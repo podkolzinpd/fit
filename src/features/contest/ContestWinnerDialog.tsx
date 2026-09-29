@@ -75,13 +75,13 @@ function ContestWinnerDialogContent({ userId, onClose }: { userId: string; onClo
         {sent
           ? <div className="contest-winner-body" role="status">
             <h2 id={titleId}>Спасибо, контакт у нас</h2>
-            <p>Команда Fit напишет вам и договорится о времени тренировки.</p>
+            <p>Команда свяжется с вами для уточнения деталей.</p>
             <div className="actions"><button type="button" className="primary" onClick={onClose}>Готово</button></div>
           </div>
           : <form className="contest-winner-body" onSubmit={onSubmit}>
             <p className="contest-winner-eyebrow">Конкурс Fit</p>
             <h2 id={titleId}>Вы выиграли персональную тренировку</h2>
-            <p>Среди всех, кто прошёл тренировку до 25 сентября, мы разыграли персональную тренировку с Иваном, бренд-тренером Fit. Оставьте контакт — мы договоримся о времени.</p>
+            <p>Среди всех, кто прошёл тренировку до 25 сентября, мы разыграли персональную тренировку с Иваном, бренд-тренером Fit. Оставьте контакт — мы с вами свяжемся.</p>
             <label className="field" htmlFor={contactId}>
               <span>Как с вами связаться</span>
               <input
