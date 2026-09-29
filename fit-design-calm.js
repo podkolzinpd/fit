@@ -1,4 +1,4 @@
-// Recolour presentation primitives only; embedded product screenshots remain intact.
+// Calm palette: recolour presentation primitives only; product screenshots remain intact.
 const designPalette = {
   '#91bea6':'#d6f500', '#69947e':'#d6f500', 'rgb(145, 190, 166)':'#d6f500',
   '#bdc3ce':'#b7bcbe', 'rgb(189, 195, 206)':'#b7bcbe', '#929da9':'#a7acae',
