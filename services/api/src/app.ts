@@ -131,6 +131,12 @@ import {
   readWorkoutTrainerResponseRequest,
 } from './post-workout-request.js'
 import { PilotWorkoutCommandError } from './workout-commands.js'
+import {
+  WorkoutTemplateError,
+  readWorkoutTemplateRequest,
+  readWorkoutTemplateVersion,
+  type PilotWorkoutTemplates,
+} from './workout-templates.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
 import { HttpError as SummaryModelError } from './legacy-summary/index.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
@@ -197,6 +203,7 @@ interface BuildAppOptions {
   pilotTrainerWorkspace?: PilotTrainerWorkspace
   pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
+  pilotWorkoutTemplates?: PilotWorkoutTemplates
   pilotWorkoutParser?: PilotWorkoutParser
   pilotTrainingSummaryGenerator?: PilotTrainingSummaryGenerator
   pilotTrainingSummaryDiagnostic?: PilotTrainingSummaryDiagnostic
@@ -2086,6 +2093,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(422).send({ error: 'invalid_workout' })
       }
+      if (error instanceof WorkoutTemplateError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        if (error.failure === 'conflict') return reply.code(409).send({ error: 'version_conflict' })
+        return reply.code(422).send({ error: 'invalid_workout_template' })
+      }
       return sendSafeDatabaseFailure(reply, error, 'Pilot command failed')
     }
   }
@@ -2974,6 +2987,60 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(reply,
       () => data.deleteStage(sessionToken, stageId, expectedVersion),
       () => reply.header('cache-control', 'no-store').send({ stage: { id: stageId, deleted: true } }))
+  })
+
+  app.get('/v1/workout-templates', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const templates = options.pilotWorkoutTemplates
+    if (templates === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => templates.list(session), (items) => reply.header('cache-control', 'no-store').send({ templates: items }))
+  })
+
+  app.get('/v1/workout-templates/:templateId', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { templateId } = request.params as { templateId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof templateId !== 'string' || !uuidPattern.test(templateId)) return reply.code(400).send({ error: 'invalid_request' })
+    const templates = options.pilotWorkoutTemplates
+    if (templates === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => templates.get(session, templateId), (template) => reply.header('cache-control', 'no-store').send({ template }))
+  })
+
+  app.post('/v1/workout-templates', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const command = readWorkoutTemplateRequest(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (command === undefined || command.expectedVersion !== null) return reply.code(400).send({ error: 'invalid_request' })
+    const templates = options.pilotWorkoutTemplates
+    if (templates === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => templates.save(session, command.draft, null), (template) => reply.header('cache-control', 'no-store').code(201).send({ template }))
+  })
+
+  app.put('/v1/workout-templates/:templateId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { templateId } = request.params as { templateId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof templateId !== 'string' || !uuidPattern.test(templateId)) return reply.code(400).send({ error: 'invalid_request' })
+    const command = readWorkoutTemplateRequest(request.body, templateId)
+    if (command === undefined || command.expectedVersion === null) return reply.code(400).send({ error: 'invalid_request' })
+    const templates = options.pilotWorkoutTemplates
+    if (templates === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => templates.save(session, command.draft, command.expectedVersion), (template) => reply.header('cache-control', 'no-store').send({ template }))
+  })
+
+  app.delete('/v1/workout-templates/:templateId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { templateId } = request.params as { templateId?: unknown }
+    const version = readWorkoutTemplateVersion(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof templateId !== 'string' || !uuidPattern.test(templateId) || version === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const templates = options.pilotWorkoutTemplates
+    if (templates === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => templates.archive(session, templateId, version), (nextVersion) => reply.header('cache-control', 'no-store').send({ template: { id: templateId, version: nextVersion } }))
   })
 
   app.post('/v1/workouts', async (request, reply) => {

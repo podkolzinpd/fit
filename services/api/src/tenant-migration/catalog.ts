@@ -132,6 +132,18 @@ export const TENANT_MIGRATION_TABLES: readonly TenantMigrationTableSpec[] = [
     targetRecord: 'public.favorite_workouts',
   },
   {
+    name: 'public.workout_templates',
+    sourceSql: publicRows(
+      'workout_templates',
+      'row.trainer_id in (select id from scope_users)',
+    ),
+    targetSql: publicRows(
+      'workout_templates',
+      'row.trainer_id in (select id from scope_users)',
+    ),
+    targetRecord: 'public.workout_templates',
+  },
+  {
     name: 'public.user_legal_acceptances',
     sourceSql: publicRows(
       'user_legal_acceptances',
@@ -548,6 +560,12 @@ readonly TenantMigrationTableSpec[] = [
     sourceSql: standalonePublicRows('favorite_workouts', 'row.client_id = $1'),
     targetSql: standalonePublicRows('favorite_workouts', 'row.client_id = $1'),
     targetRecord: 'public.favorite_workouts',
+  },
+  {
+    name: 'public.workout_templates',
+    sourceSql: standalonePublicRows('workout_templates', 'row.trainer_id = $1'),
+    targetSql: standalonePublicRows('workout_templates', 'row.trainer_id = $1'),
+    targetRecord: 'public.workout_templates',
   },
   {
     name: 'public.user_legal_acceptances',

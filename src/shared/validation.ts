@@ -3,8 +3,8 @@ import { z } from 'zod'
 export const clientSchema = z.object({
   fullName: z.string().trim().min(2, 'Введите имя'),
   gender: z.enum(['male', 'female']),
-  ageYears: z.coerce.number().int().min(1).max(119),
-  heightCm: z.coerce.number().positive().max(259),
+  ageYears: z.coerce.number().int().min(1).max(119).optional(),
+  heightCm: z.coerce.number().positive().max(259).optional(),
   goal: z.string().trim().max(1000).optional(),
   note: z.string().trim().max(5000).optional(),
   initialWeightKg: z.coerce.number().positive().max(1000).optional(),

@@ -198,9 +198,9 @@ export interface UpdateClientTrainerPreferencesInput {
 export interface CreateClientInput {
   fullName: string
   gender: Gender
-  ageYears: number
-  ageUpdatedAt: LocalDate
-  heightCm: number
+  ageYears: number | null
+  ageUpdatedAt: LocalDate | null
+  heightCm: number | null
   goal?: string
   note?: string
   initialWeightKg?: number
@@ -432,6 +432,21 @@ export interface FavoriteWorkoutTemplate {
   title: string
   createdAt: string
   exercises: WorkoutExerciseDraft[]
+}
+
+export interface WorkoutTemplateDraft {
+  id: UUID
+  name: string
+  notes?: string
+  exercises: WorkoutExerciseDraft[]
+  version?: number
+}
+
+export interface WorkoutTemplate extends WorkoutTemplateDraft {
+  trainerId: UUID
+  createdAt: string
+  updatedAt: string
+  version: number
 }
 
 export interface LiveSetDraft {

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
@@ -816,6 +817,69 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    it('binds only the native Yandex login for the second Lime trainer', async () => {
+      if (ownerPool === undefined) throw new Error('Owner pool is not ready')
+
+      const emailHash = 'a2b96a2c9a67d0a1f70028b5466bf279aa2834149e9a4a0940882e7e1337703f'
+      const loginHash = '1a13619899d89af007676a24b698ad3685b9e6a48cc27c84bad16927b7a2d581'
+      const firstTrainerHash = '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71'
+      const subjectHash = randomBytes(32).toString('hex')
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        for (const table of [
+          'app_private.trainer_schedule_v2_allowlist',
+          'app_private.fit_lime_pilot_allowlist',
+        ]) {
+          const result = await connection.query<{ login_sha256: string }>(
+            `select login_sha256 from ${table} order by login_sha256`,
+          )
+          expect(result.rows.map((row) => row.login_sha256).sort())
+            .toEqual([firstTrainerHash, loginHash].sort())
+          expect(result.rows.some((row) => row.login_sha256 === emailHash)).toBe(false)
+        }
+
+        const profile = await connection.query<{ id: string }>(
+          `insert into public.profiles (account_role)
+           values ('trainer') returning id`,
+        )
+        const profileId = profile.rows[0]?.id
+        if (profileId === undefined) throw new Error('Synthetic trainer was not created')
+        await connection.query(
+          'insert into public.trainers (profile_id) values ($1)',
+          [profileId],
+        )
+        await connection.query(
+          `insert into app_private.auth_identities
+             (provider, provider_subject_sha256, profile_id)
+           values ('yandex', $1, $2)`, [subjectHash, profileId],
+        )
+
+        const bind = async (functionName: string, hash: string) => {
+          const result = await connection.query<{ bound: boolean }>(
+            `select app_private.${functionName}($1, $2) as bound`,
+            [subjectHash, hash],
+          )
+          return result.rows[0]?.bound
+        }
+        expect(await bind('activate_trainer_schedule_v2_for_yandex_login', emailHash)).toBe(false)
+        expect(await bind('bind_fit_lime_for_yandex_login', emailHash)).toBe(false)
+        expect(await bind('activate_trainer_schedule_v2_for_yandex_login', loginHash)).toBe(true)
+        expect(await bind('bind_fit_lime_for_yandex_login', loginHash)).toBe(true)
+        await connection.query(
+          `select set_config('request.jwt.claim.sub', $1, true)`, [profileId],
+        )
+        const flags = await connection.query<{ schedule: boolean; lime: boolean }>(
+          `select app_private.trainer_schedule_v2_enabled() as schedule,
+                  app_private.fit_lime_enabled() as lime`,
+        )
+        expect(flags.rows[0]).toEqual({ schedule: true, lime: true })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
     })
 
     it('recovers after PostgreSQL terminates an idle pooled connection', async () => {
