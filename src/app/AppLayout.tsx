@@ -37,14 +37,14 @@ export function AppLayout() {
   const monochromeTrainerClientWorkouts = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
   const monochromeClientProfile = pathname === '/me/profile' || pathname === '/me/settings'
   const monochromeClientCardEdit = pathname === '/me/edit'
-  const monochromeWorkoutCreateEdit = workoutForm || todayStep || pilotCompose
+  const monochromeWorkoutCreateEdit = workoutForm || templateEditor || todayStep || pilotCompose
   const monochromeWorkoutDetailHistory = workoutDetail || exerciseHistory
   const monochromeTrainerToday = Boolean(actor?.role === 'trainer' && pathname === '/today' && !todayStep && !pilotCompose)
   const monochromeTrainerClients = Boolean(actor?.role === 'trainer' && (pathname === '/clients' || pathname === '/clients/archive'))
   const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && !['/clients/new', '/clients/archive'].includes(pathname))
   const monochromeTrainerClientForm = Boolean(actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
   const monochromeTrainerClientGoal = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
-  const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && (pathname === '/schedule' || pathname.startsWith('/schedule/templates')))
+  const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && !templateEditor && (pathname === '/schedule' || pathname.startsWith('/schedule/templates')))
   const monochromeTrainerProgress = Boolean(actor?.role === 'trainer' && /^\/progress\/[^/]+$/.test(pathname))
   const monochromeExerciseCatalog = Boolean(actor?.role === 'trainer' && pathname === '/exercises')
   const monochromeTrainerProfile = Boolean(actor?.role === 'trainer' && (pathname === '/profile' || pathname === '/profile/settings' || pathname === '/profile/trainer'))
@@ -107,7 +107,7 @@ export function AppLayout() {
     fitLimeShell ? '' : themeVariantClass(themeVariant),
     redesignedStart && pathname === '/today' ? 'today-start-shell' : '',
     liveSession ? 'live-session-shell' : '',
-    workoutForm ? 'workout-form-shell' : '',
+    workoutForm || templateEditor ? 'workout-form-shell' : '',
     assistant ? 'assistant-shell' : '',
     'ui-identity',
     monochromeClientHome ? 'client-home-identity' : '',
