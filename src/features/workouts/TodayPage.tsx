@@ -751,7 +751,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           {!reordering && <details className="today-exercise-editor">
             <summary>{workoutParseSetSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>
             {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с
-              <input key={index + '-' + (item.structure?.restBetweenSetsSec ?? 90)} aria-label={item.exercise.name + ': отдых между подходами'} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90}
+              <input key={index + '-' + (item.structure?.restBetweenSetsSec ?? 90)} aria-label={'Отдых между подходами, ' + item.exercise.name} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90}
                 onFocus={(event) => event.currentTarget.select()}
                 onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }}
                 onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />

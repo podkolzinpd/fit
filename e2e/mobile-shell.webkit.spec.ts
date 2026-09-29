@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { mockResultsHistory } from './progress-results-fixture'
+import { chooseWorkoutTime } from './workout-time-wheel'
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
@@ -546,12 +547,10 @@ test('iPhone: поля бега не перекрываются в быстро�
   await page.getByText('Добавить значения', { exact: true }).click()
 
   const row = page.locator('.today-set-editor').first()
-  const durationLabel = row.locator('label').filter({ hasText: 'Бег: время, подход 1' })
   const duration = page.getByLabel('Бег: время, подход 1')
   const distance = page.getByLabel('Бег: расстояние, подход 1')
   const unit = page.getByLabel('Бег: единица расстояния, подход 1')
-  await expect(durationLabel).toHaveCSS('position', 'absolute')
-  await expect(duration).toHaveAttribute('placeholder', 'мм:сс')
+  await expect(duration).toHaveText('Добавить время')
   await expect(distance).toHaveAttribute('placeholder', '0')
   await expect(unit).toHaveValue('km')
   await expect(unit.locator('option:checked')).toHaveText('км')
@@ -940,10 +939,10 @@ test('iPhone: в live клиент видит те же действия с тр
   }
   const liveInput = page.getByLabel('Фактическое время')
   await liveInput.evaluate((element) => { element.setAttribute('data-mount-check', 'stable') })
-  await liveInput.fill('12:30')
+  await chooseWorkoutTime(page, 'Фактическое время', 12 * 60 + 30)
   const scrollBeforeBlur = await page.locator('.content').evaluate((element) => element.scrollTop)
   await page.locator('.live-timer').click()
-  await expect(liveInput).toHaveValue('12:30')
+  await expect(liveInput).toHaveText('12:30')
   await expect(liveInput).toHaveAttribute('data-mount-check', 'stable')
   const scrollAfterInput = await page.locator('.content').evaluate((element) => element.scrollTop)
   expect(Math.abs(scrollAfterInput - scrollBeforeBlur)).toBeLessThan(24)
@@ -1789,7 +1788,7 @@ test('iPhone: копия тренировки открывается компа�
   await expect(benchEditor.getByLabel('Вес, подход 1')).toHaveValue('40')
   await addExercise(page, 'Планка')
   await expect(benchEditor.getByLabel('Вес, подход 1')).toHaveValue('40')
-  await page.getByLabel('Время, сек, подход 1').fill('45')
+  await chooseWorkoutTime(page, 'Время, подход 1', 45)
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await expect(page.locator('.planned-set-summary').nth(1)).toContainText('40 кг × 10')
   await expect(page.locator('.planned-set-summary').nth(2)).toContainText('45 сек')

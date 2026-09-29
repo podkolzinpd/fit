@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { chooseWorkoutTime } from './workout-time-wheel'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
@@ -6,6 +7,9 @@ import { expectMonochromeAccessibility } from './accessibility-helpers'
 
 test('time and distance wheel fits client and trainer viewports', async ({ page }, testInfo) => {
   await page.goto('/auth')
+  // This is an isolated component harness. CI intentionally omits app auth env,
+  // so the unrelated startup fallback must not sit above its pointer targets.
+  await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
   await page.evaluate(async () => {
     const modulePath = '/e2e/workout-time-distance-harness.tsx'
     const harness = await import(modulePath) as typeof import('./workout-time-distance-harness')
@@ -37,6 +41,7 @@ test('time and distance wheel fits client and trainer viewports', async ({ page 
   await dialog.getByRole('listbox', { name: 'минуты' }).press('ArrowDown')
   await dialog.getByRole('button', { name: 'Применить · 126:59' }).click()
   await expect(page.getByRole('button', { name: 'Время, подход 1: 126:59' })).toBeVisible()
+  await chooseWorkoutTime(page, 'Время, подход 1', 65)
 })
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'
