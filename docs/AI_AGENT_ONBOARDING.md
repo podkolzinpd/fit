@@ -1,8 +1,12 @@
 # Подключение ИИ-агента к Fit V2
 
 Эта инструкция позволяет выдать ИИ-агенту доступ к приватному репозиторию,
-подготовить локальное окружение и проверить, что оно готово к работе. Агенту не
-нужны production-секреты, доступ к Vercel или hosted Supabase.
+подготовить локальное окружение и проверить, что оно готово к работе. Production
+frontend — `fit-training.ru` на Yandex API Gateway/Object Storage; Vercel
+остаётся для Preview и legacy redirect. Новые изменения БД получают только
+numbered Yandex PostgreSQL migrations в `services/api/db/migrations`; новые
+Supabase migrations не нужны. Агенту не нужны production-секреты или доступ к
+hosted Supabase.
 
 ## Ожидаемый результат
 
@@ -142,16 +146,19 @@ npm run dev
 
 `npm run dev` через Podman готовит локальные Supabase и PostgreSQL 17 для
 Yandex API, запускает API, а затем Vite на `http://localhost:5173`. Безопасные
-локальные значения уже находятся в закоммиченном `.env.development`.
+локальные значения уже находятся в закоммиченном `.env.development`. Локальный
+Supabase нужен существующим тестам/legacy-сценариям; обычная development-сборка
+не доказывает работу новой функции через production Yandex API.
 
-Для пересоздания и проверки локальной базы:
+Для проверки замороженного локального Supabase baseline (не для новых миграций):
 
 ```bash
 npm run db:reset
 npm run db:test
 ```
 
-После изменения любой migration выполните общую локальную проверку обеих цепочек:
+Для новой Yandex PostgreSQL migration выполните общую локальную проверку,
+которая поднимет локальный PostgreSQL и проверит actor/RLS:
 
 ```bash
 npm run local:verify
@@ -195,12 +202,16 @@ git diff --cached
 npm run check
 ```
 
-Для изменений БД дополнительно обязательны:
+Для новых изменений БД дополнительно обязательны:
 
 ```bash
-npm run db:reset
-npm run db:test
+npm run local:verify
 ```
+
+`npm run db:reset` и `npm run db:test` остаются проверкой неизменённой
+Supabase-цепочки; не добавляйте в неё миграции ради новой функции. Если
+legacy E2E не может подготовить новые данные, добавьте локальный Yandex
+API/PostgreSQL fixture и целевой тест вместо параллельной Supabase-схемы.
 
 После изменения агент отправляет только рабочую ветку и создаёт PR:
 

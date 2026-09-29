@@ -62,8 +62,9 @@
 ### Preflight новой worktree
 
 До первой дорогой проверки убедитесь, что в worktree доступны уже закреплённые
-зависимости, локальный Supabase через Podman и нужный браузер. Не обнаруживайте
-отсутствующие `supabase`, Playwright или ESLint посреди `db reset`, e2e или CI.
+зависимости, локальные Supabase и PostgreSQL 17 через Podman и нужный браузер.
+Не обнаруживайте отсутствующие `supabase`, Playwright или ESLint посреди
+проверки legacy baseline, Yandex migration, e2e или CI.
 Если `package-lock.json` совпадает с уже подготовленной worktree, переиспользуйте
 её `node_modules` и сначала проверьте версии инструментов; не запускайте новый
 `npm ci` без изменения lock-файла или фактической несовместимости зависимостей.
@@ -126,7 +127,10 @@ default project исчерпан, расширяйте существующий 
   `npm run check`, если нет зафиксированного внешнего блокера.
 - Пользовательский сценарий: релевантный E2E; не гонять полный набор повторно без
   причины.
-- БД/RLS: migration, `npm run db:reset`, `npm run db:test`, generated types.
+- Новая БД/RLS: numbered Yandex migration, `npm run local:verify`, целевые
+  Yandex API/actor-RLS тесты и проверка clean PostgreSQL 17 chain. Новые
+  Supabase migrations не создаются; `db:reset`/`db:test` проверяют только
+  существующий legacy baseline.
 - iOS: после merge синхронизировать новый `main`, собрать, установить и запустить
   свежий bundle; старый симулятор не считается проверкой. Xcode не открывать
   повторно: если окно Fit уже есть, достаточно build/install/launch; открыть
@@ -144,8 +148,10 @@ bundle после merge должен быть синхронизирован, с
 
 - UI-правка не меняет prompt, matching, fallback или сохранение LLM-разбора без
   отдельного продуктового решения.
-- Локальная разработка использует локальный Supabase. Не читать и не печатать
-  `.env.local`, не менять production-данные и секреты.
+- Локальная разработка использует локальные Supabase и Yandex PostgreSQL/API
+  через Podman. Не читать и не печатать `.env.local`, не менять
+  production-данные и секреты. Production frontend выпускается на
+  `fit-training.ru` через Yandex Cloud; Vercel остаётся Preview/legacy redirect.
 - Не переименовывать тексты и селекторы без необходимости: на них могут
   опираться E2E.
 - После merge закрыть YAFIT, обновить сводный backlog и при необходимости

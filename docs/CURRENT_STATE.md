@@ -1,6 +1,6 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
-Обновлено: 2026-09-30. Frontend опубликован на `fit-training.ru` через Yandex API Gateway/Object Storage; Vercel сохранён для legacy redirect/Preview. Production data plane — принятый Yandex Cloud stage stack.
+Обновлено: 2026-09-30. Frontend опубликован на `fit-training.ru` через Yandex API Gateway/Object Storage; Vercel сохранён для legacy redirect/Preview. Production data plane — принятый Yandex Cloud stage stack. Новые изменения схемы делаются только numbered Yandex PostgreSQL migrations; Supabase-цепочка заморожена для legacy-тестов/rollback, но legacy recovery/media и локальные инструменты ещё не удалены.
 Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 ## Активная цель
 Ввод времени подхода двумя колёсами минут/секунд и пары время+дистанция для всех 24 distance-карточек и пяти time-primary тренажёров реализован без миграции БД; бег на месте и статические упражнения не получают фиктивные километры. Копирование завершённого результата сохраняет обе фактические метрики, включая старые минуты. План и локальная матрица: `docs/design/workout-time-distance-wheel-20260930.md`; CI и production smoke — перед закрытием выпуска.
@@ -100,8 +100,7 @@ Frontend hosting: 27 сентября Gateway публикует candidate `6075
    при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска.
    Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме;
    отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять
-   сохранённый auth token; это не dual-write и не перенос данных обратно.
-   Переменные и серверные bridge secrets для recovery/media пока не удалять.
+   сохранённый auth token; это не dual-write и не перенос данных обратно. Переменные и серверные bridge secrets для recovery/media пока не удалять.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer,
    linked client, recovery старого email-only профиля, новый Yandex-only аккаунт
    и оба invitation path. Автоматизированы серверные контракты, production auth
