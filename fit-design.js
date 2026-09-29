@@ -20,6 +20,10 @@ document.querySelectorAll('#deck > .slide:not(:first-child) > .eyebrow').forEach
 });
 const financial=document.querySelector('[data-section="10 · ФИНАНСОВАЯ МОДЕЛЬ"]');
 const finalYear=financial.querySelector('.content > div:nth-child(2) > div:last-child');
-finalYear.style.background='#d6f500';
+finalYear.style.background='#f5f4ef';
 finalYear.style.color='#141719';
+document.querySelectorAll('.idea-polished h3').forEach(el => el.style.color='#f5f4ef');
+const synthesis=document.querySelector('.superapp-simple .content > div:first-of-type p');
+synthesis.style.color='#f5f4ef';
+synthesis.innerHTML=synthesis.innerHTML.replace('Fit','<span style="color:#d6f500">Fit</span>');
 document.title='Fit Design — презентация';
