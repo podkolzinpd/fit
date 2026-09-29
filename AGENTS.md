@@ -15,7 +15,14 @@
 открывайте только по правилам ниже и по таблице workflow — не загружайте всю
 документацию без необходимости.
 
-До завершения перехода на Yandex Cloud для задач, затрагивающих auth, БД,
+Production frontend работает на `https://fit-training.ru` через Yandex API
+Gateway/Object Storage, а production auth/API/БД — в Yandex Cloud. Vercel
+сохранён для отдельного Preview и редиректа со старого адреса, не как место
+production-публикации. Supabase остаётся временной legacy-зависимостью для
+recovery, неперенесённых media, локальных тестов и rollback; это не второй
+production backend для новых функций. **Новые миграции в Supabase не создавайте.**
+
+До завершения вывода Supabase из эксплуатации для задач, затрагивающих auth, БД,
 repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 переносимые продуктовые данные, также полностью прочитайте
 `docs/YANDEX_CUTOVER_PLAYBOOK.md`. Текущие фаза и блокеры остаются в
@@ -44,10 +51,14 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 
 1. Сформулируйте пользовательский результат и acceptance cases.
 2. Найдите существующий публичный контракт feature. Для parity-задачи сравните его с точным V1 baseline из `FEATURE_PARITY.md`: данные, состояния, действия и mobile visual. Не создавайте параллельный путь к тем же данным.
-3. Если меняется БД: migration → SQL/RLS tests → generated types → query → repository → UI.
+3. Если меняется БД: numbered Yandex PostgreSQL migration в
+   `services/api/db/migrations` → локальная clean-chain/RLS проверка →
+   API/domain types → query/repository → UI. Не добавляйте парную Supabase migration.
 4. Добавьте happy path, validation, loading, empty, error и retry states.
 5. Если изменилось пользовательское поведение, роли, доступы, навигация или известные ограничения, обновите `docs/PRODUCT_WIKI.md`. Описывайте только уже реализованный функционал; планы и идеи оставляйте в `docs/design` и `FEATURE_PARITY.md`.
-6. Запустите `npm run check`; для DB-изменений также `npm run db:reset && npm run db:test`.
+6. Запустите `npm run check`; для DB-изменений также `npm run local:verify` и
+   целевые Yandex API/actor-RLS тесты. `db:reset`/`db:test` проверяют только
+   замороженную локальную Supabase-цепочку и не доказывают новую Yandex-схему.
 7. Обновите `docs/CURRENT_STATE.md` в той же ветке, когда фактура уже известна;
    после merge только сверьте snapshot с новым `main`. Отдельный docs-only PR
    нужен лишь для действительно новой post-merge фактуры. Это обязанность агента,
@@ -79,7 +90,8 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 - Пользовательские тексты должны быть понятны без знания англоязычных терминов:
   «Личный рекорд», «ИИ-анализ». Проценты Progress округляются до целых, прочие
   показатели — максимум до одного знака после запятой.
-- Локальные контейнеры и Supabase запускаются только через Podman. Docker у
+- Локальные контейнеры, включая PostgreSQL 17 и legacy Supabase, запускаются
+  только через Podman. Docker у
   пользователя не установлен и не планируется; не предлагайте его установку.
 - Desktop trainer и задачи P2 отложены до нового прямого решения пользователя.
 
@@ -92,13 +104,18 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 
 ### 1. Локальная проверка — обязательный первый уровень
 
-- Сначала реализуйте и проверьте функцию локально. Обычный запуск — `npm run
-  dev`; он использует только локальный Supabase, запущенный через Podman.
-- Не подключайте локальное приложение к production или другому удалённому
-  Supabase. Production URL и ключи не копируются в локальные env-файлы.
-- Если меняется БД, миграции до PR воспроизводятся локально через `npm run
-  db:reset`, проверяются через `npm run db:test`, после чего обновляются
-  generated DB types.
+- Сначала реализуйте и проверьте функцию локально. `npm run dev` через Podman
+  готовит **две локальные** базы: PostgreSQL 17 для Yandex API и замороженную
+  Supabase-цепочку для существующих legacy-тестов. Обычная development-сборка
+  ещё может выбирать Supabase; это не проверка новой production-функции.
+- Новую функцию проверяйте через локальный Yandex API/PostgreSQL (или его
+  изолированный contract test), а не только через Supabase-сценарий. Не
+  подключайте локальное приложение к удалённым production-базам и не копируйте
+  production URL/секреты в локальные env-файлы.
+- Если меняется БД, добавьте только numbered migration в
+  `services/api/db/migrations`, затем выполните `npm run local:verify` и
+  целевые Yandex API/RLS тесты. Generated Supabase types обновляются только
+  при отдельной явно разрешённой legacy-правке, не ради Yandex-изменения.
 - Выполните целевые тесты, обязательную UI/WebKit-проверку и `npm run check` по
   правилам этого файла. Успешная локальная проверка сама по себе не разрешает
   deployment или изменение production.
@@ -114,11 +131,11 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
   проверьте согласованный сценарий. Это изолированный Vercel Preview, а не
   production rollout; он не делает функцию доступной production-пользователям
   и не требует merge.
-- Preview workflow разворачивает frontend-код PR, но **не применяет миграции из
-  PR ни к одной удалённой БД**. Не запускайте ради Preview ручной SQL, Dashboard
-  SQL или удалённые миграции. Если функция зависит от новой схемы БД, отмечайте
-  удалённую проверку как неполную: полный сценарий проверяется локально либо в
-  отдельно согласованном stage с совместимой схемой.
+- Preview workflow разворачивает frontend-код PR, но **не применяет Yandex
+  PostgreSQL migrations из PR ни к одной удалённой БД**. Не запускайте ради
+  Preview ручной SQL, Dashboard SQL или удалённые миграции. Если функция зависит
+  от новой схемы БД, отмечайте удалённую проверку как неполную: полный сценарий
+  проверяется локально либо в отдельно согласованном stage с совместимой схемой.
 - Preview проверяет только код, совместимый с backend и env, настроенными для
   Vercel Preview. Не обещайте OAuth-сценарий на произвольном preview-домене без
   заранее разрешённого callback URL. Если Preview использует общий удалённый
@@ -131,8 +148,8 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 
 - Используйте этот уровень только когда пользователь прямо просит показать
   готовую функцию выбранным production-пользователям. Самостоятельно не
-  включайте пилот, не расширяйте allowlist и не изменяйте Production Environment
-  в Vercel.
+  включайте пилот, не расширяйте allowlist и не меняйте build-time переменные
+  production-сборки Yandex frontend в GitHub.
 - Для каждой функции создавайте независимые build-time переменные:
   `VITE_<FEATURE>_ENABLED=true` и
   `VITE_<FEATURE>_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>`, а также
@@ -152,13 +169,14 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 - Добавьте unit-тесты флага и тесты поведения пользователя внутри и вне пилота,
   включая прямой маршрут. Зафиксируйте переменные и default-off семантику в
   `OPERATIONS.md`, а изменившееся фактическое поведение — в релевантном разделе
-  `docs/PRODUCT_WIKI.md`.
+  `docs/PRODUCT_WIKI.md`. Production-переменные берутся из конфигурации
+  `.github/workflows/deploy-yandex-frontend.yml`, не из Vercel.
 - Изменение build-time переменных или allowlist требует нового deployment.
   Runtime-переключение без deployment в этот механизм не входит.
 
 В handoff агент явно сообщает, на каком уровне проверена функция: локально,
 в отдельном Preview или в production-пилоте; для Preview отдельно указывает,
-что миграции из PR в удалённую БД не применялись.
+что Yandex migrations из PR в удалённую БД не применялись.
 
 ## Скорость без потери качества
 
@@ -192,128 +210,84 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 
 ## База данных
 
-- Только timestamped migrations, применяемые Supabase CLI. Dashboard SQL запрещён.
+- Источник истины для новых изменений схемы — numbered migrations в
+  `services/api/db/migrations` (PostgreSQL 17, `node-pg-migrate`). Новые файлы в
+  `supabase/migrations` не добавляйте. Существующую Supabase-цепочку не
+  переписывайте: она остаётся для локальных legacy-тестов и rollback-архива.
+  Ручной SQL в production Dashboard/WebSQL запрещён.
+- `npm run dev` автоматически применяет pending Yandex migrations только к
+  локальному Podman PostgreSQL. `npm run local:verify` проверяет локальную
+  цепочку и actor/RLS. После merge `.github/workflows/deploy-yandex-stage.yml`
+  применяет pending migrations к принятому production data plane до
+  переключения API-ревизии; не запускайте отдельный ручной apply без причины.
 - PK бизнес-сущностей: `uuid default gen_random_uuid()`.
 - `created_at`: `default now()`; единственный trigger — общий `updated_at` trigger.
 - Бизнес- и auth-trigger запрещены. Инициализация пользователя вызывается явно.
-- Простая таблица меняется Data API запросом. Aggregate из нескольких таблиц — одной RPC-транзакцией.
-- RPC не принимает `trainer_id`; использует `auth.uid()`, проверяет ownership и блокирует root при update.
-- На exposed таблицах обязательны RLS, минимальные grants, `USING` и `WITH CHECK`.
+- Простая запись выполняется через Yandex API с actor context; aggregate из
+  нескольких таблиц — в одной транзакции. SQL не размещайте в UI/repository.
+- Команда не принимает `trainer_id` как основание прав: actor определяется
+  серверной app-session, ownership проверяется в транзакции; root при update
+  блокируется.
+- На доступных runtime таблицах обязательны RLS, минимальные grants, `USING`
+  и `WITH CHECK`; роль `fit_api` не получает owner/BYPASSRLS.
 - FK обязательны для aggregate children; snapshot/optional links могут быть логическими UUID.
 - Архивные записи не участвуют в новых операциях, но история остаётся читаемой.
 
-## Совместимость Supabase и Yandex во время переезда
+## Production Yandex и замороженный Supabase
 
-- Пока оба backend активны, новая продуктовая возможность получает один
-  доменный контракт и эквивалентные Supabase/Yandex implementations. Routing
-  выбирает ровно один backend для actor/tenant; dual-write и автоматический
-  fallback после ошибки запрещены. Общие contract tests должны доказать
-  одинаковую семантику обеих реализаций.
-- Функция, которая по отдельному решению выпускается только после Yandex-only
-  cutover, может иметь только Yandex implementation, но до cutover остаётся
-  default-off без доступного пользовательского входа. После закрытия rollback-
-  окна Supabase adapters удаляются, а требование новой двойной реализации
-  прекращается.
-
-- Продуктовые таблицы, уже поддерживаемые обоими backend, образуют один
-  семантический контракт. Создание, переименование или удаление таблицы, а также
-  изменение колонки, типа, nullable/default, PK/FK, unique/check constraint или
-  значимого индекса в том же PR требует эквивалентной Supabase migration и
-  numbered Yandex migration. Физическая реализация может различаться только
-  там, где различие storage/auth явно описано и покрыто contract tests.
-- Для каждой затронутой таблицы агент обязан сверить оба актуальных состояния,
-  а не только тексты новых миграций: колонки и их типы, обязательность и
-  defaults, ключи/constraints/indexes, правила доступа и операции API. Успешная
-  работа одного backend или совпадение названий таблиц не доказывают parity.
-- Если данные таблицы должны переноситься между backend, в том же PR обновите
-  tenant migration catalog, export/import mapping и validation. Clean migration
-  chain проверяет структуру, а rehearsal с репрезентативными строками — что все
-  обязательные поля действительно переносятся без потерь; не выводите PII в
-  логи, fixtures и отчёты.
-- До cutover Supabase остаётся источником рабочих данных для tenant, если
-  отдельное решение о routing не принято. Не имитируйте актуальность Yandex
-  ручным SQL или незафиксированной dual-write логикой: Yandex обновляется только
-  версионированными миграциями и штатным tenant export/import/apply процессом.
-- Обнаруженный drift нельзя молча оставить или обходить адаптером. Исправьте его
-  в текущем PR, если он входит в scope, либо зафиксируйте точные таблицы/поля,
-  безопасный fallback, проверяемый блокер и задачу в `docs/CURRENT_STATE.md` и
-  `FEATURE_PARITY.md`; до устранения drift такой tenant нельзя отмечать готовым
-  к переключению.
-- Любое изменение таблицы, RPC, Edge Function, backend-контракта или data query,
-  которое используется продуктовой функцией, в том же PR должно проверить
-  соответствующий путь в Yandex Cloud. Нельзя считать задачу завершённой только
-  потому, что она работает через Supabase.
-- Если затронутый сценарий уже поддерживается Yandex backend, тот же PR обязан
-  сохранить его совместимость: добавить эквивалентную numbered migration/API/
-  repository-реализацию, обновить tenant migration catalog и проверить оба
-  backend-контракта соразмерными тестами.
-- Если сценарий намеренно ещё не доступен через Yandex, явно зафиксируйте parity
-  gap и безопасное default-off/fallback-поведение в `docs/CURRENT_STATE.md` и
-  `FEATURE_PARITY.md`. Такой сценарий нельзя отмечать готовым к переключению
-  tenant до устранения gap.
-- Не создавайте две независимые реализации бизнес-правил. Общие доменные
-  контракты и преобразования переиспользуются, а transport/storage adapters
-  могут различаться. Никогда не подключайте одну production-БД к локальной
-  проверке другой.
-- Для изменения схемы или переносимых данных автоматическая проверка должна
-  ловить расхождение до merge: clean migration chain для затронутого backend,
-  contract/integration tests и, когда таблица входит в tenant export, локальная
-  export/import/validation rehearsal с репрезентативными строками.
+- Production auth и продуктовые чтения/записи идут через Yandex ID/API и
+  Managed PostgreSQL. Dual-write и fallback на Supabase после ошибки запрещены.
+  Новая функция получает один доменный контракт и Yandex implementation;
+  создавать ради неё Supabase adapter или парную migration не нужно.
+- Supabase ещё задействован в ограниченных legacy-путях (recovery, оставшиеся
+  media и локальные тесты). Не удаляйте их или старые таблицы до отдельного
+  decommission/rollback-решения. Если изменение пересекается с таким путём,
+  зафиксируйте конкретную совместимость и целевой тест; не расширяйте старую
+  схему молча и не направляйте новые production-данные обратно в Supabase.
+- Для новой Yandex-схемы в том же PR обновите API/DTO, repository/queries,
+  actor/RLS/grants и проверку clean migration chain. При необходимости переноса
+  **уже существующих** legacy-данных обновите tenant catalog,
+  export/import/validation и локальную rehearsal; для Yandex-only данных
+  не добавляйте фиктивное mapping в Supabase.
+- Когда старый Supabase-based UI/E2E не умеет создать новые данные, добавьте
+  локальный Yandex API/PostgreSQL fixture или contract test. Не считайте
+  зелёный Supabase-тест доказательством работы новой production-функции.
+- Выявленный gap Yandex-сценария нельзя обходить Supabase fallback. Оставьте
+  пользовательский вход default-off или явно заблокированным, зафиксируйте
+  блокер в `docs/CURRENT_STATE.md`/`FEATURE_PARITY.md` и закройте его до rollout.
+- Никогда не подключайте локальные тесты к production-БД. Не выводите PII в
+  логи, fixtures и отчёты. Исторический Supabase snapshot сохраняется до
+  завершения observation/backup/rollback-гейтов; это не работающая копия новых
+  Yandex-записей.
 
 ## Push-уведомления пользователям
 
-Архитектура (введена в `20260826190000_push_notifications.sql`, первый сценарий —
-`workout_reminder`): **producer → dispatcher → sender**. Producer — SQL-функция
-per сценарий в `private`, кладёт строки в `private.push_notifications_outbox`.
-Dispatcher (`private.dispatch_push_notifications`/`finalize_push_notifications`,
-общие, не трогать под новый сценарий — но см. ниже, мульти-device их уже
-переписал под текущую схему подписок) шлёт пачку в Cloud Function
-`fit-send-push-notifications` (`services/api/src/push-notifications/`,
-деплой — `.github/workflows/deploy-yandex-push-function.yml`). Sender шифрует
-и реально отправляет через Web Push API (`web-push`) — это единственное
-место, куда идёт настоящий сетевой вызов; шифрование ECDH/VAPID не делается
-в SQL.
+Production использует Yandex PostgreSQL `app_private.push_notifications_outbox`
+и Yandex dispatcher/sender. Для нового сценария ориентируйтесь на
+`services/api/db/migrations/000030_yandex_push_pipeline.sql` и последующие
+Yandex migrations, а не на исторические `supabase/migrations` и `pg_cron`.
 
-Мульти-device (с `20260907090000_push_subscriptions_multi_device.sql`):
-`public.push_subscriptions.id` — PK, `user_id` — обычная FK-колонка,
-`unique (user_id, endpoint)` — идентичность устройства. У пользователя может
-быть сколько угодно активных подписок одновременно; вход с нового телефона
-добавляет строку, а не замещает старую. `private.push_notifications_outbox`
-несёт `subscription_id`, который producer проставляет сразу при постановке в
-очередь (не dispatcher при отправке) — каждая строка outbox адресована ровно
-одной подписке, dedupe-ключ расширен до `(kind, user_id, data, subscription_id)`.
-Отключение уведомлений или протухший endpoint (404/410) на одном устройстве
-удаляют только его строку `push_subscriptions`, остальные устройства
-пользователя не затрагиваются.
-
-Новый сценарий уведомления — это:
-1. Одна SQL-функция-producer в новой миграции (`private.enqueue_<scenario>()`),
-   которая фан-аутит на все активные подписки получателя — `join
-   public.push_subscriptions s on s.user_id = <получатель>` (для множества
-   получателей разом) или цикл `for subscription in select id from
-   public.push_subscriptions where user_id = ...` (для одного получателя за
-   вызов) — и инсертит в `private.push_notifications_outbox` с уникальным
-   `kind`, `subscription_id = s.id`/`subscription.id` на каждой строке и
-   dedupe-ключом `(kind, user_id, data, subscription_id)`. Отсутствие
-   подписок само по себе ничего не вставляет — отдельная `exists`-проверка не
-   нужна. Обязательно фильтровать по `notification_preferences` (opt-out
-   модель — отсутствие строки = включено).
-2. `select cron.schedule(...)` под нужную частоту опроса — не переиспользовать
-   расписание другого сценария, если триггер другой природы.
-3. Ничего не менять в dispatcher/finalize/Cloud Function — они уже общие для
-   всех `kind` и уже адресуются по `subscription_id`.
-4. Если сценарий — новый текст пуша, добавить его прямо в producer (`title`/`body`);
-   отдельного реестра шаблонов нет, простая конкатенация в SQL.
-5. Тесты — pgTAP на producer (idempotency, opt-out, отсутствие подписки,
-   фан-аут на несколько подписок одного получателя) по образцу
-   `0061_push_notifications.test.sql`.
+1. Добавьте actor-scoped producer в новую numbered Yandex migration: уникальный
+   `kind`, fan-out на все активные `public.push_subscriptions` получателя,
+   `subscription_id` в каждой строке outbox и idempotent dedupe. Уважайте
+   `notification_preferences` (отсутствие строки = включено).
+2. Если событие периодическое, используйте отдельный Yandex timer/invoker по
+   действующему pipeline; не создавайте Supabase cron или Edge Function.
+3. Общий dispatcher/sender меняйте лишь при доказанной необходимости. Пуш
+   шифруется и отправляется в Cloud Function, не в SQL.
+4. Проверьте Yandex producer/dispatcher на идемпотентность, opt-out,
+   отсутствие подписок, несколько устройств и отказ отправки. Legacy pgTAP
+   остаётся регрессией замороженной Supabase-цепочки, не приёмкой новой функции.
 
 ## Качество и безопасность
 
 - Не используйте `select('*')`, `any`, небезопасные casts и проглоченные ошибки.
 - Не коммитьте `.env`, DB password, secret/service-role/OAuth secret.
-- Локальная разработка и тесты используют только локальный Supabase. Production URL и publishable key хранятся только в Vercel; не отключайте runtime-проверку этого правила.
-- Для обычного локального запуска используйте `npm run dev`: команда сама запускает локальный Supabase. Не подменяйте `.env.development` удалённым проектом.
+- Локальная разработка использует только локальные Podman Supabase и PostgreSQL
+  17; production URL/секреты не копируются в локальные env-файлы. Production
+  frontend строится GitHub Actions для Yandex Object Storage, не Vercel.
+- Для обычного локального запуска используйте `npm run dev`: команда сама
+  запускает обе локальные базы. Не подменяйте `.env.development` удалённым проектом.
 - Любая mutation должна подтверждать, что изменилась ожидаемая запись.
 - Многошаговая запись обязана полностью откатываться при любой ошибке.
 - Добавляйте тест на cross-tenant доступ для каждого нового tenant ID.
@@ -325,10 +299,12 @@ Dispatcher (`private.dispatch_push_notifications`/`finalize_push_notifications`,
 
 - Пользовательский сценарий отражён в `FEATURE_PARITY.md`.
 - `docs/PRODUCT_WIKI.md` отражает актуальный пользовательский функционал и ограничения после изменения.
-- Migration воспроизводится чистым `db reset`.
-- Generated DB types актуальны.
+- Новая Yandex migration воспроизводится на чистом локальном PostgreSQL 17;
+  `npm run local:verify` и actor/RLS тесты зелёные.
+- API/domain types актуальны; generated Supabase types не меняются без
+  отдельной явно согласованной legacy-правки.
 - Unit/component/integration/E2E покрытие соответствует риску.
-- `npm run check` зелёный; DB/RLS тесты зелёные для изменений БД.
+- `npm run check` зелёный; Yandex DB/RLS тесты зелёные для изменений БД.
 
 # Fit UI / UX Engineering Rules
 

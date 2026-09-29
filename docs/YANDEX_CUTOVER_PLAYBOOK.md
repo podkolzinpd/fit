@@ -1,30 +1,33 @@
-# Fit — playbook перехода на Yandex Cloud и Yandex ID
+# Fit — post-cutover playbook Yandex Cloud и вывода Supabase
 
 ## Цель и срок жизни документа
 
-Fit переводит production data plane и аутентификацию на Yandex Cloud и Yandex
-ID. Frontend остаётся на Vercel. Supabase сохраняется только как временный
-рабочий backend и rollback-источник до завершения согласованного окна
-стабилизации.
+Production Fit уже использует Yandex ID, Yandex API и Managed PostgreSQL;
+frontend `fit-training.ru` публикуется через Yandex API Gateway/Object Storage.
+Vercel сохранён для изолированного Preview и редиректа со старого адреса.
+Supabase остаётся временным legacy-источником для recovery, неперенесённых
+media, локальных тестов и rollback — не вторым production backend новых функций.
 
-Этот playbook обязателен для задач, которые до окончания cutover затрагивают
+Этот playbook обязателен для задач, которые до вывода Supabase затрагивают
 auth, БД, repositories/queries, media, Assistant, SpeechKit, push, backend
 routing или переносимые продуктовые данные. Текущая фаза и блокеры находятся в
 `docs/CURRENT_STATE.md`; реализованный продукт — в `docs/PRODUCT_WIKI.md`;
 полный V1-инвентарь — в `FEATURE_PARITY.md`.
 
-После Yandex-only cutover и окончания rollback-периода временные требования к
-двум backend удаляются вместе с этим документом. Постоянные архитектурные
-инварианты остаются в `AGENTS.md` и `ARCHITECTURE.md`.
+После закрытия rollback-периода временные legacy-правила удаляются вместе с
+этим документом. Постоянные архитектурные инварианты остаются в `AGENTS.md` и
+`ARCHITECTURE.md`.
 
-## Результат перехода
+## Текущее production-состояние и цель вывода legacy
 
 - новые и существующие пользователи входят только через Yandex ID;
 - все production-чтения и записи продуктовых данных идут через Yandex API в
   Managed PostgreSQL и Yandex Object Storage;
-- frontend продолжает выпускаться через Vercel;
-- production frontend не требует `VITE_SUPABASE_*` и не создаёт Supabase
-  session;
+- frontend выпускается на `fit-training.ru` только проверенным
+  `.github/workflows/deploy-yandex-frontend.yml` после зелёного CI на `main`;
+- production frontend больше не маршрутизирует продуктовые запросы в Supabase,
+  но startup/recovery/media legacy-зависимости и `VITE_SUPABASE_*` пока могут
+  оставаться; их удаление — отдельная проверяемая задача;
 - Supabase Auth, Data API, Storage, Edge Functions и фоновые producer отключены
   только после подтверждённого окна стабилизации и сохранения rollback backup;
 - пользовательский контракт клиента и тренера не ухудшается при переключении.
@@ -32,33 +35,33 @@ routing или переносимые продуктовые данные. Те�
 ## Общая методика продуктовой разработки
 
 UI, hooks и feature-код не знают, какой provider обслуживает запрос. Новая
-возможность сначала получает общий доменный контракт, затем реализации для всех
-активных backend:
+возможность получает общий доменный контракт и Yandex implementation:
 
 ```text
-route/feature -> domain repository contract -> DataBackend routing
-                                      |-> Supabase adapter
-                                      `-> Yandex adapter
+route/feature -> domain repository contract -> Yandex API/PostgreSQL
+                                      `-> legacy Supabase adapter (только старые пути)
 ```
 
-До cutover действуют правила:
+После production cutover действуют правила:
 
 1. DTO, validation, бизнес-правила и пользовательская семантика общие.
 2. Provider-specific transport, SQL и преобразование ошибок остаются в
    queries/repositories или серверном adapter.
 3. Feature-код не проверяет `backend === 'supabase'` или `'yandex'`.
-4. Один пользовательский запрос читает и пишет только выбранный backend.
-   Dual-write и автоматический fallback после ошибки запрещены.
-5. Общие contract tests прогоняются против обеих реализаций; provider-specific
-   тесты дополняют, но не заменяют их.
-6. Изменение поддерживаемой таблицы требует эквивалентных Supabase и numbered
-   Yandex migrations, проверки итоговых схем и обновления tenant catalog, если
-   таблица переносится.
-7. Новая функция сливается default-off, если её backend parity, migration
-   rehearsal или production rollout ещё не завершены.
-8. Функция, которая гарантированно будет выпущена только после Yandex-only
-   cutover, может получить только Yandex-реализацию после отдельного решения.
-   До cutover её входы остаются скрытыми.
+4. Продуктовые чтения и записи используют Yandex API/PostgreSQL. Dual-write и
+   автоматический fallback в Supabase после ошибки запрещены.
+5. Новые миграции создаются **только** в `services/api/db/migrations` как
+   numbered Yandex PostgreSQL migrations. Не добавляйте парную migration в
+   `supabase/migrations`; существующая цепочка заморожена, не удалена.
+6. Изменение схемы проверяется на чистом локальном PostgreSQL 17, actor/RLS и
+   API tests. `npm run local:verify` поднимает обе локальные базы ради
+   совместимости текущего tooling; зелёный Supabase-тест не заменяет Yandex test.
+7. Tenant catalog/export/import меняются, только если требуется перенос
+   **существующих** legacy-данных. Для новой Yandex-only таблицы не создавайте
+   фиктивное Supabase mapping.
+8. Legacy recovery/media или старый локальный тестовый путь не расширяются
+   автоматически под новые фичи. Если новое поведение пока не проверено через
+   Yandex, вход остаётся default-off до целевого теста и безопасного rollout.
 
 ## Параллельные потоки
 
@@ -72,9 +75,10 @@ route/feature -> domain repository contract -> DataBackend routing
 | `product` | пользовательские функции поверх общего backend-контракта |
 
 Один интеграционный владелец на текущий этап определяет порядок merge и
-единолично ведёт rehearsal/cutover checklist. Это не даёт ему права включать
-production: remote apply, изменение Vercel environment и переключение routing
-выполняются только в явно согласованной cutover-задаче.
+единолично ведёт decommission/rollback checklist. Обычный merge в `main`
+запускает отдельные Yandex stage/frontend workflow по их правилам; ручной
+remote apply, изменение production build-time variables и обратное
+переключение routing не входят в произвольную продуктовую задачу.
 
 До начала реализации автор задачи фиксирует:
 
@@ -85,10 +89,10 @@ production: remote apply, изменение Vercel environment и перекл�
 Зависит от PR:
 Затрагиваемые таблицы/API и общие файлы:
 Общий repository-контракт:
-Supabase implementation:
 Yandex implementation:
+Зависимость от существующих legacy recovery/media путей (если есть):
 Feature flag и default-off поведение:
-Проверки обоих backend:
+Локальная Yandex PostgreSQL/API/RLS проверка:
 Что запрещено включать или выкатывать из этой задачи:
 ```
 
@@ -106,81 +110,57 @@ environment contract. Их изменение заранее отмечаетс�
 - Созданный раньше активный PR имеет приоритет согласно `AGENTS.md`. Если его
   контракт блокирует следующий поток, интеграционный владелец явно фиксирует
   зависимость, а не пытается обойти её временным adapter.
-- За 48 часов до cutover не сливаются новые изменения auth, переносимой схемы,
-  media или backend routing, кроме исправлений подтверждённых блокеров.
-- Продуктовый код можно доставить заранее default-off. Его включение выполняется
-  после основного cutover smoke отдельным флагом и не входит в переключение
-  инфраструктуры автоматически.
+- Новая функция может быть доставлена default-off. Её включение для
+  production-пользователей — отдельное решение и не происходит автоматически
+  только от наличия API-миграции.
 
 ## Обязательная матрица проверки
 
 | Изменение | Минимальная проверка |
 | --- | --- |
-| Общий repository/API-контракт | одинаковые contract cases для Supabase и Yandex |
-| Схема или переносимые данные | обе clean migration chain, schema parity, catalog и local rehearsal |
+| Новый repository/API-контракт | целевые contract cases против локального Yandex API |
+| Новая схема | clean Yandex PostgreSQL 17 chain, actor/RLS/grants и API integration |
+| Перенос **существующих** legacy-данных | Yandex migration, catalog/export/import/validation и local rehearsal без потерь |
 | Mutation | ownership, cross-tenant, atomicity, expected-row count, retry/idempotency |
 | Auth/routing | flag-off, linked, native registration, expired/mismatch, logout и прямой маршрут |
 | Media | upload/sign/read/delete, несколько bucket types, повтор и отсутствующий object |
-| Assistant/push | actor/role parity, idempotency, safe failure и отсутствие PII в логах |
+| Assistant/push | actor/role ownership, idempotency, safe failure и отсутствие PII в логах |
 | UI | loading, empty, error/retry, success, pending, mobile WebKit и обе роли |
 
 Локальные проверки используют только Podman и локальные базы. Успешный тест
-одного adapter не является доказательством parity. Preview не применяет Yandex
-или Supabase migration из PR к удалённой базе.
+legacy Supabase adapter не является доказательством работы новой Yandex-функции.
+Vercel Preview не применяет Yandex migration из PR к удалённой базе.
 
-## Гейты перехода
+## Гейты стабилизации и вывода Supabase
 
-### 1. Parity ready
+Yandex-only production cutover уже произошёл. Не повторяйте full-cohort apply
+или не включайте Supabase routing ради новой функции. После первой
+production-записи в Yandex выключение frontend-флага **не** синхронизирует
+данные обратно: rollback требует maintenance window, проверенную reverse
+migration либо восстановление согласованного checkpoint.
 
-- все пользовательские сценарии из cutover scope работают через Yandex adapter;
-- legal, account deletion, Assistant programs и media не имеют скрытого
-  Supabase-only пути;
-- production bundle может запускаться без Supabase runtime configuration;
-- все новые schema/data изменения представлены в обеих активных реализациях.
+До отключения старого проекта необходимо:
 
-### 2. Rehearsal ready
+1. Закрыть оставшиеся recovery/media зависимости и проверить данные без
+   `allow-missing`; не удалять credentials, которые ещё используются мостом.
+2. Проверить Yandex ID, роли, mutation, Assistant, upload и push на
+   согласованных тестовых учётках; контролировать auth errors, API 5xx,
+   PostgreSQL connections, schema drift и media 404.
+3. Провести backup restore drill и завершить observation/rollback window.
+4. Сохранить проверяемый source snapshot, затем отдельным решением отключить
+   Supabase Auth/Data API/Storage/Edge Functions, старые producer и secrets.
 
-- свежий full-cohort audit/dry-run/apply/validate проходит с повторной атомарной
-  пересборкой и тем же полным checksum snapshot-а;
-- media validation проходит без `allow-missing`, проверены все используемые
-  bucket types;
-- backup восстановлен во временный private cluster, схема и агрегированные
-  counts проверены без PII;
-- пройдены Yandex ID, обе роли, mutation, Assistant, upload и push smoke.
-
-### 3. Cutover
-
-1. Остановить записи на согласованное окно.
-2. Дождаться или безопасно остановить незавершённые producer/outbox операции.
-3. Создать и применить свежий snapshot и media delta; выполнить validate.
-4. Включить server-side assignments уже связанным профилям, затем Yandex
-   app-session/routing и native registration; recovery непривязанного
-   domain-ready профиля создаёт его assignment атомарно после проверки старых
-   credentials.
-5. Выполнить smoke клиента и тренера, затем открыть записи.
-6. Зафиксировать commit, deployment, aggregate evidence и начало окна
-   стабилизации в `docs/CURRENT_STATE.md`.
-
-После первой production-записи в Yandex простое выключение frontend-флага не
-синхронизирует данные обратно в Supabase. Rollback требует maintenance window и
-отдельно проверенную reverse migration либо восстановление согласованного
-checkpoint.
-
-### 4. Стабилизация и удаление Supabase
-
-В течение согласованного окна контролируются auth failures, API 5xx, latency,
-PostgreSQL connections, migration drift, media 404, Assistant и push. После
-успешного окна отключаются Supabase Auth/Data API/Storage/Edge Functions и
-старые фоновые задачи, удаляются production secrets и fallback-код. До этого
-момента новые функции продолжают соблюдать двух-backend контракт.
+До выполнения этих гейтов старый проект и его миграционная история остаются
+нетронутыми. Это **не** обязывает добавлять новые Supabase migrations:
+production изменения схемы теперь идут только в Yandex PostgreSQL.
 
 ## Handoff агента
 
 ```text
 main/commit; ветка/PR; поток; YAFIT;
-контракт и обе реализации;
-migrations/catalog/flags;
-что проверено для Supabase и Yandex;
+доменный контракт и Yandex implementation;
+Yandex migrations/catalog/flags;
+что проверено для локального Yandex API/PostgreSQL и что осталось legacy;
 что default-off или не проверено;
 зависимый следующий PR;
 состояние дерева; production не менялся/точное согласованное изменение.
