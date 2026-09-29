@@ -1,0 +1,27 @@
+/* Fit Design only. Approved graphite / white / lime identity. */
+:root { --paper:#f5f4ef; --dark:#141719; --green:#d6f500; --dark-muted:#a7acae; --line:#3b4144; }
+body { background:#141719; }
+#deck > .slide { background:#141719!important; color:#f5f4ef!important; }
+#deck > .slide::before, #deck > .slide::after { display:none!important; }
+#deck > .slide > .eyebrow { color:#a7acae!important; font-weight:700; letter-spacing:2.3px; }
+.design-number { color:#d6f500; }
+#deck > .slide > h2 { color:#f5f4ef!important; font-weight:800!important; }
+#deck > .slide:not(:first-child) > h2::after { content:''; display:block; width:58px; height:3px; background:#d6f500; margin-top:20px; }
+#deck > .client-simple > h2::after,
+#deck > [data-section="05 · ДЛЯ ТРЕНЕРА"] > h2::after { display:none!important; }
+#deck .muted { color:#a7acae!important; }
+#deck figcaption > span { color:#d6f500!important; }
+#deck figure img { border-radius:12px!important; }
+#deck .superapp-simple .content > div:first-of-type p { font-size:43px!important; line-height:1.18!important; }
+.meeting-growth-slide .meeting-growth-trainers,
+.meeting-growth-legend i { background:#d6f500!important; color:#141719!important; }
+.meeting-growth-slide .meeting-growth-self,
+.meeting-growth-legend i.is-self { background:#a7acae!important; color:#141719!important; }
+.meeting-growth-slide .meeting-growth-clients,
+.meeting-growth-legend i.is-client { background:#4c5559!important; color:#f5f4ef!important; }
+.meeting-growth-slide .meeting-growth-badge { color:#d6f500!important; background:transparent!important; border:1px solid #3b4144; border-radius:0; }
+.meeting-growth-slide .meeting-growth-workouts > strong { color:#d6f500!important; }
+.meeting-growth-slide .meeting-growth-bar-track { background:#202527!important; }
+.meeting-growth-slide .meeting-growth-workouts { background:transparent!important; }
+.progress span { background:#d6f500!important; }
+.nav { background:#141719aa; color:#f5f4ef; }
