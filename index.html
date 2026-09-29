@@ -9876,6 +9876,13 @@ const coverSlogan = document.createElement('p');
 coverSlogan.textContent = 'Твой спорт. Твоя команда.';
 coverSlogan.style.cssText = 'position:absolute;left:0;right:0;top:650px;margin:0;text-align:center;font-size:44px;line-height:1.2;font-weight:500;color:#f5f3ef;letter-spacing:-.8px';
 cover.appendChild(coverSlogan);
+coverLogo.remove();
+coverSlogan.remove();
+const peopleCover = document.createElement('img');
+peopleCover.src = 'cover-people.png';
+peopleCover.alt = 'Фит. Твой спорт. Твоя команда. Спортсменка и тренер вместе смотрят программу на планшете.';
+peopleCover.style.cssText = 'position:absolute;inset:0;width:1600px;height:900px;object-fit:cover;z-index:10';
+cover.appendChild(peopleCover);
 cover.querySelector('.foot').style.display = 'none';
 document.querySelector('[data-section="09 · МОНЕТИЗАЦИЯ"] .foot').style.display = 'none';
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
