@@ -9866,6 +9866,11 @@ cover.querySelector('.eyebrow').textContent = 'FIT';
 cover.dataset.section = 'FIT';
 cover.querySelector('h2').innerHTML = 'Fit — приложение<br>для тренировок';
 cover.querySelector('.content').style.display = 'none';
+const coverLogo = document.createElement('img');
+coverLogo.src = 'fit-logo.png';
+coverLogo.alt = 'Фит';
+coverLogo.style.cssText = 'position:absolute;right:76px;top:285px;width:900px;height:auto;mix-blend-mode:screen;pointer-events:none';
+cover.appendChild(coverLogo);
 cover.querySelector('.foot').style.display = 'none';
 document.querySelector('[data-section="09 · МОНЕТИЗАЦИЯ"] .foot').style.display = 'none';
 const slides = [...document.querySelectorAll('.slide:not(.legacy-competitor-slide):not(.legacy-behavior-slide)')]
