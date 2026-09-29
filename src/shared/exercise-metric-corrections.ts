@@ -94,6 +94,13 @@ export const EXERCISE_METRIC_CORRECTIONS: Readonly<Record<string, ExerciseMetric
   'vital-gym-pro-r043-0101': { inputKind: 'reps' },
   'vital-gym-pro-r072-0177': { inputKind: 'strength', equipment: 'Блок' },
   'vital-gym-pro-r114-0266': { inputKind: 'duration' },
+  // These movements do not measure travelled distance. Stair machines may
+  // display a distance, but time remains the primary metric there.
+  'vital-gym-pro-r038-1190': { inputKind: 'duration' },
+  'vital-gym-pro-r039-1191': { inputKind: 'duration' },
+  'vital-gym-pro-r189-1331': { inputKind: 'duration' },
+  'vital-gym-pro-r191-1333': { inputKind: 'duration' },
+  'vital-gym-pro-r213-1533': { inputKind: 'duration' },
   'vital-gym-pro-r121-0276': { inputKind: 'reps' },
   'vital-gym-pro-r124-0286': { inputKind: 'reps' },
   'vital-gym-pro-r134-1247': { inputKind: 'reps' },

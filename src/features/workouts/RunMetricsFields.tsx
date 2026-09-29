@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import {
   formatRunDistanceInput,
-  formatRunDuration,
-  parseRunDurationInput,
   preferredRunDistanceUnit,
   runDistanceKmFromInput,
   runPaceLabel,
   rowingPaceLabel,
   type RunDistanceUnit,
 } from '../../shared/run-metrics'
+import { WorkoutDurationField } from './WorkoutDurationField'
 
 interface RunMetricsFieldsProps {
   idPrefix: string
@@ -20,6 +19,7 @@ interface RunMetricsFieldsProps {
   planDistanceHint?: boolean
   planStrokeRateHint?: boolean
   rowing?: boolean
+  optionalDistance?: boolean
   strokeRate?: number
   durationName?: string
   distanceName?: string
@@ -41,6 +41,7 @@ export function RunMetricsFields({
   planDistanceHint = false,
   planStrokeRateHint = false,
   rowing = false,
+  optionalDistance = false,
   strokeRate,
   durationName,
   distanceName,
@@ -51,23 +52,19 @@ export function RunMetricsFields({
   distanceUnitLabel,
   onCommit,
 }: RunMetricsFieldsProps) {
-  const [unit, setUnit] = useState<RunDistanceUnit>(() => rowing && distanceKm === undefined ? 'm' : preferredRunDistanceUnit(distanceKm))
-  const [durationText, setDurationText] = useState(() => formatRunDuration(durationSec))
+  const [unit, setUnit] = useState<RunDistanceUnit>(() => (rowing || optionalDistance) && distanceKm === undefined ? 'm' : preferredRunDistanceUnit(distanceKm))
+  const [localDuration, setLocalDuration] = useState(durationSec)
   const [distanceText, setDistanceText] = useState(() => formatRunDistanceInput(distanceKm, unit))
+  const [distanceVisible, setDistanceVisible] = useState(() => !optionalDistance || distanceKm !== undefined)
   const [strokeRateText, setStrokeRateText] = useState(() => strokeRate === undefined ? '' : String(strokeRate))
-  const parsedDuration = parseRunDurationInput(durationText)
+  const parsedDuration = localDuration
   const parsedDistance = runDistanceKmFromInput(distanceText, unit)
-  const pace = rowing ? rowingPaceLabel(parsedDuration, parsedDistance) : runPaceLabel(parsedDuration, parsedDistance)
+  const pace = optionalDistance ? null : rowing ? rowingPaceLabel(parsedDuration, parsedDistance) : runPaceLabel(parsedDuration, parsedDistance)
 
-  useEffect(() => setDurationText(formatRunDuration(durationSec)), [durationSec])
+  useEffect(() => setLocalDuration(durationSec), [durationSec])
   useEffect(() => setDistanceText(formatRunDistanceInput(distanceKm, unit)), [distanceKm, unit])
+  useEffect(() => { if (distanceKm !== undefined) setDistanceVisible(true) }, [distanceKm])
   useEffect(() => setStrokeRateText(strokeRate === undefined ? '' : String(strokeRate)), [strokeRate])
-
-  function commitDuration() {
-    const next = parseRunDurationInput(durationText)
-    setDurationText(formatRunDuration(next))
-    onCommit?.({ durationSec: next, durationMin: undefined })
-  }
 
   function commitDistance() {
     const next = runDistanceKmFromInput(distanceText, unit)
@@ -88,25 +85,21 @@ export function RunMetricsFields({
     onCommit?.({ reps: next })
   }
 
+  function hideDistance(event: MouseEvent<HTMLButtonElement>) {
+    const form = event.currentTarget.form
+    setDistanceVisible(false)
+    setDistanceText('')
+    onCommit?.({ distanceKm: undefined })
+    window.requestAnimationFrame(() => form?.dispatchEvent(new Event('input', { bubbles: true })))
+  }
+
   return <>
     <div className="run-duration-field">
-      <label className="sr-only" htmlFor={`${idPrefix}-duration`}>{durationLabel}</label>
-      <input
-        id={`${idPrefix}-duration`}
-        className={`${inputClassName}${planDurationHint ? ' plan-hint' : ''}`}
-        name={durationName}
-        aria-label={durationLabel}
-        type="text"
-        inputMode="numeric"
-        placeholder="мм:сс"
-        value={durationText}
-        disabled={disabled}
-        onChange={(event) => setDurationText(event.target.value)}
-        onBlur={commitDuration}
-      />
+      <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
       <small>мин:сек</small>
     </div>
     <div className="run-distance-field">
+      {!distanceVisible ? <button type="button" className="run-distance-add" disabled={disabled} onClick={() => setDistanceVisible(true)}>+ Добавить дистанцию</button> : <>
       <div className="run-distance-control">
         <label className="sr-only" htmlFor={`${idPrefix}-distance`}>{distanceLabel}</label>
         <input
@@ -138,7 +131,8 @@ export function RunMetricsFields({
           </select>
         </span>
       </div>
-      <small>{pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>
+      <small>{optionalDistance ? 'По дисплею тренажёра' : pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>
+      {optionalDistance && !disabled && <button type="button" className="run-distance-remove" onClick={hideDistance}>Убрать дистанцию</button>}
       {rowing && <label className="rowing-stroke-rate-field">
         <span>Гребков в минуту</span>
         <input
@@ -156,6 +150,7 @@ export function RunMetricsFields({
           onBlur={commitStrokeRate}
         />
       </label>}
+      </>}
     </div>
   </>
 }

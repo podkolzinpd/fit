@@ -7,5 +7,7 @@ export { storeFirstWorkoutIntent, type FirstWorkoutIntent } from './first-workou
 export { PresetWorkoutList, PresetWorkoutPicker } from './PresetWorkoutPicker'
 export { QuickWorkoutEntry } from './QuickWorkoutEntry'
 export { WorkoutExerciseEditor } from './WorkoutExerciseEditor'
+export { WorkoutDurationField } from './WorkoutDurationField'
+export { RunMetricsFields } from './RunMetricsFields'
 export { WorkoutCta, WorkoutHeader } from './WorkoutSurface'
 export type { ParsedWorkoutExercise } from './quick-workout-entry'
