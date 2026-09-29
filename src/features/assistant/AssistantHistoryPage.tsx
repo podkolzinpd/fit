@@ -298,7 +298,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
     if (runningClientIds.includes(messageId) || completedClientIds.includes(messageId)) return
     setRunningClientIds((current) => [...current, messageId]); setError(undefined)
     try {
-      const parsed = clientSchema.parse({ fullName: draft.fullName, gender: draft.gender, ageYears: draft.ageYears, heightCm: draft.heightCm, goal: draft.goal || undefined, initialWeightKg: draft.initialWeightKg })
+      const parsed = clientSchema.parse({ fullName: draft.fullName, gender: draft.gender, ageYears: draft.ageYears ?? undefined, heightCm: draft.heightCm ?? undefined, goal: draft.goal || undefined, initialWeightKg: draft.initialWeightKg ?? undefined })
       await applyAction(messageId, action, { ...parsed, ageUpdatedAt: todayInTimeZone(actor?.timezone), initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : todayInTimeZone(actor?.timezone) })
       setCompletedClientIds((current) => [...current, messageId])
     } catch { setError('Не удалось создать карточку клиента. Проверьте данные и попробуйте ещё раз.') }

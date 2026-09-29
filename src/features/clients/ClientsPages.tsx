@@ -154,8 +154,9 @@ function ClientForm({
     const parsed = clientSchema.parse(values)
     if (existing) {
       const input = { id: existing.id, version: existing.version, fullName: parsed.fullName,
-        gender: parsed.gender as Gender, ageYears: parsed.ageYears, ageUpdatedAt: existing.ageUpdatedAt ?? today,
-        heightCm: parsed.heightCm, goal: parsed.goal, note: parsed.note }
+        gender: parsed.gender as Gender, ageYears: parsed.ageYears ?? null,
+        ageUpdatedAt: parsed.ageYears === undefined ? null : existing.ageUpdatedAt ?? today,
+        heightCm: parsed.heightCm ?? null, goal: parsed.goal, note: parsed.note }
       if (createMode === 'self') {
         await clientsRepository.updateOwn(input)
         if (canRecordInitialWeight && parsed.initialWeightKg !== undefined) {
@@ -183,9 +184,11 @@ function ClientForm({
       return existing.id
     }
     const input = { fullName: parsed.fullName, gender: parsed.gender as Gender,
-      ageYears: parsed.ageYears, ageUpdatedAt: today, heightCm: parsed.heightCm,
+      ageYears: parsed.ageYears ?? null,
+      ageUpdatedAt: parsed.ageYears === undefined ? null : today,
+      heightCm: parsed.heightCm ?? null,
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
-      initialWeightRecordedOn: today }
+      initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : today }
     return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
   }, onSuccess: (id) => onSaved(id), onError: async (error) => {
     if (!existing || !isRepositoryConflict(error)) return
@@ -203,7 +206,7 @@ function ClientForm({
         </div>
         <Field label="Имя" error={form.formState.errors.fullName?.message}><input {...form.register('fullName')} /></Field>
         <Field label="Пол"><select {...form.register('gender')}><option value="">Выберите</option><option value="female">Женский</option><option value="male">Мужской</option></select></Field>
-        <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears')} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm')} /></Field></div>
+        <div className="split"><Field label="Возраст"><input type="number" {...form.register('ageYears', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field><Field label="Рост, см"><input type="number" step="0.1" {...form.register('heightCm', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field></div>
         {showInitialWeight && <Field label="Начальный вес, кг" error={form.formState.errors.initialWeightKg?.message}><input type="number" step="0.1" {...form.register('initialWeightKg', { setValueAs: (value: unknown) => value === '' ? undefined : Number(value) })} /></Field>}
         <Field label="Цель"><textarea {...form.register('goal')} /></Field>
         {createMode === 'trainer' && <Controller
