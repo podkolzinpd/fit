@@ -61,6 +61,8 @@ const summaryId = '00b88f4f-e17a-47ae-9d2e-c68079217ac5'
 const publishedSummaryId = 'e7335649-0713-44a7-9640-5453a3849dca'
 const conversationId = '3a6cc527-7bbd-4217-8a76-77de34a2c0fe'
 const publicProfileId = '0ee2e109-13e0-48ba-8664-7cc767128f0c'
+const financePackageId = '34df7b20-a0b5-4627-bd98-d4a174625723'
+const financePaymentId = 'ec3e661a-0ee8-48da-a269-d4f7707427cc'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -81,6 +83,47 @@ describe('Yandex main repository', () => {
     pilot.parseWorkout.mockReset()
     push.subscribe.mockReset()
     push.unsubscribe.mockReset()
+  })
+
+  it('reads and changes trainer finance only through the Yandex API', async () => {
+    const financePackage = {
+      id: financePackageId, clientId, trainerId: actor.userId, title: '10 тренировок',
+      sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8,
+      priceCents: 2500000, paidCents: 1000000, dueCents: 1500000,
+      startsOn: '2026-09-01', endsOn: null, paymentDueOn: '2026-09-10', comment: null,
+      packageStatus: 'active', paymentStatus: 'partial', closedAt: null, version: 1,
+      createdAt: '2026-09-01T10:00:00.000000+00:00', updatedAt: '2026-09-01T10:00:00.000000+00:00',
+    }
+    const payment = {
+      id: financePaymentId, packageId: financePackageId, amountCents: 1000000,
+      receivedOn: '2026-09-01', source: 'manual', comment: null, voidedAt: null,
+      voidReason: null, version: 1, createdAt: '2026-09-01T10:00:00.000000+00:00',
+      updatedAt: '2026-09-01T10:00:00.000000+00:00',
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, packages: [financePackage], payments: [payment] } }))
+      .mockResolvedValueOnce(jsonResponse({ package: financePackage }, 201))
+      .mockResolvedValueOnce(jsonResponse({ payment }, 201))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, packages: [{ sessionsRemaining: 8 }] })
+    await repository.trainerFinance.createPackage(clientId, {
+      title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,
+      priceCents: 2500000, openingPaidCents: 1000000, startsOn: '2026-09-01',
+      endsOn: null, paymentDueOn: '2026-09-10', comment: null,
+    })
+    await repository.trainerFinance.addPayment(financePackageId, { amountCents: 1000000, receivedOn: '2026-09-01', comment: null })
+    await repository.trainerFinance.voidPayment(financePaymentId, 1, 'Ошибка')
+
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      `${apiBaseUrl}/v1/clients/${clientId}/finance`,
+      `${apiBaseUrl}/v1/clients/${clientId}/finance/packages`,
+      `${apiBaseUrl}/v1/finance/packages/${financePackageId}/payments`,
+      `${apiBaseUrl}/v1/finance/payments/${financePaymentId}`,
+    ])
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'DELETE', body: JSON.stringify({ expectedVersion: 1, reason: 'Ошибка' }) })
   })
 
   it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {

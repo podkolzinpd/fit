@@ -4,7 +4,7 @@ import { trackPageView } from '../shared/yandex-metrika'
 import { AuthenticatedMetrika } from './authenticated-metrika'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
-import { isAssistantNavPilotEnabled, trainerHomePath } from './feature-flags'
+import { isAssistantNavPilotEnabled, isTrainerFinancePilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
 import { ArchivedClientsPage, ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
@@ -16,6 +16,7 @@ import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from
 import { WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEditorPage, WorkoutTemplateSourcePage, WorkoutTemplatesPage } from '../features/workout-templates'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
+import { TrainerFinancePage } from '../features/finance'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 function Protected() {
@@ -40,6 +41,13 @@ function ClientOnly() {
 function AssistantPilotOnly() {
   const { actor } = useAuth()
   return actor && isAssistantNavPilotEnabled(actor.userId, actor.email)
+    ? <Outlet />
+    : <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
+}
+
+function TrainerFinancePilotOnly() {
+  const { actor } = useAuth()
+  return actor?.role === 'trainer' && isTrainerFinancePilotEnabled(actor.userId)
     ? <Outlet />
     : <Navigate to={actor?.role === 'client' ? '/me' : trainerHomePath()} replace />
 }
@@ -114,6 +122,9 @@ const router = createBrowserRouter([
         { path: '/clients/:clientId/goal', element: <GoalPage /> },
         { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
         { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
+        { element: <TrainerFinancePilotOnly />, children: [
+          { path: '/clients/:clientId/finance', element: <TrainerFinancePage /> },
+        ] },
         { path: '/progress/:clientId', element: <ProgressPage /> },
       ] },
       { path: '/schedule', element: <SchedulePage /> },
