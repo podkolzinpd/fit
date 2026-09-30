@@ -44,6 +44,8 @@ it.each([
 })
 
 it.each([
+  ['15', 15],
+  ['15 минут', 15],
   ['60', 60],
   ['60 минут', 60],
   ['40-60', 40],
@@ -51,6 +53,30 @@ it.each([
 ] as const)('accepts a duration answer scoped to the duration question: %s', (message, durationMin) => {
   const context: BriefAnswerContext = { question: 'Сколько минут есть?', fields: ['durationMin'] }
   expect(mergeExtractedBrief({}, message, explicitBriefAnswer(message, context)).brief.durationMin).toBe(durationMin)
+})
+
+it.each([
+  ['Одна тренировка', 'single_workout'],
+  ['Программа', 'program'],
+] as const)('recognizes the requested planning scope: %s', (message, scope) => {
+  const context: BriefAnswerContext = { question: 'Что составить?', fields: ['scope'] }
+  expect(mergeExtractedBrief({}, message, explicitBriefAnswer(message, context)).brief.scope).toBe(scope)
+})
+
+it.each([
+  ['одну неделю', 1],
+  ['2 недели', 2],
+  ['четыре недели', 4],
+  ['месяц', 4],
+] as const)('recognizes a program range: %s', (message, weeks) => {
+  const context: BriefAnswerContext = { question: 'На сколько недель?', fields: ['weeks'] }
+  expect(mergeExtractedBrief({ scope: 'program' }, message, explicitBriefAnswer(message, context)).brief.weeks).toBe(weeks)
+})
+
+it('derives the single workout schedule from its date', () => {
+  const scope = mergeExtractedBrief({}, 'Одна тренировка', explicitBriefAnswer('Одна тренировка', { question: 'Что составить?', fields: ['scope'] })).brief
+  const result = mergeExtractedBrief(scope, 'завтра', explicitBriefAnswer('завтра', { question: 'Когда?', fields: ['startDate'] }, '2026-09-30', scope))
+  expect(result.brief).toMatchObject({ scope: 'single_workout', weeks: 1, frequency: 1, startDate: '2026-10-01', weekdays: [4] })
 })
 
 it('does not reinterpret a bare number as duration outside the duration question', () => {

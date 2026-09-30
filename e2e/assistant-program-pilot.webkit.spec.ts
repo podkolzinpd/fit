@@ -16,7 +16,7 @@ test.beforeAll(async () => {
 })
 
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
-const programQuestions = ['Продолжаем прежний подход или меняем программу? Что важно сохранить?', 'Какова цель именно этой четырёхнедельной программы: что хотите улучшить?']
+const programQuestions = ['Что составить: одну тренировку или программу на срок от одной до четырёх недель?', 'Какова цель этой тренировки или программы: что хотите улучшить?']
 
 function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') {
   const content = renderToString(createElement(ProgramCard, { enabled: true, running: false, showGuidance: false,
@@ -31,7 +31,7 @@ function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') 
     <div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><div class="content"><main class="assistant-page assistant-program-collecting">
       <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
       <section class="assistant-thread" aria-label="Диалог с ассистентом"><article class="assistant-message assistant-message-user"><p>Подготовить программу для Сан Саныч</p></article>
-        <article class="assistant-message assistant-message-assistant"><div class="assistant-message-copy"><p>Подготовлю рекомендованный черновик на четыре недели: 1–3 занятия в неделю от 30 минут, с днём отдыха между занятиями. Это не медицинское назначение; итоговую нагрузку нужно сверять с самочувствием и техникой.</p><p>Профиль: Сан Саныч. За последние восемь недель вижу 24 завершённые тренировки.</p>${programQuestions.map((question, index) => `<p data-testid="program-question-${index}">${question}</p>`).join('')}</div></article></section>
+        <article class="assistant-message assistant-message-assistant"><div class="assistant-message-copy"><p>Подготовлю рекомендованный черновик одной тренировки или программы на 1–4 недели. Занятие может длиться от 15 минут; для многодневной программы сохраняю день отдыха между занятиями.</p><p>Профиль: Сан Саныч. За последние восемь недель вижу 24 завершённые тренировки.</p>${programQuestions.map((question, index) => `<p data-testid="program-question-${index}">${question}</p>`).join('')}</div></article></section>
       <section class="assistant-context-panel${role === 'client' ? ' assistant-context-panel-client-program' : ''}" aria-label="Текущий контекст ассистента">${content}</section>
       <form class="assistant-composer" data-testid="composer"><textarea aria-label="Сообщение ассистенту" placeholder="Напишите, чем помочь"></textarea><div class="voice-input voice-input-icon"><button class="assistant-icon-button" type="button" aria-label="Голосовой ввод">М</button></div><button class="assistant-icon-button" type="button" aria-label="Отправить сообщение">→</button></form>
     </main></div>${role === 'client'
@@ -163,13 +163,13 @@ for (const width of [390, 430, 1440]) {
         exercises: [{ name: 'Приседания с гантелью у груди', restBetweenSetsSec: 90, sets: Array.from({ length: 2 }, () => ({ reps: index < 6 ? 10 : 11, rpe: 6.5 })) }, { name: 'Ходьба', restBetweenSetsSec: 0, trainerComment: 'Аэробное усилие 4/10. Разговорный темп.', sets: [{ durationSec: 600 }] }],
       }))
       const content = renderToString(createElement(ProgramCard, { enabled: true, running: false,
-        payload: { step: 'confirm', limitationReview: 'Ограничения: дискомфорт при жимах над головой. Учесть: исключить жимы над головой. Проверьте назначения перед добавлением.', clientName: 'Тестовый клиент с длинным именем', goal: 'Вернуться к регулярным занятиям после перерыва', canonicalWorkouts: workouts, historyFacts: [], sessions: workouts.map((workout, index) => ({ day: workout.workoutDate, week: Math.floor(index / 3) + 1, title: 'День', exercises: [{ exerciseRef: 'squat', name: 'Приседания с гантелью у груди', sets: 2, reps: index < 6 ? 10 : 11, durationSec: null, rpe: 6.5, restSec: 90,
+        payload: { step: 'confirm', limitationReview: 'Ограничения: дискомфорт при жимах над головой. Учесть: исключить жимы над головой. Проверьте назначения перед добавлением.', clientName: 'Тестовый клиент с длинным именем', goal: 'Вернуться к регулярным занятиям после перерыва', briefState: { scope: 'program', weeks: 4, frequency: 3, durationMin: 60 }, canonicalWorkouts: workouts, historyFacts: [], sessions: workouts.map((workout, index) => ({ day: workout.workoutDate, week: Math.floor(index / 3) + 1, title: 'День', exercises: [{ exerciseRef: 'squat', name: 'Приседания с гантелью у груди', sets: 2, reps: index < 6 ? 10 : 11, durationSec: null, rpe: 6.5, restSec: 90,
           progressionNote: 'Первые две недели закрепляйте технику. В третью добавьте одно повторение, если все подходы выполнены с целевым усилием; иначе сохраните прежнюю нагрузку.' }, { exerciseRef: 'walking', name: 'Ходьба', sets: 1, reps: null, durationSec: 600, rpe: 4, restSec: 0, progressionNote: 'Разговорный темп.' }] })) },
         onApply: async () => {}, onSaved: () => {}, onSuggestion: () => {}, onCancel: () => {},
       }))
       await page.setContent(`<html class="theme-${theme} ui-identity"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style></head><body><div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><main class="assistant-page"><section class="assistant-context-panel">${content}</section></main></div></body></html>`)
       await expect(page.getByRole('button', { name: 'Добавить в расписание' })).toBeVisible()
-      await expect(page.getByRole('region', { name: 'Обзор четырёх недель' })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Обзор программы на 4 нед.' })).toBeVisible()
       await expect(page.getByText(/Ограничения: дискомфорт/)).toBeVisible()
       await expect(page.getByText('Пояснение:').first()).toBeVisible()
       await expect(page.getByText(/1 подход по 10 мин/).first()).toBeVisible()
@@ -177,6 +177,29 @@ for (const width of [390, 430, 1440]) {
       await page.locator('summary').first().click()
       await expect(page.getByText('Приседания с гантелью у груди').first()).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    })
+  }
+}
+
+for (const width of [390, 430, 1440]) {
+  for (const theme of ['light', 'dark']) {
+    test(`single 15-minute workout card at ${width} ${theme}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+      const workout = { requestId: '10000000-0000-4000-8000-000000000001', clientId: '20000000-0000-4000-8000-000000000001', workoutDate: '2026-10-01',
+        exercises: ['Приседания', 'Отжимания', 'Тяга резинки'].map((name) => ({ name, restBetweenSetsSec: 60, sets: [{ reps: 8, rpe: 6.5 }] })) }
+      const content = renderToString(createElement(ProgramCard, { enabled: true, running: false,
+        payload: { step: 'confirm', clientName: 'Кристина', goal: 'Общая форма', briefState: { scope: 'single_workout', weeks: 1, frequency: 1, durationMin: 15 }, canonicalWorkouts: [workout], historyFacts: [],
+          sessions: [{ day: workout.workoutDate, week: 1, title: 'Всё тело', exercises: workout.exercises.map((exercise, index) => ({ exerciseRef: `exercise-${index}`, name: exercise.name, sets: 1, reps: 8, durationSec: null, rpe: 6.5, restSec: 60 })) }] },
+        onApply: async () => {}, onSaved: () => {}, onSuggestion: () => {}, onCancel: () => {},
+      }))
+      await page.setContent(`<html class="theme-${theme} ui-identity"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style></head><body><div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><main class="assistant-page"><section class="assistant-context-panel">${content}</section></main></div></body></html>`)
+      await expect(page.getByLabel('Одна тренировка')).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Обзор тренировки' })).toBeVisible()
+      await expect(page.getByText(/На разминку предусмотрено 5 минут/)).toBeVisible()
+      await expect(page.getByText('2026-10-01', { exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Добавить в расписание' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`single-workout-${width}-${theme}.png`), fullPage: true })
     })
   }
 }

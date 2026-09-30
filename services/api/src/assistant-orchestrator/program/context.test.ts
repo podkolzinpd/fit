@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildProgramHistoryContext, programSessionCount, type ProgramContextSource, type ProgramFrequency, type ProgramSetSource } from './context.js'
+import { buildProgramHistoryContext, programSessionCount, type ProgramContextSource, type ProgramFrequency, type ProgramSetSource, type ProgramWeeks } from './context.js'
 
 function set(id: string, exerciseId: string, patch: Partial<ProgramSetSource> = {}): ProgramSetSource {
   return { id, exerciseId, position: 0, confirmedAt: '2026-09-07T10:00:00Z', factReps: 10,
@@ -23,12 +23,15 @@ function fixture(): ProgramContextSource {
   }
 }
 
-describe('four-week program scope', () => {
-  it.each([1, 2, 3] as const)('%i weekly sessions produces exactly four weeks', (frequency) => {
-    expect(programSessionCount(frequency)).toBe(frequency * 4)
+describe('flexible program scope', () => {
+  it.each([1, 2, 3, 4] as const)('%i weeks produce the requested number of sessions', (weeks) => {
+    expect(programSessionCount(3, weeks)).toBe(3 * weeks)
   })
   it.each([0, 4, 1.5, NaN])('rejects unsupported runtime frequency %s', (frequency) => {
     expect(() => programSessionCount(frequency as ProgramFrequency)).toThrow('invalid_program_frequency')
+  })
+  it.each([0, 5, 1.5, NaN])('rejects unsupported runtime week count %s', (weeks) => {
+    expect(() => programSessionCount(1, weeks as ProgramWeeks)).toThrow('invalid_program_weeks')
   })
 })
 
