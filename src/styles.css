@@ -1382,7 +1382,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .set-add-row .block-rest-field > span { color: var(--muted); font-size: 12px; font-weight: 600 }
 /* Отступ от строки «＋ Подход / Отдых» до комментария в форме плана. */
 .set-add-row + .exercise-comment { margin-top: 22px }
-.block-merge { align-self: flex-start; margin-top: 8px; color: var(--accent-label) }
+.block-merge { align-self: flex-start; min-height:44px; margin-top:var(--space-1); padding:var(--space-2) var(--space-1); color:var(--tertiary-fg); text-align:left }
 /* Форма блока по кругам: список упражнений блока + группы-круги. */
 .block-exercises { display: flex; flex-direction: column; gap: 4px }
 .block-exercise-row { display: flex; flex-direction: column; gap: 6px; padding: 6px 2px }

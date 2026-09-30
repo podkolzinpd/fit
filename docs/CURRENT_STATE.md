@@ -10,6 +10,7 @@ two existing-resource updates. The follow-up permits only those exact values;
 database resize, other extensions, broader sampling, replacement and deletion
 remain blocked. Full CI and a successful stage rerun are required.
 
+Восстановить видимый вход в группировку упражнений в плане: PR #288 спрятал объединение в «…», хотя сохранение и Live-рендер не удалялись. Новая группа называется «Суперсет» (`set`, отдых 0/90 с), «Круговая» (`circuit`, 15/60 с) и старые данные сохраняются. Проверить plan → save → Live на мобильном WebKit и Yandex-контракт, затем CI и production.
 Плотность подробного дня расписания реализована: обычные 56 px/час и компактные
 44 px/час, быстрый выбор в меню и тот же выбор в настройках тренера. Значение
 хранится в Yandex-профиле аккаунта; неделя и 2 недели не меняются, при
