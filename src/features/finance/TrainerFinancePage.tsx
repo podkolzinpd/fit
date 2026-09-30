@@ -169,7 +169,7 @@ export function TrainerFinancePage() {
     onSuccess: refresh,
   })
   const packages = finance.data?.packages ?? []
-  return <Page title="Абонементы и оплаты" subtitle={client.data?.fullName} back={`/clients/${clientId}`} swipeBack className="trainer-finance-page">
+  return <Page title="Финансы" subtitle={client.data?.fullName} back={`/clients/${clientId}`} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
       {packageEditor && <PackageForm current={packageEditor === 'new' ? undefined : packageEditor} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate(draft)} />}
       {!packageEditor && <>

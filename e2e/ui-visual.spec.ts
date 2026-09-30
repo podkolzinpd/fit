@@ -70,6 +70,25 @@ test('keyboard time and optional wheel fit client and trainer viewports', async 
   await chooseWorkoutTime(page, 'Время, подход 1', 65)
 })
 
+test('trainer finance overview stays compact and readable', async ({ page }, testInfo) => {
+  await page.goto('/auth')
+  await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/finance-overview-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./finance-overview-harness')
+    harness.mountFinanceOverviewHarness()
+  })
+
+  const frame = page.locator('#finance-overview-qa .phone-frame')
+  await expect(frame).toHaveClass(/trainer-finance-identity/)
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Клиенты' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('group', { name: 'Фильтр клиентов' }).getByRole('button')).toHaveCount(6)
+  const bounds = await frame.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }))
+  expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth)
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
+  await expectVisualBaseline(page, `trainer-finance-overview-${profile}-${process.platform}.png`)
+})
+
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
 

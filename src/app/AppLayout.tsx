@@ -42,6 +42,8 @@ export function AppLayout() {
   const monochromeTrainerToday = Boolean(actor?.role === 'trainer' && pathname === '/today' && !todayStep && !pilotCompose)
   const monochromeTrainerClients = Boolean(actor?.role === 'trainer' && (pathname === '/clients' || pathname === '/clients/archive'))
   const monochromeTrainerClientDetail = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+$/.test(pathname) && !['/clients/new', '/clients/archive'].includes(pathname))
+  const monochromeTrainerFinance = Boolean(actor?.role === 'trainer'
+    && (pathname === '/finance' || /^\/clients\/[^/]+\/finance$/.test(pathname)))
   const monochromeTrainerClientForm = Boolean(actor?.role === 'trainer' && (pathname === '/clients/new' || /^\/clients\/[^/]+\/edit$/.test(pathname)))
   const monochromeTrainerClientGoal = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/goal$/.test(pathname))
   const monochromeTrainerSchedule = Boolean(actor?.role === 'trainer' && !templateEditor && (pathname === '/schedule' || pathname.startsWith('/schedule/templates')))
@@ -122,6 +124,7 @@ export function AppLayout() {
     monochromeTrainerToday && !trainerScheduleV2Route ? 'trainer-today-identity' : '',
     monochromeTrainerClients ? 'trainer-clients-identity' : '',
     monochromeTrainerClientDetail ? 'trainer-client-detail-identity' : '',
+    monochromeTrainerFinance ? 'trainer-finance-identity' : '',
     monochromeTrainerClientForm ? 'trainer-client-form-identity' : '',
     monochromeTrainerClientGoal ? 'trainer-client-goal-identity' : '',
     monochromeTrainerSchedule && !trainerScheduleV2Route ? 'trainer-schedule-identity' : '',
@@ -162,7 +165,7 @@ export function AppLayout() {
   return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
-    {(redesignedStart || trainerScheduleV2) && (fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)
+    {(redesignedStart || trainerScheduleV2) && ((fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance
       ? <Link to="/clients" className="active" aria-current="page"><ClientsIcon />Клиенты</Link>
       : <NavLink to="/clients"><ClientsIcon />Клиенты</NavLink>)}
     {trainerAssistantNav}
