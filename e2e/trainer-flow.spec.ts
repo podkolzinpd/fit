@@ -382,7 +382,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('link', { name: /Запланировать/ }).click()
   await selectClient(page, trainerAlias)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
-  await expect(page.getByText('Последние у клиента')).toBeVisible()
+  await expect(page.getByText('Недавние упражнения')).toBeVisible()
   await expect(page.getByText('Разминка и мобилити')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Проиграть технику: Болгарский сплит-присед со штангой', exact: true })).toHaveCount(1)
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
