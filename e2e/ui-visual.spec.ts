@@ -646,6 +646,9 @@ async function openClientProgress(page: import('@playwright/test').Page, options
     }
   }
   await gotoStable(page, '/me/progress')
+  // Keep the pre-achievements Progress baselines at their original scroll offsets.
+  // The new preview is covered by its own visual test above.
+  await page.addStyleTag({ path: 'e2e/visual-legacy-without-achievements.css' })
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
@@ -1380,6 +1383,7 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/progress')
+  await page.addStyleTag({ path: 'e2e/visual-legacy-without-achievements.css' })
   await page.locator('.progress-overview-panel .client-progress-goal-story').getByRole('link', { name: 'Подробнее в ПРО' }).click()
   const darkGoal = page.locator('#goal-details .client-progress-goal-story')
   await expect(darkGoal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
