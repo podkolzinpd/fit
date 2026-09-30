@@ -1972,7 +1972,7 @@ test('iPhone: live-факт сохраняется без blur и досылае
   await page.reload()
   await expect(page.getByLabel('Фактический вес')).toHaveValue('3.4')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  await expect(page.locator('.live-exercise-collapsed')).toContainText('3,4 кг × 10 повт.')
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('3.4 кг × 10 повт.')
   await expectNoHorizontalOverflow(page)
 })
 
