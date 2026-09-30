@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatThread, Client } from '../../shared/domain'
 import { ArchivedClientsPage, ClientsPage } from './ClientsListPage'
 
-const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn() }))
+const backend = vi.hoisted(() => ({ list: vi.fn(), setArchived: vi.fn(), listThreads: vi.fn(), open: vi.fn(), listFinanceOverview: vi.fn() }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open } }),
+  useDataBackend: () => ({ clients: { list: backend.list, setArchived: backend.setArchived }, chat: { listThreads: backend.listThreads, open: backend.open }, trainerFinance: { listOverview: backend.listFinanceOverview } }),
 }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1' } }) }))
 
@@ -39,6 +39,7 @@ function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
     <Route path="/clients" element={<ClientsPage />} />
     <Route path="/clients/archive" element={<ArchivedClientsPage />} />
     <Route path="/clients/:clientId" element={<p>Профиль открыт</p>} />
+    <Route path="/finance" element={<p>Финансы открыты</p>} />
     <Route path="/chat/:conversationId" element={<p>Чат открыт</p>} />
   </Routes></QueryClientProvider></MemoryRouter>)
 }
@@ -48,6 +49,7 @@ beforeEach(() => {
   backend.setArchived.mockReset()
   backend.listThreads.mockReset().mockResolvedValue([])
   backend.open.mockReset().mockResolvedValue('conversation-new')
+  backend.listFinanceOverview.mockReset().mockResolvedValue({ month: '2026-09', receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] })
   window.localStorage?.clear()
   window.sessionStorage?.clear()
 })
@@ -178,6 +180,14 @@ describe('ClientsPage archive actions', () => {
 })
 
 describe('ClientsPage search', () => {
+  it('shows a compact finance entry and the client finance state', async () => {
+    backend.listFinanceOverview.mockResolvedValue({ month: '2026-09', receivedCents: 2500000, dueCents: 500000, attentionCount: 1, clients: [{ clientId: 'active', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, activePackageCount: 1, sessionsRemaining: 2, overdue: false, lowSessions: true, unassignedSessions: 0, needsAttention: true }] })
+    renderPage([client('active', 'Анна Смирнова')])
+
+    expect(await screen.findByRole('link', { name: /25.*000.*получено.*1.*требуют внимания/ })).toHaveAttribute('href', '/finance')
+    expect(screen.getByText(/К оплате 5.*000.*₽/)).toBeVisible()
+  })
+
   it('offers a direct invitation and keeps manual profile creation available', async () => {
     renderPage([])
 

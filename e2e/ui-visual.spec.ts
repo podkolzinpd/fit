@@ -2418,7 +2418,8 @@ test('trainer Client Detail keeps its visual baselines', async ({ page }, testIn
   await expect(page.getByRole('heading', { name: 'Анна Смирнова' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Сводка по спортсмену' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Запланировать тренировку' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' }).getByRole('link')).toHaveCount(2)
+  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' }).getByRole('link', { name: 'Абонементы и оплаты' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Разделы спортсмена' }).getByRole('link')).toHaveCount(3)
   await expect(page.locator('.phone-frame')).toHaveClass(/trainer-client-detail-identity/)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : 'mobile'
   await expectVisualBaseline(page, `trainer-client-detail-${profile}-${process.platform}.png`, [], true)

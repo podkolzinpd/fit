@@ -3,13 +3,16 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
+import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import { bmiLabel } from '../../data/repositories/workouts.repository'
 import type { Client } from '../../shared/domain'
+import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Page } from '../../shared/ui'
 import { ChevronRightIcon, CloseIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { ChatStartButton } from '../chat'
 import { useChatThreads } from '../chat/use-chat-threads'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
+import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage'
 
 // Порог, с которого список перестаёт охватываться взглядом и поиск начинает
 // экономить время. Ниже него поле только занимало верх экрана: у тренера с
@@ -25,6 +28,7 @@ interface ClientSwipeCardProps {
   conversationId?: string | null
   trainerId: string
   unreadCount: number
+  financeLabel?: string
   open: boolean
   busy: boolean
   onOpenChange: (open: boolean) => void
@@ -33,7 +37,7 @@ interface ClientSwipeCardProps {
 }
 
 function ClientSwipeCard({
-  client, canOpenChat, conversationId, trainerId, unreadCount, open, busy,
+  client, canOpenChat, conversationId, trainerId, unreadCount, financeLabel, open, busy,
   onOpenChange, onArchiveChange, onBeforeOpen,
 }: ClientSwipeCardProps) {
   const [dragOffset, setDragOffset] = useState<number | null>(null)
@@ -120,7 +124,7 @@ function ClientSwipeCard({
       onClickCapture={captureClick}>
       <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
         <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
-        <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span></span>
+        <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
       </Link>
       {canOpenChat && <ChatStartButton clientId={client.id} trainerId={trainerId}
         conversationId={conversationId} partnerName={client.fullName} unreadCount={unreadCount}
@@ -137,7 +141,7 @@ interface ClientsListPageProps {
 
 function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   const { actor } = useAuth()
-  const { clients: clientsRepository } = useDataBackend()
+  const { clients: clientsRepository, trainerFinance } = useDataBackend()
   const queryClient = useQueryClient()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -156,6 +160,14 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     refetchOnMount: 'always',
   })
   const threads = useChatThreads()
+  const financeEnabled = actor?.role === 'trainer' && isTrainerFinancePilotEnabled(actor.userId)
+  const financeMonth = todayInTimeZone(actor?.timezone).slice(0, 7)
+  const finance = useQuery({
+    queryKey: ['trainer-finance-overview', financeMonth],
+    queryFn: () => trainerFinance.listOverview(financeMonth),
+    enabled: financeEnabled,
+  })
+  const financeByClientId = useMemo(() => new Map((finance.data?.clients ?? []).map((item) => [item.clientId, item])), [finance.data?.clients])
   const search = searchParams.get('q') ?? ''
   const threadByClientId = useMemo(() => new Map((threads.data ?? []).map((thread) => [thread.clientId, thread])), [threads.data])
   // Порог считаем по всему списку, а не по отфильтрованному: иначе поле
@@ -236,6 +248,9 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       <button type="button" className="clients-archive-feedback-close" aria-label="Закрыть сообщение" onClick={() => setFeedback(null)}><CloseIcon /></button>
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
+    {!archivedOnly && financeEnabled && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
+      <span><strong>Финансы</strong><small>{finance.data ? `${new Intl.NumberFormat('ru-RU').format(finance.data.receivedCents / 100)} ₽ получено · ${finance.data.attentionCount} требуют внимания` : 'Абонементы, оплаты и занятия'}</small></span><ChevronRightIcon />
+    </Link>}
     <AsyncView loading={query.isLoading} error={query.error} empty={!query.data?.length} onRetry={() => void query.refetch()}
       emptyTitle={archivedOnly ? 'Архив пуст' : 'Клиентов пока нет'}
       emptyDescription={archivedOnly ? 'Здесь появятся карточки, которые вы отправите в архив.' : 'Пригласите первого спортсмена или создайте его профиль вручную.'}
@@ -247,11 +262,13 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         </div>}
       {clients.length > 0 ? <div className="cards clients-list">{clients.map((client) => {
         const thread = threadByClientId.get(client.id)
+        const financeState = financeByClientId.get(client.id)
+        const financeLabel = financeState ? trainerFinanceClientLabel(financeState) : undefined
         const canOpenChat = Boolean(actor?.role === 'trainer' && (thread?.conversationId || (client.hasAccount && !client.archivedAt)))
         if (!client.canArchive) return <article className="card client-card" key={client.id}>
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
               <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
-              <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span></span>
+              <span className="client-card-copy"><strong>{client.fullName}</strong><span>{client.ageYears && client.heightCm ? `${client.ageYears} лет · ${client.heightCm} см · ИМТ ${bmiLabel(client.heightCm, client.currentWeightKg)}` : 'Нужно дополнить профиль'}{client.currentWeightKg ? ` · ${client.currentWeightKg} кг` : ''}</span>{financeLabel && <span className="client-finance-state">{financeLabel}</span>}</span>
             </Link>
             {canOpenChat && <ChatStartButton clientId={client.id} trainerId={thread?.trainerId ?? actor!.userId}
               conversationId={thread?.conversationId} partnerName={client.fullName} unreadCount={thread?.unreadCount ?? 0}
@@ -259,7 +276,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
           </article>
         return <ClientSwipeCard key={client.id} client={client} canOpenChat={canOpenChat}
           conversationId={thread?.conversationId} trainerId={thread?.trainerId ?? actor!.userId}
-          unreadCount={thread?.unreadCount ?? 0} open={openClientId === client.id}
+          unreadCount={thread?.unreadCount ?? 0} financeLabel={financeLabel} open={openClientId === client.id}
           busy={archive.isPending} onOpenChange={(open) => setOpenClientId(open ? client.id : null)}
           onArchiveChange={(target, archived) => archive.mutate({ client: target, archived })}
           onBeforeOpen={rememberListPosition} />
