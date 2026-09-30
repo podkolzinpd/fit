@@ -534,6 +534,21 @@ export function reorderLiveBlock(
   )
 }
 
+export function mergeLiveBlockWithNext(
+  client: DatabaseClient,
+  workoutId: string,
+  blockId: string,
+  preset: 'set' | 'circuit',
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(
+    client,
+    'select resource_id, version, replayed from public.merge_live_block_with_next($1, $2, $3, $4, $5)',
+    [workoutId, blockId, preset, expectedVersion, operationId],
+  )
+}
+
 export function replaceLiveExercise(
   client: DatabaseClient,
   workoutId: string,

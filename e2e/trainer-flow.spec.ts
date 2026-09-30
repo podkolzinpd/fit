@@ -805,8 +805,10 @@ test('план: видимый суперсет переключается в к
   await expect(page.getByRole('button', { name: 'Создать суперсет со следующим' })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.screenshot({ path: testInfo.outputPath('superset-plan-action-390.png'), fullPage: true })
-  // Видимое действие создаёт суперсет; затем можно выбрать круговую без потери структуры.
-  await page.getByRole('button', { name: 'Создать суперсет со следующим' }).click()
+  // Привычный вход через «…» также создаёт суперсет; пункт не должен исчезать.
+  await page.locator('.planned-exercise').first().getByRole('button', { name: 'Ещё действия' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Создать суперсет со следующим' })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Создать суперсет со следующим' }).click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
   await expect(page.getByLabel('Тип блока')).toHaveValue('set')
   for (const [width, height] of [[430, 932], [1440, 1000]] as const) {
