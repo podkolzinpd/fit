@@ -25,6 +25,14 @@ it('detects the observed push-heavy, no-aerobic endurance program without requir
   expect(assessProgramQuality(template, brief).signals).not.toContain('push_dominates_pull')
 })
 
+it('requires an aerobic block for weight loss when no other regular activity is recorded', () => {
+  const { brief, template } = fixture(2)
+  brief.goal = 'weight_loss'; brief.goalText = 'Хочу похудеть'; brief.otherActivity = 'нет'
+  expect(assessProgramQuality(template, brief).signals).toContain('endurance_without_aerobic_work')
+  for (const session of template.sessions) session.exercises.push({ exerciseRef: 'walking', weeks: Array.from({ length: 4 }, () => ({ sets: 1, reps: null, durationSec: 600, rpe: 4, restSec: 0 })) })
+  expect(assessProgramQuality(template, brief).signals).not.toContain('endurance_without_aerobic_work')
+})
+
 it('materializes aerobic minutes as canonical timed distance exercise sets, without fictional distance or weight', () => {
   const { brief, template } = fixture(3)
   brief.durationMin = 90; brief.goalText = 'Выносливость'
@@ -77,6 +85,7 @@ it('counts only between-set rest, avoiding false rejection of a 30-minute sessio
 it('flags repeated knee-dominant leg work and unverified pull-ups as review questions, not mandatory exercise gates', () => {
   const { brief, template } = fixture(2)
   brief.experience = 'returning'; brief.goal = 'weight_loss'
+  brief.otherActivity = 'ходьба'; brief.otherActivities = [{ kind: 'ходьба', frequency: 2, weekdays: [2, 4] }]
   for (const session of template.sessions) {
     session.exercises = session.exercises.filter((exercise) => exercise.exerciseRef !== 'fedb-butt-lift-bridge')
     session.exercises.find((exercise) => exercise.exerciseRef === 'seated-cable-row')!.exerciseRef = 'pull-ups'
