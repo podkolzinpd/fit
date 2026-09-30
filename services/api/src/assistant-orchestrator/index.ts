@@ -5,6 +5,8 @@ import { isProgramEnabled } from './program/model.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
 import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
+import { readProgramBrief } from './program/brief.js'
+import { programSessionCount } from './program/context.js'
 
 import {
   readAssistantTurnRequest,
@@ -302,10 +304,16 @@ function validProposedPayload(tool: Tool, payload: Record<string, unknown>): boo
 
 function validProgramPayload(payload: Record<string, unknown>): boolean {
   if (payload.step !== 'confirm' || typeof payload.clientId !== 'string' || !UUID.test(payload.clientId) || typeof payload.clientName !== 'string' || typeof payload.brief !== 'string' || !Array.isArray(payload.sessions)) return false
-  if (payload.schemaVersion === 'program-v1') return [4, 8, 12].includes(payload.sessions.length)
+  if (payload.schemaVersion === 'program-v1') {
+    const brief = readProgramBrief(payload.briefState)
+    const currentRange = brief?.frequency && brief.weeks && payload.sessions.length === programSessionCount(brief.frequency, brief.weeks)
+    const legacyFourWeek = typeof payload.methodVersion === 'string' && payload.methodVersion.startsWith('four-week-') && [4, 8, 12].includes(payload.sessions.length)
+    if (!currentRange && !legacyFourWeek) return false
+    return payload.sessions.length >= 1 && payload.sessions.length <= 12
     && Array.isArray(payload.canonicalWorkouts) && payload.canonicalWorkouts.length === payload.sessions.length
     && payload.canonicalWorkouts.every((workout) => record(workout) && workout.clientId === payload.clientId && typeof workout.requestId === 'string' && UUID.test(workout.requestId)
       && Array.isArray(workout.exercises) && workout.exercises.length >= 3)
+  }
   return payload.sessions.length > 0 && payload.sessions.length <= 4 && payload.sessions.every((session) => {
     if (!record(session) || typeof session.title !== 'string' || typeof session.day !== 'string' || !Array.isArray(session.exercises)) return false
     return session.exercises.length > 0 && session.exercises.length <= 12 && session.exercises.every((exercise) => {
@@ -808,7 +816,7 @@ export async function runAssistantTurn(
   }
   if (isAssistantCapabilityQuestion(command.message)) {
     const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramEnabled(user.id)
-      ? '\nТакже могу составить рекомендованный черновик программы на четыре недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.' : ''), action: null }
+      ? '\nТакже могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.' : ''), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }

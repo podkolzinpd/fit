@@ -1,7 +1,9 @@
 import { PROGRAM_EQUIPMENT, PROGRAM_CATALOG, type Equipment } from './catalog.js'
-import type { ProgramFrequency } from './context.js'
+import type { ProgramFrequency, ProgramWeeks } from './context.js'
 
 export interface ProgramBrief {
+  scope?: 'single_workout' | 'program'
+  weeks?: ProgramWeeks
   continuationPlan?: string
   preserveRefs?: string[]
   goalText?: string
@@ -26,13 +28,15 @@ export interface ProgramBrief {
 }
 
 export const briefProperties = {
+  scope: { type: 'string', enum: ['single_workout', 'program'] },
+  weeks: { type: 'integer', minimum: 1, maximum: 4 },
   continuationPlan: { type: 'string', maxLength: 500 },
   preserveRefs: { type: 'array', items: { type: 'string', enum: PROGRAM_CATALOG.map((row) => row.ref) } },
   goalText: { type: 'string', maxLength: 500 },
   goal: { type: 'string', enum: ['strength', 'hypertrophy', 'general_fitness', 'weight_loss'] },
   frequency: { type: 'integer', minimum: 1, maximum: 3 },
   weekdays: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'integer', minimum: 1, maximum: 7 } },
-  durationMin: { type: 'integer', minimum: 30, maximum: 120 },
+  durationMin: { type: 'integer', minimum: 15, maximum: 120 },
   startDate: { type: 'string' },
   experienceText: { type: 'string', maxLength: 500 },
   experience: { type: 'string', enum: ['beginner', 'returning', 'experienced'] },
@@ -80,7 +84,7 @@ export function decodeQuotedBriefPatch(value: unknown): unknown {
     evidence[field] = quote
     if (change.operation === 'clear') { clear.push(field); continue }
     if (change.operation !== 'set') throw new Error('invalid_brief_extraction')
-    patch[field] = field === 'frequency' || field === 'durationMin' ? Number(text)
+    patch[field] = field === 'frequency' || field === 'weeks' || field === 'durationMin' ? Number(text)
       : field === 'adult' || field === 'historyComplete' || field === 'activityOverlapConfirmed' ? text === 'true' ? true : text === 'false' ? false : undefined
         : field === 'otherActivities' ? JSON.parse(text) as unknown
         : field === 'weekdays' ? text.split(',').map((day) => Number(day.trim()))
@@ -110,8 +114,10 @@ export function readProgramBrief(value: unknown): ProgramBrief | undefined {
         && Array.isArray(activity.weekdays) && activity.weekdays.length === activity.frequency && new Set(activity.weekdays).size === activity.frequency
         && activity.weekdays.every((day: unknown) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 7))) return undefined
     }
+    else if (key === 'scope') { if (item !== 'single_workout' && item !== 'program') return undefined }
+    else if (key === 'weeks') { if (item !== 1 && item !== 2 && item !== 3 && item !== 4) return undefined }
     else if (key === 'frequency') { if (item !== 1 && item !== 2 && item !== 3) return undefined }
-    else if (key === 'durationMin') { if (typeof item !== 'number' || !Number.isInteger(item) || item < 30 || item > 120) return undefined }
+    else if (key === 'durationMin') { if (typeof item !== 'number' || !Number.isInteger(item) || item < 15 || item > 120) return undefined }
     else if (key === 'weekdays') {
       if (!Array.isArray(item) || item.length < 1 || item.length > 3 || new Set(item).size !== item.length
         || !item.every((day) => typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 7)) return undefined
@@ -180,6 +186,15 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
   const next: Record<string, unknown> = { ...previous }
   for (const key of clearedKeys) delete next[key]
   Object.assign(next, patch)
+  if (patch.scope === 'single_workout') {
+    next.weeks = 1
+    next.frequency = 1
+    if (typeof next.startDate === 'string') next.weekdays = [calendarWeekday(next.startDate)]
+  } else if (patch.scope === 'program' && previous.scope === 'single_workout') {
+    delete next.weeks
+    delete next.frequency
+    delete next.weekdays
+  }
   if ((clearedKeys.includes('experience') || patch.experience !== undefined && patch.experience !== previous.experience) && patch.experienceText === undefined) delete next.experienceText
   if (((patch.limitationsText !== undefined && patch.limitationsText !== previous.limitationsText)
     || (patch.limitations !== undefined && patch.limitations !== previous.limitations)
@@ -193,19 +208,26 @@ export function mergeExtractedBrief(previous: ProgramBrief, message: string, val
   // Frequency changes cannot silently reuse an incompatible old schedule.
   if (patch.frequency !== undefined && patch.weekdays === undefined && previous.frequency !== patch.frequency) delete next.weekdays
   if (patch.goalText !== undefined && patch.goal === undefined) delete next.goal
+  if (next.scope === 'single_workout') {
+    next.weeks = 1
+    next.frequency = 1
+    if (typeof next.startDate === 'string') next.weekdays = [calendarWeekday(next.startDate)]
+  }
   const brief = readProgramBrief(next)
   if (!brief) throw new Error('invalid_brief_extraction')
   return { brief, clarification }
 }
 
 export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
+  scope: 'Что составить: одну тренировку или программу на срок от одной до четырёх недель?',
+  weeks: 'На сколько недель составить программу: от одной до четырёх?',
   continuationPlan: 'Продолжаем прежний подход или меняем программу? Что важно сохранить?',
-  goalText: 'Какова цель именно этой четырёхнедельной программы: что хотите улучшить?',
+  goalText: 'Какова цель этой тренировки или программы: что хотите улучшить?',
   goal: 'Основной приоритет — сила, набор мышц, общая форма или снижение веса?',
   frequency: 'Сколько занятий в неделю планируем: одно, два или три?',
   weekdays: 'В какие дни недели удобно тренироваться?',
-  durationMin: 'Сколько минут есть на одно занятие, включая разминку и отдых? В этом пилоте — от 30 минут.',
-  startDate: 'С какой даты начинается четырёхнедельная программа?',
+  durationMin: 'Сколько минут есть на одно занятие, включая разминку и отдых? Можно выбрать от 15 минут.',
+  startDate: 'На какую дату запланировать первую тренировку?',
   experience: 'Какой опыт тренировок и был ли в последнее время перерыв?',
   equipment: 'Какое оборудование доступно? Можно перечислить его или указать полностью оборудованный тренажёрный зал.',
   limitations: 'Есть ли сейчас боль, травмы или ограничения для упражнений? Если нет — так и напишите.',
@@ -219,6 +241,7 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
 
 export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (keyof ProgramBrief)[] {
   const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && (key !== 'continuationPlan' || hasHistory)
+    && (brief.scope !== 'single_workout' || !['weeks', 'frequency', 'weekdays'].includes(key))
     && (!['limitationsText', 'limitationAdjustments'].includes(key) || brief.limitations === 'present' || brief.limitations === 'unknown')
     && brief[key as keyof ProgramBrief] === undefined) as (keyof ProgramBrief)[]
   if (brief.weekdays && brief.frequency && brief.weekdays.length !== brief.frequency && !missing.includes('weekdays')) missing.push('weekdays')
@@ -230,7 +253,7 @@ export function briefSummary(brief: ProgramBrief): string {
   const days = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const experience = { beginner: 'начальный', returning: 'возвращение после перерыва', experienced: 'есть опыт' }
   const equipmentNames: Record<Equipment, string> = { stationary_bike: 'велотренажёр', dumbbells: 'гантели', kettlebells: 'гири', resistance_bands: 'резинки', barbell: 'штанга', bench: 'скамья', rack: 'стойка', cable: 'блочный тренажёр', pullup_bar: 'турник', leg_press: 'жим ногами', leg_curl: 'сгибание ног', leg_extension: 'разгибание ног' }
-  return [brief.continuationPlan && `Продолжение: ${brief.continuationPlan}`, brief.preserveRefs?.length && `Сохранить упражнения: ${brief.preserveRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`, brief.goalText && `Цель: ${brief.goalText}`, brief.frequency && `${brief.frequency} занятий в неделю · 4 недели`,
+  return [brief.scope && `Формат: ${brief.scope === 'single_workout' ? 'одна тренировка' : `программа на ${brief.weeks ?? '—'} нед.`}`, brief.continuationPlan && `Продолжение: ${brief.continuationPlan}`, brief.preserveRefs?.length && `Сохранить упражнения: ${brief.preserveRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`, brief.goalText && `Цель: ${brief.goalText}`, brief.scope === 'program' && brief.frequency && `${brief.frequency} занятий в неделю`,
     brief.weekdays && `Дни: ${brief.weekdays.map((day) => days[day - 1]).join(', ')}`,
     brief.durationMin && `До ${brief.durationMin} минут`, brief.startDate && `Начало: ${brief.startDate}`,
     brief.equipment && `Оборудование: ${brief.equipment.length ? brief.equipment.map((item) => equipmentNames[item]).join(', ') : 'без оборудования'}`,
@@ -247,3 +270,7 @@ export function briefSummary(brief: ProgramBrief): string {
 }
 
 export const CONFIRM_PROGRAM_BRIEF = 'Условия верны, составь программу'
+
+function calendarWeekday(date: string): number {
+  return (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7 + 1
+}

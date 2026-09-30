@@ -13,6 +13,14 @@ it('preserves explicit individual model doses and permits repeated novice days',
   const plan = programPlanFromTemplate(template)
   expect(readProgramPlan(plan, brief, '2026-09-15').sessions).toEqual(template.sessions)
 })
+it.each([1, 2, 3, 4] as const)('uses exactly %s requested weekly dose assignments', (weeks) => {
+  const { brief, template } = fixture(1)
+  brief.weeks = weeks
+  for (const exercise of template.sessions[0]!.exercises) exercise.weeks = exercise.weeks.slice(0, weeks)
+  const plan = programPlanFromTemplate(template)
+  expect((plan.exercises[0] as unknown as { sets: number[] }).sets).toHaveLength(weeks)
+  expect(readProgramPlan(plan, brief, '2026-09-15').sessions[0]!.exercises[0]!.weeks).toHaveLength(weeks)
+})
 it('rejects missing weekly doses and orphan rows instead of filling values', () => {
   const { brief, template } = fixture(1)
   const plan = programPlanFromTemplate(template)

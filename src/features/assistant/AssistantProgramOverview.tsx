@@ -24,7 +24,8 @@ export function AssistantProgramOverview({ payload }: { payload: Record<string, 
   if (!parsed.success) return null
   const weekday = (date: string) => (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7
   const days = [...new Set(parsed.data.map((session) => weekday(session.day)))].sort((a, b) => a - b)
-  return <section className="assistant-message-copy" aria-label="Обзор четырёх недель"><h3>Обзор программы</h3>{days.map((day, dayIndex) => {
+  const weekCount = Math.max(...parsed.data.map((session) => session.week))
+  return <section className="assistant-message-copy" aria-label={weekCount === 1 ? 'Обзор тренировки' : `Обзор программы на ${weekCount} нед.`}><h3>{parsed.data.length === 1 ? 'Обзор тренировки' : 'Обзор программы'}</h3>{days.map((day, dayIndex) => {
     const sessions = parsed.data.filter((session) => weekday(session.day) === day).sort((a, b) => a.week - b.week)
     const positions = Math.max(...sessions.map((session) => session.exercises.length))
     return <div key={day}><h4>День {['А', 'Б', 'В'][dayIndex]} · {['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'][day]}</h4>{Array.from({ length: positions }, (_, position) => {

@@ -287,7 +287,7 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
     if (isAssistantCapabilityQuestion(command.message)) {
       response = {
         reply: assistantCapabilitiesReply() + (programEnabled
-          ? '\nТакже могу составить рекомендованный черновик программы на четыре недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.'
+          ? '\nТакже могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.'
           : ''),
         action: null,
       }

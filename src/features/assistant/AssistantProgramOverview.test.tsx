@@ -16,6 +16,11 @@ it('does not invent history for a novice', () => {
   render(<AssistantProgramOverview payload={{ sessions: [{ day: '2026-09-21', week: 1, title: 'А', exercises: [exercise] }], historyFacts: [] }} />)
   expect(screen.getByText(/нет записанного результата этого упражнения для сравнения/)).toBeVisible()
 })
+it('labels a single generated session as a workout overview', () => {
+  render(<AssistantProgramOverview payload={{ sessions: [{ day: '2026-09-21', week: 1, title: 'А', exercises: [exercise] }], historyFacts: [] }} />)
+  expect(screen.getByRole('region', { name: 'Обзор тренировки' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Обзор тренировки' })).toBeVisible()
+})
 it('groups unchanged weeks and shows the exercise progression explanation once', () => {
   const progressionNote = 'Первые две недели закрепляйте технику; затем добавьте одно повторение при целевом усилии.'
   const sessions = [21, 28, 35, 42].map((offset, index) => ({ day: new Date(Date.UTC(2026, 8, offset)).toISOString().slice(0, 10), week: index + 1, title: 'А',

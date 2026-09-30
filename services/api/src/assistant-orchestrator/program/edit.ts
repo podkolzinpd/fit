@@ -15,8 +15,9 @@ export function editProgram(message: string, payload: Record<string, unknown>, b
   const replacement = catalog.find((row) => row.name === match[4])
   if (!replacement) throw new ProgramValidationError(['invalid_edit_exercise'])
   const initial = validateProgramTemplate(payload.template, brief, today)
-  const weeks: ProgramTemplate[] = Array.isArray(payload.weeklyTemplates) && payload.weeklyTemplates.length === 4
-    ? structuredClone(payload.weeklyTemplates) as ProgramTemplate[] : Array.from({ length: 4 }, () => structuredClone(initial))
+  const weekCount = brief.weeks ?? 4
+  const weeks: ProgramTemplate[] = Array.isArray(payload.weeklyTemplates) && payload.weeklyTemplates.length === weekCount
+    ? structuredClone(payload.weeklyTemplates) as ProgramTemplate[] : Array.from({ length: weekCount }, () => structuredClone(initial))
   const current = materializeProgram(initial, brief, clientId, 'lookup')
   const target = current.sessions.find((session) => session.day === match[2])
   if (!target) throw new ProgramValidationError(['invalid_edit_date'])
@@ -24,26 +25,26 @@ export function editProgram(message: string, payload: Record<string, unknown>, b
   const position = Number(match[1]) - 1
   const prescription = { sets: Number(match[5]), reps: match[6] === 'нет' ? null : Number(match[6]),
     durationSec: match[7] === 'нет' ? null : Number(match[7]), rpe: Number(match[8]), restSec: Number(match[9]) }
-  const affected = match[3] === 'только это занятие' ? [target.week - 1] : [0, 1, 2, 3]
+  const affected = match[3] === 'только это занятие' ? [target.week - 1] : Array.from({ length: weekCount }, (_, week) => week)
   for (const week of affected) {
     const exercise = weeks[week]!.sessions.find((session) => session.weekday === weekday)?.exercises[position]
     if (!exercise) throw new ProgramValidationError(['invalid_edit_position'])
     exercise.exerciseRef = replacement.ref
-    exercise.weeks = Array.from({ length: 4 }, () => ({ ...prescription }))
-    exercise.progressionNote = `Назначение изменено пользователем для ${match[3] === 'только это занятие' ? `занятия ${target.day}` : 'этого дня во всех четырёх неделях'}. Сравните новые значения с соседними неделями; дальнейшую нагрузку меняйте только при сохранении техники, целевого усилия и запаса сил.`
+    exercise.weeks = Array.from({ length: weekCount }, () => ({ ...prescription }))
+    exercise.progressionNote = `Назначение изменено пользователем для ${match[3] === 'только это занятие' ? `занятия ${target.day}` : 'этого дня во всей программе'}. Сравните новые значения с соседними неделями; дальнейшую нагрузку меняйте только при сохранении техники, целевого усилия и запаса сил.`
   }
   const load = payload.loadBasis as ProgramLoad
   if (!load || load.version !== 'observed-load-v1') throw new Error('program_edit_missing_basis')
   const isolated = weeks.map((template, week) => {
     const sameWeek = { ...template, sessions: template.sessions.map((session) => ({ ...session, exercises: session.exercises.map((exercise) => ({ ...exercise,
-      weeks: Array.from({ length: 4 }, () => ({ ...exercise.weeks[week]! })),
+      weeks: Array.from({ length: weekCount }, () => ({ ...exercise.weeks[week]! })),
     })) })) }
     const checked = validateProgramTemplate(sameWeek, brief, today)
     validateProgramLoad(checked, load)
     return checked
   })
   let previousTotal = 0
-  for (let week = 0; week < 4; week++) {
+  for (let week = 0; week < weekCount; week++) {
     let total = 0
     for (const session of isolated[week]!.sessions) for (const [index, exercise] of session.exercises.entries()) {
       const dose = exercise.weeks[0]!
@@ -64,8 +65,8 @@ export function editProgram(message: string, payload: Record<string, unknown>, b
   const editId = createHash('sha256').update(JSON.stringify([clientId, brief, isolated])).digest('hex')
   const reviewNotes = [...new Set(isolated.flatMap((template) => assessProgramQuality(template, brief, load.familiarRefs).signals))].map((signal) => QUALITY_REVIEW_NOTES[signal]!)
   const materialized = isolated.map((template) => materializeProgram({ ...template, reviewNotes }, brief, clientId, editId))
-  const result = { ...materialized[0]!, sessions: current.sessions.map((session, index) => materialized[session.week - 1]!.sessions[index]!),
-    canonicalWorkouts: current.sessions.map((session, index) => materialized[session.week - 1]!.canonicalWorkouts[index]!) }
+  const result = { ...materialized[0]!, sessions: current.sessions.map((session) => materialized[session.week - 1]!.sessions.find((candidate) => candidate.day === session.day)!),
+    canonicalWorkouts: current.sessions.map((session) => materialized[session.week - 1]!.canonicalWorkouts.find((candidate) => candidate.workoutDate === session.day)!) }
   const previousWorkouts = payload.canonicalWorkouts as typeof result.canonicalWorkouts
   if (!Array.isArray(previousWorkouts) || previousWorkouts.length !== result.canonicalWorkouts.length) throw new Error('program_edit_missing_original')
   result.canonicalWorkouts = result.canonicalWorkouts.map((workout, index) => ({ ...workout, requestId: previousWorkouts[index]!.requestId,

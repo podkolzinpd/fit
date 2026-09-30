@@ -19,7 +19,7 @@ describe('program chat state', () => {
   it('keeps one question and passes its context to the next extraction', async () => {
     const { deps, latest } = setup()
     const active = { payload: { ...latest.payload, hasHistory: true, briefState: { adult: true }, guidance: 'Продолжаем прежний подход или меняем программу? Что важно сохранить?', askedFields: ['continuationPlan'] } }
-    deps.extract.mockResolvedValue({ patch: { continuationPlan: 'Меняем программу', goalText: 'выносливость', goal: 'general_fitness' }, clear: [], evidence: { continuationPlan: 'Меняем программу', goalText: 'выносливость', goal: 'выносливость' }, clarification: null })
+    deps.extract.mockResolvedValue({ patch: { scope: 'program', weeks: 4, continuationPlan: 'Меняем программу', goalText: 'выносливость', goal: 'general_fitness' }, clear: [], evidence: { scope: 'программу', weeks: 'программу', continuationPlan: 'Меняем программу', goalText: 'выносливость', goal: 'выносливость' }, clarification: null })
     const result = await programPilotTurn('Меняем программу, цель — выносливость', [client], active, deps)
     expect(deps.extract).toHaveBeenCalledWith({ adult: true }, 'Меняем программу, цель — выносливость', { question: active.payload.guidance, fields: ['continuationPlan'] })
     expect(result?.reply).toBe('Сколько занятий в неделю планируем: одно, два или три?')
