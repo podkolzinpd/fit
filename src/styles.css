@@ -4423,7 +4423,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-create-edit-identity .today-review-order-toolbar > .link,
 .workout-create-edit-identity .today-review-order-toolbar .reorder-mode { color:var(--fg); font-size:12px; font-weight:500 }
 .workout-create-edit-identity .today-exercise-list { gap:0; overflow:hidden; padding:0 16px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
-.workout-create-edit-identity .today-exercise.planned-exercise { padding:16px 0; border-color:var(--border) }
+.workout-create-edit-identity .today-exercise.planned-exercise { align-items:stretch; justify-content:stretch; padding:16px 0; border-color:var(--border) }
 .workout-create-edit-identity .today-exercise-title strong { color:var(--fg); font-size:16px; font-weight:600 }
 .workout-create-edit-identity .today-exercise > p { color:var(--secondary-label-fg); font-size:14px; font-weight:400 }
 .workout-create-edit-identity .today-exercise p.today-exercise-missing { color:var(--warning-fg); font-weight:500 }

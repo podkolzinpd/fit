@@ -547,6 +547,26 @@ test('iPhone: поля бега не перекрываются в быстро�
   await page.getByLabel('Тренировка').fill('Бег\nЖим лёжа 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+
+  const reviewGeometry = await page.locator('.today-exercise.planned-exercise').evaluateAll((exercises) => exercises.map((exercise) => {
+    const exerciseBox = exercise.getBoundingClientRect()
+    const headerBox = exercise.querySelector('.today-exercise-title')!.getBoundingClientRect()
+    const menuBox = exercise.querySelector('.overflow-menu')!.getBoundingClientRect()
+    return {
+      exerciseLeft: exerciseBox.left,
+      exerciseRight: exerciseBox.right,
+      headerLeft: headerBox.left,
+      headerRight: headerBox.right,
+      menuRight: menuBox.right,
+    }
+  }))
+  expect(reviewGeometry).toHaveLength(2)
+  for (const geometry of reviewGeometry) {
+    expect(Math.abs(geometry.headerLeft - geometry.exerciseLeft)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.headerRight - geometry.exerciseRight)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.menuRight - geometry.exerciseRight)).toBeLessThanOrEqual(1)
+  }
+
   await page.getByText('Добавить значения', { exact: true }).click()
 
   const row = page.locator('.today-set-editor').first()
