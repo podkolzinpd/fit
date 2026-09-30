@@ -95,9 +95,10 @@ export async function verifyResultsSources(page: Page) {
   await verifyAnalysisShortcutKeepsShell(page)
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await expect(page.locator('.progress-pro-list #results-center')).toHaveCount(1)
-  for (const control of await page.locator('.progress-details-toggle:visible').all()) {
-    expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44)
-  }
+  const toggleHeights = await page.locator('.progress-details-toggle:visible').evaluateAll((controls) =>
+    controls.map((control) => control.getBoundingClientRect().height))
+  expect(toggleHeights.length).toBeGreaterThan(0)
+  for (const height of toggleHeights) expect(height).toBeGreaterThanOrEqual(44)
   await expect(center).not.toHaveAttribute('open')
   await expect(page.locator('.weekly-training-load')).not.toHaveAttribute('open')
   await center.getByText('Все результаты', { exact: true }).click()

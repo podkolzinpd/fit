@@ -15,6 +15,7 @@ import { measurementSummaryText } from '../progress/measurement-summary'
 import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE, storeFirstWorkoutIntent } from '../workouts'
 import { clientWorkoutCardLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
+import { AthleteAchievementPreview } from '../achievements/AthleteAchievements'
 import { useWorkoutHistoryCalendar } from './use-workout-history-calendar'
 
 function favoriteExerciseCountLabel(count: number): string {
@@ -218,7 +219,7 @@ export function MyProgressPage() {
   </div> : null
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading} error={mine.error} empty={!mine.data} onRetry={() => void mine.refetch()}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он связывает тренировки, замеры и анализ прогресса в одном месте." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
-    {mine.data && <div className="client-progress-stack"><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} /></div>}
+    {mine.data && <div className="client-progress-stack"><AthleteAchievementPreview clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} /></div>}
     {confirmDialog}
   </AsyncView></Page>
 }

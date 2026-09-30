@@ -646,6 +646,9 @@ async function openClientProgress(page: import('@playwright/test').Page, options
     }
   }
   await gotoStable(page, '/me/progress')
+  // Keep the pre-achievements Progress baselines at their original scroll offsets.
+  // The new preview is covered by its own visual test above.
+  await page.addStyleTag({ path: 'e2e/visual-legacy-without-achievements.css' })
   await expect(page.getByRole('heading', { name: 'Мой прогресс' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/progress-identity/)
   await expect(page.locator('.client-progress-card')).toBeVisible()
@@ -686,6 +689,7 @@ async function expectVisualBaseline(
     mask,
     maskColor,
     maxDiffPixelRatio,
+    stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
 }
 
@@ -958,6 +962,61 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
   }
 })
 
+test('athlete achievements keep their selected style and placement', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Athlete-only route')
+  await mockBodyMapClientGender(page, 'female', false)
+  await mockClientWorkoutHistory(page)
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await gotoStable(page, '/me')
+  const home = page.locator('.athlete-achievements-home')
+  await expect(home).toBeVisible()
+  await expect(home.getByText('Первый шаг')).toBeVisible()
+  const voice = page.locator('.client-home-self-training')
+  expect((await home.boundingBox())!.y).toBeGreaterThan((await voice.boundingBox())!.y)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await home.screenshot({ path: testInfo.outputPath('achievement-home.png') })
+
+  await gotoStable(page, '/me/progress')
+  const preview = page.locator('.athlete-achievements-preview')
+  await expect(preview).toBeVisible()
+  await expect(preview.getByText('1 из 8')).toBeVisible()
+  expect((await preview.boundingBox())!.y).toBeLessThan((await page.locator('.client-progress-card').first().boundingBox())!.y)
+  await preview.getByRole('link', { name: 'Все ачивки →' }).click()
+  await expect(page).toHaveURL(/\/me\/achievements$/)
+  await expect(page.locator('.athlete-achievement-card')).toHaveCount(8)
+  await expect(page.getByRole('heading', { name: 'Регулярность' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('achievement-collection.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page).toHaveURL(/\/me\/progress$/)
+
+  await gotoStable(page, '/me')
+  await home.getByRole('button', { name: 'Скрыть карточку ачивок' }).click()
+  await expect(home).toHaveCount(0)
+  await gotoStable(page, '/me')
+  await expect(home).toHaveCount(0)
+  await gotoStable(page, '/me/progress')
+  await expect(preview).toBeVisible()
+  await gotoStable(page, '/me/settings')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await gotoStable(page, '/me/progress')
+  await expect(preview).toBeVisible()
+  await preview.screenshot({ path: testInfo.outputPath('achievement-preview-dark.png') })
+  await preview.getByRole('link', { name: 'Все ачивки →' }).click()
+  await expect(page.locator('.athlete-achievement-card')).toHaveCount(8)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('achievement-collection-dark.png'), fullPage: true })
+})
+
+test('trainer cannot enter the athlete achievement collection', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-trainer-1440', 'Trainer guard')
+  await signIn(page, 'trainer@fit.local', /\/today$/)
+  await gotoStable(page, '/me/achievements')
+  await expect(page).toHaveURL(/\/today$/)
+  await expect(page.locator('.athlete-achievements-page')).toHaveCount(0)
+})
+
 test('standalone client sees a compact trainer discovery card and can snooze it', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Trainer discovery card belongs to Client Home')
   await createStandaloneClient(page, `trainer-discovery-${testInfo.project.name}`, 'Самостоятельный клиент', 'trainer-discovery')
@@ -967,13 +1026,13 @@ test('standalone client sees a compact trainer discovery card and can snooze it'
   const card = page.getByRole('region', { name: 'Нужен тренер?' })
   await expect(card).toBeVisible()
   await expect(card.getByRole('link', { name: 'Найти тренера' })).toHaveAttribute('href', '/me/trainers')
-  await expect(card).toHaveScreenshot('trainer-discovery-home-card.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015 })
+  await expect(card).toHaveScreenshot('trainer-discovery-home-card.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css' })
 
   await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me')
   await expect(card).toBeVisible()
-  await expect(card).toHaveScreenshot('trainer-discovery-home-card-dark.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015 })
+  await expect(card).toHaveScreenshot('trainer-discovery-home-card-dark.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css' })
 
   await card.getByRole('button', { name: 'Напомнить через месяц' }).click()
   await expect(page.getByRole('status')).toHaveText('Напомним через месяц.')
@@ -1324,6 +1383,7 @@ test('client Progress shows composite goal facts in both themes', async ({ page 
   await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me/progress')
+  await page.addStyleTag({ path: 'e2e/visual-legacy-without-achievements.css' })
   await page.locator('.progress-overview-panel .client-progress-goal-story').getByRole('link', { name: 'Подробнее в ПРО' }).click()
   const darkGoal = page.locator('#goal-details .client-progress-goal-story')
   await expect(darkGoal.locator('.goal-criterion-progress-row:visible')).toHaveCount(2)
@@ -1433,7 +1493,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   }
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
 
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
@@ -1443,7 +1503,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
 })
 
@@ -2822,6 +2882,7 @@ test('best results show several real records and keep the remaining achievements
   await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, {
     animations: 'disabled',
     maxDiffPixelRatio: 0.01,
+    stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.getByText('Все результаты', { exact: true }).click()
@@ -2858,7 +2919,7 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(weekly).toContainText('Часть недели')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02, stylePath: 'e2e/visual-legacy-without-achievements.css' })
   await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
   await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, {
@@ -2885,7 +2946,7 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
   await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02, stylePath: 'e2e/visual-legacy-without-achievements.css' })
 })
 
 test('reliable chat stays compact on client phones and trainer desktop', async ({ page }, testInfo) => {

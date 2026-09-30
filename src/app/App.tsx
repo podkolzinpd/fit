@@ -16,6 +16,7 @@ import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from
 import { WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEditorPage, WorkoutTemplateSourcePage, WorkoutTemplatesPage } from '../features/workout-templates'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
+import { AthleteAchievementsPage } from '../features/achievements/AthleteAchievements'
 import { TrainerFinanceOverviewPage, TrainerFinancePage } from '../features/finance'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
@@ -97,6 +98,7 @@ const router = createBrowserRouter([
       { path: '/me/edit', element: <MyClientEditPage /> },
       { path: '/me/workouts', element: <MyWorkoutsPage /> },
       { path: '/me/progress', element: <MyProgressPage /> },
+      { path: '/me/achievements', element: <AthleteAchievementsPage /> },
       { path: '/me/goal', element: <MyGoalPage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
       { path: '/me/settings', element: <ClientProfileSettingsPage /> },

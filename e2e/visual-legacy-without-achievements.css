@@ -1,7 +1,4 @@
-.tab-bar,
-.coachmark-bubble {
-  visibility: hidden !important;
-}
+/* Existing full-page baselines predate rewards. Rewards have dedicated visual coverage. */
 .athlete-achievements-home,
 .athlete-achievements-preview,
 .athlete-achievements-new {
