@@ -799,7 +799,7 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.locator('.how-steps li').first()).toBeVisible()
 })
 
-test('план: видимый суперсет переключается в круговую и работает в Live', async ({ page }, testInfo) => {
+test('план: суперсет работает в Live без создания круговой', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -870,7 +870,7 @@ test('план: видимый суперсет переключается в к
   await expect(page.locator('.block-badge').first()).toContainText('Суперсет · 2 кр.')
 
   // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
-  // текущий круг; отдых учитывает дефолты круговой — между упражнениями и кругами.
+  // текущий круг; суперсет не запускает отдых между упражнениями, только между кругами.
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -879,13 +879,11 @@ test('план: видимый суперсет переключается в к
   // блока — проверяем закреплённый (всегда виден при скролле по кругам).
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
-  await page.screenshot({ path: testInfo.outputPath('circuit-live-390.png'), fullPage: true })
-  // После первого упражнения запускается короткий отдых между упражнениями.
+  await page.screenshot({ path: testInfo.outputPath('superset-live-390.png'), fullPage: true })
+  // Между упражнениями суперсета отдыха нет.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
-  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toBeVisible()
-  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
-  await page.getByRole('button', { name: 'Остановить отдых' }).click()
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toHaveCount(0)
   // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
   // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
