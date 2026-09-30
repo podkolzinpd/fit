@@ -2059,6 +2059,139 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('consumes completed trainer workouts once and leaves ambiguous sessions for review', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const workoutIds: string[] = []
+      await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+      try {
+        const firstPackage = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            `select public.create_trainer_finance_package(
+              $1, 'Абонемент 1', 2, 0, 1000000, 0,
+              date '2026-09-01', date '2026-09-30', null, null
+            ) as result`,
+            [CLIENT_ID],
+          ))
+        const firstPackageId = (firstPackage[0]?.result as { id: string }).id
+
+        const completed = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (
+             trainer_id, client_id, created_by, workout_date, status,
+             completed_at, notes
+           ) values ($1, $2, $1, date '2026-09-15', 'done', now(), 'Финансы: автосписание')
+           returning id`,
+          [ACTOR_ID, CLIENT_ID],
+        )
+        const completedId = completed.rows[0]!.id
+        workoutIds.push(completedId)
+        const charged = await ownerPool.query<{
+          disposition: string
+          package_id: string | null
+          source: string
+          version: string
+        }>(
+          `select disposition, package_id, source, version
+           from public.trainer_finance_sessions where workout_id = $1`,
+          [completedId],
+        )
+        expect(charged.rows).toEqual([{
+          disposition: 'charged', package_id: firstPackageId,
+          source: 'automatic', version: '1',
+        }])
+
+        await ownerPool.query(
+          `update public.workouts set status = 'done' where id = $1`,
+          [completedId],
+        )
+        const idempotent = await ownerPool.query<{ count: string }>(
+          'select count(*) from public.trainer_finance_sessions where workout_id = $1 and voided_at is null',
+          [completedId],
+        )
+        expect(idempotent.rows[0]?.count).toBe('1')
+
+        const selfLed = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (
+             trainer_id, client_id, created_by, workout_date, status,
+             completed_at, notes
+           ) values ($1, $2, $3, date '2026-09-16', 'done', now(), 'Финансы: самостоятельная')
+           returning id`,
+          [ACTOR_ID, CLIENT_ID, OTHER_ACTOR_ID],
+        )
+        workoutIds.push(selfLed.rows[0]!.id)
+        const selfLedCount = await ownerPool.query<{ count: string }>(
+          'select count(*) from public.trainer_finance_sessions where workout_id = $1',
+          [selfLed.rows[0]!.id],
+        )
+        expect(selfLedCount.rows[0]?.count).toBe('0')
+
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query(
+            `select public.create_trainer_finance_package(
+              $1, 'Абонемент 2', 2, 0, 1000000, 0,
+              date '2026-09-01', date '2026-09-30', null, null
+            )`,
+            [CLIENT_ID],
+          ))
+        const ambiguous = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (
+             trainer_id, client_id, created_by, workout_date, status,
+             completed_at, notes
+           ) values ($1, $2, $1, date '2026-09-17', 'done', now(), 'Финансы: неоднозначное')
+           returning id`,
+          [ACTOR_ID, CLIENT_ID],
+        )
+        const ambiguousId = ambiguous.rows[0]!.id
+        workoutIds.push(ambiguousId)
+        const pending = await ownerPool.query<{
+          id: string
+          disposition: string
+          package_id: string | null
+          version: string
+        }>(
+          `select id, disposition, package_id, version
+           from public.trainer_finance_sessions where workout_id = $1`,
+          [ambiguousId],
+        )
+        expect(pending.rows[0]).toMatchObject({
+          disposition: 'unassigned', package_id: null, version: '1',
+        })
+
+        const corrected = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            `select public.update_trainer_finance_session(
+              $1, 1, 'charged', $2, null
+            ) as result`,
+            [pending.rows[0]!.id, firstPackageId],
+          ))
+        expect(corrected[0]?.result).toMatchObject({
+          disposition: 'charged', packageId: firstPackageId, version: 2,
+        })
+
+        await ownerPool.query(
+          'update public.workouts set deleted_at = now() where id = $1',
+          [completedId],
+        )
+        const voided = await ownerPool.query<{ void_reason: string | null }>(
+          'select void_reason from public.trainer_finance_sessions where workout_id = $1',
+          [completedId],
+        )
+        expect(voided.rows[0]?.void_reason).toBe('Тренировка больше не завершена')
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+        if (workoutIds.length > 0) {
+          await ownerPool.query('delete from public.workouts where id = any($1::uuid[])', [workoutIds])
+        }
+      }
+    })
+
     it('uses the active relationship for trainer and chat lists', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')

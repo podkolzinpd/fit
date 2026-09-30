@@ -3,6 +3,7 @@ import type {
   TrainerFinancePackageUpdate,
   TrainerFinancePaymentDraft,
   TrainerFinancePaymentUpdate,
+  TrainerFinanceSessionUpdate,
 } from './trainer-finance.js'
 
 const localDatePattern = /^\d{4}-\d{2}-\d{2}$/
@@ -97,4 +98,19 @@ export function readTrainerFinanceVoidPayment(value: unknown): { expectedVersion
   const reason = text(input.reason, 500)
   return expectedVersion === undefined || reason === undefined || reason === null
     ? undefined : { expectedVersion, reason }
+}
+
+export function readTrainerFinanceSessionUpdate(value: unknown): TrainerFinanceSessionUpdate | undefined {
+  const input = record(value)
+  if (!input) return undefined
+  const expectedVersion = integer(input.expectedVersion, 1, Number.MAX_SAFE_INTEGER)
+  const disposition = input.disposition
+  const packageId = input.packageId === null ? null
+    : typeof input.packageId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.packageId)
+      ? input.packageId : undefined
+  const comment = text(input.comment, 2000, true)
+  if (expectedVersion === undefined || !['charged', 'unassigned', 'free', 'trial'].includes(String(disposition))
+    || packageId === undefined || comment === undefined
+    || ((disposition === 'charged') !== (packageId !== null))) return undefined
+  return { expectedVersion, disposition: disposition as TrainerFinanceSessionUpdate['disposition'], packageId, comment }
 }

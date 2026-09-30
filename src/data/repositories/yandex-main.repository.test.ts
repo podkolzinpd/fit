@@ -63,6 +63,7 @@ const conversationId = '3a6cc527-7bbd-4217-8a76-77de34a2c0fe'
 const publicProfileId = '0ee2e109-13e0-48ba-8664-7cc767128f0c'
 const financePackageId = '34df7b20-a0b5-4627-bd98-d4a174625723'
 const financePaymentId = 'ec3e661a-0ee8-48da-a269-d4f7707427cc'
+const financeSessionId = '8938c8e0-3856-469b-b743-ab5942ce4564'
 
 function jsonResponse(body: object, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -100,11 +101,19 @@ describe('Yandex main repository', () => {
       voidReason: null, version: 1, createdAt: '2026-09-01T10:00:00.000000+00:00',
       updatedAt: '2026-09-01T10:00:00.000000+00:00',
     }
+    const financeSession = {
+      id: financeSessionId, packageId: financePackageId,
+      workoutId: '77d5776a-337c-466e-a3e6-e098adb03cc7', disposition: 'charged',
+      source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null,
+      voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000000+00:00',
+      updatedAt: '2026-09-05T10:00:00.000000+00:00',
+    }
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, packages: [financePackage], payments: [payment] } }))
+      .mockResolvedValueOnce(jsonResponse({ finance: { clientId, packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
       .mockResolvedValueOnce(jsonResponse({ package: financePackage }, 201))
       .mockResolvedValueOnce(jsonResponse({ payment }, 201))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse({ session: { ...financeSession, disposition: 'free', packageId: null, version: 2 } }))
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
@@ -116,14 +125,17 @@ describe('Yandex main repository', () => {
     })
     await repository.trainerFinance.addPayment(financePackageId, { amountCents: 1000000, receivedOn: '2026-09-01', comment: null })
     await repository.trainerFinance.voidPayment(financePaymentId, 1, 'Ошибка')
+    await repository.trainerFinance.updateSession(financeSessionId, { expectedVersion: 1, disposition: 'free', packageId: null, comment: null })
 
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       `${apiBaseUrl}/v1/clients/${clientId}/finance`,
       `${apiBaseUrl}/v1/clients/${clientId}/finance/packages`,
       `${apiBaseUrl}/v1/finance/packages/${financePackageId}/payments`,
       `${apiBaseUrl}/v1/finance/payments/${financePaymentId}`,
+      `${apiBaseUrl}/v1/finance/sessions/${financeSessionId}`,
     ])
     expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'DELETE', body: JSON.stringify({ expectedVersion: 1, reason: 'Ошибка' }) })
+    expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'PUT', body: JSON.stringify({ expectedVersion: 1, disposition: 'free', packageId: null, comment: null }) })
   })
 
   it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {
