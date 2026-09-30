@@ -48,7 +48,7 @@ export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePa
   const comment = text(input.comment, 2000, true)
   if (typeof title !== 'string' || sessionsTotal === undefined || openingUsedSessions === undefined
     || openingUsedSessions > sessionsTotal || priceCents === undefined
-    || openingPaidCents === undefined || typeof startsOn !== 'string'
+    || openingPaidCents === undefined || openingPaidCents > priceCents || typeof startsOn !== 'string'
     || endsOn === undefined || paymentDueOn === undefined || comment === undefined
     || (endsOn !== null && endsOn < startsOn)) return undefined
   return { title, sessionsTotal, openingUsedSessions, priceCents, openingPaidCents,
@@ -109,8 +109,9 @@ export function readTrainerFinanceSessionUpdate(value: unknown): TrainerFinanceS
     : typeof input.packageId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.packageId)
       ? input.packageId : undefined
   const comment = text(input.comment, 2000, true)
+  const workoutDate = date(input.workoutDate)
   if (expectedVersion === undefined || !['charged', 'unassigned', 'free', 'trial'].includes(String(disposition))
-    || packageId === undefined || comment === undefined
+    || packageId === undefined || comment === undefined || typeof workoutDate !== 'string'
     || ((disposition === 'charged') !== (packageId !== null))) return undefined
-  return { expectedVersion, disposition: disposition as TrainerFinanceSessionUpdate['disposition'], packageId, comment }
+  return { expectedVersion, disposition: disposition as TrainerFinanceSessionUpdate['disposition'], packageId, comment, workoutDate }
 }

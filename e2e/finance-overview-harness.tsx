@@ -10,9 +10,9 @@ const data = {
   dueCents: 3500000,
   attentionCount: 2,
   clients: [
-    { clientId: '11111111-1111-4111-8111-111111111111', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 7500000, dueCents: 2500000, activePackageCount: 1, sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true },
-    { clientId: '22222222-2222-4222-8222-222222222222', fullName: 'Александр Константинопольский', archivedAt: null, receivedCents: 5000000, dueCents: 1000000, activePackageCount: 1, sessionsRemaining: 8, overdue: false, lowSessions: false, unassignedSessions: 1, needsAttention: true },
-    { clientId: '33333333-3333-4333-8333-333333333333', fullName: 'Василий Петров', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 1, sessionsRemaining: 10, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
+    { clientId: '11111111-1111-4111-8111-111111111111', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 7500000, dueCents: 2500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true },
+    { clientId: '22222222-2222-4222-8222-222222222222', fullName: 'Александр Константинопольский', archivedAt: null, receivedCents: 5000000, dueCents: 1000000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: false, lowSessions: false, unassignedSessions: 1, needsAttention: true },
+    { clientId: '33333333-3333-4333-8333-333333333333', fullName: 'Василий Петров', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 10, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
   ],
 }
 

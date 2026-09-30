@@ -51,6 +51,7 @@ import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanc
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
+import { WorkoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { computeAthleteAchievements, newlyEarnedAchievements, type AthleteAchievement } from '../../shared/athlete-achievements'
 import { markAchievementCompletion, takeAchievementCompletion } from '../achievements/completion-marker'
@@ -1450,7 +1451,7 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
 }
 
 export function WorkoutDetailPage() {
-  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
@@ -1494,6 +1495,11 @@ export function WorkoutDetailPage() {
     queryKey: ['workout-personal-records', workoutId],
     queryFn: () => workoutsRepository.personalRecords(workoutId),
     enabled: actor?.role !== 'client' && navigationState?.justCompleted === true && query.data?.status === 'done',
+  })
+  const completionFinance = useQuery({
+    queryKey: ['trainer-finance', query.data?.clientId],
+    queryFn: () => trainerFinance.listClient(query.data!.clientId),
+    enabled: actor?.role !== 'client' && justCompleted && Boolean(query.data?.clientId),
   })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -1541,6 +1547,8 @@ export function WorkoutDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['workout-regularity'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
       queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-finance', query.data?.clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-finance-overview'] }),
     ])
   }
   const cancelPlanned = useMutation({
@@ -1723,6 +1731,7 @@ export function WorkoutDetailPage() {
         newAchievements={newAchievements}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
+      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}
@@ -2299,7 +2308,7 @@ function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null
 }
 
 export function LiveWorkoutPage() {
-  const { pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { source: dataSource, pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const { keyboardOpen } = useAppViewport()
@@ -2788,6 +2797,14 @@ export function LiveWorkoutPage() {
       setActiveExerciseId(nextExercise?.id ?? null)
     },
   })
+  const mergeBlock = useMutation({
+    mutationFn: async ({ blockId, preset }: { blockId: string; preset: 'set' | 'circuit' }) => {
+      await liveSets.waitForIdle()
+      return runLiveWorkoutMutation(`merge-block:${blockId}:${preset}`,
+        (workout) => workoutsRepository.mergeLiveBlockWithNext(workout, blockId, preset))
+    },
+    onSuccess: async () => { await query.refetch() },
+  })
   const replaceLive = useMutation({
     mutationFn: async ({ exerciseId, exercise, discardedSetIds }: { exerciseId: string; exercise: ExerciseSnapshot; discardedSetIds: string[] }) => {
       // A blur-save may already be in flight when the picker opens. Let it
@@ -2886,7 +2903,7 @@ export function LiveWorkoutPage() {
     setConfirmFinish(true)
   }
   const rootMutationPending = appendSet.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
-    || reorderBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
+    || reorderBlock.isPending || mergeBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
   function draftFrom(form: HTMLFormElement): LiveSetDraft {
     const values = new FormData(form)
     const runDuration = values.get('runDuration')
@@ -2901,7 +2918,7 @@ export function LiveWorkoutPage() {
     }
   }
   const liveSyncError = save.error ?? confirm.error
-  const error = appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const error = appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? mergeBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
     const note = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
@@ -2913,7 +2930,20 @@ export function LiveWorkoutPage() {
   }
   // Меню упражнения в live (⋯). Если упражнение уже начато, сервер отделит
   // подтверждённый факт в самостоятельную запись, а заменит лишь остаток.
-  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet) {
+  function groupActions(blockId: string, preset: 'set' | 'circuit', canGroup: boolean, alreadyGrouped: boolean) {
+    if (!canGroup) return []
+    const disabled = rootMutationPending || save.isPending || confirm.isPending
+    return alreadyGrouped
+      ? [{ label: `Добавить следующее в ${preset === 'set' ? 'суперсет' : 'круговую'}`, disabled,
+          onClick: () => mergeBlock.mutate({ blockId, preset }) }]
+      : [
+          { label: 'Создать суперсет со следующим', disabled,
+            onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
+          { label: 'Создать круговую со следующим', disabled,
+            onClick: () => mergeBlock.mutate({ blockId, preset: 'circuit' }) },
+        ]
+  }
+  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = []) {
     if (!canManageLiveStructure) return null
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
@@ -2921,6 +2951,7 @@ export function LiveWorkoutPage() {
       ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
+      ...groupingItems,
       { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
       ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
       { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
@@ -3050,6 +3081,10 @@ export function LiveWorkoutPage() {
       {reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
         return liveBlocks.map((block, blockIndex) => {
+        const nextBlock = liveBlocks[blockIndex + 1]
+        const canGroup = dataSource === 'yandex' && !reordering && block.blockPreset !== 'interval' && Boolean(nextBlock && nextBlock.exercises.length === 1
+          && [...block.exercises, ...nextBlock.exercises].every((exercise) => exercise.sets.every((set) => !set.confirmedAt)))
+        const groupingItems = groupActions(block.blockId, block.blockPreset === 'circuit' ? 'circuit' : 'set', canGroup, block.exercises.length > 1)
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1
@@ -3084,14 +3119,14 @@ export function LiveWorkoutPage() {
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               const progressLabel = completedSets > 0 ? `Выполнено ${completedSets} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`
               return <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined, groupingItems)}{reorder}</>} />
                 <div className="live-upcoming-row"><p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
                   <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={`${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
                 </div>
               </WorkoutExercise>
             }
             return <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined, groupingItems)}{reorder}</>} />
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
@@ -3117,7 +3152,10 @@ export function LiveWorkoutPage() {
           <div className="circuit-head">
             <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
-            {canManageLiveStructure && canReorder && !reordering && <OverflowMenu items={[{ label: 'Изменить порядок', onClick: () => setReordering(true) }]} />}
+            {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0) && <OverflowMenu items={[
+              ...(canReorder ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+              ...groupingItems,
+            ]} />}
             {reorder}
           </div>
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
@@ -3125,7 +3163,9 @@ export function LiveWorkoutPage() {
             {round.items.map(({ exercise, set }) => <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name}
                 leading={roundIndex === 0 ? liveHeaderThumbnail(exercise) : undefined}
-                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 ? exerciseMenu(exercise) : undefined} />
+                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0
+                  ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])
+                  : undefined} />
               {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}

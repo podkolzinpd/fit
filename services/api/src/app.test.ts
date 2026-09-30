@@ -940,7 +940,7 @@ describe('trainer finance', () => {
     month: '2026-09', receivedCents: 1000000, dueCents: 1500000,
     attentionCount: 1, clients: [{
       clientId, fullName: 'Анна Смирнова', archivedAt: null,
-      receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1,
+      receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0,
       sessionsRemaining: 8, overdue: true, lowSessions: false,
       unassignedSessions: 0, needsAttention: true,
     }],
@@ -992,6 +992,18 @@ describe('trainer finance', () => {
     expect(createPackage).toHaveBeenCalledWith(session, clientId, draft)
   })
 
+  it('rejects an opening payment above the package price', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: {
+      title: 'Персональные тренировки', sessionsTotal: 10, openingUsedSessions: 0,
+      priceCents: 1000000, openingPaidCents: 1100000, startsOn: '2026-09-01',
+      endsOn: null, paymentDueOn: null, comment: null,
+    } })
+    expect(response.statusCode).toBe(400)
+    expect(createPackage).not.toHaveBeenCalled()
+  })
+
   it('rejects malformed money and read-only mutations', async () => {
     const { service: pilotTrainerFinance, addPayment } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
@@ -1002,10 +1014,10 @@ describe('trainer finance', () => {
     expect(addPayment).not.toHaveBeenCalled()
   })
 
-  it('corrects a session disposition without changing the workout', async () => {
+  it('corrects session accounting and workout date', async () => {
     const { service: pilotTrainerFinance, updateSession } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
-    const draft = { expectedVersion: 1, disposition: 'free', packageId: null, comment: 'Пробное занятие' }
+    const draft = { expectedVersion: 1, disposition: 'free', packageId: null, comment: 'Пробное занятие', workoutDate: '2026-09-06' }
     const response = await app.inject({ method: 'PUT', url: `/v1/finance/sessions/${financeSessionId}`, headers: { 'x-fit-session': session.token }, payload: draft })
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ session: { ...financeSession, disposition: 'free', packageId: null, version: 2 } })
@@ -2574,6 +2586,7 @@ const OPERATION_IDS = {
   finish: '65331570-913c-4faa-9771-4a60d7a5e9f0',
   removeSet: '2fdba3b8-f688-40c9-955b-f84173970d31',
   reorder: '20c4ab7a-1316-46bf-b5ce-699015a320e8',
+  merge: '30c4ab7a-1316-46bf-b5ce-699015a320e8',
   replace: '9761cf15-f83d-423a-a241-8d0bffefb4e0',
 } as const
 
@@ -2589,6 +2602,7 @@ function buildWorkoutsWriter(error?: Error): {
   removeLiveSet: ReturnType<typeof vi.fn>
   removeLiveExercise: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
+  mergeLiveBlockWithNext: ReturnType<typeof vi.fn>
   replaceLiveExercise: ReturnType<typeof vi.fn>
   recordPlannedResult: ReturnType<typeof vi.fn>
   reschedule: ReturnType<typeof vi.fn>
@@ -2647,6 +2661,11 @@ function buildWorkoutsWriter(error?: Error): {
     version: 6,
     replayed: false,
   }))
+  const mergeLiveBlockWithNext = vi.fn(() => result({
+    resourceId: WORKOUT_BLOCK_ID,
+    version: 7,
+    replayed: false,
+  }))
   const replaceLiveExercise = vi.fn(() => result({
     resourceId: WORKOUT_EXERCISE_ID,
     version: 7,
@@ -2675,6 +2694,7 @@ function buildWorkoutsWriter(error?: Error): {
       removeLiveSet,
       removeLiveExercise,
       reorderLiveBlock,
+      mergeLiveBlockWithNext,
       replaceLiveExercise,
       recordPlannedResult,
       reschedule,
@@ -2695,6 +2715,7 @@ function buildWorkoutsWriter(error?: Error): {
     removeLiveSet,
     removeLiveExercise,
     reorderLiveBlock,
+    mergeLiveBlockWithNext,
     replaceLiveExercise,
     recordPlannedResult,
     reschedule,
@@ -5171,6 +5192,26 @@ describe('pilot live workout structural commands', () => {
       5,
       OPERATION_IDS.reorder,
     )
+    const merged = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/blocks/${WORKOUT_BLOCK_ID}/merge-next`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 6, operationId: OPERATION_IDS.merge, preset: 'set' },
+    })
+    expect(merged.statusCode).toBe(200)
+    expect(merged.json()).toEqual({ block: {
+      id: WORKOUT_BLOCK_ID, version: 7, replayed: false,
+    } })
+    expect(writer.mergeLiveBlockWithNext).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, WORKOUT_BLOCK_ID, 'set', 6, OPERATION_IDS.merge,
+    )
+    const invalidMerge = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/blocks/${WORKOUT_BLOCK_ID}/merge-next`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 6, operationId: OPERATION_IDS.merge, preset: 'bad' },
+    })
+    expect(invalidMerge.statusCode).toBe(400)
     expect(writer.replaceLiveExercise).toHaveBeenCalledWith(
       sessionToken,
       WORKOUT_ID,
