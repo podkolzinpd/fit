@@ -25,6 +25,14 @@ function ZeroValueEditorHarness() {
   return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
 }
 
+function FractionalWeightEditorHarness() {
+  const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([{
+    ...exercises[0]!,
+    sets: [{ position: 0, weightKg: 3.4, reps: 12 }],
+  }])
+  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+}
+
 function ReorderEditorHarness() {
   const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
     exercises[0]!,
@@ -68,6 +76,20 @@ describe('workout exercise editor rules', () => {
     expect(reps).toHaveValue(null)
     await user.tab()
     expect(reps).toHaveValue(0)
+  })
+
+  it('allows a saved fractional weight to pass native form validation', async () => {
+    const user = userEvent.setup()
+    render(<FractionalWeightEditorHarness />)
+
+    const weight = screen.getByLabelText<HTMLInputElement>('Вес, подход 1')
+    expect(weight).toHaveValue(3.4)
+    expect(weight.checkValidity()).toBe(true)
+
+    await user.clear(weight)
+    await user.type(weight, '4.3')
+    expect(weight).toHaveValue(4.3)
+    expect(weight.checkValidity()).toBe(true)
   })
 
   it('edits, adds and removes sets and exercises', async () => {
