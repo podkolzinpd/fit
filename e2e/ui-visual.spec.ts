@@ -1705,6 +1705,13 @@ test('client Profile keeps its visual baseline', async ({ page }, testInfo) => {
   await expect(page.locator('.phone-frame')).toHaveClass(/client-profile-shell-identity/)
   await expect(page.getByRole('link', { name: 'Изменить данные' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Настройки профиля' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Найти тренера' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ввести код тренера' })).toHaveCount(0)
+  const trainerCard = page.locator('.client-trainer-connection-card').first()
+  await expect(trainerCard).toBeVisible()
+  const trainerBox = await trainerCard.boundingBox()
+  const searchBox = await page.getByRole('link', { name: 'Найти тренера' }).boundingBox()
+  expect(trainerBox && searchBox && trainerBox.y + trainerBox.height <= searchBox.y).toBe(true)
   await expect(page.getByRole('region', { name: 'Вид карты тела' })).toHaveCount(0)
   await expectVisualBaseline(page, `client-profile-${process.platform}.png`)
 

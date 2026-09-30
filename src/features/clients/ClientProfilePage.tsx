@@ -6,7 +6,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { setWorkoutTimeWheel, useWorkoutTimeWheel } from '../../app/workout-time-input'
-import { SettingsIcon } from '../../shared/icons'
+import { ChevronRightIcon, SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
 import { AsyncView, Page, Switch } from '../../shared/ui'
@@ -28,7 +28,7 @@ export function ClientProfilePage() {
   })
   if (!actor || actor.role !== 'client') return null
 
-  return <Page title="Профиль" className="client-profile-page" action={<Link className="profile-settings-link" to="/me/settings" aria-label="Настройки профиля"><SettingsIcon /></Link>}>
+  return <Page title="Профиль" className="client-profile-page" action={<Link className="profile-settings-link" to="/me/settings" aria-label="Настройки профиля"><SettingsIcon /><span>Настройки</span></Link>}>
     <AsyncView loading={client.isLoading} error={client.error} empty={!client.data} onRetry={() => void client.refetch()}>
       {client.data && <>
         <section className="client-profile-card">
@@ -38,7 +38,7 @@ export function ClientProfilePage() {
             </span>
             <div><strong>{client.data.fullName}</strong><p>{actor.email}</p></div>
           </div>
-          <Link className="button secondary client-profile-edit" to="/me/edit">Изменить данные</Link>
+          <Link className="client-profile-edit" to="/me/edit">Изменить данные <ChevronRightIcon /></Link>
         </section>
         <ClientTrainerConnections clientId={client.data.id} />
       </>}
@@ -81,7 +81,6 @@ export function ClientProfileSettingsPage() {
     <SettingsSection title="Аккаунт и помощь">
       <AccountSettingsCard />
       <div className="menu">
-        <Link to="/join">Ввести код приглашения</Link>
         <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>
         <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noopener noreferrer">Поддержка в Telegram</a>

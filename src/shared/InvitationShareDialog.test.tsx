@@ -48,6 +48,8 @@ describe('InvitationShareDialog', () => {
     const image = await screen.findByRole('img', { name: 'QR-код приглашения в Fit' })
     expect(image).toHaveAttribute('src', 'data:image/png;base64,qr')
     expect(String(toDataURL.mock.calls[0]?.[0])).toContain('source=yandex')
+    await user.click(screen.getByRole('button', { name: 'Скопировать ссылку' }))
+    expect(toDataURL.mock.calls[0]?.[0]).toBe(copyText.mock.calls[0]?.[0])
 
     await user.click(screen.getByRole('button', { name: 'Сохранить QR-код' }))
     expect(anchorClick).toHaveBeenCalledOnce()

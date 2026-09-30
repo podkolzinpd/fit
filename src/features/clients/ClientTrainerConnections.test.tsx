@@ -42,14 +42,15 @@ describe('ClientTrainerConnections safe disconnect', () => {
     renderConnections()
 
     expect(await screen.findByText('Александр Ситников')).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Отключить' }))
+    await user.click(screen.getByRole('button', { name: 'Действия с тренером Александр Ситников' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Отключить' }))
 
     const dialog = await screen.findByRole('alertdialog')
     expect(dialog).toHaveAccessibleName(/аккаунт, история тренировок, замеры и цели сохранятся/i)
     await user.click(within(dialog).getByRole('button', { name: 'Отключить' }))
 
     expect(repository.removeTrainer).toHaveBeenCalledWith('client-1', 'trainer-1')
-    expect(await screen.findByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
     expect(screen.getByRole('status')).toHaveTextContent('Ваш аккаунт, тренировки, замеры и цели сохранены.')
   })
 
@@ -60,7 +61,8 @@ describe('ClientTrainerConnections safe disconnect', () => {
     ))
     renderConnections()
 
-    await user.click(await screen.findByRole('button', { name: 'Отключить' }))
+    await user.click(await screen.findByRole('button', { name: 'Действия с тренером Александр Ситников' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Отключить' }))
     const dialog = await screen.findByRole('alertdialog')
     await user.click(within(dialog).getByRole('button', { name: 'Отключить' }))
 
@@ -76,13 +78,14 @@ describe('ClientTrainerConnections safe disconnect', () => {
     renderConnections()
 
     const trainerName = await screen.findByText('Александр Ситников')
-    await user.click(within(trainerName.closest('article')!).getByRole('button', { name: 'Отключить' }))
+    await user.click(within(trainerName.closest('article')!).getByRole('button', { name: 'Действия с тренером Александр Ситников' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Отключить' }))
     await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Отключить' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('Тренер отключён')
     expect(screen.queryByText('Александр Ситников')).not.toBeInTheDocument()
     expect(screen.getByText('Другой Тренер')).toBeVisible()
-    expect(screen.queryByText('Сейчас вы занимаетесь самостоятельно.')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Найдите своего тренера' })).not.toBeInTheDocument()
     expect(repository.removeTrainer).toHaveBeenCalledWith('client-1', 'trainer-1')
     expect(repository.listTrainers).toHaveBeenCalledTimes(2)
   })
@@ -104,11 +107,36 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(screen.getByText('ABC123DEF456')).toBeVisible()
   })
 
-  it('keeps the trainer catalog available as a quiet link in the profile', async () => {
+  it('shows the connected trainer above a distinct search action and removes manual code entry', async () => {
     renderConnections()
 
-    expect(await screen.findByRole('link', { name: /Ввести код тренера/ })).toHaveAttribute('href', '/join')
-    expect(await screen.findByRole('link', { name: /Найти тренера/ })).toHaveAttribute('href', '/me/trainers')
+    const trainer = await screen.findByText('Александр Ситников')
+    const search = screen.getByRole('link', { name: 'Найти тренера' })
+    expect(search).toHaveAttribute('href', '/me/trainers')
+    expect(search).toHaveClass('secondary')
+    expect(trainer.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /Ввести код тренера/ })).not.toBeInTheDocument()
+  })
+
+  it('makes finding a trainer the primary action when no trainer is connected', async () => {
+    repository.listTrainers.mockResolvedValue([])
+    renderConnections()
+
+    expect(await screen.findByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
+    const search = screen.getByRole('link', { name: 'Найти тренера' })
+    expect(search).toHaveClass('primary')
+    expect(search).toHaveAttribute('href', '/me/trainers')
+    expect(screen.getByRole('button', { name: 'Пригласить тренера' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Ввести код тренера/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps catalog search available when the connection list fails to load', async () => {
+    repository.listTrainers.mockRejectedValue(new Error('Не удалось загрузить тренеров'))
+    renderConnections()
+
+    expect(await screen.findByText('Не удалось загрузить тренеров')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Найти тренера' })).toHaveClass('secondary')
+    expect(screen.getByRole('button', { name: 'Повторить' })).toBeVisible()
   })
 
 })
