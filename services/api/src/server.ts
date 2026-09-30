@@ -59,6 +59,7 @@ import { parseAllowedOrigins } from './cors-origins.js'
 import { DatabaseTrainerScheduleV2Claimer } from './trainer-schedule-v2-claim.js'
 import { DatabaseTrainerScheduleV2AutoActivator } from './trainer-schedule-v2-auto-activation.js'
 import { DatabaseFitLimeAutoActivator } from './fit-lime-auto-activation.js'
+import { DatabasePilotTrainerFinance } from './trainer-finance.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -179,6 +180,9 @@ const pilotTrainerDiscovery = databasePool === undefined
 const pilotFavoriteWorkouts = databasePool === undefined
   ? undefined
   : new DatabasePilotFavoriteWorkouts(databasePool)
+const pilotTrainerFinance = databasePool === undefined
+  ? undefined
+  : new DatabasePilotTrainerFinance(databasePool)
 const pilotWorkoutsWriter =
   databasePool === undefined
     ? undefined
@@ -310,6 +314,7 @@ const app = buildApp(
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
+    ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotWorkoutTemplates === undefined ? {} : { pilotWorkoutTemplates }),
     ...(pilotProgressData === undefined ? {} : { pilotProgressData }),

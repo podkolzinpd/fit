@@ -83,6 +83,18 @@ export function isContestWinnerPilotEnabled(userId: string) {
   return allowedUserIds.includes(userId)
 }
 
+// Финансовый кабинет сначала проходит ограниченный production-пилот. Флаг
+// намеренно default-off; allowlist управляет только видимостью интерфейса, а
+// сервер отдельно проверяет роль тренера и владение каждой записью.
+export function isTrainerFinancePilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_TRAINER_FINANCE_ENABLED !== 'true') return false
+  const allowedUserIds = String(import.meta.env.VITE_TRAINER_FINANCE_PILOT_USER_IDS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return allowedUserIds.includes(userId)
+}
+
 export interface YandexIdPilotConfig {
   apiBaseUrl: string
   clientId: string

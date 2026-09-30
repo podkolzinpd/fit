@@ -88,6 +88,7 @@ import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profil
 import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
 import { FavoriteWorkoutsError, type FavoriteWorkoutTemplate, type PilotFavoriteWorkouts } from './favorite-workouts.js'
+import { TrainerFinanceError, type PilotTrainerFinance, type TrainerFinanceClientBundle, type TrainerFinancePackage, type TrainerFinancePayment } from './trainer-finance.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -905,6 +906,85 @@ describe('favorite workouts', () => {
 
     expect(response.statusCode).toBe(status)
     expect(response.json()).toEqual(body)
+  })
+})
+
+describe('trainer finance', () => {
+  const session = { accessMode: 'read_write' as const, token: 'f'.repeat(43) }
+  const clientId = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
+  const packageId = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+  const paymentId = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
+  const financePackage: TrainerFinancePackage = {
+    id: packageId, clientId, trainerId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2',
+    title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2,
+    sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000,
+    dueCents: 1500000, startsOn: '2026-09-01', endsOn: '2026-11-30',
+    paymentDueOn: '2026-09-10', comment: null, packageStatus: 'active',
+    paymentStatus: 'overdue', closedAt: null, version: 1,
+    createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z',
+  }
+  const payment: TrainerFinancePayment = {
+    id: paymentId, packageId, amountCents: 1000000, receivedOn: '2026-09-01',
+    source: 'manual', comment: null, voidedAt: null, voidReason: null, version: 1,
+    createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z',
+  }
+  const bundle: TrainerFinanceClientBundle = { clientId, packages: [financePackage], payments: [payment] }
+
+  function finance() {
+    const listClient = vi.fn<PilotTrainerFinance['listClient']>().mockResolvedValue(bundle)
+    const createPackage = vi.fn<PilotTrainerFinance['createPackage']>().mockResolvedValue(financePackage)
+    const updatePackage = vi.fn<PilotTrainerFinance['updatePackage']>().mockResolvedValue({ ...financePackage, version: 2 })
+    const addPayment = vi.fn<PilotTrainerFinance['addPayment']>().mockResolvedValue(payment)
+    const updatePayment = vi.fn<PilotTrainerFinance['updatePayment']>().mockResolvedValue({ ...payment, version: 2 })
+    const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
+    return { service: { listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment } satisfies PilotTrainerFinance,
+      listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment }
+  }
+
+  it('reads only the selected client finance bundle', async () => {
+    const { service: pilotTrainerFinance, listClient } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: `/v1/clients/${clientId}/finance`, headers: { 'x-fit-session': session.token } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ finance: bundle })
+    expect(listClient).toHaveBeenCalledWith(session, clientId)
+  })
+
+  it('creates a package with opening balances through a read-write session', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = { title: 'Персональные тренировки', sessionsTotal: 10,
+      openingUsedSessions: 2, priceCents: 2500000, openingPaidCents: 1000000,
+      startsOn: '2026-09-01', endsOn: '2026-11-30', paymentDueOn: '2026-09-10',
+      comment: null }
+    const response = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: draft })
+    expect(response.statusCode).toBe(201)
+    expect(response.json()).toEqual({ package: financePackage })
+    expect(createPackage).toHaveBeenCalledWith(session, clientId, draft)
+  })
+
+  it('rejects malformed money and read-only mutations', async () => {
+    const { service: pilotTrainerFinance, addPayment } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const malformed = await app.inject({ method: 'POST', url: `/v1/finance/packages/${packageId}/payments`, headers: { 'x-fit-session': session.token }, payload: { amountCents: 1.5, receivedOn: '2026-09-01', comment: null } })
+    const readOnly = await app.inject({ method: 'POST', url: `/v1/finance/packages/${packageId}/payments`, headers: { 'x-fit-pilot-session': session.token }, payload: { amountCents: 1000, receivedOn: '2026-09-01', comment: null } })
+    expect(malformed.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(addPayment).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['forbidden', 403, 'action_not_allowed'],
+    ['not_found', 404, 'resource_not_found'],
+    ['conflict', 409, 'version_conflict'],
+    ['invalid', 422, 'invalid_trainer_finance'],
+  ] as const)('maps a %s failure to a safe response', async (failure, status, code) => {
+    const { service: pilotTrainerFinance, listClient } = finance()
+    listClient.mockRejectedValue(new TrainerFinanceError(failure))
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: `/v1/clients/${clientId}/finance`, headers: { 'x-fit-session': session.token } })
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: code })
   })
 })
 

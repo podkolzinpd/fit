@@ -164,6 +164,14 @@ import {
 } from './trainer-schedule-v2-claim.js'
 import type { TrainerScheduleV2AutoActivator } from './trainer-schedule-v2-auto-activation.js'
 import type { FitLimeAutoActivator } from './fit-lime-auto-activation.js'
+import { TrainerFinanceError, type PilotTrainerFinance } from './trainer-finance.js'
+import {
+  readTrainerFinancePackageDraft,
+  readTrainerFinancePackageUpdate,
+  readTrainerFinancePaymentDraft,
+  readTrainerFinancePaymentUpdate,
+  readTrainerFinanceVoidPayment,
+} from './trainer-finance-request.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
@@ -227,6 +235,7 @@ interface BuildAppOptions {
   trainerScheduleV2Claimer?: TrainerScheduleV2Claimer
   trainerScheduleV2AutoActivator?: TrainerScheduleV2AutoActivator
   fitLimeAutoActivator?: FitLimeAutoActivator
+  pilotTrainerFinance?: PilotTrainerFinance
   logger?: boolean
   releaseId?: string
 }
@@ -2017,6 +2026,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         if (error.failure === 'limit_reached') return reply.code(422).send({ error: 'favorite_workout_limit_reached' })
         return reply.code(422).send({ error: 'invalid_favorite_workout' })
       }
+      if (error instanceof TrainerFinanceError) {
+        if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
+        if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        if (error.failure === 'conflict') return reply.code(409).send({ error: 'version_conflict' })
+        return reply.code(422).send({ error: 'invalid_trainer_finance' })
+      }
       if (error instanceof AssistantStateError) {
         if (error.failure === 'forbidden') {
           return reply.code(403).send({ error: 'action_not_allowed' })
@@ -2102,6 +2117,94 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return sendSafeDatabaseFailure(reply, error, 'Pilot command failed')
     }
   }
+
+  app.get('/v1/clients/:clientId/finance', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { clientId } = request.params as { clientId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.listClient(session, clientId),
+      (finance) => reply.header('cache-control', 'no-store').send({ finance }))
+  })
+
+  app.post('/v1/clients/:clientId/finance/packages', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { clientId } = request.params as { clientId?: unknown }
+    const draft = readTrainerFinancePackageDraft(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || draft === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.createPackage(session, clientId, draft),
+      (financePackage) => reply.header('cache-control', 'no-store').code(201).send({ package: financePackage }))
+  })
+
+  app.put('/v1/finance/packages/:packageId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { packageId } = request.params as { packageId?: unknown }
+    const draft = readTrainerFinancePackageUpdate(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof packageId !== 'string' || !uuidPattern.test(packageId) || draft === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.updatePackage(session, packageId, draft),
+      (financePackage) => reply.header('cache-control', 'no-store').send({ package: financePackage }))
+  })
+
+  app.post('/v1/finance/packages/:packageId/payments', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { packageId } = request.params as { packageId?: unknown }
+    const draft = readTrainerFinancePaymentDraft(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof packageId !== 'string' || !uuidPattern.test(packageId) || draft === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.addPayment(session, packageId, draft),
+      (payment) => reply.header('cache-control', 'no-store').code(201).send({ payment }))
+  })
+
+  app.put('/v1/finance/payments/:paymentId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { paymentId } = request.params as { paymentId?: unknown }
+    const draft = readTrainerFinancePaymentUpdate(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof paymentId !== 'string' || !uuidPattern.test(paymentId) || draft === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.updatePayment(session, paymentId, draft),
+      (payment) => reply.header('cache-control', 'no-store').send({ payment }))
+  })
+
+  app.delete('/v1/finance/payments/:paymentId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { paymentId } = request.params as { paymentId?: unknown }
+    const command = readTrainerFinanceVoidPayment(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof paymentId !== 'string' || !uuidPattern.test(paymentId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.voidPayment(session, paymentId, command.expectedVersion, command.reason),
+      () => reply.code(204).send())
+  })
 
   app.post('/v1/app-feedback', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
