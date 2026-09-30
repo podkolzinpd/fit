@@ -1,7 +1,7 @@
 import type { ProgramLoad } from './load.js'
 import type { ProgramBrief } from './brief.js'
 import { PROGRAM_CATALOG, type ProgramExercise } from './catalog.js'
-import { programExerciseMinutes, ProgramValidationError, validateProgramTemplate, type ProgramTemplate } from './generate.js'
+import { programExerciseMinutes, programWarmupMinutes, ProgramValidationError, validateProgramTemplate, type ProgramTemplate } from './generate.js'
 
 const DOSES = ['sets', 'amount', 'rpe', 'restSec'] as const
 const ROOT_KEYS = ['a_strategy', 'increaseWhen', 'holdWhen', 'reduceWhen', 'sessions', 'exercises', 'durationExercises', 'aerobicExercises']
@@ -9,11 +9,11 @@ const EXERCISE_KEYS = ['weekday', 'exerciseRef', 'progressionNote', ...DOSES]
 const NUMERIC_PROGRESSION_NOTE = /\p{N}|недел|(?:^|[^\p{L}])(?:перв|втор|трет|четв[её]рт)/iu
 // A stated effort range is not a second progression timeline. Accept it only
 // when every actual weekly effort fits; other numeric/weekly narration is rejected.
-function conflictingProgressionNote(row: Record<string, unknown>): boolean {
+function conflictingProgressionNote(row: Record<string, unknown>, weekCount: number): boolean {
   if (typeof row.progressionNote !== 'string') return true
   const note = row.progressionNote.replace(/(?:усили[ея]|RPE)\s+(\d+(?:[.,]\d+)?)(?:\s*[–—-]\s*(\d+(?:[.,]\d+)?))?(?:\s*(?:из|\/)\s*10)?/giu, (match, low: string, high: string | undefined) => {
     const min = Number(low.replace(',', '.')), max = high ? Number(high.replace(',', '.')) : min
-    return Array.isArray(row.rpe) && row.rpe.length === 4 && row.rpe.every((value: unknown) => typeof value === 'number' && value >= min && value <= max) ? '' : match
+    return Array.isArray(row.rpe) && row.rpe.length === weekCount && row.rpe.every((value: unknown) => typeof value === 'number' && value >= min && value <= max) ? '' : match
   })
   return NUMERIC_PROGRESSION_NOTE.test(note) || /(?:^|[.;!?]\s*)максимальное\s+количество\s+повтор/iu.test(note)
 }
@@ -23,15 +23,17 @@ function text(value: unknown, max: number): value is string { return typeof valu
 function invalid(code = 'invalid_model_plan'): never { throw new ProgramValidationError([code]) }
 
 /** Flat exercise rows avoid the provider's nesting limit. Every dose array is
- * four explicit model assignments, not a progression formula applied by code. */
+ * an explicit model assignment for each requested week, not a formula applied by code. */
 export function programPlanSchema(catalog: readonly ProgramExercise[], brief: ProgramBrief, load: ProgramLoad, repairDay = false, timeRepair?: { core: boolean; aerobic: boolean }) {
+  const weekCount = brief.weeks ?? 4
   const weekday = { type: 'integer', enum: brief.weekdays }
-  const constant = (min: number, max: number, step = 1) => Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, index) => Array(4).fill(min + index * step) as number[])
-  const four = (items: object, values?: number[][]) => ({ type: 'array', minItems: 4, maxItems: 4, items, ...(values ? { enum: values } : {}) })
+  const constant = (min: number, max: number, step = 1) => Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, index) => Array(weekCount).fill(min + index * step) as number[])
+  const doses = (items: object, values?: number[][]) => ({ type: 'array', minItems: weekCount, maxItems: weekCount, items, ...(values ? { enum: values } : {}) })
   const sequences = (min: number, max: number, step: number) => {
     const patterns = [[0, 0, 0, 0], [0, 1, 2, 3], [0, 0, 1, 2], [0, 1, 1, 2], [0, 2, 2, 4], [0, 1, 2, 2], [0, 1, 2, 0], [0, -1, -1, 0]]
-    return Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, index) => patterns.map((pattern) => pattern.map((delta) => min + (index + delta) * step)))
-      .flat().filter((values) => values.every((value) => value >= min && value <= max))
+    const values = Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, index) => patterns.map((pattern) => pattern.slice(0, weekCount).map((delta) => min + (index + delta) * step)))
+      .flat().filter((sequence) => sequence.every((value) => value >= min && value <= max))
+    return [...new Map(values.map((sequence) => [JSON.stringify(sequence), sequence])).values()]
   }
   // A time repair gets a mathematically feasible search space instead of another
   // request to estimate the same sums. The model still chooses refs and doses;
@@ -42,7 +44,7 @@ export function programPlanSchema(catalog: readonly ProgramExercise[], brief: Pr
   const coreSlots = budgeted && timeRepair.core ? 1 : 0
   const aerobicSlots = budgeted && timeRepair.aerobic ? 1 : 0
   const aerobicMax = Math.min(1800, Math.max(300, Math.floor(brief.durationMin! * 0.2) * 60))
-  const secondsPerStrength = Math.floor((brief.durationMin! - 10 - strengthSlots * 2 - coreSlots * 3.5 - aerobicSlots * (2 + aerobicMax / 60)) * 60 / strengthSlots)
+  const secondsPerStrength = Math.floor((brief.durationMin! - programWarmupMinutes(brief) - strengthSlots * 2 - coreSlots * 3.5 - aerobicSlots * (2 + aerobicMax / 60)) * 60 / strengthSlots)
   const budgetSets = Math.max(1, Math.min(load.maxSetsPerExercise, Math.floor((secondsPerStrength + 60) / 120), Math.floor(((brief.experience === 'experienced' ? 24 : 18) - coreSlots) / strengthSlots)))
   const budgetAmount = Math.max(4, Math.min(20, Math.floor(secondsPerStrength / 3)))
   const budgetRest = budgetSets === 1 ? 180 : Math.max(60, Math.min(180, Math.floor((secondsPerStrength - budgetSets * 60) / (budgetSets - 1))))
@@ -57,10 +59,10 @@ export function programPlanSchema(catalog: readonly ProgramExercise[], brief: Pr
         weekday,
         exerciseRef: { type: 'string', ...(refs.length ? { enum: refs } : { maxLength: 0 }) },
         progressionNote: { type: 'string', minLength: 1, maxLength: 240 },
-        sets: four({ type: 'integer', minimum: 1, maximum: maxSets }, constant(1, maxSets)),
-        amount: four({ type: 'integer', minimum: aerobic ? 300 : duration ? 15 : 4, maximum: maxAmount }, aerobic ? sequences(300, maxAmount, 60) : duration ? sequences(15, maxAmount, 5) : sequences(4, maxAmount, 1)),
-        rpe: four({ type: 'number', minimum: aerobic ? 3 : 6, maximum: aerobic ? 6 : load.rpe }, constant(aerobic ? 3 : 6, aerobic ? 6 : load.rpe, 0.5)),
-        restSec: four({ type: 'integer', minimum: aerobic ? 0 : 60, maximum: aerobic ? 0 : budgeted && !duration ? budgetRest : 180 }),
+        sets: doses({ type: 'integer', minimum: 1, maximum: maxSets }, constant(1, maxSets)),
+        amount: doses({ type: 'integer', minimum: aerobic ? 300 : duration ? 15 : 4, maximum: maxAmount }, aerobic ? sequences(300, maxAmount, 60) : duration ? sequences(15, maxAmount, 5) : sequences(4, maxAmount, 1)),
+        rpe: doses({ type: 'number', minimum: aerobic ? 3 : 6, maximum: aerobic ? 6 : load.rpe }, constant(aerobic ? 3 : 6, aerobic ? 6 : load.rpe, 0.5)),
+        restSec: doses({ type: 'integer', minimum: aerobic ? 0 : 60, maximum: aerobic ? 0 : budgeted && !duration ? budgetRest : 180 }),
       },
     } }
   }
@@ -84,6 +86,7 @@ export function programPlanSchema(catalog: readonly ProgramExercise[], brief: Pr
 
 /** Shape conversion only: never fill, round, clamp, or silently replace model doses. */
 export function readProgramPlan(raw: unknown, brief: ProgramBrief, today: string): ProgramTemplate {
+  const weekCount = brief.weeks ?? 4
   if (!record(raw) || !exact(raw, ROOT_KEYS) || !text(raw.a_strategy, 900)
     || !text(raw.increaseWhen, 150) || !text(raw.holdWhen, 150) || !text(raw.reduceWhen, 150)
     || !Array.isArray(raw.sessions) || raw.sessions.length !== brief.frequency
@@ -93,10 +96,10 @@ export function readProgramPlan(raw: unknown, brief: ProgramBrief, today: string
     if (record(row) && !text(row.progressionNote, 240)) invalid('invalid_progression_note')
     if (!record(row) || !exact(row, EXERCISE_KEYS) || typeof row.weekday !== 'number'
       || !brief.weekdays?.includes(row.weekday)
-      || !DOSES.every((key) => Array.isArray(row[key]) && row[key].length === 4)) invalid()
+      || !DOSES.every((key) => Array.isArray(row[key]) && row[key].length === weekCount)) invalid()
     // Exact progression is rendered from the dose arrays. A second model-written
     // timeline can contradict those numbers, so new notes stay qualitative.
-    if (conflictingProgressionNote(row)) invalid('progression_note_must_be_qualitative')
+    if (conflictingProgressionNote(row, weekCount)) invalid('progression_note_must_be_qualitative')
     const catalogEntry = PROGRAM_CATALOG.find((exercise) => exercise.ref === row.exerciseRef)
     if (!catalogEntry || (catalogEntry.movement === 'aerobic' ? 'aerobic' : catalogEntry.inputKind === 'duration' ? 'duration' : 'reps') !== kind) invalid('invalid_exercise_input_kind')
     return row
@@ -107,7 +110,7 @@ export function readProgramPlan(raw: unknown, brief: ProgramBrief, today: string
     if (!record(day) || !exact(day, ['weekday', 'title'])) invalid()
     const exercises = rows.filter((row) => row.weekday === day.weekday)
     return { ...day, exercises: exercises.map((row) => ({ exerciseRef: row.exerciseRef, progressionNote: row.progressionNote,
-      weeks: Array.from({ length: 4 }, (_, index) => {
+      weeks: Array.from({ length: weekCount }, (_, index) => {
         const duration = ['duration', 'distance'].includes(PROGRAM_CATALOG.find((exercise) => exercise.ref === row.exerciseRef)!.inputKind)
         return { sets: (row.sets as unknown[])[index], rpe: (row.rpe as unknown[])[index], restSec: (row.restSec as unknown[])[index],
           reps: duration ? null : (row.amount as unknown[])[index], durationSec: duration ? (row.amount as unknown[])[index] : null }
@@ -146,13 +149,14 @@ export function programPlanFeedback(raw: unknown, brief: ProgramBrief) {
   if (!record(raw)) return { expectedRootKeys: ROOT_KEYS }
   const rows = [raw.exercises, raw.durationExercises, raw.aerobicExercises].flatMap((value) => Array.isArray(value) ? value.filter(record) : [])
   const doseIssues: object[] = []
-  const weeklySets = [0, 0, 0, 0]
-  const dayBudgets = (brief.weekdays ?? []).flatMap((weekday) => Array.from({ length: 4 }, (_, week) => {
-    let minutes = 10
+  const weekCount = brief.weeks ?? 4
+  const weeklySets = Array.from({ length: weekCount }, () => 0)
+  const dayBudgets = (brief.weekdays ?? []).flatMap((weekday) => Array.from({ length: weekCount }, (_, week) => {
+    let minutes = programWarmupMinutes(brief)
     const loadedTrunk: string[] = []
     for (const row of rows.filter((item) => item.weekday === weekday)) {
       const entry = PROGRAM_CATALOG.find((item) => item.ref === row.exerciseRef)
-      if (!entry || !DOSES.every((key) => Array.isArray(row[key]) && row[key].length === 4 && row[key].every((value: unknown) => typeof value === 'number' && Number.isFinite(value)))) continue
+      if (!entry || !DOSES.every((key) => Array.isArray(row[key]) && row[key].length === weekCount && row[key].every((value: unknown) => typeof value === 'number' && Number.isFinite(value)))) continue
       const sets = row.sets as number[], amount = row.amount as number[], rpe = row.rpe as number[], rest = row.restSec as number[]
       const timed = ['duration', 'distance'].includes(entry.inputKind)
       const aerobic = entry.movement === 'aerobic'
@@ -174,7 +178,7 @@ export function programPlanFeedback(raw: unknown, brief: ProgramBrief) {
       overTime: minutes > brief.durationMin!, tooManyLoadedTrunk: loadedTrunk.length > 1 }
   }))
   return {
-    noteIssues: rows.filter((row) => conflictingProgressionNote(row)).map((row) => ({ weekday: row.weekday, exerciseRef: row.exerciseRef, note: row.progressionNote, correction: 'Remove numbers and week names. Do not prescribe maximum repetitions: use the assigned reps and target effort. Exact doses are displayed separately.' })),
+    noteIssues: rows.filter((row) => conflictingProgressionNote(row, weekCount)).map((row) => ({ weekday: row.weekday, exerciseRef: row.exerciseRef, note: row.progressionNote, correction: 'Remove numbers and week names. Do not prescribe maximum repetitions: use the assigned reps and target effort. Exact doses are displayed separately.' })),
     doseIssues, dayBudgets, weeklySets, maximumWeeklySetsIncrease: 0.2,
     expectedWeekdays: brief.weekdays,
     sessions: Array.isArray(raw.sessions) ? raw.sessions.filter(record).map((session) => ({

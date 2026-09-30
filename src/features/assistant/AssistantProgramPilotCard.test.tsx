@@ -49,6 +49,19 @@ describe('program pilot card', () => {
     expect(handlers.onApply).toHaveBeenCalledExactlyOnceWith({ workouts: canonicalWorkouts })
     expect(screen.getByRole('button', { name: 'Добавлено в расписание' })).toBeDisabled()
   })
+  it('renders and saves a single 15-minute workout without four-week labels', async () => {
+    const handlers = props()
+    const workout = canonicalWorkouts.slice(0, 1)
+    render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'confirm', clientName: 'Тестик', canonicalWorkouts: workout,
+      briefState: { scope: 'single_workout', weeks: 1, frequency: 1, durationMin: 15 },
+      sessions: [{ day: workout[0]!.workoutDate, week: 1, title: 'Всё тело', exercises: [{ rpe: 6.5 }] }] }} />)
+    expect(screen.getByLabelText('Одна тренировка')).toBeVisible()
+    expect(screen.getByText(workout[0]!.workoutDate)).toBeVisible()
+    expect(screen.getByText(/На разминку предусмотрено 5 минут/)).toBeVisible()
+    expect(screen.queryByText(/Неделя 1/)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Добавить в расписание' }))
+    expect(handlers.onApply).toHaveBeenCalledExactlyOnceWith({ workouts: workout })
+  })
   it('keeps confirmation disabled outside the pilot', () => {
     render(<AssistantProgramPilotCard {...props()} enabled={false} payload={{ step: 'confirm', canonicalWorkouts }} />)
     expect(screen.getByRole('button', { name: 'Добавить в расписание' })).toBeDisabled()

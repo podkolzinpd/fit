@@ -2,12 +2,13 @@ import { createHash } from 'node:crypto'
 import { PROGRAM_CATALOG } from './catalog.js'
 
 export const PROGRAM_CONTEXT_VERSION = 'program-context-v2'
-export const PROGRAM_WEEKS = 4
 export type ProgramFrequency = 1 | 2 | 3
+export type ProgramWeeks = 1 | 2 | 3 | 4
 
-export function programSessionCount(frequency: ProgramFrequency): number {
+export function programSessionCount(frequency: ProgramFrequency, weeks: ProgramWeeks = 4): number {
   if (![1, 2, 3].includes(frequency)) throw new Error('invalid_program_frequency')
-  return frequency * PROGRAM_WEEKS
+  if (![1, 2, 3, 4].includes(weeks)) throw new Error('invalid_program_weeks')
+  return frequency * weeks
 }
 
 export interface ProgramWorkoutSource {

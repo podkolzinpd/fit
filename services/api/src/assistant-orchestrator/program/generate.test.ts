@@ -5,7 +5,7 @@ import { buildProgramHistoryContext } from './context.js'
 import { deriveProgramLoad } from './load.js'
 
 
-describe('four-week program contract', () => {
+describe('flexible program contract', () => {
   it.each([1, 2, 3] as const)('materializes %s weekly sessions across exactly 28 days', (frequency) => {
     const { brief, template } = fixture(frequency)
     const valid = validateProgramTemplate(template, brief, '2026-09-15')
@@ -56,6 +56,14 @@ describe('four-week program contract', () => {
     Object.assign(template.sessions[0]!.exercises[0]!, { progressionNote })
     expect(() => validateProgramTemplate(template, brief, '2026-09-15')).toThrow(expect.objectContaining({ codes: ['invalid_progression_note'] }))
   })
+  it.each([1, 2, 3, 4] as const)('materializes exactly %s requested weeks', (weeks) => {
+    const { brief, template } = fixture(2)
+    brief.weeks = weeks
+    for (const session of template.sessions) for (const exercise of session.exercises) exercise.weeks = exercise.weeks.slice(0, weeks)
+    const result = materializeProgram(validateProgramTemplate(template, brief, '2026-09-15'), brief, 'client', `generation-${weeks}`)
+    expect(result.sessions).toHaveLength(weeks * 2)
+    expect(Math.max(...result.sessions.map((session) => session.week))).toBe(weeks)
+  })
 })
 
 it.each([1, 2, 3] as const)('calculates consistent prescriptions for %s sessions instead of trusting model numbers', (frequency) => {
@@ -75,4 +83,16 @@ it('does not require a universal movement set for a valid client program', () =>
   for (const session of template.sessions) session.exercises = session.exercises.filter((row) => row.exerciseRef !== 'plank')
   expect(() => validateProgramTemplate(template, brief, '2026-09-15')).not.toThrow()
   expect(programBriefIssues({ ...brief, excludedRefs: ['barbell-row', 'dumbbell-row', 'seated-cable-row'] }, '2026-09-15')).toEqual([])
+})
+
+it('builds one 15-minute workout on the requested date', () => {
+  const { brief } = fixture(1)
+  Object.assign(brief, { scope: 'single_workout', weeks: 1, frequency: 1, weekdays: [3], durationMin: 15, startDate: '2026-09-16' })
+  const history = buildProgramHistoryContext({ clientId: 'client', periodStart: '2026-07-22', periodEnd: '2026-09-15', workouts: [], exercises: [], sets: [] }).context
+  const load = deriveProgramLoad(brief, history, '2026-09-15')
+  const template = prescribeProgram({ days: { day1: { squat: 'leg-press', horizontal_push: 'push-ups', horizontal_pull: 'seated-cable-row', accessory: null } } }, brief, '2026-09-15', load)
+  const result = materializeProgram(template, brief, 'client', 'single-generation')
+  expect(result.sessions).toHaveLength(1)
+  expect(result.sessions[0]).toMatchObject({ day: '2026-09-16', week: 1, title: 'Всё тело 1' })
+  expect(result.sessions[0]!.exercises).toHaveLength(3)
 })

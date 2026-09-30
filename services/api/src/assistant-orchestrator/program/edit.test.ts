@@ -29,7 +29,7 @@ it('replaces an exercise only in the explicitly selected day across weeks', () =
   const date = payload.sessions[0]!.day
   const edited = editProgram(`Измени упражнение 1 в занятии ${date}; область: этот день во всех неделях; упражнение: Приседания без веса; подходы: 2; повторы: 8; секунды: нет; усилие: 6.5; отдых: 90.`, payload, brief, 'client', '2026-09-15')
   expect(edited.canonicalWorkouts.filter((workout) => workout.exercises[0]!.ref === 'fedb-bodyweight-squat')).toHaveLength(4)
-  expect(edited.sessions.filter((session) => session.exercises[0]!.ref === 'fedb-bodyweight-squat').every((session) => session.exercises[0]!.progressionNote?.includes('для этого дня во всех четырёх неделях'))).toBe(true)
+  expect(edited.sessions.filter((session) => session.exercises[0]!.ref === 'fedb-bodyweight-squat').every((session) => session.exercises[0]!.progressionNote?.includes('для этого дня во всей программе'))).toBe(true)
 })
 it('rejects an invalid dose without mutating the previous draft', () => {
   const { brief, payload } = setup(); const before = structuredClone(payload)

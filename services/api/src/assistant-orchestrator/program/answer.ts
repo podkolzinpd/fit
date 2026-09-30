@@ -22,7 +22,7 @@ function explicitDuration(text: string): number | undefined {
   if (!match) return undefined
   const values = [Number(match[1]), match[2] === undefined ? undefined : Number(match[2])]
     .filter((value): value is number => value !== undefined)
-  if (values.some((value) => !Number.isInteger(value) || value < 30 || value > 120)) return undefined
+  if (values.some((value) => !Number.isInteger(value) || value < 15 || value > 120)) return undefined
   // A program must fit even on the shorter day from an explicitly stated range.
   return Math.min(...values)
 }
@@ -43,6 +43,17 @@ function explicitEquipment(text: string): Equipment[] | undefined {
 /** Explicit absence is an answer, not a request to delete a field. */
 export function explicitBriefAnswer(message: string, context?: BriefAnswerContext, today?: string, brief?: ProgramBrief): unknown {
   const text = message.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim().replace(/[.!]$/, '')
+  if (context?.fields.length === 1 && context.fields[0] === 'scope') {
+    if (/^(?:одн(?:у|а)\s+)?тренировк(?:у|а)$/u.test(text)) return { patch: { scope: 'single_workout' }, clear: [], evidence: { scope: message }, clarification: null }
+    if (/^программ(?:у|а)(?:\s+тренировок)?$/u.test(text)) return { patch: { scope: 'program' }, clear: [], evidence: { scope: message }, clarification: null }
+  }
+  if (context?.fields.length === 1 && context.fields[0] === 'weeks') {
+    const values: Record<string, number> = { одну: 1, одна: 1, один: 1, две: 2, два: 2, три: 3, четыре: 4, месяц: 4 }
+    const match = text.match(/^(одну|одна|один|две|два|три|четыре|[1-4])(?:\s+недел(?:ю|и|ь))?$|^(месяц)$/u)
+    const value = match?.[1] ?? match?.[2]
+    const weeks = value ? values[value] ?? Number(value) : undefined
+    if (weeks) return { patch: { weeks }, clear: [], evidence: { weeks: message }, clarification: null }
+  }
   if (context?.fields.length === 1 && context.fields[0] === 'durationMin') {
     const durationMin = explicitDuration(text)
     if (durationMin !== undefined) return { patch: { durationMin }, clear: [], evidence: { durationMin: message }, clarification: null }
