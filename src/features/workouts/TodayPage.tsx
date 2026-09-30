@@ -39,7 +39,7 @@ import { WorkoutCta, WorkoutExercise, WorkoutHeader, WorkoutSetRow } from './Wor
 import { trainerActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 import { TrainerFirstPlanPrompt, TrainerFirstRun } from './FirstRunExperience'
 import { takeFirstWorkoutIntent } from './first-workout-intent'
-import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, moveParsedWorkoutReviewBlock } from './today-review-order'
+import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, mergeParsedWorkoutReviewBlockWithNext, moveParsedWorkoutReviewBlock, splitParsedWorkoutReviewBlock } from './today-review-order'
 import { AppInstallPrompt } from '../install'
 import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
@@ -587,6 +587,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setRestOverrides(new Map())
   }
 
+  function mergeReviewBlock(itemIndex: number) {
+    setItems((current) => mergeParsedWorkoutReviewBlockWithNext(current, itemIndex))
+    setRpeOverrides(new Map())
+    setRestOverrides(new Map())
+  }
+
+  function splitReviewBlock(itemIndex: number) {
+    setItems((current) => splitParsedWorkoutReviewBlock(current, itemIndex))
+  }
+
   function clearDraftAndForm(openComposer = false) {
     removeTodayDraft(draftKey)
     setScreen('compose')
@@ -730,9 +740,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div>
         : <button type="button" className="link" onClick={() => { trackGoal('today_review_reorder_started'); setReordering(true) }}>Изменить порядок</button>}
       </div>}
-      {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.map(({ item, index }, itemInBlockIndex) => {
+      {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.length > 1 && <span className="block-badge">{block.items[0]!.item.structure?.blockPreset === 'interval' ? 'Интервалы' : block.items[0]!.item.structure?.blockPreset === 'circuit' ? 'Круговая' : 'Суперсет'}</span>}{block.items.map(({ item, index }, itemInBlockIndex) => {
         const showRpe = isRpeVisible(index)
         const showRest = isRestVisible(index)
+        const nextBlock = reviewBlocks[blockIndex + 1]
+        const canMergeNext = itemInBlockIndex === block.items.length - 1 && Boolean(nextBlock && nextBlock.items.length === 1
+          && block.items.every(({ item: member }) => member.structure?.blockPreset !== 'interval' && member.structure?.blockPreset !== 'circuit')
+          && nextBlock.items[0]!.item.structure?.blockPreset !== 'interval' && nextBlock.items[0]!.item.structure?.blockPreset !== 'circuit' && nextBlock.items[0]!.item.structure?.blockType !== 'group')
         const distanceCapable = item.exercise.inputKind === 'distance' || (item.exercise.inputKind === 'duration' && (allowsOptionalDistance(item.exercise) || item.sets.some((set) => set.distanceKm !== undefined)))
         const reorderActions = itemInBlockIndex === 0 ? <span className="block-reorder today-review-order-buttons">
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вверх`} disabled={blockIndex === 0} onClick={() => moveReviewBlock(index, -1)}><ArrowUpIcon /></button>
@@ -744,6 +758,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
             actions={reordering ? reorderActions : <OverflowMenu label={`Настройки упражнения «${item.exercise.name}»`} items={[
             { label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) },
             { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(index) },
+            ...(canMergeNext ? [{ label: block.items.length > 1 ? 'Добавить следующее в суперсет' : 'Создать суперсет со следующим', onClick: () => mergeReviewBlock(index) }] : []),
+            ...(block.items.length > 1 && itemInBlockIndex === 0 && item.structure?.blockPreset === 'set' ? [{ label: 'Разбить суперсет', onClick: () => splitReviewBlock(index) }] : []),
             { label: 'Заменить', onClick: () => { setReplaceIndex(index); setPickerOpen(true) } },
             { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
           ]} />} />

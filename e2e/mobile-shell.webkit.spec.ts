@@ -966,6 +966,19 @@ test('iPhone: новый клиент выбирает готовую трени
   await expect(page.getByText('Распознано: 5')).toBeVisible()
   await expect(page.getByText('Отжимания')).toBeVisible()
 
+  const firstReviewExercise = page.locator('.today-exercise').first()
+  await firstReviewExercise.getByRole('button', { name: /Настройки упражнения/ }).click()
+  await page.getByRole('menuitem', { name: 'Создать суперсет со следующим' }).click()
+  await expect(page.locator('.today-review-block').first().getByText('Суперсет')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('review-client-superset-390.png'), fullPage: true })
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('review-client-superset-430.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await firstReviewExercise.getByRole('button', { name: /Настройки упражнения/ }).click()
+  await page.getByRole('menuitem', { name: 'Разбить суперсет' }).click()
+
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()
   await page.getByRole('button', { name: 'Записать выполненную' }).click()
@@ -1302,14 +1315,19 @@ async function addExercise(page: Page, name: string, first = false) {
   await page.getByRole('button', { name: 'Добавить 1' }).click()
 }
 
-async function createGroupedWorkout(page: Page, clientName: string, preset: 'set' | 'circuit') {
+async function createGroupedWorkout(page: Page, clientName: string, customRest = false) {
   await page.goto('/workouts/new')
   await selectClient(page, clientName)
   await addExercise(page, 'Присед со штангой', true)
   await addExercise(page, 'Жим лёжа')
   await page.getByRole('button', { name: 'Создать суперсет со следующим' }).click()
   await expect(page.getByLabel('Тип блока')).toHaveValue('set')
-  await page.getByLabel('Тип блока').selectOption(preset)
+  await expect(page.getByLabel('Тип блока').locator('option[value="circuit"]')).toHaveCount(0)
+  if (customRest) {
+    await page.locator('.block-options summary').click()
+    await page.getByLabel('Отдых между упражнениями, с').fill('15')
+    await page.getByLabel('Отдых между кругами, с').fill('60')
+  }
   await page.getByLabel('Кругов').fill('2')
   for (let round = 1; round <= 2; round += 1) {
     for (let index = 0; index < 2; index += 1) {
@@ -1324,7 +1342,7 @@ async function createGroupedWorkout(page: Page, clientName: string, preset: 'set
   await page.keyboard.press('Escape')
   await expect(page.locator('.live-timer')).toBeVisible()
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
-  await expect(page.locator('.live-pinned .block-badge')).toHaveText(preset === 'set' ? 'Суперсет' : 'Круговая')
+  await expect(page.locator('.live-pinned .block-badge')).toHaveText('Суперсет')
 }
 
 function currentRound(page: Page) {
@@ -2441,7 +2459,7 @@ test('iPhone: суперсет не ставит отдых внутри кру�
   test.slow()
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
-  await createGroupedWorkout(page, clientName, 'set')
+  await createGroupedWorkout(page, clientName)
   await expect(page.locator('.circuit-exercise-notes .live-exercise-note')).toHaveCount(2)
   await expect(page.locator('.circuit-round .live-exercise-note')).toHaveCount(0)
   await confirmCurrentSet(page)
@@ -2462,11 +2480,11 @@ test('iPhone: суперсет не ставит отдых внутри кру�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: круговая использует отдых между упражнениями и между кругами', async ({ page }, testInfo) => {
+test('iPhone: суперсет сохраняет заданный отдых между упражнениями и раундами', async ({ page }, testInfo) => {
   test.slow()
   await page.setViewportSize({ width: 390, height: 844 })
   const clientName = await createIsolatedClient(page, testInfo)
-  await createGroupedWorkout(page, clientName, 'circuit')
+  await createGroupedWorkout(page, clientName, true)
   await confirmCurrentSet(page)
   await expect(currentRound(page).locator('.live-set.confirmed')).toHaveCount(1)
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 0:1[2-5]/ })).toBeVisible()

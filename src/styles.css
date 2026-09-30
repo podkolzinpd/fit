@@ -2904,6 +2904,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .today-review-order-toolbar > .link { min-height:var(--tap); padding:6px 0; color:var(--accent-strong); font-size:14px; font-weight:750; }
 .today-review-order-toolbar .reorder-mode { width:100%; min-height:var(--tap); justify-content:space-between; padding:7px 12px; }
 .today-review-block { display:grid; gap:10px; }
+.today-review-block > .block-badge { justify-self:start; }
 .today-exercise-list.is-reordering { gap:6px; }
 .today-exercise-list.is-reordering .today-review-block { gap:0; }
 .today-exercise-list.is-reordering .today-exercise.planned-exercise { min-height:68px; padding:10px 0; }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
-import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, moveParsedWorkoutReviewBlock } from './today-review-order'
+import { groupParsedWorkoutReviewBlocks, hasUnresolvedWorkoutReviewItems, mergeParsedWorkoutReviewBlockWithNext, moveParsedWorkoutReviewBlock, splitParsedWorkoutReviewBlock } from './today-review-order'
 
 function item(ref: string, blockId?: string): ParsedWorkoutExercise {
   const exercise: ExerciseSnapshot = { source: 'system', ref, name: ref, muscleGroup: 'other', inputKind: 'strength' }
@@ -27,6 +27,30 @@ describe('today review order', () => {
     const items = [item('a'), item('b')]
     expect(moveParsedWorkoutReviewBlock(items, 0, -1).map(({ exercise }) => exercise.ref)).toEqual(['a', 'b'])
     expect(moveParsedWorkoutReviewBlock(items, 1, 1).map(({ exercise }) => exercise.ref)).toEqual(['a', 'b'])
+  })
+
+  it('объединяет три упражнения в суперсет без потери значений и возвращает одиночные', () => {
+    const original = [
+      { ...item('bench'), sets: [{ position: 0, weightKg: 60, reps: 10 }, { position: 1, weightKg: 65, reps: 8 }], hasValues: true },
+      { ...item('plank'), sets: [{ position: 0, durationSec: 45 }], hasValues: true },
+      item('squat'),
+    ]
+    const pair = mergeParsedWorkoutReviewBlockWithNext(original, 0)
+    const triple = mergeParsedWorkoutReviewBlockWithNext(pair, 1)
+    expect(groupParsedWorkoutReviewBlocks(triple)).toHaveLength(1)
+    expect(triple.map(({ structure }) => structure?.blockPreset)).toEqual(['set', 'set', 'set'])
+    expect(triple.map(({ structure }) => structure?.blockRounds)).toEqual([2, 2, 2])
+    expect(triple.map(({ sets }) => sets)).toEqual(original.map(({ sets }) => sets))
+    expect(splitParsedWorkoutReviewBlock(triple, 0).map(({ structure }) => structure?.blockType)).toEqual(['single', 'single', 'single'])
+  })
+
+  it('не объединяет интервальные и исторические круговые блоки', () => {
+    const interval = { ...item('run'), structure: { blockId: 'interval', blockType: 'single' as const, blockPreset: 'interval' as const } }
+    const circuit = { ...item('old'), structure: { blockId: 'old', blockType: 'group' as const, blockPreset: 'circuit' as const } }
+    expect(mergeParsedWorkoutReviewBlockWithNext([interval, item('a')], 0)[0]).toEqual(interval)
+    expect(mergeParsedWorkoutReviewBlockWithNext([circuit, item('a')], 0)[0]).toEqual(circuit)
+    expect(mergeParsedWorkoutReviewBlockWithNext([item('a'), interval], 0)[0]?.structure).toBeUndefined()
+    expect(mergeParsedWorkoutReviewBlockWithNext([item('a'), { ...circuit, structure: { ...circuit.structure, blockType: 'single' } }], 0)[0]?.structure).toBeUndefined()
   })
 
   it('не разрешает перейти к проверке, пока неоднозначная строка не выбрана', () => {
