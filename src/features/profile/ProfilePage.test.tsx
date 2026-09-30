@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
+import { getWorkoutTimeWheel, setWorkoutTimeWheel } from '../../app/workout-time-input'
 import { TrainerProfileSettingsPage } from './ProfilePage'
 
 type MockActor = { role: 'trainer'; userId: string; email: string }
@@ -31,6 +33,7 @@ function wrapper() {
 
 describe('TrainerProfileSettingsPage', () => {
   beforeEach(() => {
+    setWorkoutTimeWheel(false)
     useAuth.mockReset()
     notificationsStatus.mockReset()
     useAuth.mockReturnValue({ actor: { role: 'trainer', userId: 'trainer-user-1', email: 'trainer@test.com' } })
@@ -48,5 +51,15 @@ describe('TrainerProfileSettingsPage', () => {
     render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
 
     expect(screen.queryByRole('checkbox', { name: 'Показывать архив клиентов' })).not.toBeInTheDocument()
+  })
+
+  it('offers the optional wheel in trainer workout settings', async () => {
+    const user = userEvent.setup()
+    render(<TrainerProfileSettingsPage />, { wrapper: wrapper() })
+    const wheel = screen.getByRole('switch', { name: 'Ввод времени колёсиком' })
+    expect(wheel).not.toBeChecked()
+    await user.click(wheel)
+    expect(wheel).toBeChecked()
+    expect(getWorkoutTimeWheel()).toBe(true)
   })
 })

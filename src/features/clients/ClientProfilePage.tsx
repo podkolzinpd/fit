@@ -5,6 +5,7 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
+import { setWorkoutTimeWheel, useWorkoutTimeWheel } from '../../app/workout-time-input'
 import { SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
@@ -50,6 +51,7 @@ export function ClientProfileSettingsPage() {
   const { clients: clientsRepository } = useDataBackend()
   const theme = useAppTheme()
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
+  const useTimeWheel = useWorkoutTimeWheel()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
   const client = useQuery({
@@ -65,7 +67,10 @@ export function ClientProfileSettingsPage() {
     </SettingsSection>
 
     <SettingsSection title="Тренировки">
-      <div className="profile-settings"><Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} /></div>
+      <div className="profile-settings">
+        <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
+        <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
+      </div>
     </SettingsSection>
 
     <SettingsSection title="Оформление">

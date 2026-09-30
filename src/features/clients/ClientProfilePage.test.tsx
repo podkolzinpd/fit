@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
+import { getWorkoutTimeWheel, setWorkoutTimeWheel } from '../../app/workout-time-input'
 import { ClientProfilePage, ClientProfileSettingsPage } from './ClientProfilePage'
 
 type MockActor = { role: 'client'; userId: string; email: string }
@@ -43,6 +45,7 @@ function wrapper() {
 
 describe('ClientProfilePage', () => {
   beforeEach(() => {
+    setWorkoutTimeWheel(false)
     useAuth.mockReset()
     getMine.mockReset()
     notificationsStatus.mockReset()
@@ -60,6 +63,16 @@ describe('ClientProfilePage', () => {
   it('renders notification controls on the client settings page', async () => {
     render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).toBeVisible())
+  })
+
+  it('offers the optional wheel in client workout settings', async () => {
+    const user = userEvent.setup()
+    render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
+    const wheel = screen.getByRole('switch', { name: 'Ввод времени колёсиком' })
+    expect(wheel).not.toBeChecked()
+    await user.click(wheel)
+    expect(wheel).toBeChecked()
+    expect(getWorkoutTimeWheel()).toBe(true)
   })
 
   it('links to the Telegram support channel next to the feedback form entry', async () => {

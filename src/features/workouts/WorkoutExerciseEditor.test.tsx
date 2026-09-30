@@ -103,7 +103,7 @@ describe('workout exercise editor rules', () => {
       { source: 'system', ref: 'running', name: 'Бег', muscleGroup: 'cardio', inputKind: 'distance', position: 2, sets: [{ position: 0 }] },
     ]
     render(<WorkoutExerciseEditor exercises={mixed} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
-    expect(screen.getAllByRole('button', { name: /Время, подход 1/ })).toHaveLength(2)
+    expect(screen.getAllByRole('group', { name: 'Время, подход 1' })).toHaveLength(2)
     expect(screen.getByLabelText('Расстояние, подход 1')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Действия с планом' }))
@@ -145,7 +145,8 @@ describe('workout exercise editor rules', () => {
     }]
     render(<WorkoutExerciseEditor exercises={copied} onChange={vi.fn()} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: 'Время, подход 1: 0:25' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Время, подход 1: минуты' })).toHaveValue('0')
+    expect(screen.getByRole('textbox', { name: 'Время, подход 1: секунды' })).toHaveValue('25')
   })
 
   it('быстро собирает интервалы с пассивным или активным восстановлением', async () => {
@@ -156,7 +157,8 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
     await user.click(screen.getByRole('button', { name: '6 × 400 м · отдых 90 с' }))
     expect(screen.getByText('Подход 6')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Время, подход 1: 1:40' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Время, подход 1: минуты' })).toHaveValue('1')
+    expect(screen.getByRole('textbox', { name: 'Время, подход 1: секунды' })).toHaveValue('40')
     expect(screen.getByLabelText('Расстояние, подход 1')).toHaveValue(400)
 
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))

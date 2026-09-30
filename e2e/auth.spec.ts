@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseWorkoutTime } from './workout-time-wheel'
+import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function logoutFromProfile(page: import('@playwright/test').Page) {
   const pathname = new URL(page.url()).pathname
@@ -570,7 +570,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Дождаться серверной перестановки: у нового текущего упражнения один
   // подход; до refetch здесь ещё видны два подхода предыдущего упражнения.
   await expect(page.locator('.live-exercise .live-set-number')).toHaveCount(1)
-  await expect(page.getByLabel('Фактическое время')).toHaveText('Добавить время')
+  await expectWorkoutTime(page, 'Фактическое время', undefined)
   await chooseWorkoutTime(page, 'Фактическое время', 10 * 60)
   await page.getByLabel('Фактическая дистанция').fill('1.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
@@ -634,9 +634,9 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Бег', { exact: true })).toHaveCount(2)
   // После перестановки в Live и обратной перестановки результата оба факта
   // остаются у своих упражнений, а не переносятся между одинаковыми ref.
-  await expect(page.getByLabel('Время, подход 1').first()).toHaveText('29:40')
+  await expectWorkoutTime(page, 'Время, подход 1', 29 * 60 + 40, 0)
   await expect(page.getByLabel('Расстояние, подход 1').first()).toHaveValue('5.2')
-  await expect(page.getByLabel('Время, подход 1').last()).toHaveText('10:00')
+  await expectWorkoutTime(page, 'Время, подход 1', 10 * 60, 1)
   await expect(page.getByLabel('Расстояние, подход 1').last()).toHaveValue('1.2')
   await Promise.all([
     page.waitForURL(/\/workouts\/[0-9a-f-]+$/),

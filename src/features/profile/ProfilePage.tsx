@@ -4,6 +4,7 @@ import { useAuth } from '../../app/auth-context'
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
+import { setWorkoutTimeWheel, useWorkoutTimeWheel } from '../../app/workout-time-input'
 import { setAppTheme, useAppTheme } from '../../app/theme'
 import { isFitLimeShellRoute } from '../../app/fit-lime'
 import { SettingsIcon } from '../../shared/icons'
@@ -37,6 +38,7 @@ export function TrainerProfileSettingsPage() {
   const { actor } = useAuth()
   const theme = useAppTheme()
   const showRpe = useRpeDisplay(actor?.userId)
+  const useTimeWheel = useWorkoutTimeWheel()
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -53,6 +55,7 @@ export function TrainerProfileSettingsPage() {
     <SettingsSection title="Тренировки">
       <div className="profile-settings">
         <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
+        <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
         <Switch label="Показывать отдых" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
         <Switch label="Показывать RPE" checked={showRpe} onChange={(checked) => setRpeDisplay(actor.userId, checked)} />
       </div>

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseWorkoutTime } from './workout-time-wheel'
+import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: Page, items: unknown[]) {
   await page.route('**/functions/v1/parse-workout', async (route) => {
@@ -75,7 +75,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await squatEditor.getByRole('button', { name: 'Ещё действия' }).click()
   await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
   await expect(squatEditor.getByLabel('Целевой RPE, подход 1')).toHaveValue('8')
-  await expect(page.getByLabel('Время, подход 3')).toHaveText('0:45')
+  await expectWorkoutTime(page, 'Время, подход 3', 45)
 })
 
 test('форма: заголовки «Сет» и «Круговая» автоматически создают круговые', async ({ page }) => {
@@ -96,7 +96,7 @@ test('форма: заголовки «Сет» и «Круговая» авто
   await expect(page.locator('.planned-round')).toHaveCount(3)
   await expect(page.locator('.planned-round').nth(2).locator('.planned-round-exercise-name')).toHaveCount(1)
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('60')
-  await expect(page.getByLabel('Время, подход 2')).toHaveText('0:45')
+  await expectWorkoutTime(page, 'Время, подход 2', 45)
 
   await page.locator('.block-options summary').click()
   await expect(page.getByLabel('Отдых между упражнениями, с')).toHaveValue('15')
@@ -148,7 +148,7 @@ test('гребной тренажёр использует темп на 500 м 
   await page.getByLabel('Гребков в минуту').fill('30')
   await page.getByLabel('Гребков в минуту').press('Tab')
 
-  await expect(page.getByLabel('Время, подход 1')).toHaveText('5:08')
+  await expectWorkoutTime(page, 'Время, подход 1', 5 * 60 + 8)
   await expect(page.getByLabel('Расстояние, подход 1')).toHaveValue('500')
   await expect(page.getByText('Темп 5:08/500 м')).toBeVisible()
   await expect(page.getByLabel('Гребков в минуту')).toHaveValue('30')
@@ -474,7 +474,7 @@ test('live: планка вводится в секундах, таймер за
   await page.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
   // Планка — точное время в секундах, а не вес или минуты.
-  await expect(page.getByLabel('Время, подход 1')).toHaveText('Добавить время')
+  await expectWorkoutTime(page, 'Время, подход 1', undefined)
   await chooseWorkoutTime(page, 'Время, подход 1', 60)
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
@@ -493,7 +493,7 @@ test('live: планка вводится в секундах, таймер за
   await page.locator('.live-exercise-collapsed').click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
-  await expect(page.getByLabel('Фактическое время').first()).toBeEnabled()
+  await expect(page.getByRole('textbox', { name: 'Фактическое время: минуты' }).first()).toBeEnabled()
   await chooseWorkoutTime(page, 'Фактическое время', 90)
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()

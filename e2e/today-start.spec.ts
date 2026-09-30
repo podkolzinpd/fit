@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { expectWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: import('@playwright/test').Page, items: unknown[]) {
   await page.route('**/functions/v1/parse-workout', async (route) => {
@@ -283,7 +284,7 @@ test('today: беговая ветка сразу добавляет интер�
   await expect(page.getByText('Бег — быстрый отрезок', { exact: true })).toBeVisible()
   await expect(page.getByText('Бег — восстановление', { exact: true })).toBeVisible()
   await page.locator('.today-exercise').first().locator('summary').click()
-  await expect(page.getByLabel('Бег — быстрый отрезок: время, подход 6')).toHaveText('1:40')
+  await expectWorkoutTime(page, 'Бег — быстрый отрезок: время, подход 6', 100)
   await expect(page.getByLabel('Бег — быстрый отрезок: расстояние, подход 6')).toHaveValue('400')
 
   await page.getByRole('button', { name: 'Далее' }).click()
