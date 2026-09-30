@@ -732,6 +732,36 @@ test('trainer switches day-grid density from schedule and profile settings', asy
   await testInfo.attach('trainer-schedule-density-settings', { path: screenshotPath, contentType: 'image/png' })
 })
 
+test('monochrome trainer switches day-grid density without Schedule V2', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page, { pilot: false })
+  await page.goto('/schedule?date=2026-09-24')
+
+  const timeline = page.locator('.day-grid-scroll')
+  const grid = timeline.locator('.day-grid')
+  await expect(page.locator('.trainer-schedule-identity')).toBeVisible()
+  await expect(page.locator('.trainer-schedule-v2-shell')).toHaveCount(0)
+  await expect(grid).toHaveCSS('height', `${24 * 56}px`)
+  await timeline.evaluate((element) => { element.scrollTop = 500 })
+  const before = await timeline.evaluate((element) => ({ scrollTop: element.scrollTop, height: element.clientHeight }))
+
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  await page.getByRole('menuitem', { name: 'Компактная сетка' }).click()
+
+  await expect(page.locator('.schedule-density-compact')).toBeVisible()
+  await expect(grid).toHaveCSS('height', `${24 * 44}px`)
+  const after = await timeline.evaluate((element) => ({ scrollTop: element.scrollTop, height: element.clientHeight }))
+  expect((before.scrollTop + before.height / 2) / 56)
+    .toBeCloseTo((after.scrollTop + after.height / 2) / 44, 1)
+  const screenshotPath = testInfo.outputPath('trainer-schedule-monochrome-density.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-monochrome-density', { path: screenshotPath, contentType: 'image/png' })
+
+  await page.reload()
+  await expect(page.locator('.schedule-density-compact')).toBeVisible()
+  await expect(grid).toHaveCSS('height', `${24 * 44}px`)
+})
+
 test('inbox messages fail independently and all-messages back returns to the selected day', async ({ page }) => {
   const backend = await mockPilot(page, { failThreads: true })
   await page.goto('/today?date=2026-09-24')
