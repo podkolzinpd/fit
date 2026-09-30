@@ -89,6 +89,26 @@ test('trainer finance overview stays compact and readable', async ({ page }, tes
   await expectVisualBaseline(page, `trainer-finance-overview-${profile}-${process.platform}.png`)
 })
 
+test('trainer client finances keep details compact and disclose history on demand', async ({ page }, testInfo) => {
+  await page.goto('/auth')
+  await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/finance-client-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./finance-client-harness')
+    harness.mountFinanceClientHarness()
+  })
+
+  const frame = page.locator('#finance-client-qa .phone-frame')
+  await expect(frame).toHaveClass(/trainer-finance-identity/)
+  await expect(page.getByText('5 000 ₽', { exact: true }).first()).not.toBeVisible()
+  await expect(page.getByText('История абонементов')).not.toBeVisible()
+  expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.getByText('Оплаты', { exact: true }).click()
+  await expect(page.getByText('5 000 ₽', { exact: true }).first()).toBeVisible()
+  const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
+  await expectVisualBaseline(page, `trainer-finance-client-${profile}-${process.platform}.png`)
+})
+
 const demoClientId = '11111111-1111-4111-8111-111111111111'
 
 
