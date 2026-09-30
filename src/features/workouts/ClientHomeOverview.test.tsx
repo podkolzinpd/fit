@@ -73,7 +73,7 @@ describe('ClientHomeOverview', () => {
     const latest = workout({ id: 'latest', status: 'done', hasPr: true })
     render(<MemoryRouter><ClientHomeOverview today={today} workouts={[latest]} regularity={[week]} goal={goal} personalRecords={[squatRecord]} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Своя тренировка</button>} /></MemoryRouter>)
     expect(screen.queryByText('НОВЫЙ ЛИЧНЫЙ РЕКОРД')).toBeNull()
-    expect(screen.getByText('Здесь пока нечего сравнивать.')).toBeVisible()
+    expect(screen.queryByText('Личный рекорд')).toBeNull()
     expect(screen.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/latest')
   })
 

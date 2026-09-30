@@ -6013,10 +6013,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .personal-workout-result .actions a { display:inline-flex; align-items:center; min-height:44px; }
 .client-home-overview .personal-workout-result { grid-template-columns:minmax(0,1fr); justify-content:stretch; align-items:start; }
 .client-home-overview .personal-workout-result:hover { transform:none; }
-.personal-result-comparison { display:grid; gap:4px; min-width:0; }
-.personal-result-comparison p { margin:0; }
-.personal-result-comparison p:nth-child(2) { color:var(--fg); font-variant-numeric:tabular-nums; }
-.personal-result-comparison p:last-child { font-size:var(--type-caption-size); }
+.personal-workout-result > .personal-result-facts { color:var(--fg); font-size:var(--type-section-size); font-weight:600; }
 
 /* Home reuses the Progress figure and the confirmed-set distribution. */
 .workout-load-map { min-width:0; padding-top:12px; margin-top:4px; border-top:1px solid var(--border); }
