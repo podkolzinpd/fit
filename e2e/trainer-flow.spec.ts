@@ -226,9 +226,13 @@ test('trainer can create client, complete workout and save progress', async ({ p
   // Список упражнений маскируем: миниатюры-фото волатильны и различаются по ОС.
   // Под визуальным контролем — search-first хром пикера.
   await expect(page).toHaveScreenshot('exercise-picker-mobile.png', { fullPage: true, maxDiffPixelRatio: 0.03, mask: [page.locator('.picker-list')] })
-  // Группа → мышца → оборудование доступны прямо над каталогом.
+  // Группа → мышца → оборудование доступны через компактную панель фильтров.
+  await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await page.getByRole('button', { name: 'Фильтры (1)' }).click()
   await page.getByRole('button', { name: 'Передняя поверхность бедра', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Убрать фильтр: Ноги' })).toBeVisible()
+  await page.getByRole('button', { name: 'Фильтры (2)' }).click()
   await expect(page.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Мышца' })).toBeVisible()
   await expect(page.getByLabel('Оборудование')).toBeVisible()
@@ -236,7 +240,7 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.getByRole('button', { name: 'Сбросить' }).click()
   await page.getByLabel('Поиск упражнения').fill('Болгарский')
   await expect(page.getByText(/Найдено: \d+/)).toBeVisible()
-  await expect(page.getByRole('group', { name: 'Группа мышц' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Фильтры' })).toBeVisible()
   // Количество найденных карточек меняется вместе с каталогом и сдвигает
   // bottom sheet по высоте. Визуальные baseline списка живут в ui-visual;
   // здесь проверяем поведение и отсутствие горизонтального переполнения.

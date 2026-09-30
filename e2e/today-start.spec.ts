@@ -273,6 +273,7 @@ test('today: беговая ветка сразу добавляет интер�
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения вручную' }).click()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await expect(page.getByRole('button', { name: /Темповый бег/ })).toBeVisible()
   await page.getByRole('button', { name: /^Интервалы/ }).click()
