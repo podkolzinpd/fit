@@ -901,6 +901,10 @@ test('current role home keeps its visual baseline', async ({ page }, testInfo) =
     await page.getByRole('switch', { name: 'Тёмная тема' }).check()
     await gotoStable(page, '/me')
     await expect(page.locator('.phone-frame')).toHaveClass(/client-home-identity/)
+    // После клика по переключателю курсор остаётся на тех же координатах и
+    // при возврате может случайно подсветить CTA, если настройки стали выше.
+    await page.mouse.move(0, 0)
+    await expect(page.locator('.preset-workout-cta')).toHaveCSS('background-color', 'rgb(241, 237, 230)')
     await expectVisualBaseline(page, 'role-home-dark.png', [], true)
   } else {
     await page.getByRole('button', { name: 'Ввести текстом' }).click()
