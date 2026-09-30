@@ -15,13 +15,14 @@ import { z } from 'zod'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, ScheduleIcon } from '../../shared/icons'
+import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { ChatStartButton } from '../chat'
 import { YandexAccountLinkingCard } from '../auth'
 import { isRepositoryConflict } from '../../data/repositories/error'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 
 export function MyClientPage() {
   const { clients: clientsRepository } = useDataBackend()
@@ -349,6 +350,7 @@ export function ClientDetailPage() {
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
   const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
+  const financePilot = actor?.role === 'trainer' && isTrainerFinancePilotEnabled(actor.userId)
   const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
@@ -399,6 +401,7 @@ export function ClientDetailPage() {
         <nav className="client-detail-routes" aria-label="Разделы спортсмена">
           <Link to={`/clients/${clientId}/workouts`}><HistoryIcon /><span>История тренировок</span></Link>
           <Link to={`/progress/${clientId}`}><AnalyticsIcon /><span>Прогресс и замеры</span></Link>
+          {financePilot && <Link to={`/clients/${clientId}/finance`}><RecordIcon /><span>Абонементы и оплаты</span></Link>}
         </nav>
       </div>
       <ClientGoalBlock client={query.data} />
