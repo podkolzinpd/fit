@@ -1971,6 +1971,94 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(visibleMemberships).toHaveLength(2)
     })
 
+    it('isolates trainer finance and derives balances from active payments', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+      try {
+        const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            `select public.create_trainer_finance_package(
+              $1, 'Персональные тренировки', 10, 2, 2500000, 1000000,
+              date '2026-09-01', date '2026-11-30', date '2026-09-10', null
+            ) as result`,
+            [CLIENT_ID],
+          ))
+        expect(created[0]?.result).toMatchObject({
+          clientId: CLIENT_ID,
+          trainerId: ACTOR_ID,
+          sessionsTotal: 10,
+          sessionsUsed: 2,
+          sessionsRemaining: 8,
+          priceCents: 2500000,
+          paidCents: 1000000,
+          dueCents: 1500000,
+          paymentStatus: 'overdue',
+        })
+        const packageId = (created[0]?.result as { id?: unknown }).id
+        expect(typeof packageId).toBe('string')
+
+        const payment = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            `select public.add_trainer_finance_payment(
+              $1, 1500000, date '2026-09-02', 'Доплата'
+            ) as result`,
+            [packageId],
+          ))
+        expect(payment[0]?.result).toMatchObject({ amountCents: 1500000, source: 'manual' })
+
+        const bundle = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            'select public.list_trainer_finance_client($1) as result',
+            [CLIENT_ID],
+          ))
+        expect(bundle[0]?.result).toMatchObject({
+          clientId: CLIENT_ID,
+          packages: [expect.objectContaining({ paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' })],
+        })
+
+        const events = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<{ entity_type: string; event_type: string }>(
+            `select entity_type, event_type
+             from public.trainer_finance_events
+             order by id`,
+          ))
+        expect(events).toEqual([
+          { entity_type: 'package', event_type: 'created' },
+          { entity_type: 'payment', event_type: 'created' },
+          { entity_type: 'payment', event_type: 'created' },
+        ])
+
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          client.query(
+            `select public.create_trainer_finance_package(
+              $1, 'Чужой пакет', 1, 0, 1000, 0,
+              date '2026-09-01', null, null, null
+            )`,
+            [CLIENT_ID],
+          ))).rejects.toThrow('trainer_finance_client_not_found')
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          client.query('select public.list_trainer_finance_client($1)', [CLIENT_ID])))
+          .rejects.toThrow('trainer_finance_forbidden')
+
+        const hidden = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+          client.query('select id from public.trainer_finance_packages'))
+        expect(hidden).toEqual([])
+        const hiddenEvents = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+          client.query('select id from public.trainer_finance_events'))
+        expect(hiddenEvents).toEqual([])
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+      }
+    })
+
     it('uses the active relationship for trainer and chat lists', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')

@@ -9,6 +9,7 @@ import {
   isContestWinnerPilotEnabled,
   isTodayGreetingPilotEnabled,
   isTodayStartRedesignEnabled,
+  isTrainerFinancePilotEnabled,
   isTrainerDiscoveryHomeEnabled,
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
@@ -33,6 +34,25 @@ describe('today start redesign flag', () => {
     vi.stubEnv('VITE_TODAY_START_REDESIGN', 'false')
     expect(isTodayStartRedesignEnabled()).toBe(false)
     expect(trainerHomePath()).toBe('/clients')
+  })
+})
+
+describe('trainer finance pilot flag', () => {
+  it('is disabled by default and with an empty allowlist', () => {
+    vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', '')
+    vi.stubEnv('VITE_TRAINER_FINANCE_PILOT_USER_IDS', 'trainer-1')
+    expect(isTrainerFinancePilotEnabled('trainer-1')).toBe(false)
+    vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', 'true')
+    vi.stubEnv('VITE_TRAINER_FINANCE_PILOT_USER_IDS', '')
+    expect(isTrainerFinancePilotEnabled('trainer-1')).toBe(false)
+  })
+
+  it('enables only explicitly allowlisted trainers', () => {
+    vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', 'true')
+    vi.stubEnv('VITE_TRAINER_FINANCE_PILOT_USER_IDS', ' trainer-1, ,trainer-2 ')
+    expect(isTrainerFinancePilotEnabled('trainer-1')).toBe(true)
+    expect(isTrainerFinancePilotEnabled('trainer-2')).toBe(true)
+    expect(isTrainerFinancePilotEnabled('trainer-3')).toBe(false)
   })
 })
 
