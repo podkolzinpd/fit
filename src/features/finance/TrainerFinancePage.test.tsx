@@ -42,7 +42,7 @@ describe('TrainerFinancePage', () => {
     finance.updatePayment.mockReset().mockResolvedValue(bundle.payments[0])
     finance.voidPayment.mockReset().mockResolvedValue(undefined)
     finance.updateSession.mockReset().mockResolvedValue({ ...bundle.sessions[0], disposition: 'free', packageId: null, version: 2 })
-    workouts.saveCompleted.mockReset().mockResolvedValue({ id: workoutId, version: 1 })
+    workouts.saveCompleted.mockReset().mockResolvedValue(workoutId)
   })
 
   it('shows remaining sessions, payment balance and existing payments', async () => {
@@ -72,16 +72,19 @@ describe('TrainerFinancePage', () => {
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
     await user.click(screen.getByText('Проведённые занятия'))
-    await user.selectOptions(screen.getByLabelText('Учёт занятия за 5 сентября 2026 г.'), 'free')
+    await user.click(screen.getByRole('button', { name: 'Действия с занятием 5 сентября 2026 г.' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Изменить учёт' }))
+    await user.selectOptions(screen.getByLabelText('Учёт'), 'free')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.updateSession).toHaveBeenCalledWith(sessionId, {
-      expectedVersion: 1, disposition: 'free', packageId: null, comment: null,
+      expectedVersion: 1, disposition: 'free', packageId: null, comment: null, workoutDate: '2026-09-05',
     }))
 
     await user.click(screen.getByRole('button', { name: 'Добавить занятие' }))
     const date = screen.getByLabelText('Дата занятия')
     await user.clear(date)
     await user.type(date, '2026-09-20')
-    await user.click(screen.getByRole('button', { name: 'Добавить проведённое занятие' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить занятие' }))
     await waitFor(() => expect(workouts.saveCompleted).toHaveBeenCalledWith(expect.objectContaining({
       clientId, workoutDate: '2026-09-20', notes: 'Проведённое занятие', exercises: [],
     })))
