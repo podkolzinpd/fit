@@ -81,9 +81,9 @@ export function currentRoundIndex(rounds: BlockRound[]): number {
   return idx === -1 ? Math.max(0, rounds.length - 1) : idx
 }
 
-// Ярлык группы определяется пресетом (Сет/Круговая), одиночное — «Обычный».
+// Ярлык группы определяется пресетом (Суперсет/Круговая), одиночное — «Обычный».
 export const BLOCK_PRESET_LABELS: Record<BlockPreset, string> = {
-  set: 'Сет',
+  set: 'Суперсет',
   circuit: 'Круговая',
   interval: 'Интервалы',
 }
@@ -276,7 +276,7 @@ export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: stri
 }
 
 // Объединяет блок упражнения по индексу со следующим в одну группу. Если один
-// из блоков уже группа — сохраняем его пресет/отдых, иначе новая группа — «Круговая»
+// из блоков уже группа — сохраняем его пресет/отдых, иначе новая группа — «Суперсет»
 // с дефолтами отдыха.
 export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: number): WorkoutExerciseDraft[] {
   const list = ensureBlockIds(exercises)
@@ -286,7 +286,7 @@ export function mergeBlockWithNext(exercises: WorkoutExerciseDraft[], index: num
   const currentSize = list.filter((e) => e.blockId === current.blockId).length
   const nextSize = list.filter((e) => e.blockId === next.blockId).length
   const seed = currentSize > 1 ? current : nextSize > 1 ? next : null
-  const preset: BlockPreset = seed?.blockPreset ?? 'circuit'
+  const preset: BlockPreset = seed?.blockPreset ?? 'set'
   const defaults = PRESET_REST_DEFAULTS[preset]
   const targetId = current.blockId!
   const fromId = next.blockId!
@@ -310,7 +310,7 @@ export function splitBlock(exercises: WorkoutExerciseDraft[], blockId: string): 
   )
 }
 
-// Меняет пресет группы (Сет/Круговая) и подставляет дефолты отдыха пресета.
+// Меняет пресет группы (Суперсет/Круговая) и подставляет дефолты отдыха пресета.
 export function setBlockPreset(exercises: WorkoutExerciseDraft[], blockId: string, preset: BlockPreset): WorkoutExerciseDraft[] {
   const defaults = PRESET_REST_DEFAULTS[preset]
   return ensureBlockIds(exercises).map((exercise) =>

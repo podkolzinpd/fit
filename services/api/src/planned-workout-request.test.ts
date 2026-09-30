@@ -64,6 +64,23 @@ describe('planned workout request', () => {
     })
   })
 
+  it('keeps the shared block id, preset and rest settings of a superset', () => {
+    const first = {
+      ...validRequest().exercises[0]!,
+      blockType: 'group',
+      blockPreset: 'set',
+      blockRounds: 2,
+      restBetweenExercisesSec: 0,
+      restBetweenRoundsSec: 90,
+    }
+    const request = {
+      ...validRequest(),
+      exercises: [first, { ...first, position: 1, ref: 'plank', name: 'Планка' }],
+    }
+
+    expect(readSavePlannedWorkoutRequest(request, null)?.draft.exercises).toEqual(request.exercises)
+  })
+
   it('snapshots the favorite title only when planning from a favorite', () => {
     expect(readSavePlannedWorkoutRequest({
       ...validRequest(),

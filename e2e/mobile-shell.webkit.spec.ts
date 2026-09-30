@@ -1232,8 +1232,8 @@ async function createGroupedWorkout(page: Page, clientName: string, preset: 'set
   await selectClient(page, clientName)
   await addExercise(page, 'Присед со штангой', true)
   await addExercise(page, 'Жим лёжа')
-  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
-  await page.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }).click()
+  await page.getByRole('button', { name: 'Создать суперсет со следующим' }).click()
+  await expect(page.getByLabel('Тип блока')).toHaveValue('set')
   await page.getByLabel('Тип блока').selectOption(preset)
   await page.getByLabel('Кругов').fill('2')
   for (let round = 1; round <= 2; round += 1) {
@@ -1249,6 +1249,7 @@ async function createGroupedWorkout(page: Page, clientName: string, preset: 'set
   await page.keyboard.press('Escape')
   await expect(page.locator('.live-timer')).toBeVisible()
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
+  await expect(page.locator('.live-pinned .block-badge')).toHaveText(preset === 'set' ? 'Суперсет' : 'Круговая')
 }
 
 function currentRound(page: Page) {
@@ -2359,7 +2360,7 @@ test('iPhone: составная цель настраивается вручн�
   await expectNoHorizontalOverflow(page)
 })
 
-test('iPhone: сет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }, testInfo) => {
+test('iPhone: суперсет не ставит отдых внутри круга и не оставляет его после финала', async ({ page }, testInfo) => {
   // WebKit in the CI container can need longer to create an isolated Auth user
   // after a retry; this scenario also creates and runs a full grouped workout.
   test.slow()
