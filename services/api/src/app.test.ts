@@ -940,7 +940,7 @@ describe('trainer finance', () => {
     month: '2026-09', receivedCents: 1000000, dueCents: 1500000,
     attentionCount: 1, clients: [{
       clientId, fullName: 'Анна Смирнова', archivedAt: null,
-      receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1,
+      receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0,
       sessionsRemaining: 8, overdue: true, lowSessions: false,
       unassignedSessions: 0, needsAttention: true,
     }],
@@ -992,6 +992,18 @@ describe('trainer finance', () => {
     expect(createPackage).toHaveBeenCalledWith(session, clientId, draft)
   })
 
+  it('rejects an opening payment above the package price', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: {
+      title: 'Персональные тренировки', sessionsTotal: 10, openingUsedSessions: 0,
+      priceCents: 1000000, openingPaidCents: 1100000, startsOn: '2026-09-01',
+      endsOn: null, paymentDueOn: null, comment: null,
+    } })
+    expect(response.statusCode).toBe(400)
+    expect(createPackage).not.toHaveBeenCalled()
+  })
+
   it('rejects malformed money and read-only mutations', async () => {
     const { service: pilotTrainerFinance, addPayment } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
@@ -1002,10 +1014,10 @@ describe('trainer finance', () => {
     expect(addPayment).not.toHaveBeenCalled()
   })
 
-  it('corrects a session disposition without changing the workout', async () => {
+  it('corrects session accounting and workout date', async () => {
     const { service: pilotTrainerFinance, updateSession } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
-    const draft = { expectedVersion: 1, disposition: 'free', packageId: null, comment: 'Пробное занятие' }
+    const draft = { expectedVersion: 1, disposition: 'free', packageId: null, comment: 'Пробное занятие', workoutDate: '2026-09-06' }
     const response = await app.inject({ method: 'PUT', url: `/v1/finance/sessions/${financeSessionId}`, headers: { 'x-fit-session': session.token }, payload: draft })
     expect(response.statusCode).toBe(200)
     expect(response.json()).toEqual({ session: { ...financeSession, disposition: 'free', packageId: null, version: 2 } })

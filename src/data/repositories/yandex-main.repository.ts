@@ -135,7 +135,7 @@ const trainerFinanceOverviewSchema = z.object({
   clients: z.array(z.object({
     clientId: uuid, fullName: z.string(), archivedAt: yandexDateTimeSchema.nullable(),
     receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
-    activePackageCount: z.number().int().nonnegative(), sessionsRemaining: z.number().int().nonnegative().nullable(),
+    activePackageCount: z.number().int().nonnegative(), upcomingPackageCount: z.number().int().nonnegative(), sessionsRemaining: z.number().int().nonnegative().nullable(),
     overdue: z.boolean(), lowSessions: z.boolean(), unassignedSessions: z.number().int().nonnegative(),
     needsAttention: z.boolean(),
   })),

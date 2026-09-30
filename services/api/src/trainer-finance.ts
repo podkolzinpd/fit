@@ -72,6 +72,7 @@ export interface TrainerFinanceOverviewClient {
   receivedCents: number
   dueCents: number
   activePackageCount: number
+  upcomingPackageCount: number
   sessionsRemaining: number | null
   overdue: boolean
   lowSessions: boolean
@@ -125,6 +126,7 @@ export interface TrainerFinanceSessionUpdate {
   disposition: TrainerFinanceSession['disposition']
   packageId: string | null
   comment: string | null
+  workoutDate: string
 }
 
 type BundleRow = QueryResultRow & { bundle: TrainerFinanceClientBundle }
@@ -257,9 +259,9 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   updateSession(session: YandexActorSessionInput, sessionId: string, draft: TrainerFinanceSessionUpdate) {
     return this.run(session, async (client) => {
       const rows = await client.query<SessionRow>(
-        'select public.update_trainer_finance_session($1, $2, $3, $4, $5) as session',
+        'select public.update_trainer_finance_session_details($1, $2, $3, $4, $5, $6) as session',
         [sessionId, draft.expectedVersion, draft.disposition, draft.packageId,
-          draft.comment],
+          draft.comment, draft.workoutDate],
       )
       return rows[0]!.session
     })

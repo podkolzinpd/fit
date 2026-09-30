@@ -51,6 +51,7 @@ import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanc
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
+import { WorkoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, SettingsIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
@@ -1448,7 +1449,7 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
 }
 
 export function WorkoutDetailPage() {
-  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, workouts: workoutsRepository } = useDataBackend()
+  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
@@ -1485,6 +1486,11 @@ export function WorkoutDetailPage() {
     queryKey: ['workout-personal-records', workoutId],
     queryFn: () => workoutsRepository.personalRecords(workoutId),
     enabled: actor?.role !== 'client' && navigationState?.justCompleted === true && query.data?.status === 'done',
+  })
+  const completionFinance = useQuery({
+    queryKey: ['trainer-finance', query.data?.clientId],
+    queryFn: () => trainerFinance.listClient(query.data!.clientId),
+    enabled: actor?.role !== 'client' && justCompleted && Boolean(query.data?.clientId),
   })
   useClientRealtime(query.data?.clientId)
   // Этап тренировки: get() отдаёт stageId, название берём из цели клиента.
@@ -1532,6 +1538,8 @@ export function WorkoutDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['workout-regularity'] }),
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
       queryClient.invalidateQueries({ queryKey: ['trainer-attention'] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-finance', query.data?.clientId] }),
+      queryClient.invalidateQueries({ queryKey: ['trainer-finance-overview'] }),
     ])
   }
   const cancelPlanned = useMutation({
@@ -1713,6 +1721,7 @@ export function WorkoutDetailPage() {
         feedback={<WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
+      {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} />}
       {!clientCompletionReport && <WorkoutHeader eyebrow={clientMode && done ? 'ТРЕНИРОВКА ЗАВЕРШЕНА' : clientMode ? 'ВАША ТРЕНИРОВКА' : 'ТРЕНИРОВКА КЛИЕНТА'} title={clientMode ? (done ? workoutFocusTitle(groups) : 'Ваша тренировка') : workout.clientName} state={detailState}
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}

@@ -29,6 +29,7 @@ export function trainerFinanceClientLabel(client: TrainerFinanceOverviewClient):
   if (client.dueCents > 0) return `К оплате ${money(client.dueCents)}`
   if (client.activePackageCount > 1) return 'Несколько абонементов'
   if (client.sessionsRemaining !== null) return `Осталось ${client.sessionsRemaining} ${client.sessionsRemaining === 1 ? 'занятие' : 'занятий'}`
+  if (client.upcomingPackageCount > 0) return 'Абонемент начнётся позже'
   return client.activePackageCount === 0 ? 'Абонемента нет' : 'Оплачено'
 }
 
@@ -36,7 +37,7 @@ function matchesFilter(client: TrainerFinanceOverviewClient, filter: FinanceFilt
   if (filter === 'due') return client.dueCents > 0
   if (filter === 'overdue') return client.overdue
   if (filter === 'low') return client.lowSessions
-  if (filter === 'missing') return client.activePackageCount === 0
+  if (filter === 'missing') return client.activePackageCount === 0 && client.upcomingPackageCount === 0
   if (filter === 'unassigned') return client.unassignedSessions > 0
   return true
 }
