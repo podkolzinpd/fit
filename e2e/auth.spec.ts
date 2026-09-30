@@ -767,7 +767,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('alertdialog').getByRole('button', { name: 'Покинуть' }).click()
   await expect(page).toHaveURL(/\/clients$/)
 
-  // Клиент отключает основного тренера из профиля. На узком светлом экране
+  // После выхода второго тренера клиент отключает оставшегося тренера. На узком светлом экране
   // сначала проверяем понятное подтверждение, затем на 430 px в тёмной теме —
   // сам результат. Самостоятельная история остаётся доступна.
   await page.goto('/profile')
@@ -778,7 +778,9 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page).toHaveURL(/\/me$/)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Действия с тренером Второй тренер' }).click()
+  const remainingTrainerActions = page.getByRole('button', { name: 'Действия с тренером Тренер', exact: true })
+  await expect(remainingTrainerActions).toBeVisible()
+  await remainingTrainerActions.click()
   await page.getByRole('menuitem', { name: 'Отключить' }).click()
   const disconnectDialog = page.getByRole('alertdialog')
   await expect(disconnectDialog).toContainText('Ваш аккаунт, история тренировок, замеры и цели сохранятся.')
@@ -789,7 +791,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.goto('/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await page.goto('/me/profile')
-  await page.getByRole('button', { name: 'Действия с тренером Второй тренер' }).click()
+  await remainingTrainerActions.click()
   await page.getByRole('menuitem', { name: 'Отключить' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
   await expect(page.getByRole('status')).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранены.')
