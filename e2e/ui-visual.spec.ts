@@ -479,8 +479,8 @@ async function mockTrainerClients(page: VisualPage) {
   }))
 }
 
-async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean } = {}) {
-  const workoutRows = ['2026-08-10', '2026-08-03'].map((workoutDate, index) => ({
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean; firstOnly?: boolean } = {}) {
+  const workoutRows = ['2026-08-10', '2026-08-03'].filter((_, index) => !options.firstOnly || index === 0).map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
     client_id: demoClientId,
     trainer_id: '22222222-2222-4222-8222-222222222222',
@@ -2730,9 +2730,10 @@ test('personal workout result stays on Home and remains available in Progress hi
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await signIn(page, 'client@fit.local', /\/me$/)
   const result = page.getByRole('region', { name: 'Последняя тренировка' })
-  await expect(result.getByRole('heading', { name: 'Результат снизился' })).toBeVisible()
-  await expect(result).toContainText('45 → 40 кг · −5 кг')
-  await expect(result).toContainText('К прошлому результату')
+  await expect(result).toContainText('1 упражнение · 1 выполненный подход')
+  await expect(result).not.toContainText('Результат снизился')
+  await expect(result).not.toContainText('Жим лёжа')
+  await expect(result).not.toContainText('−5 кг')
   await expect(result.getByRole('link', { name: 'Сравнить' })).toHaveCount(0)
   await expect(result.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
   const homeMap = result.getByRole('region', { name: 'Нагрузка по телу' })
@@ -2768,6 +2769,36 @@ test('personal workout result stays on Home and remains available in Progress hi
   await gotoStable(page, '/me/progress')
   await expect(page.locator('.period-exercise-results')).toContainText('За этот период новых достижений нет.')
   await expectVisualBaseline(page, `personal-result-progress-dark-${process.platform}.png`)
+})
+
+test('first completed workout is a starting point rather than a personal record on Home', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home')
+  await mockClientWorkoutHistory(page, { firstOnly: true })
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await signIn(page, 'client@fit.local', /\/me$/)
+  const result = page.getByRole('region', { name: 'Последняя тренировка' })
+  await expect(result.getByRole('heading', { name: 'Первая тренировка записана' })).toBeVisible()
+  await expect(result).toContainText('1 упражнение · 1 выполненный подход')
+  await expect(result).not.toContainText('Личный рекорд')
+  await expect(result).not.toContainText('Жим лёжа')
+  await expect(result.getByRole('link', { name: 'Открыть тренировку' })).toHaveAttribute('href', '/workouts/b1000000-0000-4000-8000-000000000001')
+  await expect(result.getByRole('region', { name: 'Нагрузка по телу' })).toBeVisible()
+  await expectBodyMapBaseline(result, `personal-result-first-${process.platform}.png`)
+})
+
+test('Home names the first confirmed record and counts the others without ranking exercises', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Home')
+  await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
+  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+  await signIn(page, 'client@fit.local', /\/me$/)
+  const result = page.getByRole('region', { name: 'Последняя тренировка' })
+  await expect(result.getByRole('heading', { name: 'Личный рекорд' })).toBeVisible()
+  await expect(result.getByText('Жим лёжа')).toBeVisible()
+  await expect(result).toContainText('Максимальный вес: 45 кг')
+  await expect(result).toContainText('Предыдущий максимум — 40 кг')
+  await expect(result).toContainText(/Ещё \d+ рекорд/)
+  await expect(result.getByRole('region', { name: 'Нагрузка по телу' })).toBeVisible()
+  await expectBodyMapBaseline(result, `personal-result-record-${process.platform}.png`)
 })
 
 test('best results show several real records and keep the remaining achievements available', async ({ page }, testInfo) => {
