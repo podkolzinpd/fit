@@ -10,6 +10,7 @@ test('client saves a workout to favorites, then plans a new one from it', async 
   // Собираем реальную тренировку с одним упражнением и сохраняем как план.
   await page.goto('/workouts/new')
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByRole('button', { name: 'Бег', exact: true }).click()
   await page.getByLabel('Поиск упражнения').fill('Бег')
   await page.locator('[data-exercise-ref="running"]').click()
