@@ -18,6 +18,7 @@ import {
   removeLiveSet,
   removeLiveExercise,
   reorderLiveBlock,
+  mergeLiveBlockWithNext,
   rescheduleWorkout,
   replaceLiveExercise,
   saveCompletedWorkout,
@@ -137,6 +138,14 @@ export interface PilotWorkoutsWriter {
     workoutId: string,
     blockId: string,
     direction: -1 | 1,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult>
+  mergeLiveBlockWithNext(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    preset: 'set' | 'circuit',
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
@@ -371,6 +380,19 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
       direction,
       expectedVersion,
       operationId,
+    ))
+  }
+
+  mergeLiveBlockWithNext(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    preset: 'set' | 'circuit',
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult> {
+    return this.withSession(sessionToken, (client) => mergeLiveBlockWithNext(
+      client, workoutId, blockId, preset, expectedVersion, operationId,
     ))
   }
 

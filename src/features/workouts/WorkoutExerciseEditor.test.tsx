@@ -321,4 +321,12 @@ describe('workout exercise editor rules', () => {
     expect(container.querySelectorAll('.block-exercise-head .exercise-thumbnail')).toHaveLength(2)
     expect(container.querySelectorAll('.planned-round .exercise-thumbnail')).toHaveLength(0)
   })
+
+  it('keeps the superset action in the exercise overflow menu', async () => {
+    const user = userEvent.setup()
+    render(<ReorderEditorHarness />)
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Создать суперсет со следующим' }))
+    expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
+  })
 })

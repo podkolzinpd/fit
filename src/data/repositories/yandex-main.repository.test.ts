@@ -694,7 +694,8 @@ describe('Yandex main repository', () => {
   })
 
   it('implements the complete workout lifecycle and derived reads', async () => {
-    vi.stubGlobal('fetch', installContractFetch())
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
     installTrainingData()
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
     const item = await repository.workouts.get(workoutId)
@@ -728,6 +729,10 @@ describe('Yandex main repository', () => {
     await repository.workouts.removeLiveSet(item, setId)
     await repository.workouts.removeLiveExercise(item, exerciseId)
     await repository.workouts.reorderLiveBlock(item, blockId, -1)
+    await repository.workouts.mergeLiveBlockWithNext(item, blockId, 'circuit')
+    const mergeCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith(`/v1/workouts/${workoutId}/blocks/${blockId}/merge-next`))
+    expect(mergeCall?.[1]?.method).toBe('POST')
+    expect(JSON.parse(String(mergeCall?.[1]?.body))).toMatchObject({ expectedVersion: item.version, preset: 'circuit' })
     await repository.workouts.setExerciseComment(item, exerciseId, 'Комментарий')
     await repository.workouts.setWorkoutReview(item, { reaction: 'fire', review: 'Отлично' })
     await repository.workouts.setClientWorkoutComment(item, 'Сложно')

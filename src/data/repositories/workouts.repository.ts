@@ -293,6 +293,12 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  mergeLiveBlockWithNext(workout: Workout, blockId: string, preset: 'set' | 'circuit'): Promise<number> {
+    void workout
+    void blockId
+    void preset
+    return Promise.reject(new Error('Группировка во время тренировки доступна после перехода на новый сервер'))
+  },
   async setExerciseComment(workout: Workout, exerciseId: string, comment: string): Promise<number> {
     const result = await workoutQueries.setExerciseComment(exerciseId, comment, workout.version)
     if (result.error) throw repositoryError(result.error)
