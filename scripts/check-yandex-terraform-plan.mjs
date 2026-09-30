@@ -333,6 +333,73 @@ const isExactDatabaseBackupHardening = (resource) => {
     && Number(backupWindow?.minutes) === 30
 }
 
+const isExactDatabaseDiagnosticsEnable = (resource) => {
+  if (
+    resource.address !== 'yandex_mdb_postgresql_cluster_v2.fit'
+    || resource.change.actions.join(',') !== 'update'
+    || !hasOnlyTopLevelChanges(resource, new Set(['config']))
+  ) return false
+
+  const beforeConfig = normalizeSingleNestedBlock(resource.change.before?.config)
+  const afterConfig = normalizeSingleNestedBlock(resource.change.after?.config)
+  if (
+    beforeConfig === null
+    || afterConfig === null
+    || typeof beforeConfig !== 'object'
+    || typeof afterConfig !== 'object'
+  ) return false
+
+  const withoutDiagnostics = (config) => Object.fromEntries(
+    Object.entries(config).filter(([key]) => key !== 'performance_diagnostics'),
+  )
+  if (!isDeepStrictEqual(
+    withoutDiagnostics(beforeConfig),
+    withoutDiagnostics(afterConfig),
+  )) return false
+
+  const beforeDiagnostics = normalizeSingleNestedBlock(
+    beforeConfig.performance_diagnostics,
+  )
+  const afterDiagnostics = normalizeSingleNestedBlock(
+    afterConfig.performance_diagnostics,
+  )
+  const diagnosticsWereDisabled = beforeDiagnostics == null
+    || isDeepStrictEqual(beforeDiagnostics, { enabled: false })
+
+  return diagnosticsWereDisabled && isDeepStrictEqual(afterDiagnostics, {
+    enabled: true,
+    sessions_sampling_interval: 30,
+    statements_sampling_interval: 60,
+  })
+}
+
+const isExactPgStatStatementsEnable = (resource) => {
+  if (
+    resource.address !== 'yandex_mdb_postgresql_database.fit'
+    || resource.change.actions.join(',') !== 'update'
+    || !hasOnlyTopLevelChanges(resource, new Set(['extension']))
+  ) return false
+
+  const beforeExtensions = resource.change.before?.extension ?? []
+  const afterExtensions = resource.change.after?.extension ?? []
+  if (
+    !Array.isArray(beforeExtensions)
+    || !Array.isArray(afterExtensions)
+    || afterExtensions.length !== beforeExtensions.length + 1
+    || !beforeExtensions.every((extension) =>
+      afterExtensions.some((candidate) => isDeepStrictEqual(candidate, extension)))
+  ) return false
+
+  const addedExtensions = afterExtensions.filter((extension) =>
+    !beforeExtensions.some((candidate) => isDeepStrictEqual(candidate, extension)))
+  if (addedExtensions.length !== 1) return false
+
+  const extension = addedExtensions[0]
+  return extension?.name === 'pg_stat_statements'
+    && Object.keys(extension).every((key) => key === 'name' || key === 'version')
+    && (extension.version == null || extension.version === '')
+}
+
 const isExactLegacyDataLensIngressRemoval = (resource) => {
   if (
     resource.address !== postgresSecurityGroupAddress
@@ -545,6 +612,8 @@ const isAutomaticStageChange = (resource) => {
     || isExactPushDispatcherTriggerDescriptionUpdate(resource)
     || isExactDatabasePublicAccessRemoval(resource)
     || isExactDatabaseBackupHardening(resource)
+    || isExactDatabaseDiagnosticsEnable(resource)
+    || isExactPgStatStatementsEnable(resource)
     || isExactLegacyDataLensIngressRemoval(resource)
   ) {
     return true

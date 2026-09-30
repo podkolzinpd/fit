@@ -547,6 +547,70 @@ describe('Yandex Terraform plan policy', () => {
     assert.notEqual(excessiveRetention.status, 0)
   })
 
+  test('allows only the exact query diagnostics enablement on the existing database', () => {
+    const unchangedConfig = {
+      version: 17,
+      resources: { disk_size: 10 },
+    }
+    const diagnostics = {
+      enabled: true,
+      sessions_sampling_interval: 30,
+      statements_sampling_interval: 60,
+    }
+    const accepted = runPolicy([
+      {
+        address: 'yandex_mdb_postgresql_cluster_v2.fit',
+        change: {
+          actions: ['update'],
+          before: { name: 'fit-stage-postgres', config: unchangedConfig },
+          after: {
+            name: 'fit-stage-postgres',
+            config: { ...unchangedConfig, performance_diagnostics: diagnostics },
+          },
+        },
+      },
+      {
+        address: 'yandex_mdb_postgresql_database.fit',
+        change: {
+          actions: ['update'],
+          before: { name: 'fit', extension: [] },
+          after: {
+            name: 'fit',
+            extension: [{ name: 'pg_stat_statements', version: null }],
+          },
+        },
+      },
+    ], { automaticStageUpdate: true })
+    const broaderDiagnostics = runPolicy([{
+      address: 'yandex_mdb_postgresql_cluster_v2.fit',
+      change: {
+        actions: ['update'],
+        before: { config: unchangedConfig },
+        after: {
+          config: {
+            ...unchangedConfig,
+            performance_diagnostics: {
+              ...diagnostics,
+              statements_sampling_interval: 5,
+            },
+          },
+        },
+      },
+    }], { automaticStageUpdate: true })
+    const broaderExtension = runPolicy([{
+      address: 'yandex_mdb_postgresql_database.fit',
+      change: {
+        actions: ['update'],
+        before: { extension: [] },
+        after: { extension: [{ name: 'postgis' }] },
+      },
+    }], { automaticStageUpdate: true })
+
+    assert.equal(accepted.status, 0)
+    assert.notEqual(broaderDiagnostics.status, 0)
+    assert.notEqual(broaderExtension.status, 0)
+  })
+
   test('allows only removing the stage database public IP automatically', () => {
     const privateOnly = runPolicy(
       [{

@@ -2,7 +2,21 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-30. Frontend опубликован на `fit-training.ru` через Yandex API Gateway/Object Storage; Vercel сохранён для legacy redirect/Preview. Production data plane — принятый Yandex Cloud stage stack. Новые изменения схемы делаются только numbered Yandex PostgreSQL migrations; Supabase-цепочка заморожена для legacy-тестов/rollback, но legacy recovery/media и локальные инструменты ещё не удалены. Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 ## Активная цель
-Плотность подробного дня расписания реализована: обычные 56 px/час и компактные 44 px/час, быстрый выбор в меню и тот же выбор в настройках тренера. Значение хранится в Yandex-профиле аккаунта; неделя и 2 недели не меняются, при переключении сохраняется видимая область времени. Локальные PostgreSQL/API/RLS, Chromium, iPhone WebKit и production build зелёные; до выпуска обязательны чистый CI и production smoke. План и матрица: `docs/design/trainer-schedule-density-20260930.md`.
+Production stage policy: merged query diagnostics change #1252 added exact
+PostgreSQL `performance_diagnostics` (30/60 seconds) and
+`pg_stat_statements`, but its deploy and the later schedule-density deploy were
+blocked before apply because the automatic policy had no bounded case for those
+two existing-resource updates. The follow-up permits only those exact values;
+database resize, other extensions, broader sampling, replacement and deletion
+remain blocked. Full CI and a successful stage rerun are required.
+
+Плотность подробного дня расписания реализована: обычные 56 px/час и компактные
+44 px/час, быстрый выбор в меню и тот же выбор в настройках тренера. Значение
+хранится в Yandex-профиле аккаунта; неделя и 2 недели не меняются, при
+переключении сохраняется видимая область времени. Локальные PostgreSQL/API/RLS,
+Chromium, iPhone WebKit и production build зелёные; до выпуска обязательны
+чистый CI и production smoke. План и матрица:
+`docs/design/trainer-schedule-density-20260930.md`.
 Отдельная текущая правка анкеты программы: ответы `60`, `60 минут` и диапазоны минут разбираются детерминированно, `сегодня`/`завтра` считаются от серверной даты, а гири и резинки получают собственные коды и упражнения без подмены гантелями. Для цели снижения веса программа сохраняет силовую основу, но отсутствие аэробной работы без указанной другой активности теперь требует полной пересборки. Полный локальный check прошёл; CI и production-проверка ещё впереди. План и приёмка: `docs/design/ASSISTANT_PROGRAM_FEEDBACK_2026-09-30.md`.
 Ввод времени подхода двумя колёсами минут/секунд и пары время+дистанция для всех 24 distance-карточек и пяти time-primary тренажёров выпущен без миграции БД (#1261, merge `34c19654`); бег на месте и статические упражнения не получают фиктивные километры. Копирование завершённого результата сохраняет обе фактические метрики, включая старые минуты. План и матрица: `docs/design/workout-time-distance-wheel-20260930.md`; main CI и production smoke прошли, YAFIT-569 закрыта. Заголовок «Недавние упражнения» выпущен в #1264. Текущая правка: общий picker сохраняет поиск и выбранные фильтры на виду, а их настройку переносит под кнопку «Фильтры» для увеличения видимой области каталога; логика поиска и выбора упражнений не меняется.
 Окно победителю конкурса среди коллег: default-off пилот `VITE_CONTEST_WINNER_*` (переменные GitHub для сборки `fit-training.ru`), контакт уходит через обратную связь, срок показа до 13.10.2026. План и приёмка: `docs/design/contest-winner-announcement-20260928.md`; включение — отдельным решением владельца после розыгрыша.
