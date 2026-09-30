@@ -53,6 +53,8 @@ import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProg
 import { WorkoutCompletionCard } from './WorkoutCompletionCard'
 import { WorkoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
+import { computeAthleteAchievements, newlyEarnedAchievements, type AthleteAchievement } from '../../shared/athlete-achievements'
+import { markAchievementCompletion, takeAchievementCompletion } from '../achievements/completion-marker'
 import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, SettingsIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
@@ -1482,6 +1484,13 @@ export function WorkoutDetailPage() {
     void navigate(`/workouts/${id}/live`, { state: { ...childNavigationState, fromWorkoutDetailId: id === workoutId ? id : undefined } })
   }
   const completionHistory = useQuery({ queryKey: ['workouts', query.data?.clientId], queryFn: () => workoutsRepository.list(undefined, undefined, query.data!.clientId), enabled: actor?.role === 'client' && navigationState?.justCompleted === true && query.data?.status === 'done' })
+  const [newAchievements, setNewAchievements] = useState<AthleteAchievement[]>([])
+  useEffect(() => {
+    if (!clientCompletionReport || !completionHistory.data || !actor?.userId) return
+    if (!takeAchievementCompletion(actor.userId, workoutId)) return
+    const items = computeAthleteAchievements(completionHistory.data, todayInTimeZone(actor.timezone), actor.timezone)
+    setNewAchievements(newlyEarnedAchievements(items, workoutId))
+  }, [actor?.userId, actor?.timezone, clientCompletionReport, completionHistory.data, workoutId])
   const completionRecords = useQuery({
     queryKey: ['workout-personal-records', workoutId],
     queryFn: () => workoutsRepository.personalRecords(workoutId),
@@ -1719,6 +1728,7 @@ export function WorkoutDetailPage() {
         comparisonLoading={completionHistory.isLoading}
         hasTrainer={hasActiveTrainer}
         feedback={<WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+        newAchievements={newAchievements}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} />}
@@ -2872,6 +2882,7 @@ export function LiveWorkoutPage() {
     return version
   }, onSuccess: async () => {
     const clientId = query.data?.clientId
+    if (clientMode && actor?.userId) markAchievementCompletion(actor.userId, workoutId)
     if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
     stopRest()
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
