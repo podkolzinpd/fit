@@ -686,6 +686,7 @@ async function expectVisualBaseline(
     mask,
     maskColor,
     maxDiffPixelRatio,
+    stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
 }
 
