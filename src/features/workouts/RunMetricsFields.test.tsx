@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setWorkoutTimeWheel } from '../../app/workout-time-input'
 import { RunMetricsFields } from './RunMetricsFields'
 
 function renderFields(onCommit = vi.fn()) {
@@ -18,9 +19,12 @@ function renderFields(onCommit = vi.fn()) {
 }
 
 describe('RunMetricsFields', () => {
+  afterEach(() => setWorkoutTimeWheel(false))
+
   it('shows runner-friendly values and calculated pace', () => {
     renderFields()
-    expect(screen.getByRole('button', { name: 'Время: 29:40' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Время: минуты' })).toHaveValue('29')
+    expect(screen.getByRole('textbox', { name: 'Время: секунды' })).toHaveValue('40')
     expect(screen.getByLabelText('Дистанция')).toHaveValue(5.2)
     expect(screen.getByLabelText('Дистанция')).toHaveAttribute('placeholder', '0')
     expect(screen.getByLabelText('Единица дистанции')).toHaveValue('km')
@@ -42,6 +46,7 @@ describe('RunMetricsFields', () => {
   })
 
   it('commits duration selected as minutes and seconds', async () => {
+    setWorkoutTimeWheel(true)
     const user = userEvent.setup()
     const onCommit = renderFields()
     await user.click(screen.getByRole('button', { name: 'Время: 29:40' }))
@@ -82,7 +87,8 @@ describe('RunMetricsFields', () => {
     render(<RunMetricsFields idPrefix="stair" optionalDistance durationSec={7559}
       inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция"
       distanceUnitLabel="Единица дистанции" onCommit={onCommit} />)
-    expect(screen.getByRole('button', { name: 'Время: 125:59' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Время: минуты' })).toHaveValue('125')
+    expect(screen.getByRole('textbox', { name: 'Время: секунды' })).toHaveValue('59')
     expect(screen.queryByLabelText('Дистанция')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '+ Добавить дистанцию' }))
     await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'm')

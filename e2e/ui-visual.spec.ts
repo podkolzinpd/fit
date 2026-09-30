@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { comparisonWorkoutRow, mockResultsHistory, verifyResultsSources } from './progress-results-fixture'
 import { expectMonochromeAccessibility } from './accessibility-helpers'
 
-test('time and distance wheel fits client and trainer viewports', async ({ page }, testInfo) => {
+test('keyboard time and optional wheel fit client and trainer viewports', async ({ page }, testInfo) => {
   await page.goto('/auth')
   // This is an isolated component harness. CI intentionally omits app auth env,
   // so the unrelated startup fallback must not sit above its pointer targets.
@@ -15,7 +15,10 @@ test('time and distance wheel fits client and trainer viewports', async ({ page 
     const harness = await import(modulePath) as typeof import('./workout-time-distance-harness')
     harness.mountWorkoutTimeDistanceHarness()
   })
-  await expect(page.getByRole('button', { name: 'Время, подход 1: 125:59' })).toBeVisible()
+  const minutes = page.getByRole('textbox', { name: 'Время, подход 1: минуты' }).first()
+  const seconds = page.getByRole('textbox', { name: 'Время, подход 1: секунды' }).first()
+  await expect(minutes).toHaveValue('125')
+  await expect(seconds).toHaveValue('59')
   await expect(page.getByRole('button', { name: '+ Добавить дистанцию' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
@@ -24,8 +27,31 @@ test('time and distance wheel fits client and trainer viewports', async ({ page 
   await page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first().fill('800')
   await page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first().blur()
   await expect(page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first()).toHaveValue('800')
+  const minuteBox = await minutes.boundingBox()
+  const secondBox = await seconds.boundingBox()
+  const distanceBox = await page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first().boundingBox()
+  expect(minuteBox && secondBox && distanceBox).toBeTruthy()
+  expect(Math.abs(minuteBox!.y - secondBox!.y)).toBeLessThan(3)
+  expect(Math.abs(secondBox!.y - distanceBox!.y)).toBeLessThan(3)
+  expect(minuteBox!.x + minuteBox!.width).toBeLessThanOrEqual(secondBox!.x)
+  expect(secondBox!.x + secondBox!.width).toBeLessThanOrEqual(distanceBox!.x)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('time-distance-plan.png') })
 
+  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
+  await page.getByRole('menuitem', { name: 'Указать RPE' }).click()
+  const rpeMinuteBox = await minutes.boundingBox()
+  const rpeDistanceBox = await page.getByRole('spinbutton', { name: 'Расстояние, подход 1' }).first().boundingBox()
+  expect(rpeMinuteBox && rpeDistanceBox).toBeTruthy()
+  expect(Math.abs(rpeMinuteBox!.y - rpeDistanceBox!.y)).toBeLessThan(3)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('time-distance-rpe.png') })
+
+  await page.evaluate(async () => {
+    const modulePath = '/src/app/workout-time-input.ts'
+    const { setWorkoutTimeWheel } = await import(modulePath) as typeof import('../src/app/workout-time-input')
+    setWorkoutTimeWheel(true)
+  })
   await page.getByRole('button', { name: 'Время, подход 1: 125:59' }).click()
   const dialog = page.getByRole('dialog', { name: 'Время, подход 1' })
   await expect(dialog).toBeVisible()
