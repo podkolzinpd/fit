@@ -38,12 +38,11 @@ describe('today start redesign flag', () => {
 })
 
 describe('trainer finance pilot flag', () => {
-  it('is disabled by default and with an empty allowlist', () => {
+  it('is available to every trainer by default and supports a kill switch', () => {
     vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', '')
-    vi.stubEnv('VITE_TRAINER_FINANCE_PILOT_USER_IDS', 'trainer-1')
-    expect(isTrainerFinancePilotEnabled('trainer-1')).toBe(false)
-    vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', 'true')
     vi.stubEnv('VITE_TRAINER_FINANCE_PILOT_USER_IDS', '')
+    expect(isTrainerFinancePilotEnabled('trainer-1')).toBe(true)
+    vi.stubEnv('VITE_TRAINER_FINANCE_ENABLED', 'false')
     expect(isTrainerFinancePilotEnabled('trainer-1')).toBe(false)
   })
 

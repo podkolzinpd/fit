@@ -60,6 +60,28 @@ export interface TrainerFinanceClientBundle {
   sessions: TrainerFinanceSession[]
 }
 
+export interface TrainerFinanceOverviewClient {
+  clientId: string
+  fullName: string
+  archivedAt: string | null
+  receivedCents: number
+  dueCents: number
+  activePackageCount: number
+  sessionsRemaining: number | null
+  overdue: boolean
+  lowSessions: boolean
+  unassignedSessions: number
+  needsAttention: boolean
+}
+
+export interface TrainerFinanceOverview {
+  month: string
+  receivedCents: number
+  dueCents: number
+  attentionCount: number
+  clients: TrainerFinanceOverviewClient[]
+}
+
 export interface TrainerFinancePackageDraft {
   title: string
   sessionsTotal: number
@@ -86,6 +108,7 @@ export type TrainerFinancePaymentUpdate = TrainerFinancePaymentDraft & { expecte
 export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'disposition' | 'packageId' | 'comment'> & { expectedVersion: number }
 
 export interface TrainerFinanceRepository {
+  listOverview(month: string): Promise<TrainerFinanceOverview>
   listClient(clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>
   updatePackage(packageId: string, draft: TrainerFinancePackageUpdate): Promise<TrainerFinancePackage>
@@ -100,6 +123,7 @@ function unavailable(): Promise<never> {
 }
 
 export const trainerFinanceRepository: TrainerFinanceRepository = {
+  listOverview: unavailable,
   listClient: unavailable,
   createPackage: unavailable,
   updatePackage: unavailable,

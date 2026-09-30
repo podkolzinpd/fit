@@ -2021,6 +2021,20 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           packages: [expect.objectContaining({ paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' })],
         })
 
+        const overview = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            `select public.list_trainer_finance_overview(date '2026-09-01') as result`,
+          ))
+        expect(overview[0]?.result).toMatchObject({
+          month: '2026-09', receivedCents: 2500000, dueCents: 0,
+          attentionCount: 0,
+        })
+        const overviewClients = (overview[0]?.result as { clients?: unknown[] }).clients
+        expect(overviewClients).toContainEqual(expect.objectContaining({
+          clientId: CLIENT_ID, fullName: 'Shared client', activePackageCount: 1,
+          sessionsRemaining: 8, overdue: false, unassignedSessions: 0,
+        }))
+
         const events = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query<{ entity_type: string; event_type: string }>(
             `select entity_type, event_type
