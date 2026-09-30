@@ -2,6 +2,7 @@
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-09-30. Frontend опубликован на `fit-training.ru` через Yandex API Gateway/Object Storage; Vercel сохранён для legacy redirect/Preview. Production data plane — принятый Yandex Cloud stage stack. Новые изменения схемы делаются только numbered Yandex PostgreSQL migrations; Supabase-цепочка заморожена для legacy-тестов/rollback, но legacy recovery/media и локальные инструменты ещё не удалены. Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально.
 ## Активная цель
+YAFIT-572: внутри существующей карточки «Последняя тренировка» на Home первая запись обозначается отправной точкой, обычная завершённая тренировка показывает только дату и подтверждённый объём, а проверенный рекорд — упражнение и точную метрику. Остальные поля Home и карта нагрузки не меняются; матрица и гейты выпуска — `docs/design/YAFIT_572_LAST_WORKOUT_HOME.md`.
 Production stage policy: merged query diagnostics change #1252 added exact
 PostgreSQL `performance_diagnostics` (30/60 seconds) and
 `pg_stat_statements`, but its deploy and the later schedule-density deploy were
