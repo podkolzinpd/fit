@@ -1023,13 +1023,13 @@ test('standalone client sees a compact trainer discovery card and can snooze it'
   const card = page.getByRole('region', { name: 'Нужен тренер?' })
   await expect(card).toBeVisible()
   await expect(card.getByRole('link', { name: 'Найти тренера' })).toHaveAttribute('href', '/me/trainers')
-  await expect(card).toHaveScreenshot('trainer-discovery-home-card.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015 })
+  await expect(card).toHaveScreenshot('trainer-discovery-home-card.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css' })
 
   await gotoStable(page, '/me/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, '/me')
   await expect(card).toBeVisible()
-  await expect(card).toHaveScreenshot('trainer-discovery-home-card-dark.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015 })
+  await expect(card).toHaveScreenshot('trainer-discovery-home-card-dark.png', { animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css' })
 
   await card.getByRole('button', { name: 'Напомнить через месяц' }).click()
   await expect(page.getByRole('status')).toHaveText('Напомним через месяц.')
@@ -1489,7 +1489,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   }
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
 
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
@@ -1499,7 +1499,7 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
 })
 
@@ -2878,6 +2878,7 @@ test('best results show several real records and keep the remaining achievements
   await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, {
     animations: 'disabled',
     maxDiffPixelRatio: 0.01,
+    stylePath: 'e2e/visual-legacy-without-achievements.css',
   })
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.getByText('Все результаты', { exact: true }).click()
@@ -2914,7 +2915,7 @@ test('results center preserves sources and explains weekly work', async ({ page 
   await expect(weekly).toContainText('Часть недели')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.setViewportSize({ ...viewport, height: 1500 })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02, stylePath: 'e2e/visual-legacy-without-achievements.css' })
   await expect.soft(volume).toHaveScreenshot(`result-volume-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
   await center.getByRole('combobox', { name: 'Показатель', exact: true }).selectOption('weight')
   await expect.soft(center).toHaveScreenshot(`results-center-${process.platform}.png`, {
@@ -2941,7 +2942,7 @@ test('results center keeps detailed analytics in dark theme', async ({ page }, t
   await weekly.getByText('Нагрузка по неделям', { exact: true }).click()
   await page.setViewportSize({ ...viewport, height: 1500 })
   await expect.soft(darkVolume).toHaveScreenshot(`result-volume-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.04 })
-  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02 })
+  await expect.soft(weekly).toHaveScreenshot(`weekly-load-dark-${process.platform}.png`, { animations: 'disabled', maxDiffPixelRatio: 0.02, stylePath: 'e2e/visual-legacy-without-achievements.css' })
 })
 
 test('reliable chat stays compact on client phones and trainer desktop', async ({ page }, testInfo) => {

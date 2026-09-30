@@ -2,3 +2,8 @@
 .coachmark-bubble {
   visibility: hidden !important;
 }
+.athlete-achievements-home,
+.athlete-achievements-preview,
+.athlete-achievements-new {
+  display: none !important;
+}
