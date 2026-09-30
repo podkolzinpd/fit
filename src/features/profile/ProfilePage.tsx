@@ -17,6 +17,7 @@ import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 import { AppFeedbackForm } from './AppFeedbackForm'
 import { AccountSettingsCard, SettingsSection } from './SettingsSection'
 import { TrainerProfessionalProfileSection } from './TrainerProfileEditorPage'
+import { ScheduleDensitySetting } from './ScheduleDensitySetting'
 
 export function ProfilePage() {
   const { actor } = useAuth()
@@ -55,6 +56,10 @@ export function TrainerProfileSettingsPage() {
         <Switch label="Показывать отдых" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />
         <Switch label="Показывать RPE" checked={showRpe} onChange={(checked) => setRpeDisplay(actor.userId, checked)} />
       </div>
+    </SettingsSection>
+
+    <SettingsSection title="Расписание">
+      <ScheduleDensitySetting />
     </SettingsSection>
 
     <SettingsSection title="Оформление">

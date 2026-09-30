@@ -13,6 +13,7 @@ interface ProfileRow extends QueryResultRow {
   client_full_name: string | null
   trainer_schedule_v2: boolean
   fit_lime: boolean
+  schedule_density: 'comfortable' | 'compact'
 }
 
 export interface ProfileResponse {
@@ -32,6 +33,9 @@ export interface ProfileResponse {
       trainerScheduleV2: boolean
       fitLime: boolean
     }
+    preferences?: {
+      scheduleDensity: 'comfortable' | 'compact'
+    }
   }
 }
 
@@ -41,7 +45,7 @@ export async function readOwnProfile(
 ): Promise<ProfileResponse | undefined> {
   const rows = await client.query<ProfileRow>(`
     select profile.id, profile.first_name, profile.last_name,
-      profile.timezone, profile.account_role,
+      profile.timezone, profile.account_role, profile.schedule_density,
       client.id client_id, client.trainer_id client_trainer_id,
       client.full_name client_full_name,
       app_private.trainer_schedule_v2_enabled() trainer_schedule_v2,
@@ -66,6 +70,9 @@ export async function readOwnProfile(
       experiments: {
         trainerScheduleV2: row.trainer_schedule_v2 === true,
         fitLime: row.fit_lime === true,
+      },
+      preferences: {
+        scheduleDensity: row.schedule_density,
       },
       client: row.client_id !== null
         && row.client_trainer_id !== null

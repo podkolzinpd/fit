@@ -151,7 +151,7 @@ export const yandexPilotQueries = {
   updateProfile: (
     apiBaseUrl: string,
     sessionToken: string,
-    input: { firstName: string | null; lastName: string | null; timezone: string },
+    input: { firstName: string | null; lastName: string | null; timezone: string; scheduleDensity?: 'comfortable' | 'compact' },
   ) => fetch(`${apiBaseUrl}/v1/profile`, {
     method: 'PUT',
     cache: 'no-store',

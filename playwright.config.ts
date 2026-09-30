@@ -13,6 +13,12 @@ export default defineConfig({
     // Отдельный iPhone smoke покрывает реальный движок iOS и ширину 390 px,
     // не дублируя полный Chromium-набор. Он обязателен и локально, и в CI.
     { name: 'iphone-13-webkit', testMatch: [/.*\.webkit\.spec\.ts/, /assistant-layout\.spec\.ts/], use: { ...devices['iPhone 13'] } },
+    {
+      name: 'schedule-density-webkit',
+      testMatch: /trainer-schedule-v2\.visual\.spec\.ts/,
+      grep: /trainer switches day-grid density/,
+      use: { ...devices['iPhone 13'] },
+    },
     // Три узких профиля визуальной приёмки: два клиентских мобильных размера
     // и фактический desktop viewport тренера. Они запускают только один smoke,
     // поэтому не размножают весь поведенческий e2e-набор.

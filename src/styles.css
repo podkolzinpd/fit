@@ -1007,6 +1007,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .body-map-appearance-icon.scheme::before { top:7px }
 .body-map-appearance-icon.scheme::after { top:13px }
 .body-map-appearance-setting > small { color:var(--muted); font-size:var(--text-xs) }
+.schedule-density-setting { display:grid; gap:var(--space-3); margin:0; padding:18px; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-raised); box-shadow:none }
+.schedule-density-setting > div:first-child { display:grid; gap:4px }
+.schedule-density-setting > div:first-child strong { color:var(--fg); font-size:var(--type-section-size); font-weight:var(--weight-semibold); line-height:var(--leading-snug) }
+.schedule-density-setting > div:first-child span { color:var(--secondary-label-fg); font-size:var(--type-caption-size); line-height:var(--leading-body) }
+.schedule-density-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3px; padding:3px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-sunken) }
+.schedule-density-options button { min-width:0; min-height:44px; padding:8px; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--secondary-label-fg); box-shadow:none; font-size:var(--type-caption-size); font-weight:var(--weight-medium) }
+.schedule-density-options button[aria-checked="true"] { background:var(--surface-elevated); color:var(--fg) }
+.schedule-density-options button:focus-visible { outline:2px solid var(--fg); outline-offset:1px }
+.schedule-density-options button:disabled { opacity:1; color:var(--secondary-label-fg); cursor:wait }
+.schedule-density-setting .save-status { margin:0 }
+.schedule-density-error { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); color:var(--danger); font-size:var(--type-caption-size); font-weight:var(--weight-medium) }
+.schedule-density-error .link { min-height:44px; padding-inline:var(--space-2); color:var(--danger) }
 .app-feedback-card { display: grid; gap: var(--space-4); margin: 0 0 var(--space-4); padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-raised); box-shadow:none}
 .app-feedback-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3) }
 .app-feedback-head .eyebrow, .app-feedback-sent .eyebrow { margin: 0 0 var(--space-1) }
@@ -6690,6 +6702,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour-label { width:57px; color:#77777b; font-size:15px; font-weight:450; transform:translateY(-9px); }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour.is-near-current-time .day-grid-hour-label { visibility:hidden; }
 .trainer-schedule-v2-shell .schedule-v2-timeline .day-grid-hour-line { margin-top:0; background:#29292d; }
+.trainer-schedule-v2-shell .schedule-density-compact .schedule-v2-timeline .day-grid-hour-label { font-size:13px; transform:translateY(-7px); }
 .trainer-schedule-v2-shell .schedule-v2-event-layer { position:absolute; inset:0 0 0 69px; pointer-events:none; }
 .trainer-schedule-v2-shell .schedule-v2-event { position:absolute; left:69px; right:0; z-index:3; min-width:0; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:11px; padding:8px 14px; overflow:hidden; border:0; border-radius:18px; color:#f8f8f6; background:#222226; text-decoration:none; }
 .trainer-schedule-v2-shell .schedule-v2-event-layer .schedule-v2-event { right:auto; pointer-events:auto; }
@@ -6707,6 +6720,12 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-event b { color:#f8f8f6; font-size:16px; font-weight:520; }
 .trainer-schedule-v2-shell .schedule-v2-event small { color:#96969b; font-size:14px; font-weight:420; }
 .trainer-schedule-v2-shell .schedule-v2-event > svg { width:22px; color:var(--schedule-v2-accent); }
+.trainer-schedule-v2-shell .schedule-density-compact .schedule-v2-event.is-short { grid-template-columns:30px minmax(0,1fr) auto; gap:8px; padding:5px 10px; border-radius:14px; }
+.trainer-schedule-v2-shell .schedule-density-compact .schedule-v2-event.is-short .schedule-v2-avatar { width:30px; height:30px; font-size:9px; }
+.trainer-schedule-v2-shell .schedule-density-compact .schedule-v2-event.is-short b { font-size:14px; }
+.trainer-schedule-v2-shell .schedule-density-compact .schedule-v2-event.is-short small { display:none; }
+.trainer-schedule-v2-shell .schedule-v2-density-error { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--danger-border); border-radius:14px; color:var(--danger); background:var(--danger-surface); font-size:12px; }
+.trainer-schedule-v2-shell .schedule-v2-density-error button { min-height:44px; padding:6px 8px; border:0; color:inherit; background:transparent; font:inherit; font-weight:650; }
 .trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done { opacity:1; }
 .trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-self-led,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-decision,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-skipped { background:#19191c; }
 .trainer-schedule-v2-shell .schedule-v2-event.schedule-event-done .schedule-v2-avatar,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-self-led .schedule-v2-avatar,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-decision .schedule-v2-avatar,.trainer-schedule-v2-shell .schedule-v2-event.schedule-event-skipped .schedule-v2-avatar { color:#d1d1d4; background:#4b4b50; }

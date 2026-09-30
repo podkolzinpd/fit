@@ -17,6 +17,9 @@ const profilePayloadSchema = z.object({
     trainerScheduleV2: z.boolean(),
     fitLime: z.boolean().optional(),
   }).optional(),
+  preferences: z.object({
+    scheduleDensity: z.enum(['comfortable', 'compact']),
+  }).optional(),
   client: z.object({
     id: z.uuid(),
     trainerId: z.uuid(),
@@ -699,7 +702,7 @@ export const yandexPilotRepository = {
   async updateProfile(
     apiBaseUrl: string,
     sessionToken: string,
-    input: { firstName: string | null; lastName: string | null; timezone: string },
+    input: { firstName: string | null; lastName: string | null; timezone: string; scheduleDensity?: 'comfortable' | 'compact' },
   ): Promise<void> {
     const response = await commandResponse(() => yandexPilotQueries.updateProfile(
       apiBaseUrl,

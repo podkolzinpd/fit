@@ -296,9 +296,10 @@ export async function updateOwnProfile(
 ): Promise<void> {
   const rows = await runCommand(() => client.query<VersionRow>(`
     update public.profiles
-    set first_name = $1, last_name = $2, timezone = $3
+    set first_name = $1, last_name = $2, timezone = $3,
+      schedule_density = coalesce($4, schedule_density)
     where id = auth.uid()
     returning 1::bigint version
-  `, [draft.firstName, draft.lastName, draft.timezone]))
+  `, [draft.firstName, draft.lastName, draft.timezone, draft.scheduleDensity ?? null]))
   if (rows[0] === undefined) throw new PilotDomainCommandError('not_found')
 }
