@@ -229,7 +229,7 @@ export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (ke
 export function briefSummary(brief: ProgramBrief): string {
   const days = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const experience = { beginner: 'начальный', returning: 'возвращение после перерыва', experienced: 'есть опыт' }
-  const equipmentNames: Record<Equipment, string> = { stationary_bike: 'Велотренажёр', dumbbells: 'гантели', barbell: 'штанга', bench: 'скамья', rack: 'стойка', cable: 'блочный тренажёр', pullup_bar: 'турник', leg_press: 'жим ногами', leg_curl: 'сгибание ног', leg_extension: 'разгибание ног' }
+  const equipmentNames: Record<Equipment, string> = { stationary_bike: 'велотренажёр', dumbbells: 'гантели', kettlebells: 'гири', resistance_bands: 'резинки', barbell: 'штанга', bench: 'скамья', rack: 'стойка', cable: 'блочный тренажёр', pullup_bar: 'турник', leg_press: 'жим ногами', leg_curl: 'сгибание ног', leg_extension: 'разгибание ног' }
   return [brief.continuationPlan && `Продолжение: ${brief.continuationPlan}`, brief.preserveRefs?.length && `Сохранить упражнения: ${brief.preserveRefs.map((ref) => PROGRAM_CATALOG.find((row) => row.ref === ref)?.name).join(', ')}`, brief.goalText && `Цель: ${brief.goalText}`, brief.frequency && `${brief.frequency} занятий в неделю · 4 недели`,
     brief.weekdays && `Дни: ${brief.weekdays.map((day) => days[day - 1]).join(', ')}`,
     brief.durationMin && `До ${brief.durationMin} минут`, brief.startDate && `Начало: ${brief.startDate}`,

@@ -1,4 +1,5 @@
 import type { ProgramBrief } from './brief.js'
+import type { Equipment } from './catalog.js'
 
 export type BriefAnswerContext = { question: string; fields: (keyof ProgramBrief)[] }
 
@@ -9,9 +10,51 @@ function evenlySpacedWeekdays(frequency: ProgramBrief['frequency']): number[] | 
   return undefined
 }
 
+function addDays(date: string, days: number): string | undefined {
+  const value = new Date(`${date}T00:00:00Z`)
+  if (!Number.isFinite(value.getTime())) return undefined
+  value.setUTCDate(value.getUTCDate() + days)
+  return value.toISOString().slice(0, 10)
+}
+
+function explicitDuration(text: string): number | undefined {
+  const match = text.match(/^(\d{1,3})(?:\s*[-–—]\s*(\d{1,3}))?(?:\s*(?:мин|минута|минуты|минут))?$/u)
+  if (!match) return undefined
+  const values = [Number(match[1]), match[2] === undefined ? undefined : Number(match[2])]
+    .filter((value): value is number => value !== undefined)
+  if (values.some((value) => !Number.isInteger(value) || value < 30 || value > 120)) return undefined
+  // A program must fit even on the shorter day from an explicitly stated range.
+  return Math.min(...values)
+}
+
+function explicitEquipment(text: string): Equipment[] | undefined {
+  const equipment: Equipment[] = []
+  const add = (value: Equipment) => { if (!equipment.includes(value)) equipment.push(value) }
+  if (/(?<!\p{L})гир(?:я|и|ю|ей|ь|ек|ями|ях)?(?!\p{L})/u.test(text)) add('kettlebells')
+  if (/(?<!\p{L})(?:резин(?:а|ы|ка|ки|ку|ке|кой|ок|ками|ках)?|эспандер(?:а|ы|ом|ов|ами|ах)?)(?!\p{L})/u.test(text)) add('resistance_bands')
+  if (/(?<!\p{L})гантел(?:ь|и|ей|ями|ях)?(?!\p{L})/u.test(text)) add('dumbbells')
+  if (/(?<!\p{L})штанг(?:а|и|у|ой|е)?(?!\p{L})/u.test(text)) add('barbell')
+  if (/(?<!\p{L})(?:скам(?:ья|ьи|ью|ье)|лавк(?:а|и|у|ой|е))(?!\p{L})/u.test(text)) add('bench')
+  if (/(?<!\p{L})(?:турник|перекладин(?:а|ы|у|ой|е))(?!\p{L})/u.test(text)) add('pullup_bar')
+  if (/(?<!\p{L})велотренажер(?:а|ы|ом|е)?(?!\p{L})/u.test(text)) add('stationary_bike')
+  return equipment.length ? equipment : undefined
+}
+
 /** Explicit absence is an answer, not a request to delete a field. */
 export function explicitBriefAnswer(message: string, context?: BriefAnswerContext, today?: string, brief?: ProgramBrief): unknown {
   const text = message.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim().replace(/[.!]$/, '')
+  if (context?.fields.length === 1 && context.fields[0] === 'durationMin') {
+    const durationMin = explicitDuration(text)
+    if (durationMin !== undefined) return { patch: { durationMin }, clear: [], evidence: { durationMin: message }, clarification: null }
+  }
+  if (context?.fields.length === 1 && context.fields[0] === 'startDate' && today) {
+    const startDate = text === 'сегодня' ? today : text === 'завтра' ? addDays(today, 1) : undefined
+    if (startDate) return { patch: { startDate }, clear: [], evidence: { startDate: message }, clarification: null }
+  }
+  if (context?.fields.length === 1 && context.fields[0] === 'equipment') {
+    const equipment = explicitEquipment(text)
+    if (equipment) return { patch: { equipment }, clear: [], evidence: { equipment: message }, clarification: null }
+  }
   if (context?.fields.length === 1 && context.fields[0] === 'weekdays'
     && /^(?:да,?\s*)?(?:мне\s+)?(?:все равно|не ?важно|без разницы|любые|в любые(?: дни)?|в любой день)$/u.test(text)) {
     const weekdays = evenlySpacedWeekdays(brief?.frequency)
@@ -26,8 +69,8 @@ export function explicitBriefAnswer(message: string, context?: BriefAnswerContex
     const date = new Date(`${today}T00:00:00Z`)
     if (Number.isFinite(date.getTime())) {
       const delta = (weekdays.indexOf(nextDay[1]!) - date.getUTCDay() + 7) % 7 || 7
-      date.setUTCDate(date.getUTCDate() + delta)
-      return { patch: { startDate: date.toISOString().slice(0, 10) }, clear: [], evidence: { startDate: message }, clarification: null }
+      const startDate = addDays(today, delta)
+      if (startDate) return { patch: { startDate }, clear: [], evidence: { startDate: message }, clarification: null }
     }
   }
   const field = /^(?:предпочтений нет|нет предпочтений|без предпочтений)$/u.test(text) ? 'preferences'

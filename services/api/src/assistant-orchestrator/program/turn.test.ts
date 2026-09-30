@@ -49,6 +49,23 @@ describe('program chat state', () => {
     expect(result?.action?.payload.readyToGenerate).toBe(true)
     expect(result?.reply).not.toContain('В какие дни недели')
   })
+  it.each([
+    { field: 'durationMin', message: '60', expected: { durationMin: 60 } },
+    { field: 'durationMin', message: '40-60', expected: { durationMin: 40 } },
+    { field: 'startDate', message: 'Сегодня', expected: { startDate: '2026-09-15' } },
+    { field: 'equipment', message: 'Тренировки дома. Есть гиря 5 кг и резинки', expected: { equipment: ['kettlebells', 'resistance_bands'] } },
+  ] as const)('accepts the reported short answer for $field without an LLM guess', async ({ field, message, expected }) => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief[field]
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: [field], guidance: field === 'durationMin' ? 'Сколько минут есть на одно занятие?'
+        : field === 'startDate' ? 'С какой даты начинается программа?' : 'Какое оборудование доступно?' } }
+    deps.extract.mockImplementation((current: ProgramBrief, text: string, context?: BriefAnswerContext) => extractProgramBrief(current, text, deps.today, deps.turnId, context))
+    const result = await programPilotTurn(message, [client], active, deps)
+    expect(result?.action?.payload.briefState).toMatchObject(expected)
+    expect(result?.action?.payload.readyToGenerate).toBe(true)
+  })
   it('does not generate from an old quiz where a preference negative could erase pain', async () => {
     const { deps, latest } = setup()
     const old = { ...latest.payload, briefAnswerVersion: undefined }
