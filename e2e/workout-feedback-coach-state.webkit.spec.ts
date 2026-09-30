@@ -108,11 +108,12 @@ test('workout result stays neutral with and without an active trainer', async ({
 
   await page.goto('/me/profile')
   await expect(page.getByText('Тренер обратной связи', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Отключить' }).click()
+  await page.getByRole('button', { name: 'Действия с тренером Тренер обратной связи' }).click()
+  await page.getByRole('menuitem', { name: 'Отключить' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
-  await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
   await page.reload()
-  await expect(page.getByText('Сейчас вы занимаетесь самостоятельно.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
 
   await page.goto(workoutUrl)
   feedback = page.locator('.workout-feedback')

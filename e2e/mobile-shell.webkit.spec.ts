@@ -22,9 +22,53 @@ async function login(page: import('@playwright/test').Page, email: string) {
   await page.goto('/auth')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/me$/)
+  const submit = page.getByRole('button', { name: 'Войти' })
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const tokenResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/token?grant_type=password'))
+    await submit.click()
+    const response = await tokenResponse
+    if (response.ok()) {
+      try {
+        await expect(page).toHaveURL(/\/me$/, { timeout: 3_000 })
+      } catch {
+        await page.reload()
+        await expect(page).toHaveURL(/\/me$/, { timeout: 15_000 })
+      }
+      return
+    }
+    if (![502, 503, 504].includes(response.status()) || attempt === 4) {
+      throw new Error(`Client sign-in returned HTTP ${response.status()}`)
+    }
+    await expect(submit).toBeEnabled()
+    await page.waitForTimeout(500 * (2 ** attempt))
+  }
 }
+
+test('athlete Profile puts the connected trainer above search and has no code entry', async ({ page }) => {
+  await login(page, 'client@fit.local')
+  await page.goto('/me/profile')
+  const trainer = page.locator('.client-trainer-connection-card').first()
+  const search = page.getByRole('link', { name: 'Найти тренера' })
+  await expect(trainer).toContainText('Тест Тренер')
+  await expect(search).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ввести код тренера' })).toHaveCount(0)
+  const [trainerBox, searchBox] = await Promise.all([trainer.boundingBox(), search.boundingBox()])
+  expect(trainerBox && searchBox && trainerBox.y + trainerBox.height <= searchBox.y).toBe(true)
+  await expectNoHorizontalOverflow(page)
+
+  await page.route('**/rest/v1/rpc/list_client_trainers', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Найти тренера' })).toHaveClass(/primary/)
+  await expect(page.getByRole('link', { name: 'Найти тренера' })).toBeInViewport()
+  await expectNoHorizontalOverflow(page)
+  await page.setViewportSize({ width: 430, height: 932 })
+  await expect(page.getByRole('link', { name: 'Найти тренера' })).toBeInViewport()
+  await expectNoHorizontalOverflow(page)
+
+  await page.goto('/me/settings')
+  await expect(page.getByRole('link', { name: 'Ввести код приглашения' })).toHaveCount(0)
+})
 
 async function saveCompactClientPlan(page: Page) {
   await page.getByRole('button', { name: 'Далее' }).click()

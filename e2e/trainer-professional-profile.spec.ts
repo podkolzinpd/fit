@@ -128,7 +128,7 @@ test('trainer publishes a profile and athlete finds it in the catalog', async ({
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/me/profile')
-  await page.getByRole('link', { name: /Найти тренера/ }).click()
+  await page.getByRole('link', { name: 'Найти тренера' }).click()
   await expect(page).toHaveURL(/\/me\/trainers$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Тренеры' })).toBeVisible()
   const results = page.getByRole('region', { name: 'Найденные тренеры' })

@@ -57,12 +57,14 @@ describe('ClientProfilePage', () => {
   it('keeps the profile focused and links to separate settings', async () => {
     render(<ClientProfilePage />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('link', { name: 'Настройки профиля' })).toHaveAttribute('href', '/me/settings'))
+    expect(screen.getByText('Настройки')).toBeVisible()
     expect(screen.queryByText('Уведомления')).not.toBeInTheDocument()
   })
 
   it('renders notification controls on the client settings page', async () => {
     render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).toBeVisible())
+    expect(screen.queryByRole('link', { name: 'Ввести код приглашения' })).not.toBeInTheDocument()
   })
 
   it('offers the optional wheel in client workout settings', async () => {
