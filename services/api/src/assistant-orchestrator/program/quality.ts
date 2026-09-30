@@ -34,8 +34,8 @@ export function assessProgramQuality(template: ProgramTemplate, brief: ProgramBr
   // A deliberately asymmetric split can be valid; ask the model to reconsider,
   // never reject a draft based on this ratio.
   if (first.pushSets >= 4 && first.pushSets > first.pullSets * 2) signals.push('push_dominates_pull')
-  const enduranceGoal = /вынослив|аэроб|кардио|endurance/iu.test(brief.goalText ?? '')
-  if (enduranceGoal && !weeks.some((week) => week.aerobicMinutes > 0)
+  const aerobicGoal = brief.goal === 'weight_loss' || /вынослив|аэроб|кардио|endurance/iu.test(brief.goalText ?? '')
+  if (aerobicGoal && !weeks.some((week) => week.aerobicMinutes > 0)
     && !(brief.otherActivities?.length)) signals.push('endurance_without_aerobic_work')
   if ((brief.goal === 'general_fitness' || brief.goal === 'weight_loss') && first.lowerSets === 0) signals.push('no_compound_lower_body_work')
   if ((brief.goal === 'general_fitness' || brief.goal === 'weight_loss') && first.kneeSets >= 4 && first.hingeSets === 0 && first.kneeFlexionSets === 0) signals.push('lower_body_only_knee_dominant')
@@ -59,6 +59,6 @@ export const QUALITY_REVIEW_NOTES: Record<string, string> = {
   pullups_capacity_unverified: 'Нужно проверить: назначены подтягивания без подтверждённой в истории способности их выполнять. Проверьте доступное число повторов или выберите регулируемую нагрузку.',
   multiple_unsupported_trunk_exercises: 'Нужно проверить: в одном занятии несколько упражнений без опоры для корпуса с усилием от 7/10. Это не автоматическое противопоказание; оцените суммарную нагрузку и технику.',
   push_dominates_pull: 'Нужно проверить: прямых жимовых подходов существенно больше, чем тяг для верхней части спины. Оцените, оправдан ли этот акцент целью.',
-  endurance_without_aerobic_work: 'Нужно проверить: заявлена выносливость, но аэробный блок не запланирован. Уточните, покрывается ли цель другой активностью или речь о мышечной выносливости.',
+  endurance_without_aerobic_work: 'Нужно проверить: цель снижения веса или выносливости указана, но аэробный блок не запланирован. Уточните, покрывается ли цель другой активностью или добавьте доступную аэробную работу.',
   no_compound_lower_body_work: 'Нужно проверить: в программе общей формы нет основных движений для ног. Оцените причину с учётом ограничений и другой активности.',
 }
