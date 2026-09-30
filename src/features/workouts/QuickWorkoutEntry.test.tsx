@@ -41,7 +41,7 @@ describe('QuickWorkoutEntry circuit input', () => {
     })
   })
 
-  it('добавляет явный сет как существующую круговую, не меняя подходы', async () => {
+  it('добавляет явный сет как суперсет, не меняя подходы', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
     render(<QuickWorkoutEntry catalog={catalog} parseWorkout={parseWorkout} onAdd={onAdd} />)
 
@@ -50,7 +50,7 @@ describe('QuickWorkoutEntry circuit input', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Разобрать тренировку' }))
-    expect(await screen.findByText('Круговая · 2 упр.')).toBeInTheDocument()
+    expect(await screen.findByText('Суперсет · 2 упр.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Добавить в план (2)' }))
 
     expect(onAdd).toHaveBeenCalledOnce()
@@ -61,10 +61,10 @@ describe('QuickWorkoutEntry circuit input', () => {
     expect(added[0]!.structure).toEqual({
       blockId: added[1]!.structure!.blockId,
       blockType: 'group',
-      blockPreset: 'circuit',
+      blockPreset: 'set',
       blockRounds: 3,
-      restBetweenExercisesSec: 15,
-      restBetweenRoundsSec: 60,
+      restBetweenExercisesSec: 0,
+      restBetweenRoundsSec: 90,
     })
     expect(parseWorkout).not.toHaveBeenCalled()
   })

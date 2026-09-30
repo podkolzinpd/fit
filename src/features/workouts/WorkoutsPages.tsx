@@ -2798,7 +2798,7 @@ export function LiveWorkoutPage() {
     },
   })
   const mergeBlock = useMutation({
-    mutationFn: async ({ blockId, preset }: { blockId: string; preset: 'set' | 'circuit' }) => {
+    mutationFn: async ({ blockId, preset }: { blockId: string; preset: 'set' }) => {
       await liveSets.waitForIdle()
       return runLiveWorkoutMutation(`merge-block:${blockId}:${preset}`,
         (workout) => workoutsRepository.mergeLiveBlockWithNext(workout, blockId, preset))
@@ -2930,17 +2930,15 @@ export function LiveWorkoutPage() {
   }
   // Меню упражнения в live (⋯). Если упражнение уже начато, сервер отделит
   // подтверждённый факт в самостоятельную запись, а заменит лишь остаток.
-  function groupActions(blockId: string, preset: 'set' | 'circuit', canGroup: boolean, alreadyGrouped: boolean) {
+  function groupActions(blockId: string, canGroup: boolean, alreadyGrouped: boolean) {
     if (!canGroup) return []
     const disabled = rootMutationPending || save.isPending || confirm.isPending
     return alreadyGrouped
-      ? [{ label: `Добавить следующее в ${preset === 'set' ? 'суперсет' : 'круговую'}`, disabled,
-          onClick: () => mergeBlock.mutate({ blockId, preset }) }]
+      ? [{ label: 'Добавить следующее в суперсет', disabled,
+          onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) }]
       : [
           { label: 'Создать суперсет со следующим', disabled,
             onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
-          { label: 'Создать круговую со следующим', disabled,
-            onClick: () => mergeBlock.mutate({ blockId, preset: 'circuit' }) },
         ]
   }
   function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = []) {
@@ -3082,9 +3080,9 @@ export function LiveWorkoutPage() {
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
         return liveBlocks.map((block, blockIndex) => {
         const nextBlock = liveBlocks[blockIndex + 1]
-        const canGroup = dataSource === 'yandex' && !reordering && block.blockPreset !== 'interval' && Boolean(nextBlock && nextBlock.exercises.length === 1
+        const canGroup = dataSource === 'yandex' && !reordering && block.blockPreset === 'set' && Boolean(nextBlock && nextBlock.exercises.length === 1 && nextBlock.blockType === 'single' && nextBlock.blockPreset === 'set'
           && [...block.exercises, ...nextBlock.exercises].every((exercise) => exercise.sets.every((set) => !set.confirmedAt)))
-        const groupingItems = groupActions(block.blockId, block.blockPreset === 'circuit' ? 'circuit' : 'set', canGroup, block.exercises.length > 1)
+        const groupingItems = groupActions(block.blockId, canGroup, block.exercises.length > 1)
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1

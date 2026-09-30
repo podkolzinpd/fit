@@ -1,13 +1,15 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const testPort = Number(process.env.FIT_TEST_PORT ?? 5173)
+
 export default defineConfig({
   testDir: './e2e', fullyParallel: true, retries: process.env.CI ? 2 : 0,
   snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}-{projectName}{ext}',
   reporter: process.env.CI ? 'github' : 'list',
-  use: { baseURL: 'http://127.0.0.1:5173', trace: 'on-first-retry' },
+  use: { baseURL: `http://127.0.0.1:${testPort}`, trace: 'on-first-retry' },
   // Проверяем тот же Today-старт, который получают пользователи по умолчанию.
   // Устаревший rollout-флаг здесь маскировал регрессии нового основного сценария.
-  webServer: { command: 'npm run dev:frontend -- --host 127.0.0.1', url: 'http://127.0.0.1:5173', reuseExistingServer: !process.env.CI },
+  webServer: { command: `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI },
   projects: [
     { name: 'mobile-chromium', testIgnore: [/.*\.webkit\.spec\.ts/, /ui-visual\.spec\.ts/], use: { ...devices['Pixel 7'] } },
     // Отдельный iPhone smoke покрывает реальный движок iOS и ширину 390 px,

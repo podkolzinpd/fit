@@ -78,7 +78,7 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expectWorkoutTime(page, 'Время, подход 3', 45)
 })
 
-test('форма: заголовки «Сет» и «Круговая» автоматически создают круговые', async ({ page }) => {
+test('форма: заголовок «Сет» создаёт суперсет без потери подходов', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -88,10 +88,11 @@ test('форма: заголовки «Сет» и «Круговая» авто
   await page.goto('/workouts/new')
   await page.getByLabel('Запись тренировки').fill('1. Сет:\n- Жим лёжа 3×10 60 кг\n- Планка 2×45 сек')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
-  await expect(page.getByText('Круговая · 2 упр.')).toBeVisible()
+  await expect(page.getByText('Суперсет · 2 упр.')).toBeVisible()
   await page.getByRole('button', { name: 'Добавить в план (2)' }).click()
 
-  await expect(page.getByLabel('Тип блока')).toHaveValue('circuit')
+  await expect(page.getByLabel('Тип блока')).toHaveValue('set')
+  await expect(page.getByLabel('Тип блока').locator('option[value="circuit"]')).toHaveCount(0)
   await expect(page.getByLabel('Кругов')).toHaveValue('3')
   await expect(page.locator('.planned-round')).toHaveCount(3)
   await expect(page.locator('.planned-round').nth(2).locator('.planned-round-exercise-name')).toHaveCount(1)
@@ -99,8 +100,8 @@ test('форма: заголовки «Сет» и «Круговая» авто
   await expectWorkoutTime(page, 'Время, подход 2', 45)
 
   await page.locator('.block-options summary').click()
-  await expect(page.getByLabel('Отдых между упражнениями, с')).toHaveValue('15')
-  await expect(page.getByLabel('Отдых между кругами, с')).toHaveValue('60')
+  await expect(page.getByLabel('Отдых между упражнениями, с')).toHaveValue('0')
+  await expect(page.getByLabel('Отдых между кругами, с')).toHaveValue('90')
 })
 
 test('форма: короткая беговая фраза создаёт редактируемые интервалы в метрах', async ({ page }) => {
@@ -157,7 +158,8 @@ test('гребной тренажёр использует темп на 500 м 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
-test('стартовый экран показывает точный результат автоматического распознавания до сохранения', async ({ page }) => {
+test('тренер объединяет распознанные упражнения в суперсет и сохраняет черновик без повторного разбора', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -165,12 +167,34 @@ test('стартовый экран показывает точный резул
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
   await page.goto('/today')
-  await mockWorkoutParser(page, [{ sourceText: 'Жим гантелей на наклон 3×8 24 кг', exerciseRef: 'fedb-incline-dumbbell-press', confidence: 1, sets: [{ weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }] }])
+  await mockWorkoutParser(page, [
+    { sourceText: 'Жим гантелей на наклон 3×8 24 кг', exerciseRef: 'fedb-incline-dumbbell-press', confidence: 1, sets: [{ weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }] },
+    { sourceText: 'Планка 45 секунд', exerciseRef: 'plank', confidence: 1, sets: [{ durationSec: 45 }] },
+    { sourceText: 'Присед со штангой 60 кг 8 раз', exerciseRef: 'barbell-squat', confidence: 1, sets: [{ weightKg: 60, reps: 8 }] },
+  ])
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
-  await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг')
+  await page.getByLabel('Тренировка').fill('Жим гантелей на наклон 3×8 24 кг\nПланка 45 секунд\nПрисед со штангой 60 кг 8 раз')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await expect(page.getByText('Жим гантелей на наклонной')).toBeVisible()
+  await page.getByRole('button', { name: /Настройки упражнения «Жим гантелей на наклонной скамье»/ }).click()
+  await expect(page.getByRole('menuitem', { name: 'Создать круговую со следующим' })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'Создать суперсет со следующим' }).click()
+  await expect(page.locator('.today-review-block').first().getByText('Суперсет')).toBeVisible()
+  await page.getByRole('button', { name: /Настройки упражнения «Планка»/ }).click()
+  await page.getByRole('menuitem', { name: 'Добавить следующее в суперсет' }).click()
+  await expect(page.locator('.today-review-block')).toHaveCount(1)
+  await expect(page.getByText('3 × 24 кг × 8 повт.')).toBeVisible()
+  for (const [width, height] of [[390, 844], [430, 932], [1440, 1000]] as const) {
+    await page.setViewportSize({ width, height })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`review-trainer-superset-${width}.png`), fullPage: true })
+  }
+  await page.reload()
+  await expect(page.locator('.today-review-block')).toHaveCount(1)
+  await page.getByRole('button', { name: /Настройки упражнения «Жим гантелей на наклонной скамье»/ }).click()
+  await page.getByRole('menuitem', { name: 'Разбить суперсет' }).click()
+  await expect(page.locator('.today-review-block')).toHaveCount(3)
 })
 
 test('trainer can create client, complete workout and save progress', async ({ page }, testInfo) => {
@@ -775,7 +799,7 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.locator('.how-steps li').first()).toBeVisible()
 })
 
-test('план: видимый суперсет переключается в круговую и работает в Live', async ({ page }, testInfo) => {
+test('план: суперсет работает в Live без создания круговой', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -817,8 +841,8 @@ test('план: видимый суперсет переключается в к
     await page.screenshot({ path: testInfo.outputPath(`superset-plan-${width}.png`), fullPage: true })
   }
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByLabel('Тип блока').selectOption('circuit')
-  await expect(page.getByLabel('Тип блока')).toHaveValue('circuit')
+  await expect(page.getByLabel('Тип блока')).toHaveValue('set')
+  await expect(page.getByLabel('Тип блока').locator('option[value="circuit"]')).toHaveCount(0)
   await expect(page.locator('.block-options')).not.toHaveAttribute('open', '')
   // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
   // каждый содержит оба упражнения; кнопки «＋ Подход» внутри блока нет.
@@ -842,11 +866,11 @@ test('план: видимый суперсет переключается в к
   }
   await page.getByRole('button', { name: 'Сохранить' }).click()
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
-  // В просмотре тренировки виден бейдж «Круговая · 2 кр.».
-  await expect(page.locator('.block-badge').first()).toContainText('Круговая · 2 кр.')
+  // В просмотре тренировки виден бейдж «Суперсет · 2 кр.».
+  await expect(page.locator('.block-badge').first()).toContainText('Суперсет · 2 кр.')
 
   // Live идёт по кругам: круг 1 (упр.A → упр.B), потом круг 2. Счётчик показывает
-  // текущий круг; отдых учитывает дефолты круговой — между упражнениями и кругами.
+  // текущий круг; суперсет не запускает отдых между упражнениями, только между кругами.
   await page.getByRole('button', { name: 'Начать' }).click()
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
@@ -855,13 +879,11 @@ test('план: видимый суперсет переключается в к
   // блока — проверяем закреплённый (всегда виден при скролле по кругам).
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
-  await page.screenshot({ path: testInfo.outputPath('circuit-live-390.png'), fullPage: true })
-  // После первого упражнения запускается короткий отдых между упражнениями.
+  await page.screenshot({ path: testInfo.outputPath('superset-live-390.png'), fullPage: true })
+  // Между упражнениями суперсета отдыха нет.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
-  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toBeVisible()
-  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
-  await page.getByRole('button', { name: 'Остановить отдых' }).click()
+  await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых/ })).toHaveCount(0)
   // Второе (последнее) упражнение круга 1 — круг завершён, отдых запускается,
   // счётчик переключается на «Круг 2 из 2».
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()

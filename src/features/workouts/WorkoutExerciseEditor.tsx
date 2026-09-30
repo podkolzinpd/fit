@@ -346,20 +346,22 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       const isLast = blockIndex === blocks.length - 1
       // «Объединить» показываем на последнем упражнении блока, если дальше есть ещё.
       const blockLastIndex = block.items[block.items.length - 1]!.index
-      const canMerge = (index: number) => index === blockLastIndex && index < lastIndex
+      const nextBlock = blocks[blockIndex + 1]
+      const canMerge = (index: number) => index === blockLastIndex && index < lastIndex && block.blockPreset === 'set'
+        && Boolean(nextBlock && nextBlock.items.length === 1 && nextBlock.blockType === 'single' && nextBlock.blockPreset === 'set')
       if (block.items.length === 1) {
         const { exercise, index } = block.items[0]!
         return renderExercise(exercise, index, canMerge(index), blocks.length > 1 ? reorderButtons(block.blockId, isFirst, isLast) : undefined, blocks.length > 1)
       }
       // Многоэлементный блок: раскладка ПО КРУГАМ (круг = все упражнения по очереди).
       const rounds = draftBlockRoundsView(block)
-      const blockMergeIndex = blockLastIndex < lastIndex ? blockLastIndex : -1
-      const mergeTargetLabel = block.blockPreset === 'circuit' ? 'круговую' : block.blockPreset === 'interval' ? 'интервалы' : 'суперсет'
+      const blockMergeIndex = canMerge(blockLastIndex) ? blockLastIndex : -1
+      const mergeTargetLabel = 'суперсет'
       return <div className="exercise-block" key={block.blockId}>
         <div className="exercise-block-head">
           <select aria-label="Тип блока" value={block.blockPreset} onChange={(event) => commitExercises(setBlockPreset([...latestExercises.current], block.blockId, event.target.value as BlockPreset))}>
             <option value="set">Суперсет</option>
-            <option value="circuit">Круговая</option>
+            {block.blockPreset === 'circuit' && <option value="circuit" disabled>Круговая (ранее)</option>}
             <option value="interval">Интервалы</option>
           </select>
           <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} onCommit={(next) => commitExercises(syncBlockRounds([...latestExercises.current], block.blockId, next))} /></label>
