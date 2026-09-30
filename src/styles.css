@@ -6924,7 +6924,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .athlete-achievements-state { margin:12px 0 0; color:#c6c6cb; font-size:14px; }
 .athlete-achievements-state p { margin:0 0 8px; }
 .athlete-achievements-state button { min-height:44px; color:#19191c; background:#baff36; }
-.athlete-achievement-badge { position:relative; isolation:isolate; flex:none; display:grid; place-items:center; width:92px; height:92px; border:1px solid #35353a; border-radius:25px; background:#232328; color:#f8f8f6; box-shadow:inset 0 1px 0 #ffffff12; }
+.athlete-achievement-badge { position:relative; flex:none; display:grid; place-items:center; width:92px; height:92px; border:1px solid #35353a; border-radius:25px; background:#232328; color:#f8f8f6; box-shadow:inset 0 1px 0 #ffffff12; }
 .athlete-achievement-badge.is-compact { width:64px; height:64px; border-radius:19px; }
 .athlete-achievement-ring { position:absolute; inset:8%; width:84%; height:84%; transform:rotate(-90deg); }
 .athlete-achievement-ring circle { fill:none; stroke-width:8; }
