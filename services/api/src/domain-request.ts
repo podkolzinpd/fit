@@ -66,6 +66,7 @@ export interface ProfileDraft {
   firstName: string | null
   lastName: string | null
   timezone: string
+  scheduleDensity?: 'comfortable' | 'compact'
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -260,7 +261,12 @@ export function readProfileDraft(body: unknown): ProfileDraft | undefined {
   const firstName = nullableText(input.firstName, 120)
   const lastName = nullableText(input.lastName, 120)
   const timezone = requiredText(input.timezone, 1, 100)
-  if (firstName === undefined || lastName === undefined || timezone === undefined) {
+  const scheduleDensity = input.scheduleDensity === undefined
+    ? undefined
+    : input.scheduleDensity === 'comfortable' || input.scheduleDensity === 'compact'
+      ? input.scheduleDensity
+      : null
+  if (firstName === undefined || lastName === undefined || timezone === undefined || scheduleDensity === null) {
     return undefined
   }
   try {
@@ -268,5 +274,5 @@ export function readProfileDraft(body: unknown): ProfileDraft | undefined {
   } catch {
     return undefined
   }
-  return { firstName, lastName, timezone }
+  return { firstName, lastName, timezone, ...(scheduleDensity ? { scheduleDensity } : {}) }
 }

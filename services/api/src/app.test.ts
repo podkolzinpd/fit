@@ -1438,7 +1438,7 @@ describe('native Yandex function contracts', () => {
     const domain = buildDomainWriter()
     const app = buildApp({ pilotDomainWriter: domain.pilotDomainWriter, logger: false })
     apps.push(app)
-    const payload = { firstName: 'Ирина', lastName: 'Соколова', timezone: 'Europe/Moscow' }
+    const payload = { firstName: 'Ирина', lastName: 'Соколова', timezone: 'Europe/Moscow', scheduleDensity: 'compact' }
 
     const response = await app.inject({
       method: 'PUT', url: '/v1/profile',
@@ -1449,6 +1449,21 @@ describe('native Yandex function contracts', () => {
     expect(domain.updateProfile).toHaveBeenCalledWith(
       { accessMode: 'read_write', token: 'a'.repeat(43) }, payload,
     )
+  })
+
+  it('rejects an unsupported schedule density in the profile update', async () => {
+    const domain = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: domain.pilotDomainWriter, logger: false })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'PUT', url: '/v1/profile',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow', scheduleDensity: 'tiny' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(domain.updateProfile).not.toHaveBeenCalled()
   })
 
   it('does not expose either native contract without a pilot session', async () => {

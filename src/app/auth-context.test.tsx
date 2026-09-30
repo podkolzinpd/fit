@@ -21,6 +21,7 @@ const auth = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
   signOut: vi.fn(),
   updateProfile: vi.fn(),
+  updateScheduleDensity: vi.fn(),
 }))
 
 const yandex = vi.hoisted(() => ({ state: null as null | {

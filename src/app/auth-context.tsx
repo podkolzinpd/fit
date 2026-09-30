@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
-import type { SessionActor } from '../shared/domain'
+import type { ScheduleDensity, SessionActor } from '../shared/domain'
 import { authRepository } from '../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
 import { isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
@@ -18,7 +18,8 @@ interface AuthState {
   error: string | null
   refresh: () => Promise<void>
   signOut: () => Promise<void>
-  updateProfile: (input: { firstName: string | null; lastName: string | null; timezone: string }) => Promise<void>
+  updateProfile: (input: { firstName: string | null; lastName: string | null; timezone: string; scheduleDensity?: ScheduleDensity }) => Promise<void>
+  updateScheduleDensity: (density: ScheduleDensity) => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     && isYandexMainRoutingEnabled()
   const yandexRoutingEnabledRef = useRef(yandexRoutingEnabled)
   const [supabaseActor, setSupabaseActor] = useState<SessionActor | null>(null)
+  const [scheduleDensityOverride, setScheduleDensityOverride] = useState<ScheduleDensity | null>(null)
   const [supabaseLoading, setSupabaseLoading] = useState(true)
   const [supabaseError, setSupabaseError] = useState<string | null>(null)
   const actorRef = useRef<SessionActor | null>(null)
@@ -135,6 +137,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         kind: 'trainer', role: 'trainer', userId: profile.id, email: null,
         firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
         experiments: profile.experiments,
+        preferences: { scheduleDensity: scheduleDensityOverride ?? profile.preferences?.scheduleDensity ?? 'comfortable' },
       }
     }
     if (profile.client === null || profile.client === undefined) {
@@ -145,16 +148,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
         kind: 'trainer', role: 'client', userId: profile.id, email: null,
         firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
         experiments: profile.experiments,
+        preferences: { scheduleDensity: scheduleDensityOverride ?? profile.preferences?.scheduleDensity ?? 'comfortable' },
       }
     }
     return {
       kind: 'client', role: 'client', userId: profile.id, email: null,
       firstName: profile.firstName, lastName: profile.lastName, timezone: profile.timezone,
       experiments: profile.experiments,
+      preferences: { scheduleDensity: scheduleDensityOverride ?? profile.preferences?.scheduleDensity ?? 'comfortable' },
       clientId: profile.client.id, trainerId: profile.client.trainerId,
       fullName: profile.client.fullName,
     }
-  }, [yandexSession?.session])
+  }, [scheduleDensityOverride, yandexSession?.session])
   const yandexOnlyAuthEnabled = isYandexOnlyAuthEnabled()
   const actor = yandexOnlyAuthEnabled
     ? yandexActor
@@ -209,7 +214,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     queryClient.clear()
   }, [queryClient, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
-  const updateProfile = useCallback(async (input: { firstName: string | null; lastName: string | null; timezone: string }) => {
+  const updateProfile = useCallback(async (input: { firstName: string | null; lastName: string | null; timezone: string; scheduleDensity?: ScheduleDensity }) => {
     if (yandexRoutingEnabled && yandexSession?.session !== null && yandexSession?.session !== undefined) {
       const config = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
       await yandexPilotRepository.updateProfile(
@@ -224,7 +229,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await authRepository.updateProfile({ ...supabaseActor, ...input })
   }, [supabaseActor, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
-  const value = useMemo(() => ({ actor, loading, error, refresh, signOut, updateProfile }), [actor, loading, error, refresh, signOut, updateProfile])
+  const updateScheduleDensity = useCallback(async (density: ScheduleDensity) => {
+    if (!actor || actor.role !== 'trainer') throw new Error('Настройка расписания недоступна')
+    if (yandexRoutingEnabled && yandexSession?.session !== null && yandexSession?.session !== undefined) {
+      const config = String(import.meta.env.VITE_YANDEX_API_BASE_URL ?? '').trim().replace(/\/$/, '')
+      await yandexPilotRepository.updateProfile(config, yandexSession.session.session.token, {
+        firstName: actor.firstName,
+        lastName: actor.lastName,
+        timezone: actor.timezone,
+        scheduleDensity: density,
+      })
+    } else if (yandexOnlyAuthEnabled) {
+      throw new Error('Настройка расписания недоступна')
+    }
+    setScheduleDensityOverride(density)
+  }, [actor, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
+
+  const value = useMemo(() => ({ actor, loading, error, refresh, signOut, updateProfile, updateScheduleDensity }), [actor, loading, error, refresh, signOut, updateProfile, updateScheduleDensity])
   return <AuthContext value={value}>{children}</AuthContext>
 }
 
