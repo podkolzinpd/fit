@@ -775,7 +775,7 @@ test('карточка упражнения: шапка с оборудован�
   await expect(page.locator('.how-steps li').first()).toBeVisible()
 })
 
-test('план: два упражнения объединяются в круговую, тип виден в просмотре', async ({ page }) => {
+test('план: видимый суперсет переключается в круговую и работает в Live', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
@@ -800,10 +800,22 @@ test('план: два упражнения объединяются в круг
     await page.locator('.picker-select-mark').first().click()
     await page.getByRole('button', { name: 'Добавить 1' }).click()
   }
-  // Объединяем первое упражнение со следующим в круговую → появляется селектор типа.
-  await page.getByRole('button', { name: 'Ещё действия' }).first().click()
-  await page.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: testInfo.outputPath('superset-plan-before-action-390.png'), fullPage: true })
+  await expect(page.getByRole('button', { name: 'Создать суперсет со следующим' })).toBeVisible()
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('superset-plan-action-390.png'), fullPage: true })
+  // Видимое действие создаёт суперсет; затем можно выбрать круговую без потери структуры.
+  await page.getByRole('button', { name: 'Создать суперсет со следующим' }).click()
   await expect(page.getByLabel('Тип блока')).toBeVisible()
+  await expect(page.getByLabel('Тип блока')).toHaveValue('set')
+  for (const [width, height] of [[430, 932], [1440, 1000]] as const) {
+    await page.setViewportSize({ width, height })
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`superset-plan-${width}.png`), fullPage: true })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByLabel('Тип блока').selectOption('circuit')
   await expect(page.getByLabel('Тип блока')).toHaveValue('circuit')
   await expect(page.locator('.block-options')).not.toHaveAttribute('open', '')
   // Задаём 2 круга → форма раскладывается по кругам: «Круг 1» и «Круг 2»,
@@ -840,6 +852,8 @@ test('план: два упражнения объединяются в круг
   // Счётчик круга закреплён с таймером (.live-pinned) и продублирован в шапке
   // блока — проверяем закреплённый (всегда виден при скролле по кругам).
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('circuit-live-390.png'), fullPage: true })
   // После первого упражнения запускается короткий отдых между упражнениями.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)

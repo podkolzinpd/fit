@@ -308,15 +308,15 @@ describe('workout exercise editor rules', () => {
     expect(screen.queryByRole('button', { name: 'Вверх' })).not.toBeInTheDocument()
   })
 
-  it('keeps merging with the next exercise available from the menu', async () => {
+  it('shows a direct action to create a superset from two exercises', async () => {
     const user = userEvent.setup()
     const { container } = render(<ReorderEditorHarness />)
 
-    expect(screen.queryByRole('button', { name: '⛓ Добавить следующее в круговую' })).not.toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
-    await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в круговую' }))
+    expect(screen.getAllByRole('button', { name: 'Создать суперсет со следующим' })).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Создать суперсет со следующим' }))
     expect(screen.getByLabelText('Тип блока')).toBeInTheDocument()
-    expect(screen.getByLabelText('Тип блока')).toHaveValue('circuit')
+    expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
+    expect(screen.getByRole('option', { name: 'Суперсет' })).toBeInTheDocument()
     expect(screen.getByText('Настройки блока').closest('details')).not.toHaveAttribute('open')
     expect(container.querySelectorAll('.block-exercise-head .exercise-thumbnail')).toHaveLength(2)
     expect(container.querySelectorAll('.planned-round .exercise-thumbnail')).toHaveLength(0)

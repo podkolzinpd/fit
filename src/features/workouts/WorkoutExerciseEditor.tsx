@@ -273,7 +273,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     </span>
   }
 
-  // Одиночное упражнение (вне блока): подходы + «＋ Подход» + «Объединить».
+  // Одиночное упражнение (вне блока): подходы и видимый вход в суперсет.
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
     const distanceCapable = exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((set) => set.distanceKm !== undefined)))
     const showRpe = isRpeVisible(exerciseIndex)
@@ -295,7 +295,6 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         ...(canReorder && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
         { label: 'Настройки упражнения', onClick: () => setSettingsExerciseIndex(exerciseIndex) },
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exerciseIndex) },
-        ...(canMergeNext ? [{ label: 'Объединить со следующим в круговую', onClick: () => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
         { label: 'Заменить', onClick: () => onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span>
@@ -316,10 +315,12 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
       </div>
+      {canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
       {showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Заметка спортсмену" initialOpen={Boolean(exercise.trainerComment)}>
         {commentField(exercise, exerciseIndex)}
       </OptionalDetails>}
       </div>}
+      {!expanded && canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
     </WorkoutExercise>
   }
 
@@ -352,11 +353,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       // Многоэлементный блок: раскладка ПО КРУГАМ (круг = все упражнения по очереди).
       const rounds = draftBlockRoundsView(block)
       const blockMergeIndex = blockLastIndex < lastIndex ? blockLastIndex : -1
-      const mergeTargetLabel = block.blockPreset === 'circuit' ? 'круговую' : block.blockPreset === 'interval' ? 'интервалы' : 'сет'
+      const mergeTargetLabel = block.blockPreset === 'circuit' ? 'круговую' : block.blockPreset === 'interval' ? 'интервалы' : 'суперсет'
       return <div className="exercise-block" key={block.blockId}>
         <div className="exercise-block-head">
           <select aria-label="Тип блока" value={block.blockPreset} onChange={(event) => commitExercises(setBlockPreset([...latestExercises.current], block.blockId, event.target.value as BlockPreset))}>
-            <option value="set">Сет</option>
+            <option value="set">Суперсет</option>
             <option value="circuit">Круговая</option>
             <option value="interval">Интервалы</option>
           </select>
@@ -387,7 +388,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             {setFields(exercise, exerciseIndex, setIndex)}
           </div>)}
         </div>)}
-        {blockMergeIndex >= 0 && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>⛓ Добавить следующее в {mergeTargetLabel}</button>}
+        {blockMergeIndex >= 0 && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>Добавить следующее в {mergeTargetLabel}</button>}
       </div>
     })}
     {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer"><button type="button" className="secondary" onClick={onOpenPicker}>＋ Упражнение</button>{hasExercises && <OverflowMenu label="Действия с планом" trigger="Изменить все" items={planActions} />}</div>}
