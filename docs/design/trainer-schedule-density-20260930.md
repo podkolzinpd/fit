@@ -1,6 +1,6 @@
 # Плотность временной сетки расписания
 
-Статус: реализовано, локальная приёмка завершена.
+Статус: реализовано для обоих экранов расписания, локальная приёмка завершена.
 
 Поток: product.
 
@@ -12,7 +12,8 @@
 
 Затрагиваемые таблицы/API и общие файлы: additive-колонка
 `public.profiles.schedule_density`, `PUT /v1/profile`, профиль Yandex app-session,
-actor preference, `/profile/settings`, подробный день `/schedule` и `/today`.
+actor preference, `/profile/settings`, монохромный подробный день `/schedule` и
+пилотный подробный день `/today`.
 
 Общий repository-контракт: профиль принимает необязательное значение
 `comfortable | compact`; отсутствие поля не меняет сохранённую настройку.
@@ -50,7 +51,7 @@ Feature flag: не требуется; `comfortable` остаётся безоп
 | Пункт | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | 1 | В `/profile/settings` есть два явно подписанных режима | Chromium + iPhone WebKit | Готово |
-| 2 | В меню подробного дня режим меняется без перехода в профиль | Chromium + iPhone WebKit | Готово |
+| 2 | В меню подробного дня режим меняется без перехода в профиль и работает в монохромном `/schedule` и пилотном `/today` | Chromium + iPhone WebKit | Готово |
 | 3 | Неделя и 2 недели не меняют геометрию | browser visual comparison | Готово |
 | 4 | Компактный день сохраняет читаемость и текущую область времени | unit + Chromium + iPhone WebKit | Готово |
 | 5 | Значение приходит из профиля и сохраняется через Yandex API | API + PostgreSQL 17 + actor/RLS | Готово |
@@ -62,6 +63,8 @@ Feature flag: не требуется; `comfortable` остаётся безоп
   50/50;
 - API suite — 956 passed, 50 штатно skipped; production API build — зелёный;
 - целевой сценарий плотности — зелёный на mobile Chromium и iPhone WebKit;
+- отдельный сценарий без `trainerScheduleV2` подтверждает 56 → 44 px/час,
+  сохранение видимой области и настройку после перезагрузки;
 - production frontend build, hosting policy, migration safety, lint и typecheck —
   зелёные;
 - полный frontend suite: 2089/2090 зелёных в общем coverage-прогоне; единственный
