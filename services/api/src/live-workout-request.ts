@@ -49,6 +49,10 @@ export interface LiveReorderRequest extends LiveOperationRequest {
   direction: -1 | 1
 }
 
+export interface LiveMergeBlockRequest extends LiveOperationRequest {
+  preset: 'set' | 'circuit'
+}
+
 export interface LiveCommentRequest extends LiveOperationRequest {
   comment: string
 }
@@ -217,6 +221,13 @@ export function readLiveReorderRequest(
     || (input?.direction !== -1 && input?.direction !== 1)
   ) return undefined
   return { ...operation, direction: input.direction }
+}
+
+export function readLiveMergeBlockRequest(body: unknown): LiveMergeBlockRequest | undefined {
+  const operation = readLiveOperationRequest(body)
+  const input = record(body)
+  if (operation === undefined || (input?.preset !== 'set' && input?.preset !== 'circuit')) return undefined
+  return { ...operation, preset: input.preset }
 }
 
 export function readLiveCommentRequest(

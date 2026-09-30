@@ -1381,6 +1381,7 @@ export function createYandexMainRepository(
       },
       async removeLiveExercise(item, exerciseId) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'DELETE', item.version) },
       async reorderLiveBlock(item, blockId, direction) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/reorder`, 'POST', item.version, { direction }) },
+      async mergeLiveBlockWithNext(item, blockId, preset) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/merge-next`, 'POST', item.version, { preset }) },
       async setExerciseComment(item, exerciseId, comment) { return liveCommand(`/v1/workout-exercises/${exerciseId}/comment`, 'PUT', item.version, { comment }) },
       async setWorkoutReview(item, value) { return commandVersion(`/v1/workouts/${item.id}/review`, 'PUT', { reaction: value.reaction, review: value.review, expectedVersion: item.version }) },
       async setClientWorkoutComment(item, comment) { return commandVersion(`/v1/workouts/${item.id}/comment`, 'PUT', { comment, expectedVersion: item.version }) },
