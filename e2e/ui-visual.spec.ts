@@ -100,13 +100,91 @@ test('trainer client finances keep details compact and disclose history on deman
 
   const frame = page.locator('#finance-client-qa .phone-frame')
   await expect(frame).toHaveClass(/trainer-finance-identity/)
-  await expect(page.getByText('5 000 ₽', { exact: true }).first()).not.toBeVisible()
+  const sessions = page.locator('.finance-sessions')
+  await expect(sessions).toHaveCSS('display', 'block')
+  const sessionSummaryBox = await sessions.locator(':scope > summary').boundingBox()
+  const sessionContentBox = await sessions.locator(':scope > .finance-disclosure-content').boundingBox()
+  expect(sessionSummaryBox && sessionContentBox).toBeTruthy()
+  expect(sessionContentBox!.y).toBeGreaterThanOrEqual(sessionSummaryBox!.y + sessionSummaryBox!.height)
+  expect(Math.abs(sessionContentBox!.x - sessionSummaryBox!.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(sessionContentBox!.width - sessionSummaryBox!.width)).toBeLessThanOrEqual(1)
+  await expect(page.getByText('30 000 ₽', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('История абонементов')).not.toBeVisible()
   expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  await page.getByText('Оплаты', { exact: true }).click()
-  await expect(page.getByText('5 000 ₽', { exact: true }).first()).toBeVisible()
+  const sessionRows = page.locator('.finance-session-row')
+  await expect(sessionRows).toHaveCount(2)
+  const expectSessionRowsToFit = async () => { for (const row of await sessionRows.all()) {
+    const rowBox = await row.boundingBox()
+    const dateBox = await row.locator('strong').boundingBox()
+    const statusBox = await row.locator(':scope > small').boundingBox()
+    const menuBox = await row.locator('.overflow-menu').boundingBox()
+    expect(rowBox && dateBox && statusBox && menuBox).toBeTruthy()
+    const overlap = (first: NonNullable<typeof dateBox>, second: NonNullable<typeof dateBox>) => (
+      first.x < second.x + second.width && first.x + first.width > second.x
+      && first.y < second.y + second.height && first.y + first.height > second.y
+    )
+    expect(overlap(dateBox!, statusBox!)).toBe(false)
+    expect(overlap(dateBox!, menuBox!)).toBe(false)
+    expect(overlap(statusBox!, menuBox!)).toBe(false)
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width + 1)
+  } }
+  await expectSessionRowsToFit()
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
   await expectVisualBaseline(page, `trainer-finance-client-${profile}-${process.platform}.png`)
+
+  if (testInfo.project.name === 'visual-client-390') {
+    await page.setViewportSize({ width: 320, height: 780 })
+    await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
+    await expectSessionRowsToFit()
+    expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await expectVisualBaseline(page, `trainer-finance-client-mobile-320-${process.platform}.png`)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await frame.evaluate((element) => { element.removeAttribute('style') })
+  }
+
+  const addManualSession = sessions.getByRole('button', { name: 'Добавить занятие' })
+  await addManualSession.scrollIntoViewIfNeeded()
+  await addManualSession.click()
+  await expect(sessions.getByRole('button', { name: 'Закрыть форму' })).toBeVisible()
+  await expect(sessions.getByLabel('Дата занятия')).toBeVisible()
+  await expect(sessions.getByLabel('Учёт')).toBeVisible()
+  expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await sessions.getByRole('button', { name: 'Закрыть форму' }).click()
+
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/finance-client-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./finance-client-harness')
+    harness.mountFinanceClientHarness('package')
+  })
+  await expect(page.getByRole('heading', { name: 'Редактирование' })).toBeVisible()
+  const actions = page.locator('.finance-form > .actions')
+  const lastField = page.locator('.finance-form > .field').last()
+  const actionsBox = await actions.boundingBox()
+  const fieldBox = await lastField.boundingBox()
+  expect(actionsBox && fieldBox).toBeTruthy()
+  expect(actionsBox!.y).toBeGreaterThanOrEqual(fieldBox!.y + fieldBox!.height)
+  expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await expectVisualBaseline(page, `trainer-finance-package-edit-${profile}-${process.platform}.png`)
+
+  await actions.scrollIntoViewIfNeeded()
+  const visibleActionsBox = await actions.boundingBox()
+  const tabBarBox = await page.getByRole('navigation', { name: 'Основная навигация' }).boundingBox()
+  expect(visibleActionsBox && tabBarBox).toBeTruthy()
+  expect(visibleActionsBox!.y + visibleActionsBox!.height).toBeLessThanOrEqual(tabBarBox!.y)
+
+  if (testInfo.project.name === 'visual-client-390') {
+    await page.setViewportSize({ width: 320, height: 780 })
+    await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
+    const narrowActionsBox = await actions.boundingBox()
+    const narrowFieldBox = await lastField.boundingBox()
+    expect(narrowActionsBox && narrowFieldBox).toBeTruthy()
+    expect(narrowActionsBox!.y).toBeGreaterThanOrEqual(narrowFieldBox!.y + narrowFieldBox!.height)
+    expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await expectVisualBaseline(page, `trainer-finance-package-edit-mobile-320-${process.platform}.png`)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await frame.evaluate((element) => { element.removeAttribute('style') })
+  }
+
 })
 
 const demoClientId = '11111111-1111-4111-8111-111111111111'

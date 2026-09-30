@@ -67,6 +67,19 @@ describe('TrainerFinancePage', () => {
     await waitFor(() => expect(finance.createPackage).toHaveBeenCalledWith(clientId, expect.objectContaining({ priceCents: 2500000, openingPaidCents: 1000000, sessionsTotal: 10 })))
   })
 
+  it('adds a payment and keeps its amount in kopecks', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByText('Оплаты', { exact: true }))
+    await user.click(screen.getByRole('button', { name: 'Добавить оплату' }))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledWith(packageId, expect.objectContaining({
+      amountCents: 750000, comment: null,
+    })))
+  })
+
   it('adds a completed session and lets the trainer correct its accounting', async () => {
     const user = userEvent.setup()
     renderPage()
