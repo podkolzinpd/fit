@@ -704,17 +704,17 @@ VITE_CONTEST_WINNER_PILOT_USER_IDS=<profile-uuid-победителя>
 После 13.10.2026 окно скрывается кодом; переменные после вручения приза
 удаляются. UUID виден в публичном bundle и не является авторизацией.
 
-Финансовый кабинет тренера доставляется выключенным. Для ограниченного пилота
-оба значения обязательны; пустой allowlist никому не показывает входы:
+Финансовый кабинет тренера включён для всех тренеров. Пустой allowlist означает полный
+rollout; непустой временно ограничивает интерфейс указанными UUID:
 
 ```text
 VITE_TRAINER_FINANCE_ENABLED=true
-VITE_TRAINER_FINANCE_PILOT_USER_IDS=<trainer-profile-uuid>
+VITE_TRAINER_FINANCE_PILOT_USER_IDS=
 ```
 
 Frontend allowlist не является авторизацией: Yandex API отдельно проверяет роль
-тренера и владельца каждой финансовой записи. Изменение значений требует новой
-production-сборки frontend.
+тренера и владельца каждой финансовой записи. `VITE_TRAINER_FINANCE_ENABLED=false` служит аварийным
+kill switch. Изменение значений требует новой production-сборки frontend.
 
 Привязка существующего FIT-аккаунта к Yandex ID использует общие публичные
 настройки Yandex ID и глобальный build-time switch:

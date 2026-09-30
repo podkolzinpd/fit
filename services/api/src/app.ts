@@ -2119,6 +2119,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   }
 
+  app.get('/v1/finance/overview', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { month } = request.query as { month?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.listOverview(session, `${month}-01`),
+      (overview) => reply.header('cache-control', 'no-store').send({ overview }))
+  })
+
   app.get('/v1/clients/:clientId/finance', async (request, reply) => {
     const session = readCompatibleYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }

@@ -128,6 +128,18 @@ const trainerFinanceBundleSchema = z.object({
   payments: z.array(trainerFinancePaymentSchema),
   sessions: z.array(trainerFinanceSessionSchema),
 })
+const trainerFinanceOverviewSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
+  attentionCount: z.number().int().nonnegative(),
+  clients: z.array(z.object({
+    clientId: uuid, fullName: z.string(), archivedAt: yandexDateTimeSchema.nullable(),
+    receivedCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
+    activePackageCount: z.number().int().nonnegative(), sessionsRemaining: z.number().int().nonnegative().nullable(),
+    overdue: z.boolean(), lowSessions: z.boolean(), unassignedSessions: z.number().int().nonnegative(),
+    needsAttention: z.boolean(),
+  })),
+})
 const clientSchema = z.object({
   id: uuid,
   canArchive: z.boolean(),
@@ -892,6 +904,10 @@ export function createYandexMainRepository(
   return {
     source: 'yandex',
     trainerFinance: {
+      async listOverview(month: string) {
+        const payload = await readJson(queries, `/v1/finance/overview?month=${encodeURIComponent(month)}`, z.object({ overview: trainerFinanceOverviewSchema }))
+        return payload.overview
+      },
       async listClient(clientId: string) {
         const payload = await readJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance`, z.object({ finance: trainerFinanceBundleSchema }))
         return payload.finance

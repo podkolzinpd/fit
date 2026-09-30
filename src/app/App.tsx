@@ -16,7 +16,7 @@ import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from
 import { WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEditorPage, WorkoutTemplateSourcePage, WorkoutTemplatesPage } from '../features/workout-templates'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
-import { TrainerFinancePage } from '../features/finance'
+import { TrainerFinanceOverviewPage, TrainerFinancePage } from '../features/finance'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 function Protected() {
@@ -117,6 +117,9 @@ const router = createBrowserRouter([
       { path: '/clients', element: <ClientsPage /> },
       { path: '/clients/archive', element: <ArchivedClientsPage /> },
       { path: '/clients/new', element: <ClientFormPage /> },
+      { element: <TrainerFinancePilotOnly />, children: [
+        { path: '/finance', element: <TrainerFinanceOverviewPage /> },
+      ] },
       { element: <CanonicalClientParamRoute />, children: [
         { path: '/clients/:clientId', element: <ClientDetailPage /> },
         { path: '/clients/:clientId/goal', element: <GoalPage /> },

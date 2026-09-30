@@ -65,6 +65,28 @@ export interface TrainerFinanceClientBundle {
   sessions: TrainerFinanceSession[]
 }
 
+export interface TrainerFinanceOverviewClient {
+  clientId: string
+  fullName: string
+  archivedAt: string | null
+  receivedCents: number
+  dueCents: number
+  activePackageCount: number
+  sessionsRemaining: number | null
+  overdue: boolean
+  lowSessions: boolean
+  unassignedSessions: number
+  needsAttention: boolean
+}
+
+export interface TrainerFinanceOverview {
+  month: string
+  receivedCents: number
+  dueCents: number
+  attentionCount: number
+  clients: TrainerFinanceOverviewClient[]
+}
+
 export interface TrainerFinancePackageDraft {
   title: string
   sessionsTotal: number
@@ -109,6 +131,7 @@ type BundleRow = QueryResultRow & { bundle: TrainerFinanceClientBundle }
 type PackageRow = QueryResultRow & { package: TrainerFinancePackage }
 type PaymentRow = QueryResultRow & { payment: TrainerFinancePayment }
 type SessionRow = QueryResultRow & { session: TrainerFinanceSession }
+type OverviewRow = QueryResultRow & { overview: TrainerFinanceOverview }
 
 export class TrainerFinanceError extends Error {
   constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'conflict') {
@@ -130,6 +153,7 @@ function trainerFinanceError(error: unknown) {
 }
 
 export interface PilotTrainerFinance {
+  listOverview(session: YandexActorSessionInput, monthStart: string): Promise<TrainerFinanceOverview>
   listClient(session: YandexActorSessionInput, clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>
   updatePackage(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePackageUpdate): Promise<TrainerFinancePackage>
@@ -149,6 +173,16 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
       } catch (error) {
         throw trainerFinanceError(error) ?? error
       }
+    })
+  }
+
+  listOverview(session: YandexActorSessionInput, monthStart: string) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<OverviewRow>(
+        'select public.list_trainer_finance_overview($1) as overview',
+        [monthStart],
+      )
+      return rows[0]!.overview
     })
   }
 
