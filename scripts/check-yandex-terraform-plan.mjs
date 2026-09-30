@@ -365,6 +365,11 @@ const isExactDatabaseDiagnosticsEnable = (resource) => {
   )
   const diagnosticsWereDisabled = beforeDiagnostics == null
     || isDeepStrictEqual(beforeDiagnostics, { enabled: false })
+    || isDeepStrictEqual(beforeDiagnostics, {
+      enabled: false,
+      sessions_sampling_interval: 60,
+      statements_sampling_interval: 600,
+    })
 
   return diagnosticsWereDisabled && isDeepStrictEqual(afterDiagnostics, {
     enabled: true,

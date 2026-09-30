@@ -562,7 +562,17 @@ describe('Yandex Terraform plan policy', () => {
         address: 'yandex_mdb_postgresql_cluster_v2.fit',
         change: {
           actions: ['update'],
-          before: { name: 'fit-stage-postgres', config: unchangedConfig },
+          before: {
+            name: 'fit-stage-postgres',
+            config: {
+              ...unchangedConfig,
+              performance_diagnostics: {
+                enabled: false,
+                sessions_sampling_interval: 60,
+                statements_sampling_interval: 600,
+              },
+            },
+          },
           after: {
             name: 'fit-stage-postgres',
             config: { ...unchangedConfig, performance_diagnostics: diagnostics },
@@ -597,6 +607,28 @@ describe('Yandex Terraform plan policy', () => {
         },
       },
     }], { automaticStageUpdate: true })
+    const unexpectedPreviousDiagnostics = runPolicy([{
+      address: 'yandex_mdb_postgresql_cluster_v2.fit',
+      change: {
+        actions: ['update'],
+        before: {
+          config: {
+            ...unchangedConfig,
+            performance_diagnostics: {
+              enabled: false,
+              sessions_sampling_interval: 5,
+              statements_sampling_interval: 5,
+            },
+          },
+        },
+        after: {
+          config: {
+            ...unchangedConfig,
+            performance_diagnostics: diagnostics,
+          },
+        },
+      },
+    }], { automaticStageUpdate: true })
     const broaderExtension = runPolicy([{
       address: 'yandex_mdb_postgresql_database.fit',
       change: {
@@ -608,6 +640,7 @@ describe('Yandex Terraform plan policy', () => {
 
     assert.equal(accepted.status, 0)
     assert.notEqual(broaderDiagnostics.status, 0)
+    assert.notEqual(unexpectedPreviousDiagnostics.status, 0)
     assert.notEqual(broaderExtension.status, 0)
   })
 
