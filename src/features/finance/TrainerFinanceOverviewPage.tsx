@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
-import type { TrainerFinanceOverviewClient } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinanceOverview, TrainerFinanceOverviewClient } from '../../data/repositories/trainer-finance.repository'
 import { addMonths, formatMonth, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { AsyncView, Page } from '../../shared/ui'
@@ -49,26 +49,43 @@ export function TrainerFinanceOverviewPage() {
   const { actor } = useAuth()
   const { trainerFinance } = useDataBackend()
   const [month, setMonth] = useState(() => monthStart(todayInTimeZone(actor?.timezone)))
-  const [filter, setFilter] = useState<FinanceFilter>('all')
   const monthValue = month.slice(0, 7)
   const query = useQuery({
     queryKey: ['trainer-finance-overview', monthValue],
     queryFn: () => trainerFinance.listOverview(monthValue),
   })
-  const clients = useMemo(() => (query.data?.clients ?? []).filter((client) => matchesFilter(client, filter)), [filter, query.data?.clients])
+  return <TrainerFinanceOverviewView month={month} data={query.data} loading={query.isLoading} error={query.error}
+    onPreviousMonth={() => setMonth((value) => addMonths(value, -1))}
+    onNextMonth={() => setMonth((value) => addMonths(value, 1))}
+    onRetry={() => void query.refetch()} />
+}
 
+export function TrainerFinanceOverviewView({ month, data, loading = false, error = null, onPreviousMonth, onNextMonth, onRetry }: {
+  month: LocalDate
+  data?: TrainerFinanceOverview
+  loading?: boolean
+  error?: Error | null
+  onPreviousMonth: () => void
+  onNextMonth: () => void
+  onRetry?: () => void
+}) {
+  const [filter, setFilter] = useState<FinanceFilter>('all')
+  const clients = useMemo(() => (data?.clients ?? []).filter((client) => matchesFilter(client, filter)), [filter, data?.clients])
   return <Page title="Финансы" back="/clients" swipeBack className="finance-overview-page">
-    <div className="finance-month-switcher" aria-label="Месяц финансов">
-      <button type="button" aria-label="Предыдущий месяц" onClick={() => setMonth((value) => addMonths(value, -1))}><BackIcon /></button>
+    <div className="finance-period-block">
+      <span>Период</span>
+      <div className="finance-month-switcher" aria-label="Месяц финансов">
+      <button type="button" aria-label="Предыдущий месяц" onClick={onPreviousMonth}><BackIcon /></button>
       <strong>{formatMonth(month)}</strong>
-      <button type="button" aria-label="Следующий месяц" onClick={() => setMonth((value) => addMonths(value, 1))}><ChevronRightIcon /></button>
+      <button type="button" aria-label="Следующий месяц" onClick={onNextMonth}><ChevronRightIcon /></button>
+      </div>
     </div>
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {query.data && <>
+    <AsyncView loading={loading} error={error} onRetry={onRetry}>
+      {data && <>
         <section className="finance-overview-summary" aria-label="Финансовая сводка">
-          <p><span>Получено</span><strong>{money(query.data.receivedCents)}</strong></p>
-          <p><span>К оплате</span><strong>{money(query.data.dueCents)}</strong></p>
-          <p><span>Требуют внимания</span><strong>{query.data.attentionCount}</strong></p>
+          <p><span>Получено за месяц</span><strong>{money(data.receivedCents)}</strong></p>
+          <p><span>К оплате сейчас</span><strong>{money(data.dueCents)}</strong></p>
+          <p><span>Требуют внимания сейчас</span><strong>{data.attentionCount}</strong></p>
         </section>
         <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{FILTERS.map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
         <div className="finance-overview-list">{clients.map((client) => <Link className={`card finance-overview-client${client.needsAttention ? ' needs-attention' : ''}`} to={`/clients/${client.clientId}/finance`} key={client.clientId}><span><strong>{client.fullName}</strong>{client.archivedAt && <small>В архиве</small>}</span><span>{trainerFinanceClientLabel(client)}</span><ChevronRightIcon /></Link>)}</div>

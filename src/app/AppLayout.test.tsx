@@ -84,6 +84,8 @@ describe('AppLayout: единственная UI Identity', () => {
     ['trainer', '/clients', 'trainer-clients-identity'],
     ['trainer', '/clients/archive', 'trainer-clients-identity'],
     ['trainer', '/clients/client-1', 'trainer-client-detail-identity'],
+    ['trainer', '/finance', 'trainer-finance-identity'],
+    ['trainer', '/clients/client-1/finance', 'trainer-finance-identity'],
     ['trainer', '/clients/new', 'trainer-client-form-identity'],
     ['trainer', '/clients/client-1/edit', 'trainer-client-form-identity'],
     ['trainer', '/clients/client-1/goal', 'trainer-client-goal-identity'],
@@ -242,6 +244,16 @@ describe('AppLayout: единственная UI Identity', () => {
 })
 
 describe('AppLayout navigation', () => {
+  it.each(['/finance', '/clients/client-1/finance'])('сохраняет вкладку клиентов активной на финансовом маршруте %s', (route) => {
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+    renderLayout(route)
+
+    const clients = screen.getByRole('navigation', { name: 'Основная навигация' }).querySelector('a[href="/clients"]')
+    expect(clients).toHaveClass('active')
+    expect(clients).toHaveAttribute('aria-current', 'page')
+  })
+
   it('сохраняет активной вкладку клиентов на прогрессе только у Fit Lime тренера', () => {
     authState.role = 'trainer'
     authState.trainerScheduleV2 = true
