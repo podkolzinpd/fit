@@ -515,7 +515,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           {catalog.loading && <p className="state">Загрузка…</p>}
           {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
           {!catalog.loading && !catalog.error && hasVisibleExercises && <div ref={listRef} className="picker-list">
-            {promotedClient.length > 0 && <><p className="picker-section-label">Последние у клиента</p>{promotedClient.map((exercise) => item(exercise, 'client-recent'))}</>}
+            {promotedClient.length > 0 && <><p className="picker-section-label">Недавние упражнения</p>{promotedClient.map((exercise) => item(exercise, 'client-recent'))}</>}
             {recent.length > 0 && <><p className="picker-section-label">Недавние</p>{recent.map((exercise) => item(exercise, 'recent'))}</>}
             {(promotedClient.length > 0 || recent.length > 0) && listExercises.length > 0 && <p className="picker-section-label">Все упражнения</p>}
             {visibleListExercises.map((exercise) => item(exercise, 'all'))}

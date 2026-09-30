@@ -153,8 +153,8 @@ describe('ExercisePicker', () => {
   it('показывает клиента, недавние и остальные без дублей', () => {
     window.localStorage.setItem('fit.recent-exercises', JSON.stringify(['b', 'd']))
     render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} clientRecent={[ENRICHED[3]!]} onPick={vi.fn()} onClose={vi.fn()} />)
-    expect(screen.getAllByText(/Последние у клиента|Недавние|Все упражнения/).map((node) => node.textContent))
-      .toEqual(['Последние у клиента', 'Недавние', 'Все упражнения'])
+    expect(screen.getAllByText(/Недавние упражнения|Недавние|Все упражнения/).map((node) => node.textContent))
+      .toEqual(['Недавние упражнения', 'Недавние', 'Все упражнения'])
     expect(screen.getAllByRole('button', { name: /технику: Жим лёжа/ })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: /технику: Разгибание ног/ })).toHaveLength(1)
     expect(screen.getAllByRole('button', { name: /технику: Присед/ })).toHaveLength(1)
@@ -207,7 +207,7 @@ describe('ExercisePicker', () => {
     render(<ExercisePicker catalog={catalog({ exercises: SYSTEM_EXERCISE_CATALOG })} clientRecent={[duplicate]} onPick={vi.fn()} onClose={vi.fn()} />)
 
     expect(document.querySelector('[data-exercise-ref="fedb-bent-over-barbell-row"]')).not.toBeInTheDocument()
-    expect(screen.queryByText('Последние у клиента')).not.toBeInTheDocument()
+    expect(screen.queryByText('Недавние упражнения')).not.toBeInTheDocument()
   })
 
   it('оставляет начальный кадр запасным, если обложка из конечного кадра не загрузилась', () => {
