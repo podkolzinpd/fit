@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import type { WorkoutResult } from '../../shared/workout-results'
 import { WorkoutCompletionReport, workoutCompletionCountLine, workoutCompletionPercent, workoutCompletionTitle } from './WorkoutCompletionReport'
+import { computeAthleteAchievements } from '../../shared/athlete-achievements'
+import { localDate } from '../../shared/local-date'
 
 const baseProps = {
   date: '16 сентября',
@@ -36,6 +38,16 @@ const record: WorkoutResult = {
 }
 
 describe('WorkoutCompletionReport', () => {
+  it('adds a new badge without replacing the result, feedback or sharing', () => {
+    const completed = { id: 'new-workout', status: 'done', workoutDate: localDate('2026-09-30'), completedAt: '2026-09-30T12:00:00Z' } as Workout
+    const newAchievements = computeAthleteAchievements([completed], localDate('2026-09-30')).filter((item) => item.sourceWorkoutId === completed.id)
+    render(<MemoryRouter><WorkoutCompletionReport {...baseProps} newAchievements={newAchievements} feedback={<button type="button">Оставить отзыв</button>} /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Новые ачивки' })).toHaveTextContent('Первый шаг')
+    expect(screen.getByRole('button', { name: 'Оставить отзыв' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Поделиться' })).toBeVisible()
+  })
+
   it('shows the complete result without empty metrics', () => {
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()

@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-export function ClientFirstRunIntro({ actions, showConnection = true }: { actions?: ReactNode; showConnection?: boolean }) {
+export function ClientFirstRunIntro({ actions, afterActions, showConnection = true }: { actions?: ReactNode; afterActions?: ReactNode; showConnection?: boolean }) {
   return <section className="first-run first-run-client" aria-labelledby="client-first-run-title">
     <div className="first-run-copy">
       <p className="eyebrow">ВАШ ПРОГРЕСС</p>
@@ -9,6 +9,7 @@ export function ClientFirstRunIntro({ actions, showConnection = true }: { action
       <p>Записывайте результаты, наблюдайте за изменениями и занимайтесь самостоятельно или с тренером.</p>
     </div>
     {actions}
+    {afterActions}
     <div className="first-run-benefits">
       <strong>Fit поможет увидеть</strong>
       <ul>

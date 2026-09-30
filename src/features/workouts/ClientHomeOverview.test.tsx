@@ -34,6 +34,17 @@ const squatRecord: WorkoutPersonalRecord = {
 }
 
 describe('ClientHomeOverview', () => {
+  it('places the first-achievement goal directly after the first-run workout actions', () => {
+    render(<MemoryRouter><ClientHomeOverview today={today} workouts={[]} regularity={[]} goal={null} workoutsLoading={false} regularityLoading={false} error={null} onRetry={() => undefined} selfTraining={<button>Надиктовать тренировку</button>} /></MemoryRouter>)
+    const intro = screen.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' }).closest('section')!
+    const action = screen.getByRole('button', { name: 'Надиктовать тренировку' })
+    const achievement = screen.getByRole('heading', { name: 'Ачивки' })
+    const benefits = screen.getByText('Fit поможет увидеть')
+    expect(intro.contains(achievement)).toBe(true)
+    expect(action.compareDocumentPosition(achievement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(achievement.compareDocumentPosition(benefits) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('prioritizes an active workout over the nearest trainer assignment', () => {
     const assigned = workout({ id: 'assigned', trainerId: 'trainer-1', workoutDate: localDate('2026-08-17') })
     const active = workout({ id: 'active', status: 'in_progress', startedAt: '2026-08-16T08:00:00Z' })

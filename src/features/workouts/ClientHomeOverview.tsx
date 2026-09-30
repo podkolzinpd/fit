@@ -10,6 +10,7 @@ import { addDays, formatLocalDate, type LocalDate } from '../../shared/local-dat
 import { ChevronRightIcon, RecordIcon } from '../../shared/icons'
 import { exerciseProgressValueLabel } from './ExerciseProgressSummary'
 import { ClientFirstRunIntro } from './FirstRunExperience'
+import { AthleteAchievementHome } from '../achievements/AthleteAchievements'
 
 type NextWorkout = { kind: 'active' | 'assigned'; workout: Workout }
 type HomeHighlight =
@@ -212,8 +213,9 @@ export function ClientHomeOverview({ today, gender = null, workouts, regularity,
   const highlight = workouts ? clientHomeHighlight(workouts, goal, personalRecords) : goal ? { kind: 'goal' as const, goal } : null
   const week = regularity?.find((period) => period.period === 'week')
   const firstRun = !workoutsLoading && workouts?.length === 0
+  const achievements = <AthleteAchievementHome workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry} />
   return <div className="client-home-overview">
-    {firstRun ? <ClientFirstRunIntro actions={<>{selfTraining}{presetPrompt}</>} showConnection={showFirstRunConnection} /> : selfTraining}
+    {firstRun ? <ClientFirstRunIntro actions={<>{selfTraining}{presetPrompt}</>} afterActions={achievements} showConnection={showFirstRunConnection} /> : <>{selfTraining}{achievements}</>}
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && <NextActionCard next={next} today={today} />}

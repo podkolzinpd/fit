@@ -5,6 +5,8 @@ import { formatLocalDate, localDate } from '../../shared/local-date'
 import { resultNumber, type WorkoutResult } from '../../shared/workout-results'
 import { workoutResultDeltaLabel, type WorkoutVolumeComparison } from './workout-completion-insights'
 import { shareWorkoutSummary, type WorkoutShareMetric, type WorkoutShareSummary, type WorkoutShareVariant } from './workout-completion-share'
+import type { AthleteAchievement } from '../../shared/athlete-achievements'
+import { NewlyEarnedAchievements } from '../achievements/AthleteAchievements'
 
 function russianCountLabel(count: number, one: string, few: string, many: string): string {
   const mod100 = count % 100
@@ -62,6 +64,7 @@ export function WorkoutCompletionReport({
   comparisonLoading = false,
   hasTrainer,
   feedback,
+  newAchievements = [],
 }: {
   date: string
   completedSets: number
@@ -81,6 +84,7 @@ export function WorkoutCompletionReport({
   comparisonLoading?: boolean
   hasTrainer: boolean
   feedback?: ReactNode
+  newAchievements?: readonly AthleteAchievement[]
 }) {
   const [shareState, setShareState] = useState<'idle' | 'sharing' | 'shared' | 'copied' | 'error'>('idle')
   const [shareOpen, setShareOpen] = useState(false)
@@ -205,6 +209,7 @@ export function WorkoutCompletionReport({
 
     </div>
 
+    <NewlyEarnedAchievements items={newAchievements} />
     {hasTrainer && <p className="workout-completion-trainer-status"><CheckIcon /> Результат доступен тренеру</p>}
     {feedback}
     <div className="workout-completion-share-actions">
