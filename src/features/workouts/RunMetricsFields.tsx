@@ -96,7 +96,6 @@ export function RunMetricsFields({
   return <>
     <div className="run-duration-field">
       <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
-      <small>мин:сек</small>
     </div>
     <div className="run-distance-field">
       {!distanceVisible ? <button type="button" className="run-distance-add" disabled={disabled} onClick={() => setDistanceVisible(true)}>+ Добавить дистанцию</button> : <>
@@ -132,7 +131,7 @@ export function RunMetricsFields({
         </span>
       </div>
       <small>{optionalDistance ? 'По дисплею тренажёра' : pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>
-      {optionalDistance && !disabled && <button type="button" className="run-distance-remove" onClick={hideDistance}>Убрать дистанцию</button>}
+      {optionalDistance && !disabled && <button type="button" className="run-distance-remove" aria-label="Убрать дистанцию" onClick={hideDistance}>Убрать</button>}
       {rowing && <label className="rowing-stroke-rate-field">
         <span>Гребков в минуту</span>
         <input

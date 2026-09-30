@@ -2712,6 +2712,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .planned-set-input { width:100%; min-width:0; min-height:var(--control-height-standard); padding:6px 5px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:14px; font-weight:700; font-variant-numeric:tabular-nums }
 .planned-set-input:focus { border-color:var(--accent-focus); box-shadow:none; outline:none }
 .run-duration-field, .run-distance-field { min-width:0; display:grid; align-self:stretch; align-content:start; gap:3px }
+.workout-duration-parts { min-width:0; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:4px }
+.workout-duration-part { min-width:0; display:grid; gap:2px; color:var(--secondary-label-fg); text-align:center; font-size:11px; font-weight:var(--weight-medium) }
+.workout-duration-part input { width:100%; min-width:0; min-height:44px; padding-inline:2px; font-size:16px; font-weight:400; font-variant-numeric:tabular-nums }
+.workout-duration-part input:disabled { opacity:1 }
+.workout-duration-part input[aria-invalid="true"] { border-color:var(--danger); color:var(--danger) }
+.workout-duration-part span { line-height:14px }
 button.workout-duration-trigger { display:block; width:100%; min-width:0; min-height:44px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:tabular-nums; cursor:pointer }
 button.workout-duration-trigger:focus-visible, .run-distance-add:focus-visible, .run-distance-remove:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
@@ -2722,11 +2728,14 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .run-distance-add { min-height:44px; width:100%; padding:6px 4px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-sunken); color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-medium); line-height:1.2; white-space:normal }
 .run-distance-remove { min-height:44px; padding:4px; border:0; background:transparent; color:var(--secondary-label-fg); font-size:var(--type-caption-size); text-decoration:underline }
 .run-duration-field > small, .run-distance-field > small { min-height:16px; overflow:hidden; color:var(--secondary-label-fg); font-size:12px; font-weight:700; line-height:1.25; text-align:center; text-overflow:ellipsis; white-space:nowrap }
-.run-distance-control { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr) 64px; gap:6px }
+.run-distance-control { min-width:0; display:grid; grid-template-columns:minmax(0, 1fr) 44px; gap:4px }
+.run-distance-control input { min-width:0; padding-inline:2px; font-size:16px; appearance:textfield; -moz-appearance:textfield }
+.run-distance-control input::-webkit-inner-spin-button,
+.run-distance-control input::-webkit-outer-spin-button { margin:0; -webkit-appearance:none }
 .run-distance-unit-control { position:relative; min-width:0; color:var(--fg) }
-.run-distance-unit-control::after { content:""; position:absolute; top:50%; right:10px; width:7px; height:7px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; pointer-events:none; transform:translateY(-68%) rotate(45deg) }
+.run-distance-unit-control::after { content:""; position:absolute; top:50%; right:6px; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; pointer-events:none; transform:translateY(-68%) rotate(45deg) }
 .run-distance-unit-control.disabled::after { opacity:.45 }
-.run-distance-unit { width:100%; min-width:0; min-height:var(--control-height-standard); padding:4px 25px 4px 9px; border:1px solid var(--border); border-radius:var(--radius-sm); appearance:none; -webkit-appearance:none; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:13px; font-weight:700; text-transform:lowercase }
+.run-distance-unit { width:100%; min-width:0; min-height:var(--control-height-standard); padding:4px 16px 4px 4px; border:1px solid var(--border); border-radius:var(--radius-sm); appearance:none; -webkit-appearance:none; background:var(--surface-sunken); color:var(--fg); text-align:center; font-size:16px; font-weight:var(--weight-medium); text-transform:lowercase }
 .run-distance-unit:focus { border-color:var(--accent-focus); box-shadow:none; outline:none }
 .run-distance-unit:disabled { border-color:transparent; background:transparent; color:var(--fg); opacity:1 }
 .rowing-stroke-rate-field { min-width:0; display:grid; gap:3px; margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:700; line-height:1.25; text-align:center }
@@ -2737,14 +2746,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .planned-set.rpe-visible { grid-template-columns:28px minmax(0, 1fr) minmax(0, 1fr) 48px 32px; gap:5px }
 .planned-set-remove { min-width:var(--control-height-standard); min-height:var(--control-height-standard); display:grid; place-items:center; padding:0; font-size:20px; line-height:1 }
 .planned-set-remove svg { width:18px; height:18px }
-.planned-set-table.planned-run-rpe-table.rpe-visible .planned-set-table-head { grid-template-columns:28px minmax(0, 1fr) 48px 44px }
-.planned-run-rpe-table .planned-set-table-head > :nth-child(3) { display:none }
-.planned-set-running.rpe-visible { grid-template-columns:28px minmax(0, 1fr) 48px 44px; align-items:center }
-.planned-set-running.rpe-visible .planned-set-number { grid-column:1; grid-row:1 / span 2 }
-.planned-set-running.rpe-visible .run-duration-field { grid-column:2; grid-row:1 }
-.planned-set-running.rpe-visible .run-distance-field { grid-column:2; grid-row:2 }
-.planned-set-running.rpe-visible .planned-set-rpe { grid-column:3; grid-row:1 / span 2 }
-.planned-set-running.rpe-visible .planned-set-remove { grid-column:4; grid-row:1 / span 2 }
+.planned-set-running.rpe-visible { align-items:center }
 .workout-history-sets.workout-set-table { margin-top:10px; border-top:1px solid var(--hairline) }
 .history-set-table-head { display:grid; grid-template-columns:24px minmax(0, 1fr) 24px; gap:8px }
 .history-set-table-head > :first-child, .history-set-table-head > :last-child { text-align:center }
@@ -4397,6 +4399,9 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-create-edit-identity .planned-set-rpe,
 .workout-create-edit-identity .exercise-block select,
 .workout-create-edit-identity .exercise-block input { min-height:44px; border-color:var(--border); border-radius:10px; background:var(--surface-sunken); color:var(--fg); font-size:14px; font-weight:500; box-shadow:none}
+.workout-create-edit-identity .workout-duration-part input,
+.workout-create-edit-identity .run-distance-control input,
+.workout-create-edit-identity .run-distance-unit { font-size:16px; font-weight:400 }
 .workout-create-edit-identity .planned-exercise .set-add-row > .secondary,
 .workout-create-edit-identity .workout-editor-footer > .secondary { min-height:44px; border-color:var(--border); background:transparent; color:var(--fg); font-size:12px; font-weight:500 }
 .workout-create-edit-identity .workout-editor-footer { gap:8px; margin-top:12px }

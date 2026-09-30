@@ -303,9 +303,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {expanded && <div className="compact-editor-exercise-fields">
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<ClampedNumberInput label={`Отдых между подходами, ${exercise.name}`} value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>}
-      <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} showRpe={showRpe}
-        columnLabels={distanceCapable && showRpe ? ['Параметры', ''] : undefined}
-        className={distanceCapable && showRpe ? 'planned-run-rpe-table' : ''}>
+      <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} showRpe={showRpe}>
         {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
