@@ -169,33 +169,54 @@ export function TrainerFinancePage() {
     onSuccess: refresh,
   })
   const packages = finance.data?.packages ?? []
+  const activePackages = packages.filter((item) => item.packageStatus === 'active' || item.packageStatus === 'upcoming')
+  const pastPackages = packages.filter((item) => item.packageStatus !== 'active' && item.packageStatus !== 'upcoming')
+  const renderPackage = (item: TrainerFinancePackage, history = false) => {
+    const payments = (finance.data?.payments ?? []).filter((payment) => payment.packageId === item.id && payment.voidedAt === null)
+    const editingPayment = paymentEditor?.packageId === item.id
+    return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
+      <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с абонементом ${item.title}`} items={[{ label: 'Редактировать', onClick: () => setPackageEditor(item) }]} /></header>
+      <div className="finance-package-summary">
+        <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
+        <p><span>Оплата</span><strong>{money(item.paidCents)}</strong><small>{PAYMENT_STATUS[item.paymentStatus]} · из {money(item.priceCents)}</small></p>
+      </div>
+      <div className="finance-package-meta">
+        <span>С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</span>
+        {item.dueCents > 0 && <strong className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>К оплате {money(item.dueCents)}</strong>}
+      </div>
+      {item.comment && <p className="finance-comment">{item.comment}</p>}
+      <details className="finance-disclosure" open={editingPayment || undefined}>
+        <summary><span>Оплаты</span><small>{payments.length}</small></summary>
+        <div className="finance-disclosure-content">
+          <button type="button" className="secondary finance-inline-action" onClick={() => setPaymentEditor({ packageId: item.id })}>Добавить оплату</button>
+          {editingPayment && <PaymentForm current={paymentEditor.payment} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => setPaymentEditor(null)} onSubmit={(draft) => savePayment.mutate(draft)} />}
+          {!editingPayment && <div className="finance-payment-list">{payments.length ? payments.map((payment) => <div className="finance-payment" key={payment.id}><div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div><OverflowMenu label={`Действия с оплатой ${money(payment.amountCents)}`} items={[{ label: 'Изменить', onClick: () => setPaymentEditor({ packageId: item.id, payment }) }, { label: 'Удалить', danger: true, onClick: () => void confirm({ message: `Удалить оплату ${money(payment.amountCents)}? Итог пересчитается, запись останется в истории.`, confirmLabel: 'Удалить', danger: true }).then((ok) => { if (ok) removePayment.mutate(payment) }) }]} /></div>) : <p className="finance-empty">Оплат пока нет</p>}</div>}
+        </div>
+      </details>
+    </article>
+  }
   return <Page title="Финансы" subtitle={client.data?.fullName} back={`/clients/${clientId}`} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
       {packageEditor && <PackageForm current={packageEditor === 'new' ? undefined : packageEditor} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate(draft)} />}
       {!packageEditor && <>
-        <section className="finance-page-intro"><div><p className="eyebrow">УЧЁТ</p><h2>{packages.length ? 'Абонементы' : 'Добавьте первый абонемент'}</h2><p>{packages.length ? 'Занятия и оплаты считаются отдельно.' : 'Укажите количество занятий, стоимость и уже внесённую сумму.'}</p></div><button type="button" className="primary" onClick={() => setPackageEditor('new')}>Новый абонемент</button></section>
-        <div className="finance-package-list">{packages.map((item) => {
-          const payments = (finance.data?.payments ?? []).filter((payment) => payment.packageId === item.id && payment.voidedAt === null)
-          return <article className="finance-package card" key={item.id}>
-            <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с абонементом ${item.title}`} items={[{ label: 'Редактировать', onClick: () => setPackageEditor(item) }]} /></header>
-            <div className="finance-package-summary"><p><strong>{item.sessionsRemaining}</strong><span>занятий осталось из {item.sessionsTotal}</span></p><p><strong>{money(item.paidCents)}</strong><span>{PAYMENT_STATUS[item.paymentStatus]} · всего {money(item.priceCents)}</span></p></div>
-            <p className="finance-package-dates">С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</p>
-            {item.dueCents > 0 && <p className={`finance-due${item.paymentStatus === 'overdue' ? ' is-overdue' : ''}`}>Осталось оплатить {money(item.dueCents)}</p>}
-            {item.comment && <p className="finance-comment">{item.comment}</p>}
-              <div className="finance-payments-heading"><h3>Оплаты</h3><button type="button" className="link" onClick={() => setPaymentEditor({ packageId: item.id })}>Добавить оплату</button></div>
-            {paymentEditor?.packageId === item.id && <PaymentForm current={paymentEditor.payment} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => setPaymentEditor(null)} onSubmit={(draft) => savePayment.mutate(draft)} />}
-            {!paymentEditor || paymentEditor.packageId !== item.id ? <div className="finance-payment-list">{payments.length ? payments.map((payment) => <div className="finance-payment" key={payment.id}><div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div><OverflowMenu label={`Действия с оплатой ${money(payment.amountCents)}`} items={[{ label: 'Изменить', onClick: () => setPaymentEditor({ packageId: item.id, payment }) }, { label: 'Удалить', danger: true, onClick: () => void confirm({ message: `Удалить оплату ${money(payment.amountCents)}? Итог пересчитается, запись останется в истории.`, confirmLabel: 'Удалить', danger: true }).then((ok) => { if (ok) removePayment.mutate(payment) }) }]} /></div>) : <p className="finance-empty">Оплат пока нет</p>}</div> : null}
-          </article>
-        })}</div>
+        <section className="finance-section-heading"><div><p className="eyebrow">АБОНЕМЕНТЫ</p><h2>{activePackages.length ? 'Текущие' : 'Нет активных'}</h2></div><button type="button" className="primary" onClick={() => setPackageEditor('new')}>Новый</button></section>
+        <div className="finance-package-list">{activePackages.map((item) => renderPackage(item))}</div>
         {finance.isSuccess && packages.length === 0 && <p className="finance-empty">Финансовых записей пока нет.</p>}
-        <section className="finance-sessions card">
-          <div className="finance-payments-heading"><div><p className="eyebrow">ЗАНЯТИЯ</p><h2>Проведённые</h2></div><button type="button" className="link" onClick={() => setManualOpen((value) => !value)}>{manualOpen ? 'Закрыть' : 'Добавить занятие'}</button></div>
-          {manualOpen && <form className="finance-manual-session" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); addManualSession.mutate(String(form.get('workoutDate') ?? '')) }}><Field label="Дата занятия"><input name="workoutDate" type="date" required defaultValue={today} /></Field><button type="submit" className="primary" disabled={addManualSession.isPending}>{addManualSession.isPending ? 'Добавляем…' : 'Добавить проведённое занятие'}</button></form>}
-          <div className="finance-session-list">{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).map((session) => <div className="finance-session" key={session.id}><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link><label><span className="sr-only">Учёт занятия за {formatLocalDate(localDate(session.workoutDate))}</span><select value={session.disposition === 'charged' ? `charged:${session.packageId}` : session.disposition} disabled={updateSession.isPending} onChange={(event) => updateSession.mutate({ session, value: event.target.value })}><option value="unassigned">Выбрать абонемент</option>{packages.filter((item) => item.id === session.packageId || (item.closedAt === null && item.sessionsRemaining > 0 && item.startsOn <= session.workoutDate && (item.endsOn === null || item.endsOn >= session.workoutDate))).map((item) => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}<option value="free">Без списания</option><option value="trial">Пробное</option></select></label><small>{SESSION_STATUS[session.disposition]}</small></div>)}</div>
-          {finance.isSuccess && !(finance.data?.sessions ?? []).some((session) => session.voidedAt === null) && <p className="finance-empty">Проведённых занятий пока нет.</p>}
-          {addManualSession.error && <InlineRequestError error={addManualSession.error} />}
-          {updateSession.error && <InlineRequestError error={updateSession.error} />}
-        </section>
+        <details className="finance-sessions finance-disclosure card" open={manualOpen || undefined}>
+          <summary><span>Проведённые занятия</span><small>{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).length}</small></summary>
+          <div className="finance-disclosure-content">
+            <button type="button" className="secondary finance-inline-action" onClick={() => setManualOpen((value) => !value)}>{manualOpen ? 'Закрыть форму' : 'Добавить занятие'}</button>
+            {manualOpen && <form className="finance-manual-session" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); addManualSession.mutate(String(form.get('workoutDate') ?? '')) }}><Field label="Дата занятия"><input name="workoutDate" type="date" required defaultValue={today} /></Field><button type="submit" className="primary" disabled={addManualSession.isPending}>{addManualSession.isPending ? 'Добавляем…' : 'Добавить проведённое занятие'}</button></form>}
+            <div className="finance-session-list">{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).map((session) => <div className="finance-session" key={session.id}><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link><label><span className="sr-only">Учёт занятия за {formatLocalDate(localDate(session.workoutDate))}</span><select value={session.disposition === 'charged' ? `charged:${session.packageId}` : session.disposition} disabled={updateSession.isPending} onChange={(event) => updateSession.mutate({ session, value: event.target.value })}><option value="unassigned">Выбрать абонемент</option>{packages.filter((item) => item.id === session.packageId || (item.closedAt === null && item.sessionsRemaining > 0 && item.startsOn <= session.workoutDate && (item.endsOn === null || item.endsOn >= session.workoutDate))).map((item) => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}<option value="free">Без списания</option><option value="trial">Пробное</option></select></label><small>{SESSION_STATUS[session.disposition]}</small></div>)}</div>
+            {finance.isSuccess && !(finance.data?.sessions ?? []).some((session) => session.voidedAt === null) && <p className="finance-empty">Проведённых занятий пока нет.</p>}
+            {addManualSession.error && <InlineRequestError error={addManualSession.error} />}
+            {updateSession.error && <InlineRequestError error={updateSession.error} />}
+          </div>
+        </details>
+        {pastPackages.length > 0 && <details className="finance-history finance-disclosure card">
+          <summary><span>Прошлые абонементы</span><small>{pastPackages.length}</small></summary>
+          <div className="finance-disclosure-content finance-package-list">{pastPackages.map((item) => renderPackage(item, true))}</div>
+        </details>}
       </>}
       {removePayment.error && <InlineRequestError error={removePayment.error} />}
     </AsyncView>
