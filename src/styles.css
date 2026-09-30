@@ -5778,6 +5778,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .assistant-identity .assistant-workout-card,
 .assistant-identity .assistant-inline-summary { border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); background-image:none; box-shadow:none}
 .assistant-identity .assistant-context-panel { gap:14px; padding:16px }
+.assistant-identity .assistant-context-panel.assistant-context-panel-client-program { padding:0; border:0; border-radius:0; background:transparent }
 .assistant-identity .assistant-context-panel > .assistant-flow-card,
 .assistant-identity .assistant-context-panel > .assistant-progress-preview { border:0; border-radius:0; background:transparent }
 .assistant-identity .assistant-flow-card,
@@ -5819,6 +5820,11 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .assistant-identity .assistant-flow-checklist { gap:7px }
 .assistant-identity .assistant-flow-checklist span { min-height:32px; display:inline-flex; align-items:center; padding:0 9px; border:1px solid var(--border); border-radius:10px; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .assistant-identity .assistant-flow-checklist.complete span { border-color:var(--border); background:transparent; color:var(--success-fg) }
+.assistant-identity .assistant-context-panel > .assistant-program-card-compact { gap:8px; padding:0 }
+.assistant-identity .assistant-program-card-compact > header { align-items:center }
+.assistant-identity .assistant-program-card-compact > header > span:first-child { display:flex; align-items:baseline; gap:4px 8px; flex-wrap:wrap }
+.assistant-identity .assistant-program-client-actions { min-width:0; display:grid; gap:8px }
+.assistant-identity .assistant-program-client-actions > .assistant-flow-actions:last-child { justify-content:flex-start }
 
 .assistant-identity .assistant-flow-actions { gap:8px 16px }
 .assistant-identity .assistant-flow-actions > button:not(.assistant-action-cancel),

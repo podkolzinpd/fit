@@ -20,6 +20,28 @@ describe('program pilot card', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Подтвердить и составить' }))
     expect(handlers.onSuggestion).toHaveBeenCalledWith('Условия верны, составь программу')
   })
+  it('removes the passive client identity card while retaining cancellation', () => {
+    const handlers = props()
+    const view = render(<AssistantProgramPilotCard {...handlers} clientMode showGuidance={false} payload={{ step: 'brief', clientName: 'Кристина', briefStatus: 'needs_clarification', briefSummary: 'Цель: снижение веса' }} />)
+    expect(screen.queryByText('Кристина')).not.toBeInTheDocument()
+    expect(screen.queryByText('Уточнение')).not.toBeInTheDocument()
+    expect(screen.queryByText('Данные и условия')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Отменить' })).toBeVisible()
+    expect(view.container.querySelector('.assistant-program-card')).not.toBeInTheDocument()
+    expect(view.container.querySelector('.assistant-program-client-actions')).toBeInTheDocument()
+  })
+  it('keeps required client confirmation without restoring the identity card', () => {
+    render(<AssistantProgramPilotCard {...props()} clientMode showGuidance={false} payload={{ step: 'brief', clientName: 'Кристина', readyToGenerate: true, briefSummary: '2 занятия в неделю' }} />)
+    expect(screen.queryByText('Кристина')).not.toBeInTheDocument()
+    expect(screen.getByText('2 занятия в неделю')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Подтвердить и составить' })).toBeVisible()
+  })
+  it('keeps the trainer client card compact and marks cancellation as tertiary', () => {
+    const view = render(<AssistantProgramPilotCard {...props()} showGuidance={false} payload={{ step: 'brief', clientName: 'Кристина', briefSummary: '2 занятия в неделю' }} />)
+    expect(screen.getByText('Кристина')).toBeVisible()
+    expect(view.container.querySelector('.assistant-program-card-compact')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Отменить' })).toHaveClass('assistant-action-cancel')
+  })
   it('saves the original canonical payload once and retains identifiers', async () => {
     const handlers = props()
     render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'confirm', clientName: 'Тестик', canonicalWorkouts }} />)

@@ -20,6 +20,7 @@ const programQuestions = ['Продолжаем прежний подход ил
 
 function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') {
   const content = renderToString(createElement(ProgramCard, { enabled: true, running: false, showGuidance: false,
+    clientMode: role === 'client',
     payload: { step: 'brief', briefStatus: 'needs_answers', clientName: 'Сан Саныч', readyToGenerate: false,
       guidance: programQuestions.join('\n'), hasHistory: true,
       sourceSummary: Array.from({ length: 12 }, (_, index) => `Записанный результат ${index + 1}: два подхода по восемь повторений; последнее занятие — 14 сентября.`).join('\n'),
@@ -31,7 +32,7 @@ function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') 
       <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
       <section class="assistant-thread" aria-label="Диалог с ассистентом"><article class="assistant-message assistant-message-user"><p>Подготовить программу для Сан Саныч</p></article>
         <article class="assistant-message assistant-message-assistant"><div class="assistant-message-copy"><p>Подготовлю рекомендованный черновик на четыре недели: 1–3 занятия в неделю от 30 минут, с днём отдыха между занятиями. Это не медицинское назначение; итоговую нагрузку нужно сверять с самочувствием и техникой.</p><p>Профиль: Сан Саныч. За последние восемь недель вижу 24 завершённые тренировки.</p>${programQuestions.map((question, index) => `<p data-testid="program-question-${index}">${question}</p>`).join('')}</div></article></section>
-      <section class="assistant-context-panel" aria-label="Текущий контекст ассистента">${content}</section>
+      <section class="assistant-context-panel${role === 'client' ? ' assistant-context-panel-client-program' : ''}" aria-label="Текущий контекст ассистента">${content}</section>
       <form class="assistant-composer" data-testid="composer"><textarea aria-label="Сообщение ассистенту" placeholder="Напишите, чем помочь"></textarea><div class="voice-input voice-input-icon"><button class="assistant-icon-button" type="button" aria-label="Голосовой ввод">М</button></div><button class="assistant-icon-button" type="button" aria-label="Отправить сообщение">→</button></form>
     </main></div>${role === 'client'
       ? '<nav class="tab-bar client-tab-bar" data-testid="tabbar"><a>Кабинет</a><a>Тренировки</a><a>Ассистент</a><a>Прогресс</a><a>Профиль</a></nav>'
@@ -73,7 +74,7 @@ async function anchorProgramShell(page: Page) {
   await page.addScriptTag({ content: `(${anchorAssistantViewport.toString()})(document.querySelector('.assistant-thread'), document.querySelector('.content'), true)` })
 }
 
-for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1440, height: 900 }]) {
+for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 1440, height: 1000 }]) {
   for (const theme of ['light', 'dark']) {
     test(`program questions in complete shell at ${viewport.width} ${theme}`, async ({ page }, testInfo) => {
       await page.setViewportSize(viewport)
@@ -114,9 +115,27 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
       await expect(page.getByTestId('tabbar')).toContainText('Кабинет')
       await expect(page.locator('.assistant-message-assistant')).toContainText('рекомендованный черновик')
       await expect(page.locator('.assistant-message-assistant')).not.toContainText('тренер')
+      await expect(page.locator('.assistant-program-card')).toHaveCount(0)
+      await expect(page.locator('.assistant-program-client-actions')).toBeVisible()
+      await expect(page.getByText('Сан Саныч', { exact: true })).toHaveCount(0)
+      expect(await page.locator('.assistant-context-panel').evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('0px')
       await page.screenshot({ path: testInfo.outputPath(`client-questions-${viewport.width}-${theme}.png`) })
     })
   }
+}
+
+for (const theme of ['light', 'dark']) {
+  test(`trainer program context stays compact at 1440 ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await page.setContent(collectingShell(theme))
+    const context = page.locator('.assistant-context-panel')
+    await expect(context.locator('.assistant-program-card-compact')).toBeVisible()
+    await expect(context.getByText('Сан Саныч', { exact: true })).toBeVisible()
+    await expect(context.getByText('Данные и условия')).toBeVisible()
+    await expect(context.getByRole('button', { name: 'Отменить' })).toHaveClass(/assistant-action-cancel/)
+    expect((await context.boundingBox())!.height).toBeLessThanOrEqual(182)
+    await page.screenshot({ path: testInfo.outputPath(`trainer-compact-1440-${theme}.png`) })
+  })
 }
 
 for (const width of [390, 430, 1440]) {
