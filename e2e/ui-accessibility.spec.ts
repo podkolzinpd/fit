@@ -33,7 +33,13 @@ async function expectTokenContrast(page: Page) {
       ['secondary text / field', contrast('--secondary-label-fg', '--surface-sunken')],
       ['primary action', contrast('--mono-on-primary', '--mono-primary')],
       ['success / raised surface', contrast('--success-fg', '--surface-raised')],
+      ['primary text / success surface', contrast('--fg', '--success-surface')],
+      ['secondary text / success surface', contrast('--secondary-label-fg', '--success-surface')],
+      ['success / success surface', contrast('--success-fg', '--success-surface')],
       ['danger / raised surface', contrast('--danger', '--surface-raised')],
+      ['primary text / danger surface', contrast('--fg', '--danger-surface')],
+      ['danger / danger surface', contrast('--danger', '--danger-surface')],
+      ['primary text / current surface', contrast('--fg', '--neutral-current')],
     ] as const
   })
 

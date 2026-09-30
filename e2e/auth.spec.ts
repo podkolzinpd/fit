@@ -108,6 +108,32 @@ test('trainer adds the first client, plans a workout and gets an invitation code
   await page.getByRole('button', { name: 'Запланировать тренировку' }).click()
 
   await expect(page.getByRole('heading', { name: 'Тренировка запланирована' })).toBeVisible()
+  const firstPlanContrast = await page.locator('.first-plan-success').evaluate((section) => {
+    const luminance = (value: string) => {
+      const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number)
+      if (!channels || channels.length !== 3) throw new Error(`Unsupported colour: ${value}`)
+      const [red = 0, green = 0, blue = 0] = channels.map((channel) => {
+        const normalized = channel / 255
+        return normalized <= .04045 ? normalized / 12.92 : ((normalized + .055) / 1.055) ** 2.4
+      })
+      return red * .2126 + green * .7152 + blue * .0722
+    }
+    const ratio = (foreground: string, background: string) => {
+      const first = luminance(foreground)
+      const second = luminance(background)
+      return (Math.max(first, second) + .05) / (Math.min(first, second) + .05)
+    }
+    const background = getComputedStyle(section).backgroundColor
+    const heading = section.querySelector('h2')
+    const supportingCopy = section.querySelector('div:first-child > p:last-child')
+    if (!heading || !supportingCopy) throw new Error('First-plan success copy is incomplete')
+    return {
+      heading: ratio(getComputedStyle(heading).color, background),
+      supportingCopy: ratio(getComputedStyle(supportingCopy).color, background),
+    }
+  })
+  expect(firstPlanContrast.heading).toBeGreaterThanOrEqual(4.5)
+  expect(firstPlanContrast.supportingCopy).toBeGreaterThanOrEqual(4.5)
   await page.getByRole('button', { name: 'Пригласить спортсмена' }).click()
   await expect(page.getByText(/Код приглашения/)).toBeVisible()
   const invitationCode = (await page.locator('.invitation-code-card strong').textContent())?.match(/[A-F0-9]{12}/)?.[0]
