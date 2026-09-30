@@ -43,10 +43,26 @@ export interface TrainerFinancePayment {
   updatedAt: string
 }
 
+export interface TrainerFinanceSession {
+  id: string
+  packageId: string | null
+  workoutId: string
+  disposition: 'charged' | 'unassigned' | 'free' | 'trial'
+  source: 'automatic' | 'manual'
+  comment: string | null
+  workoutDate: string
+  voidedAt: string | null
+  voidReason: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface TrainerFinanceClientBundle {
   clientId: string
   packages: TrainerFinancePackage[]
   payments: TrainerFinancePayment[]
+  sessions: TrainerFinanceSession[]
 }
 
 export interface TrainerFinancePackageDraft {
@@ -82,9 +98,17 @@ export interface TrainerFinancePaymentUpdate extends TrainerFinancePaymentDraft 
   expectedVersion: number
 }
 
+export interface TrainerFinanceSessionUpdate {
+  expectedVersion: number
+  disposition: TrainerFinanceSession['disposition']
+  packageId: string | null
+  comment: string | null
+}
+
 type BundleRow = QueryResultRow & { bundle: TrainerFinanceClientBundle }
 type PackageRow = QueryResultRow & { package: TrainerFinancePackage }
 type PaymentRow = QueryResultRow & { payment: TrainerFinancePayment }
+type SessionRow = QueryResultRow & { session: TrainerFinanceSession }
 
 export class TrainerFinanceError extends Error {
   constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'conflict') {
@@ -99,6 +123,7 @@ function trainerFinanceError(error: unknown) {
   if (error.message === 'trainer_finance_client_not_found'
     || error.message === 'trainer_finance_package_not_found'
     || error.message === 'trainer_finance_payment_not_found') return new TrainerFinanceError('not_found')
+  if (error.message === 'trainer_finance_session_not_found') return new TrainerFinanceError('not_found')
   if (error.message === 'trainer_finance_invalid') return new TrainerFinanceError('invalid')
   if (error.message === 'trainer_finance_conflict') return new TrainerFinanceError('conflict')
   return undefined
@@ -111,6 +136,7 @@ export interface PilotTrainerFinance {
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(session: YandexActorSessionInput, paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(session: YandexActorSessionInput, paymentId: string, expectedVersion: number, reason: string): Promise<void>
+  updateSession(session: YandexActorSessionInput, sessionId: string, draft: TrainerFinanceSessionUpdate): Promise<TrainerFinanceSession>
 }
 
 export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
@@ -191,6 +217,17 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
         'select public.void_trainer_finance_payment($1, $2, $3)',
         [paymentId, expectedVersion, reason],
       )
+    })
+  }
+
+  updateSession(session: YandexActorSessionInput, sessionId: string, draft: TrainerFinanceSessionUpdate) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<SessionRow>(
+        'select public.update_trainer_finance_session($1, $2, $3, $4, $5) as session',
+        [sessionId, draft.expectedVersion, draft.disposition, draft.packageId,
+          draft.comment],
+      )
+      return rows[0]!.session
     })
   }
 }

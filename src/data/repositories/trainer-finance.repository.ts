@@ -38,10 +38,26 @@ export interface TrainerFinancePayment {
   updatedAt: string
 }
 
+export interface TrainerFinanceSession {
+  id: string
+  packageId: string | null
+  workoutId: string
+  disposition: 'charged' | 'unassigned' | 'free' | 'trial'
+  source: 'automatic' | 'manual'
+  comment: string | null
+  workoutDate: string
+  voidedAt: string | null
+  voidReason: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface TrainerFinanceClientBundle {
   clientId: string
   packages: TrainerFinancePackage[]
   payments: TrainerFinancePayment[]
+  sessions: TrainerFinanceSession[]
 }
 
 export interface TrainerFinancePackageDraft {
@@ -67,6 +83,7 @@ export interface TrainerFinancePaymentDraft {
 }
 
 export type TrainerFinancePaymentUpdate = TrainerFinancePaymentDraft & { expectedVersion: number }
+export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'disposition' | 'packageId' | 'comment'> & { expectedVersion: number }
 
 export interface TrainerFinanceRepository {
   listClient(clientId: string): Promise<TrainerFinanceClientBundle>
@@ -75,6 +92,7 @@ export interface TrainerFinanceRepository {
   addPayment(packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(paymentId: string, expectedVersion: number, reason: string): Promise<void>
+  updateSession(sessionId: string, draft: TrainerFinanceSessionUpdate): Promise<TrainerFinanceSession>
 }
 
 function unavailable(): Promise<never> {
@@ -88,4 +106,5 @@ export const trainerFinanceRepository: TrainerFinanceRepository = {
   addPayment: unavailable,
   updatePayment: unavailable,
   voidPayment: unavailable,
+  updateSession: unavailable,
 }
