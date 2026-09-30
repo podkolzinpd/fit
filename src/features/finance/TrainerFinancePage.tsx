@@ -60,10 +60,13 @@ function PackageForm({ current, today, saving, error, onCancel, onSubmit }: {
       const form = new FormData(event.currentTarget)
       const sessionsTotal = integer(form.get('sessionsTotal'), 'Всего занятий')
       const openingUsedSessions = current ? 0 : integer(form.get('openingUsedSessions'), 'Уже проведено')
+      const priceCents = cents(form.get('price'))
+      const openingPaidCents = current ? 0 : cents(form.get('openingPaid'))
       if (sessionsTotal < 1 || openingUsedSessions > sessionsTotal) throw new Error('Проведённых занятий не может быть больше общего количества')
+      if (openingPaidCents > priceCents) throw new Error('Начальная оплата не может быть больше стоимости абонемента')
       onSubmit({
         title: String(form.get('title') ?? '').trim(), sessionsTotal, openingUsedSessions,
-        priceCents: cents(form.get('price')), openingPaidCents: current ? 0 : cents(form.get('openingPaid')),
+        priceCents, openingPaidCents,
         startsOn: String(form.get('startsOn') ?? ''), endsOn: optional(form, 'endsOn'),
         paymentDueOn: optional(form, 'paymentDueOn'), comment: optional(form, 'comment'),
       })
@@ -129,6 +132,7 @@ export function TrainerFinancePage() {
   const [packageEditor, setPackageEditor] = useState<TrainerFinancePackage | 'new' | null>(null)
   const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment } | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
+  const [sessionEditor, setSessionEditor] = useState<string | null>(null)
   const [confirm, confirmDialog] = useConfirm()
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clients.get(clientId) })
   const finance = useQuery({ queryKey: ['trainer-finance', clientId], queryFn: () => trainerFinance.listClient(clientId) })
@@ -150,23 +154,38 @@ export function TrainerFinancePage() {
     onSuccess: refresh,
   })
   const addManualSession = useMutation({
-    mutationFn: (workoutDate: string) => workouts.saveCompleted({
-      requestId: crypto.randomUUID(), clientId, workoutDate: localDate(workoutDate),
-      notes: 'Проведённое занятие', exercises: [],
-    }),
+    mutationFn: async (draft: { workoutDate: string; value: string; comment: string | null }) => {
+      const workoutId = await workouts.saveCompleted({
+        requestId: crypto.randomUUID(), clientId, workoutDate: localDate(draft.workoutDate),
+        notes: 'Проведённое занятие', exercises: [],
+      })
+      const bundle = await trainerFinance.listClient(clientId)
+      const session = bundle.sessions.find((item) => item.workoutId === workoutId)
+      if (!session) return workoutId
+      const [disposition, packageId = ''] = draft.value.split(':')
+      await trainerFinance.updateSession(session.id, {
+        expectedVersion: session.version,
+        disposition: disposition as TrainerFinanceSession['disposition'],
+        packageId: disposition === 'charged' ? packageId : null,
+        comment: draft.comment,
+        workoutDate: draft.workoutDate,
+      })
+      return workoutId
+    },
     onSuccess: async () => { setManualOpen(false); await refresh() },
   })
   const updateSession = useMutation({
-    mutationFn: ({ session, value }: { session: TrainerFinanceSession; value: string }) => {
+    mutationFn: ({ session, value, workoutDate, comment }: { session: TrainerFinanceSession; value: string; workoutDate: string; comment: string | null }) => {
       const [disposition, packageId = ''] = value.split(':')
       return trainerFinance.updateSession(session.id, {
         expectedVersion: session.version,
         disposition: disposition as TrainerFinanceSession['disposition'],
         packageId: disposition === 'charged' ? packageId : null,
-        comment: disposition === 'unassigned' ? 'Нужно выбрать абонемент' : null,
+        comment,
+        workoutDate,
       })
     },
-    onSuccess: refresh,
+    onSuccess: async () => { setSessionEditor(null); await refresh() },
   })
   const packages = finance.data?.packages ?? []
   const activePackages = packages.filter((item) => item.packageStatus === 'active' || item.packageStatus === 'upcoming')
@@ -178,7 +197,7 @@ export function TrainerFinancePage() {
       <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с абонементом ${item.title}`} items={[{ label: 'Редактировать', onClick: () => setPackageEditor(item) }]} /></header>
       <div className="finance-package-summary">
         <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
-        <p><span>Оплата</span><strong>{money(item.paidCents)}</strong><small>{PAYMENT_STATUS[item.paymentStatus]} · из {money(item.priceCents)}</small></p>
+        <p><span>Оплата</span><strong>{money(item.paidCents)}</strong><small>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : `${PAYMENT_STATUS[item.paymentStatus]} · из ${money(item.priceCents)}`}</small></p>
       </div>
       <div className="finance-package-meta">
         <span>С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</span>
@@ -206,8 +225,12 @@ export function TrainerFinancePage() {
           <summary><span>Проведённые занятия</span><small>{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).length}</small></summary>
           <div className="finance-disclosure-content">
             <button type="button" className="secondary finance-inline-action" onClick={() => setManualOpen((value) => !value)}>{manualOpen ? 'Закрыть форму' : 'Добавить занятие'}</button>
-            {manualOpen && <form className="finance-manual-session" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); addManualSession.mutate(String(form.get('workoutDate') ?? '')) }}><Field label="Дата занятия"><input name="workoutDate" type="date" required defaultValue={today} /></Field><button type="submit" className="primary" disabled={addManualSession.isPending}>{addManualSession.isPending ? 'Добавляем…' : 'Добавить проведённое занятие'}</button></form>}
-            <div className="finance-session-list">{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).map((session) => <div className="finance-session" key={session.id}><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link><label><span className="sr-only">Учёт занятия за {formatLocalDate(localDate(session.workoutDate))}</span><select value={session.disposition === 'charged' ? `charged:${session.packageId}` : session.disposition} disabled={updateSession.isPending} onChange={(event) => updateSession.mutate({ session, value: event.target.value })}><option value="unassigned">Выбрать абонемент</option>{packages.filter((item) => item.id === session.packageId || (item.closedAt === null && item.sessionsRemaining > 0 && item.startsOn <= session.workoutDate && (item.endsOn === null || item.endsOn >= session.workoutDate))).map((item) => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}<option value="free">Без списания</option><option value="trial">Пробное</option></select></label><small>{SESSION_STATUS[session.disposition]}</small></div>)}</div>
+            {manualOpen && <form className="finance-manual-session" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); addManualSession.mutate({ workoutDate: String(form.get('workoutDate') ?? ''), value: String(form.get('accounting') ?? 'unassigned'), comment: optional(form, 'comment') }) }}><Field label="Дата занятия"><input name="workoutDate" type="date" required defaultValue={today} /></Field><Field label="Учёт"><select name="accounting" defaultValue="unassigned"><option value="unassigned">Выбрать абонемент позже</option>{activePackages.map((item) => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}<option value="free">Без списания</option><option value="trial">Пробное</option></select></Field><Field label="Комментарий"><input name="comment" maxLength={2000} /></Field><button type="submit" className="primary" disabled={addManualSession.isPending}>{addManualSession.isPending ? 'Добавляем…' : 'Добавить занятие'}</button></form>}
+            <div className="finance-session-list">{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).map((session) => {
+              const editing = sessionEditor === session.id
+              const eligible = packages.filter((item) => item.id === session.packageId || (item.closedAt === null && item.sessionsRemaining > 0 && item.startsOn <= session.workoutDate && (item.endsOn === null || item.endsOn >= session.workoutDate)))
+              return <div className={`finance-session${editing ? ' is-editing' : ''}`} key={session.id}><div className="finance-session-row"><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link><span><small>{SESSION_STATUS[session.disposition]}</small><OverflowMenu label={`Действия с занятием ${formatLocalDate(localDate(session.workoutDate))}`} items={[{ label: 'Изменить учёт', onClick: () => setSessionEditor(session.id) }]} /></span></div>{editing && <form className="finance-session-editor" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); updateSession.mutate({ session, value: String(form.get('accounting') ?? 'unassigned'), workoutDate: String(form.get('workoutDate') ?? session.workoutDate), comment: optional(form, 'comment') }) }}><Field label="Дата"><input name="workoutDate" type="date" required defaultValue={session.workoutDate} /></Field><Field label="Учёт"><select name="accounting" defaultValue={session.disposition === 'charged' ? `charged:${session.packageId}` : session.disposition}><option value="unassigned">Выбрать абонемент</option>{eligible.map((item) => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}<option value="free">Без списания</option><option value="trial">Пробное</option></select></Field><Field label="Комментарий"><input name="comment" maxLength={2000} defaultValue={session.comment ?? ''} /></Field><div className="actions"><button type="button" className="secondary" onClick={() => setSessionEditor(null)}>Отмена</button><button type="submit" className="primary" disabled={updateSession.isPending}>{updateSession.isPending ? 'Сохраняем…' : 'Сохранить'}</button></div></form>}</div>
+            })}</div>
             {finance.isSuccess && !(finance.data?.sessions ?? []).some((session) => session.voidedAt === null) && <p className="finance-empty">Проведённых занятий пока нет.</p>}
             {addManualSession.error && <InlineRequestError error={addManualSession.error} />}
             {updateSession.error && <InlineRequestError error={updateSession.error} />}

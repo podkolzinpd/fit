@@ -67,6 +67,7 @@ export interface TrainerFinanceOverviewClient {
   receivedCents: number
   dueCents: number
   activePackageCount: number
+  upcomingPackageCount: number
   sessionsRemaining: number | null
   overdue: boolean
   lowSessions: boolean
@@ -105,7 +106,7 @@ export interface TrainerFinancePaymentDraft {
 }
 
 export type TrainerFinancePaymentUpdate = TrainerFinancePaymentDraft & { expectedVersion: number }
-export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'disposition' | 'packageId' | 'comment'> & { expectedVersion: number }
+export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'disposition' | 'packageId' | 'comment' | 'workoutDate'> & { expectedVersion: number }
 
 export interface TrainerFinanceRepository {
   listOverview(month: string): Promise<TrainerFinanceOverview>

@@ -2032,7 +2032,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         })
         const overviewClients = (overview[0]?.result as { clients?: unknown[] }).clients
         expect(overviewClients).toContainEqual(expect.objectContaining({
-          clientId: CLIENT_ID, fullName: 'Shared client', activePackageCount: 1,
+          clientId: CLIENT_ID, fullName: 'Shared client', activePackageCount: 1, upcomingPackageCount: 0,
           sessionsRemaining: 8, overdue: false, unassignedSessions: 0,
         }))
 

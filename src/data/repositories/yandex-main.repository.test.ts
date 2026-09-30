@@ -109,7 +109,7 @@ describe('Yandex main repository', () => {
       updatedAt: '2026-09-05T10:00:00.000000+00:00',
     }
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
+      .mockResolvedValueOnce(jsonResponse({ overview: { month: '2026-09', receivedCents: 1000000, dueCents: 1500000, attentionCount: 1, clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 8, overdue: true, lowSessions: false, unassignedSessions: 0, needsAttention: true }] } }))
       .mockResolvedValueOnce(jsonResponse({ finance: { clientId, packages: [financePackage], payments: [payment], sessions: [financeSession] } }))
       .mockResolvedValueOnce(jsonResponse({ package: financePackage }, 201))
       .mockResolvedValueOnce(jsonResponse({ payment }, 201))
@@ -127,7 +127,7 @@ describe('Yandex main repository', () => {
     })
     await repository.trainerFinance.addPayment(financePackageId, { amountCents: 1000000, receivedOn: '2026-09-01', comment: null })
     await repository.trainerFinance.voidPayment(financePaymentId, 1, 'Ошибка')
-    await repository.trainerFinance.updateSession(financeSessionId, { expectedVersion: 1, disposition: 'free', packageId: null, comment: null })
+    await repository.trainerFinance.updateSession(financeSessionId, { expectedVersion: 1, disposition: 'free', packageId: null, comment: null, workoutDate: '2026-09-01' })
 
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
       `${apiBaseUrl}/v1/finance/overview?month=2026-09`,
@@ -138,7 +138,7 @@ describe('Yandex main repository', () => {
       `${apiBaseUrl}/v1/finance/sessions/${financeSessionId}`,
     ])
     expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'DELETE', body: JSON.stringify({ expectedVersion: 1, reason: 'Ошибка' }) })
-    expect(fetchMock.mock.calls[5]?.[1]).toMatchObject({ method: 'PUT', body: JSON.stringify({ expectedVersion: 1, disposition: 'free', packageId: null, comment: null }) })
+    expect(fetchMock.mock.calls[5]?.[1]).toMatchObject({ method: 'PUT', body: JSON.stringify({ expectedVersion: 1, disposition: 'free', packageId: null, comment: null, workoutDate: '2026-09-01' }) })
   })
 
   it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {

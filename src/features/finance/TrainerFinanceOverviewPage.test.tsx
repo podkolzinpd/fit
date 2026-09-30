@@ -22,8 +22,9 @@ describe('TrainerFinanceOverviewPage', () => {
     listOverview.mockReset().mockResolvedValue({
       month: '2026-09', receivedCents: 2500000, dueCents: 500000, attentionCount: 1,
       clients: [
-        { clientId: '1a0c5295-0a0f-4ccb-a39a-e58090967245', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, activePackageCount: 1, sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true },
-        { clientId: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b', fullName: 'Борис Иванов', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 0, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
+        { clientId: '1a0c5295-0a0f-4ccb-a39a-e58090967245', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true },
+        { clientId: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b', fullName: 'Борис Иванов', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 0, upcomingPackageCount: 0, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
+        { clientId: '3fe240f2-6d78-4b02-a807-1b93194596d7', fullName: 'Вера Петрова', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 0, upcomingPackageCount: 1, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
       ],
     })
   })
@@ -37,9 +38,14 @@ describe('TrainerFinanceOverviewPage', () => {
     expect(within(summary).getByText(/^5.*000.*₽$/)).toBeVisible()
     expect(screen.getByRole('link', { name: /Анна Смирнова/ })).toHaveAttribute('href', '/clients/1a0c5295-0a0f-4ccb-a39a-e58090967245/finance')
     expect(screen.getByText('Борис Иванов')).toBeVisible()
+    expect(screen.getByText('Абонемент начнётся позже')).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: 'Просрочено' }))
     expect(screen.getByText('Анна Смирнова')).toBeVisible()
     expect(screen.queryByText('Борис Иванов')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Нет абонемента' }))
+    expect(screen.getByText('Борис Иванов')).toBeVisible()
+    expect(screen.queryByText('Вера Петрова')).not.toBeInTheDocument()
   })
 })
