@@ -44,6 +44,12 @@ import { diagnosticsForResponse } from '../queries/request-diagnostics'
 import { toJson } from '../queries/json'
 import { currentAppFeedbackContext } from './app-feedback.repository'
 import type { CustomExercise } from './exercises.repository'
+import type {
+  TrainerFinancePackageDraft,
+  TrainerFinancePackageUpdate,
+  TrainerFinancePaymentDraft,
+  TrainerFinancePaymentUpdate,
+} from './trainer-finance.repository'
 import { RepositoryError } from './error'
 import { roundMetric } from './progress.repository'
 import {
@@ -91,6 +97,27 @@ const trainerWorkspaceSchema = z.object({
     question: z.string().min(1),
     askedAt: yandexDateTimeSchema,
   })),
+})
+const trainerFinancePackageSchema = z.object({
+  id: uuid, clientId: uuid, trainerId: uuid, title: z.string(),
+  sessionsTotal: z.number().int().positive(), sessionsUsed: z.number().int().nonnegative(),
+  sessionsRemaining: z.number().int().nonnegative(), priceCents: z.number().int().nonnegative(),
+  paidCents: z.number().int().nonnegative(), dueCents: z.number().int().nonnegative(),
+  startsOn: z.iso.date(), endsOn: z.iso.date().nullable(), paymentDueOn: z.iso.date().nullable(),
+  comment: z.string().nullable(), packageStatus: z.enum(['active', 'upcoming', 'completed', 'expired', 'closed']),
+  paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'overdue']), closedAt: yandexDateTimeSchema.nullable(),
+  version: z.number().int().positive(), createdAt: yandexDateTimeSchema, updatedAt: yandexDateTimeSchema,
+})
+const trainerFinancePaymentSchema = z.object({
+  id: uuid, packageId: uuid, amountCents: z.number().int().positive(), receivedOn: z.iso.date(),
+  source: z.enum(['manual', 'opening']), comment: z.string().nullable(), voidedAt: yandexDateTimeSchema.nullable(),
+  voidReason: z.string().nullable(), version: z.number().int().positive(),
+  createdAt: yandexDateTimeSchema, updatedAt: yandexDateTimeSchema,
+})
+const trainerFinanceBundleSchema = z.object({
+  clientId: uuid,
+  packages: z.array(trainerFinancePackageSchema),
+  payments: z.array(trainerFinancePaymentSchema),
 })
 const clientSchema = z.object({
   id: uuid,
@@ -855,6 +882,31 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    trainerFinance: {
+      async listClient(clientId: string) {
+        const payload = await readJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance`, z.object({ finance: trainerFinanceBundleSchema }))
+        return payload.finance
+      },
+      async createPackage(clientId: string, draft: TrainerFinancePackageDraft) {
+        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/packages`, 'POST', draft, z.object({ package: trainerFinancePackageSchema }))
+        return payload.package
+      },
+      async updatePackage(packageId: string, draft: TrainerFinancePackageUpdate) {
+        const payload = await writeJson(queries, `/v1/finance/packages/${encodeURIComponent(packageId)}`, 'PUT', draft, z.object({ package: trainerFinancePackageSchema }))
+        return payload.package
+      },
+      async addPayment(packageId: string, draft: TrainerFinancePaymentDraft) {
+        const payload = await writeJson(queries, `/v1/finance/packages/${encodeURIComponent(packageId)}/payments`, 'POST', draft, z.object({ payment: trainerFinancePaymentSchema }))
+        return payload.payment
+      },
+      async updatePayment(paymentId: string, draft: TrainerFinancePaymentUpdate) {
+        const payload = await writeJson(queries, `/v1/finance/payments/${encodeURIComponent(paymentId)}`, 'PUT', draft, z.object({ payment: trainerFinancePaymentSchema }))
+        return payload.payment
+      },
+      async voidPayment(paymentId: string, expectedVersion: number, reason: string) {
+        await writeEmpty(queries, `/v1/finance/payments/${encodeURIComponent(paymentId)}`, 'DELETE', { expectedVersion, reason })
+      },
+    },
     trainerWorkspace: {
       async read(): Promise<TrainerWorkspace> {
         return readJson(queries, '/v1/trainer-workspace', trainerWorkspaceSchema)
