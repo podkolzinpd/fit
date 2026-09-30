@@ -254,13 +254,27 @@ function TrainerScheduleV2Claim({ token }: { token: string }) {
 }
 
 function TrainerScheduleV1() {
+  const densityPreference = useScheduleDensityPreference()
+  const hourHeight = SCHEDULE_HOUR_HEIGHT[densityPreference.density]
   const {
     actor, selected, isTwoWeekView, isDayView, weekStart,
     periodEnd, overviewDays, today, scrollRef, openDay, showOverview,
     shiftOverview, query, itemsByDay, totalCount, timed, untimed, todayDisabled,
-  } = useTrainerScheduleModel()
+  } = useTrainerScheduleModel(false, hourHeight)
+  const previousHourHeightRef = useRef(hourHeight)
 
-  return <Page className={`schedule-page ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}`} title="Расписание" action={
+  useLayoutEffect(() => {
+    const previousHourHeight = previousHourHeightRef.current
+    if (previousHourHeight === hourHeight) return
+    const viewport = scrollRef.current
+    if (viewport) {
+      const centeredHour = (viewport.scrollTop + viewport.clientHeight / 2) / previousHourHeight
+      viewport.scrollTop = Math.max(0, centeredHour * hourHeight - viewport.clientHeight / 2)
+    }
+    previousHourHeightRef.current = hourHeight
+  }, [hourHeight, scrollRef])
+
+  return <Page className={`schedule-page ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}`} title="Расписание" action={
     <div className="schedule-controls">
       <div className="schedule-month-row">
         <strong>{formatMonth(selected)}</strong>
@@ -277,6 +291,11 @@ function TrainerScheduleV1() {
             <strong>{formatScheduleDateLabel(selected)}</strong>
             <span>{query.isLoading ? 'Загружаем…' : workoutCountLabel(totalCount)}</span>
           </div>
+          <OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={[{
+            label: densityPreference.density === 'compact' ? 'Обычная сетка' : 'Компактная сетка',
+            disabled: densityPreference.status === 'saving',
+            onClick: () => void densityPreference.save(densityPreference.density === 'compact' ? 'comfortable' : 'compact'),
+          }]} />
           <Link className="button secondary schedule-plan" to={`/workouts/new?date=${selected}`}>Запланировать</Link>
         </div>
       </div> : <>
@@ -294,6 +313,7 @@ function TrainerScheduleV1() {
       </>}
     </div>
   }>
+    {densityPreference.status === 'error' && <p className="schedule-density-inline-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <Coachmark id="trainer-schedule-week-overview-2026-09" userId={actor?.userId} title="Расписание целиком" description="Все тренировки выбранного периода видны сразу. Нажмите на день, чтобы открыть подробное расписание.">
         {isTwoWeekView ? <section className="schedule-fortnight" aria-label={`Расписание на две недели: ${formatWeekRange(weekStart, periodEnd)}`}>
@@ -369,21 +389,21 @@ function TrainerScheduleV1() {
         ))}</div>
       </section>}
       <div className="day-grid-scroll" ref={scrollRef}>
-        <div className="day-grid" style={{ height: HOURS.length * HOUR_HEIGHT }}>
+        <div className="day-grid" style={{ height: HOURS.length * hourHeight }}>
           {HOURS.map((hour) => (
-            <div key={hour} className="day-grid-hour" style={{ top: hour * HOUR_HEIGHT }}>
+            <div key={hour} className="day-grid-hour" style={{ top: hour * hourHeight }}>
               <span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span>
               <div className="day-grid-hour-line" />
             </div>
           ))}
           {timed.map((workout) => {
             const startMin = minutesOf(workout.startTime!.slice(0, 5))
-            const endMin = workout.endTime ? minutesOf(workout.endTime.slice(0, 5)) : startMin + 60
-            const top = (startMin / 60) * HOUR_HEIGHT
-            const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 52)
+            const durationMinutes = scheduleDurationMinutes(workout.startTime!, workout.endTime)
+            const top = (startMin / 60) * hourHeight
+            const height = Math.max((durationMinutes / 60) * hourHeight, densityPreference.density === 'compact' ? 44 : 52)
             const names = exerciseSummary(workout).map((e) => e.name)
             const status = scheduleEventStatus(workout, today)
-            return <Link key={workout.id} className={`day-grid-event schedule-event-${status.tone}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
+            return <Link key={workout.id} className={`day-grid-event schedule-event-${status.tone}${densityPreference.density === 'compact' && durationMinutes < 60 ? ' is-short' : ''}`} style={{ top, height }} to={`/workouts/${workout.id}`}>
               <span className="day-grid-event-top">
                 <span className="day-grid-event-time">{eventTime(workout)}</span>
                 <span className="day-grid-event-name">{workout.clientName}</span>
