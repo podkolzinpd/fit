@@ -171,6 +171,7 @@ import {
   readTrainerFinancePaymentDraft,
   readTrainerFinancePaymentUpdate,
   readTrainerFinanceVoidPayment,
+  readTrainerFinanceSessionUpdate,
 } from './trainer-finance-request.js'
 
 export type LegacySummaryHandler = (request: Request) => Promise<Response>
@@ -2204,6 +2205,21 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(reply,
       () => options.pilotTrainerFinance!.voidPayment(session, paymentId, command.expectedVersion, command.reason),
       () => reply.code(204).send())
+  })
+
+  app.put('/v1/finance/sessions/:sessionId', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const { sessionId } = request.params as { sessionId?: unknown }
+    const draft = readTrainerFinanceSessionUpdate(request.body)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (typeof sessionId !== 'string' || !uuidPattern.test(sessionId) || draft === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.updateSession(session, sessionId, draft),
+      (financeSession) => reply.header('cache-control', 'no-store').send({ session: financeSession }))
   })
 
   app.post('/v1/app-feedback', async (request, reply) => {

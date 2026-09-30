@@ -88,7 +88,7 @@ import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profil
 import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
 import { FavoriteWorkoutsError, type FavoriteWorkoutTemplate, type PilotFavoriteWorkouts } from './favorite-workouts.js'
-import { TrainerFinanceError, type PilotTrainerFinance, type TrainerFinanceClientBundle, type TrainerFinancePackage, type TrainerFinancePayment } from './trainer-finance.js'
+import { TrainerFinanceError, type PilotTrainerFinance, type TrainerFinanceClientBundle, type TrainerFinancePackage, type TrainerFinancePayment, type TrainerFinanceSession } from './trainer-finance.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -914,6 +914,7 @@ describe('trainer finance', () => {
   const clientId = 'b3942b20-52a2-4d5d-9895-b3b63cf61442'
   const packageId = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
   const paymentId = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
+  const financeSessionId = '8938c8e0-3856-469b-b743-ab5942ce4564'
   const financePackage: TrainerFinancePackage = {
     id: packageId, clientId, trainerId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2',
     title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2,
@@ -928,7 +929,13 @@ describe('trainer finance', () => {
     source: 'manual', comment: null, voidedAt: null, voidReason: null, version: 1,
     createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z',
   }
-  const bundle: TrainerFinanceClientBundle = { clientId, packages: [financePackage], payments: [payment] }
+  const financeSession: TrainerFinanceSession = {
+    id: financeSessionId, packageId, workoutId: '77d5776a-337c-466e-a3e6-e098adb03cc7',
+    disposition: 'charged', source: 'automatic', comment: null,
+    workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1,
+    createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z',
+  }
+  const bundle: TrainerFinanceClientBundle = { clientId, packages: [financePackage], payments: [payment], sessions: [financeSession] }
 
   function finance() {
     const listClient = vi.fn<PilotTrainerFinance['listClient']>().mockResolvedValue(bundle)
@@ -937,8 +944,9 @@ describe('trainer finance', () => {
     const addPayment = vi.fn<PilotTrainerFinance['addPayment']>().mockResolvedValue(payment)
     const updatePayment = vi.fn<PilotTrainerFinance['updatePayment']>().mockResolvedValue({ ...payment, version: 2 })
     const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
-    return { service: { listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment } satisfies PilotTrainerFinance,
-      listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment }
+    const updateSession = vi.fn<PilotTrainerFinance['updateSession']>().mockResolvedValue({ ...financeSession, disposition: 'free', packageId: null, version: 2 })
+    return { service: { listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession } satisfies PilotTrainerFinance,
+      listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession }
   }
 
   it('reads only the selected client finance bundle', async () => {
@@ -971,6 +979,16 @@ describe('trainer finance', () => {
     expect(malformed.statusCode).toBe(400)
     expect(readOnly.statusCode).toBe(403)
     expect(addPayment).not.toHaveBeenCalled()
+  })
+
+  it('corrects a session disposition without changing the workout', async () => {
+    const { service: pilotTrainerFinance, updateSession } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = { expectedVersion: 1, disposition: 'free', packageId: null, comment: 'Пробное занятие' }
+    const response = await app.inject({ method: 'PUT', url: `/v1/finance/sessions/${financeSessionId}`, headers: { 'x-fit-session': session.token }, payload: draft })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ session: { ...financeSession, disposition: 'free', packageId: null, version: 2 } })
+    expect(updateSession).toHaveBeenCalledWith(session, financeSessionId, draft)
   })
 
   it.each([

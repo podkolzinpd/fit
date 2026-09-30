@@ -11,17 +11,21 @@ const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
 const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
 const packageId = '34df7b20-a0b5-4627-bd98-d4a174625723'
 const paymentId = 'ec3e661a-0ee8-48da-a269-d4f7707427cc'
+const sessionId = '8938c8e0-3856-469b-b743-ab5942ce4564'
+const workoutId = '77d5776a-337c-466e-a3e6-e098adb03cc7'
 const client: Client = { id: clientId, canArchive: true, hasAccount: true, fullName: 'Анна Смирнова', canonicalFullName: 'анна смирнова', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: 1 }
 const bundle: TrainerFinanceClientBundle = {
   clientId,
   packages: [{ id: packageId, clientId, trainerId, title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01', endsOn: null, paymentDueOn: '2026-09-10', comment: null, packageStatus: 'active', paymentStatus: 'overdue', closedAt: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
   payments: [{ id: paymentId, packageId, amountCents: 1000000, receivedOn: '2026-09-01', source: 'manual', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
+  sessions: [{ id: sessionId, packageId, workoutId, disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z' }],
 }
 const clients = vi.hoisted(() => ({ get: vi.fn() }))
-const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn(), updatePackage: vi.fn(), addPayment: vi.fn(), updatePayment: vi.fn(), voidPayment: vi.fn() }))
+const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn(), updatePackage: vi.fn(), addPayment: vi.fn(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn() }))
+const workouts = vi.hoisted(() => ({ saveCompleted: vi.fn() }))
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow' } as SessionActor }) }))
-vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ clients, trainerFinance: finance }) }))
+vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ clients, trainerFinance: finance, workouts }) }))
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -37,6 +41,8 @@ describe('TrainerFinancePage', () => {
     finance.addPayment.mockReset().mockResolvedValue(bundle.payments[0])
     finance.updatePayment.mockReset().mockResolvedValue(bundle.payments[0])
     finance.voidPayment.mockReset().mockResolvedValue(undefined)
+    finance.updateSession.mockReset().mockResolvedValue({ ...bundle.sessions[0], disposition: 'free', packageId: null, version: 2 })
+    workouts.saveCompleted.mockReset().mockResolvedValue({ id: workoutId, version: 1 })
   })
 
   it('shows remaining sessions, payment balance and existing payments', async () => {
@@ -58,5 +64,24 @@ describe('TrainerFinancePage', () => {
     await user.type(screen.getByLabelText('Уже оплачено, ₽'), '10000')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.createPackage).toHaveBeenCalledWith(clientId, expect.objectContaining({ priceCents: 2500000, openingPaidCents: 1000000, sessionsTotal: 10 })))
+  })
+
+  it('adds a completed session and lets the trainer correct its accounting', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.selectOptions(screen.getByLabelText('Учёт занятия за 5 сентября 2026 г.'), 'free')
+    await waitFor(() => expect(finance.updateSession).toHaveBeenCalledWith(sessionId, {
+      expectedVersion: 1, disposition: 'free', packageId: null, comment: null,
+    }))
+
+    await user.click(screen.getByRole('button', { name: 'Добавить занятие' }))
+    const date = screen.getByLabelText('Дата занятия')
+    await user.clear(date)
+    await user.type(date, '2026-09-20')
+    await user.click(screen.getByRole('button', { name: 'Добавить проведённое занятие' }))
+    await waitFor(() => expect(workouts.saveCompleted).toHaveBeenCalledWith(expect.objectContaining({
+      clientId, workoutDate: '2026-09-20', notes: 'Проведённое занятие', exercises: [],
+    })))
   })
 })

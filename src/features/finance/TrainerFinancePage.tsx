@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type {
   TrainerFinancePackage,
   TrainerFinancePackageDraft,
-  TrainerFinancePayment,
+  TrainerFinancePayment, TrainerFinanceSession,
   TrainerFinancePaymentDraft,
 } from '../../data/repositories/trainer-finance.repository'
 import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
@@ -17,6 +17,9 @@ const PACKAGE_STATUS: Record<TrainerFinancePackage['packageStatus'], string> = {
 }
 const PAYMENT_STATUS: Record<TrainerFinancePackage['paymentStatus'], string> = {
   unpaid: 'Не оплачен', partial: 'Оплачен частично', paid: 'Оплачен', overdue: 'Просрочен',
+}
+const SESSION_STATUS: Record<TrainerFinanceSession['disposition'], string> = {
+  charged: 'Списано', unassigned: 'Нужно выбрать абонемент', free: 'Без списания', trial: 'Пробное',
 }
 
 function money(cents: number) {
@@ -120,11 +123,12 @@ function PaymentForm({ current, today, saving, error, onCancel, onSubmit }: {
 export function TrainerFinancePage() {
   const { clientId = '' } = useParams()
   const { actor } = useAuth()
-  const { clients, trainerFinance } = useDataBackend()
+  const { clients, trainerFinance, workouts } = useDataBackend()
   const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
   const [packageEditor, setPackageEditor] = useState<TrainerFinancePackage | 'new' | null>(null)
   const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment } | null>(null)
+  const [manualOpen, setManualOpen] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clients.get(clientId) })
   const finance = useQuery({ queryKey: ['trainer-finance', clientId], queryFn: () => trainerFinance.listClient(clientId) })
@@ -145,6 +149,25 @@ export function TrainerFinancePage() {
     mutationFn: (payment: TrainerFinancePayment) => trainerFinance.voidPayment(payment.id, payment.version, 'Удалено тренером'),
     onSuccess: refresh,
   })
+  const addManualSession = useMutation({
+    mutationFn: (workoutDate: string) => workouts.saveCompleted({
+      requestId: crypto.randomUUID(), clientId, workoutDate: localDate(workoutDate),
+      notes: 'Проведённое занятие', exercises: [],
+    }),
+    onSuccess: async () => { setManualOpen(false); await refresh() },
+  })
+  const updateSession = useMutation({
+    mutationFn: ({ session, value }: { session: TrainerFinanceSession; value: string }) => {
+      const [disposition, packageId = ''] = value.split(':')
+      return trainerFinance.updateSession(session.id, {
+        expectedVersion: session.version,
+        disposition: disposition as TrainerFinanceSession['disposition'],
+        packageId: disposition === 'charged' ? packageId : null,
+        comment: disposition === 'unassigned' ? 'Нужно выбрать абонемент' : null,
+      })
+    },
+    onSuccess: refresh,
+  })
   const packages = finance.data?.packages ?? []
   return <Page title="Абонементы и оплаты" subtitle={client.data?.fullName} back={`/clients/${clientId}`} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
@@ -159,12 +182,20 @@ export function TrainerFinancePage() {
             <p className="finance-package-dates">С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</p>
             {item.dueCents > 0 && <p className={`finance-due${item.paymentStatus === 'overdue' ? ' is-overdue' : ''}`}>Осталось оплатить {money(item.dueCents)}</p>}
             {item.comment && <p className="finance-comment">{item.comment}</p>}
-            <div className="finance-payments-heading"><h3>Оплаты</h3><button type="button" className="link" onClick={() => setPaymentEditor({ packageId: item.id })}>Добавить</button></div>
+              <div className="finance-payments-heading"><h3>Оплаты</h3><button type="button" className="link" onClick={() => setPaymentEditor({ packageId: item.id })}>Добавить оплату</button></div>
             {paymentEditor?.packageId === item.id && <PaymentForm current={paymentEditor.payment} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => setPaymentEditor(null)} onSubmit={(draft) => savePayment.mutate(draft)} />}
             {!paymentEditor || paymentEditor.packageId !== item.id ? <div className="finance-payment-list">{payments.length ? payments.map((payment) => <div className="finance-payment" key={payment.id}><div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div><OverflowMenu label={`Действия с оплатой ${money(payment.amountCents)}`} items={[{ label: 'Изменить', onClick: () => setPaymentEditor({ packageId: item.id, payment }) }, { label: 'Удалить', danger: true, onClick: () => void confirm({ message: `Удалить оплату ${money(payment.amountCents)}? Итог пересчитается, запись останется в истории.`, confirmLabel: 'Удалить', danger: true }).then((ok) => { if (ok) removePayment.mutate(payment) }) }]} /></div>) : <p className="finance-empty">Оплат пока нет</p>}</div> : null}
           </article>
         })}</div>
         {finance.isSuccess && packages.length === 0 && <p className="finance-empty">Финансовых записей пока нет.</p>}
+        <section className="finance-sessions card">
+          <div className="finance-payments-heading"><div><p className="eyebrow">ЗАНЯТИЯ</p><h2>Проведённые</h2></div><button type="button" className="link" onClick={() => setManualOpen((value) => !value)}>{manualOpen ? 'Закрыть' : 'Добавить занятие'}</button></div>
+          {manualOpen && <form className="finance-manual-session" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); addManualSession.mutate(String(form.get('workoutDate') ?? '')) }}><Field label="Дата занятия"><input name="workoutDate" type="date" required defaultValue={today} /></Field><button type="submit" className="primary" disabled={addManualSession.isPending}>{addManualSession.isPending ? 'Добавляем…' : 'Добавить проведённое занятие'}</button></form>}
+          <div className="finance-session-list">{(finance.data?.sessions ?? []).filter((session) => session.voidedAt === null).map((session) => <div className="finance-session" key={session.id}><Link to={`/workouts/${session.workoutId}`}><strong>{formatLocalDate(localDate(session.workoutDate))}</strong><span>{session.source === 'manual' ? 'Добавлено вручную' : 'Из завершённой тренировки'}</span></Link><label><span className="sr-only">Учёт занятия за {formatLocalDate(localDate(session.workoutDate))}</span><select value={session.disposition === 'charged' ? `charged:${session.packageId}` : session.disposition} disabled={updateSession.isPending} onChange={(event) => updateSession.mutate({ session, value: event.target.value })}><option value="unassigned">Выбрать абонемент</option>{packages.filter((item) => item.id === session.packageId || (item.closedAt === null && item.sessionsRemaining > 0 && item.startsOn <= session.workoutDate && (item.endsOn === null || item.endsOn >= session.workoutDate))).map((item) => <option key={item.id} value={`charged:${item.id}`}>Списать: {item.title}</option>)}<option value="free">Без списания</option><option value="trial">Пробное</option></select></label><small>{SESSION_STATUS[session.disposition]}</small></div>)}</div>
+          {finance.isSuccess && !(finance.data?.sessions ?? []).some((session) => session.voidedAt === null) && <p className="finance-empty">Проведённых занятий пока нет.</p>}
+          {addManualSession.error && <InlineRequestError error={addManualSession.error} />}
+          {updateSession.error && <InlineRequestError error={updateSession.error} />}
+        </section>
       </>}
       {removePayment.error && <InlineRequestError error={removePayment.error} />}
     </AsyncView>

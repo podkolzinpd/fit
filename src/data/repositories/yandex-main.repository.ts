@@ -49,6 +49,7 @@ import type {
   TrainerFinancePackageUpdate,
   TrainerFinancePaymentDraft,
   TrainerFinancePaymentUpdate,
+  TrainerFinanceSessionUpdate,
 } from './trainer-finance.repository'
 import { RepositoryError } from './error'
 import { roundMetric } from './progress.repository'
@@ -114,10 +115,18 @@ const trainerFinancePaymentSchema = z.object({
   voidReason: z.string().nullable(), version: z.number().int().positive(),
   createdAt: yandexDateTimeSchema, updatedAt: yandexDateTimeSchema,
 })
+const trainerFinanceSessionSchema = z.object({
+  id: uuid, packageId: uuid.nullable(), workoutId: uuid,
+  disposition: z.enum(['charged', 'unassigned', 'free', 'trial']), source: z.enum(['automatic', 'manual']),
+  comment: z.string().nullable(), workoutDate: z.iso.date(), voidedAt: yandexDateTimeSchema.nullable(),
+  voidReason: z.string().nullable(), version: z.number().int().positive(),
+  createdAt: yandexDateTimeSchema, updatedAt: yandexDateTimeSchema,
+})
 const trainerFinanceBundleSchema = z.object({
   clientId: uuid,
   packages: z.array(trainerFinancePackageSchema),
   payments: z.array(trainerFinancePaymentSchema),
+  sessions: z.array(trainerFinanceSessionSchema),
 })
 const clientSchema = z.object({
   id: uuid,
@@ -905,6 +914,10 @@ export function createYandexMainRepository(
       },
       async voidPayment(paymentId: string, expectedVersion: number, reason: string) {
         await writeEmpty(queries, `/v1/finance/payments/${encodeURIComponent(paymentId)}`, 'DELETE', { expectedVersion, reason })
+      },
+      async updateSession(sessionId: string, draft: TrainerFinanceSessionUpdate) {
+        const payload = await writeJson(queries, `/v1/finance/sessions/${encodeURIComponent(sessionId)}`, 'PUT', draft, z.object({ session: trainerFinanceSessionSchema }))
+        return payload.session
       },
     },
     trainerWorkspace: {
