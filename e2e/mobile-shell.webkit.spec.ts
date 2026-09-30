@@ -1958,19 +1958,21 @@ test('iPhone: live-факт сохраняется без blur и досылае
   await page.keyboard.press('Escape')
 
   await page.route('**/rest/v1/rpc/save_live_set_draft', (route) => route.abort('failed'))
-  await page.getByLabel('Фактический вес').fill('55')
+  const weight = page.getByLabel('Фактический вес')
+  await weight.fill('3.4')
+  expect(await weight.evaluate((element: HTMLInputElement) => element.validity.valid)).toBe(true)
   // Reload до blur и debounce: значение уже должно быть защищено на устройстве.
   await page.reload()
-  await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
+  await expect(page.getByLabel('Фактический вес')).toHaveValue('3.4')
   await expect(page.getByText('Восстановили результаты')).toBeVisible()
 
   await page.unroute('**/rest/v1/rpc/save_live_set_draft')
   await page.evaluate(() => window.dispatchEvent(new Event('online')))
   await expect(page.getByText('Восстановили результаты')).toHaveCount(0)
   await page.reload()
-  await expect(page.getByLabel('Фактический вес')).toHaveValue('55')
+  await expect(page.getByLabel('Фактический вес')).toHaveValue('3.4')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  await expect(page.locator('.live-exercise-collapsed')).toContainText('55 кг × 10 повт.')
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('3.4 кг × 10 повт.')
   await expectNoHorizontalOverflow(page)
 })
 
