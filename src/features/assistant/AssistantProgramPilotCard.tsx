@@ -11,9 +11,9 @@ const workoutSchema = z.object({ requestId: z.string().uuid(), clientId: z.strin
 const programSchema = z.object({ canonicalWorkouts: z.array(workoutSchema).refine((value) => [4, 8, 12].includes(value.length)) })
 
 type Props = { payload: Record<string, unknown>; enabled: boolean; running: boolean; onApply: (input: object) => Promise<void>;
-  onSaved: () => void; onSuggestion: (message: string) => void; onCancel: () => void; showGuidance?: boolean }
+  onSaved: () => void; onSuggestion: (message: string) => void; onCancel: () => void; showGuidance?: boolean; clientMode?: boolean }
 
-export function AssistantProgramPilotCard({ payload, enabled, running, onApply, onSaved, onSuggestion, onCancel, showGuidance = true }: Props) {
+export function AssistantProgramPilotCard({ payload, enabled, running, onApply, onSaved, onSuggestion, onCancel, showGuidance = true, clientMode = false }: Props) {
   const [edit, setEdit] = useState<{ date: string; position: number; scope: string; name: string; sets: string; reps: string; seconds: string; rpe: string; rest: string }>()
   const sessionDoses = z.array(z.object({ day: z.string(), exercises: z.array(z.object({ rpe: z.number() }).passthrough()) }).passthrough()).safeParse(payload.sessions)
   const effort = (date: string, position: number, saved?: number) => saved ?? (sessionDoses.success ? sessionDoses.data.find((session) => session.day === date)?.exercises[position]?.rpe : undefined)
@@ -39,7 +39,24 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
     } catch { setError('Не удалось сохранить программу. Если данные клиента изменились, составьте новый черновик; иначе повторите сохранение.') }
     finally { setSaving(false) }
   }
-  return <div className="assistant-flow-card assistant-program-card" aria-label="Программа на четыре недели">
+  if (!confirm && clientMode) return <div className="assistant-program-client-actions" aria-label="Составление программы">
+    {!enabled && <p className="assistant-card-hint">Составление программ сейчас недоступно для этого аккаунта.</p>}
+    {payload.historyQuestion === true && <div className="assistant-flow-actions">
+      <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Это все тренировки')}>Это все тренировки</button>
+      <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Часть тренировок не записана')}>Часть тренировок не записана</button>
+    </div>}
+    {payload.readyToGenerate === true && (typeof payload.sourceSummary === 'string' || typeof payload.briefSummary === 'string') && <details className="assistant-program-context-details" open>
+      <summary><ChevronRightIcon />Данные и условия</summary>
+      {typeof payload.sourceSummary === 'string' && <p className="assistant-card-hint">{payload.sourceSummary}</p>}
+      {typeof payload.briefSummary === 'string' && <div className="assistant-message-copy">{payload.briefSummary.split('\n').filter(Boolean).map((line) => <p key={line}>{line}</p>)}</div>}
+    </details>}
+    <div className="assistant-flow-actions">
+      {payload.readyToGenerate === true && <button type="button" className="primary" disabled={busy} onClick={() => onSuggestion('Условия верны, составь программу')}>{running ? 'Составляю…' : 'Подтвердить и составить'}</button>}
+      <button type="button" className="assistant-action-cancel" disabled={running || saving} onClick={onCancel}>Отменить</button>
+    </div>
+  </div>
+
+  return <div className={`assistant-flow-card assistant-program-card${confirm ? '' : ' assistant-program-card-compact'}`} aria-label="Программа на четыре недели">
     <header><span><small>{confirm ? 'Программа на четыре недели' : 'Составление программы'}</small><strong>{String(payload.clientName ?? '')}</strong></span><span className="assistant-flow-status">{confirm ? `${parsed.data.canonicalWorkouts.length} трен.` : payload.briefStatus === 'needs_clarification' ? 'Уточнение' : payload.readyToGenerate === true ? 'Проверка условий' : 'Уточняем условия'}</span></header>
     {!enabled && <p className="assistant-card-hint">Составление программ сейчас недоступно для этого аккаунта.</p>}
     {!confirm && showGuidance && typeof payload.guidance === 'string' && <div className="assistant-message-copy" role="status">{payload.guidance.split('\n').filter(Boolean).map((line, index) => <p key={index}>{line}</p>)}</div>}
@@ -88,7 +105,7 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
         : payload.readyToGenerate === true && <button type="button" className="primary" disabled={busy} onClick={() => onSuggestion('Условия верны, составь программу')}>{running ? 'Составляю…' : 'Подтвердить и составить'}</button>}
       {confirm && !feedbackOpen && typeof payload.modelInputJson === 'object' && payload.modelInputJson !== null && typeof payload.modelOutputJson === 'object' && payload.modelOutputJson !== null && <button type="button" disabled={busy} onClick={() => setFeedbackOpen(true)}>Оставить обратную связь</button>}
       {confirm && !saved && <button type="button" disabled={busy} onClick={() => onSuggestion('Изменить условия программы')}>Изменить условия</button>}
-      {!saved && <button type="button" disabled={running || saving} onClick={onCancel}>Отменить</button>}
+      {!saved && <button type="button" className="assistant-action-cancel" disabled={running || saving} onClick={onCancel}>Отменить</button>}
     </div>
   </div>
 }
