@@ -42,7 +42,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -70,6 +70,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
   let profileSaveAttempts = 0
   let customExerciseSaveAttempts = 0
   let customExercises = options.withCustomExercise ? [{ id: customExerciseId, name: 'Мой присед', muscleGroup: 'legs', inputKind: 'strength', primaryMuscleDetail: null, equipment: null, description: null, archivedAt: null as string | null, version: 1, createdBy: profileId }] : []
+  let scheduleDensity = options.scheduleDensity ?? 'comfortable'
   let professionalProfile = {
     publicId: '10000000-0000-4000-8000-000000000060',
     draft: { displayName: 'Антон', bio: '', specialties: [] as string[], city: '', metroStationIds: [] as string[], customLocations: [] as string[], trainingModes: [] as string[], experienceStartYear: null as number | null, education: '', formats: '', price: '', acceptingClients: false, avatarDataUrl: null as string | null, photos: [], certificates: [] },
@@ -113,8 +114,14 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
           timezone: 'Europe/Moscow',
           accountRole: 'trainer',
           experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true },
+          preferences: { scheduleDensity },
         },
       }
+    } else if (url.pathname === '/v1/profile' && route.request().method() === 'PUT') {
+      const draft = route.request().postDataJSON() as { scheduleDensity?: 'comfortable' | 'compact' }
+      if (draft.scheduleDensity) scheduleDensity = draft.scheduleDensity
+      await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' })
+      return
     } else if (url.pathname === '/v1/legal/acceptance') {
       body = { applicable: true, accepted: true, acceptedAt: '2026-09-01T00:00:00.000Z' }
     } else if (url.pathname === '/v1/trainer-profile' && route.request().method() === 'GET') {
@@ -685,6 +692,44 @@ test('renders the single-trainer schedule and combines questions with messages',
   await page.getByRole('button', { name: 'Закрыть входящие' }).click()
   await expect(page.getByRole('button', { name: /5 Вопросы и сообщения/ })).toBeFocused()
   await expect.poll(() => page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)).toBe(0)
+})
+
+test('trainer switches day-grid density from schedule and profile settings', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page)
+  await page.goto('/today?date=2026-09-24')
+
+  const timeline = page.locator('.schedule-v2-timeline')
+  const grid = timeline.locator('.day-grid')
+  await expect(grid).toHaveCSS('height', `${24 * 56}px`)
+  await timeline.evaluate((element) => { element.scrollTop = 500 })
+  const before = await timeline.evaluate((element) => ({ scrollTop: element.scrollTop, height: element.clientHeight }))
+
+  await page.getByRole('button', { name: 'Настройки расписания' }).click()
+  await page.getByRole('menuitem', { name: 'Компактная сетка' }).click()
+  await expect(page.locator('.schedule-density-compact')).toBeVisible()
+  await expect(grid).toHaveCSS('height', `${24 * 44}px`)
+  const after = await timeline.evaluate((element) => ({ scrollTop: element.scrollTop, height: element.clientHeight }))
+  expect((before.scrollTop + before.height / 2) / 56)
+    .toBeCloseTo((after.scrollTop + after.height / 2) / 44, 1)
+
+  await page.reload()
+  await expect(page.locator('.schedule-density-compact')).toBeVisible()
+  await page.goto('/profile/settings')
+  const densityGroup = page.getByRole('radiogroup', { name: 'Плотность временной сетки' })
+  await expect(densityGroup.getByRole('radio', { name: 'Компактная' })).toHaveAttribute('aria-checked', 'true')
+  await densityGroup.getByRole('radio', { name: 'Обычная' }).click()
+  await expect(densityGroup.getByRole('radio', { name: 'Обычная' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByText('Сохранено')).toBeVisible()
+
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.locator('.schedule-density-compact')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Четверг, 24 сентября' }).click()
+  await expect(page.locator('.schedule-v2-timeline .day-grid')).toHaveCSS('height', `${24 * 56}px`)
+
+  const screenshotPath = testInfo.outputPath('trainer-schedule-density-settings.png')
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await testInfo.attach('trainer-schedule-density-settings', { path: screenshotPath, contentType: 'image/png' })
 })
 
 test('inbox messages fail independently and all-messages back returns to the selected day', async ({ page }) => {

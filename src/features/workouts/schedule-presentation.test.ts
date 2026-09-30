@@ -100,6 +100,21 @@ describe('schedule presentation', () => {
     ])
   })
 
+  it('uses the compact hour scale without shrinking a tappable event below 44px', () => {
+    const events = layoutScheduleTimelineEvents([
+      workout({ id: '30m', startTime: '09:00', endTime: '09:30' }),
+      workout({ id: '45m', startTime: '10:00', endTime: '10:45' }),
+      workout({ id: '60m', startTime: '11:00', endTime: '12:00' }),
+      workout({ id: '90m', startTime: '13:00', endTime: '14:30' }),
+    ], 44, 44)
+    expect(events.map(({ workout: item, top, height }) => [item.id, top, height])).toEqual([
+      ['30m', 9 * 44, 44],
+      ['45m', 10 * 44, 44],
+      ['60m', 11 * 44, 44],
+      ['90m', 13 * 44, 66],
+    ])
+  })
+
   it('keeps three simultaneous workouts distinct and reuses a lane afterwards', () => {
     const events = layoutScheduleTimelineEvents([
       workout({ id: 'a', startTime: '14:00', endTime: '15:00' }),

@@ -12,6 +12,7 @@ export type BlockType = 'single' | 'group'
 export type BlockPreset = 'set' | 'circuit' | 'interval'
 
 export type AccountRole = 'trainer' | 'client'
+export type ScheduleDensity = 'comfortable' | 'compact'
 export type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
 export interface ChatThread {
@@ -97,6 +98,9 @@ interface SessionActorBase {
   experiments?: {
     trainerScheduleV2: boolean
     fitLime?: boolean
+  }
+  preferences?: {
+    scheduleDensity: ScheduleDensity
   }
 }
 

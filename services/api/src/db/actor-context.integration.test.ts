@@ -263,6 +263,7 @@ interface ActorRow extends QueryResultRow {
 
 interface ProfileRow extends QueryResultRow {
   first_name: string | null
+  schedule_density?: 'comfortable' | 'compact'
 }
 
 interface EnrollmentProfileRow extends QueryResultRow {
@@ -1895,6 +1896,28 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [ACTOR_ID],
         )
         expect(ownUpdate).toEqual([{ first_name: 'Updated actor' }])
+
+        const ownPreferenceUpdate = await client.query<ProfileRow>(
+          `
+            update public.profiles
+            set schedule_density = 'compact'
+            where id = $1
+            returning schedule_density
+          `,
+          [ACTOR_ID],
+        )
+        expect(ownPreferenceUpdate).toEqual([{ schedule_density: 'compact' }])
+
+        const hiddenPreferenceUpdate = await client.query<ProfileRow>(
+          `
+            update public.profiles
+            set schedule_density = 'compact'
+            where id = $1
+            returning schedule_density
+          `,
+          [OTHER_ACTOR_ID],
+        )
+        expect(hiddenPreferenceUpdate).toEqual([])
 
         const visibleTrainers = await client.query(
           'select profile_id from public.trainers',

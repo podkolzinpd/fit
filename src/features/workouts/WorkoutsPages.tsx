@@ -81,9 +81,10 @@ import { readTodayDraft, todayDraftKey } from './today-draft'
 import { trainerHomeContext } from './trainer-home-context'
 import { trainerActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 import { cloneWorkoutTemplate } from '../../data/repositories/workout-templates.repository'
+import { SCHEDULE_HOUR_HEIGHT, useScheduleDensityPreference } from '../../app/schedule-density'
 
 const HOURS = Array.from({ length: 24 }, (_, index) => index)
-const HOUR_HEIGHT = 56
+const HOUR_HEIGHT = SCHEDULE_HOUR_HEIGHT.comfortable
 export const WORKOUT_HISTORY_PAGE_SIZE = 20
 
 const LIVE_SET_KEYBOARD_GUTTER = 16
@@ -122,7 +123,7 @@ function safeScheduleDate(value: string | null): LocalDate | null {
   try { return localDate(value) } catch { return null }
 }
 
-function useTrainerScheduleModel(forceDayView = false) {
+function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT) {
   const { workouts: workoutsRepository } = useDataBackend()
   const [params, setParams] = useSearchParams()
   const { actor } = useAuth()
@@ -194,10 +195,10 @@ function useTrainerScheduleModel(forceDayView = false) {
     scrollRef.current.scrollTop = scheduleTimelineScrollTop(
       focusMinutes,
       scrollRef.current.clientHeight,
-      HOUR_HEIGHT,
+      hourHeight,
     )
     autoScrolledDateRef.current = selected
-  }, [actor?.timezone, isDayView, query.isError, query.isLoading, selected, timed])
+  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed])
 
   const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
 
@@ -620,11 +621,13 @@ function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError
 
 function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean }) {
   useScheduleV2MinuteTicker()
+  const densityPreference = useScheduleDensityPreference()
+  const hourHeight = SCHEDULE_HOUR_HEIGHT[densityPreference.density]
   const {
     actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
     overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
     query, itemsByDay, timed, untimed, todayDisabled,
-  } = useTrainerScheduleModel(forceDayView)
+  } = useTrainerScheduleModel(forceDayView, hourHeight)
   const workspace = useTrainerWorkspace(isDayView)
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const queryClient = useQueryClient()
@@ -646,8 +649,20 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const restoreOnboardingFocus = useCallback(() => onboardingTriggerRef.current?.focus(), [])
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
-  const timelineEvents = layoutScheduleTimelineEvents(timed, HOUR_HEIGHT)
-  const timelineHeight = Math.max(HOURS.length * HOUR_HEIGHT, ...timelineEvents.map((event) => event.top + event.height + 8))
+  const timelineEvents = layoutScheduleTimelineEvents(timed, hourHeight, densityPreference.density === 'compact' ? 44 : 54)
+  const timelineHeight = Math.max(HOURS.length * hourHeight, ...timelineEvents.map((event) => event.top + event.height + 8))
+  const previousHourHeightRef = useRef(hourHeight)
+
+  useLayoutEffect(() => {
+    const previousHourHeight = previousHourHeightRef.current
+    if (previousHourHeight === hourHeight) return
+    const viewport = scrollRef.current
+    if (viewport) {
+      const centeredHour = (viewport.scrollTop + viewport.clientHeight / 2) / previousHourHeight
+      viewport.scrollTop = Math.max(0, centeredHour * hourHeight - viewport.clientHeight / 2)
+    }
+    previousHourHeightRef.current = hourHeight
+  }, [hourHeight, scrollRef])
   const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
   const periodLabel = scheduleV2Range(weekStart, periodEnd)
@@ -721,6 +736,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     { label: 'Сегодня', disabled: todayDisabled, onClick: () => openDay(today) },
     { label: 'Выбрать дату', onClick: openDatePicker },
     { label: isTwoWeekView ? 'К 2 неделям' : 'К неделе', onClick: () => showOverview(weekStart) },
+    ...(isDayView ? [{
+      label: densityPreference.density === 'compact' ? 'Обычная сетка' : 'Компактная сетка',
+      disabled: densityPreference.status === 'saving',
+      onClick: () => void densityPreference.save(densityPreference.density === 'compact' ? 'comfortable' : 'compact'),
+    }] : []),
     { label: 'Шаблоны тренировок', onClick: () => navigate('/schedule/templates') },
     { label: 'Профиль', onClick: () => navigate('/profile') },
     { label: 'Настройки', onClick: () => navigate('/profile/settings') },
@@ -752,7 +772,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   </section>
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}`}
     title="Расписание"
     hideTitle
   >
@@ -765,6 +785,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {fitLimeToday && daySummary}
     {homeActions}
     {!fitLimeToday && daySummary}
+    {densityPreference.status === 'error' && <p className="schedule-v2-density-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {!isDayView ? <>
         <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
@@ -801,12 +822,12 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
-            {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes) ? ' is-near-current-time' : ''}`} style={{ top: hour * HOUR_HEIGHT }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
-            {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * HOUR_HEIGHT }}><time>{currentTime}</time><span /></div>}
+            {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
+            {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * hourHeight }}><time>{currentTime}</time><span /></div>}
             <div className="schedule-v2-event-layer">
             {timelineEvents.map(({ workout, top, height, column, columns }) => {
               const status = scheduleEventStatus(workout, today)
-              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
+              return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
                 <span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}
