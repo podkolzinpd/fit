@@ -48,16 +48,17 @@ describe('TrainerFinancePage', () => {
   it('shows remaining sessions, payment balance and existing payments', async () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Персональные тренировки' })).toBeVisible()
-    expect(screen.getByText('8')).toBeVisible()
-    expect(screen.getByText(/Осталось оплатить 15.*000/)).toBeVisible()
+    expect(screen.getByText('8 из 10')).toBeVisible()
+    expect(screen.getByText(/К оплате 15.*000/)).toBeVisible()
     expect(screen.getAllByText(/10.*000/).length).toBeGreaterThan(0)
+    expect(screen.getByText('1 сентября 2026 г.')).not.toBeVisible()
   })
 
   it('creates a package with opening sessions and payment in kopecks', async () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
-    await user.click(screen.getByRole('button', { name: 'Новый абонемент' }))
+    await user.click(screen.getByRole('button', { name: 'Новый' }))
     await user.clear(screen.getByLabelText('Стоимость, ₽'))
     await user.type(screen.getByLabelText('Стоимость, ₽'), '25000')
     await user.clear(screen.getByLabelText('Уже оплачено, ₽'))
@@ -70,6 +71,7 @@ describe('TrainerFinancePage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByText('Проведённые занятия'))
     await user.selectOptions(screen.getByLabelText('Учёт занятия за 5 сентября 2026 г.'), 'free')
     await waitFor(() => expect(finance.updateSession).toHaveBeenCalledWith(sessionId, {
       expectedVersion: 1, disposition: 'free', packageId: null, comment: null,
