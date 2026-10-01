@@ -89,7 +89,7 @@ export function TrainerFinanceOverviewView({ month, data, loading = false, error
           <p><span>Требуют внимания сейчас</span><strong>{data.attentionCount}</strong></p>
         </section>
         <div className="finance-filter-row" role="group" aria-label="Фильтр клиентов">{FILTERS.map((item) => <button key={item.id} type="button" className={filter === item.id ? 'is-active' : ''} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}</div>
-        <div className="finance-overview-list">{clients.map((client) => <Link className={`card finance-overview-client${client.needsAttention ? ' needs-attention' : ''}`} to={`/clients/${client.clientId}/finance`} key={client.clientId}><span><strong>{client.fullName}</strong>{client.archivedAt && <small>В архиве</small>}</span><span>{trainerFinanceClientLabel(client)}</span><ChevronRightIcon /></Link>)}</div>
+        <div className="finance-overview-list">{clients.map((client) => <Link className={`card finance-overview-client${client.needsAttention ? ' needs-attention' : ''}`} to={`/clients/${client.clientId}/finance`} state={{ financeBackTo: '/finance' }} key={client.clientId}><span><strong>{client.fullName}</strong>{client.archivedAt && <small>В архиве</small>}</span><span>{trainerFinanceClientLabel(client)}</span><ChevronRightIcon /></Link>)}</div>
         {clients.length === 0 && <p className="finance-empty">В этом разделе клиентов нет.</p>}
       </>}
     </AsyncView>

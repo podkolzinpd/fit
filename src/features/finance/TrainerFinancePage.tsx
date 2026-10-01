@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type {
@@ -141,6 +141,8 @@ const FINANCE_TABS: { id: FinanceTab; label: string }[] = [
 
 export function TrainerFinancePage() {
   const { clientId = '' } = useParams()
+  const location = useLocation()
+  const routeState: unknown = location.state
   const { actor } = useAuth()
   const { clients, trainerFinance, workouts } = useDataBackend()
   const queryClient = useQueryClient()
@@ -248,7 +250,11 @@ export function TrainerFinancePage() {
       </details>
     </article>
   }
-  return <Page title="Финансы" subtitle={client.data?.fullName} back={`/clients/${clientId}`} swipeBack className="trainer-finance-page">
+  const financeBackTo = routeState && typeof routeState === 'object'
+    && 'financeBackTo' in routeState && routeState.financeBackTo === '/finance'
+    ? '/finance'
+    : `/clients/${clientId}`
+  return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
       {packageEditor && <PackageForm current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate(draft)} />}
       {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}

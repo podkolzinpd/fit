@@ -27,9 +27,13 @@ const workouts = vi.hoisted(() => ({ saveCompleted: vi.fn() }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow' } as SessionActor }) }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ clients, trainerFinance: finance, workouts }) }))
 
-function renderPage() {
+function renderPage(financeBackTo?: '/finance') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<MemoryRouter initialEntries={[`/clients/${clientId}/finance`]}><QueryClientProvider client={queryClient}><Routes><Route path="/clients/:clientId/finance" element={<TrainerFinancePage />} /></Routes></QueryClientProvider></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={[{ pathname: `/clients/${clientId}/finance`, state: financeBackTo ? { financeBackTo } : undefined }]}><QueryClientProvider client={queryClient}><Routes>
+    <Route path="/clients/:clientId/finance" element={<TrainerFinancePage />} />
+    <Route path="/finance" element={<p>Общий финансовый кабинет</p>} />
+    <Route path="/clients/:clientId" element={<p>Профиль спортсмена</p>} />
+  </Routes></QueryClientProvider></MemoryRouter>)
 }
 
 describe('TrainerFinancePage', () => {
@@ -54,6 +58,22 @@ describe('TrainerFinancePage', () => {
     expect(screen.getByRole('tab', { name: 'Абонементы: 1' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Занятия: 1' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: 'Оплаты: 1' })).toHaveAttribute('aria-selected', 'false')
+  })
+
+  it('returns to the finance overview when opened from the finance cabinet', async () => {
+    const user = userEvent.setup()
+    renderPage('/finance')
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(screen.getByText('Общий финансовый кабинет')).toBeVisible()
+  })
+
+  it('returns to the athlete profile when opened directly from the profile', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(screen.getByText('Профиль спортсмена')).toBeVisible()
   })
 
   it('creates a package with opening sessions and payment in kopecks', async () => {
