@@ -2573,6 +2573,7 @@ function buildDomainWriter(error?: Error): {
 }
 
 const WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+const QUICK_START_CLIENT_ID = 'a18efab5-0530-4660-9798-79901fcddfeb'
 const WORKOUT_EXERCISE_ID = 'd40b742b-5d5b-41ab-91df-ed464414d034'
 const WORKOUT_SET_ID = 'ea8efab5-0530-4660-9798-79901fcddfeb'
 const WORKOUT_BLOCK_ID = '44c414cc-542b-4f29-a17f-b451e44fd778'
@@ -2592,6 +2593,8 @@ const OPERATION_IDS = {
 
 function buildWorkoutsWriter(error?: Error): {
   pilotWorkoutsWriter: PilotWorkoutsWriter
+  quickStart: ReturnType<typeof vi.fn>
+  cancelEmpty: ReturnType<typeof vi.fn>
   appendLiveExercise: ReturnType<typeof vi.fn>
   appendLiveSet: ReturnType<typeof vi.fn>
   cancelPlanned: ReturnType<typeof vi.fn>
@@ -2622,6 +2625,8 @@ function buildWorkoutsWriter(error?: Error): {
   const result = <Value>(value: Value) => error === undefined
     ? Promise.resolve(value)
     : Promise.reject(error)
+  const quickStart = vi.fn(() => result({ id: WORKOUT_ID, resumed: false }))
+  const cancelEmpty = vi.fn(() => result(2))
   const deletePlanned = vi.fn(() => result(3))
   const deleteWorkout = vi.fn(() => result(3))
   const cancelPlanned = vi.fn(() => result(2))
@@ -2678,6 +2683,8 @@ function buildWorkoutsWriter(error?: Error): {
   }))
   return {
     pilotWorkoutsWriter: {
+      quickStart,
+      cancelEmpty,
       submitFeedback,
       setReview,
       askQuestion,
@@ -2705,6 +2712,8 @@ function buildWorkoutsWriter(error?: Error): {
       setClientComment,
       startLive,
     },
+    quickStart,
+    cancelEmpty,
     appendLiveExercise,
     appendLiveSet,
     cancelPlanned,
@@ -4905,6 +4914,47 @@ describe('pilot post-workout commands', () => {
 
 describe('pilot live workout core commands', () => {
   const sessionToken = 's'.repeat(43)
+
+  it('quick-starts a live workout with a stable operation identity', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/v1/workouts/quick-start',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { clientId: QUICK_START_CLIENT_ID, operationId: OPERATION_IDS.start },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ workout: { id: WORKOUT_ID, resumed: false } })
+    expect(writer.quickStart).toHaveBeenCalledWith(sessionToken, QUICK_START_CLIENT_ID, OPERATION_IDS.start)
+  })
+
+  it('rejects quick-start without a valid operation ID', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: '/v1/workouts/quick-start',
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { clientId: QUICK_START_CLIENT_ID, operationId: 'invalid' },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(writer.quickStart).not.toHaveBeenCalled()
+  })
+
+  it('cancels an empty active workout through the bounded command', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'POST', url: `/v1/workouts/${WORKOUT_ID}/cancel-empty`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { expectedVersion: 1 },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ workout: { version: 2 } })
+    expect(writer.cancelEmpty).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, 1)
+  })
 
   it('starts, records, confirms and finishes with operation identities', async () => {
     const writer = buildWorkoutsWriter()

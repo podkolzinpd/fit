@@ -3176,6 +3176,40 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     return sendPilotCommand(reply, () => templates.archive(session, templateId, version), (nextVersion) => reply.header('cache-control', 'no-store').send({ template: { id: templateId, version: nextVersion } }))
   })
 
+  app.post('/v1/workouts/quick-start', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const body = request.body
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return reply.code(400).send({ error: 'invalid_request' })
+    const fields = body as Record<string, unknown>
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (typeof fields.operationId !== 'string' || !uuidPattern.test(fields.operationId)
+      || (fields.clientId !== null && fields.clientId !== undefined
+        && (typeof fields.clientId !== 'string' || !uuidPattern.test(fields.clientId)))) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (!writer) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => writer.quickStart(sessionToken, (fields.clientId as string | null | undefined) ?? null, fields.operationId as string),
+      (started) => reply.header('cache-control', 'no-store').send({ workout: started }))
+  })
+
+  app.post('/v1/workouts/:workoutId/cancel-empty', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const expectedVersion = readExpectedVersion(request.body)
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId) || expectedVersion === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (!writer) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => writer.cancelEmpty(sessionToken, workoutId, expectedVersion),
+      (version) => reply.header('cache-control', 'no-store').send({ workout: { version } }))
+  })
+
   app.post('/v1/workouts', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     if (sessionToken === undefined) {

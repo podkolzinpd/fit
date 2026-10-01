@@ -29,6 +29,8 @@ import {
   softDeleteWorkout,
   softDeletePlannedWorkout,
   startLiveWorkout,
+  quickStartLiveWorkout,
+  cancelEmptyLiveWorkout,
   submitWorkoutFeedback,
   setWorkoutReview,
   askWorkoutQuestion,
@@ -38,6 +40,7 @@ import {
   type PilotLiveCommandResult,
   type PilotLiveStructureResult,
   type SavedPilotWorkout,
+  type PilotQuickStartResult,
 } from './workout-commands.js'
 import type {
   WorkoutFeedbackRequest,
@@ -45,6 +48,8 @@ import type {
 } from './post-workout-request.js'
 
 export interface PilotWorkoutsWriter {
+  quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string): Promise<PilotQuickStartResult>
+  cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number): Promise<number>
   submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest): Promise<number>
   setReview(sessionToken: YandexActorSessionInput, workoutId: string, response: WorkoutTrainerResponseRequest): Promise<number>
   askQuestion(sessionToken: YandexActorSessionInput, workoutId: string, question: string, expectedVersion: number): Promise<number>
@@ -186,6 +191,14 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     work: Parameters<typeof withYandexActorSession<Result>>[2],
   ): Promise<Result> {
     return withYandexActorSession(this.pool, sessionToken, work)
+  }
+
+  quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string) {
+    return this.withSession(sessionToken, (client) => quickStartLiveWorkout(client, clientId, operationId))
+  }
+
+  cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number) {
+    return this.withSession(sessionToken, (client) => cancelEmptyLiveWorkout(client, workoutId, expectedVersion))
   }
 
   submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest) {

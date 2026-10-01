@@ -1920,6 +1920,6 @@ test('pilot calendar keeps workout review and save in the existing entry flow', 
   await expect(page).toHaveURL(/\/today\?view=compose$/)
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await page.goto('/today?classic=1#trainer-attention')
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Продолжить' })).toBeVisible()
 })
