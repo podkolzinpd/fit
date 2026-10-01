@@ -62,6 +62,7 @@ test('runs Chromium behavior scenarios in two isolated shards', () => {
 
 test('keeps the required app check stable while quality and coverage run in parallel', () => {
   assert.match(workflow, /app-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run build/)
+  assert.match(workflow, /app-quality:[\s\S]*- run: npm run db:types:check[\s\S]*- run: npm run build/)
   assert.match(workflow, /app-tests:[\s\S]*- run: npm run test:coverage/)
   assert.match(workflow, /app:\n    needs: \[app-quality, app-tests, frontend-infrastructure\]/)
   assert.match(workflow, /INFRA_RESULT: \$\{\{ needs\.frontend-infrastructure\.result \}\}/)
@@ -69,6 +70,14 @@ test('keeps the required app check stable while quality and coverage run in para
   assert.match(workflow, /QUALITY_RESULT: \$\{\{ needs\.app-quality\.result \}\}/)
   assert.match(workflow, /TESTS_RESULT: \$\{\{ needs\.app-tests\.result \}\}/)
   assert.match(workflow, /App checks failed: quality=\$QUALITY_RESULT tests=\$TESTS_RESULT/)
+})
+
+test('runs heavy legacy database checks only for relevant changes or a manual CI run', () => {
+  assert.match(workflow, /database:\n    needs: e2e-scope\n    if: needs\.e2e-scope\.outputs\.database_required == 'true'/)
+  assert.match(workflow, /database_required: \$\{\{ steps\.database-scope\.outputs\.required \}\}/)
+  assert.match(workflow, /id: database-scope\n\s+run: node scripts\/supabase-database-scope\.mjs "\$EVENT_NAME" "\$BASE_SHA" "\$HEAD_SHA"/)
+  assert.match(workflow, /EVENT_NAME: \$\{\{ github\.event_name \}\}/)
+  assert.match(workflow, /- run: supabase test db --local/)
 })
 
 test('waits for local auth readiness before auth-dependent E2E jobs', () => {

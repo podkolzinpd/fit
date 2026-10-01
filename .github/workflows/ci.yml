@@ -37,6 +37,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run db:types:check
       - run: npm run infra:policy:test
       - run: npm run frontend:hosting:test
       - run: npm run build
@@ -107,6 +108,8 @@ jobs:
       - run: npm --prefix services/api run check
 
   database:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.database_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,8 +127,6 @@ jobs:
       - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
       - run: supabase db reset --local
       - run: supabase test db --local
-      - name: Check generated database types
-        run: npm run db:types:check
 
   yandex-database:
     runs-on: ubuntu-latest
@@ -163,6 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       required: ${{ steps.scope.outputs.required }}
+      database_required: ${{ steps.database-scope.outputs.required }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -171,6 +173,13 @@ jobs:
         id: scope
         run: node scripts/e2e-scope.mjs "$BASE_SHA" "$HEAD_SHA"
         env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Detect legacy database changes
+        id: database-scope
+        run: node scripts/supabase-database-scope.mjs "$EVENT_NAME" "$BASE_SHA" "$HEAD_SHA"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
