@@ -99,57 +99,92 @@ test('trainer client finances keep details compact and disclose history on deman
   })
 
   const frame = page.locator('#finance-client-qa .phone-frame')
+  const resetFinanceScroll = async () => {
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await frame.locator('.content').evaluate((element) => { element.scrollTop = 0 })
+  }
   await expect(frame).toHaveClass(/trainer-finance-identity/)
-  const sessions = page.locator('.finance-sessions')
-  await expect(sessions).toHaveCSS('display', 'block')
-  const sessionSummaryBox = await sessions.locator(':scope > summary').boundingBox()
-  const sessionContentBox = await sessions.locator(':scope > .finance-disclosure-content').boundingBox()
-  expect(sessionSummaryBox && sessionContentBox).toBeTruthy()
-  expect(sessionContentBox!.y).toBeGreaterThanOrEqual(sessionSummaryBox!.y + sessionSummaryBox!.height)
-  expect(Math.abs(sessionContentBox!.x - sessionSummaryBox!.x)).toBeLessThanOrEqual(1)
-  expect(Math.abs(sessionContentBox!.width - sessionSummaryBox!.width)).toBeLessThanOrEqual(1)
-  await expect(page.getByText('30 000 ₽', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('История абонементов')).not.toBeVisible()
+  const tabs = page.getByRole('tablist', { name: 'Раздел финансов клиента' })
+  const tabButtons = tabs.getByRole('tab')
+  await expect(tabButtons).toHaveCount(3)
+  const tabBoxes = await Promise.all((await tabButtons.all()).map((tab) => tab.boundingBox()))
+  expect(tabBoxes.every((box) => box && box.height >= 44)).toBe(true)
+  const tabHeights = tabBoxes.map((box) => box?.height ?? 0)
+  expect(Math.max(...tabHeights) - Math.min(...tabHeights)).toBeLessThanOrEqual(1)
+  await expect(page.getByRole('tab', { name: 'Абонементы: 5' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('[data-finance-tab="packages"]')).toBeVisible()
   expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  const sessionRows = page.locator('.finance-session-row')
-  await expect(sessionRows).toHaveCount(2)
-  const expectSessionRowsToFit = async () => { for (const row of await sessionRows.all()) {
-    const rowBox = await row.boundingBox()
-    const dateBox = await row.locator('strong').boundingBox()
-    const statusBox = await row.locator(':scope > small').boundingBox()
-    const menuBox = await row.locator('.overflow-menu').boundingBox()
-    expect(rowBox && dateBox && statusBox && menuBox).toBeTruthy()
-    const overlap = (first: NonNullable<typeof dateBox>, second: NonNullable<typeof dateBox>) => (
-      first.x < second.x + second.width && first.x + first.width > second.x
-      && first.y < second.y + second.height && first.y + first.height > second.y
-    )
-    expect(overlap(dateBox!, statusBox!)).toBe(false)
-    expect(overlap(dateBox!, menuBox!)).toBe(false)
-    expect(overlap(statusBox!, menuBox!)).toBe(false)
-    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width + 1)
-  } }
-  await expectSessionRowsToFit()
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
+  await resetFinanceScroll()
   await expectVisualBaseline(page, `trainer-finance-client-${profile}-${process.platform}.png`)
+
+  const expectRowsInsideContainer = async (selector: string) => {
+    for (const row of await page.locator(selector).all()) {
+      const rowBox = await row.boundingBox()
+      expect(rowBox).toBeTruthy()
+      for (const child of await row.locator(':scope > *').all()) {
+        const childBox = await child.boundingBox()
+        if (!childBox) continue
+        expect(childBox.x).toBeGreaterThanOrEqual(rowBox!.x - 1)
+        expect(childBox.x + childBox.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width + 1)
+        expect(childBox.y).toBeGreaterThanOrEqual(rowBox!.y - 1)
+        expect(childBox.y + childBox.height).toBeLessThanOrEqual(rowBox!.y + rowBox!.height + 1)
+      }
+    }
+  }
+
+  await page.getByRole('tab', { name: 'Занятия: 2' }).click()
+  await resetFinanceScroll()
+  const sessions = page.locator('[data-finance-tab="sessions"]')
+  await expect(sessions).toBeVisible()
+  await expect(sessions.locator('.finance-session-row')).toHaveCount(2)
+  await expectRowsInsideContainer('.finance-session-row')
+  await expectVisualBaseline(page, `trainer-finance-client-sessions-${profile}-${process.platform}.png`)
+
+  await page.getByRole('tab', { name: 'Оплаты: 2' }).click()
+  await resetFinanceScroll()
+  const payments = page.locator('[data-finance-tab="payments"]')
+  await expect(payments).toBeVisible()
+  await expect(payments.locator('.finance-payment')).toHaveCount(2)
+  await expectRowsInsideContainer('.finance-payment')
+  await expectVisualBaseline(page, `trainer-finance-client-payments-${profile}-${process.platform}.png`)
 
   if (testInfo.project.name === 'visual-client-390') {
     await page.setViewportSize({ width: 320, height: 780 })
     await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
-    await expectSessionRowsToFit()
-    expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-    await expectVisualBaseline(page, `trainer-finance-client-mobile-320-${process.platform}.png`)
+    for (const [tabName, screenshot] of [
+      ['Абонементы: 5', `trainer-finance-client-mobile-320-${process.platform}.png`],
+      ['Занятия: 2', `trainer-finance-client-sessions-mobile-320-${process.platform}.png`],
+      ['Оплаты: 2', `trainer-finance-client-payments-mobile-320-${process.platform}.png`],
+    ] as const) {
+      await page.getByRole('tab', { name: tabName }).click()
+      await resetFinanceScroll()
+      expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      if (tabName === 'Занятия: 2') await expectRowsInsideContainer('.finance-session-row')
+      if (tabName === 'Оплаты: 2') await expectRowsInsideContainer('.finance-payment')
+      await expectVisualBaseline(page, screenshot)
+    }
     await page.setViewportSize({ width: 390, height: 844 })
     await frame.evaluate((element) => { element.removeAttribute('style') })
   }
 
-  const addManualSession = sessions.getByRole('button', { name: 'Добавить занятие' })
+  await page.getByRole('tab', { name: 'Занятия: 2' }).click()
+  await resetFinanceScroll()
+  const addManualSession = sessions.getByRole('button', { name: 'Добавить', exact: true })
   await addManualSession.scrollIntoViewIfNeeded()
   await addManualSession.click()
-  await expect(sessions.getByRole('button', { name: 'Закрыть форму' })).toBeVisible()
+  await expect(sessions.getByRole('button', { name: 'Отмена' })).toBeVisible()
   await expect(sessions.getByLabel('Дата занятия')).toBeVisible()
   await expect(sessions.getByLabel('Учёт')).toBeVisible()
+  const manualActions = sessions.locator('.finance-manual-session .actions')
+  const manualFields = sessions.locator('.finance-manual-session .field')
+  const manualActionsBox = await manualActions.boundingBox()
+  const manualLastFieldBox = await manualFields.last().boundingBox()
+  expect(manualActionsBox && manualLastFieldBox).toBeTruthy()
+  expect(manualActionsBox!.y).toBeGreaterThanOrEqual(manualLastFieldBox!.y + manualLastFieldBox!.height)
+  expect(await manualActions.getByRole('button').evaluateAll((buttons) => buttons.every((button) => button.getBoundingClientRect().height >= 44))).toBe(true)
   expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  await sessions.getByRole('button', { name: 'Закрыть форму' }).click()
+  await sessions.getByRole('button', { name: 'Отмена' }).click()
 
   await page.evaluate(async () => {
     const modulePath = '/e2e/finance-client-harness.tsx'
@@ -184,6 +219,21 @@ test('trainer client finances keep details compact and disclose history on deman
     await page.setViewportSize({ width: 390, height: 844 })
     await frame.evaluate((element) => { element.removeAttribute('style') })
   }
+
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/finance-client-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./finance-client-harness')
+    harness.mountFinanceClientHarness('payment')
+  })
+  await expect(page.getByRole('heading', { name: 'Добавить оплату' })).toBeVisible()
+  const paymentActions = page.locator('.finance-form > .actions')
+  const paymentLastField = page.locator('.finance-form > .field').last()
+  const paymentActionsBox = await paymentActions.boundingBox()
+  const paymentFieldBox = await paymentLastField.boundingBox()
+  expect(paymentActionsBox && paymentFieldBox).toBeTruthy()
+  expect(paymentActionsBox!.y).toBeGreaterThanOrEqual(paymentFieldBox!.y + paymentFieldBox!.height)
+  expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await expectVisualBaseline(page, `trainer-finance-payment-edit-${profile}-${process.platform}.png`)
 
 })
 
