@@ -1310,6 +1310,23 @@ test('live: удаление подхода и наследование факт
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
   await page.locator('.live-exercise-collapsed').click()
   await expect(page.locator('.live-set')).toHaveCount(1)
+
+  // Если отдельный confirm не дошёл после уже успешного сохранения значений,
+  // «Повторить» обязано закончить подтверждение, а не просто снять баннер.
+  // Создаём новый незавершённый подход после проверки удаления: подтверждённые
+  // подходы намеренно нельзя удалять через меню текущего подхода.
+  await page.getByRole('button', { name: '＋ Подход' }).click()
+  const retriedWeight = page.locator('.live-set:not(.confirmed)').getByLabel('Фактический вес')
+  await retriedWeight.fill('105')
+  await page.route('**/rest/v1/rpc/confirm_live_set', (route) => route.abort('failed'))
+  await page.getByRole('button', { name: 'Готово, отдых' }).last().click()
+  await expect(page.getByText('Результаты сохранены на телефоне')).toBeVisible()
+  await page.unroute('**/rest/v1/rpc/confirm_live_set')
+  await page.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
+  await expect(page.locator('.live-set.confirmed')).toHaveCount(2)
+  await page.reload()
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('105 кг')
 })
 
 test('live: «Готово» без ввода факта — подход считается выполненным по плану', async ({ page }) => {
