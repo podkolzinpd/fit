@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -40,6 +41,31 @@ function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: 
       : <span className="athlete-achievement-check" aria-hidden="true">✓</span>}
     <strong>{item.threshold}</strong>
   </span>
+}
+
+function AchievementDetail({ item, onClose, returnFocusTo }: { item: AthleteAchievement; onClose: () => void; returnFocusTo: RefObject<HTMLButtonElement | null> }) {
+  const titleId = useId()
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    closeRef.current?.focus()
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') { event.preventDefault(); onClose() }
+      if (event.key === 'Tab') { event.preventDefault(); closeRef.current?.focus() }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown); returnFocusTo.current?.focus() }
+  }, [onClose, returnFocusTo])
+
+  const host = document.querySelector('.phone-frame') ?? document.body
+  return createPortal(<div className="athlete-achievement-detail-overlay" onClick={onClose}>
+    <section className="athlete-achievement-detail" role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(event) => event.stopPropagation()}>
+      <div className="athlete-achievement-detail-heading"><h2 id={titleId}>{item.title}</h2><button ref={closeRef} type="button" aria-label="Закрыть подробности ачивки" onClick={onClose}><CloseIcon /></button></div>
+      <Badge item={item} />
+      <p>{item.description}</p>
+      <strong>{item.earnedOn ? `Получена ${formatLocalDate(item.earnedOn)}` : `Прогресс: ${item.progress} из ${item.threshold}`}</strong>
+    </section>
+  </div>, host)
 }
 
 function useAchievements(clientId: string | undefined) {
@@ -95,6 +121,9 @@ export function AthleteAchievementPreview({ clientId }: { clientId: string }) {
 }
 
 export function AthleteAchievementsPage() {
+  const [selected, setSelected] = useState<AthleteAchievement | null>(null)
+  const selectedButton = useRef<HTMLButtonElement>(null)
+  const closeSelected = useCallback(() => setSelected(null), [])
   const { clients: clientsRepository } = useDataBackend()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   const { query, achievements } = useAchievements(mine.data?.id)
@@ -104,11 +133,12 @@ export function AthleteAchievementsPage() {
       <p className="athlete-achievements-count">Получено {earned} из 8</p>
       {(['workouts', 'weeks'] as const).map((kind) => <section className="athlete-achievements-group" key={kind} aria-label={kind === 'workouts' ? 'Тренировки' : 'Регулярность'}>
         <h2>{kind === 'workouts' ? 'Тренировки' : 'Регулярность'}</h2>
-        <div className="athlete-achievements-grid">{achievements.filter((item) => item.kind === kind).map((item) => <article className="athlete-achievement-card" key={item.id}>
+        <div className="athlete-achievements-grid">{achievements.filter((item) => item.kind === kind).map((item) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? 'Получена' : `Прогресс: ${item.progress} из ${item.threshold}`}. Открыть подробности`}>
           <Badge item={item} />
-          <div><h3>{item.title}</h3><p>{item.description}</p><small>{item.earnedOn ? `Получена ${formatLocalDate(item.earnedOn)}` : item.nearest ? `${item.progress} из ${item.threshold}` : 'Пока не получена'}</small></div>
-        </article>)}</div>
+          <span className="athlete-achievement-card-title">{item.title}</span>
+        </button>)}</div>
       </section>)}
+      {selected && <AchievementDetail item={selected} onClose={closeSelected} returnFocusTo={selectedButton} />}
     </>}
   </Page>
 }
