@@ -11,6 +11,7 @@ const finance: ClientFinanceSummary = { trainers: [
     trainerName: 'Анастасия Константинопольская-Романова',
     packages: [{
       id: '34df7b20-a0b5-4627-bd98-d4a174625723',
+      kind: 'session_pack',
       title: 'Персональные тренировки с очень длинным названием',
       sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8,
       priceCents: 2500000, paidCents: 1000000, dueCents: 1500000,
@@ -18,6 +19,7 @@ const finance: ClientFinanceSummary = { trainers: [
       packageStatus: 'active', paymentStatus: 'partial',
     }, {
       id: '44df7b20-a0b5-4627-bd98-d4a174625724',
+      kind: 'session_pack',
       title: 'Следующий абонемент', sessionsTotal: 12, sessionsUsed: 0,
       sessionsRemaining: 12, priceCents: 3000000, paidCents: 3000000, dueCents: 0,
       startsOn: '2026-12-01', endsOn: null, paymentDueOn: null,

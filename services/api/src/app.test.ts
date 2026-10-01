@@ -917,7 +917,7 @@ describe('trainer finance', () => {
   const financeSessionId = '8938c8e0-3856-469b-b743-ab5942ce4564'
   const financePackage: TrainerFinancePackage = {
     id: packageId, clientId, trainerId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2',
-    title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2,
+    kind: 'session_pack', title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2,
     sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000,
     dueCents: 1500000, startsOn: '2026-09-01', endsOn: '2026-11-30',
     paymentDueOn: '2026-09-10', comment: null, packageStatus: 'active',
@@ -949,7 +949,7 @@ describe('trainer finance', () => {
     trainerId: financePackage.trainerId,
     trainerName: 'Ирина',
     packages: [{
-      id: packageId, title: 'Персональные тренировки', sessionsTotal: 10,
+      id: packageId, kind: 'session_pack', title: 'Персональные тренировки', sessionsTotal: 10,
       sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000,
       paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01',
       endsOn: '2026-11-30', paymentDueOn: '2026-09-10', packageStatus: 'active',
@@ -1005,7 +1005,7 @@ describe('trainer finance', () => {
   it('creates a package with opening balances through a read-write session', async () => {
     const { service: pilotTrainerFinance, createPackage } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
-    const draft = { title: 'Персональные тренировки', sessionsTotal: 10,
+    const draft = { kind: 'session_pack' as const, title: 'Персональные тренировки', sessionsTotal: 10,
       openingUsedSessions: 2, priceCents: 2500000, openingPaidCents: 1000000,
       startsOn: '2026-09-01', endsOn: '2026-11-30', paymentDueOn: '2026-09-10',
       comment: null }
@@ -1019,9 +1019,35 @@ describe('trainer finance', () => {
     const { service: pilotTrainerFinance, createPackage } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
     const response = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: {
-      title: 'Персональные тренировки', sessionsTotal: 10, openingUsedSessions: 0,
+      kind: 'session_pack', title: 'Персональные тренировки', sessionsTotal: 10, openingUsedSessions: 0,
       priceCents: 1000000, openingPaidCents: 1100000, startsOn: '2026-09-01',
       endsOn: null, paymentDueOn: null, comment: null,
+    } })
+    expect(response.statusCode).toBe(400)
+    expect(createPackage).not.toHaveBeenCalled()
+  })
+
+  it('creates online coaching without a session balance', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = {
+      kind: 'online_coaching' as const, title: 'Онлайн-сопровождение',
+      sessionsTotal: 0, openingUsedSessions: 0, priceCents: 1200000,
+      openingPaidCents: 0, startsOn: '2026-10-01', endsOn: '2026-10-31',
+      paymentDueOn: null, comment: null,
+    }
+    const response = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: draft })
+    expect(response.statusCode).toBe(201)
+    expect(createPackage).toHaveBeenCalledWith(session, clientId, draft)
+  })
+
+  it('requires an end date for online coaching', async () => {
+    const { service: pilotTrainerFinance, createPackage } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: {
+      kind: 'online_coaching', title: 'Онлайн-сопровождение', sessionsTotal: 0,
+      openingUsedSessions: 0, priceCents: 1200000, openingPaidCents: 0,
+      startsOn: '2026-10-01', endsOn: null, paymentDueOn: null, comment: null,
     } })
     expect(response.statusCode).toBe(400)
     expect(createPackage).not.toHaveBeenCalled()

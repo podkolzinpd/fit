@@ -16,7 +16,7 @@ const workoutId = '77d5776a-337c-466e-a3e6-e098adb03cc7'
 const client: Client = { id: clientId, canArchive: true, hasAccount: true, fullName: 'Анна Смирнова', canonicalFullName: 'анна смирнова', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: 1 }
 const bundle: TrainerFinanceClientBundle = {
   clientId,
-  packages: [{ id: packageId, clientId, trainerId, title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01', endsOn: null, paymentDueOn: '2026-09-10', comment: null, packageStatus: 'active', paymentStatus: 'overdue', closedAt: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
+  packages: [{ id: packageId, clientId, trainerId, kind: 'session_pack', title: 'Персональные тренировки', sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01', endsOn: null, paymentDueOn: '2026-09-10', comment: null, packageStatus: 'active', paymentStatus: 'overdue', closedAt: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
   payments: [{ id: paymentId, packageId, amountCents: 1000000, receivedOn: '2026-09-01', source: 'manual', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-01T10:00:00.000Z', updatedAt: '2026-09-01T10:00:00.000Z' }],
   sessions: [{ id: sessionId, packageId, workoutId, disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z' }],
 }
@@ -55,7 +55,7 @@ describe('TrainerFinancePage', () => {
     expect(screen.getByText('8 из 10')).toBeVisible()
     expect(screen.getByText(/К оплате 15.*000/)).toBeVisible()
     expect(screen.getByText('1 сентября 2026 г.')).not.toBeVisible()
-    expect(screen.getByRole('tab', { name: 'Абонементы: 1' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Услуги: 1' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Занятия: 1' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: 'Оплаты: 1' })).toHaveAttribute('aria-selected', 'false')
   })
@@ -80,7 +80,7 @@ describe('TrainerFinancePage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
-    await user.click(screen.getByRole('button', { name: 'Новый' }))
+    await user.click(screen.getByRole('button', { name: 'Новая' }))
     await user.clear(screen.getByLabelText('Стоимость, ₽'))
     await user.type(screen.getByLabelText('Стоимость, ₽'), '25000')
     await user.clear(screen.getByLabelText('Уже оплачено, ₽'))
@@ -129,7 +129,7 @@ describe('TrainerFinancePage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
-    await user.click(screen.getByRole('button', { name: 'Действия с абонементом Персональные тренировки' }))
+    await user.click(screen.getByRole('button', { name: 'Действия с услугой Персональные тренировки' }))
     await user.click(screen.getByRole('menuitem', { name: 'Продлить' }))
     expect(screen.getByRole('heading', { name: 'Продление' })).toBeVisible()
     expect(screen.getByLabelText('Название')).toHaveValue('Персональные тренировки')
@@ -141,5 +141,24 @@ describe('TrainerFinancePage', () => {
       title: 'Персональные тренировки', sessionsTotal: 10, openingUsedSessions: 0, priceCents: 2500000,
     })))
     expect(finance.updatePackage).not.toHaveBeenCalled()
+  })
+
+  it('creates online coaching for a period without session fields', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Новая' }))
+    await user.selectOptions(screen.getByLabelText('Тип'), 'online_coaching')
+    expect(screen.queryByLabelText('Всего занятий')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Уже проведено')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Название')).toHaveValue('Онлайн-сопровождение')
+    await user.clear(screen.getByLabelText('Стоимость, ₽'))
+    await user.type(screen.getByLabelText('Стоимость, ₽'), '12000')
+    await user.type(screen.getByLabelText('Окончание'), '2026-10-31')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.createPackage).toHaveBeenCalledWith(clientId, expect.objectContaining({
+      kind: 'online_coaching', sessionsTotal: 0, openingUsedSessions: 0,
+      priceCents: 1200000, endsOn: '2026-10-31',
+    })))
   })
 })

@@ -1,7 +1,8 @@
-import type { TrainerFinancePackageStatus, TrainerFinancePaymentStatus } from './trainer-finance.repository'
+import type { TrainerFinancePackageKind, TrainerFinancePackageStatus, TrainerFinancePaymentStatus } from './trainer-finance.repository'
 
 export interface ClientFinancePackage {
   id: string
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   sessionsUsed: number

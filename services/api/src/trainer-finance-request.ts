@@ -37,8 +37,9 @@ function text(value: unknown, maximum: number, nullable = false): string | null 
 export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePackageDraft | undefined {
   const input = record(value)
   if (!input) return undefined
+  const kind = input.kind
   const title = text(input.title, 120)
-  const sessionsTotal = integer(input.sessionsTotal, 1, 10000)
+  const sessionsTotal = integer(input.sessionsTotal, 0, 10000)
   const openingUsedSessions = integer(input.openingUsedSessions, 0, 10000)
   const priceCents = integer(input.priceCents, 0, 100000000000)
   const openingPaidCents = integer(input.openingPaidCents, 0, 100000000000)
@@ -46,12 +47,15 @@ export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePa
   const endsOn = date(input.endsOn, true)
   const paymentDueOn = date(input.paymentDueOn, true)
   const comment = text(input.comment, 2000, true)
-  if (typeof title !== 'string' || sessionsTotal === undefined || openingUsedSessions === undefined
-    || openingUsedSessions > sessionsTotal || priceCents === undefined
+  if ((kind !== 'session_pack' && kind !== 'online_coaching')
+    || typeof title !== 'string' || sessionsTotal === undefined || openingUsedSessions === undefined
+    || (kind === 'session_pack' && (sessionsTotal < 1 || openingUsedSessions > sessionsTotal))
+    || (kind === 'online_coaching' && (sessionsTotal !== 0 || openingUsedSessions !== 0 || endsOn === null))
+    || priceCents === undefined
     || openingPaidCents === undefined || openingPaidCents > priceCents || typeof startsOn !== 'string'
     || endsOn === undefined || paymentDueOn === undefined || comment === undefined
     || (endsOn !== null && endsOn < startsOn)) return undefined
-  return { title, sessionsTotal, openingUsedSessions, priceCents, openingPaidCents,
+  return { kind, title, sessionsTotal, openingUsedSessions, priceCents, openingPaidCents,
     startsOn, endsOn, paymentDueOn, comment }
 }
 
@@ -62,6 +66,7 @@ export function readTrainerFinancePackageUpdate(value: unknown): TrainerFinanceP
   const expectedVersion = integer(input.expectedVersion, 1, Number.MAX_SAFE_INTEGER)
   if (!base || expectedVersion === undefined) return undefined
   return {
+    kind: base.kind,
     title: base.title,
     sessionsTotal: base.sessionsTotal,
     priceCents: base.priceCents,

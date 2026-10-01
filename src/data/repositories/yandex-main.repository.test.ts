@@ -88,7 +88,7 @@ describe('Yandex main repository', () => {
 
   it('reads and changes trainer finance only through the Yandex API', async () => {
     const financePackage = {
-      id: financePackageId, clientId, trainerId: actor.userId, title: '10 тренировок',
+      id: financePackageId, clientId, trainerId: actor.userId, kind: 'session_pack', title: '10 тренировок',
       sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8,
       priceCents: 2500000, paidCents: 1000000, dueCents: 1500000,
       startsOn: '2026-09-01', endsOn: null, paymentDueOn: '2026-09-10', comment: null,
@@ -121,7 +121,7 @@ describe('Yandex main repository', () => {
     await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1 })
     await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, packages: [{ sessionsRemaining: 8 }] })
     await repository.trainerFinance.createPackage(clientId, {
-      title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,
+      kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,
       priceCents: 2500000, openingPaidCents: 1000000, startsOn: '2026-09-01',
       endsOn: null, paymentDueOn: '2026-09-10', comment: null,
     })
@@ -151,7 +151,7 @@ describe('Yandex main repository', () => {
       trainerId: actor.userId,
       trainerName: 'Ирина',
       packages: [{
-        id: financePackageId, title: '10 тренировок', sessionsTotal: 10,
+        id: financePackageId, kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10,
         sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000,
         paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01',
         endsOn: null, paymentDueOn: '2026-09-10', packageStatus: 'active',

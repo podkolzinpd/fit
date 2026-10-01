@@ -1995,8 +1995,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       try {
         const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query<JsonResultRow>(
-            `select public.create_trainer_finance_package(
-              $1, 'Персональные тренировки', 10, 2, 2500000, 1000000,
+            `select public.create_trainer_finance_service(
+              $1, 'session_pack', 'Персональные тренировки', 10, 2, 2500000, 1000000,
               date '2026-09-01', date '2026-11-30', date '2026-09-10', 'Внутренняя заметка'
             ) as result`,
             [CLIENT_ID],
@@ -2004,6 +2004,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(created[0]?.result).toMatchObject({
           clientId: CLIENT_ID,
           trainerId: ACTOR_ID,
+          kind: 'session_pack',
           sessionsTotal: 10,
           sessionsUsed: 2,
           sessionsRemaining: 8,
@@ -2026,7 +2027,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
         const bundle = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query<JsonResultRow>(
-            'select public.list_trainer_finance_client($1) as result',
+            'select public.list_trainer_finance_client_v2($1) as result',
             [CLIENT_ID],
           ))
         expect(bundle[0]?.result).toMatchObject({
@@ -2035,7 +2036,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         })
 
         const clientFinance = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
-          client.query<JsonResultRow>('select public.list_client_finance_self() as result'))
+          client.query<JsonResultRow>('select public.list_client_finance_self_v2() as result'))
         expect(clientFinance[0]?.result).toMatchObject({
           trainers: [{
             trainerId: ACTOR_ID,
@@ -2056,16 +2057,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(serializedClientFinance).not.toContain('Доплата')
 
         const unrelatedClient = await withActorTransaction(runtimePool, LINK_ACTOR_ID, (client) =>
-          client.query<JsonResultRow>('select public.list_client_finance_self() as result'))
+          client.query<JsonResultRow>('select public.list_client_finance_self_v2() as result'))
         expect(unrelatedClient[0]?.result).toEqual({ trainers: [] })
 
         await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
-          client.query('select public.list_client_finance_self()')))
+          client.query('select public.list_client_finance_self_v2()')))
           .rejects.toThrow('trainer_finance_forbidden')
 
         const overview = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query<JsonResultRow>(
-            `select public.list_trainer_finance_overview(date '2026-09-01') as result`,
+            `select public.list_trainer_finance_overview_v2(date '2026-09-01') as result`,
           ))
         expect(overview[0]?.result).toMatchObject({
           month: '2026-09', receivedCents: 2500000, dueCents: 0,
@@ -2091,14 +2092,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
         await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           client.query(
-            `select public.create_trainer_finance_package(
-              $1, 'Чужой пакет', 1, 0, 1000, 0,
+            `select public.create_trainer_finance_service(
+              $1, 'session_pack', 'Чужой пакет', 1, 0, 1000, 0,
               date '2026-09-01', null, null, null
             )`,
             [CLIENT_ID],
           ))).rejects.toThrow('trainer_finance_client_not_found')
         await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
-          client.query('select public.list_trainer_finance_client($1)', [CLIENT_ID])))
+          client.query('select public.list_trainer_finance_client_v2($1)', [CLIENT_ID])))
           .rejects.toThrow('trainer_finance_forbidden')
 
         const hidden = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
@@ -2115,6 +2116,63 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('keeps online coaching period-based and never consumes it on workout completion', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      let workoutId: string | undefined
+      await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+      try {
+        const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<JsonResultRow>(
+            `select public.create_trainer_finance_service(
+              $1, 'online_coaching', 'Онлайн-сопровождение', 0, 0, 1200000, 0,
+              date '2026-10-01', date '2026-10-31', null, null
+            ) as result`,
+            [CLIENT_ID],
+          ))
+        expect(created[0]?.result).toMatchObject({
+          clientId: CLIENT_ID, trainerId: ACTOR_ID, kind: 'online_coaching',
+          sessionsTotal: 0, sessionsUsed: 0, sessionsRemaining: 0,
+          startsOn: '2026-10-01', endsOn: '2026-10-31',
+        })
+
+        const clientFinance = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          client.query<JsonResultRow>('select public.list_client_finance_self_v2() as result'))
+        expect(clientFinance[0]?.result).toMatchObject({ trainers: [{
+          trainerId: ACTOR_ID,
+          packages: [expect.objectContaining({ kind: 'online_coaching', title: 'Онлайн-сопровождение' })],
+        }] })
+
+        const workout = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (
+             trainer_id, client_id, created_by, workout_date, status, completed_at, notes
+           ) values ($1, $2, $1, date '2026-10-15', 'done', now(), 'Онлайн без списания')
+           returning id`,
+          [ACTOR_ID, CLIENT_ID],
+        )
+        workoutId = workout.rows[0]!.id
+        const sessionCount = await ownerPool.query<{ count: string }>(
+          'select count(*) from public.trainer_finance_sessions where workout_id = $1',
+          [workoutId],
+        )
+        expect(sessionCount.rows[0]?.count).toBe('0')
+
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          client.query('select public.list_trainer_finance_client_v2($1)', [CLIENT_ID])))
+          .rejects.toThrow('trainer_finance_client_not_found')
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+        if (workoutId) await ownerPool.query('delete from public.workouts where id = $1', [workoutId])
+      }
+    })
+
     it('consumes completed trainer workouts once and leaves ambiguous sessions for review', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
@@ -2127,8 +2185,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       try {
         const firstPackage = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query<JsonResultRow>(
-            `select public.create_trainer_finance_package(
-              $1, 'Абонемент 1', 2, 0, 1000000, 0,
+            `select public.create_trainer_finance_service(
+              $1, 'session_pack', 'Абонемент 1', 2, 0, 1000000, 0,
               date '2026-09-01', date '2026-09-30', null, null
             ) as result`,
             [CLIENT_ID],
@@ -2187,8 +2245,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
         await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query(
-            `select public.create_trainer_finance_package(
-              $1, 'Абонемент 2', 2, 0, 1000000, 0,
+            `select public.create_trainer_finance_service(
+              $1, 'session_pack', 'Абонемент 2', 2, 0, 1000000, 0,
               date '2026-09-01', date '2026-09-30', null, null
             )`,
             [CLIENT_ID],

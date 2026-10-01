@@ -125,7 +125,7 @@ test('client payment information stays compact and does not overlap', async ({ p
     }
   }
 
-  await expect(page.getByRole('heading', { name: 'Абонементы' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Услуги тренера' })).toBeVisible()
   const details = page.getByRole('link', { name: /Подробнее/ })
   expect((await details.boundingBox())?.height).toBeGreaterThanOrEqual(44)
   await assertGeometry()
@@ -152,8 +152,8 @@ test('client payment information stays compact and does not overlap', async ({ p
     const harness = await import(modulePath) as typeof import('./client-payment-info-harness')
     harness.mountClientPaymentInfoHarness(true)
   })
-  await expect(page.getByRole('heading', { name: 'Абонементы' })).toBeVisible()
-  await expect(page.getByText('Абонементов пока нет')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Услуги тренера' })).toBeVisible()
+  await expect(page.getByText('Услуг пока нет')).toBeVisible()
   expect((await page.getByRole('link', { name: /Подробнее/ }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 })
@@ -184,7 +184,7 @@ test('trainer client finances keep details compact and disclose history on deman
   expect(tabBoxes.every((box) => box && box.height >= 44)).toBe(true)
   const tabHeights = tabBoxes.map((box) => box?.height ?? 0)
   expect(Math.max(...tabHeights) - Math.min(...tabHeights)).toBeLessThanOrEqual(1)
-  await expect(page.getByRole('tab', { name: 'Абонементы: 5' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: 'Услуги: 5' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('[data-finance-tab="packages"]')).toBeVisible()
   expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   const profile = testInfo.project.name === 'visual-trainer-1440' ? 'desktop' : testInfo.project.name.replace('visual-client-', 'mobile-')
@@ -226,7 +226,7 @@ test('trainer client finances keep details compact and disclose history on deman
     await page.setViewportSize({ width: 320, height: 780 })
     await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
     for (const [tabName, screenshot] of [
-      ['Абонементы: 5', `trainer-finance-client-mobile-320-${process.platform}.png`],
+      ['Услуги: 5', `trainer-finance-client-mobile-320-${process.platform}.png`],
       ['Занятия: 2', `trainer-finance-client-sessions-mobile-320-${process.platform}.png`],
       ['Оплаты: 2', `trainer-finance-client-payments-mobile-320-${process.platform}.png`],
     ] as const) {
@@ -292,6 +292,20 @@ test('trainer client finances keep details compact and disclose history on deman
     await page.setViewportSize({ width: 390, height: 844 })
     await frame.evaluate((element) => { element.removeAttribute('style') })
   }
+
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/finance-client-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./finance-client-harness')
+    harness.mountFinanceClientHarness('new')
+  })
+  await page.getByLabel('Тип').selectOption('online_coaching')
+  await expect(page.getByRole('heading', { name: 'Новая услуга' })).toBeVisible()
+  await expect(page.getByLabel('Название')).toHaveValue('Онлайн-сопровождение')
+  await expect(page.getByLabel('Окончание')).toHaveAttribute('required', '')
+  await expect(page.getByLabel('Всего занятий')).toHaveCount(0)
+  await expect(page.getByLabel('Уже проведено')).toHaveCount(0)
+  expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await expectVisualBaseline(page, `trainer-finance-online-coaching-${profile}-${process.platform}.png`)
 
   await page.evaluate(async () => {
     const modulePath = '/e2e/finance-client-harness.tsx'

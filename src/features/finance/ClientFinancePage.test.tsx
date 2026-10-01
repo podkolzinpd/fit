@@ -16,7 +16,7 @@ const summary: ClientFinanceSummary = { trainers: [{
   trainerId,
   trainerName: 'Анастасия Константинопольская',
   packages: [{
-    id: packageId, title: 'Персональные тренировки', sessionsTotal: 10,
+    id: packageId, kind: 'session_pack', title: 'Персональные тренировки', sessionsTotal: 10,
     sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000,
     paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01',
     endsOn: '2026-11-30', paymentDueOn: '2026-10-10', packageStatus: 'active',
@@ -55,7 +55,7 @@ describe('Client finance', () => {
 
   it('shows one compact home entry without edit actions', async () => {
     renderHome()
-    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Услуги тренера' })).toBeVisible()
     expect(screen.getByText('Анастасия Константинопольская')).toBeVisible()
     expect(screen.getByText('8 из 10')).toBeVisible()
     expect(screen.getByText(/К оплате 15.*000/)).toBeVisible()
@@ -74,12 +74,25 @@ describe('Client finance', () => {
     expect(screen.queryByRole('button', { name: /добавить|изменить|удалить|сохранить/i })).not.toBeInTheDocument()
   })
 
+  it('shows online coaching by period without a zero session balance', async () => {
+    getMine.mockResolvedValue({ trainers: [{ ...summary.trainers[0]!, packages: [{
+      ...summary.trainers[0]!.packages[0]!, kind: 'online_coaching',
+      title: 'Онлайн-сопровождение', sessionsTotal: 0, sessionsUsed: 0,
+      sessionsRemaining: 0, endsOn: '2026-10-31',
+    }] }] })
+    renderPage()
+    expect(await screen.findByRole('heading', { name: 'Онлайн-сопровождение' })).toBeVisible()
+    expect(screen.getByText('Онлайн · Активен')).toBeVisible()
+    expect(screen.getByText('До 31 октября 2026 г.')).toBeVisible()
+    expect(screen.queryByText('0 из 0')).not.toBeInTheDocument()
+  })
+
   it('keeps the home entry visible and shows a simple empty state without finance records', async () => {
     getMine.mockResolvedValue({ trainers: [] })
     const home = renderHome()
     await waitFor(() => expect(getMine).toHaveBeenCalledTimes(1))
-    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
-    expect(screen.getByText('Абонементов пока нет')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Услуги тренера' })).toBeVisible()
+    expect(screen.getByText('Услуг пока нет')).toBeVisible()
     expect(screen.getByRole('link', { name: /Подробнее/ })).toHaveAttribute('href', '/me/finance')
     home.unmount()
     renderPage()
@@ -90,7 +103,7 @@ describe('Client finance', () => {
     getMine.mockRejectedValue(new Error('offline'))
     renderHome()
     await waitFor(() => expect(getMine).toHaveBeenCalledTimes(1))
-    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Услуги тренера' })).toBeVisible()
     expect(screen.getByText('Не удалось загрузить данные')).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -98,14 +111,14 @@ describe('Client finance', () => {
   it('scopes the query cache by authenticated user', async () => {
     const client = queryClient()
     const first = renderHome(client)
-    await screen.findByRole('heading', { name: 'Абонементы' })
+    await screen.findByRole('heading', { name: 'Услуги тренера' })
     first.unmount()
 
     authState.userId = '71ace3ce-ac6d-4a32-b2fd-faa6370f32ea'
     getMine.mockResolvedValue({ trainers: [] })
     renderHome(client)
     await waitFor(() => expect(getMine).toHaveBeenCalledTimes(2))
-    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
-    expect(screen.getByText('Абонементов пока нет')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Услуги тренера' })).toBeVisible()
+    expect(screen.getByText('Услуг пока нет')).toBeVisible()
   })
 })

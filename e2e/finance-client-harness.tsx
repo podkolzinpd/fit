@@ -5,19 +5,19 @@ import { PackageForm, PaymentForm } from '../src/features/finance/TrainerFinance
 import { AssistantIcon, ClientsIcon, ScheduleIcon, TodayIcon } from '../src/shared/icons'
 
 const currentPackage = {
-  id: 'package-1', clientId: 'client-1', trainerId: 'trainer-1', title: 'Персональные тренировки с очень длинным названием',
+  id: 'package-1', clientId: 'client-1', trainerId: 'trainer-1', kind: 'session_pack' as const, title: 'Персональные тренировки с очень длинным названием',
   sessionsTotal: 10, sessionsUsed: 1, sessionsRemaining: 9, priceCents: 3000000, paidCents: 3000000,
   dueCents: 0, startsOn: '2026-09-30', endsOn: '2026-12-31', paymentDueOn: null, comment: 'Тренировки два раза в неделю.',
   packageStatus: 'active' as const, paymentStatus: 'paid' as const, closedAt: null, version: 1,
   createdAt: '2026-09-30T10:00:00Z', updatedAt: '2026-09-30T10:00:00Z',
 }
 
-type Editor = 'package' | 'payment' | null
+type Editor = 'package' | 'new' | 'payment' | null
 type Tab = 'packages' | 'sessions' | 'payments'
 
 function FinanceTabs({ active, onChange }: { active: Tab; onChange: (tab: Tab) => void }) {
   const tabs: { id: Tab; label: string; count: number }[] = [
-    { id: 'packages', label: 'Абонементы', count: 5 },
+    { id: 'packages', label: 'Услуги', count: 5 },
     { id: 'sessions', label: 'Занятия', count: 2 },
     { id: 'payments', label: 'Оплаты', count: 2 },
   ]
@@ -33,6 +33,7 @@ function Harness({ initialEditor = null }: { initialEditor?: Editor }) {
       <div className="content"><main className="page trainer-finance-page">
         <header className="page-header"><button className="page-back" type="button" aria-label="Назад">‹</button><div className="page-title-group"><h1>Финансы</h1><p>Александр Константинопольский</p></div></header>
         {editor === 'package' && <PackageForm current={currentPackage} today="2026-10-01" saving={false} error={null} onCancel={() => setEditor(null)} onSubmit={() => setEditor(null)} />}
+        {editor === 'new' && <PackageForm today="2026-10-01" saving={false} error={null} onCancel={() => setEditor(null)} onSubmit={() => setEditor(null)} />}
         {editor === 'payment' && <PaymentForm packages={[currentPackage]} packageId={currentPackage.id} today="2026-10-01" saving={false} error={null} onCancel={() => setEditor(null)} onSubmit={() => setEditor(null)} />}
         {!editor && <><FinanceTabs active={activeTab} onChange={setActiveTab} />
           <section id="finance-packages-panel" className="finance-tab-panel" data-finance-tab="packages" role="tabpanel" aria-labelledby="finance-packages-tab" hidden={activeTab !== 'packages'}>

@@ -38,21 +38,26 @@ function packagePayment(item: ClientFinancePackage): string {
   return item.dueCents === 0 ? 'Оплачено' : `К оплате ${money(item.dueCents)}`
 }
 
+function packageBalance(item: ClientFinancePackage): string {
+  if (item.kind === 'session_pack') return `${item.sessionsRemaining} из ${item.sessionsTotal}`
+  return item.endsOn ? `До ${formatLocalDate(localDate(item.endsOn))}` : 'Онлайн'
+}
+
 export function ClientFinanceHomeContent({ finance }: { finance: ClientFinanceSummary }) {
   return <section className="client-finance-home" aria-labelledby="client-finance-home-title">
     <div className="client-finance-home-heading">
-      <div><p className="eyebrow">ОПЛАТА ТРЕНИРОВОК</p><h2 id="client-finance-home-title">Абонементы</h2></div>
+      <div><p className="eyebrow">ОПЛАТА</p><h2 id="client-finance-home-title">Услуги тренера</h2></div>
       <Link to="/me/finance">Подробнее <ChevronRightIcon /></Link>
     </div>
     <div className="client-finance-home-list">{finance.trainers.length === 0
-      ? <p className="client-finance-home-empty">Абонементов пока нет</p>
+      ? <p className="client-finance-home-empty">Услуг пока нет</p>
       : finance.trainers.map((trainer) => {
       const visible = currentPackages(trainer)
       const first = visible[0]
       if (!first) return null
       return <div className="client-finance-home-row" key={trainer.trainerId}>
         <span><strong>{trainer.trainerName}</strong><small>{first.title}{visible.length > 1 ? ` · ещё ${visible.length - 1}` : ''}</small></span>
-        <span><strong>{first.sessionsRemaining} из {first.sessionsTotal}</strong><small>{packagePayment(first)}</small></span>
+        <span><strong>{packageBalance(first)}</strong><small>{packagePayment(first)}</small></span>
       </div>
       })}</div>
   </section>
@@ -69,7 +74,7 @@ export function ClientFinanceHomeCard() {
   if (finance.isLoading) return null
   if (finance.error) return <section className="client-finance-home" aria-labelledby="client-finance-home-title">
     <div className="client-finance-home-heading">
-      <div><p className="eyebrow">ОПЛАТА ТРЕНИРОВОК</p><h2 id="client-finance-home-title">Абонементы</h2></div>
+      <div><p className="eyebrow">ОПЛАТА</p><h2 id="client-finance-home-title">Услуги тренера</h2></div>
       <Link to="/me/finance">Подробнее <ChevronRightIcon /></Link>
     </div>
     <p className="client-finance-home-empty">Не удалось загрузить данные</p>
@@ -82,7 +87,7 @@ function PackageCard({ item }: { item: ClientFinancePackage }) {
     ? `${formatLocalDate(localDate(item.startsOn))} — ${formatLocalDate(localDate(item.endsOn))}`
     : `С ${formatLocalDate(localDate(item.startsOn))}`
   return <article className="client-finance-package">
-    <header><div><span className={`client-finance-status is-${item.packageStatus}`}>{PACKAGE_STATUS[item.packageStatus]}</span><h3>{item.title}</h3></div><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></header>
+    <header><div><span className={`client-finance-status is-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h3>{item.title}</h3></div><strong>{packageBalance(item)}</strong></header>
     <p className="client-finance-period">{period}</p>
     <div className="client-finance-package-money">
       <p><span>Стоимость</span><strong>{money(item.priceCents)}</strong></p>
@@ -111,7 +116,7 @@ function TrainerFinanceSection({ trainer }: { trainer: ClientFinanceTrainer }) {
 
 export function ClientFinanceDetails({ finance }: { finance: ClientFinanceSummary }) {
   return finance.trainers.length === 0
-    ? <EmptyState title="Оплат пока нет" description="Здесь появится информация, когда тренер добавит абонемент." />
+    ? <EmptyState title="Оплат пока нет" description="Здесь появится информация, когда тренер добавит услугу." />
     : <div className="client-finance-trainer-list">{finance.trainers.map((trainer) => <TrainerFinanceSection key={trainer.trainerId} trainer={trainer} />)}</div>
 }
 
