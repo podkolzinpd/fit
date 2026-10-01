@@ -34,10 +34,35 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
   assert.match(workflow, /e2e-visual:/)
   assert.match(workflow, /e2e-chromium:/)
   assert.match(workflow, /if: needs\.e2e-scope\.outputs\.required == 'true'/)
-  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-visual, e2e-chromium, e2e-webkit\]/)
+  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-yandex-auth, e2e-visual, e2e-chromium, e2e-webkit\]/)
+  assert.match(workflow, /YANDEX_AUTH_RESULT: \$\{\{ needs\.e2e-yandex-auth\.result \}\}/)
+  assert.match(workflow, /"\$YANDEX_AUTH_RESULT" != "success"/)
   assert.match(workflow, /VISUAL_RESULT: \$\{\{ needs\.e2e-visual\.result \}\}/)
   assert.match(workflow, /CHROMIUM_RESULT: \$\{\{ needs\.e2e-chromium\.result \}\}/)
   assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
+})
+
+test('runs required Yandex-only browser auth without starting local Supabase', () => {
+  const start = workflow.indexOf('  e2e-yandex-auth:\n')
+  const end = workflow.indexOf('  e2e-visual:\n', start)
+  assert.ok(start >= 0 && end > start)
+  const job = workflow.slice(start, end)
+
+  assert.match(job, /needs: e2e-scope\n    if: needs\.e2e-scope\.outputs\.required == 'true'/)
+  assert.match(job, /FIT_YANDEX_E2E_REQUIRED: 'true'/)
+  assert.match(job, /VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id/)
+  assert.match(job, /VITE_YANDEX_API_BASE_URL: https:\/\/stage\.example\.test/)
+  for (const flag of [
+    'VITE_YANDEX_ONLY_AUTH_ENABLED',
+    'VITE_YANDEX_NATIVE_REGISTRATION_ENABLED',
+    'VITE_YANDEX_APP_SESSION_ENABLED',
+    'VITE_YANDEX_MAIN_ROUTING_ENABLED',
+  ]) {
+    assert.match(job, new RegExp(`${flag}: 'true'`))
+    assert.match(job, new RegExp(`--env ${flag}`))
+  }
+  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts --project=iphone-13-webkit --workers=1/)
+  assert.doesNotMatch(job, /supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
 })
 
 test('runs client visual shards and one trainer visual job with isolated databases', () => {
