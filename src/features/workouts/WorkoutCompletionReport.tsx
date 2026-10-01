@@ -96,7 +96,7 @@ export function WorkoutCompletionReport({
   const metrics: WorkoutShareMetric[] = [
     ...(duration ? [{ label: 'Время', value: duration }] : []),
     ...(tonnage ? [{ label: 'Тоннаж', value: tonnage }] : []),
-    ...(caloriesKcal ? [{ label: 'Оценка ФИТ', value: `≈ ${caloriesKcal} ккал` }] : []),
+    ...(caloriesKcal ? [{ label: 'Активные калории FIT', value: `≈ ${caloriesKcal} ккал` }] : []),
     ...(percent !== null ? [{ label: 'План', value: `${percent}%` }] : []),
   ]
   const visibleMetrics = metrics.filter((metric) => metric.label !== 'План')
