@@ -529,6 +529,9 @@ export interface Workout {
   startedAt: string | null
   completedAt: string | null
   activeCaloriesKcal?: number | null
+  calorieEstimateVersion?: number | null
+  calorieEstimateBasis?: string | null
+  calorieEstimateNotice?: string | null
   status: WorkoutStatus
   notes: string | null
   trainerReview?: string

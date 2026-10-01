@@ -30,6 +30,7 @@ import type {
   YandexIdentityUnlinkManager,
 } from './db/yandex-identity-unlink.js'
 import { buildMigrationApp } from './migration-app.js'
+import type { StageCalorieAuditor } from './db/workout-calorie-audit.js'
 import { TenantMigrationArtifactError } from './tenant-migration/bundle.js'
 import { TenantMigrationError } from './tenant-migration/engine.js'
 import {
@@ -48,6 +49,49 @@ const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('stage calorie audit', () => {
+  it('is unavailable without an explicitly configured auditor', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/stage/calories/audit' })
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('returns only the aggregate audit result', async () => {
+    const read = vi.fn<StageCalorieAuditor['read']>().mockResolvedValue({
+      windowDays: 30,
+      categories: [{
+        category: 'bike', total: 8, estimated: 7, missingDuration: 1,
+        missingWeight: 0, highKcal: 0, moreThanDoubleV1: 2, medianV2ToV1: 1.37,
+      }],
+    })
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]), calorieAudit: { read } })
+    apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/stage/calories/audit' })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      status: 'ok', windowDays: 30,
+      categories: [{
+        category: 'bike', total: 8, estimated: 7, missingDuration: 1,
+        missingWeight: 0, highKcal: 0, moreThanDoubleV1: 2, medianV2ToV1: 1.37,
+      }],
+    })
+  })
+
+  it('does not expose database errors', async () => {
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      calorieAudit: { read: () => Promise.reject(new Error('postgresql://owner:secret@database')) },
+    })
+    apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/stage/calories/audit' })
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({ status: 'audit_unavailable' })
+    expect(response.body).not.toContain('secret')
+  })
 })
 
 describe('domain-change push announcement', () => {
