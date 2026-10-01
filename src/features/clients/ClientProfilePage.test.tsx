@@ -17,7 +17,8 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
 const getMine = vi.hoisted(() => vi.fn<() => Promise<Client | null>>())
 vi.mock('../../data/repositories/clients.repository', () => ({ clientsRepository: { getMine } }))
 
-vi.mock('./ClientTrainerConnections', () => ({ ClientTrainerConnections: () => null }))
+vi.mock('./ClientTrainerConnections', () => ({ ClientTrainerConnections: ({ finance }: { finance?: ReactNode }) => <div>{finance}</div> }))
+vi.mock('../finance', () => ({ ClientFinanceHomeCard: () => <section aria-label="Абонементы клиента">Абонементы</section> }))
 vi.mock('../progress/BodyMapAppearanceSetting', () => ({ BodyMapAppearanceSetting: () => null }))
 
 const notificationsStatus = vi.hoisted(() => vi.fn())
@@ -59,6 +60,7 @@ describe('ClientProfilePage', () => {
     await waitFor(() => expect(screen.getByRole('link', { name: 'Настройки профиля' })).toHaveAttribute('href', '/me/settings'))
     expect(screen.getByText('Настройки')).toBeVisible()
     expect(screen.queryByText('Уведомления')).not.toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Абонементы клиента' })).toBeVisible()
   })
 
   it('renders notification controls on the client settings page', async () => {

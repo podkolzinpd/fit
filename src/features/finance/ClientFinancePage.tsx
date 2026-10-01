@@ -123,7 +123,7 @@ export function ClientFinancePage() {
     queryFn: () => clientFinance.getMine(),
     enabled: actor?.role === 'client',
   })
-  return <Page title="Оплата тренировок" back="/me" swipeBack className="client-finance-page">
+  return <Page title="Оплата тренировок" back="/me/profile" swipeBack className="client-finance-page">
     <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
       {finance.data && <ClientFinanceDetails finance={finance.data} />}
     </AsyncView>

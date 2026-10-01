@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
@@ -23,9 +24,9 @@ const connectedTrainer = {
   joinedAt: '2026-08-28T10:00:00Z', isRoot: true,
 }
 
-function renderConnections() {
+function renderConnections(finance?: ReactNode) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<MemoryRouter><QueryClientProvider client={queryClient}><ClientTrainerConnections clientId="client-1" /></QueryClientProvider></MemoryRouter>)
+  return render(<MemoryRouter><QueryClientProvider client={queryClient}><ClientTrainerConnections clientId="client-1" finance={finance} /></QueryClientProvider></MemoryRouter>)
 }
 
 describe('ClientTrainerConnections safe disconnect', () => {
@@ -108,13 +109,16 @@ describe('ClientTrainerConnections safe disconnect', () => {
   })
 
   it('shows the connected trainer above a distinct search action and removes manual code entry', async () => {
-    renderConnections()
+    renderConnections(<section aria-label="Абонементы клиента">Абонементы</section>)
 
     const trainer = await screen.findByText('Александр Ситников')
+    const finance = screen.getByRole('region', { name: 'Абонементы клиента' })
     const search = screen.getByRole('link', { name: 'Найти тренера' })
     expect(search).toHaveAttribute('href', '/me/trainers')
     expect(search).toHaveClass('secondary')
     expect(trainer.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(trainer.compareDocumentPosition(finance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(finance.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.queryByRole('link', { name: /Ввести код тренера/ })).not.toBeInTheDocument()
   })
 

@@ -126,6 +126,8 @@ test('client payment information stays compact and does not overlap', async ({ p
   await assertGeometry()
   await expectMonochromeAccessibility(page)
   await page.screenshot({ path: testInfo.outputPath(`client-payment-info-${testInfo.project.name}.png`), fullPage: true })
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Профиль' })).toBeVisible()
 
   if (testInfo.project.name === 'visual-client-390') {
     for (const width of [320, 390, 430]) {

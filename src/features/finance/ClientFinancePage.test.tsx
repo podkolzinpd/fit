@@ -43,7 +43,7 @@ function renderHome(client = queryClient()) {
 function renderPage() {
   return render(<MemoryRouter initialEntries={['/me/finance']}><QueryClientProvider client={queryClient()}><Routes>
     <Route path="/me/finance" element={<ClientFinancePage />} />
-    <Route path="/me" element={<p>Кабинет клиента</p>} />
+    <Route path="/me/profile" element={<p>Профиль клиента</p>} />
   </Routes></QueryClientProvider></MemoryRouter>)
 }
 

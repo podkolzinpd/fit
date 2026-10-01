@@ -17,6 +17,7 @@ import { AppFeedbackForm } from '../profile/AppFeedbackForm'
 import { AccountSettingsCard, SettingsSection } from '../profile/SettingsSection'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
+import { ClientFinanceHomeCard } from '../finance'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
@@ -40,7 +41,7 @@ export function ClientProfilePage() {
           </div>
           <Link className="client-profile-edit" to="/me/edit">Изменить данные <ChevronRightIcon /></Link>
         </section>
-        <ClientTrainerConnections clientId={client.data.id} />
+        <ClientTrainerConnections clientId={client.data.id} finance={<ClientFinanceHomeCard />} />
       </>}
     </AsyncView>
   </Page>
