@@ -317,7 +317,8 @@ export async function readAccessibleTrainingData(
         workout.client_question_resolved_at,
         workout.started_at,
         workout.completed_at,
-        workout.active_calories_kcal,
+        case when workout.calorie_v2_shadow_reason is not null
+          then null else workout.active_calories_kcal end active_calories_kcal,
         workout.version,
         workout.stage_id,
         stage.title stage_title,

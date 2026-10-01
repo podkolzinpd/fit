@@ -20,6 +20,7 @@ import { type ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, orderParsedWorkoutItems, parsedWorkoutItems, parseWorkoutWithLlm, resolveWorkoutParseChoice, workoutParseSetSummary, workoutParseUnmatched, type WorkoutParseUnmatchedView } from './llm-workout-parser'
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { type WorkoutRecordMode } from './workout-entry-rules'
+import { firstCardioDraftMissingEnteredDuration } from './calorie-duration-prompt'
 import { WorkoutComposer } from './WorkoutComposer'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
@@ -81,6 +82,11 @@ function draftExercise(item: ParsedWorkoutExercise, position: number): WorkoutDr
     sets: (item.sets.length ? item.sets : [{ position: 0 }]).map((set) => ({
       ...set,
       ...(isValidRpe(set.rpe) ? {} : { rpe: undefined }),
+      metricSources: set.metricSources ?? {
+        duration: item.hasValues && (set.durationSec !== undefined || set.durationMin !== undefined) ? 'entered' : 'unknown',
+        distance: item.hasValues && set.distanceKm !== undefined ? 'entered' : 'unknown',
+        rpe: item.hasValues && isValidRpe(set.rpe) ? 'entered' : 'unknown',
+      },
     })),
   }
 }
@@ -143,6 +149,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const effectiveClientId = clientMode ? mine.data?.id ?? clientId : clientId
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', effectiveClientId], queryFn: () => workoutsRepository.list(undefined, undefined, effectiveClientId), enabled: Boolean(effectiveClientId) })
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
+  const [missingCardioTime, setMissingCardioTime] = useState<string | null>(null)
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : undefined)
@@ -531,13 +538,20 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   function updateSet(itemIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
     trackGoal('today_review_edited')
+    setMissingCardioTime(null)
     const ref = items[itemIndex]?.exercise.ref
     if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
     const safePatch = patch.rpe === undefined || isValidRpe(patch.rpe) ? patch : { ...patch, rpe: undefined }
     setItems((current) => current.map((item, index) => index !== itemIndex ? item : {
       ...item,
       hasValues: true,
-      sets: item.sets.map((set, currentSetIndex) => currentSetIndex === setIndex ? { ...set, ...safePatch } : set),
+      sets: item.sets.map((set, currentSetIndex) => currentSetIndex === setIndex ? { ...set, ...safePatch,
+        metricSources: {
+          duration: ('durationSec' in safePatch || 'durationMin' in safePatch) ? 'entered' : set.metricSources?.duration ?? 'unknown',
+          distance: 'distanceKm' in safePatch ? 'entered' : set.metricSources?.distance ?? 'unknown',
+          rpe: 'rpe' in safePatch ? 'entered' : set.metricSources?.rpe ?? 'unknown',
+        },
+      } : set),
     }))
   }
 
@@ -625,6 +639,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setItems([])
     setClientId('')
     setRecordMode('planned')
+    setMissingCardioTime(null)
     setWorkoutDate(today)
     setStartTime('')
     setTrainingFormat(clientMode ? 'self' : undefined)
@@ -838,10 +853,23 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <p className="today-save-question">Как сохранить?</p>
-        <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
+        <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => { setRecordMode('planned'); setMissingCardioTime(null) }}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
         {!clientMode && <div className="today-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
-        <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !effectiveClientId} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>
+        {recordMode === 'completed' && missingCardioTime
+          ? <div className="finish-confirm" role="status">
+              <p>У «{missingCardioTime}» есть дистанция, но нет фактического времени. Добавьте время на шаге проверки или сохраните результат без оценки активных калорий FIT.</p>
+              <div className="actions workout-action-row">
+                <WorkoutCta type="button" onClick={() => { setMissingCardioTime(null); setScreen('review') }}>Внести время</WorkoutCta>
+                <WorkoutCta type="button" variant="secondary" pending={save.isPending} pendingLabel="Сохраняем…" onClick={() => save.mutate('completed')}>Сохранить без оценки</WorkoutCta>
+              </div>
+            </div>
+          : <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !effectiveClientId} onClick={() => {
+              const missing = recordMode === 'completed'
+                ? firstCardioDraftMissingEnteredDuration({ exercises: items.map(draftExercise) }) : null
+              if (missing) setMissingCardioTime(missing)
+              else save.mutate(recordMode)
+            }}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>}
       </section></section>}
     </section>}
     {supplementalLoadError && <InlineRequestError error={supplementalLoadError} />}

@@ -30,6 +30,7 @@ import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveSetAutosave } from './live-set-autosave'
 import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
 import { liveMetricSources, markLiveMetricEntered } from './live-set-provenance'
+import { firstCardioDraftMissingEnteredDuration, firstCardioSetMissingEnteredDuration } from './calorie-duration-prompt'
 import {
   clearPendingLiveSetConfirmations,
   clearPendingLiveSetDrafts,
@@ -1361,7 +1362,7 @@ export function WorkoutFormPage() {
     ])
   }
   function closePicker() { parsedExerciseSelection.current = null; setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (exercises.length === 0) return
     const form = new FormData(event.currentTarget)
@@ -1381,6 +1382,12 @@ export function WorkoutFormPage() {
         : ''
     endTimeInput?.setCustomValidity(timeError)
     if (timeError) { endTimeInput?.reportValidity(); return }
+    const missingTimeExercise = completedMode
+      ? firstCardioDraftMissingEnteredDuration({ exercises }) : null
+    if (missingTimeExercise && !await confirmLeave({
+      message: `У «${missingTimeExercise}» есть дистанция, но нет фактического времени. Добавьте время для оценки активных калорий FIT или сохраните результат без неё.`,
+      confirmLabel: 'Сохранить без оценки',
+    })) return
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
@@ -1785,7 +1792,7 @@ export function WorkoutDetailPage() {
       {done && !clientCompletionReport && <section className={`workout-fact-summary${workout.activeCaloriesKcal ? ' has-calories' : ''}`} aria-label="Сводка тренировки">
         <p><span>Время</span><strong>{duration && duration !== '0 мин' ? duration : '—'}</strong></p>
         <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
-        {workout.activeCaloriesKcal && <p><span>Оценка ФИТ</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
+        {workout.activeCaloriesKcal && <p><span>Оценка активных калорий FIT</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
         <p><span>Подходы</span><strong>{completedSets}</strong></p>
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
         {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
@@ -3002,6 +3009,19 @@ export function LiveWorkoutPage() {
     },
   })
   const hasIncompleteLiveSets = query.data?.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)) ?? false
+  const cardioSetMissingTime = query.data ? firstCardioSetMissingEnteredDuration(query.data) : null
+  function focusCardioDuration() {
+    if (!cardioSetMissingTime) return
+    setConfirmFinish(false)
+    setExpandedExercises((current) => new Set(current).add(cardioSetMissingTime.exerciseId))
+    setEditingSets((current) => new Set(current).add(cardioSetMissingTime.setId))
+    setExpandedSetId(cardioSetMissingTime.setId)
+    window.requestAnimationFrame(() => {
+      const form = liveSetForms.current.get(cardioSetMissingTime.setId)
+      form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      form?.querySelector<HTMLInputElement>('input[name="runDuration"], input[name="durationSec"]')?.focus()
+    })
+  }
   function finishFromInactivityReminder() {
     inactivityReminder.dismiss()
     setConfirmFinish(true)
@@ -3302,13 +3322,17 @@ export function LiveWorkoutPage() {
         </div>}
         {query.data.exercises.length > 0 && (confirmFinish
           ? <div className="finish-confirm">
-              <p>{hasIncompleteLiveSets ? 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
+              <p>{cardioSetMissingTime
+                ? `У «${cardioSetMissingTime.exerciseName}» указана дистанция, но нет фактического времени. Добавьте время для оценки активных калорий FIT или завершите без неё.`
+                : hasIncompleteLiveSets ? 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
               <div className="actions workout-action-row">
-                <WorkoutCta type="button" variant="tertiary" onClick={() => setConfirmFinish(false)}>Отмена</WorkoutCta>
-                <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
+                {cardioSetMissingTime
+                  ? <WorkoutCta type="button" onClick={focusCardioDuration}>Внести время</WorkoutCta>
+                  : <WorkoutCta type="button" variant="tertiary" onClick={() => setConfirmFinish(false)}>Отмена</WorkoutCta>}
+                <WorkoutCta variant={cardioSetMissingTime ? 'secondary' : 'primary'} pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>{cardioSetMissingTime ? 'Завершить без оценки' : 'Завершить'}</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
+          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}

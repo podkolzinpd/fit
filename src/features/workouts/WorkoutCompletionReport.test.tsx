@@ -108,7 +108,7 @@ describe('WorkoutCompletionReport', () => {
   it('shows the FIT calorie estimate when it is available', () => {
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} caloriesKcal={321} /></MemoryRouter>)
     expect(screen.getByText('≈ 321 ккал')).toBeVisible()
-    expect(screen.getByText('Оценка ФИТ')).toBeVisible()
+    expect(screen.getByText('Активные калории FIT')).toBeVisible()
   })
 
   it('offers three share stories and disables progress without a reliable comparison', async () => {
