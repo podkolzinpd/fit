@@ -141,6 +141,34 @@ describe('Yandex main repository', () => {
     expect(fetchMock.mock.calls[5]?.[1]).toMatchObject({ method: 'PUT', body: JSON.stringify({ expectedVersion: 1, disposition: 'free', packageId: null, comment: null, workoutDate: '2026-09-01' }) })
   })
 
+  it('reads client finance only from the self endpoint', async () => {
+    const clientActor: SessionActor = {
+      ...actor,
+      kind: 'client', role: 'client', userId: '974f21af-f304-421f-81bd-050dbfabdd46',
+      clientId, trainerId: actor.userId, fullName: 'Анна',
+    }
+    const response = { trainers: [{
+      trainerId: actor.userId,
+      trainerName: 'Ирина',
+      packages: [{
+        id: financePackageId, title: '10 тренировок', sessionsTotal: 10,
+        sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000,
+        paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01',
+        endsOn: null, paymentDueOn: '2026-09-10', packageStatus: 'active',
+        paymentStatus: 'partial',
+      }],
+      payments: [{ id: financePaymentId, packageId: financePackageId, amountCents: 1000000, receivedOn: '2026-09-01' }],
+    }] }
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ finance: response }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, clientActor)
+
+    await expect(repository.clientFinance.getMine()).resolves.toEqual(response)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`${apiBaseUrl}/v1/me/finance`)
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain(clientId)
+  })
+
   it('uses the Yandex API for legal acceptance and account deletion lifecycle', async () => {
     const requestId = '8fc45130-9bcf-4b77-9ff7-f0872a354034'
     const acceptedAt = '2026-09-19T10:00:00.000000+00:00'

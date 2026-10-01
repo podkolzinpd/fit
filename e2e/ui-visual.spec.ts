@@ -89,6 +89,53 @@ test('trainer finance overview stays compact and readable', async ({ page }, tes
   await expectVisualBaseline(page, `trainer-finance-overview-${profile}-${process.platform}.png`)
 })
 
+test('client payment information stays compact and does not overlap', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client payments belong to the mobile client cabinet')
+  await page.goto('/auth')
+  await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/client-payment-info-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./client-payment-info-harness')
+    harness.mountClientPaymentInfoHarness()
+  })
+  const frame = page.locator('#client-payment-info-qa .phone-frame')
+  const assertGeometry = async () => {
+    expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    for (const selector of ['.client-finance-home-row', '.client-finance-package > header', '.client-finance-package-money', '.client-finance-payment']) {
+      for (const row of await frame.locator(selector).all()) {
+        const box = await row.boundingBox()
+        expect(box).not.toBeNull()
+        for (const child of await row.locator(':scope > *').all()) {
+          const childBox = await child.boundingBox()
+          if (!childBox || !box) continue
+          expect(childBox.x).toBeGreaterThanOrEqual(box.x - 1)
+          expect(childBox.x + childBox.width).toBeLessThanOrEqual(box.x + box.width + 1)
+        }
+      }
+    }
+  }
+
+  await expect(page.getByRole('heading', { name: 'Абонементы' })).toBeVisible()
+  const details = page.getByRole('link', { name: /Подробнее/ })
+  expect((await details.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  await assertGeometry()
+  await page.screenshot({ path: testInfo.outputPath(`client-payment-info-home-${testInfo.project.name}.png`), fullPage: true })
+  await details.click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Оплата тренировок' })).toBeVisible()
+  await expect(page.getByText('25 000 ₽')).toBeVisible()
+  await assertGeometry()
+  await expectMonochromeAccessibility(page)
+  await page.screenshot({ path: testInfo.outputPath(`client-payment-info-${testInfo.project.name}.png`), fullPage: true })
+
+  if (testInfo.project.name === 'visual-client-390') {
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
+      await assertGeometry()
+    }
+  }
+})
+
 test('trainer client finances keep details compact and disclose history on demand', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })

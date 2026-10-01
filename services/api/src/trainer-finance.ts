@@ -88,6 +88,40 @@ export interface TrainerFinanceOverview {
   clients: TrainerFinanceOverviewClient[]
 }
 
+export interface ClientFinancePackage {
+  id: string
+  title: string
+  sessionsTotal: number
+  sessionsUsed: number
+  sessionsRemaining: number
+  priceCents: number
+  paidCents: number
+  dueCents: number
+  startsOn: string
+  endsOn: string | null
+  paymentDueOn: string | null
+  packageStatus: TrainerFinancePackageStatus
+  paymentStatus: TrainerFinancePaymentStatus
+}
+
+export interface ClientFinancePayment {
+  id: string
+  packageId: string
+  amountCents: number
+  receivedOn: string
+}
+
+export interface ClientFinanceTrainer {
+  trainerId: string
+  trainerName: string
+  packages: ClientFinancePackage[]
+  payments: ClientFinancePayment[]
+}
+
+export interface ClientFinanceSummary {
+  trainers: ClientFinanceTrainer[]
+}
+
 export interface TrainerFinancePackageDraft {
   title: string
   sessionsTotal: number
@@ -134,6 +168,7 @@ type PackageRow = QueryResultRow & { package: TrainerFinancePackage }
 type PaymentRow = QueryResultRow & { payment: TrainerFinancePayment }
 type SessionRow = QueryResultRow & { session: TrainerFinanceSession }
 type OverviewRow = QueryResultRow & { overview: TrainerFinanceOverview }
+type ClientSummaryRow = QueryResultRow & { finance: ClientFinanceSummary }
 
 export class TrainerFinanceError extends Error {
   constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'conflict') {
@@ -155,6 +190,7 @@ function trainerFinanceError(error: unknown) {
 }
 
 export interface PilotTrainerFinance {
+  listClientSelf(session: YandexActorSessionInput): Promise<ClientFinanceSummary>
   listOverview(session: YandexActorSessionInput, monthStart: string): Promise<TrainerFinanceOverview>
   listClient(session: YandexActorSessionInput, clientId: string): Promise<TrainerFinanceClientBundle>
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft): Promise<TrainerFinancePackage>
@@ -185,6 +221,15 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
         [monthStart],
       )
       return rows[0]!.overview
+    })
+  }
+
+  listClientSelf(session: YandexActorSessionInput) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<ClientSummaryRow>(
+        'select public.list_client_finance_self() as finance',
+      )
+      return rows[0]!.finance
     })
   }
 
