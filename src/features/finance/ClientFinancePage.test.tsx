@@ -77,11 +77,18 @@ describe('Client finance', () => {
   it('hides the home card and shows a simple empty state without finance records', async () => {
     getMine.mockResolvedValue({ trainers: [] })
     const home = renderHome()
-    await screen.findByText('Загружаем оплату…')
+    await waitFor(() => expect(getMine).toHaveBeenCalledTimes(1))
     expect(screen.queryByRole('heading', { name: 'Абонементы' })).not.toBeInTheDocument()
     home.unmount()
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Оплат пока нет' })).toBeVisible()
+  })
+
+  it('keeps a home read failure silent while details retain their retry state', async () => {
+    getMine.mockRejectedValue(new Error('offline'))
+    renderHome()
+    await waitFor(() => expect(getMine).toHaveBeenCalledTimes(1))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('scopes the query cache by authenticated user', async () => {

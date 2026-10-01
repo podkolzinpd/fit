@@ -65,8 +65,7 @@ export function ClientFinanceHomeCard() {
     queryFn: () => clientFinance.getMine(),
     enabled: actor?.role === 'client',
   })
-  if (finance.isLoading) return <section className="client-finance-home client-finance-home-state" role="status">Загружаем оплату…</section>
-  if (finance.error) return <section className="client-finance-home client-finance-home-state" role="alert"><span>Не удалось загрузить оплату.</span><button type="button" className="link" onClick={() => void finance.refetch()}>Повторить</button></section>
+  if (finance.isLoading || finance.error) return null
   return finance.data ? <ClientFinanceHomeContent finance={finance.data} /> : null
 }
 
