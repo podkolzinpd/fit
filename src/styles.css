@@ -6771,12 +6771,19 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-text-entry { color:#f8f8f6; background:#303034; }
 .trainer-schedule-v2-shell .trainer-active-workouts h2 { color:#f8f8f6; }
 .trainer-schedule-v2-shell .trainer-active-workouts a { border-color:#38383e; background:#222226; color:#f8f8f6; }
-.live-empty-start { display:grid; gap:9px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
-.live-empty-start h2, .live-empty-start p, .live-empty-actions p { margin:0; }
-.live-empty-start h2 { font-size:18px; }
-.live-empty-start p, .live-empty-actions p { color:var(--muted); font-size:13px; line-height:1.4; }
-.live-empty-actions { display:grid; gap:8px; padding:10px 0; }
-.live-empty-actions button { min-height:44px; justify-self:start; }
+.live-empty-start { display:grid; gap:16px; padding:16px; border-radius:18px; background:var(--surface-raised); }
+.live-empty-start h2, .live-empty-start p { margin:0; }
+.live-empty-start h2 { font-size:16px; font-weight:600; }
+.live-empty-start .primary { min-height:48px; margin:0; }
+.live-empty-start .live-empty-error { color:var(--danger); font-size:13px; line-height:1.4; }
+.live-identity .live-pinned-empty .live-timer-toolbar .live-timer { min-height:48px; font-size:22px; }
+.live-pinned-empty .live-rest-trigger { min-height:48px; }
+.live-identity .live-bottom-bar-empty { justify-items:end; padding:8px 16px calc(8px + env(safe-area-inset-bottom)); }
+.live-bottom-bar-empty .live-sync-state { width:100%; }
+.live-empty-delete { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border:0; border-radius:14px; background:transparent; color:var(--danger); }
+.live-empty-delete svg { width:22px; height:22px; }
+.live-empty-delete:focus-visible { outline:2px solid var(--danger); outline-offset:2px; }
+.live-empty-delete:disabled { opacity:.55; }
 @media (max-width:390px) { .trainer-schedule-v2-shell .schedule-v2-entry-actions { grid-template-columns:minmax(0,1fr) 44px 44px; gap:6px; } }
 .trainer-schedule-v2-shell .schedule-v2-untimed { display:grid; gap:7px; margin-bottom:16px; padding:14px; border:1px solid #303034; border-radius:20px; background:#19191b; }
 .trainer-schedule-v2-shell .schedule-v2-untimed > strong { color:#858589; font-size:11px; text-transform:uppercase; letter-spacing:.07em; }

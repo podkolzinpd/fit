@@ -1,6 +1,7 @@
 # Fit — текущее состояние проекта
 > Rolling snapshot для продолжения между сессиями, максимум 120 строк; полная история хранится в Git, PR и Tracker.
 Обновлено: 2026-10-01. Frontend опубликован на `fit-training.ru` через Yandex API Gateway/Object Storage; Vercel сохранён только для legacy redirect, новые Git deployments и PR Preview отключены. Production data plane — принятый Yandex Cloud stage stack. Новые изменения схемы делаются только numbered Yandex PostgreSQL migrations; Supabase-цепочка заморожена для legacy-тестов/rollback, но legacy recovery/media и локальные инструменты ещё не удалены. Yandex ID является единственным production-входом; app-session, main routing и native registration включены глобально. UI-правка YAFIT-574 ставит привязанного тренера над поиском, убирает ручной ввод кода из профиля и настроек, сохраняя legacy `/join`: `docs/design/athlete-profile-invitation-ux-20260930.md`.
+YAFIT-576: пустой Live-экран после быстрого старта упрощён для клиента и тренера: LIVE/имя, компактный таймер, выбор первого упражнения и только подтверждаемая красная корзина внизу. Нулевой прогресс и дублирующий статус скрыты; после добавления подходов обычный Live не меняется. План и приёмка: `docs/design/YAFIT-576-LIVE-EMPTY-POLISH.md`; релиз после CI и production smoke.
 Финансы клиента пересобраны по #1299 в три компактные вкладки: «Абонементы»,
 «Занятия» и «Оплаты». В абонементе доступны подробности, изменение и продление;
 занятия получили фильтры и явную связь со списанием; оплаты собраны в единую
