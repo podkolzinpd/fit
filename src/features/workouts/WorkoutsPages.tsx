@@ -1356,10 +1356,13 @@ export function WorkoutFormPage() {
     const submittedStartTime = startTime
     const submittedEndTime = endTime
     const endTimeInput = event.currentTarget.elements.namedItem('endTime') as HTMLInputElement | null
+    const startMinutes = submittedStartTime ? Number(submittedStartTime.slice(0, 2)) * 60 + Number(submittedStartTime.slice(3, 5)) : null
+    const endMinutes = submittedEndTime ? Number(submittedEndTime.slice(0, 2)) * 60 + Number(submittedEndTime.slice(3, 5)) : null
+    const elapsedMinutes = startMinutes === null || endMinutes === null ? null : (endMinutes - startMinutes + 1440) % 1440
     const timeError = submittedEndTime && !submittedStartTime
       ? 'Укажите время начала тренировки'
-      : submittedEndTime && submittedEndTime <= submittedStartTime
-        ? 'Окончание должно быть позже начала'
+      : elapsedMinutes !== null && (elapsedMinutes === 0 || elapsedMinutes > 720)
+        ? 'Укажите длительность до 12 часов; переход через полночь допустим'
         : ''
     endTimeInput?.setCustomValidity(timeError)
     if (timeError) { endTimeInput?.reportValidity(); return }

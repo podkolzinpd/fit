@@ -325,11 +325,10 @@ export function readSavePlannedWorkoutRequest(
     || exercises.some((exercise) => exercise === undefined)
     || new Set(exercises.map((exercise) => exercise?.position)).size
       !== exercises.length
-    || (
-      startTime !== null
-      && endTime !== null
-      && timeValue(endTime) <= timeValue(startTime)
-    )
+    || (startTime !== null && endTime !== null && (
+      (timeValue(endTime) - timeValue(startTime) + 86_400) % 86_400 === 0
+      || (timeValue(endTime) - timeValue(startTime) + 86_400) % 86_400 > 43_200
+    ))
     || (workoutId !== null && expectedVersion === undefined)
   ) return undefined
   return {

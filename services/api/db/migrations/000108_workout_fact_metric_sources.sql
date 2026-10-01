@@ -10,6 +10,15 @@ alter table public.workout_sets
   add constraint workout_sets_distance_source_valid check (fact_distance_source in ('unknown', 'planned', 'entered')),
   add constraint workout_sets_rpe_source_valid check (fact_rpe_source in ('unknown', 'planned', 'entered'));
 
+-- Existing same-day sessions remain valid, while a 23:30–00:30 session can be
+-- stored and evaluated rather than being rejected before calorie validation.
+alter table public.workouts
+  drop constraint workouts_time_order,
+  add constraint workouts_time_order check (
+    (start_time is null and end_time is null)
+    or (start_time is not null and (end_time is null or end_time <> start_time))
+  );
+
 create function app_private.canonical_set_duration_seconds(p_seconds integer, p_minutes numeric)
 returns integer language sql immutable set search_path = '' as $$
   select coalesce(p_seconds, round(p_minutes * 60)::integer)
@@ -264,6 +273,8 @@ revoke all on function public.save_completed_workout(jsonb, bigint) from public;
 grant execute on function public.save_completed_workout(jsonb, bigint) to fit_api;
 
 -- Down Migration
+-- Keep the widened time-order constraint: restoring the old one could reject
+-- overnight workouts written after this migration.
 drop function public.save_completed_workout(jsonb, bigint);
 alter function app_private.save_completed_workout_without_metric_sources(jsonb, bigint) set schema public;
 alter function public.save_completed_workout_without_metric_sources(jsonb, bigint) rename to save_completed_workout;

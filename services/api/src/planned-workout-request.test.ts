@@ -51,6 +51,12 @@ function validRequest() {
 }
 
 describe('planned workout request', () => {
+  it('accepts an overnight workout and a session longer than three hours', () => {
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), startTime: '23:30', endTime: '00:30' }, null)
+      ?.draft.endTime).toBe('00:30')
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), startTime: '10:00', endTime: '14:00' }, null)
+      ?.draft.endTime).toBe('14:00')
+  })
   it('preserves fact provenance on result edits and rejects invalid sources', () => {
     const request = validRequest()
     const set = request.exercises[0]!.sets[0]!

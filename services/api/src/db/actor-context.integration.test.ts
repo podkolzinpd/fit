@@ -7226,6 +7226,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         overnight: 3600, four_hours: 14400, plausible: true, implausible: false,
         consistent_total: 'consistent', contradictory_total: 'contradictory',
       })
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        const saved = await connection.query<{ start_time: string; end_time: string }>(`
+          update public.workouts set start_time = time '23:30', end_time = time '00:30'
+          where id = $1 returning start_time::text, end_time::text`, [ROOT_WORKOUT_ID])
+        expect(saved.rows[0]).toMatchObject({ start_time: '23:30:00', end_time: '00:30:00' })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
     })
 
     it('never uses a future weight measurement for an earlier workout', async () => {
