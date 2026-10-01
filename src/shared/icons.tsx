@@ -102,6 +102,10 @@ export function CopyIcon(props: IconProps) {
   return <Icon data-icon="copy" {...props}><rect x="8" y="8" width="11" height="11" rx="2.5" /><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8" /></Icon>
 }
 
+export function TrashIcon(props: IconProps) {
+  return <Icon data-icon="trash" {...props}><path d="M4.5 6.5h15M9 6.5V4.8c0-.7.6-1.3 1.3-1.3h3.4c.7 0 1.3.6 1.3 1.3v1.7M6.5 6.5l.8 13.2c.1.9.8 1.5 1.7 1.5h6c.9 0 1.6-.6 1.7-1.5l.8-13.2M10 10.5v6.5M14 10.5v6.5" /></Icon>
+}
+
 export function ShareIcon(props: IconProps) {
   return <Icon data-icon="share" {...props}><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5" /></Icon>
 }

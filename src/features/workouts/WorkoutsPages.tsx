@@ -64,7 +64,7 @@ import { WorkoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { computeAthleteAchievements, newlyEarnedAchievements, type AthleteAchievement } from '../../shared/athlete-achievements'
 import { markAchievementCompletion, takeAchievementCompletion } from '../achievements/completion-marker'
-import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, SettingsIcon } from '../../shared/icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, SettingsIcon, TrashIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -3120,10 +3120,10 @@ export function LiveWorkoutPage() {
   // falls back to its workout detail because the tab bar is hidden here.
   return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" className="live-session-header" meta={<div className="live-session-progress">
+      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" showStatus={query.data.exercises.length > 0} className="live-session-header" meta={sessionProgress.setCount > 0 ? <div className="live-session-progress">
         <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
         <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
-      </div>} />
+      </div> : undefined} />
       {inactivityReminder.visible && <section className="live-inactivity-reminder" role="alert" aria-labelledby="live-inactivity-reminder-title">
         <div><strong id="live-inactivity-reminder-title">Тренировка ещё идёт</strong><span>Продолжить или завершить её?</span></div>
         <div className="actions">
@@ -3146,7 +3146,7 @@ export function LiveWorkoutPage() {
         const circuitCurrent = circuitRounds ? selectedCircuitRound >= 0 ? selectedCircuitRound : currentRoundIndex(circuitRounds) : 0
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
-        <div className="live-pinned">
+        <div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
             <Coachmark id="live-timer-2026-09" userId={actor?.userId} title="Отдых — в кнопке таймера" description="Нажмите, чтобы запустить отдых, добавить время или остановить его. Подходы можно заполнять прямо в таблице.">
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration} />
@@ -3259,7 +3259,7 @@ export function LiveWorkoutPage() {
           </div>
         </div>
       }) })()}
-      {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Тренировка началась</h2><p>Добавьте первое упражнение — результаты можно записывать сразу.</p><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
+      {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>}
       {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
@@ -3267,10 +3267,10 @@ export function LiveWorkoutPage() {
           конкурировать с primary-подтверждением подхода в карточке.
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
-      <div className="live-bottom-bar">
-        {query.data.exercises.length === 0 && <div className="live-empty-actions"><p>Пустую тренировку нельзя завершить как выполненную.</p><button type="button" className="link" disabled={cancelEmpty.isPending} onClick={async () => {
-          if (await askConfirm({ message: 'Отменить эту пустую тренировку?', confirmLabel: 'Отменить тренировку', danger: true })) cancelEmpty.mutate()
-        }}>{cancelEmpty.isPending ? 'Отменяем…' : 'Отменить тренировку'}</button>{cancelEmpty.error && <p role="alert">Не удалось отменить. Повторите попытку.</p>}</div>}
+      <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
+        {query.data.exercises.length === 0 && <button type="button" className="live-empty-delete" aria-label={cancelEmpty.isPending ? 'Удаляем тренировку' : 'Удалить тренировку'} title="Удалить тренировку" aria-busy={cancelEmpty.isPending} disabled={cancelEmpty.isPending} onClick={async () => {
+          if (await askConfirm({ message: 'Удалить эту пустую тренировку?', confirmLabel: 'Удалить', danger: true })) cancelEmpty.mutate()
+        }}><TrashIcon /></button>}
         {(liveSyncError || recoveredSetIds.size > 0) && <div className={`live-sync-state ${liveSyncError ? 'error' : ''}`} role={liveSyncError ? 'alert' : 'status'}>
           <div>
             <strong>{liveSyncError ? 'Результаты сохранены на телефоне' : 'Восстановили результаты'}</strong>
