@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -50,8 +50,10 @@ describe('TrainerFinancePage', () => {
     expect(await screen.findByRole('heading', { name: 'Персональные тренировки' })).toBeVisible()
     expect(screen.getByText('8 из 10')).toBeVisible()
     expect(screen.getByText(/К оплате 15.*000/)).toBeVisible()
-    expect(screen.getAllByText(/10.*000/).length).toBeGreaterThan(0)
     expect(screen.getByText('1 сентября 2026 г.')).not.toBeVisible()
+    expect(screen.getByRole('tab', { name: 'Абонементы: 1' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Занятия: 1' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: 'Оплаты: 1' })).toHaveAttribute('aria-selected', 'false')
   })
 
   it('creates a package with opening sessions and payment in kopecks', async () => {
@@ -71,8 +73,8 @@ describe('TrainerFinancePage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
-    await user.click(screen.getByText('Оплаты', { exact: true }))
-    await user.click(screen.getByRole('button', { name: 'Добавить оплату' }))
+    await user.click(screen.getByRole('tab', { name: 'Оплаты: 1' }))
+    await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
     await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledWith(packageId, expect.objectContaining({
@@ -84,7 +86,7 @@ describe('TrainerFinancePage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
-    await user.click(screen.getByText('Проведённые занятия'))
+    await user.click(screen.getByRole('tab', { name: 'Занятия: 1' }))
     await user.click(screen.getByRole('button', { name: 'Действия с занятием 5 сентября 2026 г.' }))
     await user.click(screen.getByRole('menuitem', { name: 'Изменить учёт' }))
     await user.selectOptions(screen.getByLabelText('Учёт'), 'free')
@@ -93,13 +95,31 @@ describe('TrainerFinancePage', () => {
       expectedVersion: 1, disposition: 'free', packageId: null, comment: null, workoutDate: '2026-09-05',
     }))
 
-    await user.click(screen.getByRole('button', { name: 'Добавить занятие' }))
+    await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
     const date = screen.getByLabelText('Дата занятия')
     await user.clear(date)
     await user.type(date, '2026-09-20')
-    await user.click(screen.getByRole('button', { name: 'Добавить занятие' }))
+    await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
     await waitFor(() => expect(workouts.saveCompleted).toHaveBeenCalledWith(expect.objectContaining({
       clientId, workoutDate: '2026-09-20', notes: 'Проведённое занятие', exercises: [],
     })))
+  })
+
+  it('renews an existing package without changing the original record', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('button', { name: 'Действия с абонементом Персональные тренировки' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Продлить' }))
+    expect(screen.getByRole('heading', { name: 'Продление' })).toBeVisible()
+    expect(screen.getByLabelText('Название')).toHaveValue('Персональные тренировки')
+    expect(screen.getByLabelText('Всего занятий')).toHaveValue(10)
+    expect(screen.getByLabelText('Стоимость, ₽')).toHaveValue(25000)
+    expect(screen.getByLabelText('Уже проведено')).toHaveValue(0)
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.createPackage).toHaveBeenCalledWith(clientId, expect.objectContaining({
+      title: 'Персональные тренировки', sessionsTotal: 10, openingUsedSessions: 0, priceCents: 2500000,
+    })))
+    expect(finance.updatePackage).not.toHaveBeenCalled()
   })
 })
