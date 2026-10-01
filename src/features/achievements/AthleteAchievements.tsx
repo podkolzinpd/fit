@@ -32,20 +32,32 @@ function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: 
   const earned = Boolean(item.earnedOn)
   const ratio = earned ? 1 : item.nearest ? item.progress / item.threshold : 0
   const status = earned ? 'получена' : item.kind === 'comeback' ? 'пока не получена' : `${item.progress} из ${item.threshold}`
+  const calendar = item.kind === 'weeks' || item.kind === 'weeks-total'
+  const record = item.kind === 'records'
+  const recordFive = item.id === 'records-5'
+  const showNumber = item.kind !== 'comeback' && item.id !== 'records-1'
   return <span className={`athlete-achievement-badge kind-${item.kind} badge-id-${item.id}${earned ? ' is-earned' : ''}${item.nearest ? ' is-nearest' : ''}${compact ? ' is-compact' : ''}`} role="img" aria-label={`${item.title}: ${status}`}>
-    <svg className="athlete-achievement-ring" viewBox="0 0 100 100" aria-hidden="true">
+    <svg className="athlete-achievement-art" viewBox="0 0 100 100" aria-hidden="true">
       <circle className="athlete-achievement-ring-track" cx="50" cy="50" r="40" />
-      {ratio > 0 && <circle className="athlete-achievement-ring-fill" cx="50" cy="50" r="40" strokeDasharray={`${ratio * 251.33} 251.33`} />}
+      {ratio > 0 && <circle className="athlete-achievement-ring-fill" cx="50" cy="50" r="40" pathLength="100" strokeDasharray={`${ratio * 100} 100`} transform="rotate(-90 50 50)" />}
+      {calendar && <g className="athlete-achievement-calendar">
+        <rect x="39" y="22" width="22" height="19" rx="3" />
+        <path d="M39 28h22M44 19v6M56 19v6" />
+        <path className="athlete-achievement-calendar-dots" d="M44 33h3M53 33h3M44 37h3M53 37h3" />
+      </g>}
+      {item.kind === 'comeback' && <g className="athlete-achievement-comeback">
+        <path d="M30 67V54c0-11 7-18 18-18h14m-9-10 10 10-10 10" />
+        <path className="athlete-achievement-comeback-accent" d="M30 67h10" />
+      </g>}
+      {record && <g className={`athlete-achievement-record${recordFive ? ' is-five' : ''}`}>
+        {recordFive ? <path d="M37 76v-7h6v7m4 0V65h6v11m4 0V60h6v16" /> : <>
+          <path d="M31 72V60h8v12m4 0V52h8v20m4 0V44h8v28" />
+          <path className="athlete-achievement-record-star" d="m70 33 2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+        </>}
+      </g>}
+      {showNumber && <text className={`athlete-achievement-number${item.threshold >= 100 ? ' is-three-digit' : item.threshold >= 10 ? ' is-two-digit' : ''}${calendar ? ' is-calendar' : ''}${recordFive ? ' is-record-five' : ''}`} x="50" y={recordFive ? 36 : calendar ? 66 : 53} textAnchor="middle" dominantBaseline="middle">{item.threshold}</text>}
+      {earned && <g className="athlete-achievement-check"><circle cx="80" cy="17" r="10" /><path d="m75 17 4 4 7-8" /></g>}
     </svg>
-    {(item.kind === 'weeks' || item.kind === 'weeks-total')
-      ? <svg className="athlete-achievement-calendar" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="9" width="38" height="33" rx="7" /><path d="M5 19h38M15 5v9M33 5v9" /><path className="athlete-achievement-calendar-dots" d="M13 27h5M23 27h5M33 27h3M13 35h5M23 35h5M33 35h3" /></svg>
-      : item.kind === 'comeback'
-        ? <svg className="athlete-achievement-comeback" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 35V24c0-9 6-14 15-14h5" /><path d="m26 4 7 6-7 6" /><path className="athlete-achievement-comeback-accent" d="M12 35h9" /></svg>
-        : item.kind === 'records'
-          ? <svg className="athlete-achievement-record" viewBox="0 0 48 48" aria-hidden="true"><path className="athlete-achievement-record-bars" d="M8 39V28h8v11M20 39V21h8v18M32 39V14h8v25" /><path className="athlete-achievement-record-star" d="m35 3 1.5 3.5L40 8l-3.5 1.5L35 13l-1.5-3.5L30 8l3.5-1.5z" /></svg>
-          : null}
-    {earned && <span className="athlete-achievement-check" aria-hidden="true">✓</span>}
-    {item.kind !== 'comeback' && item.id !== 'records-1' && <strong>{item.threshold}</strong>}
   </span>
 }
 
