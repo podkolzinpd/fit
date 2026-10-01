@@ -195,13 +195,17 @@ export function savePlannedWorkout(
     const saved = rows[0]
     if (saved === undefined) throw new Error('Workout was not saved')
     await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
+    const formatted = await client.query<{ version: string }>(
+      'select public.set_workout_training_format($1, $2, $3, $4) as version',
+      [saved.workout_id, draft.trainingFormat ?? null, saved.version, expectedVersion === null],
+    )
     if (expectedVersion === null) {
       await client.query(
         'select app_private.enqueue_workout_scheduled_notification($1)',
         [saved.workout_id],
       )
     }
-    return { id: saved.workout_id, version: safeVersion(saved.version) }
+    return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
   })
 }
 
@@ -221,7 +225,11 @@ export function saveCompletedWorkout(
     const saved = rows[0]
     if (saved === undefined) throw new Error('Completed workout was not saved')
     await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
-    return { id: saved.workout_id, version: safeVersion(saved.version) }
+    const formatted = await client.query<{ version: string }>(
+      'select public.set_workout_training_format($1, $2, $3, $4) as version',
+      [saved.workout_id, draft.trainingFormat ?? null, saved.version, expectedVersion === null],
+    )
+    return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
   })
 }
 
@@ -241,7 +249,11 @@ export function recordPlannedWorkoutResult(
     const saved = rows[0]
     if (saved === undefined) throw new Error('Planned result was not saved')
     await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
-    return { id: saved.workout_id, version: safeVersion(saved.version) }
+    const formatted = await client.query<{ version: string }>(
+      'select public.set_workout_training_format($1, $2, $3, false) as version',
+      [saved.workout_id, draft.trainingFormat ?? null, saved.version],
+    )
+    return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
   })
 }
 
@@ -435,6 +447,12 @@ export function quickStartLiveWorkout(
     )
     const result = rows[0]
     if (!result?.workout_id) throw new Error('Quick start returned no workout')
+    if (!result.resumed) {
+      await client.query(
+        'select public.set_workout_training_format($1, null, null, true)',
+        [result.workout_id],
+      )
+    }
     return { id: result.workout_id, resumed: result.resumed }
   })
 }

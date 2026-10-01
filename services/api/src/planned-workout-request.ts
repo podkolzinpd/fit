@@ -61,6 +61,7 @@ export interface PlannedWorkoutDraft {
   stageId?: string | null
   exercises: PlannedWorkoutExerciseDraft[]
   favoriteTitle?: string | null
+  trainingFormat?: 'self' | 'with_trainer'
 }
 
 export interface SavePlannedWorkoutRequest {
@@ -309,6 +310,9 @@ export function readSavePlannedWorkoutRequest(
   const favoriteTitle = input.favoriteTitle === null || input.favoriteTitle === undefined
     ? null
     : readFavoriteWorkoutTitle(input.favoriteTitle)
+  const trainingFormat = input.trainingFormat === null || input.trainingFormat === undefined
+    ? null
+    : enumValue(input.trainingFormat, ['self', 'with_trainer'] as const)
   const exercises = input.exercises.map(readExercise)
   const expectedVersion = workoutId === null
     ? null
@@ -322,6 +326,7 @@ export function readSavePlannedWorkoutRequest(
     || notes === undefined
     || stageId === undefined
     || favoriteTitle === undefined
+    || trainingFormat === undefined
     || exercises.some((exercise) => exercise === undefined)
     || new Set(exercises.map((exercise) => exercise?.position)).size
       !== exercises.length
@@ -342,6 +347,7 @@ export function readSavePlannedWorkoutRequest(
       notes,
       stageId,
       favoriteTitle,
+      ...(trainingFormat === null ? {} : { trainingFormat }),
       exercises: exercises as PlannedWorkoutExerciseDraft[],
     },
     expectedVersion: expectedVersion ?? null,

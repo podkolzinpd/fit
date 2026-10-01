@@ -740,12 +740,14 @@ describe('Yandex main repository', () => {
       completedAt: '2026-08-20T10:00:00.000000+00:00', workoutId,
     })).totalCount).toBe(1)
 
-    const draft = workoutDraft()
+    const draft = { ...workoutDraft(), trainingFormat: 'with_trainer' as const }
     await repository.workouts.save(draft)
     await repository.workouts.save({ ...draft, id: workoutId, version: 1 })
     await repository.workouts.saveCompleted(draft)
     await repository.workouts.saveCompleted({ ...draft, id: workoutId, version: 1 })
     await repository.workouts.recordPlannedResult({ ...draft, id: workoutId, version: 1 })
+    const createCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/v1/workouts') && init?.method === 'POST')
+    expect(JSON.parse(String(createCall?.[1]?.body))).toMatchObject({ trainingFormat: 'with_trainer' })
     await expect(repository.workouts.recordPlannedResult(draft)).rejects.toThrow('не выбрана')
     await repository.workouts.start(item)
     await repository.workouts.cancelPlanned(item)

@@ -2149,8 +2149,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
         const workout = await ownerPool.query<{ id: string }>(
           `insert into public.workouts (
-             trainer_id, client_id, created_by, workout_date, status, completed_at, notes
-           ) values ($1, $2, $1, date '2026-10-15', 'done', now(), 'Онлайн без списания')
+             trainer_id, client_id, created_by, workout_date, status, completed_at, notes, training_format
+           ) values ($1, $2, $1, date '2026-10-15', 'done', now(), 'Онлайн без списания', 'with_trainer')
            returning id`,
           [ACTOR_ID, CLIENT_ID],
         )
@@ -2170,6 +2170,96 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
         await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
         if (workoutId) await ownerPool.query('delete from public.workouts where id = $1', [workoutId])
+      }
+    })
+
+    it('defaults the workout format from services and reverses finance on format changes', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const workoutIds: string[] = []
+      await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+      await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+      try {
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query(
+          `select public.create_trainer_finance_service(
+            $1, 'session_pack', 'Абонемент', 5, 0, 500000, 0,
+            date '2026-10-01', date '2026-10-31', null, null
+          )`, [CLIENT_ID]))
+        const workout = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (trainer_id, client_id, created_by, workout_date, status)
+           values ($1, $2, $1, date '2026-10-10', 'planned') returning id`,
+          [ACTOR_ID, CLIENT_ID],
+        )
+        const workoutId = workout.rows[0]!.id
+        workoutIds.push(workoutId)
+        const defaulted = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<{ version: string }>(
+            `select public.set_workout_training_format($1, null, 1, true) as version`,
+            [workoutId],
+          ))
+        expect(defaulted[0]?.version).toBe('2')
+        expect((await ownerPool.query<{ training_format: string }>(
+          'select training_format from public.workouts where id = $1', [workoutId],
+        )).rows[0]?.training_format).toBe('with_trainer')
+
+        await ownerPool.query(`update public.workouts set status = 'done', completed_at = now() where id = $1`, [workoutId])
+        expect((await ownerPool.query<{ count: string }>(
+          'select count(*) from public.trainer_finance_sessions where workout_id = $1 and voided_at is null', [workoutId],
+        )).rows[0]?.count).toBe('1')
+        const selfVersion = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query<{ version: string }>(
+            `select public.set_workout_training_format($1, 'self', 2, false) as version`, [workoutId],
+          ))
+        expect(selfVersion[0]?.version).toBe('3')
+        expect((await ownerPool.query<{ count: string }>(
+          'select count(*) from public.trainer_finance_sessions where workout_id = $1 and voided_at is null', [workoutId],
+        )).rows[0]?.count).toBe('0')
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query(
+          `select public.set_workout_training_format($1, 'with_trainer', 3, false)`, [workoutId],
+        ))
+        expect((await ownerPool.query<{ count: string }>(
+          'select count(*) from public.trainer_finance_sessions where workout_id = $1 and voided_at is null', [workoutId],
+        )).rows[0]?.count).toBe('1')
+
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query(
+          `select public.create_trainer_finance_service(
+            $1, 'online_coaching', 'Онлайн', 0, 0, 500000, 0,
+            date '2026-10-01', date '2026-10-31', null, null
+          )`, [CLIENT_ID]))
+        const onlineWorkout = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (trainer_id, client_id, created_by, workout_date, status)
+           values ($1, $2, $1, date '2026-10-11', 'planned') returning id`,
+          [ACTOR_ID, CLIENT_ID],
+        )
+        workoutIds.push(onlineWorkout.rows[0]!.id)
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query(
+          `select public.set_workout_training_format($1, null, 1, true)`, [onlineWorkout.rows[0]!.id],
+        ))
+        expect((await ownerPool.query<{ training_format: string }>(
+          'select training_format from public.workouts where id = $1', [onlineWorkout.rows[0]!.id],
+        )).rows[0]?.training_format).toBe('self')
+
+        const clientWorkout = await ownerPool.query<{ id: string }>(
+          `insert into public.workouts (trainer_id, client_id, created_by, workout_date, status)
+           values ($1, $2, $3, date '2026-10-12', 'planned') returning id`,
+          [ACTOR_ID, CLIENT_ID, OTHER_ACTOR_ID],
+        )
+        workoutIds.push(clientWorkout.rows[0]!.id)
+        await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) => client.query(
+          `select public.set_workout_training_format($1, 'with_trainer', 1, false)`, [clientWorkout.rows[0]!.id],
+        ))
+        expect((await ownerPool.query<{ training_format: string }>(
+          'select training_format from public.workouts where id = $1', [clientWorkout.rows[0]!.id],
+        )).rows[0]?.training_format).toBe('self')
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id = $1', [CLIENT_ID])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
+        if (workoutIds.length > 0) await ownerPool.query('delete from public.workouts where id = any($1::uuid[])', [workoutIds])
       }
     })
 
@@ -2196,8 +2286,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const completed = await ownerPool.query<{ id: string }>(
           `insert into public.workouts (
              trainer_id, client_id, created_by, workout_date, status,
-             completed_at, notes
-           ) values ($1, $2, $1, date '2026-09-15', 'done', now(), 'Финансы: автосписание')
+             completed_at, notes, training_format
+           ) values ($1, $2, $1, date '2026-09-15', 'done', now(), 'Финансы: автосписание', 'with_trainer')
            returning id`,
           [ACTOR_ID, CLIENT_ID],
         )
@@ -2254,8 +2344,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const ambiguous = await ownerPool.query<{ id: string }>(
           `insert into public.workouts (
              trainer_id, client_id, created_by, workout_date, status,
-             completed_at, notes
-           ) values ($1, $2, $1, date '2026-09-17', 'done', now(), 'Финансы: неоднозначное')
+             completed_at, notes, training_format
+           ) values ($1, $2, $1, date '2026-09-17', 'done', now(), 'Финансы: неоднозначное', 'with_trainer')
            returning id`,
           [ACTOR_ID, CLIENT_ID],
         )
@@ -3137,6 +3227,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             createdBy: STAGE_SMOKE_PROFILE_ID,
             origin: 'manual',
             favoriteTitle: null,
+            trainingFormat: 'self',
             startedBy: null,
             completedBy: null,
             workoutDate: '2026-08-22',

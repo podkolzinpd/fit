@@ -1,4 +1,4 @@
-import type { WorkoutDraft } from '../../shared/domain'
+import type { WorkoutDraft, WorkoutTrainingFormat } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 
 export interface WorkoutFormDraft {
@@ -10,6 +10,7 @@ export interface WorkoutFormDraft {
   stageId: string
   recordCompleted: boolean
   exercises: WorkoutDraft['exercises']
+  trainingFormat?: WorkoutTrainingFormat
 }
 
 function isDraft(value: unknown): value is WorkoutFormDraft {
@@ -23,6 +24,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
     && typeof draft.stageId === 'string'
     && typeof draft.recordCompleted === 'boolean'
     && Array.isArray(draft.exercises)
+    && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
 }
 
 export function workoutFormDraftKey(userId: string, sourceId = 'new'): string {

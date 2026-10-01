@@ -2208,6 +2208,7 @@ async function openWorkoutReview(page: import('@playwright/test').Page, trainer:
 test('workout create keeps its visual baseline', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workout form uses mobile visual profiles')
   await openWorkoutCreate(page)
+  await expect(page.getByRole('group', { name: 'Формат тренировки' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Сохранить план' })).toBeDisabled()
   await expectVisualBaseline(page, `workout-create-${process.platform}.png`)
 })

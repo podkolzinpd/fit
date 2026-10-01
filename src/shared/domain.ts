@@ -437,7 +437,11 @@ export interface WorkoutDraft {
   version?: number
   /** Снэпшот названия избранного на момент планирования; пишется только при создании, никогда не обновляется. */
   favoriteTitle?: string
+  /** Определяет, должна ли завершённая тренировка списывать занятие из абонемента. */
+  trainingFormat?: WorkoutTrainingFormat
 }
+
+export type WorkoutTrainingFormat = 'self' | 'with_trainer'
 
 /** Личный шаблон, сохранённый клиентом из своей тренировки для повторного планирования без похода в историю. */
 export interface FavoriteWorkoutTemplate {
@@ -516,6 +520,7 @@ export interface Workout {
   origin?: 'manual' | 'ai'
   /** Снэпшот названия избранного на момент планирования (не живая ссылка на favorite_workouts.title); null для тренировок, не из избранного. */
   favoriteTitle?: string | null
+  trainingFormat?: WorkoutTrainingFormat
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate

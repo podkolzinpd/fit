@@ -4365,6 +4365,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-create-edit-identity .workout-form { gap:20px; padding-bottom:calc(84px + env(safe-area-inset-bottom)) }
 .workout-create-edit-identity .workout-form-section,
 .workout-create-edit-identity .workout-form-page .workout-form-section:first-child { gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); box-shadow:none}
+.workout-create-edit-identity .workout-form-section > * { min-width:0 }
 .workout-create-edit-identity .workout-form-section-head { gap:4px; padding:0 }
 .workout-create-edit-identity .workout-form-section-head .eyebrow { color:var(--muted); font-size:12px; font-weight:500; line-height:1.3; letter-spacing:.06em }
 .workout-create-edit-identity .workout-form-section-head h2,
