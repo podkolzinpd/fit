@@ -4,7 +4,7 @@
 
 Production Fit уже использует Yandex ID, Yandex API и Managed PostgreSQL;
 frontend `fit-training.ru` публикуется через Yandex API Gateway/Object Storage.
-Vercel сохранён для изолированного Preview и редиректа со старого адреса.
+Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
 Supabase остаётся временным legacy-источником для recovery, неперенесённых
 media, локальных тестов и rollback — не вторым production backend новых функций.
 
@@ -129,7 +129,8 @@ environment contract. Их изменение заранее отмечаетс�
 
 Локальные проверки используют только Podman и локальные базы. Успешный тест
 legacy Supabase adapter не является доказательством работы новой Yandex-функции.
-Vercel Preview не применяет Yandex migration из PR к удалённой базе.
+Удалённой PR Preview-среды сейчас нет. Новые Yandex migrations из PR проверяются
+локально на PostgreSQL 17 и Yandex API, а не применяются к production-БД.
 
 ## Гейты стабилизации и вывода Supabase
 

@@ -519,8 +519,8 @@ delete/replace и любые сопутствующие изменения datab
 применяет `.github/workflows/deploy-yandex-stage.yml` до переключения
 API-ревизии. Запуск SQL через Dashboard запрещён. Production frontend
 публикуется на `fit-training.ru` через Yandex Gateway/Object Storage; Vercel
-остаётся Preview/legacy redirect. Service role и DB password никогда не
-помещаются в публичный frontend build.
+остаётся только для legacy redirect; новые Preview отключены. Service role и
+DB password никогда не помещаются в публичный frontend build.
 
 Foundation UI Identity v1 является единственным production UI. Отдельного
 rollout-переключателя, пользовательского preview allowlist и rollback-режима у
@@ -679,9 +679,10 @@ VITE_ASSISTANT_NAV_ENABLED=true
 
 По умолчанию production rollout включён; точное `false` скрывает вкладку и закрывает
 маршрут для обеих ролей после нового deployment. `VITE_ASSISTANT_NAV_PILOT_USER_IDS`
-и `VITE_ASSISTANT_NAV_PILOT_EMAILS` сохраняются только для изолированной local/preview-разработки
-и в production игнорируются. Клиентский ассистент автоматически использует собственную
-карточку; данные и мутации защищены серверными role/ownership-проверками.
+и `VITE_ASSISTANT_NAV_PILOT_EMAILS` сохраняются только для изолированной
+локальной разработки и в production игнорируются. Клиентский ассистент
+автоматически использует собственную карточку; данные и мутации защищены
+серверными role/ownership-проверками.
 
 Закрытый пилот приветствия в шапке «Сегодня»/«Кабинет» использует build-time
 переменные:
@@ -766,7 +767,7 @@ assignment, не переносит клиентов/тренировки и н�
 `Повторить`; отсутствие полной публичной linking-конфигурации также закрывает
 доступ с явной ошибкой. Реализация остаётся default-off, но в Yandex production
 frontend build глобально включены оба linking-флага: персонального allowlist нет,
-а Preview и локальная разработка не затронуты. Gate не создаёт rollout
+а локальная разработка не затронута. Gate не создаёт rollout
 assignment, не включает Yandex app-session и не меняет выбранный data backend.
 Для аварийного возврата необязательной привязки нужен новый deployment со
 значением `false`.
@@ -815,7 +816,7 @@ variables как `false`.
 публичной анкеты и приглашения эти две переменные можно удалить именно из
 Yandex frontend build workflow и сделать новый deployment. Серверные Supabase
 secrets не удалять: они ещё нужны для recovery старых аккаунтов и оставшегося
-media bridge. Локальная разработка и Preview сохраняют свои legacy настройки.
+media bridge. Локальная разработка сохраняет свои legacy настройки.
 
 Не включайте frontend раньше server revision. Порядок cutover: maintenance →
 fresh 35-table apply → repeat checksum → linked-ready assignments → server
@@ -1060,8 +1061,9 @@ Program access (trainers and clients):
   conversation ownership, role and target ownership. Set in the build step of
   both `.github/workflows/deploy-yandex-frontend.yml` (production,
   `fit-training.ru`) and `.github/workflows/prepare-yandex-frontend.yml`
-  (preview) - `vercel.json`'s copy only affects the legacy `fit-drab.vercel.app`
-  project, which is redirect-only and no longer serves production traffic. A
+  (offline rehearsal/candidate artifact, not a PR Preview site) -
+  `vercel.json`'s copy only affects the legacy `fit-drab.vercel.app` project,
+  which is redirect-only and no longer serves production traffic. A
   variable missing from either Yandex workflow silently disables the flow for
   everyone on that channel with no error - `import.meta.env` reads it as
   `undefined`, not `false` (real incident: 2026-09-29, the flag was never
