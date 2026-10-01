@@ -654,7 +654,7 @@ async function mockTrainerClients(page: VisualPage) {
   }))
 }
 
-async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean; firstOnly?: boolean } = {}) {
+async function mockClientWorkoutHistory(page: import('@playwright/test').Page, options: { includeBack?: boolean; homeLayout?: boolean; bestResults?: boolean; firstOnly?: boolean; denseAchievements?: boolean } = {}) {
   const workoutRows = ['2026-08-10', '2026-08-03'].filter((_, index) => !options.firstOnly || index === 0).map((workoutDate, index) => ({
     id: `b1000000-0000-4000-8000-00000000000${index + 1}`,
     client_id: demoClientId,
@@ -776,6 +776,26 @@ async function mockClientWorkoutHistory(page: import('@playwright/test').Page, o
         exercise_name: name, muscle_group: group, position: index,
         sets: base.sets.map((set) => ({ ...set, id: `b3100000-0000-4000-8000-00000000000${index}` })) })
     }
+  }
+  if (options.denseAchievements) {
+    const template = workoutRows[0]!
+    const exercise = template.exercises[0]!
+    const set = exercise.sets[0]!
+    const rows = Array.from({ length: 23 }, (_, index) => {
+      const workoutDate = new Date(Date.UTC(2026, 5, 15 + index * 3)).toISOString().slice(0, 10)
+      const suffix = String(index + 1).padStart(12, '0')
+      const workoutId = `b1000000-0000-4000-8000-${suffix}`
+      const exerciseId = `b2000000-0000-4000-8000-${suffix}`
+      return {
+        ...template, id: workoutId, workout_date: workoutDate,
+        started_at: `${workoutDate}T15:00:00Z`, completed_at: `${workoutDate}T16:00:00Z`,
+        exercises: [{ ...exercise, id: exerciseId, block_id: exerciseId, sets: [{
+          ...set, id: `b3000000-0000-4000-8000-${suffix}`, fact_weight_kg: 40 + index,
+          confirmed_at: `${workoutDate}T15:30:00Z`,
+        }] }],
+      }
+    })
+    workoutRows.splice(0, workoutRows.length, ...rows.reverse())
   }
   await page.route('**/rest/v1/workouts?*', (route) => {
     const id = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
@@ -1175,12 +1195,13 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   expect(fourth.y).toBeGreaterThan(first.y + 100)
   expect(first.width).toBeLessThan(130)
   const weekBadge = page.locator('.athlete-achievements-group').nth(1).locator('.athlete-achievement-badge').first()
-  const calendar = (await weekBadge.locator('.athlete-achievement-calendar').boundingBox())!
-  const number = (await weekBadge.locator('strong').boundingBox())!
+  await weekBadge.scrollIntoViewIfNeeded()
+  const calendar = await weekBadge.locator('.athlete-achievement-calendar').evaluate((node) => { const box = (node as SVGGraphicsElement).getBBox(); return { y: box.y, height: box.height } })
+  const number = await weekBadge.locator('.athlete-achievement-number').evaluate((node) => { const box = (node as SVGGraphicsElement).getBBox(); return { y: box.y, height: box.height } })
   expect(calendar.y + calendar.height).toBeLessThan(number.y)
   await weekBadge.evaluate((badge) => badge.classList.add('is-compact'))
-  const compactCalendar = (await weekBadge.locator('.athlete-achievement-calendar').boundingBox())!
-  const compactNumber = (await weekBadge.locator('strong').boundingBox())!
+  const compactCalendar = await weekBadge.locator('.athlete-achievement-calendar').evaluate((node) => { const box = (node as SVGGraphicsElement).getBBox(); return { y: box.y, height: box.height } })
+  const compactNumber = await weekBadge.locator('.athlete-achievement-number').evaluate((node) => { const box = (node as SVGGraphicsElement).getBBox(); return { y: box.y, height: box.height } })
   expect(compactCalendar.y + compactCalendar.height).toBeLessThan(compactNumber.y)
   await weekBadge.evaluate((badge) => badge.classList.remove('is-compact'))
   await cards.first().click()
@@ -1195,12 +1216,13 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   await page.getByRole('button', { name: 'Закрыть подробности ачивки' }).click()
   const fiveWorkouts = page.locator('.badge-id-workouts-5').first()
   const fiveRecords = page.locator('.badge-id-records-5').first()
+  await fiveRecords.scrollIntoViewIfNeeded()
   await expect(fiveWorkouts.locator('.athlete-achievement-record')).toHaveCount(0)
   await expect(fiveRecords.locator('.athlete-achievement-record')).toHaveCount(1)
   await fiveRecords.evaluate((badge) => { badge.classList.add('is-compact'); badge.style.width = '64px'; badge.style.height = '64px' })
   await expect(fiveRecords).toHaveCSS('width', '64px')
-  const recordNumber = (await fiveRecords.locator('strong').boundingBox())!
-  const recordBars = (await fiveRecords.locator('.athlete-achievement-record').boundingBox())!
+  const recordNumber = await fiveRecords.locator('.athlete-achievement-number').evaluate((node) => { const box = (node as SVGGraphicsElement).getBBox(); return { y: box.y, height: box.height } })
+  const recordBars = await fiveRecords.locator('.athlete-achievement-record').evaluate((node) => { const box = (node as SVGGraphicsElement).getBBox(); return { y: box.y, height: box.height } })
   expect(recordNumber.y + recordNumber.height).toBeLessThanOrEqual(recordBars.y + 2)
   await fiveRecords.screenshot({ path: testInfo.outputPath('achievement-record-five-64.png') })
   await fiveRecords.evaluate((badge) => { badge.classList.remove('is-compact'); badge.style.removeProperty('width'); badge.style.removeProperty('height') })
@@ -1234,6 +1256,105 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   const narrowThird = (await narrowCards.nth(2).boundingBox())!
   expect(Math.abs(narrowFirst.y - narrowSecond.y)).toBeLessThan(2)
   expect(narrowThird.y).toBeGreaterThan(narrowFirst.y + 100)
+})
+
+test('dense athlete achievement art stays inside compact squares without glyph collisions', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Athlete-only route')
+  await mockClientWorkoutHistory(page, { denseAchievements: true })
+  await signIn(page, 'client@fit.local', /\/me$/)
+  await page.clock.install({ time: new Date('2026-08-22T12:00:00+03:00') })
+  const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+    a.x < b.x + b.width - 1 && b.x < a.x + a.width - 1 && a.y < b.y + b.height - 1 && b.y < a.y + a.height - 1
+
+  for (const theme of ['light', 'dark'] as const) {
+    if (theme === 'dark') {
+      await gotoStable(page, '/me/settings')
+      await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+    }
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      await gotoStable(page, '/me/achievements')
+      const cards = page.locator('.athlete-achievement-card')
+      await expect(cards).toHaveCount(13)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      const firstRow = await Promise.all([0, 1, 2].map((index) => cards.nth(index).boundingBox()))
+      expect(Math.max(...firstRow.map((box) => box!.y)) - Math.min(...firstRow.map((box) => box!.y))).toBeLessThan(2)
+
+      for (const badge of await page.locator('.athlete-achievement-card .athlete-achievement-badge').all()) {
+        const square = (await badge.boundingBox())!
+        expect(square.width).toBeLessThanOrEqual(81)
+        expect(Math.abs(square.width - square.height)).toBeLessThan(2)
+        for (const glyph of await badge.locator('.athlete-achievement-number,.athlete-achievement-calendar,.athlete-achievement-check,.athlete-achievement-comeback,.athlete-achievement-record').all()) {
+          const box = (await glyph.boundingBox())!
+          expect(box.x).toBeGreaterThanOrEqual(square.x - 1)
+          expect(box.y).toBeGreaterThanOrEqual(square.y - 1)
+          expect(box.x + box.width).toBeLessThanOrEqual(square.x + square.width + 1)
+          expect(box.y + box.height).toBeLessThanOrEqual(square.y + square.height + 1)
+        }
+        const calendar = badge.locator('.athlete-achievement-calendar')
+        if (await calendar.count()) {
+          const number = (await badge.locator('.athlete-achievement-number').boundingBox())!
+          const calendarBox = (await calendar.boundingBox())!
+          expect(overlaps(number, calendarBox)).toBe(false)
+          const check = badge.locator('.athlete-achievement-check')
+          if (await check.count()) expect(overlaps(calendarBox, (await check.boundingBox())!)).toBe(false)
+        }
+        if (await badge.evaluate((node) => node.classList.contains('badge-id-records-5'))) {
+          expect(overlaps((await badge.locator('.athlete-achievement-number').boundingBox())!, (await badge.locator('.athlete-achievement-record').boundingBox())!)).toBe(false)
+        }
+        const earned = await badge.evaluate((node) => node.classList.contains('is-earned'))
+        expect(await badge.locator('.athlete-achievement-check').count()).toBe(earned ? 1 : 0)
+        expect(await badge.locator('.athlete-achievement-ring-fill').count()).toBe(earned || await badge.evaluate((node) => node.classList.contains('is-nearest')) ? 1 : 0)
+      }
+      await expect(page.locator('.badge-id-comeback-21 .athlete-achievement-ring-fill')).toHaveCount(0)
+      await expect(page.locator('.badge-id-weeks-12 .athlete-achievement-ring-fill')).toHaveCount(1)
+      await expect(page.locator('.badge-id-records-5 .athlete-achievement-check')).toHaveCount(1)
+      for (const [index, group] of ['workouts', 'regularity', 'records'].entries()) {
+        const section = page.locator('.athlete-achievements-group').nth(index)
+        await section.scrollIntoViewIfNeeded()
+        await section.screenshot({ path: testInfo.outputPath(`achievement-dense-${group}-${theme}-${width}.png`) })
+      }
+      await page.locator('.content').evaluate((content) => { content.scrollTop = content.scrollHeight })
+      const lastCard = (await cards.last().boundingBox())!
+      const nav = (await page.locator('.client-tab-bar').boundingBox())!
+      expect(lastCard.y + lastCard.height).toBeLessThan(nav.y - 8)
+
+      const badges = page.locator('.athlete-achievement-card .athlete-achievement-badge')
+      await badges.evaluateAll((nodes) => nodes.forEach((node) => {
+        const badge = node as HTMLElement
+        badge.classList.add('is-compact')
+        badge.style.width = '64px'
+        badge.style.height = '64px'
+      }))
+      for (const badge of await badges.all()) {
+        const square = (await badge.boundingBox())!
+        expect(Math.abs(square.width - 64)).toBeLessThan(2)
+        for (const glyph of await badge.locator('.athlete-achievement-number,.athlete-achievement-calendar,.athlete-achievement-check,.athlete-achievement-comeback,.athlete-achievement-record').all()) {
+          const box = (await glyph.boundingBox())!
+          expect(box.x).toBeGreaterThanOrEqual(square.x - 1)
+          expect(box.y).toBeGreaterThanOrEqual(square.y - 1)
+          expect(box.x + box.width).toBeLessThanOrEqual(square.x + square.width + 1)
+          expect(box.y + box.height).toBeLessThanOrEqual(square.y + square.height + 1)
+        }
+        const calendar = badge.locator('.athlete-achievement-calendar')
+        if (await calendar.count()) expect(overlaps((await calendar.boundingBox())!, (await badge.locator('.athlete-achievement-number').boundingBox())!)).toBe(false)
+        if (await badge.evaluate((node) => node.classList.contains('badge-id-records-5'))) {
+          expect(overlaps((await badge.locator('.athlete-achievement-number').boundingBox())!, (await badge.locator('.athlete-achievement-record').boundingBox())!)).toBe(false)
+        }
+      }
+      for (const [index, group] of ['workouts', 'regularity', 'records'].entries()) {
+        const section = page.locator('.athlete-achievements-group').nth(index)
+        await section.scrollIntoViewIfNeeded()
+        await section.screenshot({ path: testInfo.outputPath(`achievement-dense-${group}-compact-${theme}-${width}.png`) })
+      }
+      await badges.evaluateAll((nodes) => nodes.forEach((node) => {
+        const badge = node as HTMLElement
+        badge.classList.remove('is-compact')
+        badge.style.removeProperty('width')
+        badge.style.removeProperty('height')
+      }))
+    }
+  }
 })
 
 test('trainer cannot enter the athlete achievement collection', async ({ page }, testInfo) => {

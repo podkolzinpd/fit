@@ -7081,40 +7081,37 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .athlete-achievements-state button { min-height:44px; color:#19191c; background:#baff36; }
 .athlete-achievement-badge { position:relative; flex:none; display:grid; place-items:center; width:92px; height:92px; border:1px solid #35353a; border-radius:25px; background:#232328; color:#f8f8f6; box-shadow:inset 0 1px 0 #ffffff12; }
 .athlete-achievement-badge.is-compact { width:64px; height:64px; border-radius:19px; }
-.athlete-achievement-ring { position:absolute; inset:8%; width:84%; height:84%; transform:rotate(-90deg); }
-.athlete-achievement-ring circle { fill:none; stroke-width:8; }
+.athlete-achievement-art { display:block; width:100%; height:100%; overflow:visible; }
+.athlete-achievement-ring-track,.athlete-achievement-ring-fill { fill:none; stroke-width:8; }
 .athlete-achievement-ring-track { stroke:#45454b; }
 .athlete-achievement-ring-fill { stroke:#baff36; stroke-linecap:round; }
-.athlete-achievement-badge.is-earned { border-color:#5e8121; box-shadow:0 0 18px #baff3620,inset 0 1px 0 #ffffff1c; }
-.athlete-achievement-check { position:absolute; top:4%; left:50%; display:grid; place-items:center; width:24px; height:24px; border-radius:50%; transform:translateX(-50%); background:#baff36; color:#151713; font-size:17px; font-weight:900; line-height:1; box-shadow:0 0 12px #baff3670; }
-.athlete-achievement-badge:not(.is-earned) .athlete-achievement-check { display:none; }
-.athlete-achievement-badge > strong { position:absolute; top:50%; left:50%; transform:translate(-50%,-40%); color:#f8f8f6; font-size:32px; line-height:1; }
-.athlete-achievement-calendar { position:absolute; top:9%; left:25%; width:50%; height:34%; fill:none; stroke:#79797d; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
-.athlete-achievement-calendar-dots { stroke:#baff36; stroke-width:4; }
-.athlete-achievement-badge.kind-weeks > strong,.athlete-achievement-badge.kind-weeks-total > strong { top:auto; bottom:18%; transform:translateX(-50%); line-height:1; }
-.athlete-achievement-comeback { position:absolute; top:27%; left:27%; width:46%; height:46%; fill:none; stroke:#f8f8f6; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; }
+.athlete-achievement-badge.is-earned { border-color:#5e8121; box-shadow:inset 0 1px 0 #ffffff1c; }
+.athlete-achievement-check circle { fill:#baff36; }
+.athlete-achievement-check path { fill:none; stroke:#151713; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.athlete-achievement-number { fill:#f8f8f6; font-family:inherit; font-size:34px; font-weight:700; font-variant-numeric:tabular-nums; }
+.athlete-achievement-number.is-two-digit { font-size:30px; }
+.athlete-achievement-number.is-three-digit { font-size:26px; }
+.athlete-achievement-number.is-calendar { font-size:28px; }
+.athlete-achievement-number.is-calendar:not(.is-two-digit) { font-size:30px; }
+.athlete-achievement-number.is-record-five { font-size:32px; }
+.athlete-achievement-calendar { fill:none; stroke:#79797d; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+.athlete-achievement-calendar-dots { stroke:#baff36; stroke-width:3; }
+.athlete-achievement-comeback { fill:none; stroke:#f8f8f6; stroke-width:6; stroke-linecap:round; stroke-linejoin:round; }
 .athlete-achievement-comeback-accent { stroke:#baff36; }
 .athlete-achievement-badge:not(.is-earned) .athlete-achievement-comeback-accent { stroke:#79797d; }
-.athlete-achievement-record { position:absolute; top:28%; left:26%; width:48%; height:48%; fill:none; }
-.athlete-achievement-record-bars { fill:#f8f8f6; stroke:#f8f8f6; stroke-width:1; stroke-linejoin:round; }
-.athlete-achievement-record-star { fill:#baff36; }
+.athlete-achievement-record { fill:none; stroke:#f8f8f6; stroke-width:6; stroke-linecap:round; stroke-linejoin:round; }
+.athlete-achievement-record.is-five { stroke:#baff36; stroke-width:5; }
+.athlete-achievement-record-star { fill:#baff36; stroke:none; }
 .athlete-achievement-badge:not(.is-earned) .athlete-achievement-record-star { fill:#79797d; }
-.athlete-achievement-badge.badge-id-records-5 > strong { top:44%; font-size:30px; }
-.athlete-achievement-badge.badge-id-records-5 .athlete-achievement-record { top:64%; left:32%; width:36%; height:23%; }
-.athlete-achievement-badge.badge-id-records-5 .athlete-achievement-record-bars { fill:#baff36; stroke:#baff36; }
-.athlete-achievement-badge.badge-id-records-5 .athlete-achievement-record-star { display:none; }
-.athlete-achievement-badge.is-compact .athlete-achievement-check { width:18px; height:18px; font-size:13px; }
-.athlete-achievement-badge.is-compact > strong { font-size:23px; }
-.athlete-achievement-badge.badge-id-records-5.is-compact > strong { font-size:21px; }
 .athlete-achievements-preview-badges { display:flex; gap:10px; margin:13px 0 4px; }
 .athlete-achievements-page { padding-bottom:calc(110px + env(safe-area-inset-bottom)); }
 .athlete-achievements-count { margin:0 0 20px; color:var(--muted); }
-.athlete-achievements-group { margin-bottom:24px; }
-.athlete-achievements-group h2 { margin:0 0 12px; font-size:20px; }
-.athlete-achievements-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px 8px; }
-.athlete-achievement-card { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; min-width:0; min-height:136px; padding:4px 0; border:0; border-radius:14px; background:transparent; color:var(--fg); box-shadow:none; text-align:center; cursor:pointer; }
-.athlete-achievement-card .athlete-achievement-badge { width:min(92px,100%); height:auto; aspect-ratio:1; }
-.athlete-achievement-card-title { max-width:100%; color:var(--fg); font-size:13px; font-weight:650; line-height:1.2; overflow-wrap:anywhere; }
+.athlete-achievements-group { margin-bottom:20px; }
+.athlete-achievements-group h2 { margin:0 0 12px; font-size:18px; font-weight:600; }
+.athlete-achievements-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px 8px; }
+.athlete-achievement-card { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; min-width:0; padding:4px 0; border:0; border-radius:14px; background:transparent; color:var(--fg); box-shadow:none; text-align:center; cursor:pointer; }
+.athlete-achievement-card .athlete-achievement-badge { width:min(80px,100%); height:auto; aspect-ratio:1; border-radius:22px; }
+.athlete-achievement-card-title { max-width:100%; color:var(--fg); font-size:12px; font-weight:600; line-height:1.25; overflow-wrap:normal; }
 .athlete-achievement-detail-overlay { position:fixed; z-index:80; inset:0; display:grid; place-items:center; padding:16px; background:rgba(0,0,0,.72); }
 .athlete-achievement-detail { display:grid; justify-items:center; gap:16px; width:min(100%,360px); padding:20px; border:1px solid #35353a; border-radius:22px; background:#19191c; color:#f8f8f6; box-shadow:0 16px 48px #0008; text-align:center; }
 .athlete-achievement-detail-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; text-align:left; }
@@ -7130,4 +7127,4 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .athlete-achievements-home :focus-visible,.athlete-achievements-preview :focus-visible,.athlete-achievements-page :focus-visible,.athlete-achievements-new :focus-visible,.athlete-achievement-detail :focus-visible { outline:3px solid #baff36; outline-offset:3px; }
 @media (max-width:430px) { .athlete-achievements-home,.athlete-achievements-preview,.athlete-achievements-new { padding:14px; } }
 @media (max-width:350px) { .athlete-achievements-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (prefers-reduced-motion:reduce) { .athlete-achievement-badge,.athlete-achievement-ring { transition:none !important; animation:none !important; } }
+@media (prefers-reduced-motion:reduce) { .athlete-achievement-badge,.athlete-achievement-art { transition:none !important; animation:none !important; } }
