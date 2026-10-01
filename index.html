@@ -10042,4 +10042,45 @@ show(current, false)
   rows[0].style.padding = '16px 0';
 }
 </script>
+<style>
+#deck .team-project { padding:58px 76px!important; }
+#deck .team-project > .eyebrow { margin-bottom:22px!important; }
+#deck .team-project > h2 { font-size:58px!important; margin-bottom:28px!important; }
+.team-project .team-people { display:grid;grid-template-columns:repeat(4,1fr);gap:30px; }
+.team-project .team-photo { height:245px;background:#242a2d;display:flex;align-items:center;justify-content:center;color:#a7acae;font-size:18px;overflow:hidden; }
+.team-project .team-photo img { width:100%;height:100%;object-fit:cover;object-position:center 30%; }
+.team-project .team-photo img[src*="mishmetyev"] { object-position:center 86%; }
+.team-project .team-person h3 { font-size:27px!important;letter-spacing:-.6px;margin:17px 0 6px!important; }
+.team-project .team-role { font-size:21px;color:#d6f500;font-weight:700; }
+.team-project .team-duty { font-size:19px;color:#a7acae;margin-top:7px; }
+.team-project .team-cfo-note { font-size:16px;color:#a7acae;margin:20px 0 27px; }
+.team-project .team-bottom { border-top:1px solid #3b4144;padding-top:24px;display:grid;grid-template-columns:1fr 2fr;gap:52px; }
+.team-project .team-bottom h3 { font-size:25px!important;margin:0 0 15px!important; }
+.team-project .team-bottom p { font-size:20px;line-height:1.5;margin:0!important;color:#b7bcbe; }
+.team-project .team-hiring { display:grid;grid-template-columns:1fr 1fr;gap:28px; }
+.team-project .team-name { color:#f5f4ef;font-size:25px;font-weight:700; }
+.team-project .team-later { font-size:17px;color:#a7acae;margin-top:17px; }
+</style>
+<script>
+{
+ const team=document.querySelector('[data-section="11 · ЭТАПЫ"]');
+ team.classList.add('team-project');
+ team.dataset.section='11 · КОМАНДА';
+ team.dataset.slideType='feature-overview';
+ team.innerHTML=`<div class="eyebrow"><span class="design-number">11</span> · КОМАНДА</div>
+ <h2>Команда проекта</h2>
+ <div class="team-people">
+ <div class="team-person"><div class="team-photo"><img src="assets/team/antonknyazev.jpg" alt="Антон Князев"></div><h3>Антон Князев</h3><div class="team-role">CEO</div><div class="team-duty">Руководство проектом</div></div>
+ <div class="team-person"><div class="team-photo"><img src="assets/team/mishmetyev.jpg" alt="Михаил Ишметев"></div><h3>Михаил Ишметев</h3><div class="team-role">CFO</div><div class="team-duty">Финансы</div></div>
+ <div class="team-person"><div class="team-photo"><img src="assets/team/podkolzinpd.jpg" alt="Павел Подколзин"></div><h3>Павел Подколзин</h3><div class="team-role">CTO</div><div class="team-duty">Техническое направление</div></div>
+ <div class="team-person"><div class="team-photo"><img src="assets/team/a-goltsov.jpg" alt="Саша Гольцов"></div><h3>Саша Гольцов</h3><div class="team-role">AI Lead</div><div class="team-duty">Искусственный интеллект</div></div>
+ </div>
+ <div class="team-cfo-note">Михаил: в бюджете 0,5 ставки с 4-го месяца, полная ставка — с 7-го.</div>
+ <div class="team-bottom">
+ <div><h3>Сообщество и тренеры</h3><p><span class="team-name">Ваня Загурский</span><br>Уже в команде · 0,5 ставки на старте</p></div>
+ <div><h3>Усиление на старте</h3><div class="team-hiring"><p>Backend — 2 ставки<br>Mobile — 1 ставка</p><p>UI/UX-дизайнер — 1 ставка<br>QA — 0,5 ставки<br>IT / продуктовый юрист — 1 ставка</p></div><div class="team-later">С 3-го месяца — DevOps на 0,5 ставки.</div></div>
+ </div>
+ <aside class="speaker-notes">Четыре основных участника проекта: Антон Князев, Михаил Ишметев, Павел Подколзин, Саша Гольцов. Порядок и написание имён подтверждены пользователем. Ваня Загурский — сообщество и работа с тренерами. Ставки взяты из Team details, помесячный план строк 53–73, модели Fit_рынок_РФ [twgZ0h].xlsx. Старт: 9 FTE; с третьего месяца 9,5. CFO в бюджете с месяца 4 на 0,5, с месяца 7 на 1. Усиление не означает подтверждённые вакансии по всем позициям. Композиционный ориентир apple/08: четыре равных объекта на общей оси, второстепенная информация ниже; сохранена текущая Fit Design айдентика.</aside>`;
+}
+</script>
 </body></html>
