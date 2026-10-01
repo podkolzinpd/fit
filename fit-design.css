@@ -8,7 +8,7 @@ body { background:#141719; }
 #deck > .slide > h2 { color:#f5f4ef!important; font-weight:800!important; }
 #deck > .slide:not(:first-child) > h2::after { content:''; display:block; width:58px; height:3px; background:#d6f500; margin-top:20px; }
 #deck > .client-simple > h2::after,
-#deck > [data-section="05 · ДЛЯ ТРЕНЕРА"] > h2::after { display:none!important; }
+#deck > [data-section="04 · ДЛЯ ТРЕНЕРА"] > h2::after { display:none!important; }
 #deck .muted { color:#a7acae!important; }
 #deck figcaption > span { color:#d6f500!important; }
 #deck figure img { border-radius:12px!important; }
