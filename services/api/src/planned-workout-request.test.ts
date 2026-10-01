@@ -51,6 +51,21 @@ function validRequest() {
 }
 
 describe('planned workout request', () => {
+  it('accepts an overnight workout and a session longer than three hours', () => {
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), startTime: '23:30', endTime: '00:30' }, null)
+      ?.draft.endTime).toBe('00:30')
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), startTime: '10:00', endTime: '14:00' }, null)
+      ?.draft.endTime).toBe('14:00')
+  })
+  it('preserves fact provenance on result edits and rejects invalid sources', () => {
+    const request = validRequest()
+    const set = request.exercises[0]!.sets[0]!
+    const sources = { duration: 'entered', distance: 'entered', rpe: 'unknown' }
+    expect(readSavePlannedWorkoutRequest({ ...request, exercises: [{ ...request.exercises[0]!, sets: [{ ...set, metricSources: sources }] }] }, null)
+      ?.draft.exercises[0]?.sets[0]?.metricSources).toEqual(sources)
+    expect(readSavePlannedWorkoutRequest({ ...request, exercises: [{ ...request.exercises[0]!, sets: [{ ...set,
+      metricSources: { ...sources, distance: 'gps' } }] }] }, null)).toBeUndefined()
+  })
   it('normalizes a create request and keeps its aggregate values explicit', () => {
     expect(readSavePlannedWorkoutRequest(validRequest(), null)).toEqual({
       draft: {

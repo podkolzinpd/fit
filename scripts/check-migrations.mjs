@@ -62,9 +62,9 @@ function checkDangerousUpMigrations(changes) {
   const dangerousPatterns = [
     /\bdrop\s+(?:table|schema|database)\b/i,
     /\btruncate\b/i,
-    /\balter\s+table\b[\s\S]*?\bdrop\s+column\b/i,
-    /\balter\s+table\b[\s\S]*?\balter\s+column\b[\s\S]*?\btype\b/i,
-    /\balter\s+table\b[\s\S]*?\brename\s+(?:column|to)\b/i,
+    /\balter\s+table\b[^;]*?\bdrop\s+column\b/i,
+    /\balter\s+table\b[^;]*?\balter\s+column\b[^;]*?\btype\b/i,
+    /\balter\s+table\b[^;]*?\brename\s+(?:column|to)\b/i,
   ]
   const errors = []
 

@@ -27,6 +27,7 @@ export interface PlannedWorkoutSetDraft {
   durationSec: number | null
   distanceKm: number | null
   rpe: number | null
+  metricSources?: { duration: 'unknown' | 'planned' | 'entered'; distance: 'unknown' | 'planned' | 'entered'; rpe: 'unknown' | 'planned' | 'entered' }
 }
 
 export interface PlannedWorkoutExerciseDraft {
@@ -162,6 +163,10 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
   const durationSec = metric(input.durationSec, 2_147_483_647, true)
   const distanceKm = metric(input.distanceKm, 999_999)
   const rpe = metric(input.rpe, 10)
+  const sourceInput = record(input.metricSources)
+  const validSource = (entry: unknown) => entry === 'unknown' || entry === 'planned' || entry === 'entered'
+  if (input.metricSources != null && (!sourceInput
+    || !validSource(sourceInput.duration) || !validSource(sourceInput.distance) || !validSource(sourceInput.rpe))) return undefined
   if (
     position === undefined
     || sourceSetId === undefined
@@ -182,6 +187,11 @@ function readSet(value: unknown): PlannedWorkoutSetDraft | undefined {
     durationSec,
     distanceKm,
     rpe,
+    ...(sourceInput ? { metricSources: {
+      duration: sourceInput.duration as 'unknown' | 'planned' | 'entered',
+      distance: sourceInput.distance as 'unknown' | 'planned' | 'entered',
+      rpe: sourceInput.rpe as 'unknown' | 'planned' | 'entered',
+    } } : {}),
   }
 }
 
@@ -315,11 +325,10 @@ export function readSavePlannedWorkoutRequest(
     || exercises.some((exercise) => exercise === undefined)
     || new Set(exercises.map((exercise) => exercise?.position)).size
       !== exercises.length
-    || (
-      startTime !== null
-      && endTime !== null
-      && timeValue(endTime) <= timeValue(startTime)
-    )
+    || (startTime !== null && endTime !== null && (
+      (timeValue(endTime) - timeValue(startTime) + 86_400) % 86_400 === 0
+      || (timeValue(endTime) - timeValue(startTime) + 86_400) % 86_400 > 43_200
+    ))
     || (workoutId !== null && expectedVersion === undefined)
   ) return undefined
   return {

@@ -963,6 +963,7 @@ export function completedWorkoutDraft(source: Workout): WorkoutDraft {
           durationMin: fact?.durationMin ?? set.durationMin,
           distanceKm: fact?.distanceKm ?? set.distanceKm,
           rpe: fact?.rpe ?? set.rpe,
+          metricSources: sourceSet?.metricSources,
         }
       }),
     })),

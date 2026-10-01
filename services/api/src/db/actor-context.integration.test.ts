@@ -3128,6 +3128,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
                   {
                     id: smokeIds.strengthSetId,
                     position: 0,
+                    metricSources: { duration: 'unknown', distance: 'unknown', rpe: 'unknown' },
                     plan: {
                       weightKg: 40,
                       reps: 10,
@@ -3171,6 +3172,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
                   {
                     id: smokeIds.runningSetId,
                     position: 0,
+                    metricSources: { duration: 'unknown', distance: 'unknown', rpe: 'unknown' },
                     plan: {
                       weightKg: null,
                       reps: null,
@@ -3558,6 +3560,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         completed_at: Date
         exercise_id: string
         fact_weight_kg: string
+        fact_rpe_source: string
         plan_weight_kg: string
         set_id: string
         status: string
@@ -3569,7 +3572,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             exercise.id as exercise_id,
             workout_set.id as set_id,
             workout_set.plan_weight_kg,
-            workout_set.fact_weight_kg
+            workout_set.fact_weight_kg,
+            workout_set.fact_rpe_source
           from public.workouts workout
           join public.workout_exercises exercise
             on exercise.workout_id = workout.id
@@ -3582,6 +3586,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(aggregate.rows[0]).toMatchObject({
         fact_weight_kg: '40.00',
         plan_weight_kg: '40.00',
+        fact_rpe_source: 'planned',
         status: 'done',
       })
       const originalCompletedAt = aggregate.rows[0]!.completed_at.toISOString()
@@ -4103,6 +4108,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             durationSec: 1740,
             distanceKm: 5.21234,
             rpe: 8,
+            metricSources: { duration: 'entered', distance: 'entered', rpe: 'entered' },
           }],
         }],
       }
@@ -4139,11 +4145,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         client_comment: string
         fact_distance_km: string
         plan_distance_km: string
+        fact_duration_source: string
+        fact_distance_source: string
+        fact_rpe_source: string
         status: string
       }>(
         `
           select workout.status, workout.client_comment,
-            workout_set.plan_distance_km, workout_set.fact_distance_km
+            workout_set.plan_distance_km, workout_set.fact_distance_km,
+            workout_set.fact_duration_source, workout_set.fact_distance_source,
+            workout_set.fact_rpe_source
           from public.workouts workout
           join public.workout_exercises exercise
             on exercise.workout_id = workout.id
@@ -4157,6 +4168,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         client_comment: 'Темп был комфортным',
         fact_distance_km: '5.21234',
         plan_distance_km: '5.01225',
+        fact_duration_source: 'entered',
+        fact_distance_source: 'entered',
+        fact_rpe_source: 'entered',
         status: 'done',
       }])
 
@@ -4607,6 +4621,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           durationSec: 1_650,
           distanceKm: 5.25001,
           rpe: 7.5,
+          metricSources: { duration: 'entered' as const, distance: 'entered' as const, rpe: 'entered' as const },
         }
         await expect(withActorTransaction(
           runtimePool,
@@ -4667,6 +4682,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           `
             select
               confirmed_at, fact_distance_km, fact_duration_sec, fact_rpe,
+              fact_duration_source, fact_distance_source, fact_rpe_source,
               updated_by, version
             from public.workout_sets
             where id = $1
@@ -4677,6 +4693,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           fact_distance_km: '5.25001',
           fact_duration_sec: 1650,
           fact_rpe: '7.5',
+          fact_duration_source: 'entered',
+          fact_distance_source: 'entered',
+          fact_rpe_source: 'entered',
           updated_by: OTHER_ACTOR_ID,
           version: '3',
         }])
@@ -7184,6 +7203,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
 
       const disabled = await manager.applyLinkedProfiles('disable')
       expect(disabled.rolloutEnabledProfiles).toBe(0)
+    })
+
+    it('uses one canonical duration and validates long or overnight workout clocks', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const result = await ownerPool.query<{
+        canonical: number; consistent: boolean; contradictory: boolean
+        overnight: number; four_hours: number; plausible: boolean; implausible: boolean
+        consistent_total: string; contradictory_total: string
+      }>(`select
+        app_private.canonical_set_duration_seconds(1800, 30) canonical,
+        app_private.set_duration_is_consistent(1800, 30) consistent,
+        app_private.set_duration_is_consistent(1800, 20) contradictory,
+        app_private.workout_elapsed_seconds(null, null, time '23:30', time '00:30') overnight,
+        app_private.workout_elapsed_seconds(null, null, time '10:00', time '14:00') four_hours,
+        app_private.workout_elapsed_is_plausible(14400) plausible,
+        app_private.workout_elapsed_is_plausible(50000) implausible,
+        app_private.workout_time_quality(3600, 3500) consistent_total,
+        app_private.workout_time_quality(3600, 4000) contradictory_total`)
+      expect(result.rows[0]).toMatchObject({
+        canonical: 1800, consistent: true, contradictory: false,
+        overnight: 3600, four_hours: 14400, plausible: true, implausible: false,
+        consistent_total: 'consistent', contradictory_total: 'contradictory',
+      })
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        const saved = await connection.query<{ start_time: string; end_time: string }>(`
+          update public.workouts set start_time = time '23:30', end_time = time '00:30'
+          where id = $1 returning start_time::text, end_time::text`, [ROOT_WORKOUT_ID])
+        expect(saved.rows[0]).toMatchObject({ start_time: '23:30:00', end_time: '00:30:00' })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('never uses a future weight measurement for an earlier workout', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        await connection.query(`insert into public.client_progress
+          (trainer_id, client_id, created_by, recorded_on, weight_kg)
+          values ($1, $2, $1, date '1900-01-01', 70),
+            ($1, $2, $1, date '1900-01-03', 85)`, [ACTOR_ID, CLIENT_ID])
+        const result = await connection.query<{ weight: string }>(`
+          select app_private.workout_weight_on_date($1, date '1900-01-02')::text weight`, [CLIENT_ID])
+        expect(result.rows[0]?.weight).toBe('70.00')
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
     })
   },
 )
