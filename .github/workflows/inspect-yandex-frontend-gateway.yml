@@ -1,0 +1,46 @@
+name: Inspect Yandex frontend gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      previous_commit:
+        description: 'Previous production commit (40 hex characters)'
+        required: true
+        type: string
+      candidate_commit:
+        description: 'Failed candidate commit (40 hex characters)'
+        required: true
+        type: string
+      incident_since_utc:
+        description: 'Start of failed gateway update (RFC-3339 UTC)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: fit-frontend-production
+    timeout-minutes: 10
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_FRONTEND_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: b1goqho12tlk9dibc3f3
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+      PREVIOUS_COMMIT: ${{ inputs.previous_commit }}
+      CANDIDATE_COMMIT: ${{ inputs.candidate_commit }}
+      INCIDENT_SINCE_UTC: ${{ inputs.incident_since_utc }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exchange OIDC for scoped frontend identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Read gateway status, active version and operations only
+        run: node scripts/inspect-yandex-frontend-gateway.mjs
