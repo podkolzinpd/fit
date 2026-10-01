@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import legalDocuments from '../../shared/legal-documents.json'
+import { PRIVACY_VERSION } from '../../shared/legal'
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from './LegalPages'
 
 type MockAuthState = { actor: { userId: string } | null; signOut: () => Promise<void> }
@@ -63,14 +64,17 @@ describe('legal pages', () => {
 
     render(wrapper(<PrivacyPage />))
     expect(screen.getByRole('heading', { level: 1, name: 'Политика конфиденциальности' })).toBeVisible()
+    expect(screen.getByText(/https:\/\/fit-training\.ru\/legal\/terms/)).toBeVisible()
+    expect(screen.queryByText(/fit-drab\.vercel\.app/)).not.toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Перечень обрабатываемых персональных данных' })).toBeVisible()
     expect(screen.getByText('Сервис не передает персональные данные в третьи страны.')).toBeVisible()
     expect(screen.queryByText(/Supabase, Vercel и сервисы Yandex Cloud/)).not.toBeInTheDocument()
   })
 
-  it('keeps the published text byte-for-byte aligned with the extracted document content', async () => {
+  it('keeps published text hashes current without changing acceptance for a link correction', async () => {
     await expect(contentDigest(legalDocuments.terms)).resolves.toBe(legalDocuments.terms.sourceTextSha256)
-    await expect(contentDigest(legalDocuments.privacy)).resolves.toBe(legalDocuments.privacy.sourceTextSha256)
+    await expect(contentDigest(legalDocuments.privacy)).resolves.toBe(legalDocuments.privacy.publishedTextSha256)
+    expect(PRIVACY_VERSION).toBe('sha256:5371d0ac8c84bd4dda416083')
   })
 
   it('asks a signed-out user to authenticate before a deletion request', () => {
