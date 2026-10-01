@@ -4068,7 +4068,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             reps: null,
             durationMin: null,
             durationSec: 1800,
-            distanceKm: 5,
+            distanceKm: 5.01225,
             rpe: 7,
           }],
         }],
@@ -4101,7 +4101,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             ...plan.exercises[0]!.sets[0]!,
             sourceSetId: sourceRows.rows[0]!.set_id,
             durationSec: 1740,
-            distanceKm: 5.2,
+            distanceKm: 5.21234,
             rpe: 8,
           }],
         }],
@@ -4155,8 +4155,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
       expect(recordedRows.rows).toEqual([{
         client_comment: 'Темп был комфортным',
-        fact_distance_km: '5.200',
-        plan_distance_km: '5.000',
+        fact_distance_km: '5.21234',
+        plan_distance_km: '5.01225',
         status: 'done',
       }])
 
@@ -4605,7 +4605,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           reps: null,
           durationMin: null,
           durationSec: 1_650,
-          distanceKm: 5.25,
+          distanceKm: 5.25001,
           rpe: 7.5,
         }
         await expect(withActorTransaction(
@@ -4674,7 +4674,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [ROOT_WORKOUT_SET_ID],
         )
         expect(setRows.rows).toMatchObject([{
-          fact_distance_km: '5.250',
+          fact_distance_km: '5.25001',
           fact_duration_sec: 1650,
           fact_rpe: '7.5',
           updated_by: OTHER_ACTOR_ID,
@@ -4717,7 +4717,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           version: 3,
           exercises: [{
             sets: [{
-              fact: { durationSec: 1650, distanceKm: 5.25, rpe: 7.5 },
+              fact: { durationSec: 1650, distanceKm: 5.25001, rpe: 7.5 },
               version: 3,
             }],
           }],

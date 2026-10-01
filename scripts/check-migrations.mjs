@@ -55,6 +55,10 @@ function checkImmutableHistory(changes) {
 }
 
 function checkDangerousUpMigrations(changes) {
+  // The workout distance columns start as numeric(9,3). This exact widening
+  // preserves their six integer digits and every existing stored value, while
+  // adding two fractional digits for centimetre-precision metre input.
+  const safeWorkoutDistanceWidening = /alter\s+table\s+public\.workout_sets\s+alter\s+column\s+plan_distance_km\s+type\s+numeric\(11,\s*5\)\s*,\s*alter\s+column\s+fact_distance_km\s+type\s+numeric\(11,\s*5\)\s*;/gi
   const dangerousPatterns = [
     /\bdrop\s+(?:table|schema|database)\b/i,
     /\btruncate\b/i,
@@ -71,7 +75,8 @@ function checkDangerousUpMigrations(changes) {
 
     const contents = readFileSync(path, 'utf8')
     const upMigration = contents.split(/^-- Down Migration\s*$/im)[0] ?? ''
-    if (dangerousPatterns.some((pattern) => pattern.test(upMigration))) {
+    const upMigrationWithoutSafeWidening = upMigration.replace(safeWorkoutDistanceWidening, '')
+    if (dangerousPatterns.some((pattern) => pattern.test(upMigrationWithoutSafeWidening))) {
       errors.push(
         `Потенциально разрушающая операция в новой миграции: ${path}. ` +
           'Такое изменение нужно вынести в отдельный ручной план развёртывания.',

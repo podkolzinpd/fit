@@ -109,7 +109,7 @@ export function RunMetricsFields({
           type="number"
           inputMode="decimal"
           min="0"
-          step={unit === 'm' ? 1 : 0.01}
+          step="any"
           placeholder="0"
           value={distanceText}
           disabled={disabled}
