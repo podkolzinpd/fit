@@ -1,5 +1,32 @@
 import { expect, test } from '@playwright/test'
 
+if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
+  for (const name of [
+    'VITE_YANDEX_ONLY_AUTH_ENABLED',
+    'VITE_YANDEX_NATIVE_REGISTRATION_ENABLED',
+    'VITE_YANDEX_APP_SESSION_ENABLED',
+    'VITE_YANDEX_MAIN_ROUTING_ENABLED',
+  ]) {
+    expect(process.env[name], `${name} must be enabled in the required Yandex E2E lane`).toBe('true')
+  }
+  expect(process.env.VITE_YANDEX_OAUTH_CLIENT_ID).toBeTruthy()
+  expect(process.env.VITE_YANDEX_API_BASE_URL).toBe('https://stage.example.test')
+}
+
+const legacyRequestCounts = new WeakMap<object, number>()
+
+test.beforeEach(async ({ page }) => {
+  legacyRequestCounts.set(page, 0)
+  await page.route(/^https?:\/\/(?:127\.0\.0\.1|localhost):54321(?:\/|$)/, (route) => {
+    legacyRequestCounts.set(page, (legacyRequestCounts.get(page) ?? 0) + 1)
+    return route.abort('connectionrefused')
+  })
+})
+
+test.afterEach(({ page }) => {
+  expect(legacyRequestCounts.get(page), 'Yandex-only auth must not call local Supabase').toBe(0)
+})
+
 test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page }, testInfo) => {
   test.skip(
     process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
@@ -61,8 +88,6 @@ test('restored Yandex session completes the legal check after reload', async ({ 
   )
   const token = 'a'.repeat(43)
   let legalRequests = 0
-  // Restoring Yandex must not depend on the legacy service being reachable.
-  await page.route('http://127.0.0.1:54321/**', (route) => route.abort('connectionrefused'))
   await page.route('https://stage.example.test/v1/auth/yandex/session', async (route) => {
     await route.fulfill({
       status: 200,
@@ -111,7 +136,6 @@ test('Yandex restore exits loading after a network error and offers retry', asyn
       || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
     'Run with the complete Yandex-only session switches.',
   )
-  await page.route('http://127.0.0.1:54321/**', (route) => route.abort('connectionrefused'))
   await page.route('https://stage.example.test/v1/auth/yandex/session', (route) => route.abort('connectionrefused'))
   await page.route('https://stage.example.test/health', (route) => route.abort('connectionrefused'))
   await page.addInitScript(() => {

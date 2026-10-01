@@ -183,6 +183,58 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+  # Production auth uses Yandex. Keep this browser gate independent from the
+  # frozen local Supabase stack still needed by the remaining legacy specs.
+  e2e-yandex-auth:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.required == 'true'
+    runs-on: ubuntu-latest
+    env:
+      FIT_YANDEX_E2E_REQUIRED: 'true'
+      VITE_SUPABASE_URL: http://127.0.0.1:54321
+      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
+      VITE_YANDEX_API_BASE_URL: https://stage.example.test
+      VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+      VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+      VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+      VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+      PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.61.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run Yandex-only auth without Supabase services
+        run: |
+          docker run --rm --init --ipc=host --network host \
+            --env CI=true \
+            --env FIT_YANDEX_E2E_REQUIRED \
+            --env VITE_SUPABASE_URL \
+            --env VITE_SUPABASE_PUBLISHABLE_KEY \
+            --env VITE_YANDEX_OAUTH_CLIENT_ID \
+            --env VITE_YANDEX_API_BASE_URL \
+            --env VITE_YANDEX_ONLY_AUTH_ENABLED \
+            --env VITE_YANDEX_NATIVE_REGISTRATION_ENABLED \
+            --env VITE_YANDEX_APP_SESSION_ENABLED \
+            --env VITE_YANDEX_MAIN_ROUTING_ENABLED \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work \
+            "$PLAYWRIGHT_IMAGE" \
+            npx playwright test e2e/yandex-only-auth.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests
+      - name: Upload Yandex-only browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics-yandex-auth
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
   e2e-visual:
     needs: e2e-scope
     if: needs.e2e-scope.outputs.required == 'true'
@@ -388,7 +440,7 @@ jobs:
   # Preserve one stable required check regardless of whether the heavy browser
   # jobs ran, passed, failed or were intentionally skipped by the scope gate.
   e2e:
-    needs: [e2e-scope, e2e-visual, e2e-chromium, e2e-webkit]
+    needs: [e2e-scope, e2e-yandex-auth, e2e-visual, e2e-chromium, e2e-webkit]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -396,6 +448,7 @@ jobs:
         env:
           SCOPE_RESULT: ${{ needs.e2e-scope.result }}
           E2E_REQUIRED: ${{ needs.e2e-scope.outputs.required }}
+          YANDEX_AUTH_RESULT: ${{ needs.e2e-yandex-auth.result }}
           VISUAL_RESULT: ${{ needs.e2e-visual.result }}
           CHROMIUM_RESULT: ${{ needs.e2e-chromium.result }}
           WEBKIT_RESULT: ${{ needs.e2e-webkit.result }}
@@ -409,8 +462,8 @@ jobs:
             echo "E2E skipped: changes do not affect the browser runtime"
             exit 0
           fi
-          if [[ "$VISUAL_RESULT" != "success" || "$CHROMIUM_RESULT" != "success" || "$WEBKIT_RESULT" != "success" ]]; then
-            echo "E2E failed: visual=$VISUAL_RESULT chromium=$CHROMIUM_RESULT webkit=$WEBKIT_RESULT"
+          if [[ "$YANDEX_AUTH_RESULT" != "success" || "$VISUAL_RESULT" != "success" || "$CHROMIUM_RESULT" != "success" || "$WEBKIT_RESULT" != "success" ]]; then
+            echo "E2E failed: yandex-auth=$YANDEX_AUTH_RESULT visual=$VISUAL_RESULT chromium=$CHROMIUM_RESULT webkit=$WEBKIT_RESULT"
             exit 1
           fi
           echo "All E2E lanes passed"
