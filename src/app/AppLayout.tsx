@@ -33,6 +33,7 @@ export function AppLayout() {
   const monochromeLive = liveSession
   const monochromeProgress = pathname === '/me/progress'
   const monochromeClientGoal = pathname === '/me/goal'
+  const monochromeClientFinance = pathname === '/me/finance'
   const monochromeClientWorkouts = pathname === '/me/workouts'
   const monochromeTrainerClientWorkouts = Boolean(actor?.role === 'trainer' && /^\/clients\/[^/]+\/workouts$/.test(pathname))
   const monochromeClientProfile = pathname === '/me/profile' || pathname === '/me/settings'
@@ -116,6 +117,7 @@ export function AppLayout() {
     monochromeLive ? 'live-identity' : '',
     monochromeProgress ? 'progress-identity' : '',
     monochromeClientGoal ? 'trainer-client-goal-identity client-goal-identity' : '',
+    monochromeClientFinance ? 'client-finance-identity' : '',
     monochromeClientWorkouts || monochromeTrainerClientWorkouts ? 'client-workouts-identity' : '',
     monochromeClientProfile ? 'client-profile-shell-identity' : '',
     monochromeClientCardEdit ? 'client-card-edit-identity' : '',
@@ -149,7 +151,9 @@ export function AppLayout() {
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
   if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
-    <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>
+    {monochromeClientFinance
+      ? <Link to="/me" className="active" aria-current="page"><HomeIcon />Кабинет</Link>
+      : <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>}
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>
     {isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
       id="client-assistant-2026-09"
