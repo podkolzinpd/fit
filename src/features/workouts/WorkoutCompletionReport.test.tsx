@@ -39,7 +39,9 @@ const record: WorkoutResult = {
 
 describe('WorkoutCompletionReport', () => {
   it('adds a new badge without replacing the result, feedback or sharing', () => {
-    const completed = { id: 'new-workout', status: 'done', workoutDate: localDate('2026-09-30'), completedAt: '2026-09-30T12:00:00Z' } as Workout
+    const completed: Workout = { id: 'new-workout', clientId: 'client', clientName: 'Клиент', status: 'done',
+      workoutDate: localDate('2026-09-30'), completedAt: '2026-09-30T12:00:00Z', startedAt: null,
+      startTime: null, endTime: null, notes: null, stageId: null, stageTitle: null, version: 1, exercises: [] }
     const newAchievements = computeAthleteAchievements([completed], localDate('2026-09-30')).filter((item) => item.sourceWorkoutId === completed.id)
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} newAchievements={newAchievements} feedback={<button type="button">Оставить отзыв</button>} /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { AthleteAchievementHome, NewlyEarnedAchievements } from './AthleteAchievements'
-import { computeAthleteAchievements } from '../../shared/athlete-achievements'
+import { computeAthleteAchievements, type AthleteAchievement } from '../../shared/athlete-achievements'
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: 'athlete-1', role: 'client', timezone: 'Europe/Moscow' } }) }))
 
@@ -47,7 +47,7 @@ describe('athlete achievement surfaces', () => {
   it('reopens once for a genuinely new award, not for an old history recalculation', () => {
     const view = render(<MemoryRouter><AthleteAchievementHome workouts={[completed]} loading={false} error={null} onRetry={() => undefined} /></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Скрыть карточку ачивок' }))
-    const oldHistory = Array.from({ length: 9 }, (_, index) => ({ ...completed, id: `old-${index}`, completedAt: `2026-08-${String(index + 1).padStart(2, '0')}T12:00:00Z` }))
+    const oldHistory = Array.from({ length: 9 }, (_, index) => ({ ...completed, id: `old-${index}`, completedAt: `2026-09-${20 + index}T12:00:00Z` }))
     view.rerender(<MemoryRouter><AthleteAchievementHome workouts={[completed, ...oldHistory]} loading={false} error={null} onRetry={() => undefined} /></MemoryRouter>)
     expect(screen.queryByText('В ритме')).not.toBeInTheDocument()
 
@@ -70,5 +70,19 @@ describe('athlete achievement surfaces', () => {
     const items = computeAthleteAchievements([completed], localDate('2026-09-30'))
     render(<MemoryRouter><NewlyEarnedAchievements items={items.filter((item) => item.sourceWorkoutId === completed.id)} /></MemoryRouter>)
     expect(screen.getByRole('region', { name: 'Новые ачивки' })).toHaveTextContent('Первый шаг')
+  })
+
+  it('distinguishes the two five-awards at compact size with a record glyph and accessible names', () => {
+    const items: AthleteAchievement[] = [
+      { id: 'workouts-5', kind: 'workouts', title: 'Первая пятёрка', threshold: 5, description: 'Завершить 5 тренировок', earnedOn: localDate('2026-09-29'), earnedAt: completed.completedAt, sourceWorkoutId: completed.id, progress: 5, nearest: false },
+      { id: 'records-5', kind: 'records', title: 'Рекорды копятся', threshold: 5, description: 'Установить личные рекорды в 5 разных тренировках', earnedOn: localDate('2026-09-29'), earnedAt: completed.completedAt, sourceWorkoutId: completed.id, progress: 5, nearest: false },
+    ]
+    render(<MemoryRouter><NewlyEarnedAchievements items={items} /></MemoryRouter>)
+    const workoutsBadge = screen.getByRole('img', { name: 'Первая пятёрка: получена' })
+    const recordsBadge = screen.getByRole('img', { name: 'Рекорды копятся: получена' })
+    expect(workoutsBadge).toHaveClass('is-compact', 'badge-id-workouts-5')
+    expect(recordsBadge).toHaveClass('is-compact', 'badge-id-records-5')
+    expect(workoutsBadge.querySelector('.athlete-achievement-record')).toBeNull()
+    expect(recordsBadge.querySelector('.athlete-achievement-record')).not.toBeNull()
   })
 })
