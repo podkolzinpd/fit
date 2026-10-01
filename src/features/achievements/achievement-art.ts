@@ -1,7 +1,19 @@
 import type { AchievementId } from '../../shared/athlete-achievements'
 
-/** These are the exact, unmodified PNGs from the owner-approved 21-icon sheet. */
-export const achievementArt: Partial<Record<AchievementId, { file: string; crop: 'standard' | 'dark' | 'distance' }>> = {
+/** Exact, unmodified owner-reviewed PNGs for all athlete achievements. */
+export const achievementArt: Record<AchievementId, { file: string; crop: 'standard' | 'dark' | 'distance' }> = {
+  'workouts-1': { file: 'achievement-workouts-first-step-v1-20261001.png', crop: 'standard' },
+  'workouts-5': { file: 'achievement-workouts-5-number-v2-20261001.png', crop: 'standard' },
+  'workouts-10': { file: 'achievement-workouts-10-number-v2-20261001.png', crop: 'standard' },
+  'workouts-25': { file: 'achievement-workouts-25-number-v2-20261001.png', crop: 'standard' },
+  'workouts-50': { file: 'achievement-workouts-50-number-v2-20261001.png', crop: 'standard' },
+  'workouts-100': { file: 'achievement-workouts-100-number-v2-20261001.png', crop: 'standard' },
+  'weeks-4': { file: 'achievement-regularity-4w-calendar-v1-20261001.png', crop: 'standard' },
+  'weeks-8': { file: 'achievement-regularity-8w-calendar-v1-20261001.png', crop: 'standard' },
+  'weeks-12': { file: 'achievement-regularity-12w-calendar-v1-20261001.png', crop: 'standard' },
+  'weeks-total-52': { file: 'achievement-regularity-52w-calendar-v1-20261001.png', crop: 'standard' },
+  'comeback-21': { file: 'achievement-regularity-comeback-calendar-v1-20261001.png', crop: 'standard' },
+  'records-5': { file: 'achievement-records-5-trophy-v1-20261001.png', crop: 'standard' },
   'plank-5m': { file: 'achievement-reference-plank-20261001.png', crop: 'dark' },
   'plank-30m': { file: 'achievement-plank-30m-concept-20261001.png', crop: 'dark' },
   'plank-2h': { file: 'achievement-plank-2h-concept-20261001.png', crop: 'dark' },

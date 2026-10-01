@@ -72,7 +72,7 @@ describe('athlete achievement surfaces', () => {
     expect(screen.getByRole('region', { name: 'Новые ачивки' })).toHaveTextContent('Первый шаг')
   })
 
-  it('distinguishes the two five-awards at compact size with a record glyph and accessible names', () => {
+  it('distinguishes the two five-awards at compact size with different approved art and accessible names', () => {
     const items: AthleteAchievement[] = [
       { id: 'workouts-5', kind: 'workouts', title: 'Первая пятёрка', threshold: 5, description: 'Завершить 5 тренировок', earnedOn: localDate('2026-09-29'), earnedAt: completed.completedAt, sourceWorkoutId: completed.id, progress: 5, nearest: false },
       { id: 'records-5', kind: 'records', title: 'Рекорды копятся', threshold: 5, description: 'Установить личные рекорды в 5 разных тренировках', earnedOn: localDate('2026-09-29'), earnedAt: completed.completedAt, sourceWorkoutId: completed.id, progress: 5, nearest: false },
@@ -82,7 +82,7 @@ describe('athlete achievement surfaces', () => {
     const recordsBadge = screen.getByRole('img', { name: 'Рекорды копятся: получена' })
     expect(workoutsBadge).toHaveClass('is-compact', 'badge-id-workouts-5')
     expect(recordsBadge).toHaveClass('is-compact', 'badge-id-records-5')
-    expect(workoutsBadge.querySelector('.athlete-achievement-record')).toBeNull()
-    expect(recordsBadge.querySelector('.athlete-achievement-record')).not.toBeNull()
+    expect(workoutsBadge.querySelector('img')).toHaveAttribute('src', '/achievements/achievement-workouts-5-number-v2-20261001.png')
+    expect(recordsBadge.querySelector('img')).toHaveAttribute('src', '/achievements/achievement-records-5-trophy-v1-20261001.png')
   })
 })
