@@ -40,7 +40,7 @@ export function preferredRunDistanceUnit(distanceKm?: number): RunDistanceUnit {
 
 export function formatRunDistanceInput(distanceKm: number | undefined, unit: RunDistanceUnit): string {
   if (distanceKm === undefined || !Number.isFinite(distanceKm) || distanceKm < 0) return ''
-  return String(unit === 'm' ? Math.round(distanceKm * 1000) : Math.round(distanceKm * 1000) / 1000)
+  return String(unit === 'm' ? Math.round(distanceKm * 100_000) / 100 : Math.round(distanceKm * 100_000) / 100_000)
 }
 
 export function runDistanceKmFromInput(value: string, unit: RunDistanceUnit): number | undefined {
@@ -48,7 +48,8 @@ export function runDistanceKmFromInput(value: string, unit: RunDistanceUnit): nu
   if (!normalized) return undefined
   const parsed = Number(normalized)
   if (!Number.isFinite(parsed) || parsed < 0) return undefined
-  return Math.round((unit === 'm' ? parsed / 1000 : parsed) * 1000) / 1000
+  // Hundredths of a metre require five decimal places in the kilometre model.
+  return Math.round((unit === 'm' ? parsed / 1000 : parsed) * 100_000) / 100_000
 }
 
 export function runDistanceLabel(distanceKm?: number): string | null {

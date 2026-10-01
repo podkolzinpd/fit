@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import {
   formatRunDistanceInput,
   preferredRunDistanceUnit,
@@ -55,6 +55,7 @@ export function RunMetricsFields({
   const [unit, setUnit] = useState<RunDistanceUnit>(() => (rowing || optionalDistance) && distanceKm === undefined ? 'm' : preferredRunDistanceUnit(distanceKm))
   const [localDuration, setLocalDuration] = useState(durationSec)
   const [distanceText, setDistanceText] = useState(() => formatRunDistanceInput(distanceKm, unit))
+  const lastSyncedDistanceKm = useRef(distanceKm)
   const [distanceVisible, setDistanceVisible] = useState(() => !optionalDistance || distanceKm !== undefined)
   const [strokeRateText, setStrokeRateText] = useState(() => strokeRate === undefined ? '' : String(strokeRate))
   const parsedDuration = localDuration
@@ -62,7 +63,13 @@ export function RunMetricsFields({
   const pace = optionalDistance ? null : rowing ? rowingPaceLabel(parsedDuration, parsedDistance) : runPaceLabel(parsedDuration, parsedDistance)
 
   useEffect(() => setLocalDuration(durationSec), [durationSec])
-  useEffect(() => setDistanceText(formatRunDistanceInput(distanceKm, unit)), [distanceKm, unit])
+  useEffect(() => {
+    // A unit change converts the current draft; only a new server/parent value
+    // may replace it. Live autosave can still be pending when the unit changes.
+    if (Object.is(lastSyncedDistanceKm.current, distanceKm)) return
+    lastSyncedDistanceKm.current = distanceKm
+    setDistanceText(formatRunDistanceInput(distanceKm, unit))
+  }, [distanceKm, unit])
   useEffect(() => { if (distanceKm !== undefined) setDistanceVisible(true) }, [distanceKm])
   useEffect(() => setStrokeRateText(strokeRate === undefined ? '' : String(strokeRate)), [strokeRate])
 
@@ -109,7 +116,7 @@ export function RunMetricsFields({
           type="number"
           inputMode="decimal"
           min="0"
-          step={unit === 'm' ? 1 : 0.01}
+          step="any"
           placeholder="0"
           value={distanceText}
           disabled={disabled}

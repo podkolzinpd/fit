@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -43,6 +44,58 @@ describe('RunMetricsFields', () => {
     await user.type(distance, '400')
     await user.tab()
     expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 0.4 })
+  })
+
+  it('accepts hundredths of a metre and keeps them when switching units', async () => {
+    const user = userEvent.setup()
+    const onCommit = vi.fn()
+    function Harness() {
+      const [distanceKm, setDistanceKm] = useState(5.2)
+      return <RunMetricsFields idPrefix="fractional-run" durationSec={1780} distanceKm={distanceKm}
+        inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция"
+        distanceUnitLabel="Единица дистанции" onCommit={(patch) => {
+          onCommit(patch)
+          if (patch.distanceKm !== undefined) setDistanceKm(patch.distanceKm)
+        }} />
+    }
+    render(<Harness />)
+    await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'm')
+    const distance = screen.getByLabelText('Дистанция')
+    expect(distance).toHaveAttribute('step', 'any')
+    await user.clear(distance)
+    await user.type(distance, '12.25')
+    await user.tab()
+    expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 0.01225 })
+    expect(distance).toHaveValue(12.25)
+    await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'km')
+    expect(distance).toHaveValue(0.01225)
+  })
+
+  it('accepts hundredths of a kilometre without native step validation', async () => {
+    const user = userEvent.setup()
+    const onCommit = renderFields()
+    const distance = screen.getByLabelText('Дистанция')
+    expect(distance).toHaveAttribute('step', 'any')
+    await user.clear(distance)
+    await user.type(distance, '5.25')
+    await user.tab()
+    expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 5.25 })
+    expect(distance).toHaveValue(5.25)
+  })
+
+  it('keeps an unsynced Live distance when the unit changes before server data arrives', async () => {
+    const user = userEvent.setup()
+    render(<RunMetricsFields idPrefix="live-distance" durationSec={120} distanceKm={5.2}
+      inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция"
+      distanceUnitLabel="Единица дистанции" />)
+    const distance = screen.getByLabelText('Дистанция')
+    const unit = screen.getByLabelText('Единица дистанции')
+    await user.selectOptions(unit, 'm')
+    await user.clear(distance)
+    await user.type(distance, '12.25')
+    await user.tab()
+    await user.selectOptions(unit, 'km')
+    expect(distance).toHaveValue(0.01225)
   })
 
   it('commits duration selected as minutes and seconds', async () => {
