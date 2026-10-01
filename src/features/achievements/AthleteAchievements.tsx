@@ -31,15 +31,21 @@ function readDismissed(userId: string): HomePreference {
 function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: boolean }) {
   const earned = Boolean(item.earnedOn)
   const ratio = earned ? 1 : item.nearest ? item.progress / item.threshold : 0
-  return <span className={`athlete-achievement-badge kind-${item.kind}${earned ? ' is-earned' : ''}${item.nearest ? ' is-nearest' : ''}${compact ? ' is-compact' : ''}`} role="img" aria-label={`${item.title}: ${earned ? 'получена' : `${item.progress} из ${item.threshold}`}`}>
+  const status = earned ? 'получена' : item.kind === 'comeback' ? 'пока не получена' : `${item.progress} из ${item.threshold}`
+  return <span className={`athlete-achievement-badge kind-${item.kind} badge-id-${item.id}${earned ? ' is-earned' : ''}${item.nearest ? ' is-nearest' : ''}${compact ? ' is-compact' : ''}`} role="img" aria-label={`${item.title}: ${status}`}>
     <svg className="athlete-achievement-ring" viewBox="0 0 100 100" aria-hidden="true">
       <circle className="athlete-achievement-ring-track" cx="50" cy="50" r="40" />
       {ratio > 0 && <circle className="athlete-achievement-ring-fill" cx="50" cy="50" r="40" strokeDasharray={`${ratio * 251.33} 251.33`} />}
     </svg>
-    {item.kind === 'weeks'
+    {(item.kind === 'weeks' || item.kind === 'weeks-total')
       ? <svg className="athlete-achievement-calendar" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="9" width="38" height="33" rx="7" /><path d="M5 19h38M15 5v9M33 5v9" /><path className="athlete-achievement-calendar-dots" d="M13 27h5M23 27h5M33 27h3M13 35h5M23 35h5M33 35h3" /></svg>
-      : <span className="athlete-achievement-check" aria-hidden="true">✓</span>}
-    <strong>{item.threshold}</strong>
+      : item.kind === 'comeback'
+        ? <svg className="athlete-achievement-comeback" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 35V24c0-9 6-14 15-14h5" /><path d="m26 4 7 6-7 6" /><path className="athlete-achievement-comeback-accent" d="M12 35h9" /></svg>
+        : item.kind === 'records'
+          ? <svg className="athlete-achievement-record" viewBox="0 0 48 48" aria-hidden="true"><path className="athlete-achievement-record-bars" d="M8 39V28h8v11M20 39V21h8v18M32 39V14h8v25" /><path className="athlete-achievement-record-star" d="m35 3 1.5 3.5L40 8l-3.5 1.5L35 13l-1.5-3.5L30 8l3.5-1.5z" /></svg>
+          : null}
+    {earned && <span className="athlete-achievement-check" aria-hidden="true">✓</span>}
+    {item.kind !== 'comeback' && item.id !== 'records-1' && <strong>{item.threshold}</strong>}
   </span>
 }
 
@@ -63,7 +69,7 @@ function AchievementDetail({ item, onClose, returnFocusTo }: { item: AthleteAchi
       <div className="athlete-achievement-detail-heading"><h2 id={titleId}>{item.title}</h2><button ref={closeRef} type="button" aria-label="Закрыть подробности ачивки" onClick={onClose}><CloseIcon /></button></div>
       <Badge item={item} />
       <p>{item.description}</p>
-      <strong>{item.earnedOn ? `Получена ${formatLocalDate(item.earnedOn)}` : `Прогресс: ${item.progress} из ${item.threshold}`}</strong>
+      <strong>{item.earnedOn ? `Получена ${formatLocalDate(item.earnedOn)}` : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${item.progress} из ${item.threshold}`}</strong>
     </section>
   </div>, host)
 }
@@ -112,10 +118,10 @@ export function AthleteAchievementHome({ workouts, loading, error, onRetry }: { 
 
 export function AthleteAchievementPreview({ clientId }: { clientId: string }) {
   const { query, achievements } = useAchievements(clientId)
-  const earned = achievements?.filter((item) => item.earnedOn) ?? []
-  const visible = earned.length ? earned.slice(-3) : achievements?.slice(0, 1) ?? []
+  const earned = achievements?.filter((item) => item.earnedOn).sort((a, b) => b.earnedAt!.localeCompare(a.earnedAt!)) ?? []
+  const visible = earned.length ? earned.slice(0, 3) : achievements?.slice(0, 1) ?? []
   return <section className="athlete-achievements-preview" aria-labelledby="athlete-achievements-preview-title">
-    <div className="athlete-achievements-heading"><h2 id="athlete-achievements-preview-title">Ачивки</h2>{achievements && <span>{earned.length} из 8</span>}</div>
+    <div className="athlete-achievements-heading"><h2 id="athlete-achievements-preview-title">Ачивки</h2>{achievements && <span>{earned.length} из {achievements.length}</span>}</div>
     {!achievements ? <LoadState loading={query.isLoading} error={query.error} retry={() => void query.refetch()} /> : <><div className="athlete-achievements-preview-badges">{visible.map((item) => <Badge key={item.id} item={item} compact />)}</div><Link to="/me/achievements">Все ачивки →</Link></>}
   </section>
 }
@@ -130,10 +136,10 @@ export function AthleteAchievementsPage() {
   const earned = achievements?.filter((item) => item.earnedOn).length ?? 0
   return <Page className="athlete-achievements-page" title="Все ачивки" back="/me/progress">
     {mine.isLoading ? <LoadState loading error={null} retry={() => void mine.refetch()} /> : mine.error ? <LoadState loading={false} error={mine.error} retry={() => void mine.refetch()} /> : !mine.data ? <p>Заполните профиль спортсмена, чтобы видеть ачивки.</p> : !achievements ? <LoadState loading={query.isLoading} error={query.error} retry={() => void query.refetch()} /> : <>
-      <p className="athlete-achievements-count">Получено {earned} из 8</p>
-      {(['workouts', 'weeks'] as const).map((kind) => <section className="athlete-achievements-group" key={kind} aria-label={kind === 'workouts' ? 'Тренировки' : 'Регулярность'}>
-        <h2>{kind === 'workouts' ? 'Тренировки' : 'Регулярность'}</h2>
-        <div className="athlete-achievements-grid">{achievements.filter((item) => item.kind === kind).map((item) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? 'Получена' : `Прогресс: ${item.progress} из ${item.threshold}`}. Открыть подробности`}>
+      <p className="athlete-achievements-count">Получено {earned} из {achievements.length}</p>
+      {(['workouts', 'weeks', 'records'] as const).map((group) => <section className="athlete-achievements-group" key={group} aria-label={group === 'workouts' ? 'Тренировки' : group === 'weeks' ? 'Регулярность' : 'Личные рекорды'}>
+        <h2>{group === 'workouts' ? 'Тренировки' : group === 'weeks' ? 'Регулярность' : 'Личные рекорды'}</h2>
+        <div className="athlete-achievements-grid">{achievements.filter((item) => group === 'weeks' ? ['weeks', 'weeks-total', 'comeback'].includes(item.kind) : item.kind === group).map((item) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? 'Получена' : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${item.progress} из ${item.threshold}`}. Открыть подробности`}>
           <Badge item={item} />
           <span className="athlete-achievement-card-title">{item.title}</span>
         </button>)}</div>
