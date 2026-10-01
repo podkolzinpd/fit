@@ -11,7 +11,10 @@ export function firstCardioSetMissingEnteredDuration(workout: Pick<Workout, 'exe
       if (!distance || distance <= 0) continue
       const duration = set.fact.durationSec ?? (set.fact.durationMin === undefined
         ? undefined : Math.round(set.fact.durationMin * 60))
-      if (set.metricSources?.duration === 'entered' && duration && duration > 0) continue
+      // Legacy workouts do not carry provenance at all. A filled duration there
+      // may have just been entered in this UI; do not interrupt completion.
+      // Yandex rows explicitly carry "unknown" or "planned" when unverified.
+      if (duration && duration > 0 && (set.metricSources?.duration === 'entered' || set.metricSources?.duration === undefined)) continue
       return { exerciseId: exercise.id, exerciseName: exercise.name, setId: set.id }
     }
   }
@@ -25,7 +28,7 @@ export function firstCardioDraftMissingEnteredDuration(draft: Pick<WorkoutDraft,
       if (!set.distanceKm || set.distanceKm <= 0) continue
       const duration = set.durationSec ?? (set.durationMin === undefined
         ? undefined : Math.round(set.durationMin * 60))
-      if (set.metricSources?.duration === 'entered' && duration && duration > 0) continue
+      if (duration && duration > 0 && (set.metricSources?.duration === 'entered' || set.metricSources?.duration === undefined)) continue
       return exercise.name
     }
   }

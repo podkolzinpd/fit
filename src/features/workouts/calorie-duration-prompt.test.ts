@@ -25,6 +25,14 @@ describe('cardio duration prompt', () => {
     expect(firstCardioSetMissingEnteredDuration(workout('entered', 3600))).toBeNull()
   })
 
+  it('accepts a filled duration in legacy workouts without provenance metadata', () => {
+    const candidate = workout('unknown', 3600)
+    delete candidate.exercises[0]!.sets[0]!.metricSources
+    expect(firstCardioSetMissingEnteredDuration(candidate)).toBeNull()
+    candidate.exercises[0]!.sets[0]!.fact.durationSec = undefined
+    expect(firstCardioSetMissingEnteredDuration(candidate)).not.toBeNull()
+  })
+
   it('ignores unconfirmed distance', () => {
     const candidate = workout('unknown')
     candidate.exercises[0]!.sets[0]!.confirmedAt = null
