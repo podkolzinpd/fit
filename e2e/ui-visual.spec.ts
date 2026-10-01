@@ -126,6 +126,8 @@ test('client payment information stays compact and does not overlap', async ({ p
   await assertGeometry()
   await expectMonochromeAccessibility(page)
   await page.screenshot({ path: testInfo.outputPath(`client-payment-info-${testInfo.project.name}.png`), fullPage: true })
+  await page.getByRole('button', { name: 'Назад' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Профиль' })).toBeVisible()
 
   if (testInfo.project.name === 'visual-client-390') {
     for (const width of [320, 390, 430]) {
@@ -133,6 +135,20 @@ test('client payment information stays compact and does not overlap', async ({ p
       await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
       await assertGeometry()
     }
+  }
+
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/client-payment-info-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./client-payment-info-harness')
+    harness.mountClientPaymentInfoHarness(true)
+  })
+  await expect(page.getByRole('heading', { name: 'Абонементы' })).toBeVisible()
+  await expect(page.getByText('Абонементов пока нет')).toBeVisible()
+  expect((await page.getByRole('link', { name: /Подробнее/ }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
+    expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   }
 })
 

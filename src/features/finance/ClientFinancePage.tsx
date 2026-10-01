@@ -39,13 +39,14 @@ function packagePayment(item: ClientFinancePackage): string {
 }
 
 export function ClientFinanceHomeContent({ finance }: { finance: ClientFinanceSummary }) {
-  if (finance.trainers.length === 0) return null
   return <section className="client-finance-home" aria-labelledby="client-finance-home-title">
     <div className="client-finance-home-heading">
       <div><p className="eyebrow">ОПЛАТА ТРЕНИРОВОК</p><h2 id="client-finance-home-title">Абонементы</h2></div>
       <Link to="/me/finance">Подробнее <ChevronRightIcon /></Link>
     </div>
-    <div className="client-finance-home-list">{finance.trainers.map((trainer) => {
+    <div className="client-finance-home-list">{finance.trainers.length === 0
+      ? <p className="client-finance-home-empty">Абонементов пока нет</p>
+      : finance.trainers.map((trainer) => {
       const visible = currentPackages(trainer)
       const first = visible[0]
       if (!first) return null
@@ -53,7 +54,7 @@ export function ClientFinanceHomeContent({ finance }: { finance: ClientFinanceSu
         <span><strong>{trainer.trainerName}</strong><small>{first.title}{visible.length > 1 ? ` · ещё ${visible.length - 1}` : ''}</small></span>
         <span><strong>{first.sessionsRemaining} из {first.sessionsTotal}</strong><small>{packagePayment(first)}</small></span>
       </div>
-    })}</div>
+      })}</div>
   </section>
 }
 
@@ -65,7 +66,14 @@ export function ClientFinanceHomeCard() {
     queryFn: () => clientFinance.getMine(),
     enabled: actor?.role === 'client',
   })
-  if (finance.isLoading || finance.error) return null
+  if (finance.isLoading) return null
+  if (finance.error) return <section className="client-finance-home" aria-labelledby="client-finance-home-title">
+    <div className="client-finance-home-heading">
+      <div><p className="eyebrow">ОПЛАТА ТРЕНИРОВОК</p><h2 id="client-finance-home-title">Абонементы</h2></div>
+      <Link to="/me/finance">Подробнее <ChevronRightIcon /></Link>
+    </div>
+    <p className="client-finance-home-empty">Не удалось загрузить данные</p>
+  </section>
   return finance.data ? <ClientFinanceHomeContent finance={finance.data} /> : null
 }
 
@@ -115,7 +123,7 @@ export function ClientFinancePage() {
     queryFn: () => clientFinance.getMine(),
     enabled: actor?.role === 'client',
   })
-  return <Page title="Оплата тренировок" back="/me" swipeBack className="client-finance-page">
+  return <Page title="Оплата тренировок" back="/me/profile" swipeBack className="client-finance-page">
     <AsyncView loading={finance.isLoading} error={finance.error} onRetry={() => void finance.refetch()}>
       {finance.data && <ClientFinanceDetails finance={finance.data} />}
     </AsyncView>
