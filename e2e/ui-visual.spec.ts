@@ -136,6 +136,27 @@ test('client payment information stays compact and does not overlap', async ({ p
   }
 })
 
+test('client payment entry remains compact and available before the first package', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'visual-client-390', 'One mobile geometry pass covers the empty entry')
+  await page.goto('/auth')
+  await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })
+  await page.evaluate(async () => {
+    const modulePath = '/e2e/client-payment-info-harness.tsx'
+    const harness = await import(modulePath) as typeof import('./client-payment-info-harness')
+    harness.mountClientPaymentInfoHarness(true)
+  })
+  const frame = page.locator('#client-payment-info-qa .phone-frame')
+  await expect(page.getByRole('heading', { name: 'Абонементы' })).toBeVisible()
+  await expect(page.getByText('Абонементов пока нет')).toBeVisible()
+  const details = page.getByRole('link', { name: /Подробнее/ })
+  expect((await details.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await frame.evaluate((element) => { element.setAttribute('style', 'width:100%;height:100dvh;margin:0;border-radius:0') })
+    expect(await frame.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  }
+})
+
 test('trainer client finances keep details compact and disclose history on demand', async ({ page }, testInfo) => {
   await page.goto('/auth')
   await page.addStyleTag({ content: '#fit-startup-shell, #fit-startup-emergency { display: none !important; }' })

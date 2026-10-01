@@ -40,24 +40,24 @@ function Navigation() {
   </nav>
 }
 
-function Home() {
-  return <main className="page today-page"><header className="page-header"><h1>Добрый день, Анна</h1></header><div className="client-home-overview"><ClientFinanceHomeContent finance={finance} /></div></main>
+function Home({ summary }: { summary: ClientFinanceSummary }) {
+  return <main className="page today-page"><header className="page-header"><h1>Добрый день, Анна</h1></header><div className="client-home-overview"><ClientFinanceHomeContent finance={summary} /></div></main>
 }
 
-function Details() {
-  return <Page title="Оплата тренировок" back="/me" className="client-finance-page"><ClientFinanceDetails finance={finance} /></Page>
+function Details({ summary }: { summary: ClientFinanceSummary }) {
+  return <Page title="Оплата тренировок" back="/me" className="client-finance-page"><ClientFinanceDetails finance={summary} /></Page>
 }
 
-function Harness() {
-  return <MemoryRouter initialEntries={['/me']}><div className="phone-frame theme-light ui-identity client-home-identity client-finance-identity"><div className="content"><Routes><Route path="/me" element={<Home />} /><Route path="/me/finance" element={<Details />} /></Routes></div><Navigation /></div></MemoryRouter>
+function Harness({ summary }: { summary: ClientFinanceSummary }) {
+  return <MemoryRouter initialEntries={['/me']}><div className="phone-frame theme-light ui-identity client-home-identity client-finance-identity"><div className="content"><Routes><Route path="/me" element={<Home summary={summary} />} /><Route path="/me/finance" element={<Details summary={summary} />} /></Routes></div><Navigation /></div></MemoryRouter>
 }
 
-export function mountClientPaymentInfoHarness() {
+export function mountClientPaymentInfoHarness(empty = false) {
   const original = document.getElementById('root')
   if (original) original.style.display = 'none'
   document.getElementById('client-payment-info-qa')?.remove()
   const mount = document.createElement('div')
   mount.id = 'client-payment-info-qa'
   document.body.append(mount)
-  createRoot(mount).render(<Harness />)
+  createRoot(mount).render(<Harness summary={empty ? { trainers: [] } : finance} />)
 }

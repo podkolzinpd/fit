@@ -74,20 +74,24 @@ describe('Client finance', () => {
     expect(screen.queryByRole('button', { name: /добавить|изменить|удалить|сохранить/i })).not.toBeInTheDocument()
   })
 
-  it('hides the home card and shows a simple empty state without finance records', async () => {
+  it('keeps the home entry visible and shows a simple empty state without finance records', async () => {
     getMine.mockResolvedValue({ trainers: [] })
     const home = renderHome()
     await waitFor(() => expect(getMine).toHaveBeenCalledTimes(1))
-    expect(screen.queryByRole('heading', { name: 'Абонементы' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
+    expect(screen.getByText('Абонементов пока нет')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Подробнее/ })).toHaveAttribute('href', '/me/finance')
     home.unmount()
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Оплат пока нет' })).toBeVisible()
   })
 
-  it('keeps a home read failure silent while details retain their retry state', async () => {
+  it('keeps the finance entry available when the compact read fails', async () => {
     getMine.mockRejectedValue(new Error('offline'))
     renderHome()
     await waitFor(() => expect(getMine).toHaveBeenCalledTimes(1))
+    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
+    expect(screen.getByText('Не удалось загрузить данные')).toBeVisible()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -101,6 +105,7 @@ describe('Client finance', () => {
     getMine.mockResolvedValue({ trainers: [] })
     renderHome(client)
     await waitFor(() => expect(getMine).toHaveBeenCalledTimes(2))
-    expect(screen.queryByRole('heading', { name: 'Абонементы' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Абонементы' })).toBeVisible()
+    expect(screen.getByText('Абонементов пока нет')).toBeVisible()
   })
 })
