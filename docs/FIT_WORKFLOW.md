@@ -151,7 +151,8 @@ bundle после merge должен быть синхронизирован, с
 - Локальная разработка использует локальные Supabase и Yandex PostgreSQL/API
   через Podman. Не читать и не печатать `.env.local`, не менять
   production-данные и секреты. Production frontend выпускается на
-  `fit-training.ru` через Yandex Cloud; Vercel остаётся Preview/legacy redirect.
+  `fit-training.ru` через Yandex Cloud; Vercel остаётся только для legacy redirect,
+  новые Git deployments и PR Preview выключены.
 - Не переименовывать тексты и селекторы без необходимости: на них могут
   опираться E2E.
 - После merge закрыть YAFIT, обновить сводный backlog и при необходимости

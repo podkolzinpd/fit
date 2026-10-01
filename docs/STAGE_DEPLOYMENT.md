@@ -221,13 +221,9 @@ session for authorization while the stage API writes chat photos to private
 Yandex Object Storage. Set it to the reviewed stage API HTTPS origin and rebuild
 the frontend; it is not an OAuth-routing switch and must not contain a secret.
 
-The first browser pilot uses the existing branch-scoped Vercel Preview rather
-than a separate cloud frontend. Its exact origin is included in the stage CORS
-allowlist and its Yandex OAuth callback is:
-
-```text
-https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app/auth/yandex/callback
-```
+The first browser pilot historically used a branch-scoped Vercel Preview. That
+preview is no longer published or synchronized: Vercel Git deployments are
+disabled. Do not use the former pilot origin for new testing or OAuth setup.
 
 The canonical production origin is `https://fit-training.ru`; it is included in
 the stage API CORS allowlist and its Yandex OAuth callback is registered. The
@@ -237,22 +233,12 @@ retained solely to return a path-preserving permanent redirect. The old origin
 remains in CORS temporarily only for a previously cached client; removing that
 compatibility entry does not justify a standalone production API rollout.
 
-Only that preview branch receives the three pilot build variables:
-`VITE_YANDEX_ID_PILOT_ENABLED=true`, the public
-`VITE_YANDEX_OAUTH_CLIENT_ID`, and `VITE_YANDEX_API_BASE_URL` pointing to the
-stage API. Do not add them to Production or to every Preview deployment.
-
-`.github/workflows/sync-yandex-stage-preview.yml` merges every verified `main`
-push into `codex/yandex-id-stage-pilot`. Vercel therefore rebuilds the same
-branch-scoped origin automatically; the OAuth callback and CORS allowlist do
-not need to change after normal merges. The workflow never force-pushes. A
-merge conflict stops synchronization visibly instead of replacing either
-branch.
-
-`vercel.json` disables Git deployments for every other branch. Normal feature
-branches and pull requests therefore do not consume Preview build capacity;
-only a merged `main` revision and its automatically synchronized stable pilot
-branch trigger Vercel deployments.
+The GitHub repository is disconnected from the Vercel project; `vercel.json`
+also disables all new Git deployments if it is ever reconnected. The already
+published Vercel production revision
+is retained for the `fit-drab.vercel.app` redirect; it is not a stage frontend.
+Any future remote pre-merge frontend environment needs a separately reviewed
+Yandex-hosted implementation.
 
 The browser sends the short-lived Fit pilot session in
 `X-Fit-Pilot-Session`, not in `Authorization`. Yandex Serverless Containers
