@@ -19,9 +19,9 @@ function earnedCount(count: number) {
 
 describe('athlete achievements', () => {
   it.each([
-    [0, []], [1, [1]], [9, [1]], [10, [1, 10]], [24, [1, 10]],
-    [25, [1, 10, 25]], [49, [1, 10, 25]], [50, [1, 10, 25, 50]],
-    [99, [1, 10, 25, 50]], [100, [1, 10, 25, 50, 100]],
+    [0, []], [1, [1]], [4, [1]], [5, [1, 5]], [9, [1, 5]], [10, [1, 5, 10]], [24, [1, 5, 10]],
+    [25, [1, 5, 10, 25]], [49, [1, 5, 10, 25]], [50, [1, 5, 10, 25, 50]],
+    [99, [1, 5, 10, 25, 50]], [100, [1, 5, 10, 25, 50, 100]],
   ])('unlocks precise workout thresholds at %i', (count, expected) => {
     expect(earnedCount(count)).toEqual(expected)
   })
@@ -73,5 +73,45 @@ describe('athlete achievements', () => {
     const mondayUtc = { ...workout(1, localDate('2026-06-08')), completedAt: '2026-06-08T08:00:00Z' }
     const result = computeAthleteAchievements([sundayUtc, mondayUtc], localDate('2026-06-08'), 'Europe/Moscow')
     expect(result.find((item) => item.id === 'weeks-4')?.progress).toBe(1)
+  })
+
+  it('awards 52 different training weeks across history without requiring a streak', () => {
+    const history = Array.from({ length: 52 }, (_, index) => workout(index, addDays(localDate('2024-01-01'), index * 14)))
+    const before = computeAthleteAchievements(history.slice(0, 51), today).find((item) => item.id === 'weeks-total-52')!
+    expect(before).toMatchObject({ earnedOn: null, progress: 51, nearest: true })
+    const awarded = computeAthleteAchievements([...history, workout(52, history[51]!.workoutDate)], today)
+    expect(awarded.find((item) => item.id === 'weeks-total-52')).toMatchObject({ progress: 52, sourceWorkoutId: 'workout-51' })
+    expect(awarded.find((item) => item.id === 'weeks-12')?.earnedOn).toBeNull()
+  })
+
+  it('awards a comeback only after 21 elapsed days between completed workouts', () => {
+    const first = workout(0, localDate('2026-01-01'))
+    const early = workout(1, localDate('2026-01-21'))
+    expect(computeAthleteAchievements([first, early], today).find((item) => item.id === 'comeback-21'))
+      .toMatchObject({ earnedOn: null, progress: 0, nearest: false })
+    const returnWorkout = workout(2, localDate('2026-01-22'))
+    expect(computeAthleteAchievements([first, { ...early, status: 'cancelled' }, returnWorkout], today).find((item) => item.id === 'comeback-21'))
+      .toMatchObject({ progress: 21, sourceWorkoutId: 'workout-2' })
+  })
+
+  it('counts real personal records in distinct workouts, never the baseline or several metrics in one workout', () => {
+    const withStrength = (index: number, weight: number, confirmed = true): Workout => ({ ...workout(index),
+      exercises: [{ id: `exercise-${index}`, source: 'system', ref: 'squat', name: 'Присед', inputKind: 'strength', muscleGroup: 'legs', position: 0,
+        blockId: 'block', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+        sets: [{ id: `set-${index}`, position: 0, version: 1, confirmedAt: confirmed ? '2026-01-01T12:00:00Z' : null,
+          fact: { weightKg: weight, reps: 10 + index } }],
+      }],
+    })
+    const baseline = withStrength(0, 40)
+    expect(computeAthleteAchievements([baseline], today).find((item) => item.id === 'records-1')?.earnedOn).toBeNull()
+    const firstRecord = withStrength(1, 45)
+    const first = computeAthleteAchievements([baseline, firstRecord, withStrength(2, 100, false)], today)
+    expect(first.find((item) => item.id === 'records-1')).toMatchObject({ sourceWorkoutId: firstRecord.id, progress: 1 })
+    expect(first.find((item) => item.id === 'records-5')).toMatchObject({ earnedOn: null, progress: 1 })
+    const four = [baseline, ...[1, 2, 3, 4].map((index) => withStrength(index, 40 + index * 5))]
+    expect(computeAthleteAchievements([...four, four[4]!], today).find((item) => item.id === 'records-5')?.progress).toBe(4)
+    const fifth = withStrength(5, 65)
+    expect(computeAthleteAchievements([...four, fifth], today).find((item) => item.id === 'records-5'))
+      .toMatchObject({ sourceWorkoutId: fifth.id, progress: 5 })
   })
 })

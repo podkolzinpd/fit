@@ -7023,9 +7023,21 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .athlete-achievement-badge > strong { position:absolute; top:50%; left:50%; transform:translate(-50%,-40%); color:#f8f8f6; font-size:32px; line-height:1; }
 .athlete-achievement-calendar { position:absolute; top:9%; left:25%; width:50%; height:34%; fill:none; stroke:#79797d; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
 .athlete-achievement-calendar-dots { stroke:#baff36; stroke-width:4; }
-.athlete-achievement-badge.kind-weeks > strong { top:auto; bottom:18%; transform:translateX(-50%); line-height:1; }
+.athlete-achievement-badge.kind-weeks > strong,.athlete-achievement-badge.kind-weeks-total > strong { top:auto; bottom:18%; transform:translateX(-50%); line-height:1; }
+.athlete-achievement-comeback { position:absolute; top:27%; left:27%; width:46%; height:46%; fill:none; stroke:#f8f8f6; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; }
+.athlete-achievement-comeback-accent { stroke:#baff36; }
+.athlete-achievement-badge:not(.is-earned) .athlete-achievement-comeback-accent { stroke:#79797d; }
+.athlete-achievement-record { position:absolute; top:28%; left:26%; width:48%; height:48%; fill:none; }
+.athlete-achievement-record-bars { fill:#f8f8f6; stroke:#f8f8f6; stroke-width:1; stroke-linejoin:round; }
+.athlete-achievement-record-star { fill:#baff36; }
+.athlete-achievement-badge:not(.is-earned) .athlete-achievement-record-star { fill:#79797d; }
+.athlete-achievement-badge.badge-id-records-5 > strong { top:44%; font-size:30px; }
+.athlete-achievement-badge.badge-id-records-5 .athlete-achievement-record { top:64%; left:32%; width:36%; height:23%; }
+.athlete-achievement-badge.badge-id-records-5 .athlete-achievement-record-bars { fill:#baff36; stroke:#baff36; }
+.athlete-achievement-badge.badge-id-records-5 .athlete-achievement-record-star { display:none; }
 .athlete-achievement-badge.is-compact .athlete-achievement-check { width:18px; height:18px; font-size:13px; }
 .athlete-achievement-badge.is-compact > strong { font-size:23px; }
+.athlete-achievement-badge.badge-id-records-5.is-compact > strong { font-size:21px; }
 .athlete-achievements-preview-badges { display:flex; gap:10px; margin:13px 0 4px; }
 .athlete-achievements-page { padding-bottom:calc(110px + env(safe-area-inset-bottom)); }
 .athlete-achievements-count { margin:0 0 20px; color:var(--muted); }
