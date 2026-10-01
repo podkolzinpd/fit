@@ -29,6 +29,7 @@ import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveSetAutosave } from './live-set-autosave'
 import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
+import { liveMetricSources, markLiveMetricEntered } from './live-set-provenance'
 import {
   clearPendingLiveSetConfirmations,
   clearPendingLiveSetDrafts,
@@ -2667,8 +2668,9 @@ export function LiveWorkoutPage() {
     if (immediate) liveSetAutosave.flush(set.id, send)
     else liveSetAutosave.schedule(set.id, send)
   }
-  function captureLiveDraft(set: WorkoutSet, form: HTMLFormElement) {
-    const draft = draftFrom(form)
+  function captureLiveDraft(set: WorkoutSet, form: HTMLFormElement, target: EventTarget) {
+    markLiveMetricEntered(form, target)
+    const draft = draftFrom(form, set)
     // localStorage пишется синхронно на каждом вводе. React-state обновится при
     // debounce/blur, чтобы набор текста не перерисовывал всю тренировку.
     rememberLiveDraft(set.id, draft, false)
@@ -2928,7 +2930,7 @@ export function LiveWorkoutPage() {
       // into an empty draft while finishing a partially completed exercise.
       if (set?.confirmedAt && !editingSets.has(setId)) continue
       if (!set || (!liveFormChanged(form) && !pendingSetDrafts.current.has(setId))) continue
-      const draft = draftFrom(form)
+      const draft = draftFrom(form, set)
       liveSetAutosave.clear(setId)
       rememberLiveDraft(setId, draft)
       await save.mutateAsync({ set, draft })
@@ -2987,7 +2989,7 @@ export function LiveWorkoutPage() {
   }
   const rootMutationPending = appendSet.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
     || reorderBlock.isPending || mergeBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
-  function draftFrom(form: HTMLFormElement): LiveSetDraft {
+  function draftFrom(form: HTMLFormElement, set: WorkoutSet): LiveSetDraft {
     const values = new FormData(form)
     const runDuration = values.get('runDuration')
     const runDistance = values.get('runDistance')
@@ -2998,6 +3000,7 @@ export function LiveWorkoutPage() {
       distanceKm: runDistance === null ? numberValue(values.get('distanceKm')) : runDistanceKmFromInput(String(runDistance), runUnit),
       durationSec: runDuration === null ? numberValue(values.get('durationSec')) : parseRunDurationInput(String(runDuration)),
       rpe: numberValue(values.get('rpe')),
+      metricSources: liveMetricSources(form, set),
     }
   }
   const liveSyncError = save.error ?? confirm.error
@@ -3074,11 +3077,11 @@ export function LiveWorkoutPage() {
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
       if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) keepLiveSetFieldVisible(target)
-    }} onInput={(event) => captureLiveDraft(set, event.currentTarget)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+    }} onInput={(event) => captureLiveDraft(set, event.currentTarget, event.target)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-      persistLiveDraft(set, draftFrom(event.currentTarget), true)
+      persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
@@ -3087,11 +3090,11 @@ export function LiveWorkoutPage() {
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>
+                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { prepareGong(); liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
+                onClick={(event) => { prepareGong(); liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form, set) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
         </div>
       </WorkoutSetRow>
       <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>

@@ -199,7 +199,14 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   function updateSet(exerciseIndex: number, setIndex: number, patch: Partial<WorkoutSetDraft>) {
     commitExercises(latestExercises.current.map((exercise, currentExercise) => currentExercise === exerciseIndex ? {
       ...exercise,
-      sets: exercise.sets.map((set, currentSet) => currentSet === setIndex ? { ...set, ...patch } : set),
+      sets: exercise.sets.map((set, currentSet) => currentSet === setIndex ? {
+        ...set, ...patch,
+        ...(entryMode === 'fact' ? { metricSources: {
+          duration: ('durationSec' in patch || 'durationMin' in patch) ? 'entered' as const : set.metricSources?.duration ?? 'unknown' as const,
+          distance: 'distanceKm' in patch ? 'entered' as const : set.metricSources?.distance ?? 'unknown' as const,
+          rpe: 'rpe' in patch ? 'entered' as const : set.metricSources?.rpe ?? 'unknown' as const,
+        } } : {}),
+      } : set),
     } : exercise))
   }
   function addSet(exerciseIndex: number) {

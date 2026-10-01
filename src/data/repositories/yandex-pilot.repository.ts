@@ -137,6 +137,11 @@ const workoutSetSchema = z.object({
   position: z.number().int().nonnegative(),
   plan: workoutSetValuesSchema,
   fact: workoutSetValuesSchema,
+  metricSources: z.object({
+    duration: z.enum(['unknown', 'planned', 'entered']),
+    distance: z.enum(['unknown', 'planned', 'entered']),
+    rpe: z.enum(['unknown', 'planned', 'entered']),
+  }).optional(),
   confirmedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
 })

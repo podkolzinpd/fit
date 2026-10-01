@@ -35,6 +35,14 @@ describe('live workout request validation', () => {
     })
   })
 
+  it('preserves explicit metric provenance and rejects forged values', () => {
+    const metricSources = { duration: 'entered', distance: 'planned', rpe: 'unknown' }
+    expect(readLiveSetRequest({ operationId, expectedVersion: 4, draft: { durationSec: 900, metricSources } })?.draft.metricSources)
+      .toEqual(metricSources)
+    expect(readLiveSetRequest({ operationId, expectedVersion: 4, draft: { durationSec: 900,
+      metricSources: { ...metricSources, duration: 'measured_by_watch' } } })).toBeUndefined()
+  })
+
   it.each([
     { operationId: 'not-a-uuid', expectedVersion: 1 },
     { operationId, expectedVersion: 0 },

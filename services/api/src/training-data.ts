@@ -128,6 +128,9 @@ interface WorkoutSetRow extends QueryResultRow {
   fact_duration_sec: number | null
   fact_distance_km: string | null
   fact_rpe: string | null
+  fact_duration_source: 'unknown' | 'planned' | 'entered'
+  fact_distance_source: 'unknown' | 'planned' | 'entered'
+  fact_rpe_source: 'unknown' | 'planned' | 'entered'
   confirmed_at: Date | null
   version: string
 }
@@ -164,6 +167,7 @@ export interface PilotWorkoutSet {
     distanceKm: number | null
     rpe: number | null
   }
+  metricSources?: { duration: 'unknown' | 'planned' | 'entered'; distance: 'unknown' | 'planned' | 'entered'; rpe: 'unknown' | 'planned' | 'entered' }
   confirmedAt: string | null
   version: number
 }
@@ -364,7 +368,9 @@ export async function readAccessibleTrainingData(
           plan_weight_kg, plan_reps, plan_duration_min, plan_duration_sec,
           plan_distance_km, plan_rpe,
           fact_weight_kg, fact_reps, fact_duration_min, fact_duration_sec,
-          fact_distance_km, fact_rpe, confirmed_at, version
+          fact_distance_km, fact_rpe,
+          fact_duration_source, fact_distance_source, fact_rpe_source,
+          confirmed_at, version
         from public.workout_sets
         where workout_exercise_id = any($1::uuid[])
         order by workout_exercise_id, position, id
@@ -391,6 +397,11 @@ export async function readAccessibleTrainingData(
         durationSec: row.fact_duration_sec,
         distanceKm: optionalNumber(row.fact_distance_km),
         rpe: optionalNumber(row.fact_rpe),
+      },
+      metricSources: {
+        duration: row.fact_duration_source,
+        distance: row.fact_distance_source,
+        rpe: row.fact_rpe_source,
       },
       confirmedAt: row.confirmed_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'workout set version'),

@@ -13,6 +13,7 @@ export interface LiveSetDraft {
   durationSec: number | null
   distanceKm: number | null
   rpe: number | null
+  metricSources?: { duration: 'unknown' | 'planned' | 'entered'; distance: 'unknown' | 'planned' | 'entered'; rpe: 'unknown' | 'planned' | 'entered' }
 }
 
 export interface LiveSetRequest extends LiveOperationRequest {
@@ -142,6 +143,10 @@ export function readLiveSetRequest(body: unknown): LiveSetRequest | undefined {
   const durationSec = metric(draftInput.durationSec, 2_147_483_647, true)
   const distanceKm = metric(draftInput.distanceKm, 999_999)
   const rpe = metric(draftInput.rpe, 10)
+  const sourceInput = record(draftInput.metricSources)
+  const validSource = (entry: unknown) => entry === 'unknown' || entry === 'planned' || entry === 'entered'
+  if (draftInput.metricSources != null && (!sourceInput
+    || !validSource(sourceInput.duration) || !validSource(sourceInput.distance) || !validSource(sourceInput.rpe))) return undefined
   if (
     weightKg === undefined
     || reps === undefined
@@ -161,6 +166,11 @@ export function readLiveSetRequest(body: unknown): LiveSetRequest | undefined {
       durationSec,
       distanceKm,
       rpe,
+      ...(sourceInput ? { metricSources: {
+        duration: sourceInput.duration as 'unknown' | 'planned' | 'entered',
+        distance: sourceInput.distance as 'unknown' | 'planned' | 'entered',
+        rpe: sourceInput.rpe as 'unknown' | 'planned' | 'entered',
+      } } : {}),
     },
   }
 }

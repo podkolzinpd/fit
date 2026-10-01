@@ -8,7 +8,7 @@ export function applyLiveSetDraft(workout: Workout, setId: string, draft: LiveSe
     ...workout,
     exercises: workout.exercises.map((exercise) => ({
       ...exercise,
-      sets: exercise.sets.map((set) => set.id === setId ? { ...set, fact: { ...draft }, version } : set),
+      sets: exercise.sets.map((set) => set.id === setId ? { ...set, fact: { ...draft }, metricSources: draft.metricSources ?? set.metricSources, version } : set),
     })),
   }
 }
@@ -17,7 +17,7 @@ export function applyLiveSetDraft(workout: Workout, setId: string, draft: LiveSe
  * успел отдать серверную версию. Так быстрый переход между подходами не стирает
  * введённые числа из компактного представления. */
 export function setWithLocalDraft(set: WorkoutSet, draft: LiveSetDraft | undefined): WorkoutSet {
-  return draft ? { ...set, fact: { ...draft } } : set
+  return draft ? { ...set, fact: { ...draft }, metricSources: draft.metricSources ?? set.metricSources } : set
 }
 
 function carriedWeightSource(exercise: Pick<Workout['exercises'][number], 'sets'>, set: WorkoutSet): WorkoutSet | undefined {
@@ -72,6 +72,11 @@ export function sameLiveSetDraft(left: LiveSetDraft, right: LiveSetDraft): boole
     && left.durationMin === right.durationMin
     && left.distanceKm === right.distanceKm
     && left.rpe === right.rpe
+    && (!left.metricSources || !right.metricSources || (
+      left.metricSources.duration === right.metricSources.duration
+      && left.metricSources.distance === right.metricSources.distance
+      && left.metricSources.rpe === right.metricSources.rpe
+    ))
 }
 
 /** Called only after confirmation succeeds, never optimistically before the RPC. */

@@ -393,6 +393,15 @@ export interface WorkoutSetDraft {
   distanceKm?: number
   /** Целевая субъективная нагрузка в плане: 6–10, шаг 0,5. */
   rpe?: number
+  /** Provenance of factual metrics, never inferred from a filled value. */
+  metricSources?: WorkoutMetricSources
+}
+
+export type WorkoutMetricSource = 'unknown' | 'planned' | 'entered'
+export interface WorkoutMetricSources {
+  duration: WorkoutMetricSource
+  distance: WorkoutMetricSource
+  rpe: WorkoutMetricSource
 }
 
 export interface WorkoutExerciseDraft extends ExerciseSnapshot {
@@ -462,11 +471,13 @@ export interface LiveSetDraft {
   distanceKm?: number
   /** Фактическая субъективная нагрузка: 6–10, шаг 0,5. */
   rpe?: number
+  metricSources?: WorkoutMetricSources
 }
 
 export interface WorkoutSet extends WorkoutSetDraft {
   id: UUID
   fact: LiveSetDraft
+  metricSources?: WorkoutMetricSources
   confirmedAt: string | null
   version: number
 }

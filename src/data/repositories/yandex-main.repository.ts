@@ -593,6 +593,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
       clientNote: exercise.clientNote ?? undefined,
       sets: exercise.sets.map((set) => ({
         id: set.id,
+        metricSources: set.metricSources,
         position: set.position,
         weightKg: set.plan.weightKg ?? undefined,
         reps: set.plan.reps ?? undefined,
@@ -607,6 +608,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
           durationSec: set.fact.durationSec ?? undefined,
           distanceKm: set.fact.distanceKm ?? undefined,
           rpe: set.fact.rpe ?? undefined,
+          metricSources: set.metricSources,
         },
         confirmedAt: set.confirmedAt,
         version: set.version,
@@ -642,6 +644,7 @@ function workoutExerciseDraftsPayload(exercises: readonly WorkoutExerciseDraft[]
       durationSec: set.durationSec ?? null,
       distanceKm: set.distanceKm ?? null,
       rpe: set.rpe ?? null,
+      ...(set.metricSources ? { metricSources: set.metricSources } : {}),
     })),
   }))
 }
@@ -1417,7 +1420,7 @@ export function createYandexMainRepository(
       async start(item) { return liveCommand(`/v1/workouts/${item.id}/start`, 'POST', item.version) },
       async cancelPlanned(item) { return commandVersion(`/v1/workouts/${item.id}/cancel`, 'POST', { expectedVersion: item.version }) },
       async reschedule(item, date, startTime) { return commandVersion(`/v1/workouts/${item.id}/reschedule`, 'POST', { workoutDate: date, startTime, expectedVersion: item.version }) },
-      async saveLiveSet(id, draft, version) { return liveCommand(`/v1/workout-sets/${id}/draft`, 'PUT', version, { draft: { weightKg: draft.weightKg ?? null, reps: draft.reps ?? null, durationMin: draft.durationMin ?? null, durationSec: draft.durationSec ?? null, distanceKm: draft.distanceKm ?? null, rpe: draft.rpe ?? null } }) },
+      async saveLiveSet(id, draft, version) { return liveCommand(`/v1/workout-sets/${id}/draft`, 'PUT', version, { draft: { weightKg: draft.weightKg ?? null, reps: draft.reps ?? null, durationMin: draft.durationMin ?? null, durationSec: draft.durationSec ?? null, distanceKm: draft.distanceKm ?? null, rpe: draft.rpe ?? null, metricSources: draft.metricSources ?? null } }) },
       async confirmLiveSet(id, version) { return liveCommand(`/v1/workout-sets/${id}/confirm`, 'POST', version) },
       async appendLiveExercise(item, exercise: ExerciseSnapshot) { return liveCommand(`/v1/workouts/${item.id}/exercises`, 'POST', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }) },
       async appendLiveSet(item, exerciseId) { return liveCommand(`/v1/workout-exercises/${exerciseId}/sets`, 'POST', item.version) },
