@@ -18,10 +18,7 @@ document.querySelectorAll('#deck > .slide:not(:first-child) [style], #deck svg [
 document.querySelectorAll('#deck > .slide:not(:first-child) > .eyebrow').forEach(el => {
   el.innerHTML=el.textContent.replace(/^(\d+)/,'<span class="design-number">$1</span>');
 });
-const financial=document.querySelector('[data-section="10 · ФИНАНСОВАЯ МОДЕЛЬ"]');
-const finalYear=financial.querySelector('.content > div:nth-child(2) > div:last-child');
-finalYear.style.background='#f5f4ef';
-finalYear.style.color='#141719';
+// Слайд 10 пересобран 01.10.2026 (график выручки и затрат) — выделение финального года колонкой больше не нужно.
 document.querySelectorAll('.idea-polished h3').forEach(el => el.style.color='#f5f4ef');
 const synthesis=document.querySelector('.superapp-simple .content > div:first-of-type p');
 synthesis.style.color='#f5f4ef';
