@@ -29,7 +29,16 @@ import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveSetAutosave } from './live-set-autosave'
 import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
-import { clearPendingLiveSetDrafts, readPendingLiveSetDrafts, removePendingLiveSetDraft, writePendingLiveSetDraft } from './live-set-draft-storage'
+import {
+  clearPendingLiveSetConfirmations,
+  clearPendingLiveSetDrafts,
+  readPendingLiveSetConfirmations,
+  readPendingLiveSetDrafts,
+  removePendingLiveSetConfirmation,
+  removePendingLiveSetDraft,
+  writePendingLiveSetConfirmation,
+  writePendingLiveSetDraft,
+} from './live-set-draft-storage'
 import { createLiveWorkoutCoordinator, liveWorkoutRecoveryError } from './live-workout-coordinator'
 import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
@@ -2411,6 +2420,7 @@ export function LiveWorkoutPage() {
   // такой же — иначе при переходе к следующему подходу строка мигнёт пустой.
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
   const pendingSetDrafts = useRef<Map<string, LiveSetDraft>>(new Map())
+  const pendingSetConfirmations = useRef<Set<string>>(new Set())
   const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
   const [recoveredFormIds, setRecoveredFormIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
@@ -2467,14 +2477,27 @@ export function LiveWorkoutPage() {
     if (!actor?.userId || !query.data) return
     const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
     const pending = readPendingLiveSetDrafts(actor.userId, workoutId)
+    const pendingConfirmations = new Set([
+      ...pendingSetConfirmations.current,
+      ...readPendingLiveSetConfirmations(actor.userId, workoutId),
+    ])
     for (const [setId, draft] of pending) {
       const serverSet = serverSets.get(setId)
-      if (!serverSet || sameLiveSetDraft(serverSet.fact, draft)) {
+      const confirmationComplete = !pendingConfirmations.has(setId) || Boolean(serverSet?.confirmedAt)
+      if (!serverSet || (sameLiveSetDraft(serverSet.fact, draft) && confirmationComplete)) {
         removePendingLiveSetDraft(actor.userId, workoutId, setId)
+        removePendingLiveSetConfirmation(actor.userId, workoutId, setId)
         pending.delete(setId)
       }
     }
+    for (const setId of pendingConfirmations) {
+      if (!pending.has(setId)) {
+        pendingConfirmations.delete(setId)
+        removePendingLiveSetConfirmation(actor.userId, workoutId, setId)
+      }
+    }
     pendingSetDrafts.current = new Map(pending)
+    pendingSetConfirmations.current = pendingConfirmations
     setRecoveredSetIds(new Set(pending.keys()))
     if (recoveryInitializedFor.current !== workoutId) {
       recoveryInitializedFor.current = workoutId
@@ -2493,7 +2516,11 @@ export function LiveWorkoutPage() {
   useEffect(() => () => liveSetAutosave.dispose(), [liveSetAutosave])
   useEffect(() => {
     if (query.data?.status !== 'done') return
-    if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
+    if (actor?.userId) {
+      clearPendingLiveSetDrafts(actor.userId, workoutId)
+      clearPendingLiveSetConfirmations(actor.userId, workoutId)
+    }
+    pendingSetConfirmations.current.clear()
     // При обычном успешном finish итоговый экран открывает onSuccess ниже с
     // justCompleted. Этот fallback нужен только когда ответ потерялся, но
     // refetch уже увидел завершённую тренировку, либо после reload live URL.
@@ -2506,11 +2533,15 @@ export function LiveWorkoutPage() {
     if (updateVisibleDraft) setLocalSetDrafts((current) => new Map(current).set(setId, draft))
     if (actor?.userId) writePendingLiveSetDraft(actor.userId, workoutId, setId, draft)
   }
-  function acknowledgeLiveDraft(setId: string, savedDraft?: LiveSetDraft) {
+  function acknowledgeLiveDraft(setId: string, savedDraft?: LiveSetDraft, confirmationComplete = false) {
     const pendingDraft = pendingSetDrafts.current.get(setId)
     if (savedDraft && pendingDraft && !sameLiveSetDraft(pendingDraft, savedDraft)) return
     pendingSetDrafts.current.delete(setId)
-    if (actor?.userId) removePendingLiveSetDraft(actor.userId, workoutId, setId)
+    if (actor?.userId) {
+      removePendingLiveSetDraft(actor.userId, workoutId, setId)
+      if (confirmationComplete) removePendingLiveSetConfirmation(actor.userId, workoutId, setId)
+    }
+    if (confirmationComplete) pendingSetConfirmations.current.delete(setId)
     setRecoveredSetIds((current) => { const next = new Set(current); next.delete(setId); return next })
     setLocalSetDrafts((current) => {
       if (!current.has(setId)) return current
@@ -2658,7 +2689,11 @@ export function LiveWorkoutPage() {
   }, [savedSetId])
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
-    onMutate: ({ set, draft }) => { rememberLiveDraft(set.id, draft) },
+    onMutate: ({ set, draft }) => {
+      rememberLiveDraft(set.id, draft)
+      pendingSetConfirmations.current.add(set.id)
+      if (actor?.userId) writePendingLiveSetConfirmation(actor.userId, workoutId, set.id)
+    },
     onSuccess: (version, { set, draft }) => {
       const before = queryClient.getQueryData<Workout>(['workout', workoutId])
       const owner = before?.exercises.find((exercise) => exercise.sets.some((item) => item.id === set.id))
@@ -2669,7 +2704,7 @@ export function LiveWorkoutPage() {
       }
       queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
-      acknowledgeLiveDraft(set.id, draft)
+      acknowledgeLiveDraft(set.id, draft, true)
       setExpandedSetId(null)
       // Отдых берётся из настроек блока (Этап A), не хардкод:
       // - одиночное упражнение → отдых между подходами;
@@ -2699,17 +2734,38 @@ export function LiveWorkoutPage() {
     trackGoal('live_set_retry_started')
     try {
       const serverSets = new Map(query.data.exercises.flatMap((exercise) => exercise.sets).map((set) => [set.id, set]))
+      const pendingConfirmations = new Set([
+        ...pendingSetConfirmations.current,
+        ...readPendingLiveSetConfirmations(actor.userId, workoutId),
+      ])
       for (const [setId, draft] of pending) {
         const set = serverSets.get(setId)
-        if (!set) { acknowledgeLiveDraft(setId); continue }
-        if (sameLiveSetDraft(set.fact, draft)) { acknowledgeLiveDraft(setId, draft); continue }
+        const confirmationPending = pendingConfirmations.has(setId)
+        if (!set) { acknowledgeLiveDraft(setId, undefined, true); continue }
+        if (set.confirmedAt && sameLiveSetDraft(set.fact, draft)) {
+          liveSets.sync(set, draft)
+          acknowledgeLiveDraft(setId, draft, true)
+          continue
+        }
         try {
-          await save.mutateAsync({ set, draft })
+          if (confirmationPending) {
+            // A failed confirm may have saved the values before its response
+            // was lost. Reuse the authoritative version and finish the exact
+            // action the user requested instead of downgrading it to autosave.
+            liveSets.sync(set, sameLiveSetDraft(set.fact, draft) ? draft : undefined)
+            await confirm.mutateAsync({ set, draft })
+          } else if (sameLiveSetDraft(set.fact, draft)) {
+            liveSets.sync(set, draft)
+            acknowledgeLiveDraft(setId, draft)
+          } else {
+            await save.mutateAsync({ set, draft })
+          }
         } catch {
           break
         }
       }
       if (pendingSetDrafts.current.size === 0) {
+        save.reset()
         confirm.reset()
         trackGoal('live_set_retry_completed')
       }
@@ -2777,7 +2833,7 @@ export function LiveWorkoutPage() {
       return runLiveWorkoutMutation(`remove-exercise:${exercise.id}`, (workout) => workoutsRepository.removeLiveExercise(workout, exercise.id))
     },
     onSuccess: async (_version, exercise) => {
-      for (const set of exercise.sets) acknowledgeLiveDraft(set.id)
+      for (const set of exercise.sets) acknowledgeLiveDraft(set.id, undefined, true)
       setExpandedSetId(null)
       stopRest()
       await query.refetch()
@@ -2815,7 +2871,7 @@ export function LiveWorkoutPage() {
       return runLiveWorkoutMutation(`replace:${exerciseId}`, (workout) => workoutsRepository.replaceLiveExercise(workout, exerciseId, exercise))
     },
     onSuccess: async (_version, { discardedSetIds }) => {
-      for (const setId of discardedSetIds) acknowledgeLiveDraft(setId)
+      for (const setId of discardedSetIds) acknowledgeLiveDraft(setId, undefined, true)
       setExpandedSetId(null)
       stopRest()
       await query.refetch()
@@ -2875,6 +2931,13 @@ export function LiveWorkoutPage() {
     }
   }
   const finish = useMutation({ mutationFn: async () => {
+    // Finishing must not downgrade a failed «Готово» to a plain draft save.
+    // First replay every persisted confirmation intent; only then flush fields.
+    await retryPendingLiveDrafts()
+    if (pendingSetConfirmations.current.size > 0
+      || (actor?.userId && readPendingLiveSetConfirmations(actor.userId, workoutId).size > 0)) {
+      throw new Error('Сначала повторите отправку результатов на сервер')
+    }
     await flushOpenLiveSetDrafts()
     await liveSets.waitForIdle()
     const version = await runLiveWorkoutMutation('finish', (workout) => workoutsRepository.finish(workout))
@@ -2883,7 +2946,11 @@ export function LiveWorkoutPage() {
   }, onSuccess: async () => {
     const clientId = query.data?.clientId
     if (clientMode && actor?.userId) markAchievementCompletion(actor.userId, workoutId)
-    if (actor?.userId) clearPendingLiveSetDrafts(actor.userId, workoutId)
+    if (actor?.userId) {
+      clearPendingLiveSetDrafts(actor.userId, workoutId)
+      clearPendingLiveSetConfirmations(actor.userId, workoutId)
+    }
+    pendingSetConfirmations.current.clear()
     stopRest()
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
     // Освежаем не только саму тренировку, но и статистику клиента и списки
