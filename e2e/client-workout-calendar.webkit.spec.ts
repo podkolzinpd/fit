@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 
 const historyRow = {
   id: 'c1000000-0000-4000-8000-000000000001',
@@ -31,6 +32,7 @@ const historyRow = {
 }
 
 test('client workout month calendar stays usable in iPhone WebKit', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
     const body = route.request().postDataJSON() as { p_from?: string | null; p_to?: string | null }
     const visible = (!body.p_from || historyRow.workout_date >= body.p_from)
@@ -38,9 +40,18 @@ test('client workout month calendar stays usable in iPhone WebKit', async ({ pag
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(visible ? [historyRow] : []) })
   })
   await page.goto('/auth')
-  await page.getByLabel('Email').fill('client@fit.local')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Тестовый клиент')
+  await page.getByLabel('Email').fill(`workout-calendar-${randomUUID()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await expect(page).toHaveURL(/\/me$/, { timeout: 20_000 })
+  await page.goto('/me/edit')
+  await page.getByLabel('Пол').selectOption('female')
+  await page.getByLabel('Возраст').fill('30')
+  await page.getByLabel('Рост, см').fill('170')
+  await page.getByRole('button', { name: 'Сохранить профиль' }).click()
   await expect(page).toHaveURL(/\/me$/)
 
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
@@ -81,10 +92,11 @@ function historyListExercises(confirmed: boolean) {
 }
 
 async function mockNavigationWorkouts(page: Page) {
-  const state = { status: 'done', version: 1, deleted: false, createdId: historyRow.id, monthError: false, delayMonth: false, count: 1, setConfirmed: true }
+  const state = { status: 'done', version: 1, deleted: false, empty: false, createdId: historyRow.id, monthError: false, delayMonth: false, count: 1, setConfirmed: true }
   const row = () => ({ ...historyRow, id: state.createdId, trainer_id: trainerId, created_by: trainerId,
     status: state.status, version: state.version, workout_date: state.status !== 'done' ? '2026-08-16' : historyRow.workout_date,
-    exercises: [{ ...fixtureExercise, sets: [{ ...fixtureSet, confirmed_at: state.setConfirmed ? fixtureSet.confirmed_at : null }] }],
+    started_at: state.empty && state.status !== 'done' ? '2026-08-16T14:59:42Z' : historyRow.started_at,
+    exercises: state.empty ? [] : [{ ...fixtureExercise, sets: [{ ...fixtureSet, confirmed_at: state.setConfirmed ? fixtureSet.confirmed_at : null }] }],
   })
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
     const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_offset?: number; p_limit?: number }
@@ -92,15 +104,15 @@ async function mockNavigationWorkouts(page: Page) {
       if (state.delayMonth) await new Promise((resolve) => setTimeout(resolve, 700))
       if (state.monthError) { await route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"test calendar unavailable"}' }); return }
     }
-    const item = { ...row(), exercises: historyListExercises(state.setConfirmed) }
+    const item = { ...row(), exercises: state.empty ? [] : historyListExercises(state.setConfirmed) }
     const visible = !state.deleted && (!body.p_from || item.workout_date >= body.p_from) && (!body.p_to || item.workout_date <= body.p_to)
     const rows = Array.from({ length: state.count }, (_, index) => ({ ...item, id: index === 0 ? item.id : `c1000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}` }))
     const offset = body.p_offset ?? 0
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(visible ? rows.slice(offset, offset + (body.p_limit ?? 51)) : []) })
   })
   await page.route('**/rest/v1/workouts?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(row()) }))
-  await page.route('**/rest/v1/workout_exercises?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([fixtureExercise]) }))
-  await page.route('**/rest/v1/workout_sets?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([{
+  await page.route('**/rest/v1/workout_exercises?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(state.empty ? [] : [fixtureExercise]) }))
+  await page.route('**/rest/v1/workout_sets?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(state.empty ? [] : [{
     ...fixtureSet,
     confirmed_at: state.setConfirmed ? fixtureSet.confirmed_at : null,
   }]) }))
@@ -153,6 +165,93 @@ async function dismissCalendarHint(page: Page) {
   await expect(hint).toBeVisible()
   await hint.getByRole('button', { name: 'Понятно' }).click()
   await dismissVisibleHints(page)
+}
+
+for (const role of ['client', 'trainer'] as const) {
+  test(`${role}: empty Live is compact and deletion stays safe`, async ({ page }, testInfo) => {
+    const state = await mockNavigationWorkouts(page)
+    state.status = 'in_progress'
+    state.empty = true
+    if (role === 'trainer') await loginForHistory(page, role)
+    else {
+      await page.goto('/auth')
+      await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+      await page.getByLabel('Тип аккаунта').selectOption('client')
+      await page.getByLabel('Имя').fill('Тестовый клиент')
+      await page.getByLabel('Email').fill(`live-empty-${randomUUID()}@fit.local`)
+      await page.getByLabel('Пароль').fill('FitLocal123!')
+      await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+      await expect(page).toHaveURL(/\/me$/)
+      await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
+      const fixtureClient = {
+        id: historyRow.client_id, auth_user_id: null, full_name: historyRow.client_name,
+        canonical_full_name: historyRow.client_name, gender: null, age_years: null,
+        age_updated_at: null, height_cm: null, goal: null, note: null,
+        current_weight_kg: null, last_activity_at: null, archived_at: null,
+        version: 1, membership_version: null, merged_into_client_id: null,
+        can_archive: false, has_account: false,
+      }
+      await page.route('**/rest/v1/clients?*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(fixtureClient) }))
+      await page.route('**/rest/v1/rpc/list_clients', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify([fixtureClient]) }))
+    }
+    await page.goto(`${detailPath}/live`)
+    await dismissVisibleHints(page)
+
+    await expect(page.getByText('LIVE', { exact: true })).toBeVisible()
+    await expect(page.locator('.live-session-header .workout-status')).toHaveCount(0)
+    await expect(page.locator('.live-session-progress')).toHaveCount(0)
+    await expect(page.getByRole('progressbar', { name: 'Выполненные подходы' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Добавьте первое упражнение' })).toBeVisible()
+    await dismissVisibleHints(page)
+    await expect(page.getByRole('button', { name: 'Выбрать упражнение' })).toBeVisible()
+    await expect(page.getByText('Пустую тренировку нельзя завершить как выполненную.')).toHaveCount(0)
+    const deleteButton = page.locator('.live-bottom-bar').getByRole('button', { name: 'Удалить тренировку' })
+    await expect(page.locator('.live-bottom-bar button')).toHaveCount(1)
+    await expect(deleteButton.locator('[data-icon="trash"]')).toBeVisible()
+    const hitTarget = await deleteButton.boundingBox()
+    expect(hitTarget?.width).toBeGreaterThanOrEqual(44)
+    expect(hitTarget?.height).toBeGreaterThanOrEqual(44)
+
+    for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await expect(deleteButton).toBeInViewport()
+      await page.screenshot({ path: testInfo.outputPath(`${role}-live-empty-${width}.png`), fullPage: true })
+    }
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.locator('html').evaluate((element) => element.classList.remove('theme-light'))
+    await page.locator('.phone-frame').evaluate((element) => element.classList.remove('theme-light'))
+    await expect(deleteButton).toBeInViewport()
+    await page.screenshot({ path: testInfo.outputPath(`${role}-live-empty-dark-390.png`), fullPage: true })
+
+    await deleteButton.click()
+    await expect(page.getByRole('alertdialog', { name: 'Удалить эту пустую тренировку?' })).toBeVisible()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
+    await expect(page).toHaveURL(`${detailPath}/live`)
+
+    let failOnce = true
+    await page.route('**/rest/v1/rpc/soft_delete_workout', (route) => {
+      if (failOnce) {
+        failOnce = false
+        return route.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"temporarily unavailable"}' })
+      }
+      return route.fallback()
+    })
+    await deleteButton.click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(page.getByRole('alert')).toHaveText('Не удалось удалить тренировку. Попробуйте ещё раз.')
+    await expect(deleteButton).toBeEnabled()
+    await deleteButton.click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(page).toHaveURL(role === 'client' ? /\/me$/ : /\/today$/)
+
+    state.deleted = false
+    state.empty = false
+    await page.goto(`${detailPath}/live`)
+    await expect(page.locator('.live-session-progress')).toContainText('Готово 1 из 1')
+    await expect(page.locator('.live-bottom-bar').getByRole('button', { name: 'Удалить тренировку' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Завершить тренировку' })).toBeVisible()
+  })
 }
 
 for (const role of ['trainer', 'client'] as const) {
@@ -420,8 +519,8 @@ for (const role of ['trainer', 'client'] as const) {
     await expect(page.locator('.live-exercise')).toHaveCount(0)
     expect(calls).toBe(2)
     await page.reload()
-    await expect(page.getByRole('button', { name: 'Добавить упражнение', exact: true })).toBeVisible()
-    await expect(page.getByText('Добавьте первое упражнение — результаты можно записывать сразу.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Выбрать упражнение', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Добавьте первое упражнение' })).toBeVisible()
     await expect(page.locator('.live-exercise, .live-exercise-collapsed')).toHaveCount(0)
   })
 }
