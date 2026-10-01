@@ -420,7 +420,8 @@ for (const role of ['trainer', 'client'] as const) {
     await expect(page.locator('.live-exercise')).toHaveCount(0)
     expect(calls).toBe(2)
     await page.reload()
-    await expect(page.getByRole('button', { name: '＋ Ещё упражнение', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Добавить упражнение', exact: true })).toBeVisible()
+    await expect(page.getByText('Добавьте первое упражнение — результаты можно записывать сразу.')).toBeVisible()
     await expect(page.locator('.live-exercise, .live-exercise-collapsed')).toHaveCount(0)
   })
 }
