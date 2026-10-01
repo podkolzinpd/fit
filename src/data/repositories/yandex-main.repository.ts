@@ -1355,6 +1355,19 @@ export function createYandexMainRepository(
       async findActive(clientId) {
         return (await this.listSummaries(clientId)).find((item) => item.status === 'in_progress') ?? null
       },
+      async quickStart(clientId, operationId) {
+        const payload = await writeJson(queries, '/v1/workouts/quick-start', 'POST',
+          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID() },
+          z.object({ workout: z.object({ id: uuid, resumed: z.boolean() }) }))
+        invalidate()
+        return payload.workout
+      },
+      async cancelEmpty(item) {
+        await writeJson(queries, `/v1/workouts/${item.id}/cancel-empty`, 'POST',
+          { expectedVersion: item.version },
+          z.object({ workout: z.object({ version: z.number().int().positive() }) }))
+        invalidate()
+      },
       async personalRecords(workoutId) {
         const item = await this.get(workoutId)
         const records: WorkoutPersonalRecord[] = []

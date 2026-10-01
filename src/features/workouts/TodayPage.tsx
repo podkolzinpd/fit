@@ -47,6 +47,7 @@ import { ChatHeaderAction } from '../chat'
 import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
 import { YandexAccountLinkingCard } from '../auth'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
+import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
 import { ClientFinanceHomeCard } from '../finance'
 
 type Screen = 'compose' | 'review' | 'save'
@@ -616,15 +617,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setTextComposerOpen(openComposer)
   }
 
-  const currentWorkout = todayWorkouts.data?.find((workout) => workout.status === 'in_progress')
   const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
   function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
   const profileInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || (clientMode ? 'К' : 'П')
   const latestWorkout = workouts.data?.filter((workout) => workout.status === 'done').sort((a, b) => `${b.workoutDate}${b.startTime ?? ''}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}`))[0]
-  const contextWorkout = currentWorkout ?? plannedWorkouts[0] ?? latestWorkout
-  const contextTitle = currentWorkout ? 'Текущая тренировка' : plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
-  const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={currentWorkout ? `/workouts/${contextWorkout.id}/live` : `/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><ChevronRightIcon /></Link></section>
+  const contextWorkout = plannedWorkouts[0] ?? latestWorkout
+  const contextTitle = plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
+  const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={`/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><ChevronRightIcon /></Link></section>
   const actionItems = !clientMode ? trainerActionItems(clients.data ?? [], workouts.data ?? [], trainerAttention.data ?? [], today) : []
   const actionClientIds = new Set(actionItems.map((item) => item.clientId))
   const planningItems = !clientMode ? trainerPlanningItems(clients.data ?? [], workouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today) : []
@@ -684,11 +684,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           }
         }}
         selfTraining={<section className="client-home-self-training primary">
-          <div className="today-voice-hero-compact">
+          <QuickStartWorkout role="client" clientId={mine.data?.id} workouts={workouts.data} loading={mine.isLoading || workouts.isLoading} error={mine.error ?? workouts.error} onRetry={() => { void mine.refetch(); void workouts.refetch() }} returnTo="/me" />
+          <div className="today-voice-hero-compact compose-workout-entry">
             <VoiceInputButton
               variant="hero"
               source="today_workout"
               idleLabel="Надиктовать тренировку"
+              heroTitle="Составить тренировку"
+              heroSubtitle="Голосом или вручную"
               onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }}
               onPhaseChange={setVoicePhase}
               onTranscript={handleHeroTranscript}
@@ -698,6 +701,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           {restoredDraftScreen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
           {voiceRefinement?.state === 'error' && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
         </section>}
+        hideActiveNextAction
         showFirstRunConnection={actor?.kind === 'client' && actor.trainerId === actor.userId}
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
         trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
@@ -705,11 +709,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
-      {!textComposerOpen && <div className="today-voice-hero-compact">
+      {!clientMode && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={workouts.data} loading={clients.isLoading || workouts.isLoading} error={clients.error ?? workouts.error} onRetry={() => { void clients.refetch(); void workouts.refetch() }} returnTo="/today" />}
+      {!textComposerOpen && <div className="today-voice-hero-compact compose-workout-entry">
         <VoiceInputButton
           variant="hero"
           source="today_workout"
           idleLabel="Надиктовать тренировку"
+          heroTitle="Составить тренировку"
+          heroSubtitle="Голосом или вручную"
           onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }}
           onPhaseChange={setVoicePhase}
           onTranscript={handleHeroTranscript}
@@ -733,6 +740,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
        {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
+      {!clientMode && !textComposerOpen && <TrainerActiveWorkouts workouts={workouts.data} returnTo="/today" />}
       {voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>

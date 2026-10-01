@@ -53,7 +53,7 @@ test('today: voice-first запускает запись, отменяет её 
   await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
   await expect(page.getByText('Назовите упражнения, подходы, повторения и вес')).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
@@ -141,7 +141,7 @@ test('today: быстрый старт ведёт к единому выбору
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
 
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Тренировка' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
@@ -250,7 +250,7 @@ test('today: пустой финальный шаг не оставляет по
   await expect(page).toHaveURL(/\/today$/)
   await expect(page.getByRole('heading', { name: 'Сохраните тренировку' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Запланировать тренировку' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
 })
 
 test('today: беговая ветка сразу добавляет интервалы с активным восстановлением', async ({ page }) => {
@@ -345,7 +345,7 @@ test('today: черновик сохраняет финальный шаг и п
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page).toHaveURL(/\/(today|clients)$/)
   await page.goto('/today')
-  await expect(page.getByRole('heading', { name: 'Что будем делать?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
 

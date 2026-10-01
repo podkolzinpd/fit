@@ -87,6 +87,8 @@ import {
   softDeletePlannedWorkout,
   softDeleteWorkout,
   startLiveWorkout,
+  quickStartLiveWorkout,
+  cancelEmptyLiveWorkout,
 } from '../workout-commands.js'
 import { withActorTransaction } from './actor-transaction.js'
 import { PgDatabasePool } from './pg-pool.js'
@@ -168,6 +170,16 @@ const QUICK_OWN_RECOVERY_CANONICAL_ID = 'a237c0bf-5dc5-46cd-ab26-951ddfb49949'
 const ROOT_CUSTOM_EXERCISE_ID = 'b27d65d0-6221-47cb-91a0-8dfcc0a2ceba'
 const MEMBER_CUSTOM_EXERCISE_ID = '3127663e-4395-4100-8dd1-7b784d90917a'
 const ROOT_WORKOUT_ID = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+const QUICK_START_CLIENT_ID = '10a21ee8-718e-4f74-b4ed-d7bea41ac1a7'
+const QUICK_START_ACTOR_ID = '20a21ee8-718e-4f74-b4ed-d7bea41ac1a7'
+const QUICK_START_OPERATION_IDS = {
+  trainer: '30a21ee8-718e-4f74-b4ed-d7bea41ac1a7',
+  client: '40a21ee8-718e-4f74-b4ed-d7bea41ac1a7',
+  second: '50a21ee8-718e-4f74-b4ed-d7bea41ac1a7',
+  finish: '60a21ee8-718e-4f74-b4ed-d7bea41ac1a7',
+  clientSecond: '70a21ee8-718e-4f74-b4ed-d7bea41ac1a7',
+  trainerSecond: '80a21ee8-718e-4f74-b4ed-d7bea41ac1a7',
+} as const
 const MEMBER_WORKOUT_ID = 'd3cff30a-7aa2-4407-b62d-0683167cf4c8'
 const CLIENT_WORKOUT_ID = '6e2d8d63-7c3a-4301-b9ba-76d875210f1f'
 const POST_WORKOUT_ID = 'cd691fd5-86ee-4740-838c-b37166df7e71'
@@ -4388,6 +4400,77 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
 
       await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
+    })
+
+    it('quick-starts atomically, resumes by trainer and client, and rejects empty completion', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      await ownerPool.query('delete from public.workouts where client_id = $1', [QUICK_START_CLIENT_ID])
+      await ownerPool.query('delete from public.clients where id = $1', [QUICK_START_CLIENT_ID])
+      await ownerPool.query('delete from public.profiles where id = $1', [QUICK_START_ACTOR_ID])
+      await ownerPool.query(
+        `insert into public.profiles (id, first_name, account_role)
+         values ($1, 'Quick start client', 'client')`, [QUICK_START_ACTOR_ID],
+      )
+      await ownerPool.query(
+        `insert into public.clients (id, trainer_id, auth_user_id, full_name)
+         values ($1, $2, $3, 'Quick start fixture')`,
+        [QUICK_START_CLIENT_ID, ACTOR_ID, QUICK_START_ACTOR_ID],
+      )
+      try {
+        const first = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.trainer))
+        expect(first.id).toMatch(/^[0-9a-f-]{36}$/)
+        expect(first.resumed).toBe(false)
+        const replay = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.trainer))
+        expect(replay).toEqual({ id: first.id, resumed: true })
+        const resumed = await withActorTransaction(runtimePool, QUICK_START_ACTOR_ID, (client) =>
+          quickStartLiveWorkout(client, null, QUICK_START_OPERATION_IDS.client))
+        expect(resumed).toEqual({ id: first.id, resumed: true })
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second)))
+          .rejects.toMatchObject({ failure: 'forbidden' })
+        await ownerPool.query(
+          'insert into public.client_trainers (client_id, trainer_id) values ($1, $2)',
+          [QUICK_START_CLIENT_ID, OUTSIDE_TRAINER_ID],
+        )
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second)))
+          .rejects.toMatchObject({ failure: 'active' })
+        const otherTrainerView = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          client.query<{ id: string }>('select id from public.workouts where id = $1', [first.id]))
+        expect(otherTrainerView).toEqual([])
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          finishLiveWorkout(client, first.id, 1, QUICK_START_OPERATION_IDS.finish)))
+          .rejects.toMatchObject({ failure: 'invalid' })
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => cancelEmptyLiveWorkout(client, first.id, 1))
+        const second = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second))
+        expect(second.resumed).toBe(false)
+        expect(second.id).not.toBe(first.id)
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => cancelEmptyLiveWorkout(client, second.id, 1))
+        const clientStarted = await withActorTransaction(runtimePool, QUICK_START_ACTOR_ID, (client) =>
+          quickStartLiveWorkout(client, null, QUICK_START_OPERATION_IDS.clientSecond))
+        const connectedTrainerView = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          client.query<{ id: string }>('select id from public.workouts where id = $1', [clientStarted.id]))
+        expect(connectedTrainerView).toEqual([{ id: clientStarted.id }])
+        const trainerResumed = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.trainerSecond))
+        expect(trainerResumed).toEqual({ id: clientStarted.id, resumed: true })
+        const connectedTrainerResumed = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second))
+        expect(connectedTrainerResumed).toEqual({ id: clientStarted.id, resumed: true })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          finishLiveWorkout(client, clientStarted.id, 1, QUICK_START_OPERATION_IDS.finish)))
+          .rejects.toMatchObject({ failure: 'invalid' })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          cancelEmptyLiveWorkout(client, clientStarted.id, 1)))
+          .resolves.toBe(2)
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id = $1', [QUICK_START_CLIENT_ID])
+        await ownerPool.query('delete from public.clients where id = $1', [QUICK_START_CLIENT_ID])
+        await ownerPool.query('delete from public.profiles where id = $1', [QUICK_START_ACTOR_ID])
+      }
     })
 
     it('runs the idempotent live core lifecycle with conflicts and actor attribution', async () => {

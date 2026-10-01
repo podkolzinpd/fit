@@ -18,6 +18,8 @@ interface VoiceInputButtonProps {
   decodeAudio?: (blob: Blob) => Promise<ArrayBuffer>
   maxDurationMs?: number
   idleLabel?: string
+  heroTitle?: string
+  heroSubtitle?: string
   beta?: boolean
   variant?: 'inline' | 'hero' | 'icon'
   onPhaseChange?: (phase: VoiceInputPhase) => void
@@ -40,6 +42,8 @@ export function VoiceInputButton({
   decodeAudio = decodeAudioToPcm16,
   maxDurationMs = 270_000,
   idleLabel = 'Надиктовать заметку',
+  heroTitle = 'Что будем делать?',
+  heroSubtitle,
   beta = false,
   variant = 'inline',
   onPhaseChange,
@@ -273,7 +277,8 @@ export function VoiceInputButton({
       onClick={startVoiceInput}
     />}
     <div className="voice-action-copy">
-      <h2>{recording ? 'Слушаю…' : busy ? voiceHeroStatus(phase) : 'Что будем делать?'}</h2>
+      <h2>{recording ? 'Слушаю…' : busy ? voiceHeroStatus(phase) : heroTitle}</h2>
+      {!recording && !busy && heroSubtitle && <p className="voice-action-guidance">{heroSubtitle}</p>}
       {recording && <p className="voice-action-guidance">Назовите упражнения, подходы, повторения и вес</p>}
       {recording && message?.startsWith('Сейчас распознаю:') && <p className="voice-action-transcript">«{message.replace('Сейчас распознаю:', '').trim()}»</p>}
     </div>

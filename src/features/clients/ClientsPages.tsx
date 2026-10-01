@@ -23,10 +23,12 @@ import { isRepositoryConflict } from '../../data/repositories/error'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
+import { QuickStartWorkout } from '../workouts/QuickStartWorkout'
 
 export function MyClientPage() {
-  const { clients: clientsRepository } = useDataBackend()
+  const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const { actor, refresh } = useAuth()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
@@ -42,17 +44,38 @@ export function MyClientPage() {
       await refresh()
     },
   })
+  const beginFirstLive = useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error('Профиль пользователя не найден')
+      const fullName = [actor.firstName, actor.lastName].filter(Boolean).join(' ').trim()
+      const clientId = await clientsRepository.createQuickOwn(fullName)
+      const started = await workoutsRepository.quickStart(clientId)
+      return started.id
+    },
+    onSuccess: async (id) => {
+      await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+      await refresh()
+      navigate(`/workouts/${id}/live`, { state: { returnTo: '/me' } })
+    },
+    onError: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+      await refresh()
+    },
+  })
   useClientRealtime(query.data?.id)
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
     {actor && <YandexAccountLinkingCard actor={actor} />}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
-        <div className="today-voice-hero-compact">
+        <section className="quick-start-workout"><div className="quick-start-copy"><h2>Начать тренировку</h2><p>Тренировка начнётся сразу. Упражнения добавите по ходу.</p></div><button type="button" className="quick-start-button" disabled={beginFirstLive.isPending} onClick={() => beginFirstLive.mutate()}>{beginFirstLive.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>{beginFirstLive.error && <p role="alert">Не удалось начать тренировку. Повторите попытку.</p>}</section>
+        <div className="today-voice-hero-compact compose-workout-entry">
           <VoiceInputButton
             variant="hero"
             source="today_workout"
             idleLabel="Надиктовать тренировку"
+            heroTitle="Составить тренировку"
+            heroSubtitle="Голосом или вручную"
             onPhaseChange={setVoicePhase}
             onTranscript={(transcript) => quickStart.mutateAsync({ mode: 'voice', transcript })}
             secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" disabled={quickStart.isPending} onClick={() => quickStart.mutate({ mode: 'text' })}><KeyboardIcon /></button> : undefined}
@@ -393,6 +416,7 @@ export function ClientDetailPage() {
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       <div className="client-detail-actions">
         {query.data.hasAccount && actor?.role === 'trainer' && <ChatStartButton clientId={clientId} trainerId={actor.userId} className="secondary wide client-detail-message" />}
+        {actor?.role === 'trainer' && !query.data.archivedAt && <QuickStartWorkout role="trainer" clientId={clientId} workouts={workouts.data} loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} returnTo={`/clients/${clientId}`} compact />}
         <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
           <ScheduleIcon />
           <span>Запланировать тренировку</span>

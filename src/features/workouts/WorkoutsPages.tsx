@@ -91,6 +91,7 @@ import { AppInstallPrompt } from '../install'
 import { NotificationOnboarding } from '../notifications'
 import { readTodayDraft, todayDraftKey } from './today-draft'
 import { trainerHomeContext } from './trainer-home-context'
+import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
 import { trainerActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 import { cloneWorkoutTemplate } from '../../data/repositories/workout-templates.repository'
 import { SCHEDULE_HOUR_HEIGHT, useScheduleDensityPreference } from '../../app/schedule-density'
@@ -747,7 +748,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     void homeWorkouts.refetch()
     void attentionPreferences.refetch()
   }
-  const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data, today) : null
+  const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data.filter((workout) => workout.status !== 'in_progress'), today) : null
   const draft = actor && showHomeActions ? readTodayDraft(todayDraftKey(actor.userId)) : null
 
   useEffect(() => {
@@ -779,10 +780,13 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   ]
 
   const homeActions = showHomeActions && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
+    <QuickStartWorkout role="trainer" clients={homeClients.data} workouts={homeWorkouts.data} loading={homeClients.isLoading || homeWorkouts.isLoading} error={homeClients.error ?? homeWorkouts.error} onRetry={() => { void homeClients.refetch(); void homeWorkouts.refetch() }} returnTo={returnTo} />
     <div className="schedule-v2-entry-actions">
-      <Link className="schedule-v2-voice-entry" to="/today?view=compose" onClick={() => trackGoal('schedule_v2_voice_entry_opened')}><MicIcon />Надиктовать тренировку</Link>
-      <Link className="schedule-v2-text-entry" to="/today?view=compose&entry=text" onClick={() => trackGoal('schedule_v2_text_entry_opened')}><KeyboardIcon /><span>Ввести текстом</span></Link>
+      <span className="schedule-v2-compose-label"><strong>Составить тренировку</strong><small>Голосом или вручную</small></span>
+      <Link className="schedule-v2-voice-entry" to="/today?view=compose" aria-label="Надиктовать тренировку" onClick={() => trackGoal('schedule_v2_voice_entry_opened')}><MicIcon /></Link>
+      <Link className="schedule-v2-text-entry" to="/today?view=compose&entry=text" aria-label="Ввести текстом" onClick={() => trackGoal('schedule_v2_text_entry_opened')}><KeyboardIcon /></Link>
     </div>
+    <TrainerActiveWorkouts workouts={homeWorkouts.data} returnTo={returnTo} />
     {draft && <Link className="schedule-v2-resume" to="/today?view=compose"><strong>Есть незавершённая тренировка</strong><span>Продолжить <ChevronRightIcon /></span></Link>}
     {homeClients.isLoading && <p className="schedule-v2-home-state" role="status">Загружаем клиентов…</p>}
     {homeClients.isError && <p className="schedule-v2-home-state" role="alert">Не удалось загрузить клиентов. <button type="button" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
@@ -2964,6 +2968,18 @@ export function LiveWorkoutPage() {
     ])
     showCompletedWorkout(true)
   } })
+  const cancelEmpty = useMutation({
+    mutationFn: async () => {
+      const workout = query.data
+      if (!workout || workout.status !== 'in_progress' || workout.exercises.length > 0) throw new Error('Тренировка уже содержит упражнения')
+      await workoutsRepository.cancelEmpty(workout)
+    },
+    onSuccess: async () => {
+      await invalidateWorkoutResults(queryClient)
+      await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
+      navigate(sourceReturnTo ?? (clientMode ? '/me' : '/today'), { replace: true })
+    },
+  })
   const hasIncompleteLiveSets = query.data?.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)) ?? false
   function finishFromInactivityReminder() {
     inactivityReminder.dismiss()
@@ -3243,7 +3259,8 @@ export function LiveWorkoutPage() {
           </div>
         </div>
       }) })()}
-      {canManageLiveStructure && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Тренировка началась</h2><p>Добавьте первое упражнение — результаты можно записывать сразу.</p><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
+      {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
@@ -3251,6 +3268,9 @@ export function LiveWorkoutPage() {
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
       <div className="live-bottom-bar">
+        {query.data.exercises.length === 0 && <div className="live-empty-actions"><p>Пустую тренировку нельзя завершить как выполненную.</p><button type="button" className="link" disabled={cancelEmpty.isPending} onClick={async () => {
+          if (await askConfirm({ message: 'Отменить эту пустую тренировку?', confirmLabel: 'Отменить тренировку', danger: true })) cancelEmpty.mutate()
+        }}>{cancelEmpty.isPending ? 'Отменяем…' : 'Отменить тренировку'}</button>{cancelEmpty.error && <p role="alert">Не удалось отменить. Повторите попытку.</p>}</div>}
         {(liveSyncError || recoveredSetIds.size > 0) && <div className={`live-sync-state ${liveSyncError ? 'error' : ''}`} role={liveSyncError ? 'alert' : 'status'}>
           <div>
             <strong>{liveSyncError ? 'Результаты сохранены на телефоне' : 'Восстановили результаты'}</strong>
@@ -3258,7 +3278,7 @@ export function LiveWorkoutPage() {
           </div>
           <button type="button" className="secondary" disabled={save.isPending || confirm.isPending} onClick={() => void retryPendingLiveDrafts()}>{save.isPending ? 'Отправляем…' : 'Повторить'}</button>
         </div>}
-        {confirmFinish
+        {query.data.exercises.length > 0 && (confirmFinish
           ? <div className="finish-confirm">
               <p>{hasIncompleteLiveSets ? 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
               <div className="actions workout-action-row">
@@ -3266,7 +3286,7 @@ export function LiveWorkoutPage() {
                 <WorkoutCta pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>Завершить</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>}
+          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onClose={closePicker} />}
