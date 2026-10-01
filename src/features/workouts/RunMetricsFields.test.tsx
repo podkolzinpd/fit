@@ -83,6 +83,21 @@ describe('RunMetricsFields', () => {
     expect(distance).toHaveValue(5.25)
   })
 
+  it('keeps an unsynced Live distance when the unit changes before server data arrives', async () => {
+    const user = userEvent.setup()
+    render(<RunMetricsFields idPrefix="live-distance" durationSec={120} distanceKm={5.2}
+      inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция"
+      distanceUnitLabel="Единица дистанции" />)
+    const distance = screen.getByLabelText('Дистанция')
+    const unit = screen.getByLabelText('Единица дистанции')
+    await user.selectOptions(unit, 'm')
+    await user.clear(distance)
+    await user.type(distance, '12.25')
+    await user.tab()
+    await user.selectOptions(unit, 'km')
+    expect(distance).toHaveValue(0.01225)
+  })
+
   it('commits duration selected as minutes and seconds', async () => {
     setWorkoutTimeWheel(true)
     const user = userEvent.setup()
