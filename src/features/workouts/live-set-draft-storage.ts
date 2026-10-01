@@ -6,6 +6,10 @@ function storageKey(userId: string, workoutId: string): string {
   return `fit.live-set-drafts.${userId}.${workoutId}`
 }
 
+function confirmationStorageKey(userId: string, workoutId: string): string {
+  return `fit.live-set-confirmations.${userId}.${workoutId}`
+}
+
 function optionalNumber(value: unknown): boolean {
   return value === undefined || (typeof value === 'number' && Number.isFinite(value))
 }
@@ -51,4 +55,36 @@ export function removePendingLiveSetDraft(userId: string, workoutId: string, set
 
 export function clearPendingLiveSetDrafts(userId: string, workoutId: string): void {
   try { localStorage.removeItem(storageKey(userId, workoutId)) } catch { /* localStorage недоступен */ }
+}
+
+export function readPendingLiveSetConfirmations(userId: string, workoutId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(confirmationStorageKey(userId, workoutId))
+    const parsed: unknown = raw ? JSON.parse(raw) : null
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((setId): setId is string => typeof setId === 'string' && setId.length > 0))
+  } catch {
+    return new Set()
+  }
+}
+
+export function writePendingLiveSetConfirmation(userId: string, workoutId: string, setId: string): void {
+  try {
+    const confirmations = readPendingLiveSetConfirmations(userId, workoutId)
+    confirmations.add(setId)
+    localStorage.setItem(confirmationStorageKey(userId, workoutId), JSON.stringify([...confirmations]))
+  } catch { /* приватный режим: намерение остаётся в памяти текущей вкладки */ }
+}
+
+export function removePendingLiveSetConfirmation(userId: string, workoutId: string, setId: string): void {
+  try {
+    const confirmations = readPendingLiveSetConfirmations(userId, workoutId)
+    confirmations.delete(setId)
+    if (confirmations.size) localStorage.setItem(confirmationStorageKey(userId, workoutId), JSON.stringify([...confirmations]))
+    else localStorage.removeItem(confirmationStorageKey(userId, workoutId))
+  } catch { /* localStorage недоступен */ }
+}
+
+export function clearPendingLiveSetConfirmations(userId: string, workoutId: string): void {
+  try { localStorage.removeItem(confirmationStorageKey(userId, workoutId)) } catch { /* localStorage недоступен */ }
 }

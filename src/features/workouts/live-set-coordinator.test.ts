@@ -60,6 +60,20 @@ describe('live set coordinator', () => {
     expect(saveLiveSet).toHaveBeenCalledWith('set-1', { ...draft, reps: 13 }, 4)
   })
 
+  it('clears a stale failed-save state when refetch proves the draft is on the server', async () => {
+    const coordinator = createLiveSetCoordinator(
+      vi.fn().mockRejectedValueOnce(new Error('response lost')),
+      vi.fn(),
+    )
+
+    await expect(coordinator.save(set, draft)).rejects.toThrow('response lost')
+    await expect(coordinator.waitForIdle()).rejects.toThrow('response lost')
+
+    coordinator.sync({ ...set, fact: draft, version: 2 }, draft)
+
+    await expect(coordinator.waitForIdle()).resolves.toBeUndefined()
+  })
+
   it('prevents finish from passing a failed pending autosave', async () => {
     let failSave: ((error: Error) => void) | undefined
     const coordinator = createLiveSetCoordinator(
