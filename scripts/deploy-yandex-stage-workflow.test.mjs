@@ -33,6 +33,10 @@ test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange'
     /profile_name="github-actions-\$\{GITHUB_RUN_ID:-local\}-\$\{GITHUB_JOB:-job\}-\$\{RANDOM\}"/,
   )
   assert.match(oidcExchangeScript, /yc config profile create "\$profile_name"/)
+  assert.match(
+    oidcExchangeScript,
+    /yc config set endpoint "\$\{YC_CLOUD_API_ENDPOINT:-api\.cloud\.yandex\.net:443\}"/,
+  )
   assert.match(oidcExchangeScript, /yc config set token "\$iam_token"/)
   assert.match(oidcExchangeScript, /yc config set folder-id "\$YC_FOLDER_ID"/)
   assert.doesNotMatch(workflow, /yc config profile create|yc config set token/)

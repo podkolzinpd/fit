@@ -54,6 +54,10 @@ printf 'YC_IAM_TOKEN=%s\n' "$iam_token" >>"$GITHUB_ENV"
 if command -v yc >/dev/null 2>&1; then
   profile_name="github-actions-${GITHUB_RUN_ID:-local}-${GITHUB_JOB:-job}-${RANDOM}"
   yc config profile create "$profile_name"
+  # Fresh yc profiles no longer inherit the public Cloud API endpoint. Set it
+  # explicitly before the first service command so non-interactive CI does not
+  # fail with "endpoint should be set".
+  yc config set endpoint "${YC_CLOUD_API_ENDPOINT:-api.cloud.yandex.net:443}"
   yc config set token "$iam_token"
   if [[ -n "${YC_FOLDER_ID:-}" ]]; then
     yc config set folder-id "$YC_FOLDER_ID"
