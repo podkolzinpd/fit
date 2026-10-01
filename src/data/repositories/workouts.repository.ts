@@ -192,6 +192,15 @@ export const workoutsRepository = {
   },
   listSummaries,
   findActive,
+  quickStart(clientId?: string, operationId?: string): Promise<{ id: string; resumed: boolean }> {
+    void clientId
+    void operationId
+    return Promise.reject(new Error('Быстрый старт доступен только в основной версии ФИТ.'))
+  },
+  cancelEmpty(workout: Workout): Promise<void> {
+    if (workout.exercises.length > 0) return Promise.reject(new Error('Тренировка уже содержит упражнения'))
+    return this.remove(workout)
+  },
   async personalRecords(workoutId: string): Promise<WorkoutPersonalRecord[]> {
     const result = await workoutQueries.personalRecords(workoutId)
     if (result.error) throw repositoryError(result.error)

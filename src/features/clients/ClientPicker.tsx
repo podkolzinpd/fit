@@ -16,6 +16,9 @@ interface ClientPickerProps {
   error?: Error | null
   onRetry?: () => void
   onCreate?: (fullName: string) => Promise<ClientPickerSelection>
+  initialOpen?: boolean
+  onDismiss?: () => void
+  hideTrigger?: boolean
 }
 
 function useVisualViewportStyle() {
@@ -39,8 +42,8 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ClientPicker({ userId, clients, selectedId, onChange, label = 'Клиент', selectionError, loading = false, error, onRetry, onCreate }: ClientPickerProps) {
-  const [open, setOpen] = useState(false)
+export function ClientPicker({ userId, clients, selectedId, onChange, label = 'Клиент', selectionError, loading = false, error, onRetry, onCreate, initialOpen = false, onDismiss, hideTrigger = false }: ClientPickerProps) {
+  const [open, setOpen] = useState(initialOpen)
   const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState('')
   const [name, setName] = useState('')
@@ -63,6 +66,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
     setSearch('')
     setName('')
     setCreateError(null)
+    onDismiss?.()
   }
 
   function choose(client: ClientPickerSelection) {
@@ -94,7 +98,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
   return <div className="client-picker-control">
     <input type="hidden" name="clientId" value={selectedId} />
     <span className="client-picker-label">{label}</span>
-    <button type="button" className="client-picker-trigger" aria-label={`${label}: ${selected?.fullName ?? 'Выберите клиента'}`} aria-describedby={selectionError ? 'client-picker-selection-error' : undefined} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}><span>{selected?.fullName ?? 'Выберите клиента'}</span><ChevronDownIcon /></button>
+    {!hideTrigger && <button type="button" className="client-picker-trigger" aria-label={`${label}: ${selected?.fullName ?? 'Выберите клиента'}`} aria-describedby={selectionError ? 'client-picker-selection-error' : undefined} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}><span>{selected?.fullName ?? 'Выберите клиента'}</span><ChevronDownIcon /></button>}
     {selectionError && <p id="client-picker-selection-error" className="error" role="alert">{selectionError}</p>}
     {open && <div className={`sheet-overlay${keyboardOpen ? ' keyboard-open' : ''}`} style={viewportStyle} onClick={close}>
       <section className="client-picker" role="dialog" aria-modal="true" aria-label="Выбор клиента" onClick={stopPropagation}>

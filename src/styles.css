@@ -6732,6 +6732,52 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .trainer-schedule-v2-shell .schedule-v2-home-state button { min-height:44px; border:0; color:var(--schedule-v2-accent); background:transparent; font-weight:650; }
 .trainer-schedule-v2-shell .schedule-v2-onboarding-trigger { min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; border:1px solid #303034; border-radius:14px; color:#a8a8ad; background:#19191b; box-shadow:none; font-size:12px; text-align:left; }
 .trainer-schedule-v2-shell .schedule-v2-onboarding-trigger svg { width:15px; height:15px; }
+
+/* Quick live start and compact composition share the monochrome home hierarchy. */
+.quick-start-workout { display:grid; gap:12px; min-width:0; padding:18px; border-radius:20px; background:var(--mono-primary, #202024); color:var(--mono-on-primary, #faf9f6); }
+.quick-start-copy h2 { margin:0 0 5px; color:inherit; font-size:19px; line-height:1.2; }
+.client-home-identity .quick-start-copy h2 { color:inherit; font-size:19px; }
+.quick-start-copy p { margin:0; color:inherit; opacity:.75; font-size:14px; line-height:1.4; }
+.quick-start-button { width:100%; min-height:50px; border:1px solid currentColor; border-radius:14px; background:var(--mono-on-primary, #faf9f6); color:var(--mono-primary, #202024); font-size:15px; font-weight:650; }
+.quick-start-button:disabled { opacity:.55; }
+.quick-start-status { margin:0; color:inherit; font-size:13px; line-height:1.4; }
+.quick-start-status a, .quick-start-status button { color:inherit; text-decoration:underline; }
+.quick-start-status button { min-height:44px; padding:0 8px; border:0; background:transparent; }
+.quick-start-workout.compact { padding:0; border-radius:0; background:transparent; color:var(--fg); }
+.quick-start-workout.compact .quick-start-button { border:1px solid var(--border); background:var(--surface-raised); color:var(--fg); }
+.trainer-active-workouts { display:grid; gap:8px; }
+.trainer-active-workouts h2 { margin:0; color:var(--fg); font-size:15px; }
+.trainer-active-workouts a { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:52px; padding:12px 14px; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised); color:var(--fg); text-decoration:none; }
+.trainer-active-workouts a span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.trainer-active-workouts a span:last-child { white-space:nowrap; font-size:13px; }
+.client-home-identity .compose-workout-entry .voice-action,
+.trainer-today-identity .compose-workout-entry .voice-action { min-height:78px; padding:12px 14px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); color:var(--fg); }
+.client-home-identity .compose-workout-entry .voice-action-copy h2,
+.trainer-today-identity .compose-workout-entry .voice-action-copy h2 { color:var(--fg); font-size:16px; }
+.client-home-identity .compose-workout-entry .voice-action-guidance,
+.trainer-today-identity .compose-workout-entry .voice-action-guidance { margin:0; color:var(--muted); opacity:1; }
+.client-home-identity .compose-workout-entry .voice-action-label,
+.trainer-today-identity .compose-workout-entry .voice-action-label { display:none; }
+.client-home-identity .compose-workout-entry .voice-action-button,
+.client-home-identity .compose-workout-entry .today-voice-text-inline,
+.trainer-today-identity .compose-workout-entry .voice-action-button,
+.trainer-today-identity .compose-workout-entry .today-voice-text-inline { width:46px; height:46px; border:1px solid var(--border); background:var(--surface); color:var(--fg); }
+.trainer-schedule-v2-shell .schedule-v2-entry-actions { grid-template-columns:minmax(0,1fr) 48px 48px; align-items:center; padding:11px 12px; border:1px solid #38383e; border-radius:18px; background:#222226; }
+.trainer-schedule-v2-shell .schedule-v2-compose-label { display:grid; min-width:0; gap:3px; color:#f8f8f6; }
+.trainer-schedule-v2-shell .schedule-v2-compose-label strong { overflow:hidden; font-size:14px; text-overflow:ellipsis; white-space:nowrap; }
+.trainer-schedule-v2-shell .schedule-v2-compose-label small { color:#b8b8bd; font-size:12px; }
+.trainer-schedule-v2-shell .schedule-v2-entry-actions a { min-height:46px; padding:0; border:1px solid #4b4b50; border-radius:13px; color:#f8f8f6; background:#303034; }
+.trainer-schedule-v2-shell .schedule-v2-voice-entry,
+.trainer-schedule-v2-shell .schedule-v2-text-entry { color:#f8f8f6; background:#303034; }
+.trainer-schedule-v2-shell .trainer-active-workouts h2 { color:#f8f8f6; }
+.trainer-schedule-v2-shell .trainer-active-workouts a { border-color:#38383e; background:#222226; color:#f8f8f6; }
+.live-empty-start { display:grid; gap:9px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised); }
+.live-empty-start h2, .live-empty-start p, .live-empty-actions p { margin:0; }
+.live-empty-start h2 { font-size:18px; }
+.live-empty-start p, .live-empty-actions p { color:var(--muted); font-size:13px; line-height:1.4; }
+.live-empty-actions { display:grid; gap:8px; padding:10px 0; }
+.live-empty-actions button { min-height:44px; justify-self:start; }
+@media (max-width:390px) { .trainer-schedule-v2-shell .schedule-v2-entry-actions { grid-template-columns:minmax(0,1fr) 44px 44px; gap:6px; } }
 .trainer-schedule-v2-shell .schedule-v2-untimed { display:grid; gap:7px; margin-bottom:16px; padding:14px; border:1px solid #303034; border-radius:20px; background:#19191b; }
 .trainer-schedule-v2-shell .schedule-v2-untimed > strong { color:#858589; font-size:11px; text-transform:uppercase; letter-spacing:.07em; }
 .trainer-schedule-v2-shell .schedule-v2-untimed > a { min-width:0; display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:10px; padding-top:8px; border-top:1px solid #303034; color:#f8f8f6; text-decoration:none; }

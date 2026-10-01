@@ -29,6 +29,11 @@ interface LiveStructureRow extends LiveCommandRow {
   resource_id: string | null
 }
 
+interface QuickStartRow extends QueryResultRow {
+  workout_id: string
+  resumed: boolean
+}
+
 export type PilotWorkoutCommandFailure =
   | 'active'
   | 'conflict'
@@ -57,6 +62,11 @@ export interface PilotLiveStructureResult extends PilotLiveCommandResult {
   resourceId: string
 }
 
+export interface PilotQuickStartResult {
+  id: string
+  resumed: boolean
+}
+
 function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   if (typeof error !== 'object' || error === null || !('message' in error)) {
     return undefined
@@ -82,6 +92,7 @@ function commandError(error: unknown): PilotWorkoutCommandError | undefined {
   }
   if (
     message === 'workout_invalid'
+    || message === 'operation_reused'
     || message === 'workout_not_completed'
     || message === 'workout_feedback_invalid'
     || message === 'workout_response_invalid'
@@ -410,6 +421,28 @@ export function startLiveWorkout(
     'select version, replayed from public.start_live_workout($1, $2, $3)',
     [workoutId, expectedVersion, operationId],
   )
+}
+
+export function quickStartLiveWorkout(
+  client: DatabaseClient,
+  clientId: string | null,
+  operationId: string,
+): Promise<PilotQuickStartResult> {
+  return runCommand(async () => {
+    const rows = await client.query<QuickStartRow>(
+      'select workout_id, resumed from public.quick_start_live_workout($1, $2)',
+      [clientId, operationId],
+    )
+    const result = rows[0]
+    if (!result?.workout_id) throw new Error('Quick start returned no workout')
+    return { id: result.workout_id, resumed: result.resumed }
+  })
+}
+
+export function cancelEmptyLiveWorkout(client: DatabaseClient, workoutId: string, expectedVersion: number): Promise<number> {
+  return runVersionCommand(client,
+    'select public.cancel_empty_live_workout($1, $2) as version',
+    [workoutId, expectedVersion])
 }
 
 export function saveLiveSetDraft(
