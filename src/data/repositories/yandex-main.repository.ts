@@ -140,6 +140,33 @@ const trainerFinanceOverviewSchema = z.object({
     needsAttention: z.boolean(),
   })),
 })
+const clientFinanceSchema = z.object({
+  trainers: z.array(z.object({
+    trainerId: uuid,
+    trainerName: z.string().min(1),
+    packages: z.array(z.object({
+      id: uuid,
+      title: z.string().min(1),
+      sessionsTotal: z.number().int().positive(),
+      sessionsUsed: z.number().int().nonnegative(),
+      sessionsRemaining: z.number().int().nonnegative(),
+      priceCents: z.number().int().nonnegative(),
+      paidCents: z.number().int().nonnegative(),
+      dueCents: z.number().int().nonnegative(),
+      startsOn: z.iso.date(),
+      endsOn: z.iso.date().nullable(),
+      paymentDueOn: z.iso.date().nullable(),
+      packageStatus: z.enum(['active', 'upcoming', 'completed', 'expired', 'closed']),
+      paymentStatus: z.enum(['unpaid', 'partial', 'paid', 'overdue']),
+    })),
+    payments: z.array(z.object({
+      id: uuid,
+      packageId: uuid,
+      amountCents: z.number().int().positive(),
+      receivedOn: z.iso.date(),
+    })),
+  })),
+})
 const clientSchema = z.object({
   id: uuid,
   canArchive: z.boolean(),
@@ -903,6 +930,12 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    clientFinance: {
+      async getMine() {
+        const payload = await readJson(queries, '/v1/me/finance', z.object({ finance: clientFinanceSchema }))
+        return payload.finance
+      },
+    },
     trainerFinance: {
       async listOverview(month: string) {
         const payload = await readJson(queries, `/v1/finance/overview?month=${encodeURIComponent(month)}`, z.object({ overview: trainerFinanceOverviewSchema }))
