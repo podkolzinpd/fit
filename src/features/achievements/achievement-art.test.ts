@@ -4,8 +4,20 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { achievementArt } from './achievement-art'
 
-// SHA-256 of the exact PNG files shown on the owner-approved 21-icon sheet.
+// SHA-256 of the exact PNG files reviewed by the owner.
 const approvedHashes: Record<string, string> = {
+  'achievement-workouts-first-step-v1-20261001.png': '2986d3eeece6c83522f8ce91fb4c6eef4d7ed6b319e483e8f52346d6ce59e24c',
+  'achievement-workouts-5-number-v2-20261001.png': '8a99f6ebceb3ccfd5afc44f0c16487266a51550b938beff2024a7d47a24ce3c1',
+  'achievement-workouts-10-number-v2-20261001.png': 'e7dc3878863df87ee84aedc73a3b2b8892f94202028e476755f31e8c902cc0e3',
+  'achievement-workouts-25-number-v2-20261001.png': '40b13005aea4161517ffebeb92f96fac2d1edc15cae14ddda7aaf3a30b611f58',
+  'achievement-workouts-50-number-v2-20261001.png': '1401f9e27e564064c40af5d037482b881c2ffc75a792904699696c4ec2402868',
+  'achievement-workouts-100-number-v2-20261001.png': '2b3ce754ae3d70d36809c6dd88dd74d0101fdfd8cab5cf9da0af9c76cfb6810f',
+  'achievement-regularity-4w-calendar-v1-20261001.png': 'c5f2fdfeb5f37cb1a44931930ba495329bd0d320df1cc624ed92f364f162350b',
+  'achievement-regularity-8w-calendar-v1-20261001.png': 'ea2b59fb71d9a8c49a6693c61bcd7598da882b2180c2e8a899e0bd03eb77aa5a',
+  'achievement-regularity-12w-calendar-v1-20261001.png': 'ef229009525c34c8e9790108b2f7c759b50ace9eff2cfe8b58508dd6d1935d69',
+  'achievement-regularity-52w-calendar-v1-20261001.png': '798a7d98fc7f72d13e5a6a5b972da6863bff599770224931ca49d917b09852c5',
+  'achievement-regularity-comeback-calendar-v1-20261001.png': '72031f3a9634719ad7fb064dc8101309685e53189e977810bb1cc8e836a6df42',
+  'achievement-records-5-trophy-v1-20261001.png': '9861552510c6213e3336ab8a8a44e14e7e7596079f5e73e061f4c4e48f0e111a',
   'achievement-cardio-10h-concept-20261001.png': 'b974796ed0b96e18698006cb9ff599427e744eb9822d0602f5161799d95e3780',
   'achievement-cardio-50h-concept-20261001.png': 'c9f90d932771a12c5b4222cf153e97e13ec366f078350edddcaf99f2833dd554',
   'achievement-cardio-first-hour-concept-20261001.png': '17a1ebbfa8abedb0c62f8a3369bde8c2674f2e7307da7818e237e1d743098e86',
@@ -30,11 +42,11 @@ const approvedHashes: Record<string, string> = {
 }
 
 describe('owner-approved achievement artwork', () => {
-  it('maps exactly 21 unchanged PNGs, including the existing first-record replacement', () => {
+  it('maps exactly 33 unchanged PNGs, including every original athlete achievement', () => {
     const entries = Object.entries(achievementArt)
-    expect(entries).toHaveLength(21)
+    expect(entries).toHaveLength(33)
     expect(achievementArt['records-1']?.file).toBe('achievement-distinct-pr-trophy-1-concept-20261001.png')
-    expect(new Set(entries.map(([, art]) => art.file)).size).toBe(21)
+    expect(new Set(entries.map(([, art]) => art.file)).size).toBe(33)
     for (const [, art] of entries) {
       const bytes = readFileSync(resolve(process.cwd(), 'public/achievements', art.file))
       expect(createHash('sha256').update(bytes).digest('hex'), art.file).toBe(approvedHashes[art.file])
