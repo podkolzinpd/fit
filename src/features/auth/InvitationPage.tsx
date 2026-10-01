@@ -10,8 +10,9 @@ import { FitLogo } from '../../shared/FitLogo'
 import { StatePanel } from '../../shared/ui'
 import { trackGoal } from '../../shared/yandex-metrika'
 import {
-  captureInvitationLink,
+  captureInvitationLocation,
   clearPendingInvitationLink,
+  hasInvitationLocationParameters,
   readPendingInvitationLink,
   type PendingInvitationLink,
 } from './invitation-link-continuation'
@@ -43,27 +44,29 @@ export function InvitationPage() {
   const queryClient = useQueryClient()
   const { actor, loading: authLoading, signOut } = useAuth()
   const backend = useDataBackend()
-  const [{ pending, persisted }] = useState<{
+  const [{ pending, persisted, hadUrlParameters }] = useState<{
     pending: PendingInvitationLink | null
     persisted: boolean
+    hadUrlParameters: boolean
   }>(() => {
-    const captured = captureInvitationLink(window.location.hash)
+    const captured = captureInvitationLocation(window.location.search, window.location.hash)
     const stored = readPendingInvitationLink()
     return {
       pending: captured,
       persisted: captured !== null
         && stored?.token === captured.token
         && stored.source === captured.source,
+      hadUrlParameters: hasInvitationLocationParameters(window.location.search, window.location.hash),
     }
   })
   const [signingOut, setSigningOut] = useState(false)
   const openedTracked = useRef(false)
 
   useEffect(() => {
-    if (persisted && window.location.hash) {
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
+    if (persisted && hadUrlParameters) {
+      window.history.replaceState(null, '', window.location.pathname)
     }
-  }, [persisted])
+  }, [hadUrlParameters, persisted])
 
   const preview = useQuery({
     queryKey: ['invitation-link-preview', pending?.source, pending?.token.slice(0, 12)],

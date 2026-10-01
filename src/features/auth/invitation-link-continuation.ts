@@ -22,6 +22,36 @@ function validSource(value: unknown): value is InvitationLinkSource {
   return value === 'supabase' || value === 'yandex'
 }
 
+interface ParsedInvitationInput {
+  addressed: boolean
+  invitation: PendingInvitationLink | null
+}
+
+function parseInvitationInput(value: string, now: number): ParsedInvitationInput {
+  const params = new URLSearchParams(value.startsWith('#') || value.startsWith('?') ? value.slice(1) : value)
+  const keys = [...params.keys()]
+  const addressed = keys.some((key) => key === 'token' || key === 'source')
+  if (!addressed) return { addressed: false, invitation: null }
+
+  const tokens = params.getAll('token')
+  const sources = params.getAll('source')
+  const token = tokens[0]?.trim() ?? ''
+  const sourceValue = sources[0] ?? 'supabase'
+  if (keys.some((key) => key !== 'token' && key !== 'source')
+    || tokens.length !== 1
+    || sources.length > 1
+    || !tokenPattern.test(token)
+    || !validSource(sourceValue)) {
+    return { addressed: true, invitation: null }
+  }
+  return { addressed: true, invitation: { token, source: sourceValue, savedAt: now } }
+}
+
+function persistInvitationLink(invitation: PendingInvitationLink, storage: Storage | undefined): PendingInvitationLink {
+  try { storage?.setItem(storageKey, JSON.stringify(invitation)) } catch { /* Continue in the current page if storage is blocked. */ }
+  return invitation
+}
+
 export function readPendingInvitationLink(
   storage: Storage | undefined = browserStorage(),
   now = Date.now(),
@@ -48,26 +78,39 @@ export function readPendingInvitationLink(
 }
 
 export function captureInvitationLink(
+  value: string,
+  storage: Storage | undefined = browserStorage(),
+  now = Date.now(),
+): PendingInvitationLink | null {
+  const parsed = parseInvitationInput(value, now)
+  if (!parsed.addressed) return readPendingInvitationLink(storage, now)
+  return parsed.invitation === null ? null : persistInvitationLink(parsed.invitation, storage)
+}
+
+export function captureInvitationLocation(
+  search: string,
   hash: string,
   storage: Storage | undefined = browserStorage(),
   now = Date.now(),
 ): PendingInvitationLink | null {
-  const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
-  const keys = [...params.keys()]
-  const tokens = params.getAll('token')
-  const sources = params.getAll('source')
-  const token = tokens[0]?.trim() ?? ''
-  const sourceValue = sources[0] ?? 'supabase'
-  if (keys.some((key) => key !== 'token' && key !== 'source')
-    || tokens.length !== 1
-    || sources.length > 1
-    || !tokenPattern.test(token)
-    || !validSource(sourceValue)) {
-    return readPendingInvitationLink(storage, now)
-  }
-  const invitation = { token, source: sourceValue, savedAt: now }
-  try { storage?.setItem(storageKey, JSON.stringify(invitation)) } catch { /* Continue in the current page if storage is blocked. */ }
-  return invitation
+  const queryInput = parseInvitationInput(search, now)
+  const hashInput = parseInvitationInput(hash, now)
+  if ((queryInput.addressed && queryInput.invitation === null)
+    || (hashInput.addressed && hashInput.invitation === null)) return null
+
+  if (queryInput.invitation !== null && hashInput.invitation !== null
+    && (queryInput.invitation.token !== hashInput.invitation.token
+      || queryInput.invitation.source !== hashInput.invitation.source)) return null
+
+  const invitation = queryInput.invitation ?? hashInput.invitation
+  return invitation === null
+    ? readPendingInvitationLink(storage, now)
+    : persistInvitationLink(invitation, storage)
+}
+
+export function hasInvitationLocationParameters(search: string, hash: string): boolean {
+  return parseInvitationInput(search, Date.now()).addressed
+    || parseInvitationInput(hash, Date.now()).addressed
 }
 
 export function clearPendingInvitationLink(storage: Storage | undefined = browserStorage()): void {

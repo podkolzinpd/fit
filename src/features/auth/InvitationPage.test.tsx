@@ -70,7 +70,7 @@ describe('InvitationPage', () => {
     preview.mockReset()
     signOut.mockReset().mockResolvedValue(undefined)
     Object.defineProperty(window, 'sessionStorage', { configurable: true, value: memoryStorage() })
-    window.history.replaceState(null, '', `/invite#token=${token}&source=supabase`)
+    window.history.replaceState(null, '', `/invite?token=${token}&source=supabase`)
     preview.mockResolvedValue({
       targetRole: 'trainer', inviterName: 'Антон',
       expiresAt: '2026-09-25T12:00:00.000Z', status: 'active',
@@ -82,6 +82,7 @@ describe('InvitationPage', () => {
     renderPage()
 
     expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(window.location.search).toBe('')
     expect(window.location.hash).toBe('')
     await user.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
 
@@ -101,13 +102,21 @@ describe('InvitationPage', () => {
     expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
     expect(screen.getByText('Откройте ссылку в Safari или Chrome')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Создать аккаунт' })).not.toBeInTheDocument()
-    expect(window.location.hash).toBe(`#token=${token}&source=supabase`)
+    expect(window.location.search).toBe(`?token=${token}&source=supabase`)
 
     firstRender.unmount()
     renderPage()
 
     expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
-    expect(window.location.hash).toBe(`#token=${token}&source=supabase`)
+    expect(window.location.search).toBe(`?token=${token}&source=supabase`)
+  })
+
+  it('keeps existing fragment links working', async () => {
+    window.history.replaceState(null, '', `/invite#token=${token}&source=supabase`)
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Антон приглашает вас стать тренером' })).toBeVisible()
+    expect(window.location.hash).toBe('')
   })
 
   it('does not let an account with the wrong role accept the invitation', async () => {

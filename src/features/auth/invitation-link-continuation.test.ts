@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   captureInvitationLink,
+  captureInvitationLocation,
   clearPendingInvitationLink,
   hasPendingInvitationLink,
   readPendingInvitationLink,
@@ -27,13 +28,30 @@ describe('invitation link continuation', () => {
   })
 
   it('keeps the protected token through authentication without putting personal data in storage', () => {
-    expect(captureInvitationLink(`#token=${token}&source=yandex`, window.sessionStorage, 1000)).toEqual({
+    expect(captureInvitationLocation(`?token=${token}&source=yandex`, '', window.sessionStorage, 1000)).toEqual({
       token, source: 'yandex', savedAt: 1000,
     })
     expect(readPendingInvitationLink(window.sessionStorage, 2000)).toEqual({
       token, source: 'yandex', savedAt: 1000,
     })
     expect(window.sessionStorage.getItem('fit.pendingInvitationLink.v1')).not.toContain('Антон')
+  })
+
+  it('keeps accepting existing fragment links', () => {
+    expect(captureInvitationLocation('', `#token=${token}&source=supabase`, window.sessionStorage, 1000)).toEqual({
+      token, source: 'supabase', savedAt: 1000,
+    })
+  })
+
+  it('rejects conflicting query and fragment credentials', () => {
+    const otherToken = `123456ABCDEF.${'b'.repeat(64)}`
+    expect(captureInvitationLocation(
+      `?token=${token}&source=yandex`,
+      `#token=${otherToken}&source=yandex`,
+      window.sessionStorage,
+      1000,
+    )).toBeNull()
+    expect(readPendingInvitationLink(window.sessionStorage, 1000)).toBeNull()
   })
 
   it('opens a valid current-page link when browser storage is unavailable', () => {

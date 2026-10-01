@@ -22,7 +22,7 @@ describe('InvitationShareDialog', () => {
     Object.defineProperty(navigator, 'share', { configurable: true, value: undefined })
   })
 
-  it('copies a fragment link and keeps the manual code behind a disclosure', async () => {
+  it('copies a query link and keeps the manual code behind a disclosure', async () => {
     const user = userEvent.setup()
     render(<InvitationShareDialog share={share} source="supabase" message="Антон приглашает вас стать тренером в Fit." onClose={vi.fn()} onRevoke={vi.fn()} />)
 
@@ -30,7 +30,9 @@ describe('InvitationShareDialog', () => {
     expect(copyText).toHaveBeenCalledOnce()
     const url = new URL(String(copyText.mock.calls[0]?.[0]))
     expect(url.pathname).toBe('/invite')
-    expect(new URLSearchParams(url.hash.slice(1)).get('token')).toBe(share.token)
+    expect(url.searchParams.get('token')).toBe(share.token)
+    expect(url.searchParams.get('source')).toBe('supabase')
+    expect(url.hash).toBe('')
     expect(screen.getByRole('button', { name: 'Ссылка скопирована' })).toBeVisible()
 
     expect(screen.getByText('ABC123DEF456')).toBeVisible()

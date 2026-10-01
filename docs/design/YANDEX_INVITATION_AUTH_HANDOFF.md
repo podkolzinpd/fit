@@ -7,17 +7,18 @@
 ## Пользовательский результат
 
 Незарегистрированный или вышедший пользователь открывает защищённую ссылку
-`/invite#token=…&source=…` из #1038, видит отправителя и назначенную роль, входит либо создаёт
+`/invite?token=…&source=…` (и ранее отправленный `/invite#token=…&source=…`) из #1038, видит отправителя и назначенную роль, входит либо создаёт
 аккаунт через Yandex ID и возвращается к тому же приглашению. Старый
 `/join?code=…` остаётся совместимым fallback. Ни один auth-поток не создаёт
 связь без отдельного подтверждения пользователя.
 
 ## Acceptance cases
 
-1. Публичный `/invite#token=<12 символов>.<64 hex>&source=<backend>` из #1038
+1. Публичный `/invite?token=<12 символов>.<64 hex>&source=<backend>` из #1038
    получает безопасный preview и показывает отправителя, роль, срок и
-   active/claimed/revoked/expired состояния. Bearer-token передаётся только в
-   POST body, не выводится в логи и не остаётся в адресной строке после capture.
+   active/claimed/revoked/expired состояния. Ранее отправленный hash-format
+   остаётся совместимым. Bearer-token передаётся только в POST body, не
+   выводится в аналитику и не остаётся в адресной строке после capture.
 2. Валидный `/invite` с уже проверенным session context или legacy
    `/join?code=<12 символов>` сохраняется
    в browser session перед Yandex OAuth, email login/registration и password
