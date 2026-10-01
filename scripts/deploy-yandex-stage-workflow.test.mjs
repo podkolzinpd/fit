@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -59,18 +59,6 @@ test('keeps the trainer Schedule V2 rollout bounded while preserving two assignm
   assert.doesNotMatch(trainerSchedulePilotWorkflow, /knyaz187@/i)
   assert.doesNotMatch(trainerSchedulePilotWorkflow, /echo.*TARGET_EMAIL/)
 })
-const previewSyncWorkflow = readFileSync(
-  join(import.meta.dirname, '..', '.github', 'workflows', 'sync-yandex-stage-preview.yml'),
-  'utf8',
-)
-const prPreviewWorkflow = readFileSync(
-  join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-pr-preview.yml'),
-  'utf8',
-)
-const prPreviewCleanupWorkflow = readFileSync(
-  join(import.meta.dirname, '..', '.github', 'workflows', 'cleanup-pr-preview.yml'),
-  'utf8',
-)
 const vercelConfig = JSON.parse(
   readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'),
 )
@@ -650,25 +638,15 @@ test('loads synthetic fixtures and verifies every read model through the runtime
   assert.doesNotMatch(workflow, /jq -r '\.session\.token'/)
 })
 
-test('syncs the stable Yandex preview from main without rewriting history', () => {
-  assert.match(previewSyncWorkflow, /^  push:\n    branches: \[main\]$/m)
-  assert.match(previewSyncWorkflow, /^  contents: write$/m)
-  assert.match(
-    previewSyncWorkflow,
-    /^  STAGE_PREVIEW_BRANCH: codex\/yandex-id-stage-pilot$/m,
-  )
-  assert.match(previewSyncWorkflow, /git merge --no-edit origin\/main/)
-  assert.match(previewSyncWorkflow, /git push origin "HEAD:\$STAGE_PREVIEW_BRANCH"/)
-  assert.doesNotMatch(previewSyncWorkflow, /--force(?:-with-lease)?/)
-})
-
-test('deploys Vercel only from main, stable stage, and explicit PR preview refs', () => {
-  assert.deepEqual(vercelConfig.git?.deploymentEnabled, {
-    main: true,
-    'codex/yandex-id-stage-pilot': true,
-    'preview/**': true,
-    '**': false,
-  })
+test('keeps the legacy Vercel redirect without starting new Git deployments', () => {
+  assert.equal(vercelConfig.git?.deploymentEnabled, false)
+  for (const workflowName of [
+    'deploy-pr-preview.yml',
+    'sync-yandex-stage-preview.yml',
+    'cleanup-pr-preview.yml',
+  ]) {
+    assert.equal(existsSync(join(import.meta.dirname, '..', '.github', 'workflows', workflowName)), false)
+  }
 })
 
 test('recovers stale frontend bundles without leaving a blank screen', () => {
@@ -690,52 +668,6 @@ test('recovers stale frontend bundles without leaving a blank screen', () => {
   assert.match(assetRecoveryScript, /searchParams\.set\('fit-recover'/)
   assert.match(assetRecoveryScript, /window\.location\.replace/)
   assert.match(assetRecoveryScript, /fit:asset-load-error/)
-})
-
-test('creates isolated Vercel previews only when a collaborator requests their own PR', () => {
-  assert.match(prPreviewWorkflow, /^  issue_comment:\n    types: \[created\]$/m)
-  assert.match(prPreviewWorkflow, /^  contents: write$/m)
-  assert.match(prPreviewWorkflow, /^  deployments: read$/m)
-  assert.match(prPreviewWorkflow, /^  pull-requests: write$/m)
-  assert.match(prPreviewWorkflow, /github\.event\.comment\.body == '\/preview'/)
-  assert.match(prPreviewWorkflow, /OWNER.*MEMBER.*COLLABORATOR/)
-  assert.match(prPreviewWorkflow, /'\.user\.login'/)
-  assert.match(prPreviewWorkflow, /"\$author" != "\$REQUESTED_BY"/)
-  assert.match(prPreviewWorkflow, /"\$state" != 'open' \|\| "\$base_ref" != 'main'/)
-  assert.match(prPreviewWorkflow, /"\$head_repository" != "\$REPOSITORY"/)
-  assert.match(prPreviewWorkflow, /preview_branch="preview\/pr-\$PR_NUMBER"/)
-  assert.match(prPreviewWorkflow, /uses: actions\/checkout@v4/)
-  assert.match(prPreviewWorkflow, /git commit --allow-empty/)
-  assert.match(prPreviewWorkflow, /preview_tree.*source_tree/)
-  assert.match(prPreviewWorkflow, /--force-with-lease=/)
-  assert.match(prPreviewWorkflow, /repos\/\$REPOSITORY\/deployments/)
-  assert.match(prPreviewWorkflow, /Vercel Preview готов/)
-  assert.match(prPreviewWorkflow, /issues\/\$PR_NUMBER\/comments/)
-  assert.doesNotMatch(
-    prPreviewWorkflow,
-    /^  pull_request(?:_target)?:|--method DELETE|VERCEL_TOKEN/m,
-  )
-})
-
-test('cleans preview refs from the trusted base context after a PR closes', () => {
-  assert.match(
-    prPreviewCleanupWorkflow,
-    /^  pull_request_target:\n    types: \[closed\]$/m,
-  )
-  assert.match(prPreviewCleanupWorkflow, /^  contents: write$/m)
-  assert.match(
-    prPreviewCleanupWorkflow,
-    /group: pr-preview-\$\{\{ github\.event\.pull_request\.number \}\}/,
-  )
-  assert.match(
-    prPreviewCleanupWorkflow,
-    /preview_branch="preview\/pr-\$PR_NUMBER"/,
-  )
-  assert.match(prPreviewCleanupWorkflow, /--method DELETE/)
-  assert.doesNotMatch(
-    prPreviewCleanupWorkflow,
-    /actions\/checkout|github\.event\.pull_request\.head|VERCEL_TOKEN/,
-  )
 })
 
 test('manages curated database readers only through an explicit private run', () => {

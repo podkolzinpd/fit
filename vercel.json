@@ -1,12 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "codex/yandex-id-stage-pilot": true,
-      "preview/**": true,
-      "**": false
-    }
+    "deploymentEnabled": false
   },
   "build": {
     "env": {

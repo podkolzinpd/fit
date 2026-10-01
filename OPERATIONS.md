@@ -594,14 +594,26 @@ Public read включён с этой ограничивающей полити
 
 Шлюз и frontend-бакет общие для технического адреса и `fit-training.ru`;
 DNS propagation не требуется для smoke через технический адрес. Vercel
-работает параллельно и этим workflow не управляется. План, IAM scope,
+сохраняет только ранее опубликованный legacy redirect и этим workflow не
+управляется. План, IAM scope,
 ограничения и ручной откат: `docs/design/YANDEX_FRONTEND_AUTODEPLOY.md`.
 
-### Vercel (legacy redirect и отдельные PR previews)
+### Vercel (только legacy redirect)
 
 Vercel больше не является точкой production-публикации `fit-training.ru`.
-Его GitHub integration и настройки ниже относятся к старому адресу и
-изолированным PR previews, а не к выпуску основного сайта:
+GitHub repository отключён от Vercel-проекта `fit`; ранее опубликованный
+production deployment при этом остался активным. Дополнительно `vercel.json`
+устанавливает `git.deploymentEnabled=false` для всех веток на случай повторного
+подключения.
+Workflows для `/preview`, синхронизации старого пилотного preview и удаления
+preview-веток отключены; новых Vercel releases после merge или по комментарию
+быть не должно. Текущий production deployment и сам Vercel-проект сохраняются
+для `308`-редиректа `fit-drab.vercel.app` на `fit-training.ru` с путём и query.
+Проверка редиректа — `Verify production domain redirect` каждые шесть часов.
+Не удаляйте проект, домен или текущий deployment. Если понадобится удалённый
+PR Preview, сначала спроектируйте отдельную Yandex-hosted среду.
+
+Исторические настройки Vercel-проекта:
 
 - repository: `podkolzinpd/fit`;
 - framework preset: Vite;
@@ -610,8 +622,8 @@ Vercel больше не является точкой production-публика
 - output directory: `dist`.
 
 На время диагностического отката #1144 для старой Vercel-сборки и Preview
-понадобились публичные frontend-переменные Supabase. В текущей Yandex
-production-сборке они также пока обязательны для startup/recovery
+понадобились публичные frontend-переменные Supabase. Новых Vercel-сборок нет;
+в текущей Yandex production-сборке они также пока обязательны для startup/recovery
 совместимости и читаются GitHub workflow, а не Vercel Environment:
 
 ```text
