@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { COUNTER_IDS, trackAuthenticatedOpen, trackGoal, trackPageView } from './yandex-metrika'
+import { COUNTER_IDS, sanitizeMetrikaUrl, trackAuthenticatedOpen, trackGoal, trackPageView } from './yandex-metrika'
 
 afterEach(() => {
   delete window.ym
@@ -13,6 +13,9 @@ describe('Metrika counters', () => {
     const initList = html.match(/\[([\d,\s]+)\]\.forEach\(function \(id\) \{\s*ym\(id, 'init'/)?.[1] ?? ''
 
     expect(initList.split(',').map((id) => Number(id.trim()))).toEqual([...COUNTER_IDS])
+    expect(html).toContain('id="fit-invitation-link-bootstrap"')
+    expect(html).toContain("referrerPolicy.content = 'no-referrer'")
+    expect(html).toContain('url: fitMetrikaSafeUrl(location.href)')
   })
 })
 
@@ -27,6 +30,12 @@ describe('trackPageView', () => {
       [111074543, 'hit', '/today?view=compose'],
       [113121193, 'hit', '/today?view=compose'],
     ])
+  })
+
+  it('removes invitation credentials from analytics URLs', () => {
+    const token = `ABCDEF123456.${'a'.repeat(64)}`
+    expect(sanitizeMetrikaUrl(`/invite?token=${token}&source=yandex`)).toBe('/invite')
+    expect(sanitizeMetrikaUrl(`/invite#token=${token}&source=yandex`)).toBe('/invite')
   })
 })
 

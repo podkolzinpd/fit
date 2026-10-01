@@ -119,7 +119,7 @@ test('protected invitation link previews and survives Yandex registration at 390
     { width: 430, height: 932 },
   ]) {
     await page.setViewportSize(viewport)
-    await page.goto(`/invite#token=${token}&source=yandex`)
+    await page.goto(`/invite?token=${token}&source=yandex`)
 
     await expect(page.getByRole('heading', { name: 'Анастасия приглашает вас стать спортсменом' })).toBeVisible()
     await expect(page.getByText('После подключения вы увидите общие тренировки и сможете общаться в Fit.')).toBeVisible()

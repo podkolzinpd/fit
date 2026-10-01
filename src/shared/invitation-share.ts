@@ -6,7 +6,7 @@ export function invitationShareUrl(
   origin = window.location.origin,
 ): string {
   const url = new URL('/invite', origin)
-  url.hash = new URLSearchParams({ token, source }).toString()
+  url.search = new URLSearchParams({ token, source }).toString()
   return url.toString()
 }
 

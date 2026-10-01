@@ -8,10 +8,27 @@ declare global {
   interface Window { ym?: (id: number, action: string, ...args: unknown[]) => void }
 }
 
+export function sanitizeMetrikaUrl(rawUrl: string): string {
+  try {
+    const absolute = /^[a-z][a-z\d+.-]*:/i.test(rawUrl)
+    const url = new URL(rawUrl, window.location.origin)
+    if (url.pathname === '/invite') {
+      url.searchParams.delete('token')
+      url.searchParams.delete('source')
+      const hash = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash)
+      if (hash.has('token') || hash.has('source')) url.hash = ''
+    }
+    return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return '/'
+  }
+}
+
 // Счётчик по умолчанию трекает только полную перезагрузку страницы. Роутер —
 // SPA (react-router), поэтому переходы между экранами шлём вручную хитом.
 export function trackPageView(url: string) {
-  for (const id of COUNTER_IDS) window.ym?.(id, 'hit', url)
+  const safeUrl = sanitizeMetrikaUrl(url)
+  for (const id of COUNTER_IDS) window.ym?.(id, 'hit', safeUrl)
 }
 
 // Клики и другие внутристраничные действия — через JS-событие. Имя должно

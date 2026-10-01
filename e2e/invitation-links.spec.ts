@@ -22,7 +22,7 @@ test('trainer invites a new athlete by protected link without entering a code', 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.getByRole('button', { name: 'Скопировать ссылку' }).click()
   const invitationUrl = await page.evaluate(() => navigator.clipboard.readText())
-  expect(invitationUrl).toMatch(/\/invite#token=[A-F0-9]{12}\.[0-9a-f]{64}&source=supabase$/)
+  expect(invitationUrl).toMatch(/\/invite\?token=[A-F0-9]{12}\.[0-9a-f]{64}&source=supabase$/)
 
   await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.goto('/profile/settings')
@@ -74,7 +74,7 @@ test('athlete invites a trainer by the same protected link shown in the QR code'
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.getByRole('button', { name: 'Скопировать ссылку' }).click()
   const invitationUrl = await page.evaluate(() => navigator.clipboard.readText())
-  expect(invitationUrl).toMatch(/\/invite#token=[A-F0-9]{12}\.[0-9a-f]{64}&source=supabase$/)
+  expect(invitationUrl).toMatch(/\/invite\?token=[A-F0-9]{12}\.[0-9a-f]{64}&source=supabase$/)
 
   await page.getByRole('button', { name: 'Показать QR-код' }).click()
   await expect(page.getByRole('img', { name: 'QR-код приглашения в Fit' })).toHaveAttribute('src', /^data:image\/png;base64,/)
