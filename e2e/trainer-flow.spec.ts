@@ -48,6 +48,21 @@ test('форма: быстрый ввод разбирает текст в уп�
   // явного раскрытия, а быстрый ввод упражнений открыт сразу.
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeHidden()
+  const format = page.getByRole('group', { name: 'Формат тренировки' })
+  await expect(format.getByRole('button', { name: 'Самостоятельно' })).toHaveAttribute('aria-pressed', 'true')
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const metrics = await format.evaluate((element) => {
+      const bounds = element.getBoundingClientRect()
+      return { left: bounds.left, right: bounds.right, viewport: window.innerWidth, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }
+    })
+    expect(metrics.left, JSON.stringify(metrics)).toBeGreaterThanOrEqual(-1)
+    expect(metrics.right, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.viewport + 1)
+    expect(metrics.scrollWidth, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.clientWidth + 1)
+    for (const button of await format.getByRole('button').all()) {
+      expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+    }
+  }
   await page.locator('.workout-notes summary').click()
   await expect(page.getByRole('textbox', { name: 'Заметка' })).toBeVisible()
   await selectClient(page, 'Анна Смирнова')

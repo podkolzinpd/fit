@@ -548,6 +548,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     createdBy: value.createdBy,
     origin: value.origin,
     favoriteTitle: value.favoriteTitle ?? null,
+    trainingFormat: value.trainingFormat ?? 'self',
     startedBy: value.startedBy,
     completedBy: value.completedBy,
     workoutDate: localDate(value.workoutDate),
@@ -660,6 +661,7 @@ function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
     notes: draft.notes ?? null,
     stageId: draft.stageId ?? null,
     favoriteTitle: draft.favoriteTitle ?? null,
+    ...(draft.trainingFormat === undefined ? {} : { trainingFormat: draft.trainingFormat }),
     ...(draft.id === undefined ? {} : { expectedVersion: draft.version }),
     exercises: workoutExerciseDraftsPayload(draft.exercises),
   }

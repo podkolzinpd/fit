@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { createRunningFormatDrafts, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft } from '../../shared/domain'
+import type { ExerciseSnapshot, Workout, WorkoutDraft, WorkoutSetDraft, WorkoutTrainingFormat } from '../../shared/domain'
 import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
@@ -48,6 +48,7 @@ import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
 import { YandexAccountLinkingCard } from '../auth'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
+import { defaultWorkoutTrainingFormat } from './workout-training-format'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -103,7 +104,7 @@ function runningFormatItems(exercise: ExerciseSnapshot, format: RunningFormat): 
 }
 
 export function TodayPage({ clientMode = false }: TodayPageProps) {
-  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, progress: progressRepository, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, exercises: exercisesRepository, goals: goalsRepository, progress: progressRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
@@ -144,6 +145,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
+  const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : undefined)
+  const trainingFormatTouched = useRef(false)
+  const finance = useQuery({
+    queryKey: ['trainer-finance-client', effectiveClientId],
+    queryFn: () => trainerFinance.listClient(effectiveClientId),
+    enabled: !clientMode && Boolean(effectiveClientId),
+  })
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [manualRefs, setManualRefs] = useState<string[]>([])
   const [removedRefs, setRemovedRefs] = useState<string[]>([])
@@ -226,6 +234,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setRecordMode(draft.recordMode ?? 'planned')
       setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
+      setTrainingFormat(clientMode ? 'self' : draft.trainingFormat)
+      trainingFormatTouched.current = Boolean(draft.trainingFormat)
       setManualRefs(draft.manualRefs ?? [])
       setRemovedRefs(draft.removedRefs ?? [])
     }
@@ -235,6 +245,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (clientMode && mine.data?.id) setClientId(mine.data.id)
   }, [clientMode, mine.data?.id])
+
+  useEffect(() => {
+    if (clientMode) { setTrainingFormat('self'); return }
+    if (!trainingFormatTouched.current && finance.data) {
+      setTrainingFormat(defaultWorkoutTrainingFormat(finance.data.packages, workoutDate))
+    }
+  }, [clientMode, finance.data, workoutDate])
 
   useEffect(() => {
     if (!draftReady || requestedScreen !== 'save' || items.length > 0) return
@@ -249,8 +266,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       removeTodayDraft(draftKey)
       return
     }
-    writeTodayDraft(draftKey, { screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime })
-  }, [choices, clientId, draftKey, draftReady, items, lastLlmText, manualRefs, recordMode, removedRefs, screen, startTime, text, workoutDate])
+    writeTodayDraft(draftKey, { screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, trainingFormat })
+  }, [choices, clientId, draftKey, draftReady, items, lastLlmText, manualRefs, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
   const resolved = recognized
@@ -286,7 +303,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { clientId: effectiveClientId, workoutDate, startTime: mode === 'planned' ? startTime || undefined : undefined, exercises: items.map(draftExercise) }
+      const draft = { clientId: effectiveClientId, workoutDate, startTime: mode === 'planned' ? startTime || undefined : undefined, trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -610,6 +627,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setRecordMode('planned')
     setWorkoutDate(today)
     setStartTime('')
+    setTrainingFormat(clientMode ? 'self' : undefined)
+    trainingFormatTouched.current = false
     setManualRefs([])
     setRemovedRefs([])
     setRestoredDraftScreen(null)
@@ -815,12 +834,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           : mine.isLoading
             ? <p className="today-assignment-self">Проверяем профиль…</p>
             : <div className="error" role="alert">Не удалось открыть профиль спортсмена. <button type="button" className="link" onClick={() => void mine.refetch()}>Повторить</button></div>
-        : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={setClientId} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
+        : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { trainingFormatTouched.current = false; setTrainingFormat(undefined); setClientId(id) }} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
         <p className="today-save-question">Как сохранить?</p>
         <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => setRecordMode('planned')}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
+        {!clientMode && <div className="today-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
         <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !effectiveClientId} onClick={() => save.mutate(recordMode)}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>
       </section></section>}
     </section>}

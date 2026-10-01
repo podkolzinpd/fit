@@ -1,4 +1,4 @@
-import type { ExerciseSnapshot } from '../../shared/domain'
+import type { ExerciseSnapshot, WorkoutTrainingFormat } from '../../shared/domain'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 
 export interface TodayDraft {
@@ -13,6 +13,7 @@ export interface TodayDraft {
   recordMode?: 'planned' | 'completed'
   workoutDate?: string
   startTime?: string
+  trainingFormat?: WorkoutTrainingFormat
 }
 
 function isDraft(value: unknown): value is TodayDraft {
@@ -27,6 +28,7 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.recordMode === undefined || draft.recordMode === 'planned' || draft.recordMode === 'completed')
     && (draft.workoutDate === undefined || typeof draft.workoutDate === 'string')
     && (draft.startTime === undefined || typeof draft.startTime === 'string')
+    && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
 }
 
 export function todayDraftKey(userId: string): string {

@@ -17,4 +17,12 @@ describe('workoutFinanceConfirmation', () => {
   it('does not show finance when the trainer has not enabled it for the workout', () => {
     expect(workoutFinanceConfirmation(bundle, 'another-workout')).toBeNull()
   })
+
+  it('confirms that a self workout does not spend a session', () => {
+    expect(workoutFinanceConfirmation(bundle, 'another-workout', 'self')).toEqual({ title: 'Самостоятельно', detail: 'Без списания' })
+  })
+
+  it('explains when a coached workout has no package to charge', () => {
+    expect(workoutFinanceConfirmation(bundle, 'another-workout', 'with_trainer')).toEqual({ title: 'Не списано', detail: 'Нет абонемента' })
+  })
 })

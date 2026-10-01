@@ -79,6 +79,15 @@ describe('planned workout request', () => {
     })
   })
 
+  it('accepts only the two supported training formats', () => {
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), trainingFormat: 'with_trainer' }, null))
+      .toMatchObject({ draft: { trainingFormat: 'with_trainer' } })
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), trainingFormat: 'self' }, null))
+      .toMatchObject({ draft: { trainingFormat: 'self' } })
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), trainingFormat: 'remote' }, null))
+      .toBeUndefined()
+  })
+
   it('keeps the shared block id, preset and rest settings of a superset', () => {
     const first = {
       ...validRequest().exercises[0]!,
