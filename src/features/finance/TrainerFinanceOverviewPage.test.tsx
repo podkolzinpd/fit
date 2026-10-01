@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TrainerFinanceOverviewPage } from './TrainerFinanceOverviewPage'
 
@@ -13,8 +13,17 @@ function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(<MemoryRouter initialEntries={['/finance']}><QueryClientProvider client={queryClient}><Routes>
     <Route path="/finance" element={<TrainerFinanceOverviewPage />} />
-    <Route path="/clients/:clientId/finance" element={<p>Финансы клиента</p>} />
+    <Route path="/clients/:clientId/finance" element={<FinanceTarget />} />
   </Routes></QueryClientProvider></MemoryRouter>)
+}
+
+function FinanceTarget() {
+  const location = useLocation()
+  const routeState: unknown = location.state
+  const financeBackTo = routeState && typeof routeState === 'object' && 'financeBackTo' in routeState
+    ? String(routeState.financeBackTo)
+    : ''
+  return <p>Финансы клиента · возврат {financeBackTo}</p>
 }
 
 describe('TrainerFinanceOverviewPage', () => {
@@ -47,5 +56,12 @@ describe('TrainerFinanceOverviewPage', () => {
     await user.click(screen.getByRole('button', { name: 'Нет абонемента' }))
     expect(screen.getByText('Борис Иванов')).toBeVisible()
     expect(screen.queryByText('Вера Петрова')).not.toBeInTheDocument()
+  })
+
+  it('keeps the finance overview as the return destination', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('link', { name: /Анна Смирнова/ }))
+    expect(screen.getByText('Финансы клиента · возврат /finance')).toBeVisible()
   })
 })
