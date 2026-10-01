@@ -88,7 +88,7 @@ import type { PilotTrainerProfiles, TrainerProfileDraft } from './trainer-profil
 import { ChatCommandError, type PilotChat } from './pilot-chat.js'
 import { TrainerDiscoveryError, type PilotTrainerDiscovery } from './trainer-discovery.js'
 import { FavoriteWorkoutsError, type FavoriteWorkoutTemplate, type PilotFavoriteWorkouts } from './favorite-workouts.js'
-import { TrainerFinanceError, type PilotTrainerFinance, type TrainerFinanceClientBundle, type TrainerFinanceOverview, type TrainerFinancePackage, type TrainerFinancePayment, type TrainerFinanceSession } from './trainer-finance.js'
+import { TrainerFinanceError, type ClientFinanceSummary, type PilotTrainerFinance, type TrainerFinanceClientBundle, type TrainerFinanceOverview, type TrainerFinancePackage, type TrainerFinancePayment, type TrainerFinanceSession } from './trainer-finance.js'
 
 const apps: ReturnType<typeof buildApp>[] = []
 
@@ -945,8 +945,21 @@ describe('trainer finance', () => {
       unassignedSessions: 0, needsAttention: true,
     }],
   }
+  const clientFinance: ClientFinanceSummary = { trainers: [{
+    trainerId: financePackage.trainerId,
+    trainerName: 'Ирина',
+    packages: [{
+      id: packageId, title: 'Персональные тренировки', sessionsTotal: 10,
+      sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000,
+      paidCents: 1000000, dueCents: 1500000, startsOn: '2026-09-01',
+      endsOn: '2026-11-30', paymentDueOn: '2026-09-10', packageStatus: 'active',
+      paymentStatus: 'overdue',
+    }],
+    payments: [{ id: paymentId, packageId, amountCents: 1000000, receivedOn: '2026-09-01' }],
+  }] }
 
   function finance() {
+    const listClientSelf = vi.fn<PilotTrainerFinance['listClientSelf']>().mockResolvedValue(clientFinance)
     const listOverview = vi.fn<PilotTrainerFinance['listOverview']>().mockResolvedValue(overview)
     const listClient = vi.fn<PilotTrainerFinance['listClient']>().mockResolvedValue(bundle)
     const createPackage = vi.fn<PilotTrainerFinance['createPackage']>().mockResolvedValue(financePackage)
@@ -955,9 +968,19 @@ describe('trainer finance', () => {
     const updatePayment = vi.fn<PilotTrainerFinance['updatePayment']>().mockResolvedValue({ ...payment, version: 2 })
     const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
     const updateSession = vi.fn<PilotTrainerFinance['updateSession']>().mockResolvedValue({ ...financeSession, disposition: 'free', packageId: null, version: 2 })
-    return { service: { listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession } satisfies PilotTrainerFinance,
-      listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession }
+    return { service: { listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession } satisfies PilotTrainerFinance,
+      listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession }
   }
+
+  it('reads client finance from the authenticated session without a client id', async () => {
+    const { service: pilotTrainerFinance, listClientSelf } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const response = await app.inject({ method: 'GET', url: '/v1/me/finance', headers: { 'x-fit-session': session.token } })
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ finance: clientFinance })
+    expect(listClientSelf).toHaveBeenCalledWith(session)
+  })
 
   it('reads the trainer overview for a valid month', async () => {
     const { service: pilotTrainerFinance, listOverview } = finance()

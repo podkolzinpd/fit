@@ -201,11 +201,12 @@ interface ClientHomeOverviewProps {
   hideActiveNextAction?: boolean
   wearable?: ReactNode
   trainerDiscovery?: ReactNode
+  finance?: ReactNode
   showFirstRunConnection?: boolean
   presetPrompt?: ReactNode
 }
 
-export function ClientHomeOverview({ today, gender = null, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, hideActiveNextAction = false, wearable, trainerDiscovery, showFirstRunConnection = true, presetPrompt }: ClientHomeOverviewProps) {
+export function ClientHomeOverview({ today, gender = null, workouts, regularity, goal, personalRecords = [], workoutsLoading, regularityLoading, error, onRetry, selfTraining, hideActiveNextAction = false, wearable, trainerDiscovery, finance, showFirstRunConnection = true, presetPrompt }: ClientHomeOverviewProps) {
   const lastCompleted = useMemo(() => workouts?.filter((item) => item.status === 'done').sort(completedWorkoutOrder).at(-1), [workouts])
   const loadPeriod = useMemo(() => summaryPeriodRange('1m', today), [today])
   const next = workouts ? clientHomeNextWorkout(workouts, today) : null
@@ -220,6 +221,7 @@ export function ClientHomeOverview({ today, gender = null, workouts, regularity,
     {workoutsLoading && !workouts && <section className="client-home-next client-home-loading" role="status">Загружаем следующую тренировку…</section>}
     {!hasActiveOrTodayPlan && pastPlans.length > 0 && <PastPlanCard workouts={pastPlans} />}
     {next && (!hideActiveNextAction || next.kind !== 'active') && <NextActionCard next={next} today={today} />}
+    {finance}
     <PersonalWorkoutResult home workouts={workouts} loading={workoutsLoading} error={error} onRetry={onRetry}>
       {lastCompleted && <PeriodLoadMap workouts={workouts ?? []} clientId={lastCompleted.clientId} periodStart={loadPeriod.start} periodEnd={loadPeriod.end} gender={gender} />}
     </PersonalWorkoutResult>

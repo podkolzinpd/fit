@@ -2133,6 +2133,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (overview) => reply.header('cache-control', 'no-store').send({ overview }))
   })
 
+  app.get('/v1/me/finance', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (options.pilotTrainerFinance === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotTrainerFinance!.listClientSelf(session),
+      (finance) => reply.header('cache-control', 'no-store').send({ finance }))
+  })
+
   app.get('/v1/clients/:clientId/finance', async (request, reply) => {
     const session = readCompatibleYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }

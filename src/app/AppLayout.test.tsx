@@ -80,6 +80,7 @@ describe('AppLayout: единственная UI Identity', () => {
     ['client', '/me/settings', 'client-profile-shell-identity'],
     ['client', '/me/edit', 'client-card-edit-identity'],
     ['client', '/me/goal', 'client-goal-identity'],
+    ['client', '/me/finance', 'client-finance-identity'],
     ['trainer', '/today', 'trainer-today-identity'],
     ['trainer', '/clients', 'trainer-clients-identity'],
     ['trainer', '/clients/archive', 'trainer-clients-identity'],
@@ -331,6 +332,12 @@ describe('AppLayout navigation', () => {
     const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
     expect(iconName(within(navigation).getByRole('link', { name: 'Кабинет' }))).toBe('home')
     expect(iconName(within(navigation).getByRole('link', { name: 'Тренировки' }))).toBe('schedule')
+  })
+
+  it('сохраняет вкладку Кабинет активной в оплатах клиента', () => {
+    renderLayout('/me/finance')
+    const navigation = screen.getByRole('navigation', { name: 'Основная навигация' })
+    expect(within(navigation).getByRole('link', { name: 'Кабинет' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('различает Сегодня и Расписание тренера', () => {

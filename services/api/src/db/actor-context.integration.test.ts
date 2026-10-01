@@ -1997,7 +1997,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           client.query<JsonResultRow>(
             `select public.create_trainer_finance_package(
               $1, 'Персональные тренировки', 10, 2, 2500000, 1000000,
-              date '2026-09-01', date '2026-11-30', date '2026-09-10', null
+              date '2026-09-01', date '2026-11-30', date '2026-09-10', 'Внутренняя заметка'
             ) as result`,
             [CLIENT_ID],
           ))
@@ -2033,6 +2033,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           clientId: CLIENT_ID,
           packages: [expect.objectContaining({ paidCents: 2500000, dueCents: 0, paymentStatus: 'paid' })],
         })
+
+        const clientFinance = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          client.query<JsonResultRow>('select public.list_client_finance_self() as result'))
+        expect(clientFinance[0]?.result).toMatchObject({
+          trainers: [{
+            trainerId: ACTOR_ID,
+            trainerName: 'Updated actor',
+            packages: [expect.objectContaining({
+              id: packageId,
+              title: 'Персональные тренировки',
+              sessionsRemaining: 8,
+              paidCents: 2500000,
+              dueCents: 0,
+            })],
+          }],
+        })
+        const serializedClientFinance = JSON.stringify(clientFinance[0]?.result)
+        expect(serializedClientFinance).toContain('"amountCents":1000000')
+        expect(serializedClientFinance).toContain('"amountCents":1500000')
+        expect(serializedClientFinance).not.toContain('Внутренняя заметка')
+        expect(serializedClientFinance).not.toContain('Доплата')
+
+        const unrelatedClient = await withActorTransaction(runtimePool, LINK_ACTOR_ID, (client) =>
+          client.query<JsonResultRow>('select public.list_client_finance_self() as result'))
+        expect(unrelatedClient[0]?.result).toEqual({ trainers: [] })
+
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query('select public.list_client_finance_self()')))
+          .rejects.toThrow('trainer_finance_forbidden')
 
         const overview = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           client.query<JsonResultRow>(
