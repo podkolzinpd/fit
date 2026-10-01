@@ -17,7 +17,7 @@ import { WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEd
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
 import { AthleteAchievementsPage } from '../features/achievements/AthleteAchievements'
-import { TrainerFinanceOverviewPage, TrainerFinancePage } from '../features/finance'
+import { ClientFinancePage, TrainerFinanceOverviewPage, TrainerFinancePage } from '../features/finance'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 function Protected() {
@@ -100,6 +100,7 @@ const router = createBrowserRouter([
       { path: '/me/progress', element: <MyProgressPage /> },
       { path: '/me/achievements', element: <AthleteAchievementsPage /> },
       { path: '/me/goal', element: <MyGoalPage /> },
+      { path: '/me/finance', element: <ClientFinancePage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
       { path: '/me/settings', element: <ClientProfileSettingsPage /> },
       { path: '/me/trainers', element: <TrainerCatalogPage /> },

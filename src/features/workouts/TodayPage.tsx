@@ -47,6 +47,7 @@ import { ChatHeaderAction } from '../chat'
 import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
 import { YandexAccountLinkingCard } from '../auth'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
+import { ClientFinanceHomeCard } from '../finance'
 
 type Screen = 'compose' | 'review' | 'save'
 type RecordMode = WorkoutRecordMode
@@ -670,6 +671,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         workouts={workouts.data}
         regularity={regularity.data}
         goal={goal.data}
+        finance={<ClientFinanceHomeCard />}
         workoutsLoading={mine.isLoading || workouts.isLoading}
         regularityLoading={mine.isLoading || regularity.isLoading}
         error={clientHomeError}
