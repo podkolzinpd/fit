@@ -7256,5 +7256,89 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         connection.release()
       }
     })
+
+    it('calculates shadow calories from entered work without changing published v1', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        await connection.query(`insert into public.client_progress
+          (trainer_id, client_id, created_by, recorded_on, weight_kg)
+          values ($1, $2, $1, date '2026-08-20', 70)
+          on conflict (client_id, recorded_on) where deleted_at is null
+          do update set weight_kg = excluded.weight_kg`, [ACTOR_ID, CLIENT_ID])
+        await connection.query(`update public.workouts set status = 'done',
+          start_time = time '10:00', end_time = time '11:00',
+          completed_at = timestamptz '2026-08-20 11:00:00+00'
+          where id = $1`, [ROOT_WORKOUT_ID])
+        await connection.query(`update public.workout_sets set
+          fact_duration_sec = 3600, fact_duration_source = 'entered',
+          fact_distance_km = 10, fact_distance_source = 'entered',
+          fact_rpe = 9, fact_rpe_source = 'planned',
+          confirmed_at = timestamptz '2026-08-20 11:00:00+00'
+          where id = $1`, [ROOT_WORKOUT_SET_ID])
+        const read = async () => {
+          const result = await connection.query<{
+            active_calories_kcal: number | null
+            calorie_v2_shadow_kcal: number | null
+            calorie_v2_shadow_reason: string | null
+            calorie_v2_shadow_details: { segments: Array<{ met: number }> }
+          }>(`select active_calories_kcal, calorie_v2_shadow_kcal,
+              calorie_v2_shadow_reason, calorie_v2_shadow_details
+            from public.workouts where id = $1`, [ROOT_WORKOUT_ID])
+          return result.rows[0]!
+        }
+        const running = await read()
+        expect(running.calorie_v2_shadow_reason).toBeNull()
+        expect(running.calorie_v2_shadow_kcal).toBe(610)
+        expect(running.calorie_v2_shadow_details.segments[0]?.met).toBe(9.3)
+        const publishedV1 = running.active_calories_kcal
+
+        await connection.query(`update public.workout_exercises
+          set exercise_ref = 'stationary-bike', exercise_name = 'Велотренажёр'
+          where id = $1`, [ROOT_WORKOUT_EXERCISE_ID])
+        const bike = await read()
+        expect(bike.calorie_v2_shadow_kcal).toBe(425)
+        expect(bike.calorie_v2_shadow_details.segments[0]?.met).toBe(6.8)
+        // Changing bike distance alone cannot change the intensity estimate.
+        await connection.query(`update public.workout_sets set fact_distance_km = 30
+          where id = $1`, [ROOT_WORKOUT_SET_ID])
+        expect((await read()).calorie_v2_shadow_kcal).toBe(425)
+        expect((await read()).active_calories_kcal).toBe(publishedV1)
+
+        await connection.query(`update public.workout_sets set fact_duration_source = 'planned'
+          where id = $1`, [ROOT_WORKOUT_SET_ID])
+        const missing = await read()
+        expect(missing.calorie_v2_shadow_kcal).toBeNull()
+        expect(missing.calorie_v2_shadow_reason).toBe('missing_activity_duration')
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('uses bounded activity MET bands and never infers bike intensity from distance', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const values = await ownerPool.query<{
+        walk_slow: string; walk_fast: string; row_moderate: string
+        row_fast: string; bike: string; bike_rpe: string
+        recovery: string; custom: string
+      }>(`select
+        app_private.calorie_v2_met('walking', 3, null)::text walk_slow,
+        app_private.calorie_v2_met('walking', 6, null)::text walk_fast,
+        app_private.calorie_v2_met('rowing-machine', 6, null)::text row_moderate,
+        app_private.calorie_v2_met('rowing-machine', 10, null)::text row_fast,
+        app_private.calorie_v2_met('stationary-bike', 100, null)::text bike,
+        app_private.calorie_v2_met('stationary-bike', null, 9)::text bike_rpe,
+        app_private.calorie_v2_met('recovery', null, null)::text recovery,
+        app_private.calorie_v2_met(
+          app_private.calorie_v2_activity('custom', 'stationary-bike', 'cardio', 'set'),
+          null, null)::text custom`)
+      expect(values.rows[0]).toEqual({
+        walk_slow: '2.30', walk_fast: '4.80', row_moderate: '5.00',
+        row_fast: '7.30', bike: '6.80', bike_rpe: '7.34',
+        recovery: '2.30', custom: '4.00',
+      })
+    })
   },
 )
