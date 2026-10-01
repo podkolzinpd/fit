@@ -1064,6 +1064,32 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   await expect(page).toHaveURL(/\/me\/achievements$/)
   await expect(page.locator('.athlete-achievement-card')).toHaveCount(8)
   await expect(page.getByRole('heading', { name: 'Регулярность' })).toBeVisible()
+  const cards = page.locator('.athlete-achievements-group').first().locator('.athlete-achievement-card')
+  const first = (await cards.nth(0).boundingBox())!
+  const third = (await cards.nth(2).boundingBox())!
+  const fourth = (await cards.nth(3).boundingBox())!
+  expect(Math.abs(first.y - third.y)).toBeLessThan(2)
+  expect(fourth.y).toBeGreaterThan(first.y + 100)
+  expect(first.width).toBeLessThan(130)
+  const weekBadge = page.locator('.athlete-achievements-group').last().locator('.athlete-achievement-badge').first()
+  const calendar = (await weekBadge.locator('.athlete-achievement-calendar').boundingBox())!
+  const number = (await weekBadge.locator('strong').boundingBox())!
+  expect(calendar.y + calendar.height).toBeLessThan(number.y)
+  await weekBadge.evaluate((badge) => badge.classList.add('is-compact'))
+  const compactCalendar = (await weekBadge.locator('.athlete-achievement-calendar').boundingBox())!
+  const compactNumber = (await weekBadge.locator('strong').boundingBox())!
+  expect(compactCalendar.y + compactCalendar.height).toBeLessThan(compactNumber.y)
+  await weekBadge.evaluate((badge) => badge.classList.remove('is-compact'))
+  await cards.first().click()
+  const detail = page.getByRole('dialog', { name: 'Первый шаг' })
+  await expect(detail.getByText('Завершить 1 тренировку')).toBeVisible()
+  await expect(detail.getByText(/Получена/)).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(detail).toHaveCount(0)
+  await expect(cards.first()).toBeFocused()
+  await cards.nth(2).click()
+  await expect(page.getByRole('dialog', { name: 'Крепкая привычка' }).getByText('Прогресс: 2 из 25')).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть подробности ачивки' }).click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('achievement-collection.png'), fullPage: true })
   await page.getByRole('button', { name: 'Назад' }).click()
@@ -1085,6 +1111,13 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   await expect(page.locator('.athlete-achievement-card')).toHaveCount(8)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('achievement-collection-dark.png'), fullPage: true })
+  await page.setViewportSize({ width: 320, height: 700 })
+  const narrowCards = page.locator('.athlete-achievements-group').first().locator('.athlete-achievement-card')
+  const narrowFirst = (await narrowCards.nth(0).boundingBox())!
+  const narrowSecond = (await narrowCards.nth(1).boundingBox())!
+  const narrowThird = (await narrowCards.nth(2).boundingBox())!
+  expect(Math.abs(narrowFirst.y - narrowSecond.y)).toBeLessThan(2)
+  expect(narrowThird.y).toBeGreaterThan(narrowFirst.y + 100)
 })
 
 test('trainer cannot enter the athlete achievement collection', async ({ page }, testInfo) => {
