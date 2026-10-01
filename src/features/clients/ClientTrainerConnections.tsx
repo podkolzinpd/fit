@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -8,7 +8,7 @@ import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { ChatStartButton } from '../chat'
 
-export function ClientTrainerConnections({ clientId }: { clientId: string }) {
+export function ClientTrainerConnections({ clientId, finance }: { clientId: string; finance?: ReactNode }) {
   const { invitations: invitationsRepository } = useDataBackend()
   const queryClient = useQueryClient()
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
@@ -48,6 +48,7 @@ export function ClientTrainerConnections({ clientId }: { clientId: string }) {
         }]} /></div>
       </article>
     })}
+    {finance}
     <Link className={`button client-trainer-search ${trainers.data?.length === 0 ? 'primary' : 'secondary'}`} to="/me/trainers"><SearchIcon />Найти тренера</Link>
     <div className="client-trainer-invite-actions"><p>{hasTrainers ? 'Пригласить другого тренера' : 'Уже договорились с тренером?'}</p><InvitationShareButton clientId={clientId} targetRole="trainer" label="Пригласить тренера" className="secondary client-trainer-invite-button" /><small>Отправьте ему ссылку или QR-код.</small></div>
     {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
