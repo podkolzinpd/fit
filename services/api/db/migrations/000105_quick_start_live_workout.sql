@@ -97,7 +97,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  actor_id uuid := auth.uid();
+  current_actor_id uuid := auth.uid();
   actor_role text;
   target_client_id uuid;
   root_trainer_id uuid;
@@ -107,7 +107,7 @@ declare
   active_workout_id uuid;
   active_author_id uuid;
 begin
-  if actor_id is null then
+  if current_actor_id is null then
     raise exception 'workout_forbidden' using errcode = 'PT403';
   end if;
   if p_operation_id is null then
@@ -115,13 +115,13 @@ begin
   end if;
 
   select profile.account_role into actor_role
-  from public.profiles profile where profile.id = actor_id;
+  from public.profiles profile where profile.id = current_actor_id;
 
   -- Self-managed clients must have their own linked client partition.
   if actor_role = 'client' then
     select client.id into target_client_id
     from public.clients client
-    where client.auth_user_id = actor_id and client.archived_at is null;
+    where client.auth_user_id = current_actor_id and client.archived_at is null;
     if p_client_id is not null and p_client_id is distinct from target_client_id then
       raise exception 'client_forbidden' using errcode = 'PT403';
     end if;
@@ -139,10 +139,10 @@ begin
   where client.id = target_client_id
     and client.archived_at is null
     and (
-      (actor_role = 'client' and client.auth_user_id = actor_id)
-      or (actor_role = 'trainer' and (client.trainer_id = actor_id or exists (
+      (actor_role = 'client' and client.auth_user_id = current_actor_id)
+      or (actor_role = 'trainer' and (client.trainer_id = current_actor_id or exists (
         select 1 from public.client_trainers membership
-        where membership.client_id = client.id and membership.trainer_id = actor_id
+        where membership.client_id = client.id and membership.trainer_id = current_actor_id
       )))
     )
   for update of client;
@@ -153,7 +153,7 @@ begin
   select operation.client_id, operation.workout_id
     into previous_client_id, previous_workout_id
   from app_private.quick_start_operations operation
-  where operation.actor_id = actor_id and operation.operation_id = p_operation_id;
+  where operation.actor_id = current_actor_id and operation.operation_id = p_operation_id;
   if previous_workout_id is not null then
     if previous_client_id is distinct from target_client_id then
       raise exception 'operation_reused' using errcode = 'PT422';
@@ -170,13 +170,13 @@ begin
 
   if active_workout_id is not null then
     -- A connected trainer cannot edit another trainer's live session.
-    if actor_role = 'trainer' and active_author_id is distinct from actor_id
+    if actor_role = 'trainer' and active_author_id is distinct from current_actor_id
       and not (owner_actor_id is not null and active_author_id = owner_actor_id)
-      and not (active_author_id is null and root_trainer_id = actor_id) then
+      and not (active_author_id is null and root_trainer_id = current_actor_id) then
       raise exception 'active_workout_exists' using errcode = 'PT409';
     end if;
     insert into app_private.quick_start_operations(actor_id, operation_id, client_id, workout_id)
-    values (actor_id, p_operation_id, target_client_id, active_workout_id);
+    values (current_actor_id, p_operation_id, target_client_id, active_workout_id);
     return query select active_workout_id, true;
     return;
   end if;
@@ -186,7 +186,7 @@ begin
       trainer_id, client_id, created_by, updated_by, started_by,
       workout_date, status, started_at, origin
     ) values (
-      root_trainer_id, target_client_id, actor_id, actor_id, actor_id,
+      root_trainer_id, target_client_id, current_actor_id, current_actor_id, current_actor_id,
       app_private.client_today(target_client_id), 'in_progress', now(), 'manual'
     ) returning id into active_workout_id;
   exception when unique_violation then
@@ -194,7 +194,7 @@ begin
     raise exception 'active_workout_exists' using errcode = 'PT409';
   end;
   insert into app_private.quick_start_operations(actor_id, operation_id, client_id, workout_id)
-  values (actor_id, p_operation_id, target_client_id, active_workout_id);
+  values (current_actor_id, p_operation_id, target_client_id, active_workout_id);
   return query select active_workout_id, false;
 end;
 $$;
