@@ -5,11 +5,13 @@ import { withYandexActorSession, type YandexActorSessionInput } from './yandex-a
 
 export type TrainerFinancePackageStatus = 'active' | 'upcoming' | 'completed' | 'expired' | 'closed'
 export type TrainerFinancePaymentStatus = 'unpaid' | 'partial' | 'paid' | 'overdue'
+export type TrainerFinancePackageKind = 'session_pack' | 'online_coaching'
 
 export interface TrainerFinancePackage {
   id: string
   clientId: string
   trainerId: string
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   sessionsUsed: number
@@ -90,6 +92,7 @@ export interface TrainerFinanceOverview {
 
 export interface ClientFinancePackage {
   id: string
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   sessionsUsed: number
@@ -123,6 +126,7 @@ export interface ClientFinanceSummary {
 }
 
 export interface TrainerFinancePackageDraft {
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   openingUsedSessions: number
@@ -136,6 +140,7 @@ export interface TrainerFinancePackageDraft {
 
 export interface TrainerFinancePackageUpdate {
   expectedVersion: number
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   priceCents: number
@@ -217,7 +222,7 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   listOverview(session: YandexActorSessionInput, monthStart: string) {
     return this.run(session, async (client) => {
       const rows = await client.query<OverviewRow>(
-        'select public.list_trainer_finance_overview($1) as overview',
+        'select public.list_trainer_finance_overview_v2($1) as overview',
         [monthStart],
       )
       return rows[0]!.overview
@@ -227,7 +232,7 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   listClientSelf(session: YandexActorSessionInput) {
     return this.run(session, async (client) => {
       const rows = await client.query<ClientSummaryRow>(
-        'select public.list_client_finance_self() as finance',
+        'select public.list_client_finance_self_v2() as finance',
       )
       return rows[0]!.finance
     })
@@ -236,7 +241,7 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   listClient(session: YandexActorSessionInput, clientId: string) {
     return this.run(session, async (client) => {
       const rows = await client.query<BundleRow>(
-        'select public.list_trainer_finance_client($1) as bundle',
+        'select public.list_trainer_finance_client_v2($1) as bundle',
         [clientId],
       )
       return rows[0]!.bundle
@@ -246,10 +251,10 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft) {
     return this.run(session, async (client) => {
       const rows = await client.query<PackageRow>(
-        `select public.create_trainer_finance_package(
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        `select public.create_trainer_finance_service(
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
         ) as package`,
-        [clientId, draft.title, draft.sessionsTotal, draft.openingUsedSessions,
+        [clientId, draft.kind, draft.title, draft.sessionsTotal, draft.openingUsedSessions,
           draft.priceCents, draft.openingPaidCents, draft.startsOn, draft.endsOn,
           draft.paymentDueOn, draft.comment],
       )
@@ -260,10 +265,10 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   updatePackage(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePackageUpdate) {
     return this.run(session, async (client) => {
       const rows = await client.query<PackageRow>(
-        `select public.update_trainer_finance_package(
-          $1, $2, $3, $4, $5, $6, $7, $8, $9
+        `select public.update_trainer_finance_service(
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
         ) as package`,
-        [packageId, draft.expectedVersion, draft.title, draft.sessionsTotal,
+        [packageId, draft.expectedVersion, draft.kind, draft.title, draft.sessionsTotal,
           draft.priceCents, draft.startsOn, draft.endsOn, draft.paymentDueOn,
           draft.comment],
       )
@@ -304,7 +309,7 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   updateSession(session: YandexActorSessionInput, sessionId: string, draft: TrainerFinanceSessionUpdate) {
     return this.run(session, async (client) => {
       const rows = await client.query<SessionRow>(
-        'select public.update_trainer_finance_session_details($1, $2, $3, $4, $5, $6) as session',
+        'select public.update_trainer_finance_session_details_v2($1, $2, $3, $4, $5, $6) as session',
         [sessionId, draft.expectedVersion, draft.disposition, draft.packageId,
           draft.comment, draft.workoutDate],
       )

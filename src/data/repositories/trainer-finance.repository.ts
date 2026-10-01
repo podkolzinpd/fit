@@ -1,10 +1,12 @@
 export type TrainerFinancePackageStatus = 'active' | 'upcoming' | 'completed' | 'expired' | 'closed'
 export type TrainerFinancePaymentStatus = 'unpaid' | 'partial' | 'paid' | 'overdue'
+export type TrainerFinancePackageKind = 'session_pack' | 'online_coaching'
 
 export interface TrainerFinancePackage {
   id: string
   clientId: string
   trainerId: string
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   sessionsUsed: number
@@ -84,6 +86,7 @@ export interface TrainerFinanceOverview {
 }
 
 export interface TrainerFinancePackageDraft {
+  kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
   openingUsedSessions: number

@@ -4,7 +4,7 @@ import { workoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 
 const bundle: TrainerFinanceClientBundle = {
   clientId: 'client',
-  packages: [{ id: 'package', clientId: 'client', trainerId: 'trainer', title: '10 тренировок', sessionsTotal: 10, sessionsUsed: 3, sessionsRemaining: 7, priceCents: 3000000, paidCents: 3000000, dueCents: 0, startsOn: '2026-09-01', endsOn: null, paymentDueOn: null, comment: null, packageStatus: 'active', paymentStatus: 'paid', closedAt: null, version: 1, createdAt: '', updatedAt: '' }],
+  packages: [{ id: 'package', clientId: 'client', trainerId: 'trainer', kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10, sessionsUsed: 3, sessionsRemaining: 7, priceCents: 3000000, paidCents: 3000000, dueCents: 0, startsOn: '2026-09-01', endsOn: null, paymentDueOn: null, comment: null, packageStatus: 'active', paymentStatus: 'paid', closedAt: null, version: 1, createdAt: '', updatedAt: '' }],
   payments: [],
   sessions: [{ id: 'session', packageId: 'package', workoutId: 'workout', disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-30', voidedAt: null, voidReason: null, version: 1, createdAt: '', updatedAt: '' }],
 }
