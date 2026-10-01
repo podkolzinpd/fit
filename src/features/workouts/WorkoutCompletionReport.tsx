@@ -55,6 +55,8 @@ export function WorkoutCompletionReport({
   duration,
   tonnage,
   caloriesKcal,
+  calorieBasis,
+  calorieNotice,
   muscleGroups,
   personalResult,
   resultLoading = false,
@@ -75,6 +77,8 @@ export function WorkoutCompletionReport({
   duration: string | null
   tonnage: string | null
   caloriesKcal?: number | null
+  calorieBasis?: string | null
+  calorieNotice?: string | null
   muscleGroups: string[]
   personalResult?: WorkoutResult
   resultLoading?: boolean
@@ -190,6 +194,8 @@ export function WorkoutCompletionReport({
       {visibleMetrics.length > 0 && <dl className="workout-completion-report-facts" aria-label="Краткий итог тренировки">
         {visibleMetrics.map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
       </dl>}
+      {caloriesKcal && calorieBasis && <p className="muted">Основа оценки: {calorieBasis.toLowerCase()}.</p>}
+      {!caloriesKcal && calorieNotice && <p className="muted" role="status">{calorieNotice}</p>}
 
       {(highlightLoading || highlightError || personalAchievement || positiveVolumeProgress) && <section className="workout-completion-highlight" aria-busy={highlightLoading}>
         {highlightLoading ? <p className="workout-completion-highlight-loading" role="status">Проверяем достижения…</p>

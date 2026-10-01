@@ -41,6 +41,17 @@ variable "yandex_only_auth_enabled" {
   default     = false
 }
 
+variable "calorie_v2_rollout_percent" {
+  description = "Percentage of completed workouts eligible for v2 active-calorie display. Default off; 0 immediately rolls back to v1."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.calorie_v2_rollout_percent >= 0 && var.calorie_v2_rollout_percent <= 100 && floor(var.calorie_v2_rollout_percent) == var.calorie_v2_rollout_percent
+    error_message = "calorie_v2_rollout_percent must be an integer from 0 to 100."
+  }
+}
+
 variable "media_bucket_override" {
   description = "Optional existing private Object Storage bucket used by the API for media. Empty uses the stage-managed bucket."
   type        = string

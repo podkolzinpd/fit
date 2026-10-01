@@ -11,6 +11,7 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import type { StageCalorieAuditor } from './db/workout-calorie-audit.js'
 import type { RuntimeDomainReadinessResult } from './db/runtime-domain-readiness.js'
 import {
   StageDatabaseReaderNotReadyError,
@@ -62,6 +63,7 @@ interface PilotEnrollmentOptions {
 }
 
 interface BuildMigrationAppOptions {
+  calorieAudit?: StageCalorieAuditor
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   domainChangeAnnouncement?: DomainChangeAnnouncementManager
   logger?: boolean
@@ -294,6 +296,18 @@ export function buildMigrationApp(
   const app = Fastify({ logger: options.logger ?? true })
 
   app.get('/health', () => ({ status: 'ok' }))
+
+  if (options.calorieAudit !== undefined) {
+    const calorieAudit = options.calorieAudit
+    app.get('/stage/calories/audit', async (request, reply) => {
+      try {
+        return { status: 'ok', ...(await calorieAudit.read()) }
+      } catch {
+        request.log.error('Calorie audit failed')
+        return reply.code(503).send({ status: 'audit_unavailable' })
+      }
+    })
+  }
 
   app.post('/migrate', async (request, reply) => {
     try {

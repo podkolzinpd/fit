@@ -1759,6 +1759,8 @@ export function WorkoutDetailPage() {
         duration={duration && duration !== '0 мин' ? duration : null}
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
         caloriesKcal={workout.activeCaloriesKcal}
+        calorieBasis={workout.calorieEstimateBasis}
+        calorieNotice={workout.calorieEstimateNotice}
         muscleGroups={groups}
         personalResult={completionPersonalResult}
         resultLoading={completionHistory.isLoading}
@@ -1793,6 +1795,8 @@ export function WorkoutDetailPage() {
         <p><span>Время</span><strong>{duration && duration !== '0 мин' ? duration : '—'}</strong></p>
         <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
         {workout.activeCaloriesKcal && <p><span>Оценка активных калорий FIT</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
+        {workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
+        {!workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
         <p><span>Подходы</span><strong>{completedSets}</strong></p>
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
         {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}

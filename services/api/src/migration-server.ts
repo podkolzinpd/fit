@@ -9,6 +9,7 @@ import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
 import { DatabaseStageDatabaseReaderAccessManager } from './db/stage-database-reader-access.js'
 import { DatabaseDomainChangeAnnouncementManager } from './db/domain-change-announcement.js'
 import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assignment.js'
+import { DatabaseStageCalorieAuditor } from './db/workout-calorie-audit.js'
 import { DatabaseTrainerScheduleV2PilotManager } from './db/trainer-schedule-v2-pilot.js'
 import { DatabaseFitLimePilotManager } from './db/fit-lime-pilot.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
@@ -135,6 +136,8 @@ const vitalMediaDeployment = mediaStorageConfig === undefined
   : new YandexVitalMediaDeployment(mediaStorageConfig)
 
 const app = buildMigrationApp({
+  ...(privateFeaturePool === undefined || !stageRolloutAssignmentsEnabled
+    ? {} : { calorieAudit: new DatabaseStageCalorieAuditor(privateFeaturePool) }),
   ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
     ? {}
     : {

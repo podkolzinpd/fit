@@ -1,6 +1,7 @@
 import type { QueryResultRow } from 'pg'
 
 import type { DatabaseClient } from './db/types.js'
+import { calorieRolloutPercent, publishedWorkoutCalories } from './workout-calorie-rollout.js'
 
 const DEFAULT_WORKOUT_PAGE_SIZE = 100
 
@@ -67,6 +68,10 @@ interface WorkoutRow extends QueryResultRow {
   started_at: Date | null
   completed_at: Date | null
   active_calories_kcal: number | null
+  calorie_v2_shadow_kcal: number | null
+  calorie_v2_shadow_reason: string | null
+  calorie_v2_shadow_details: { segments?: Array<{ activity?: string; speedKmh?: number | null }> } | null
+  calorie_v2_shadow_at: Date | null
   version: string
   stage_id: string | null
   stage_title: string | null
@@ -225,6 +230,9 @@ export interface PilotWorkout {
   startedAt: string | null
   completedAt: string | null
   activeCaloriesKcal?: number | null
+  calorieEstimateVersion?: number | null
+  calorieEstimateBasis?: string | null
+  calorieEstimateNotice?: string | null
   version: number
   stageId?: string | null
   stageTitle?: string | null
@@ -317,8 +325,11 @@ export async function readAccessibleTrainingData(
         workout.client_question_resolved_at,
         workout.started_at,
         workout.completed_at,
-        case when workout.calorie_v2_shadow_reason is not null
-          then null else workout.active_calories_kcal end active_calories_kcal,
+        workout.active_calories_kcal,
+        workout.calorie_v2_shadow_kcal,
+        workout.calorie_v2_shadow_reason,
+        workout.calorie_v2_shadow_details,
+        workout.calorie_v2_shadow_at,
         workout.version,
         workout.stage_id,
         stage.title stage_title,
@@ -439,6 +450,7 @@ export async function readAccessibleTrainingData(
     exercisesByWorkout.set(row.workout_id, current)
   }
 
+  const rolloutPercent = calorieRolloutPercent()
   return {
     accessMode: 'read_only',
     customExercises: customExerciseRows.map((row) => ({
@@ -453,43 +465,49 @@ export async function readAccessibleTrainingData(
       version: safeInteger(row.version, 'custom exercise version'),
       createdBy: row.created_by,
     })),
-    workouts: workoutRows.map((row) => ({
-      id: row.id,
-      trainerId: row.trainer_id,
-      clientId: row.client_id,
-      clientName: row.client_name,
-      createdBy: row.created_by,
-      origin: row.origin,
-      favoriteTitle: row.favorite_title,
-      trainingFormat: row.training_format,
-      startedBy: row.started_by,
-      completedBy: row.completed_by,
-      workoutDate: row.workout_date,
-      startTime: row.start_time,
-      endTime: row.end_time,
-      status: row.status,
-      notes: row.notes,
-      clientComment: row.client_comment,
-      sessionRpe: row.session_rpe,
-      wellbeing: row.wellbeing,
-      discomfort: row.discomfort,
-      feedbackSubmittedAt: row.feedback_submitted_at?.toISOString() ?? null,
-      trainerReaction: row.trainer_reaction,
-      trainerReview: row.trainer_review,
-      trainerReviewAuthorId: row.trainer_review_author_id,
-      trainerReviewedAt: row.trainer_reviewed_at?.toISOString() ?? null,
-      clientQuestion: row.client_question,
-      clientQuestionAskedAt: row.client_question_asked_at?.toISOString() ?? null,
-      clientQuestionResolvedAt: row.client_question_resolved_at?.toISOString() ?? null,
-      startedAt: row.started_at?.toISOString() ?? null,
-      completedAt: row.completed_at?.toISOString() ?? null,
-      activeCaloriesKcal: row.active_calories_kcal,
-      version: safeInteger(row.version, 'workout version'),
-      stageId: row.stage_id,
-      stageTitle: row.stage_title,
-      hasPr: row.has_pr,
-      exercises: exercisesByWorkout.get(row.id) ?? [],
-    })),
+    workouts: workoutRows.map((row) => {
+      const calories = publishedWorkoutCalories(row, rolloutPercent)
+      return {
+        id: row.id,
+        trainerId: row.trainer_id,
+        clientId: row.client_id,
+        clientName: row.client_name,
+        createdBy: row.created_by,
+        origin: row.origin,
+        favoriteTitle: row.favorite_title,
+        trainingFormat: row.training_format,
+        startedBy: row.started_by,
+        completedBy: row.completed_by,
+        workoutDate: row.workout_date,
+        startTime: row.start_time,
+        endTime: row.end_time,
+        status: row.status,
+        notes: row.notes,
+        clientComment: row.client_comment,
+        sessionRpe: row.session_rpe,
+        wellbeing: row.wellbeing,
+        discomfort: row.discomfort,
+        feedbackSubmittedAt: row.feedback_submitted_at?.toISOString() ?? null,
+        trainerReaction: row.trainer_reaction,
+        trainerReview: row.trainer_review,
+        trainerReviewAuthorId: row.trainer_review_author_id,
+        trainerReviewedAt: row.trainer_reviewed_at?.toISOString() ?? null,
+        clientQuestion: row.client_question,
+        clientQuestionAskedAt: row.client_question_asked_at?.toISOString() ?? null,
+        clientQuestionResolvedAt: row.client_question_resolved_at?.toISOString() ?? null,
+        startedAt: row.started_at?.toISOString() ?? null,
+        completedAt: row.completed_at?.toISOString() ?? null,
+        activeCaloriesKcal: calories.kcal,
+        calorieEstimateVersion: calories.version,
+        calorieEstimateBasis: calories.basis,
+        calorieEstimateNotice: calories.notice,
+        version: safeInteger(row.version, 'workout version'),
+        stageId: row.stage_id,
+        stageTitle: row.stage_title,
+        hasPr: row.has_pr,
+        exercises: exercisesByWorkout.get(row.id) ?? [],
+      }
+    }),
     attention: attentionRows.map((row) => ({
       workoutId: row.workout_id,
       clientId: row.client_id,
