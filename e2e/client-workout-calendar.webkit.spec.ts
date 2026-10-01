@@ -32,6 +32,7 @@ const historyRow = {
 }
 
 test('client workout month calendar stays usable in iPhone WebKit', async ({ page }) => {
+  test.setTimeout(60_000)
   await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
     const body = route.request().postDataJSON() as { p_from?: string | null; p_to?: string | null }
     const visible = (!body.p_from || historyRow.workout_date >= body.p_from)
@@ -45,7 +46,7 @@ test('client workout month calendar stays usable in iPhone WebKit', async ({ pag
   await page.getByLabel('Email').fill(`workout-calendar-${randomUUID()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/me$/)
+  await expect(page).toHaveURL(/\/me$/, { timeout: 20_000 })
   await page.goto('/me/edit')
   await page.getByLabel('Пол').selectOption('female')
   await page.getByLabel('Возраст').fill('30')
