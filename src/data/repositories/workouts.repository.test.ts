@@ -7,6 +7,7 @@ import { workoutsRepository } from './workouts.repository'
 
 it('keeps atomic Live rounds unavailable on the legacy backend', () => {
   expect(workoutsRepository.supportsAtomicLiveRounds).toBe(false)
+  expect(workoutsRepository.supportsLiveSupersetSplit).toBe(false)
 })
 
 function summary(date: string, status: WorkoutStatus, id = date): WorkoutSummary {

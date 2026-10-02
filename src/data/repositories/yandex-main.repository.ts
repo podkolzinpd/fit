@@ -1407,6 +1407,7 @@ export function createYandexMainRepository(
     },
     workouts: {
       supportsAtomicLiveRounds: true,
+      supportsLiveSupersetSplit: true,
       async get(id) {
         const result = (await trainingData()).workouts.find((item) => item.id === id)
         if (!result) throw new RepositoryError('PT404', 'Тренировка не найдена.')

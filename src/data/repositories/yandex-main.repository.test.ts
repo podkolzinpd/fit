@@ -795,6 +795,7 @@ describe('Yandex main repository', () => {
     await repository.workouts.appendLiveExercise(item, exerciseSnapshot())
     await repository.workouts.appendLiveSet(item, exerciseId)
     expect(repository.workouts.supportsAtomicLiveRounds).toBe(true)
+    expect(repository.workouts.supportsLiveSupersetSplit).toBe(true)
     const roundOperationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f40'
     const removeRoundOperationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f41'
     await repository.workouts.appendLiveRound(item, blockId, roundOperationId)

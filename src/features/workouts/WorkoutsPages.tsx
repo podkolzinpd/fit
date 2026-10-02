@@ -3397,10 +3397,10 @@ export function LiveWorkoutPage() {
           <div className="circuit-head">
             <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
-            {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0 || (dataSource === 'yandex' && block.blockPreset === 'set')) && <OverflowMenu items={[
+            {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0 || (workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set')) && <OverflowMenu items={[
               ...(canReorder ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
               ...groupingItems,
-              ...(dataSource === 'yandex' && block.blockPreset === 'set' ? [{
+              ...(workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set' ? [{
                 label: 'Разделить суперсет',
                 onClick: async () => {
                   const rest = block.exercises.map((exercise) => `${exercise.name} — ${exercise.restBetweenSetsSec ?? 90} с`).join('; ')

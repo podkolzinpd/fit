@@ -186,6 +186,7 @@ async function findActive(clientId: string): Promise<WorkoutSummary | null> {
 
 export const workoutsRepository = {
   supportsAtomicLiveRounds: false,
+  supportsLiveSupersetSplit: false,
   get,
   listPage,
   async list(from?: string, to?: string, clientId?: string): Promise<Workout[]> {
