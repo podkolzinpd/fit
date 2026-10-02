@@ -672,6 +672,79 @@ export interface CustomMetric {
   version: number
 }
 
+export type InBodySegment = 'rightArm' | 'leftArm' | 'trunk' | 'rightLeg' | 'leftLeg'
+
+export interface InBodySegmentMeasurement {
+  segment: InBodySegment
+  leanMassKg?: number
+  leanPercent?: number
+  fatMassKg?: number
+  fatPercent?: number
+  intracellularWaterL?: number
+  extracellularWaterL?: number
+  ecwTbwRatio?: number
+  phaseAngleDeg?: number
+}
+
+/**
+ * Versioned body-composition payload from a printed InBody result sheet.
+ * Outputs differ between InBody models, so every measured value is optional
+ * while the object shape and units remain explicit.
+ */
+export interface InBodyMeasurement {
+  schemaVersion: 1
+  deviceModel?: string
+  measuredAt?: string
+  totalBodyWaterL?: number
+  intracellularWaterL?: number
+  extracellularWaterL?: number
+  proteinKg?: number
+  mineralsKg?: number
+  bodyFatMassKg?: number
+  softLeanMassKg?: number
+  fatFreeMassKg?: number
+  skeletalMuscleMassKg?: number
+  bodyCellMassKg?: number
+  boneMineralContentKg?: number
+  bodyMassIndex?: number
+  bodyFatPercent?: number
+  ecwTbwRatio?: number
+  visceralFatAreaCm2?: number
+  visceralFatLevel?: number
+  waistHipRatio?: number
+  phaseAngleDeg?: number
+  basalMetabolicRateKcal?: number
+  inBodyScore?: number
+  targetWeightKg?: number
+  weightControlKg?: number
+  fatControlKg?: number
+  muscleControlKg?: number
+  obesityDegreePercent?: number
+  skeletalMuscleIndexKgM2?: number
+  fatMassIndexKgM2?: number
+  fatFreeMassIndexKgM2?: number
+  segmental?: InBodySegmentMeasurement[]
+}
+
+export interface InBodyRecognitionImage {
+  dataUrl: string
+  mimeType: 'image/jpeg'
+  width: number
+  height: number
+  sizeBytes: number
+}
+
+export interface InBodyRecognitionResult {
+  recordedOn?: LocalDate
+  weightKg?: number
+  waistCm?: number
+  hipCm?: number
+  chestCm?: number
+  inBody: InBodyMeasurement
+  recognizedFieldCount: number
+  warnings: string[]
+}
+
 export interface ProgressDraft {
   id?: UUID
   clientId: UUID
@@ -680,6 +753,7 @@ export interface ProgressDraft {
   chestCm?: number
   waistCm?: number
   hipCm?: number
+  inBody?: InBodyMeasurement
   notes?: string
   customMetrics: Array<{ metricId: UUID; value: number }>
   version?: number

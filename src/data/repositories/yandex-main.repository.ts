@@ -12,6 +12,7 @@ import type {
   FavoriteWorkoutTemplate,
   ProgressDraft,
   ProgressEntry,
+  InBodyRecognitionResult,
   PublishedTrainingSummary,
   SaveClientGoalInput,
   SaveGoalStageInput,
@@ -53,6 +54,7 @@ import type {
 } from './trainer-finance.repository'
 import { RepositoryError } from './error'
 import { roundMetric } from './progress.repository'
+import { recognizeInBody } from '../queries/inbody-recognition'
 import {
   publishedTrainingSummaryFromRow,
   trainingSummaryFromRow,
@@ -256,6 +258,28 @@ const customMetricSchema = z.object({
   archivedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
 })
+const inBodySegmentSchema = z.object({
+  segment: z.enum(['rightArm', 'leftArm', 'trunk', 'rightLeg', 'leftLeg']),
+  leanMassKg: z.number().optional(), leanPercent: z.number().optional(),
+  fatMassKg: z.number().optional(), fatPercent: z.number().optional(),
+  intracellularWaterL: z.number().optional(), extracellularWaterL: z.number().optional(),
+  ecwTbwRatio: z.number().optional(), phaseAngleDeg: z.number().optional(),
+})
+const inBodySchema = z.object({
+  schemaVersion: z.literal(1),
+  deviceModel: z.string().optional(), measuredAt: z.string().optional(),
+  totalBodyWaterL: z.number().optional(), intracellularWaterL: z.number().optional(), extracellularWaterL: z.number().optional(),
+  proteinKg: z.number().optional(), mineralsKg: z.number().optional(), bodyFatMassKg: z.number().optional(),
+  softLeanMassKg: z.number().optional(), fatFreeMassKg: z.number().optional(), skeletalMuscleMassKg: z.number().optional(),
+  bodyCellMassKg: z.number().optional(), boneMineralContentKg: z.number().optional(), bodyMassIndex: z.number().optional(),
+  bodyFatPercent: z.number().optional(), ecwTbwRatio: z.number().optional(), visceralFatAreaCm2: z.number().optional(),
+  visceralFatLevel: z.number().optional(), waistHipRatio: z.number().optional(), phaseAngleDeg: z.number().optional(),
+  basalMetabolicRateKcal: z.number().optional(), inBodyScore: z.number().optional(), targetWeightKg: z.number().optional(),
+  weightControlKg: z.number().optional(), fatControlKg: z.number().optional(), muscleControlKg: z.number().optional(),
+  obesityDegreePercent: z.number().optional(), skeletalMuscleIndexKgM2: z.number().optional(),
+  fatMassIndexKgM2: z.number().optional(), fatFreeMassIndexKgM2: z.number().optional(),
+  segmental: z.array(inBodySegmentSchema).max(5).optional(),
+})
 const progressEntrySchema = z.object({
   id: uuid,
   clientId: uuid,
@@ -265,6 +289,7 @@ const progressEntrySchema = z.object({
   chestCm: z.number().nullable().optional(),
   waistCm: z.number().nullable().optional(),
   hipCm: z.number().nullable().optional(),
+  inBody: inBodySchema.optional(),
   notes: z.string().nullable().optional(),
   customMetrics: z.array(z.object({ metricId: uuid, value: z.number() })),
   version: z.number().int().positive(),
@@ -773,6 +798,7 @@ function progressDraft(draft: ProgressDraft): Record<string, unknown> {
     chestCm: draft.chestCm ?? null,
     waistCm: draft.waistCm ?? null,
     hipCm: draft.hipCm ?? null,
+    ...(draft.inBody === undefined ? {} : { inBody: draft.inBody }),
     notes: draft.notes ?? null,
     customMetrics: draft.customMetrics.map((metric) => ({
       ...metric,
@@ -1270,6 +1296,7 @@ export function createYandexMainRepository(
       },
     },
     progress: {
+      recognizeInBody: (clientId, image): Promise<InBodyRecognitionResult> => recognizeInBody(sessionToken, clientId, image),
       async regularity(clientId) {
         const payload = await readJson(queries, `/v1/clients/${clientId}/progress/regularity`, regularitySchema)
         return payload.regularity.map((item) => ({ ...item, periodStart: localDate(item.periodStart), periodEnd: localDate(item.periodEnd) }))
@@ -1284,7 +1311,7 @@ export function createYandexMainRepository(
           id: item.id, clientId: item.clientId, createdBy: item.createdBy,
           recordedOn: localDate(item.recordedOn), weightKg: item.weightKg ?? undefined,
           chestCm: item.chestCm ?? undefined, waistCm: item.waistCm ?? undefined,
-          hipCm: item.hipCm ?? undefined, notes: item.notes ?? undefined,
+          hipCm: item.hipCm ?? undefined, inBody: item.inBody, notes: item.notes ?? undefined,
           customMetrics: item.customMetrics, version: item.version,
         }))
       },
