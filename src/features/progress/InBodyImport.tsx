@@ -25,7 +25,7 @@ export function InBodyImport({ busy, error, result, onRecognize, onApply, onRese
   }
   return <section className="inbody-import" aria-labelledby="inbody-import-title">
     <div className="inbody-import-copy"><p className="eyebrow">INBODY</p><h2 id="inbody-import-title">Добавить InBody</h2><p className="muted">Сфотографируйте весь лист ровно и без бликов. Перед сохранением можно проверить и исправить значения.</p></div>
-    <input ref={input} className="visually-hidden" type="file" accept="image/*" capture="environment" onChange={(event) => void select(event)} />
+    <input ref={input} hidden type="file" accept="image/*" capture="environment" onChange={(event) => void select(event)} />
     {!result && <button type="button" className="secondary" disabled={working} onClick={() => input.current?.click()}>{working ? 'Распознаём отчёт…' : 'Сфотографировать или выбрать'}</button>}
     {(localError || error) && <div className="inbody-import-error" role="alert"><p>{localError ?? error?.message}</p><button type="button" className="link" onClick={() => input.current?.click()}>Попробовать ещё раз</button></div>}
     {result && <div className="inbody-import-result" aria-live="polite"><strong>Распознано показателей: {result.recognizedFieldCount}</strong><p>{inBodyPreview(result)}</p>{result.warnings.map((warning) => <p className="muted" key={warning}>{warning}</p>)}<div className="actions"><button type="button" className="secondary" onClick={() => input.current?.click()}>Другое фото</button><button type="button" className="primary" onClick={onApply}>Проверить и сохранить</button></div></div>}

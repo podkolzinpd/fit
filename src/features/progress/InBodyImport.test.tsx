@@ -17,4 +17,9 @@ describe('InBodyImport', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Проверить и сохранить' }))
     expect(apply).toHaveBeenCalledOnce()
   })
+
+  it('keeps the native camera input out of the visual and accessibility layout', () => {
+    const { container } = render(<InBodyImport busy={false} error={null} result={null} onRecognize={vi.fn()} onApply={vi.fn()} onReset={vi.fn()} />)
+    expect(container.querySelector('input[type="file"]')).toHaveAttribute('hidden')
+  })
 })
