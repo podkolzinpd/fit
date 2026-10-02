@@ -1218,16 +1218,16 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   await gotoStable(page, '/me/progress')
   const preview = page.locator('.athlete-achievements-preview')
   await expect(preview).toBeVisible()
-  await expect(preview.getByText('1 из 33')).toBeVisible()
+  await expect(preview.getByText('1 из 83')).toBeVisible()
   expect((await preview.boundingBox())!.y).toBeLessThan((await page.locator('.client-progress-card').first().boundingBox())!.y)
   await preview.getByRole('link', { name: 'Все ачивки →' }).click()
   await expect(page).toHaveURL(/\/me\/achievements$/)
-  await expect(page.locator('.athlete-achievement-card')).toHaveCount(33)
-  await expect(page.locator('.athlete-achievement-static-art')).toHaveCount(33)
+  await expect(page.locator('.athlete-achievement-card')).toHaveCount(83)
+  await expect(page.locator('.athlete-achievement-static-art')).toHaveCount(83)
   await expect(page.getByRole('heading', { name: 'Регулярность' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Личные рекорды' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Первая пятёрка/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Год движения/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /52 активные недели/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Снова в деле/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Первый рекорд/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Рекорды копятся/ })).toBeVisible()
@@ -1253,7 +1253,7 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   await expect(detail).toHaveCount(0)
   await expect(cards.first()).toBeFocused()
   await cards.nth(3).click()
-  await expect(page.getByRole('dialog', { name: 'Крепкая привычка' }).getByText('Прогресс: 2 из 25')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Четверть сотни' }).getByText('Прогресс: 2 из 25')).toBeVisible()
   await page.getByRole('button', { name: 'Закрыть подробности ачивки' }).click()
   const fiveWorkouts = page.locator('.badge-id-workouts-5').first()
   const fiveRecords = page.locator('.badge-id-records-5').first()
@@ -1285,7 +1285,7 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   await expect(preview).toBeVisible()
   await preview.screenshot({ path: testInfo.outputPath('achievement-preview-dark.png') })
   await preview.getByRole('link', { name: 'Все ачивки →' }).click()
-  await expect(page.locator('.athlete-achievement-card')).toHaveCount(33)
+  await expect(page.locator('.athlete-achievement-card')).toHaveCount(83)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('achievement-collection-dark.png'), fullPage: true })
   await page.setViewportSize({ width: 320, height: 700 })
@@ -1313,7 +1313,7 @@ test('dense athlete achievement art stays inside compact squares without glyph c
       await page.setViewportSize({ width, height: 844 })
       await gotoStable(page, '/me/achievements')
       const cards = page.locator('.athlete-achievement-card')
-      await expect(cards).toHaveCount(33)
+      await expect(cards).toHaveCount(83)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       const firstRow = await Promise.all([0, 1, 2].map((index) => cards.nth(index).boundingBox()))
       expect(Math.max(...firstRow.map((box) => box!.y)) - Math.min(...firstRow.map((box) => box!.y))).toBeLessThan(2)
@@ -1323,7 +1323,7 @@ test('dense athlete achievement art stays inside compact squares without glyph c
         const box = badge.getBoundingClientRect()
         return { width: box.width, height: box.height, hasArt: badge.classList.contains('has-static-art'), staticArt: badge.querySelectorAll('.athlete-achievement-static-art').length, images: badge.querySelectorAll('img').length, svgs: badge.querySelectorAll('svg').length }
       }))
-      expect(badgeGeometry).toHaveLength(33)
+      expect(badgeGeometry).toHaveLength(83)
       for (const badge of badgeGeometry) {
         expect(badge.width).toBeLessThanOrEqual(81)
         expect(Math.abs(badge.width - badge.height)).toBeLessThan(2)
@@ -1332,7 +1332,7 @@ test('dense athlete achievement art stays inside compact squares without glyph c
       await expect(page.locator('.badge-id-comeback-21 .athlete-achievement-static-art')).toHaveCount(1)
       await expect(page.locator('.badge-id-weeks-12 .athlete-achievement-static-art')).toHaveCount(1)
       await expect(page.locator('.badge-id-records-5 .athlete-achievement-static-art')).toHaveCount(1)
-      for (const [index, group] of [[0, 'workouts'], [1, 'regularity'], [7, 'records']] as const) {
+      for (const [index, group] of [[0, 'workouts'], [1, 'regularity'], [14, 'records']] as const) {
         const section = page.locator('.athlete-achievements-group').nth(index)
         await section.scrollIntoViewIfNeeded()
         await section.screenshot({ path: testInfo.outputPath(`achievement-dense-${group}-${theme}-${width}.png`) })
@@ -1353,12 +1353,12 @@ test('dense athlete achievement art stays inside compact squares without glyph c
         const box = node.getBoundingClientRect()
         return { width: box.width, height: box.height }
       }))
-      expect(compactSizes).toHaveLength(33)
+      expect(compactSizes).toHaveLength(83)
       for (const square of compactSizes) {
         expect(Math.abs(square.width - 64)).toBeLessThan(2)
         expect(Math.abs(square.width - square.height)).toBeLessThan(2)
       }
-      for (const [index, group] of [[0, 'workouts'], [1, 'regularity'], [7, 'records']] as const) {
+      for (const [index, group] of [[0, 'workouts'], [1, 'regularity'], [14, 'records']] as const) {
         const section = page.locator('.athlete-achievements-group').nth(index)
         await section.scrollIntoViewIfNeeded()
         await section.screenshot({ path: testInfo.outputPath(`achievement-dense-${group}-compact-${theme}-${width}.png`) })
@@ -1373,19 +1373,21 @@ test('dense athlete achievement art stays inside compact squares without glyph c
   }
 })
 
-test('all 33 approved raster drawings render without fallback or changed crop geometry', async ({ page }, testInfo) => {
+test('all 83 approved raster drawings render without fallback or changed crop geometry', async ({ page }, testInfo) => {
+  test.setTimeout(90_000)
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Athlete-only route')
   await mockClientWorkoutHistory(page)
   await signIn(page, 'client@fit.local', /\/me$/)
   await gotoStable(page, '/me/achievements')
   const art = page.locator('.athlete-achievement-card .athlete-achievement-badge.has-static-art')
-  await expect(art).toHaveCount(33)
+  await expect(art).toHaveCount(83)
   const spriteCells = await art.locator('.athlete-achievement-static-art').evaluateAll((nodes) => nodes.map((node) => {
     const style = getComputedStyle(node)
     return { image: style.backgroundImage, position: style.backgroundPosition }
   }))
-  expect(new Set(spriteCells.map((cell) => cell.position)).size).toBe(33)
-  expect(spriteCells.every((cell) => cell.image.startsWith('url("data:image/webp;base64,'))).toBe(true)
+  expect(new Set(spriteCells.map((cell) => `${cell.image}:${cell.position}`)).size).toBe(83)
+  expect(spriteCells.filter((cell) => cell.image.startsWith('url("data:image/webp;base64,')).length).toBe(33)
+  expect(spriteCells.filter((cell) => cell.image.includes('achievement-art-expansion-20261002.webp')).length).toBe(50)
   for (const badge of await art.all()) {
     await badge.scrollIntoViewIfNeeded()
     const image = badge.locator('.athlete-achievement-static-art')
@@ -1405,9 +1407,9 @@ test('all 33 approved raster drawings render without fallback or changed crop ge
     expect(Math.abs(geometry.left - expected.offset)).toBeLessThan(0.01)
     expect(Math.abs(geometry.top - expected.offset)).toBeLessThan(0.01)
   }
-  // Show the original colored artwork for visual review without changing product state.
+  // Show original colored artwork only for visual review, without changing saved data.
   await art.evaluateAll((nodes) => nodes.forEach((node) => node.classList.add('is-earned')))
-  for (const [index, name] of [[0, 'workouts'], [1, 'regularity'], [2, 'plank'], [3, 'workout-tonnage'], [4, 'lifetime-tonnage'], [5, 'distance'], [6, 'cardio'], [7, 'records'], [8, 'variety']] as const) {
+  for (const [index, name] of ['workouts', 'regularity', 'plank', 'workout-tonnage', 'lifetime-tonnage', 'distance', 'running', 'bike', 'row', 'ellipse', 'rope', 'push', 'pull', 'cardio', 'records', 'variety', 'balance'].entries()) {
     const section = page.locator('.athlete-achievements-group').nth(index)
     await section.scrollIntoViewIfNeeded()
     await section.screenshot({ path: testInfo.outputPath(`approved-art-${name}-${testInfo.project.name}.png`) })
