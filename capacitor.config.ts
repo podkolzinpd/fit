@@ -5,6 +5,10 @@ const config: CapacitorConfig = {
   appName: 'Fit',
   webDir: 'dist',
   backgroundColor: '#15131a',
+  server: {
+    hostname: 'localhost',
+    androidScheme: 'https',
+  },
 }
 
 export default config

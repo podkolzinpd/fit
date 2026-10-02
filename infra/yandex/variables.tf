@@ -324,7 +324,7 @@ variable "api_cors_allowed_origins" {
       for origin in var.api_cors_allowed_origins :
       can(regex("^(https://[^/]+|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?|capacitor://localhost)$", origin))
     ])
-    error_message = "api_cors_allowed_origins must use HTTPS, exact localhost development origins, or capacitor://localhost for the iOS app."
+    error_message = "api_cors_allowed_origins must use HTTPS (including https://localhost for Android), exact localhost HTTP for development, or capacitor://localhost for iOS."
   }
 }
 
