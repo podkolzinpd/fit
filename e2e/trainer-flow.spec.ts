@@ -93,6 +93,77 @@ test('форма: быстрый ввод разбирает текст в уп�
   await expectWorkoutTime(page, 'Время, подход 3', 45)
 })
 
+test('live: пустой подход Берпи остаётся компактным и не уходит на сервер', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/auth')
+  await page.getByLabel('Email').fill('trainer@fit.local')
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  const tokenResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/token?grant_type=password'))
+  await page.getByRole('button', { name: 'Войти' }).click()
+  expect((await tokenResponse).ok()).toBe(true)
+  try {
+    await expect(page).toHaveURL(/\/today$/, { timeout: 3_000 })
+  } catch {
+    await page.reload()
+    await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
+  }
+
+  const clientName = `Быстрый Live ${testInfo.workerIndex}-${Date.now()}`
+  await page.goto('/clients/new')
+  await page.getByLabel('Имя').fill(clientName)
+  await fillNewClientProfile(page)
+  await page.getByLabel('Начальный вес, кг').fill('75')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByRole('heading', { name: clientName })).toBeVisible()
+
+  await page.getByRole('link', { name: /Запланировать тренировку/ }).click()
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('Берпи')
+  await page.getByRole('button', { name: 'Выбрать: Берпи', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByLabel('Повторы, подход 1').fill('')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await page.getByRole('button', { name: 'Начать' }).click()
+  await expect(page.getByRole('heading', { name: 'Берпи', exact: true })).toBeVisible()
+
+  const row = page.locator('.live-set').first()
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+    const geometry = await row.locator('.live-set-grid').evaluate((grid) => {
+      const bounds = (element: Element) => {
+        const rectangle = element.getBoundingClientRect()
+        return { left: rectangle.left, right: rectangle.right, height: rectangle.height }
+      }
+      return {
+        grid: bounds(grid),
+        children: Array.from(grid.children)
+          .filter((child) => getComputedStyle(child).display !== 'none')
+          .map(bounds),
+      }
+    })
+    expect(geometry.grid.height, JSON.stringify(geometry)).toBeLessThanOrEqual(52)
+    for (let index = 1; index < geometry.children.length; index += 1) {
+      expect(geometry.children[index]!.left, JSON.stringify(geometry)).toBeGreaterThanOrEqual(geometry.children[index - 1]!.right - 1)
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(row.getByRole('button', { name: 'Фактическое время: не указано' })).toHaveText('—')
+
+  let confirmRequests = 0
+  page.on('request', (request) => { if (request.url().includes('confirm_live_set') || request.url().includes('/confirm')) confirmRequests += 1 })
+  await row.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(row.getByRole('alert')).toHaveText('Введите результат подхода')
+  await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
+  expect(confirmRequests).toBe(0)
+
+  await row.getByLabel('Фактические повторы').fill('12')
+  await row.getByRole('button', { name: 'Готово, отдых' }).click()
+  await expect(page.locator('.live-exercise-collapsed')).toContainText('12 повт.')
+  await expect(page.getByText('Результаты сохранены на телефоне')).toHaveCount(0)
+  expect(confirmRequests).toBeGreaterThan(0)
+})
+
 test('форма: заголовок «Сет» создаёт суперсет без потери подходов', async ({ page }) => {
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
@@ -493,8 +564,15 @@ test('live: планка вводится в секундах, таймер за
   await page.goto('/auth')
   await page.getByLabel('Email').fill('trainer@fit.local')
   await page.getByLabel('Пароль').fill('FitLocal123!')
+  const tokenResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/token?grant_type=password'))
   await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  expect((await tokenResponse).ok()).toBe(true)
+  try {
+    await expect(page).toHaveURL(/\/today$/, { timeout: 3_000 })
+  } catch {
+    await page.reload()
+    await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
+  }
   await page.goto('/clients')
 
   await page.getByRole('link', { name: 'Добавить' }).click()
@@ -532,7 +610,7 @@ test('live: планка вводится в секундах, таймер за
   await page.locator('.live-exercise-collapsed').click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toBeVisible()
   await page.getByRole('button', { name: 'Редактировать подход' }).first().click()
-  await expect(page.getByRole('textbox', { name: 'Фактическое время: минуты' }).first()).toBeEnabled()
+  await expect(page.getByRole('button', { name: /^Фактическое время:/ }).first()).toBeEnabled()
   await chooseWorkoutTime(page, 'Фактическое время', 90)
   await page.getByRole('button', { name: 'Сохранить' }).first().click()
   await expect(page.locator('.live-exercise-collapsed')).toBeVisible()

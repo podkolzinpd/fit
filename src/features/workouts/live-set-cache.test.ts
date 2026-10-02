@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Workout } from '../../shared/domain'
-import { applyLiveSetConfirmation, applyLiveSetDraft, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight, setWithLocalDraft } from './live-set-cache'
+import { applyLiveSetConfirmation, applyLiveSetDraft, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight, setWithLocalDraft } from './live-set-cache'
 
 const workout = {
   id: 'workout-1', clientId: 'client-1', clientName: 'Антон', workoutDate: '2026-08-05', status: 'in_progress', version: 1,
@@ -80,5 +80,17 @@ describe('applyLiveSetDraft', () => {
     }
 
     expect(setWithCarriedLiveWeight(exercise, exercise.sets[1]!, { weightKg: 30 }).fact.weightKg).toBe(30)
+  })
+})
+
+describe('hasLiveSetResult', () => {
+  it('rejects an empty quick-start set before it reaches the server', () => {
+    expect(hasLiveSetResult({})).toBe(false)
+  })
+
+  it('accepts any entered metric, including zero', () => {
+    expect(hasLiveSetResult({ reps: 12 })).toBe(true)
+    expect(hasLiveSetResult({ durationSec: 0 })).toBe(true)
+    expect(hasLiveSetResult({ rpe: 8 })).toBe(true)
   })
 })

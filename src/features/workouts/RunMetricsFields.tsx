@@ -18,6 +18,7 @@ interface RunMetricsFieldsProps {
   planDurationHint?: boolean
   planDistanceHint?: boolean
   planStrokeRateHint?: boolean
+  compactDuration?: boolean
   rowing?: boolean
   optionalDistance?: boolean
   strokeRate?: number
@@ -40,6 +41,7 @@ export function RunMetricsFields({
   planDurationHint = false,
   planDistanceHint = false,
   planStrokeRateHint = false,
+  compactDuration = false,
   rowing = false,
   optionalDistance = false,
   strokeRate,
@@ -102,7 +104,7 @@ export function RunMetricsFields({
 
   return <>
     <div className="run-duration-field">
-      <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
+      <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} compact={compactDuration} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
     </div>
     <div className="run-distance-field">
       {!distanceVisible ? <button type="button" className="run-distance-add" disabled={disabled} onClick={() => setDistanceVisible(true)}>+ Добавить дистанцию</button> : <>

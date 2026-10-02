@@ -1,5 +1,19 @@
 import type { LiveSetDraft, Workout, WorkoutSet } from '../../shared/domain'
 
+/** A set can be confirmed only when at least one actual metric is present.
+ * Keep this check next to the live cache so the UI and recovery path use the
+ * same definition as the database invariant. Zero is an entered value. */
+export function hasLiveSetResult(draft: LiveSetDraft): boolean {
+  return [
+    draft.weightKg,
+    draft.reps,
+    draft.durationSec,
+    draft.durationMin,
+    draft.distanceKm,
+    draft.rpe,
+  ].some((value) => value !== undefined)
+}
+
 // Локальная копия live-тренировки должна сразу отражать автосохранённый факт.
 // Иначе при переходе к следующей строке React сворачивает предыдущую по старым
 // данным и временно показывает «Без значений», хотя запись уже отправлена.

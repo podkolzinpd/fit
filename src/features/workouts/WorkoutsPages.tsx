@@ -28,7 +28,7 @@ import type { RunningFormat } from '../../shared/running-formats'
 import type { ParsedWorkoutExercise } from './quick-workout-entry'
 import { createLiveSetCoordinator } from './live-set-coordinator'
 import { createLiveSetAutosave } from './live-set-autosave'
-import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
+import { applyLiveSetConfirmation, applyLiveSetDraft, carriedLiveWeightKey, hasLiveSetResult, reconcileLiveWorkout, sameLiveSetDraft, setWithCarriedLiveWeight } from './live-set-cache'
 import { liveMetricSources, markLiveMetricEntered } from './live-set-provenance'
 import { firstCardioDraftMissingEnteredDuration, firstCardioSetMissingEnteredDuration } from './calorie-duration-prompt'
 import {
@@ -2295,12 +2295,12 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} />
+    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />
     <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
     {rpeField}
   </>
   if (inputKind === 'duration' && !distanceCapable) return <>
-    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} />
+    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />
     <span className="live-set-empty" aria-hidden="true" />
     {rpeField}
   </>
@@ -2317,6 +2317,7 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
       planDurationHint={isPlanHint(factDuration, planDuration)}
       planDistanceHint={isPlanHint(set.fact.distanceKm, set.distanceKm)}
       planStrokeRateHint={isPlanHint(set.fact.reps, set.reps)}
+      compactDuration
       durationName="durationSec"
       distanceName="runDistance"
       distanceUnitName="runDistanceUnit"
@@ -2462,6 +2463,7 @@ export function LiveWorkoutPage() {
   const [savingSetId, setSavingSetId] = useState<string | null>(null)
   const [savedSetId, setSavedSetId] = useState<string | null>(null)
   const [saveErrorSetId, setSaveErrorSetId] = useState<string | null>(null)
+  const [validationErrorSetIds, setValidationErrorSetIds] = useState<Set<string>>(() => new Set())
   const retryingSetDrafts = useRef(false)
   const initialRetryWorkoutId = useRef<string | null>(null)
   const recoveryInitializedFor = useRef<string | null>(null)
@@ -2526,6 +2528,18 @@ export function LiveWorkoutPage() {
       }
     }
     for (const setId of pendingConfirmations) {
+      const draft = pending.get(setId)
+      const serverSet = serverSets.get(setId)
+      if (draft && serverSet && !hasLiveSetResult(draft)) {
+        // Older clients could send an entirely empty quick-start set. The
+        // database correctly rejected it, but the persisted confirmation then
+        // retried forever and looked like a network outage. Drop only that
+        // invalid confirmation intent; the blank draft remains safe to edit.
+        pendingConfirmations.delete(setId)
+        removePendingLiveSetConfirmation(actor.userId, workoutId, setId)
+        setValidationErrorSetIds((current) => new Set(current).add(setId))
+        continue
+      }
       if (!pending.has(setId)) {
         pendingConfirmations.delete(setId)
         removePendingLiveSetConfirmation(actor.userId, workoutId, setId)
@@ -2731,6 +2745,10 @@ export function LiveWorkoutPage() {
       if (actor?.userId) writePendingLiveSetConfirmation(actor.userId, workoutId, set.id)
     },
     onSuccess: (version, { set, draft }) => {
+      setValidationErrorSetIds((current) => {
+        if (!current.has(set.id)) return current
+        const next = new Set(current); next.delete(set.id); return next
+      })
       const before = queryClient.getQueryData<Workout>(['workout', workoutId])
       const owner = before?.exercises.find((exercise) => exercise.sets.some((item) => item.id === set.id))
       if (owner && owner.blockType === 'single' && owner.sets.every((item) => item.id === set.id || item.confirmedAt)) {
@@ -3116,11 +3134,15 @@ export function LiveWorkoutPage() {
     // Однократный recovery-key нужен только после reload, чтобы применить
     // восстановленные defaultValue.
     const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
+    const validationError = validationErrorSetIds.has(set.id)
+    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
       if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) keepLiveSetFieldVisible(target)
-    }} onInput={(event) => captureLiveDraft(set, event.currentTarget, event.target)} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+    }} onInput={(event) => {
+      if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
+      captureLiveDraft(set, event.currentTarget, event.target)
+    }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
@@ -3137,10 +3159,23 @@ export function LiveWorkoutPage() {
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { prepareGong(); liveSetAutosave.clear(set.id); const form = event.currentTarget.form; if (form) confirm.mutate({ set, draft: draftFrom(form, set) }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>}
+                onClick={(event) => {
+                  prepareGong()
+                  liveSetAutosave.clear(set.id)
+                  const form = event.currentTarget.form
+                  if (form) {
+                    const draft = draftFrom(form, set)
+                    if (!hasLiveSetResult(draft)) {
+                      setValidationErrorSetIds((current) => new Set(current).add(set.id))
+                      form.querySelector<HTMLElement>('.live-set-input:not(:disabled), .live-set-rpe:not(:disabled)')?.focus({ preventScroll: true })
+                    } else confirm.mutate({ set, draft })
+                  }
+                  skipBlurForSet.current = null
+                }}><span aria-hidden="true">✓</span></button>}
         </div>
       </WorkoutSetRow>
       <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
+      {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
       {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
