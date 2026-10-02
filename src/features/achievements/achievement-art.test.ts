@@ -43,7 +43,7 @@ const approvedHashes: Record<string, string> = {
 
 describe('owner-approved achievement artwork', () => {
   it('preserves all approved sources and maps every achievement to a unique sprite cell', () => {
-    const entries = Object.entries(achievementArt)
+    const entries = Object.entries(achievementArt).filter(([, art]) => !art.expansion)
     expect(entries).toHaveLength(33)
     expect(achievementArt['records-1']?.file).toBe('achievement-distinct-pr-trophy-1-concept-20261001.webp')
     expect(new Set(entries.map(([, art]) => art.file)).size).toBe(33)
@@ -76,6 +76,21 @@ describe('owner-approved achievement artwork', () => {
     expect(sprite.readUInt16LE(26) & 0x3fff).toBe(1920)
     expect(sprite.readUInt16LE(28) & 0x3fff).toBe(1920)
     expect(sprite.byteLength).toBeLessThanOrEqual(250 * 1024)
+  })
+
+  it('provides 50 additional unique raster assets without replacing the original 33', () => {
+    const entries = Object.values(achievementArt).filter((art) => art.expansion)
+    expect(Object.keys(achievementArt)).toHaveLength(83)
+    expect(entries).toHaveLength(50)
+    expect(new Set(Object.values(achievementArt).map((art) => art.file)).size).toBe(83)
+    expect(new Set(entries.map((art) => `${art.column}:${art.row}`)).size).toBe(50)
+    for (const art of entries) {
+      expect(existsSync(resolve('docs/design/achievement-art-source', art.file.replace(/\.webp$/, '.png')))).toBe(true)
+      expect(existsSync(resolve('src/assets/achievements', art.file))).toBe(true)
+    }
+    const sprite = readFileSync(resolve('src/assets/achievement-art-expansion-20261002.webp'))
+    expect(sprite.subarray(8, 12).toString('ascii')).toBe('WEBP')
+    expect(sprite.byteLength).toBeLessThanOrEqual(500 * 1024)
   })
 
   it('keeps the full-size source PNGs out of the production public directory', () => {

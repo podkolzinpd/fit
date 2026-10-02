@@ -1,0 +1,470 @@
+[
+  {
+    "id": "lifetime-tonnage-250t",
+    "title": "Весомый результат",
+    "threshold": 250000,
+    "kind": "lifetime-tonnage",
+    "description": "Поднять суммарно 250 тонн за всё время",
+    "subject": "A strong geometric tower made from weight plates",
+    "reuse": "08feee14-dd69-4e37-ad31-6ffe943a509b",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A strong geometric tower made from weight plates"
+  },
+  {
+    "id": "lifetime-tonnage-1000t",
+    "title": "Тысяча тонн",
+    "threshold": 1000000,
+    "kind": "lifetime-tonnage",
+    "description": "Поднять суммарно 1000 тонн за всё время",
+    "subject": "Pyramid of weight plates",
+    "reuse": "3c3113fb-9879-427b-bee9-44a9b6e5ee45",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Pyramid of weight plates"
+  },
+  {
+    "id": "lifetime-tonnage-1500t",
+    "title": "Большая работа",
+    "threshold": 1500000,
+    "kind": "lifetime-tonnage",
+    "description": "Поднять суммарно 1500 тонн за всё время",
+    "subject": "Weight-plate towers with summit flag",
+    "reuse": "f327f374-036f-48f7-bcb8-f3c9a273e386",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Weight-plate towers with summit flag"
+  },
+  {
+    "id": "workouts-75",
+    "title": "Три четверти сотни",
+    "threshold": 75,
+    "kind": "workouts",
+    "description": "Завершить 75 тренировок",
+    "subject": "A lime medal with two short ribbons and large warm-white number \"75\". Match existing circular medal series. No other symbols.",
+    "prompt": "Use case: precise-object-edit. Image 1 is EDIT TARGET. Change ONLY the medal numeral \"50\" to \"75\" in identical bold warm-white type, no outline. Preserve exactly the lime medal shape, its bright lime-green inner ring, highlights, charcoal rounded square, thin lime border and equal white outside margins. No additional symbols, no black stroke on numerals, no dark ring."
+  },
+  {
+    "id": "workouts-150",
+    "title": "Полторы сотни",
+    "threshold": 150,
+    "kind": "workouts",
+    "description": "Завершить 150 тренировок",
+    "subject": "A lime medal with two short ribbons and large warm-white number \"150\". Match existing circular medal series. No other symbols.",
+    "prompt": "Use case: precise-object-edit. Image 1 is EDIT TARGET. Change ONLY the medal numeral \"50\" to \"150\" in identical bold warm-white type, no outline. Preserve exactly the lime medal shape, its bright lime-green inner ring, highlights, charcoal rounded square, thin lime border and equal white outside margins. No additional symbols, no black stroke on numerals, no dark ring."
+  },
+  {
+    "id": "records-10",
+    "title": "Новая высота",
+    "threshold": 10,
+    "kind": "records",
+    "description": "Установить личные рекорды в 10 разных тренировках",
+    "subject": "Cup with rising arrow",
+    "reuse": "c8e41b16-ed4d-4308-8724-29529656089f",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Cup with rising arrow"
+  },
+  {
+    "id": "records-25",
+    "title": "Рекордная история",
+    "threshold": 25,
+    "kind": "records",
+    "description": "Установить личные рекорды в 25 разных тренировках",
+    "subject": "Cup and laurel crown",
+    "reuse": "0a9f1376-dd2c-434b-9ace-048cd0e36e1b",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Cup and laurel crown"
+  },
+  {
+    "id": "run-single-5km",
+    "title": "Моя пятёрка",
+    "threshold": 5,
+    "kind": "run-single",
+    "description": "Пробежать 5 км за одну тренировку",
+    "subject": "A single dynamic running shoe with a small finish pennant, strong diagonal silhouette, no numbers.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A single dynamic running shoe with a small finish pennant, strong diagonal silhouette, no numbers."
+  },
+  {
+    "id": "run-single-10km",
+    "title": "Моя десятка",
+    "threshold": 10,
+    "kind": "run-single",
+    "description": "Пробежать 10 км за одну тренировку",
+    "subject": "A running shoe breaking a finish ribbon, larger achievement feeling, strong diagonal silhouette.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A running shoe breaking a finish ribbon, larger achievement feeling, strong diagonal silhouette."
+  },
+  {
+    "id": "run-total-50km",
+    "title": "Бег: первые 50",
+    "threshold": 50,
+    "kind": "run-total",
+    "description": "Накопить 50 км в упражнении «Бег»",
+    "subject": "Hill route",
+    "reuse": "90b50444-f7bc-41e4-a300-6a0c653557ed",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Hill route"
+  },
+  {
+    "id": "run-total-100km",
+    "title": "Беговая сотня",
+    "threshold": 100,
+    "kind": "run-total",
+    "description": "Накопить 100 км в упражнении «Бег»",
+    "subject": "Compass route",
+    "reuse": "6440de99-9199-4c66-b68d-ba8430dbb1c2",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Compass route"
+  },
+  {
+    "id": "run-total-250km",
+    "title": "Беговой горизонт",
+    "threshold": 250,
+    "kind": "run-total",
+    "description": "Накопить 250 км в упражнении «Бег»",
+    "subject": "Globe route",
+    "reuse": "1a4167d0-c8aa-45a7-99ed-e163373572d5",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Globe route"
+  },
+  {
+    "id": "run-workouts-10",
+    "title": "Бег вошёл в привычку",
+    "threshold": 10,
+    "kind": "run-workouts",
+    "description": "Выполнить упражнение «Бег» в 10 разных тренировках",
+    "subject": "A running shoe with a confident circular repeat arrow behind it.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A running shoe with a confident circular repeat arrow behind it."
+  },
+  {
+    "id": "bike-workouts-5",
+    "title": "Кручу педали",
+    "threshold": 5,
+    "kind": "bike-workouts",
+    "description": "Заниматься на велотренажёре в 5 разных тренировках",
+    "subject": "A compact indoor stationary exercise bike, side view, clear saddle handlebars pedals and flywheel, no outdoor bicycle.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A compact indoor stationary exercise bike, side view, clear saddle handlebars pedals and flywheel, no outdoor bicycle."
+  },
+  {
+    "id": "bike-workouts-15",
+    "title": "Педали в ритме",
+    "threshold": 15,
+    "kind": "bike-workouts",
+    "description": "Заниматься на велотренажёре в 15 разных тренировках",
+    "subject": "A large indoor exercise bike flywheel and crank with two pedals, short curved motion strokes.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A large indoor exercise bike flywheel and crank with two pedals, short curved motion strokes."
+  },
+  {
+    "id": "bike-workouts-30",
+    "title": "Мастер педалей",
+    "threshold": 30,
+    "kind": "bike-workouts",
+    "description": "Заниматься на велотренажёре в 30 разных тренировках",
+    "subject": "An indoor stationary bike flywheel and pedal inside a bold open laurel wreath.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: An indoor stationary bike flywheel and pedal inside a bold open laurel wreath."
+  },
+  {
+    "id": "row-workouts-5",
+    "title": "Держу курс",
+    "threshold": 5,
+    "kind": "row-workouts",
+    "description": "Заниматься на гребном тренажёре в 5 разных тренировках",
+    "subject": "An indoor rowing machine side view, clear fan flywheel long rail sliding seat and pull handle, no water or boat.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: An indoor rowing machine side view, clear fan flywheel long rail sliding seat and pull handle, no water or boat."
+  },
+  {
+    "id": "row-workouts-15",
+    "title": "Гребной ритм",
+    "threshold": 15,
+    "kind": "row-workouts",
+    "description": "Заниматься на гребном тренажёре в 15 разных тренировках",
+    "subject": "Close view of a rowing machine pull handle attached by cable to its circular fan wheel, with two horizontal motion lines.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Close view of a rowing machine pull handle attached by cable to its circular fan wheel, with two horizontal motion lines."
+  },
+  {
+    "id": "row-workouts-30",
+    "title": "Мастер гребли",
+    "threshold": 30,
+    "kind": "row-workouts",
+    "description": "Заниматься на гребном тренажёре в 30 разных тренировках",
+    "subject": "Indoor rowing machine fan flywheel and pull handle with a small laurel at base, clear compact composition.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Indoor rowing machine fan flywheel and pull handle with a small laurel at base, clear compact composition."
+  },
+  {
+    "id": "ellipse-workouts-5",
+    "title": "На своей орбите",
+    "threshold": 5,
+    "kind": "ellipse-workouts",
+    "description": "Заниматься на эллиптическом тренажёре в 5 разных тренировках",
+    "subject": "Indoor elliptical cross trainer simplified side view, long swinging handles paired foot pedals and round drive housing.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Indoor elliptical cross trainer simplified side view, long swinging handles paired foot pedals and round drive housing."
+  },
+  {
+    "id": "ellipse-workouts-15",
+    "title": "Орбита движения",
+    "threshold": 15,
+    "kind": "ellipse-workouts",
+    "description": "Заниматься на эллиптическом тренажёре в 15 разных тренировках",
+    "subject": "Two foot pedals following a single large elliptical orbit with a small bright motion spark, sporty abstract silhouette.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Two foot pedals following a single large elliptical orbit with a small bright motion spark, sporty abstract silhouette."
+  },
+  {
+    "id": "ellipse-workouts-30",
+    "title": "Мастер орбиты",
+    "threshold": 30,
+    "kind": "ellipse-workouts",
+    "description": "Заниматься на эллиптическом тренажёре в 30 разных тренировках",
+    "subject": "A confident elliptical orbit enclosing two exercise machine foot pedals, tiny victory star above, clean bold silhouette.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A confident elliptical orbit enclosing two exercise machine foot pedals, tiny victory star above, clean bold silhouette."
+  },
+  {
+    "id": "rope-reps-500",
+    "title": "Первые 500 прыжков",
+    "threshold": 500,
+    "kind": "rope-reps",
+    "description": "Накопить 500 повторений в упражнении «Прыжки со скакалкой»",
+    "subject": "A jump rope with two thick handles and one elegant open loop, no person.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A jump rope with two thick handles and one elegant open loop, no person."
+  },
+  {
+    "id": "rope-reps-2000",
+    "title": "Прыжок за прыжком",
+    "threshold": 2000,
+    "kind": "rope-reps",
+    "description": "Накопить 2000 повторений в упражнении «Прыжки со скакалкой»",
+    "subject": "A jump rope forming a dynamic looping figure eight, thick handles on each end, three small motion strokes.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A jump rope forming a dynamic looping figure eight, thick handles on each end, three small motion strokes."
+  },
+  {
+    "id": "rope-reps-5000",
+    "title": "Мастер скакалки",
+    "threshold": 5000,
+    "kind": "rope-reps",
+    "description": "Накопить 5000 повторений в упражнении «Прыжки со скакалкой»",
+    "subject": "A jump rope forming a bold circular frame around a small lightning bolt, two handles clearly visible at bottom.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A jump rope forming a bold circular frame around a small lightning bolt, two handles clearly visible at bottom."
+  },
+  {
+    "id": "push-reps-100",
+    "title": "Первая сотня отжиманий",
+    "threshold": 100,
+    "kind": "push-reps",
+    "description": "Накопить 100 повторений в упражнении «Отжимания»",
+    "subject": "A simplified athletic human in a correct push-up position, side view, straight body on hands and toes, bent elbows.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A simplified athletic human in a correct push-up position, side view, straight body on hands and toes, bent elbows."
+  },
+  {
+    "id": "push-reps-500",
+    "title": "Сильная опора",
+    "threshold": 500,
+    "kind": "push-reps",
+    "description": "Накопить 500 повторений в упражнении «Отжимания»",
+    "subject": "A simplified athletic human in a straight-arm push-up position on a bold horizontal base, side view, small upward arrow.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A simplified athletic human in a straight-arm push-up position on a bold horizontal base, side view, small upward arrow."
+  },
+  {
+    "id": "push-reps-1000",
+    "title": "Тысяча отжиманий",
+    "threshold": 1000,
+    "kind": "push-reps",
+    "description": "Накопить 1000 повторений в упражнении «Отжимания»",
+    "subject": "A compact shield containing a simplified side-view athlete in push-up position, strong clean arms and straight body.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A compact shield containing a simplified side-view athlete in push-up position, strong clean arms and straight body."
+  },
+  {
+    "id": "pull-reps-25",
+    "title": "Тянусь вверх",
+    "threshold": 25,
+    "kind": "pull-reps",
+    "description": "Накопить 25 повторений в упражнении «Подтягивания»",
+    "subject": "Simplified athletic person doing a pull-up on a horizontal bar, front view, hands wider than shoulders, chin at bar.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Simplified athletic person doing a pull-up on a horizontal bar, front view, hands wider than shoulders, chin at bar."
+  },
+  {
+    "id": "pull-reps-100",
+    "title": "Выше перекладины",
+    "threshold": 100,
+    "kind": "pull-reps",
+    "description": "Накопить 100 повторений в упражнении «Подтягивания»",
+    "subject": "Simplified person doing a pull-up on horizontal bar with small upward arrow alongside torso, front view.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Simplified person doing a pull-up on horizontal bar with small upward arrow alongside torso, front view."
+  },
+  {
+    "id": "pull-reps-250",
+    "title": "Сила притяжения",
+    "threshold": 250,
+    "kind": "pull-reps",
+    "description": "Накопить 250 повторений в упражнении «Подтягивания»",
+    "subject": "A shield framing a simplified person completing a pull-up on a horizontal bar, chin above bar, confident compact icon.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A shield framing a simplified person completing a pull-up on a horizontal bar, chin above bar, confident compact icon."
+  },
+  {
+    "id": "plank-1h",
+    "title": "Час опоры",
+    "threshold": 3600,
+    "kind": "plank",
+    "description": "Накопить 1 час в упражнении «Планка»",
+    "subject": "Plank shield",
+    "reuse": "be69ccba-ab8d-42cd-a625-e92b89549597",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Plank shield"
+  },
+  {
+    "id": "cardio-25h",
+    "title": "Сердце в ритме",
+    "threshold": 90000,
+    "kind": "cardio",
+    "description": "Накопить 25 часов фактического времени кардиоупражнений",
+    "subject": "Stopwatch heart",
+    "reuse": "778ee194-b7cd-44e5-a50c-b9faae838e7e",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Stopwatch heart"
+  },
+  {
+    "id": "cardio-100h",
+    "title": "Сто часов движения",
+    "threshold": 360000,
+    "kind": "cardio",
+    "description": "Накопить 100 часов фактического времени кардиоупражнений",
+    "subject": "Winged heart",
+    "reuse": "7beaf91b-1031-4ce3-946f-cf2c192c1e9a",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Winged heart"
+  },
+  {
+    "id": "rhythm-4",
+    "title": "Нашёл ритм",
+    "threshold": 4,
+    "kind": "rhythm",
+    "description": "Тренироваться минимум в 2 разные даты каждую неделю 4 недели подряд",
+    "subject": "Calendar4checkrows",
+    "reuse": "000ff544-661d-484c-8f80-ba367d99bed0",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Calendar4checkrows"
+  },
+  {
+    "id": "rhythm-8",
+    "title": "Держу ритм",
+    "threshold": 8,
+    "kind": "rhythm",
+    "description": "Тренироваться минимум в 2 разные даты каждую неделю 8 недель подряд",
+    "subject": "Calendar rays",
+    "reuse": "26eb234d-24fa-4064-8d06-5b9d82fc7317",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Calendar rays"
+  },
+  {
+    "id": "rhythm-12",
+    "title": "Ритм на квартал",
+    "threshold": 12,
+    "kind": "rhythm",
+    "description": "Тренироваться минимум в 2 разные даты каждую неделю 12 недель подряд",
+    "subject": "Calendar infinity",
+    "reuse": "83f9850c-5287-4e58-9987-22bd929bc1cd",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Calendar infinity"
+  },
+  {
+    "id": "three-weekly-4",
+    "title": "Трижды в неделю",
+    "threshold": 4,
+    "kind": "three-weekly",
+    "description": "Тренироваться минимум в 3 разные даты каждую неделю 4 недели подряд",
+    "subject": "A clean mechanical metronome with swinging arm and three bright beats beside it, expressive silhouette.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A clean mechanical metronome with swinging arm and three bright beats beside it, expressive silhouette."
+  },
+  {
+    "id": "flexible-6",
+    "title": "В своём темпе",
+    "threshold": 6,
+    "kind": "flexible",
+    "description": "Тренироваться минимум в 2 разные даты в 6 из 8 последовательных недель; перерывы допустимы",
+    "subject": "Six large stepping stones on a gently curving path ending in a small pennant, deliberate gaps between stones.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Six large stepping stones on a gently curving path ending in a small pennant, deliberate gaps between stones."
+  },
+  {
+    "id": "month-days-8",
+    "title": "Месяц в движении",
+    "threshold": 8,
+    "kind": "month-days",
+    "description": "Тренироваться в 8 разных датах календарного месяца. Можно получать каждый месяц",
+    "subject": "Two calendars",
+    "reuse": "1fa53b60-c623-43cf-82f4-f757e98f1ec1",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Two calendars"
+  },
+  {
+    "id": "month-days-12",
+    "title": "Сильный месяц",
+    "threshold": 12,
+    "kind": "month-days",
+    "description": "Тренироваться в 12 разных датах календарного месяца. Можно получать каждый месяц",
+    "subject": "Open calendar book",
+    "reuse": "a2031745-ceda-40f8-b44c-70eef388447e",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Open calendar book"
+  },
+  {
+    "id": "active-months-3",
+    "title": "Три месяца в деле",
+    "threshold": 3,
+    "kind": "active-months",
+    "description": "Тренироваться минимум в 4 разные даты в каждом из 3 последовательных календарных месяцев",
+    "subject": "Three journals",
+    "reuse": "bddc9e87-bde9-42f4-a345-71d6ae5faba8",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Three journals"
+  },
+  {
+    "id": "active-months-6",
+    "title": "Полгода в деле",
+    "threshold": 6,
+    "kind": "active-months",
+    "description": "Тренироваться минимум в 4 разные даты в каждом из 6 последовательных календарных месяцев",
+    "subject": "A strong young tree with six broad leaves and a tiny calendar tab at base, visual metaphor of a growing training habit.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A strong young tree with six broad leaves and a tiny calendar tab at base, visual metaphor of a growing training habit."
+  },
+  {
+    "id": "comeback-rhythm",
+    "title": "Вернулся в ритм",
+    "threshold": 3,
+    "kind": "comeback-rhythm",
+    "description": "После возвращения с перерыва не менее 21 дня потренироваться ещё в 2 разные даты в следующие 14 дней",
+    "subject": "Calendar footprint",
+    "reuse": "6bfa8eeb-0e42-4f5b-a4bf-4a71e2b70c72",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Calendar footprint"
+  },
+  {
+    "id": "versatile",
+    "title": "Разносторонний спортсмен",
+    "threshold": 3,
+    "kind": "versatile",
+    "description": "За 30 дней выполнить силовые упражнения, кардио и растяжку",
+    "subject": "A three-part circular emblem: one small kettlebell, a running shoe and a simple stretching figure, balanced triangle composition.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A three-part circular emblem: one small kettlebell, a running shoe and a simple stretching figure, balanced triangle composition."
+  },
+  {
+    "id": "strength-endurance",
+    "title": "Сила и выносливость",
+    "threshold": 2,
+    "kind": "strength-endurance",
+    "description": "В течение одной календарной недели выполнить силовые упражнения и кардио",
+    "subject": "A kettlebell and heart linked by a single short pulse line, two equal interlocking silhouettes.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A kettlebell and heart linked by a single short pulse line, two equal interlocking silhouettes."
+  },
+  {
+    "id": "movement-balance",
+    "title": "Баланс движения",
+    "threshold": 3,
+    "kind": "movement-balance",
+    "description": "В каждом из 3 последовательных календарных месяцев выполнить силовые упражнения, кардио и растяжку",
+    "subject": "Three balanced interlocking arcs around a small stable triangle, motion and equilibrium, clean abstract sporty emblem.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Three balanced interlocking arcs around a small stable triangle, motion and equilibrium, clean abstract sporty emblem."
+  },
+  {
+    "id": "cardio-choice",
+    "title": "Кардио на выбор",
+    "threshold": 3,
+    "kind": "cardio-choice",
+    "description": "За 30 дней выполнить 3 вида кардио из пяти: бег, велотренажёр, эллипс, гребной тренажёр, скакалка",
+    "subject": "Three fanned cards displaying a running shoe, stationary bike pedal and jump rope, clearly different silhouettes.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: Three fanned cards displaying a running shoe, stationary bike pedal and jump rope, clearly different silhouettes."
+  },
+  {
+    "id": "equipment-variety",
+    "title": "Разный инвентарь",
+    "threshold": 3,
+    "kind": "equipment-variety",
+    "description": "В одном календарном месяце выполнить силовые упражнения со штангой, гантелями и на тренажёре",
+    "subject": "Three equipment cards",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject:  Subject: three overlapping rounded cards, each bearing one clearly identifiable piece of strength equipment: a long BARBELL with weight plates, a short DUMBBELL, and an upright CABLE WEIGHT MACHINE with top pulley and weight stack. No shoes, no kettlebells. Three strong simple lime silhouettes, precise friendly clean illustration, readable at 64 px."
+  },
+  {
+    "id": "four-seasons",
+    "title": "Четыре сезона",
+    "threshold": 4,
+    "kind": "four-seasons",
+    "description": "Потренироваться зимой, весной, летом и осенью в течение 365 дней",
+    "subject": "A circular four-season emblem with snowflake, sprouting leaf, sun and autumn leaf in four quadrants, lime and warm white only.",
+    "prompt": "Use case: stylized-concept. ONE square achievement badge for Fit fitness app. Image 1 is STYLE REFERENCE ONLY. Match near-black charcoal rounded-square tile with very thin bright chartreuse lime border, bold clean lime illustrated symbol with small warm-white highlights, restrained slightly dimensional vector-like rendering. White outer canvas with EXACT equal 10% margins around tile. Icon fills center without touching border, big simple silhouette readable at 64px. Same framing as reference. No text or numbers except when expressly specified in subject. No logos, watermark, extra tiles, purple, gold, scenery. Subject: A circular four-season emblem with snowflake, sprouting leaf, sun and autumn leaf in four quadrants, lime and warm white only."
+  }
+]
