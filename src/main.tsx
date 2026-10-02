@@ -4,6 +4,7 @@ import { AppRoot } from './app/AppRoot'
 import { isMaintenanceModeEnabled } from './app/feature-flags'
 import { applyAppTheme, getAppTheme } from './app/theme'
 import { initializeWorkoutInactivityNotificationActions } from './features/workouts/workout-inactivity-reminder'
+import { initializeAndroidYandexDeepLink } from './features/auth/android-yandex-deep-link'
 import '@fontsource-variable/onest/wght.css'
 import '@fontsource/rem/latin-700.css'
 import './styles.css'
@@ -40,6 +41,7 @@ declare global {
 // восстановлении сессии не было вспышки другой палитры.
 applyAppTheme(getAppTheme())
 if (!isMaintenanceModeEnabled()) initializeWorkoutInactivityNotificationActions()
+void initializeAndroidYandexDeepLink()
 
 function AppStartedSignal() {
   useEffect(() => window.__fitMarkAppStarted?.(), [])

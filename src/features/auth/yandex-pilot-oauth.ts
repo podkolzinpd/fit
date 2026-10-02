@@ -14,6 +14,13 @@ export interface PendingYandexNativeRegistration {
 
 const LEGAL_VERSION_PATTERN = /^sha256:[0-9a-f]{24}$/
 
+export function isPendingYandexAuthorizationState(
+  state: string | null,
+  storage: Pick<Storage, 'getItem'> = sessionStorage,
+): boolean {
+  return state !== null && state.length > 0 && storage.getItem(OAUTH_STATE_KEY) === state
+}
+
 function randomBase64Url(byteLength: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength))
   let binary = ''
