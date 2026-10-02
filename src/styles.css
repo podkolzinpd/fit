@@ -7167,7 +7167,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .athlete-achievements-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px 8px; }
 .athlete-achievement-card { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:8px; min-width:0; padding:4px 0; border:0; border-radius:14px; background:transparent; color:var(--fg); box-shadow:none; text-align:center; cursor:pointer; }
 .athlete-achievement-card .athlete-achievement-badge { width:min(80px,100%); height:auto; aspect-ratio:1; border-radius:22px; }
-.athlete-achievement-badge.has-static-art,.athlete-achievement-card .athlete-achievement-badge.has-static-art { display:block; overflow:hidden; border:0; border-radius:20%; background:transparent; box-shadow:none; }
+.athlete-achievement-badge.has-static-art,.athlete-achievement-card .athlete-achievement-badge.has-static-art { display:block; overflow:hidden; border:0; border-radius:20%; background:#232328; box-shadow:none; }
 .athlete-achievement-badge.has-static-art.is-earned { border:0; box-shadow:none; }
 .athlete-achievement-static-art { position:absolute; display:block; width:125%; height:125%; max-width:none; left:-12.5%; top:-12.5%; }
 .athlete-achievement-badge.art-dark .athlete-achievement-static-art { width:114%; height:114%; left:-7%; top:-7%; }
