@@ -72,6 +72,20 @@ describe('WorkoutDurationField', () => {
     expect(onCommit).toHaveBeenCalledWith(3720)
   })
 
+  it('uses one compact control in Live even when the global wheel rollout is off', async () => {
+    const user = userEvent.setup()
+    const onCommit = vi.fn()
+    render(<WorkoutDurationField label="Фактическое время" compact onCommit={onCommit} />)
+    const trigger = screen.getByRole('button', { name: 'Фактическое время: не указано' })
+    expect(trigger).toHaveTextContent('—')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    await user.click(trigger)
+    await choose(user, 'минуты', 1)
+    await choose(user, 'секунды', 15)
+    await user.click(screen.getByRole('button', { name: 'Применить · 1:15' }))
+    expect(onCommit).toHaveBeenCalledWith(75)
+  })
+
   it('does not open when the set is locked', async () => {
     setWorkoutTimeWheel(true)
     const user = userEvent.setup()

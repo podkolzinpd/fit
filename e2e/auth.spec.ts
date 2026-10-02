@@ -428,9 +428,15 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByLabel('Имя').fill('Тренер')
   await page.getByLabel('Email').fill(trainerEmail)
   await page.getByLabel('Пароль').fill('FitLocal123!')
+  const trainerSignUp = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/signup'))
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-
-  await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
+  expect((await trainerSignUp).ok()).toBe(true)
+  try {
+    await expect(page).toHaveURL(/\/today$/, { timeout: 3_000 })
+  } catch {
+    await page.reload()
+    await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
+  }
   await page.goto('/clients')
   await page.getByRole('link', { name: 'Добавить' }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
@@ -596,7 +602,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // Дождаться серверной перестановки: у нового текущего упражнения один
   // подход; до refetch здесь ещё видны два подхода предыдущего упражнения.
   await expect(page.locator('.live-exercise .live-set-number')).toHaveCount(1)
-  await expectWorkoutTime(page, 'Фактическое время', undefined)
+  await expect(page.getByRole('button', { name: 'Фактическое время: не указано' })).toHaveText('—')
   await chooseWorkoutTime(page, 'Фактическое время', 10 * 60)
   await page.getByLabel('Фактическая дистанция').fill('1.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()

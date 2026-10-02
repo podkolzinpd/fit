@@ -18,7 +18,7 @@ export function formatWorkoutDuration(seconds: number | undefined): string {
 }
 
 /** A set duration is always stored as seconds; keyboard and wheel are presentation only. */
-export function WorkoutDurationField({ durationSec, onCommit, name, label, className = '', disabled = false, planHint = false }: {
+export function WorkoutDurationField({ durationSec, onCommit, name, label, className = '', disabled = false, planHint = false, compact = false }: {
   durationSec?: number
   onCommit?: (seconds: number | undefined) => void
   name?: string
@@ -26,8 +26,10 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
   className?: string
   disabled?: boolean
   planHint?: boolean
+  compact?: boolean
 }) {
   const wheelEnabled = useWorkoutTimeWheel()
+  const pickerEnabled = wheelEnabled || compact
   const [current, setCurrent] = useState(durationSec)
   const [parts, setParts] = useState(() => durationParts(durationSec))
   const [open, setOpen] = useState(false)
@@ -108,7 +110,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
 
   return <>
     {name && <input ref={input} type="hidden" name={name} value={current ?? ''} readOnly disabled={disabled} />}
-    {wheelEnabled ? <button ref={trigger} type="button" className={`workout-duration-trigger ${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: ${current === undefined ? 'не указано' : formatWorkoutDuration(current)}`} disabled={disabled} onClick={openPicker}>{formatWorkoutDuration(current)}</button> : <div ref={partsGroup} className="workout-duration-parts" role="group" aria-label={label}>
+    {pickerEnabled ? <button ref={trigger} type="button" className={`workout-duration-trigger ${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: ${current === undefined ? 'не указано' : formatWorkoutDuration(current)}`} disabled={disabled} onClick={openPicker}>{compact && current === undefined ? '—' : formatWorkoutDuration(current)}</button> : <div ref={partsGroup} className="workout-duration-parts" role="group" aria-label={label}>
       <label className="workout-duration-part">
         <input type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" className={`${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: минуты`} aria-invalid={Number(parts.minutes) > DEFAULT_MAX_MINUTES || undefined} placeholder="—" value={parts.minutes} disabled={disabled} onFocus={(event) => event.currentTarget.select()} onChange={(event) => changePart('minutes', event.target.value)} onBlur={commitParts} />
         <span>мин</span>
@@ -118,7 +120,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
         <span>сек</span>
       </label>
     </div>}
-    {wheelEnabled && open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
+    {pickerEnabled && open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet workout-duration-sheet" role="dialog" aria-modal="true" aria-label={label} onClick={(event) => event.stopPropagation()}>
         <header className="picker-header"><h2>{label}</h2><button type="button" className="picker-close" aria-label="Закрыть выбор времени" onClick={() => setOpen(false)}><CloseIcon /></button></header>
         <div className="rest-time-picker" aria-label="Минуты и секунды">

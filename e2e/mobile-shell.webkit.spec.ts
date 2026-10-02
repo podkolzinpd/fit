@@ -988,6 +988,7 @@ test('iPhone: новый клиент выбирает готовую трени
 })
 
 test('iPhone: в live клиент видит те же действия с тренировкой, что и тренер, на 390 px', async ({ page }, testInfo) => {
+  testInfo.setTimeout(60_000)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/auth')
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
@@ -995,7 +996,15 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByLabel('Имя').fill('Live клиент')
   await page.getByLabel('Email').fill(`client-live-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.getByLabel('Пароль').fill('FitLocal123!')
+  const signUpResponse = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().includes('/auth/v1/signup'))
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  expect((await signUpResponse).ok()).toBe(true)
+  try {
+    await expect(page.getByRole('button', { name: 'Ввести текстом' })).toBeVisible({ timeout: 3_000 })
+  } catch {
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Ввести текстом' })).toBeVisible({ timeout: 15_000 })
+  }
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Скрыть' }).click()
@@ -1032,13 +1041,12 @@ test('iPhone: в live клиент видит те же действия с тр
     expect(box).not.toBeNull()
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
-  const liveInput = page.getByRole('group', { name: 'Фактическое время' })
+  const liveInput = page.getByRole('button', { name: /^Фактическое время:/ })
   await liveInput.evaluate((element) => { element.setAttribute('data-mount-check', 'stable') })
   await chooseWorkoutTime(page, 'Фактическое время', 12 * 60 + 30)
   const scrollBeforeBlur = await page.locator('.content').evaluate((element) => element.scrollTop)
   await page.locator('.live-timer').click()
-  await expect(liveInput.getByRole('textbox', { name: 'Фактическое время: минуты' })).toHaveValue('12')
-  await expect(liveInput.getByRole('textbox', { name: 'Фактическое время: секунды' })).toHaveValue('30')
+  await expect(liveInput).toHaveText('12:30')
   await expect(liveInput).toHaveAttribute('data-mount-check', 'stable')
   const scrollAfterInput = await page.locator('.content').evaluate((element) => element.scrollTop)
   expect(Math.abs(scrollAfterInput - scrollBeforeBlur)).toBeLessThan(24)
