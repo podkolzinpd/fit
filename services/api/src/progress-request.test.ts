@@ -36,6 +36,19 @@ describe('progress request validation', () => {
     })
   })
 
+  it('accepts a versioned InBody payload and rejects out-of-range values', () => {
+    expect(readVersionedProgressRequest({ draft: {
+      clientId: CLIENT_ID, recordedOn: '2026-10-02', customMetrics: [],
+      inBody: { schemaVersion: 1, deviceModel: 'InBody 770', totalBodyWaterL: 42.1,
+        bodyFatPercent: 18.4, segmental: [{ segment: 'rightArm', leanMassKg: 3.21 }] },
+    } })?.draft.inBody).toEqual({ schemaVersion: 1, deviceModel: 'InBody 770', totalBodyWaterL: 42.1,
+      bodyFatPercent: 18.4, segmental: [{ segment: 'rightArm', leanMassKg: 3.21 }] })
+    expect(readVersionedProgressRequest({ draft: {
+      clientId: CLIENT_ID, recordedOn: '2026-10-02', customMetrics: [],
+      inBody: { schemaVersion: 1, bodyFatPercent: 180 },
+    } })).toBeUndefined()
+  })
+
   it('requires an optimistic version for updates and rejects invalid measurements', () => {
     expect(readVersionedProgressRequest({
       draft: { id: RESOURCE_ID, clientId: CLIENT_ID, recordedOn: '2026-08-25', customMetrics: [] },

@@ -18,6 +18,8 @@ import { TrainerTrainingSummaryCard } from './TrainingSummaryCard'
 import { TrainerProgressOverviewCard } from './TrainerProgressOverviewCard'
 import { RunningProgressCard } from './RunningProgressCard'
 import { measurementSummaryText } from './measurement-summary'
+import { InBodyDetails } from './InBodyImport'
+import { InBodyProgressCard } from './InBodyProgressCard'
 
 const METRIC_TABS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: 'weightKg', label: 'Вес', unit: 'кг' },
@@ -54,7 +56,7 @@ export function ProgressPage() {
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
   const entries = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const metrics = useQuery({ queryKey: ['metrics', clientId], queryFn: () => progressRepository.listMetrics(clientId) })
-  const save = useMutation({ mutationFn: async (form: HTMLFormElement) => { const data = new FormData(form); const recordedOn = localDate(String(data.get('recordedOn'))); if (recordedOn > today) throw new Error('Нельзя добавить замер с будущей датой'); return progressRepository.save({ id: editing?.id, clientId, version: editing?.version, recordedOn, weightKg: numberValue(data.get('weightKg')), chestCm: numberValue(data.get('chestCm')), waistCm: numberValue(data.get('waistCm')), hipCm: numberValue(data.get('hipCm')), notes: String(data.get('notes') || '') || undefined, customMetrics: metrics.data?.filter((metric) => !metric.archivedAt).flatMap((metric) => { const value = numberValue(data.get(`metric-${metric.id}`)); return value === undefined ? [] : [{ metricId: metric.id, value }] }) ?? [] }) }, onSuccess: async () => { setEditing(null); setCreateFormOpen(false); await queryClient.invalidateQueries({ queryKey: ['progress', clientId] }); await queryClient.invalidateQueries({ queryKey: ['client', clientId] }) } })
+  const save = useMutation({ mutationFn: async (form: HTMLFormElement) => { const data = new FormData(form); const recordedOn = localDate(String(data.get('recordedOn'))); if (recordedOn > today) throw new Error('Нельзя добавить замер с будущей датой'); return progressRepository.save({ id: editing?.id, clientId, version: editing?.version, recordedOn, weightKg: numberValue(data.get('weightKg')), chestCm: numberValue(data.get('chestCm')), waistCm: numberValue(data.get('waistCm')), hipCm: numberValue(data.get('hipCm')), inBody: editing?.inBody, notes: String(data.get('notes') || '') || undefined, customMetrics: metrics.data?.filter((metric) => !metric.archivedAt).flatMap((metric) => { const value = numberValue(data.get(`metric-${metric.id}`)); return value === undefined ? [] : [{ metricId: metric.id, value }] }) ?? [] }) }, onSuccess: async () => { setEditing(null); setCreateFormOpen(false); await queryClient.invalidateQueries({ queryKey: ['progress', clientId] }); await queryClient.invalidateQueries({ queryKey: ['client', clientId] }) } })
   const remove = useMutation({ mutationFn: (entry: ProgressEntry) => progressRepository.remove(entry), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['progress', clientId] }) })
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(clientId, name, unit), onSuccess: async () => Promise.all([queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }), queryClient.invalidateQueries({ queryKey: ['progress-metrics', clientId] })]) })
   const archiveMetric = useMutation({ mutationFn: (metric: CustomMetric) => progressRepository.setMetricArchived(metric, !metric.archivedAt), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['metrics', clientId] }) })
@@ -119,6 +121,7 @@ export function ProgressPage() {
             <h2>{latestEntry ? 'Последний замер' : 'Замеров пока нет'}</h2>
             <span>{latestEntry ? `${formatLocalDate(latestEntry.recordedOn)} · ${latestEntrySummary}` : latestEntrySummary}</span>
           </header>
+          {entries.data && <InBodyProgressCard entries={entries.data} />}
           {entries.data && entries.data.length > 0 && <section className="measurement-trend" aria-label="Динамика замеров">
             <div className="metric-tabs" ref={tabsRef}
               onPointerDown={handleTabsPointerDown} onPointerMove={handleTabsPointerMove} onPointerUp={handleTabsPointerUp} onPointerLeave={handleTabsPointerUp}>
@@ -138,7 +141,7 @@ export function ProgressPage() {
             <div className="workout-editor-heading"><h2>История замеров ({entries.data?.length ?? 0})</h2></div>
             <div className="cards">{entries.data?.map((entry) => editing?.id === entry.id
               ? <article className="card editing" key={entry.id}><ProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} errorMessage={save.error?.message ?? null} onSubmit={(form) => save.mutate(form)} onCancel={() => setEditing(null)} /></article>
-              : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p></div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" disabled={remove.isPending} aria-busy={remove.isPending} onClick={async () => { if (!fitLimePilot || await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Данные этого замера будут потеряны.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry) }}>Удалить</button></div>}</article>)}</div>
+              : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.inBody && <InBodyDetails result={entry.inBody} />}</div>{canManage(entry) && <div className="row-actions"><button className="link" onClick={() => { setCreateError(null); setCreateFormOpen(false); setEditing(entry) }}>Изменить</button><button className="link danger" disabled={remove.isPending} aria-busy={remove.isPending} onClick={async () => { if (!fitLimePilot || await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Данные этого замера будут потеряны.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry) }}>Удалить</button></div>}</article>)}</div>
             {fitLimePilot && remove.error && <p className="error" role="alert">Не удалось удалить замер. Повторите действие.</p>}
           </section>}
           {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
@@ -154,6 +157,7 @@ export function ProgressPage() {
       {client.data && <div className="trainer-progress-stack">
         <TrainerProgressOverviewCard clientId={clientId} />
         <TrainerTrainingSummaryCard clientId={clientId} profileGoal={client.data.goal} gender={client.data.gender} />
+        {entries.data && <InBodyProgressCard entries={entries.data} compact />}
         <RunningProgressCard clientId={clientId} compact detailsPath={`/progress/${clientId}?view=running`} />
         <Link className="trainer-progress-route-card measurements" to={`/progress/${clientId}?view=measurements`} aria-label="Открыть замеры и показатели">
           <div>

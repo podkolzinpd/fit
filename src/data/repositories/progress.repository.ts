@@ -1,4 +1,4 @@
-import type { CustomMetric, ProgressDraft, ProgressEntry, RunningProgressFormat, RunningProgressSession, WorkoutRegularity, WorkoutRegularityPeriod } from '../../shared/domain'
+import type { CustomMetric, InBodyRecognitionImage, InBodyRecognitionResult, ProgressDraft, ProgressEntry, RunningProgressFormat, RunningProgressSession, WorkoutRegularity, WorkoutRegularityPeriod } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { progressQueries } from '../queries/progress.queries'
 import { RepositoryError, repositoryError } from './error'
@@ -6,6 +6,11 @@ import { groupCustomMetricValues, roundMetric } from './progress-rules'
 export { roundMetric } from './progress-rules'
 
 export const progressRepository = {
+  recognizeInBody(clientId: string, image: InBodyRecognitionImage): Promise<InBodyRecognitionResult> {
+    void clientId
+    void image
+    return Promise.reject(new RepositoryError('inbody_recognition_unavailable', 'Распознавание InBody доступно после входа через Yandex ID'))
+  },
   async regularity(clientId: string): Promise<WorkoutRegularity[]> {
     const result = await progressQueries.regularity(clientId)
     if (result.error) throw repositoryError(result.error)

@@ -1,3 +1,5 @@
+import type { InBodyMeasurement, InBodySegmentMeasurement } from './inbody-recognition.js'
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 export interface ProgressMetricValue {
@@ -13,6 +15,7 @@ export interface ProgressDraft {
   chestCm: number | null
   waistCm: number | null
   hipCm: number | null
+  inBody?: InBodyMeasurement | null
   notes: string | null
   customMetrics: ProgressMetricValue[]
 }
@@ -121,6 +124,70 @@ function optionalNumber(value: unknown, maximum: number): number | null | undefi
     : undefined
 }
 
+function boundedNumber(value: unknown, minimum: number, maximum: number): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= minimum && value <= maximum
+    ? value
+    : undefined
+}
+
+const inBodyNumbers: ReadonlyArray<[keyof InBodyMeasurement, number, number]> = [
+  ['totalBodyWaterL', 0, 150], ['intracellularWaterL', 0, 100], ['extracellularWaterL', 0, 80],
+  ['proteinKg', 0, 60], ['mineralsKg', 0, 30], ['bodyFatMassKg', 0, 300],
+  ['softLeanMassKg', 0, 300], ['fatFreeMassKg', 0, 300], ['skeletalMuscleMassKg', 0, 200],
+  ['bodyCellMassKg', 0, 200], ['boneMineralContentKg', 0, 30], ['bodyMassIndex', 0, 150],
+  ['bodyFatPercent', 0, 100], ['ecwTbwRatio', 0, 1], ['visceralFatAreaCm2', 0, 1000],
+  ['visceralFatLevel', 0, 100], ['waistHipRatio', 0, 3], ['phaseAngleDeg', 0, 30],
+  ['basalMetabolicRateKcal', 0, 10_000], ['inBodyScore', 0, 200], ['targetWeightKg', 0, 500],
+  ['weightControlKg', -300, 300], ['fatControlKg', -300, 300], ['muscleControlKg', -200, 200],
+  ['obesityDegreePercent', 0, 500], ['skeletalMuscleIndexKgM2', 0, 50],
+  ['fatMassIndexKgM2', 0, 100], ['fatFreeMassIndexKgM2', 0, 100],
+]
+
+function inBodySegment(value: unknown): InBodySegmentMeasurement | undefined {
+  const input = record(value)
+  if (!input || !['rightArm', 'leftArm', 'trunk', 'rightLeg', 'leftLeg'].includes(String(input.segment))) return undefined
+  const result: InBodySegmentMeasurement = { segment: input.segment as InBodySegmentMeasurement['segment'] }
+  const definitions: ReadonlyArray<[keyof InBodySegmentMeasurement, number, number]> = [
+    ['leanMassKg', 0, 100], ['leanPercent', 0, 500], ['fatMassKg', 0, 100], ['fatPercent', 0, 500],
+    ['intracellularWaterL', 0, 100], ['extracellularWaterL', 0, 100], ['ecwTbwRatio', 0, 1], ['phaseAngleDeg', 0, 30],
+  ]
+  for (const [key, minimum, maximum] of definitions) {
+    if (input[key] === undefined) continue
+    const parsed = boundedNumber(input[key], minimum, maximum)
+    if (parsed === undefined) return undefined
+    ;(result as unknown as Record<string, unknown>)[key] = parsed
+  }
+  return result
+}
+
+function inBodyMeasurement(value: unknown): InBodyMeasurement | null | undefined {
+  if (value === null || value === undefined) return null
+  const input = record(value)
+  if (!input || input.schemaVersion !== 1) return undefined
+  const result: InBodyMeasurement = { schemaVersion: 1 }
+  if (input.deviceModel !== undefined) {
+    if (typeof input.deviceModel !== 'string' || input.deviceModel.trim().length < 1 || input.deviceModel.length > 80) return undefined
+    result.deviceModel = input.deviceModel.trim()
+  }
+  if (input.measuredAt !== undefined) {
+    if (typeof input.measuredAt !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.measuredAt)) return undefined
+    result.measuredAt = input.measuredAt
+  }
+  for (const [key, minimum, maximum] of inBodyNumbers) {
+    if (input[key] === undefined) continue
+    const parsed = boundedNumber(input[key], minimum, maximum)
+    if (parsed === undefined) return undefined
+    ;(result as unknown as Record<string, unknown>)[key] = parsed
+  }
+  if (input.segmental !== undefined) {
+    if (!Array.isArray(input.segmental) || input.segmental.length > 5) return undefined
+    const segments = input.segmental.map(inBodySegment)
+    if (segments.some((segment) => segment === undefined)) return undefined
+    result.segmental = segments as InBodySegmentMeasurement[]
+  }
+  return result
+}
+
 function text(value: unknown, maximum: number, required: true): string | undefined
 function text(value: unknown, maximum: number, required: false): string | null | undefined
 function text(value: unknown, maximum: number, required: boolean): string | null | undefined {
@@ -147,6 +214,8 @@ export function readVersionedProgressRequest(body: unknown): VersionedProgressRe
   const chestCm = optionalNumber(draft?.chestCm, 999.99)
   const waistCm = optionalNumber(draft?.waistCm, 999.99)
   const hipCm = optionalNumber(draft?.hipCm, 999.99)
+  const hasInBody = draft !== undefined && Object.hasOwn(draft, 'inBody')
+  const inBody = hasInBody ? inBodyMeasurement(draft.inBody) : null
   const notes = text(draft?.notes, 5_000, false)
   const expectedVersion = version(input?.expectedVersion, id !== null)
   if (!Array.isArray(draft?.customMetrics)) return undefined
@@ -162,9 +231,10 @@ export function readVersionedProgressRequest(body: unknown): VersionedProgressRe
   if (id === undefined || clientId === undefined || recordedOn === undefined
     || weightKg === undefined || chestCm === undefined || waistCm === undefined
     || hipCm === undefined || notes === undefined || expectedVersion === undefined
+    || inBody === undefined
     || customMetrics.some((metric) => metric === undefined)) return undefined
   return {
-    draft: { id, clientId, recordedOn, weightKg, chestCm, waistCm, hipCm,
+    draft: { id, clientId, recordedOn, weightKg, chestCm, waistCm, hipCm, ...(hasInBody ? { inBody } : {}),
       notes, customMetrics: customMetrics as ProgressMetricValue[] },
     expectedVersion,
   }

@@ -5,11 +5,11 @@ import { useAuth } from '../../app/auth-context'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { splitClientWorkouts } from '../../data/repositories/workouts.repository'
-import type { CustomMetric, ProgressEntry } from '../../shared/domain'
+import type { CustomMetric, InBodyRecognitionResult, ProgressEntry } from '../../shared/domain'
 import { CloseIcon, ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
-import { ClientTrainingSummaryCard, groupMetricRows } from '../progress'
+import { ClientTrainingSummaryCard, groupMetricRows, InBodyDetails, InBodyImport, InBodyProgressCard } from '../progress'
 import { MetricsManager } from '../progress/MetricsManager'
 import { measurementSummaryText } from '../progress/measurement-summary'
 import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE, storeFirstWorkoutIntent } from '../workouts'
@@ -161,9 +161,11 @@ export function MyProgressPage() {
   const [measurementFormOpen, setMeasurementFormOpen] = useState(false)
   const [measurementHistoryOpen, setMeasurementHistoryOpen] = useState(false)
   const [metricsOpen, setMetricsOpen] = useState(false)
+  const [recognizedInBody, setRecognizedInBody] = useState<InBodyRecognitionResult | null>(null)
   const entries = useQuery({ queryKey: ['progress', mine.data?.id], queryFn: () => progressRepository.list(mine.data!.id), enabled: Boolean(mine.data) })
   const metrics = useQuery({ queryKey: ['metrics', mine.data?.id], queryFn: () => progressRepository.listMetrics(mine.data!.id), enabled: Boolean(mine.data) })
   const [confirm, confirmDialog] = useConfirm()
+  const recognizeInBody = useMutation({ mutationFn: (image: Parameters<typeof progressRepository.recognizeInBody>[1]) => progressRepository.recognizeInBody(mine.data!.id, image), onSuccess: setRecognizedInBody })
   const save = useMutation({ mutationFn: ({ form, entry }: { form: HTMLFormElement; entry: ProgressEntry | null }) => {
     const data = new FormData(form)
     const recordedOn = localDate(String(data.get('recordedOn')))
@@ -177,6 +179,7 @@ export function MyProgressPage() {
       chestCm: numberValue(data.get('chestCm')),
       waistCm: numberValue(data.get('waistCm')),
       hipCm: numberValue(data.get('hipCm')),
+      inBody: entry ? entry.inBody : recognizedInBody?.inBody,
       notes: String(data.get('notes') || '') || undefined,
       customMetrics: (metrics.data ?? []).filter((metric) => !metric.archivedAt).flatMap((metric) => {
         const value = numberValue(data.get(`metric-${metric.id}`))
@@ -185,6 +188,7 @@ export function MyProgressPage() {
     })
   }, onSuccess: async (_savedEntry, variables) => {
     setEditing(null)
+    setRecognizedInBody(null)
     if (!variables.entry) setMeasurementFormOpen(false)
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['progress', mine.data?.id] }),
@@ -210,22 +214,24 @@ export function MyProgressPage() {
     if (await confirm({ message: `Удалить замер за ${formatLocalDate(entry.recordedOn)}? Это действие нельзя отменить.`, confirmLabel: 'Удалить', danger: true })) remove.mutate(entry)
   }
   const measurementManagement = entries.data ? <div className="client-measurement-management">
+    <InBodyImport busy={recognizeInBody.isPending} error={recognizeInBody.error} result={recognizedInBody} onRecognize={(image) => recognizeInBody.mutate(image)} onReset={() => { recognizeInBody.reset(); setRecognizedInBody(null) }} onApply={() => setMeasurementFormOpen(true)} />
     <nav className="measurement-actions" aria-label="Действия с замерами"><button type="button" className="secondary measurement-primary-action" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>{entries.data.length > 0 && <button type="button" className="link" aria-expanded={measurementHistoryOpen} onClick={() => setMeasurementHistoryOpen((open) => !open)}>История замеров · {entries.data.length}</button>}<button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((open) => !open)}>{metricsOpen ? 'Закрыть показатели' : 'Настроить показатели'}</button></nav>
-    {measurementFormOpen && <ClientProgressForm entry={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => setMeasurementFormOpen(false)} />}
+    {measurementFormOpen && <ClientProgressForm entry={null} recognized={recognizedInBody} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => { setMeasurementFormOpen(false); setRecognizedInBody(null) }} />}
     {measurementHistoryOpen && <section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ИСТОРИЯ</p><h2>Все замеры</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
-      ? <article className="card editing" key={entry.id}><ClientProgressForm entry={entry} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
-      : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
+      ? <article className="card editing" key={entry.id}><ClientProgressForm entry={entry} recognized={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
+      : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.inBody && <InBodyDetails result={entry.inBody} />}{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
     {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
   </div> : null
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading} error={mine.error} empty={!mine.data} onRetry={() => void mine.refetch()}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он связывает тренировки, замеры и анализ прогресса в одном месте." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
-    {mine.data && <div className="client-progress-stack"><AthleteAchievementPreview clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} /></div>}
+    {mine.data && <div className="client-progress-stack"><AthleteAchievementPreview clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} />{entries.data && <InBodyProgressCard entries={entries.data} />}</div>}
     {confirmDialog}
   </AsyncView></Page>
 }
 
-function ClientProgressForm({ entry, metrics, today, busy, error, onSubmit, onCancel }: {
+function ClientProgressForm({ entry, recognized, metrics, today, busy, error, onSubmit, onCancel }: {
   entry: ProgressEntry | null
+  recognized: InBodyRecognitionResult | null
   metrics: CustomMetric[]
   today: LocalDate
   busy: boolean
@@ -235,8 +241,9 @@ function ClientProgressForm({ entry, metrics, today, busy, error, onSubmit, onCa
 }) {
   const activeMetrics = metrics.filter((metric) => !metric.archivedAt)
   return <section className="client-progress-form"><div className="client-progress-section-head"><p className="eyebrow">{entry ? 'ИСПРАВИТЬ РЕЗУЛЬТАТ' : 'ЗАФИКСИРОВАТЬ РЕЗУЛЬТАТ'}</p><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2></div><form className="stack compact" onSubmit={onSubmit}>
-    <Field label="Дата"><input name="recordedOn" type="date" max={today} defaultValue={entry?.recordedOn ?? today} required /></Field>
-    <div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm} /></Field></div>
+    <Field label="Дата"><input name="recordedOn" type="date" max={today} defaultValue={entry?.recordedOn ?? recognized?.recordedOn ?? today} required /></Field>
+    <div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg ?? recognized?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm ?? recognized?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm ?? recognized?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm ?? recognized?.hipCm} /></Field></div>
+    {recognized && <InBodyDetails result={recognized.inBody} />}
     {groupMetricRows(activeMetrics).map((row) => row.kind === 'single'
       ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}><ClientMetricInput metric={row.metric} entry={entry} /></Field>
       : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && <ClientMetricInput metric={row.left} entry={entry} placeholder="Л" />}{row.right && <ClientMetricInput metric={row.right} entry={entry} placeholder="П" />}</div></Field>)}

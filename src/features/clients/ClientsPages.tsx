@@ -24,6 +24,7 @@ import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import { QuickStartWorkout } from '../workouts/QuickStartWorkout'
+import { InBodyProgressCard } from '../progress'
 
 export function MyClientPage() {
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
@@ -369,6 +370,7 @@ export function ClientDetailPage() {
     clients: clientsRepository,
     invitations: invitationsRepository,
     workouts: workoutsRepository,
+    progress: progressRepository,
   } = useDataBackend()
   const { clientId = '' } = useParams(); const queryClient = useQueryClient()
   const { actor } = useAuth(); const navigate = useNavigate()
@@ -382,6 +384,7 @@ export function ClientDetailPage() {
   }, [clientId, navigate, query.data?.id])
   const stats = useQuery({ queryKey: ['client-stats', clientId, today], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), today) })
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
+  const progress = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, today).upcoming : []
   const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
@@ -413,6 +416,8 @@ export function ClientDetailPage() {
             : <><strong>{stats.data.completionPercent}%</strong><span>прошедших тренировок выполнено</span></>}</p>
         </div>}
       </section>
+      {progress.data && <InBodyProgressCard entries={progress.data} compact />}
+      <ClientDetailSourceState label="данные InBody" loading={progress.isLoading} error={progress.error} onRetry={() => void progress.refetch()} />
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       <div className="client-detail-actions">
         {query.data.hasAccount && actor?.role === 'trainer' && <ChatStartButton clientId={clientId} trainerId={actor.userId} className="secondary wide client-detail-message" />}
