@@ -2274,6 +2274,44 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('revalidates completed dates without choosing another package or charging a plan', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const clientId = randomUUID()
+      await ownerPool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Finance dates fixture')`,[clientId,ACTOR_ID])
+      try {
+        const packs: string[] = []
+        for (const [starts,ends] of [['2026-10-01','2026-10-31'],['2026-11-01','2026-11-30']]) {
+          const rows = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{item:{id:string}}>(
+            `select public.create_trainer_finance_service($1,'session_pack','Пакет',5,0,10000,0,$2,$3,null,null) as item`,[clientId,starts,ends]))
+          packs.push(rows[0]!.item.id)
+        }
+        const created = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{s:{id:string;workoutId:string;version:number}}>(
+          `select public.create_trainer_finance_manual_session($1,$2,date '2026-10-02','charged',$3,'Комментарий') as s`,[clientId,randomUUID(),packs[0]]))
+        const session = created[0]!.s
+        await ownerPool.query("update public.workouts set workout_date=date '2026-10-03' where id=$1",[session.workoutId])
+        expect((await ownerPool.query('select package_id,version from public.trainer_finance_sessions where id=$1',[session.id])).rows[0]).toEqual({package_id:packs[0],version:String(session.version)})
+        await ownerPool.query("update public.workouts set workout_date=date '2026-11-01' where id=$1",[session.workoutId])
+        expect((await ownerPool.query('select package_id,disposition,comment from public.trainer_finance_sessions where id=$1',[session.id])).rows[0]).toEqual({package_id:null,disposition:'unassigned',comment:'Комментарий'})
+        const details = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{s:{disposition:string;packageId:string}}>(
+          `select public.update_trainer_finance_session_details_v2($1,$2,'charged',$3,'Комментарий',date '2026-11-02') as s`,[session.id,session.version+1,packs[1]]))
+        expect(details[0]?.s).toMatchObject({disposition:'charged',packageId:packs[1]})
+        const dateEdit = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{s:{disposition:string;packageId:null}}>(
+          `select public.update_trainer_finance_session_details_v2($1,$2,'charged',$3,'Комментарий',date '2026-12-02') as s`,[session.id,session.version+2,packs[1]]))
+        expect(dateEdit[0]?.s).toMatchObject({disposition:'unassigned',packageId:null})
+        const planned = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>savePlannedWorkout(client,{
+          id:null,clientId,workoutDate:'2026-10-02',trainingFormat:'with_trainer',startTime:null,endTime:null,notes:null,exercises:[],
+        },null))
+        await ownerPool.query("update public.workouts set workout_date=date '2026-11-03' where id=$1",[planned.id])
+        expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1',[planned.id])).rowCount).toBe(0)
+      } finally {
+        await ownerPool.query("delete from app_private.finance_manual_requests where payload->>'clientId'=$1",[clientId])
+        for (const table of ['trainer_finance_events','trainer_finance_sessions','trainer_finance_payments','trainer_finance_packages','workouts']) {
+          await ownerPool.query(`delete from public.${table} where client_id=$1`,[clientId])
+        }
+        await ownerPool.query('delete from public.clients where id=$1',[clientId])
+      }
+    })
+
     it('defaults the workout format from services and reverses finance on format changes', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
