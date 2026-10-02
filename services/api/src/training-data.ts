@@ -67,6 +67,7 @@ interface WorkoutRow extends QueryResultRow {
   client_question_resolved_at: Date | null
   started_at: Date | null
   completed_at: Date | null
+  actual_duration_sec: number | null
   active_calories_kcal: number | null
   calorie_v2_shadow_kcal: number | null
   calorie_v2_shadow_reason: string | null
@@ -325,6 +326,7 @@ export async function readAccessibleTrainingData(
         workout.client_question_resolved_at,
         workout.started_at,
         workout.completed_at,
+        workout.actual_duration_sec,
         workout.active_calories_kcal,
         workout.calorie_v2_shadow_kcal,
         workout.calorie_v2_shadow_reason,
@@ -497,6 +499,7 @@ export async function readAccessibleTrainingData(
         clientQuestionResolvedAt: row.client_question_resolved_at?.toISOString() ?? null,
         startedAt: row.started_at?.toISOString() ?? null,
         completedAt: row.completed_at?.toISOString() ?? null,
+        actualDurationSec: row.actual_duration_sec,
         activeCaloriesKcal: calories.kcal,
         calorieEstimateVersion: calories.version,
         calorieEstimateBasis: calories.basis,

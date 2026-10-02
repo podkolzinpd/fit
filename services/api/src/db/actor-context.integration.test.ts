@@ -2260,11 +2260,51 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('update public.trainer_finance_packages set closed_at=now() where client_id=$1',[clientId])
         await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query(
           `select public.create_trainer_finance_service($1,'session_pack','Один',1,0,10000,0,date '2026-10-01',date '2026-10-31',null,null)`,[clientId]))
-        const draft: PlannedWorkoutDraft = {id:null,requestId:randomUUID(),clientId,workoutDate:'2026-10-02',startTime:null,endTime:null,notes:null,exercises:[]}
+        const draft: PlannedWorkoutDraft = {id:null,requestId:randomUUID(),clientId,workoutDate:'2026-10-02',startTime:null,endTime:null,notes:null,actualDurationSec:3000,exercises:[]}
         const saved = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>saveCompletedWorkout(client,draft,null))
         const repeated = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>saveCompletedWorkout(client,draft,null))
         expect(repeated).toEqual(saved)
+        expect((await ownerPool.query<{actual_duration_sec:number;training_format:string}>(
+          'select actual_duration_sec,training_format from public.workouts where id=$1',[saved.id])).rows).toEqual([{actual_duration_sec:3000,training_format:'with_trainer'}])
         expect((await ownerPool.query("select disposition from public.trainer_finance_sessions where workout_id=$1 and voided_at is null",[saved.id])).rows).toEqual([{disposition:'charged'}])
+      } finally {
+        await ownerPool.query("delete from app_private.finance_manual_requests where payload->>'clientId'=$1",[clientId])
+        for (const table of ['trainer_finance_events','trainer_finance_sessions','trainer_finance_payments','trainer_finance_packages','workouts']) {
+          await ownerPool.query(`delete from public.${table} where client_id=$1`,[clientId])
+        }
+        await ownerPool.query('delete from public.clients where id=$1',[clientId])
+      }
+    })
+
+    it('revalidates completed dates without choosing another package or charging a plan', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const clientId = randomUUID()
+      await ownerPool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Finance dates fixture')`,[clientId,ACTOR_ID])
+      try {
+        const packs: string[] = []
+        for (const [starts,ends] of [['2026-10-01','2026-10-31'],['2026-11-01','2026-11-30']]) {
+          const rows = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{item:{id:string}}>(
+            `select public.create_trainer_finance_service($1,'session_pack','Пакет',5,0,10000,0,$2,$3,null,null) as item`,[clientId,starts,ends]))
+          packs.push(rows[0]!.item.id)
+        }
+        const created = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{s:{id:string;workoutId:string;version:number}}>(
+          `select public.create_trainer_finance_manual_session($1,$2,date '2026-10-02','charged',$3,'Комментарий') as s`,[clientId,randomUUID(),packs[0]]))
+        const session = created[0]!.s
+        await ownerPool.query("update public.workouts set workout_date=date '2026-10-03' where id=$1",[session.workoutId])
+        expect((await ownerPool.query('select package_id,version from public.trainer_finance_sessions where id=$1',[session.id])).rows[0]).toEqual({package_id:packs[0],version:String(session.version)})
+        await ownerPool.query("update public.workouts set workout_date=date '2026-11-01' where id=$1",[session.workoutId])
+        expect((await ownerPool.query('select package_id,disposition,comment from public.trainer_finance_sessions where id=$1',[session.id])).rows[0]).toEqual({package_id:null,disposition:'unassigned',comment:'Комментарий'})
+        const details = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{s:{disposition:string;packageId:string}}>(
+          `select public.update_trainer_finance_session_details_v2($1,$2,'charged',$3,'Комментарий',date '2026-11-02') as s`,[session.id,session.version+1,packs[1]]))
+        expect(details[0]?.s).toMatchObject({disposition:'charged',packageId:packs[1]})
+        const dateEdit = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{s:{disposition:string;packageId:null}}>(
+          `select public.update_trainer_finance_session_details_v2($1,$2,'charged',$3,'Комментарий',date '2026-12-02') as s`,[session.id,session.version+2,packs[1]]))
+        expect(dateEdit[0]?.s).toMatchObject({disposition:'unassigned',packageId:null})
+        const planned = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>savePlannedWorkout(client,{
+          id:null,clientId,workoutDate:'2026-10-02',trainingFormat:'with_trainer',startTime:null,endTime:null,notes:null,exercises:[],
+        },null))
+        await ownerPool.query("update public.workouts set workout_date=date '2026-11-03' where id=$1",[planned.id])
+        expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1',[planned.id])).rowCount).toBe(0)
       } finally {
         await ownerPool.query("delete from app_private.finance_manual_requests where payload->>'clientId'=$1",[clientId])
         for (const table of ['trainer_finance_events','trainer_finance_sessions','trainer_finance_payments','trainer_finance_packages','workouts']) {
@@ -3350,6 +3390,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             status: 'done',
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
+            actualDurationSec: null,
             activeCaloriesKcal: null,
             calorieEstimateVersion: null,
             calorieEstimateBasis: null,
@@ -3753,6 +3794,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(afterUpdate.rows).toEqual([{ favorite_title: 'Ноги и спина' }])
 
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('persists actual duration with authorization, replay safety, clearing and calorie recalculation', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const draft: PlannedWorkoutDraft = {
+        id: null, requestId: 'f6477000-0000-4000-8000-000000000001',
+        clientId: CLIENT_ID, workoutDate: '2026-08-20', startTime: '10:00', endTime: null,
+        actualDurationSec: 3000, notes: null,
+        exercises: [{
+          position: 0, source: 'system', ref: 'stationary-bike', customExerciseId: null,
+          name: 'Велотренажёр', muscleGroup: 'cardio', inputKind: 'duration',
+          blockId: 'f6477000-0000-4000-8000-000000000002', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0, trainerComment: null,
+          sets: [{ position: 0, weightKg: null, reps: null, durationMin: null, durationSec: 3000,
+            distanceKm: 22.16, rpe: null, metricSources: { duration: 'entered', distance: 'entered', rpe: 'unknown' } }],
+        }],
+      }
+      const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveCompletedWorkout(client, draft, null))
+      try {
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, { ...draft, actualDurationSec: 600 }, null))).resolves.toEqual(created)
+        const stored = await ownerPool.query<{ actual_duration_sec: number | null; started_at: Date | null; completed_at: Date | null }>(
+          'select actual_duration_sec, started_at, completed_at from public.workouts where id=$1', [created.id])
+        expect(stored.rows[0]).toMatchObject({ actual_duration_sec: 3000, started_at: null })
+        const distance = await ownerPool.query<{ fact_distance_km: string | null }>(
+          'select fact_distance_km from public.workout_sets where workout_exercise_id in (select id from public.workout_exercises where workout_id=$1)', [created.id])
+        expect(Number(distance.rows[0]?.fact_distance_km)).toBe(22.16)
+        const edited: PlannedWorkoutDraft = { ...draft, id: created.id, actualDurationSec: 3600 }
+        delete edited.requestId
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => saveCompletedWorkout(client, edited, created.version))).rejects.toMatchObject({ failure: 'forbidden' })
+        const corrected = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, edited, created.version))
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, { ...edited, actualDurationSec: 1200 }, created.version))).rejects.toMatchObject({ failure: 'conflict' })
+        const omittedDuration = { ...edited }
+        delete omittedDuration.actualDurationSec
+        const preserved = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, omittedDuration, corrected.version))
+        const afterEdit = await ownerPool.query<{ actual_duration_sec: number | null; completed_at: Date | null; calorie_v2_shadow_details: unknown }>(
+          'select actual_duration_sec, completed_at, calorie_v2_shadow_details from public.workouts where id=$1', [created.id])
+        expect(afterEdit.rows[0]?.actual_duration_sec).toBe(3600)
+        expect(afterEdit.rows[0]?.calorie_v2_shadow_details).toMatchObject({ elapsedSeconds: 3600 })
+        expect(afterEdit.rows[0]?.completed_at).toEqual(stored.rows[0]?.completed_at)
+        const cleared = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, { ...edited, actualDurationSec: null }, preserved.version))
+        expect(cleared.version).toBeGreaterThan(preserved.version)
+        expect((await ownerPool.query<{ actual_duration_sec: number | null }>('select actual_duration_sec from public.workouts where id=$1', [created.id])).rows[0]?.actual_duration_sec).toBeNull()
+      } finally {
+        await ownerPool.query('delete from app_private.workout_create_requests where request_id=$1', [draft.requestId])
+        await ownerPool.query('delete from public.workouts where id=$1', [created.id])
+      }
     })
 
     it('saves and corrects completed facts idempotently without rewriting the plan', async () => {
@@ -4669,6 +4762,26 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
     })
 
+    it('keeps the selected quick-start format across replay and resume', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const clientId = randomUUID()
+      await ownerPool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Quick format fixture')`,[clientId,ACTOR_ID])
+      try {
+        for (const format of ['with_trainer','self'] as const) {
+          const operationId = randomUUID()
+          const first = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>quickStartLiveWorkout(client,clientId,operationId,format))
+          const opposite = format === 'self' ? 'with_trainer' : 'self'
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,(client)=>quickStartLiveWorkout(client,clientId,operationId,opposite))).toEqual({id:first.id,resumed:true})
+          const row = (await ownerPool.query<{training_format:string;version:string}>('select training_format,version from public.workouts where id=$1',[first.id])).rows[0]!
+          expect(row.training_format).toBe(format)
+          await withActorTransaction(runtimePool,ACTOR_ID,(client)=>cancelEmptyLiveWorkout(client,first.id,Number(row.version)))
+        }
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.clients where id=$1',[clientId])
+      }
+    })
+
     it('quick-starts atomically, resumes by trainer and client, and rejects empty completion', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       await ownerPool.query('delete from public.workouts where client_id = $1', [QUICK_START_CLIENT_ID])
@@ -4717,7 +4830,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(second.id).not.toBe(first.id)
         await withActorTransaction(runtimePool, ACTOR_ID, (client) => cancelEmptyLiveWorkout(client, second.id, 1))
         const clientStarted = await withActorTransaction(runtimePool, QUICK_START_ACTOR_ID, (client) =>
-          quickStartLiveWorkout(client, null, QUICK_START_OPERATION_IDS.clientSecond))
+          quickStartLiveWorkout(client, null, QUICK_START_OPERATION_IDS.clientSecond, 'with_trainer'))
+        expect((await ownerPool.query<{training_format:string}>('select training_format from public.workouts where id=$1',[clientStarted.id])).rows[0]?.training_format).toBe('self')
         const connectedTrainerView = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           client.query<{ id: string }>('select id from public.workouts where id = $1', [clientStarted.id]))
         expect(connectedTrainerView).toEqual([{ id: clientStarted.id }])
