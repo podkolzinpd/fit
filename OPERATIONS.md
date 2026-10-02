@@ -610,6 +610,27 @@ preview-веток отключены; новых Vercel releases после mer
 быть не должно. Текущий production deployment и сам Vercel-проект сохраняются
 для `308`-редиректа `fit-drab.vercel.app` на `fit-training.ru` с путём и query.
 Проверка редиректа — `Verify production domain redirect` каждые шесть часов.
+Тот же read-only workflow замеряет `fit-training.ru/auth` через системный DNS,
+DNS Яндекса, Cloudflare и Google, обращаясь по каждому A-адресу с настоящими
+Host/SNI, затем проверяет критические JS/CSS assets. JSON artifact содержит
+UTC-время каждого запроса и DNS/TCP/TLS/TTFB/total, но не тело ответа, cookie,
+токены или идентификаторы пользователей. Локально запустить можно командой
+`node scripts/probe-production-frontend.mjs`; делать это следует из проблемной
+сети, поскольку переключение DNS на одном хосте не заменяет проверку из разных
+сетей. Порог 5 секунд делает job красным и помогает зафиксировать интермиттентный
+сбой, но сам по себе не устанавливает его источник.
+
+В Yandex Monitoring для frontend API Gateway настроены `FIT frontend gateway:
+slow responses` (p99 latency, warning >5 c, alarm >10 c) и `FIT frontend
+gateway: HTTP 5xx` (ошибки 5xx). Они используют существующий Telegram-канал
+`fit-stage-postgres-alerts-telegram`, отправляют warning/alarm/recovery с
+двухминутным подавлением повторов. Метрика задержки охватывает весь ответ
+шлюза; она не разделяет время самого Gateway и получения объекта из Storage.
+Когда экран ещё пуст, сопоставляйте UTC-время и IP из probe artifact с графиком
+задержки; если HTML быстро получен, отдельно диагностируйте загрузку JS и
+восстановление сессии. Для обхода внешнего пути через GitHub runner без PII
+используйте ручной запуск этого workflow. Отсутствие 5xx-метрики при нуле
+ошибок — нормальное состояние, а не доказательство доставки уведомления.
 Не удаляйте проект, домен или текущий deployment. Если понадобится удалённый
 PR Preview, сначала спроектируйте отдельную Yandex-hosted среду.
 
