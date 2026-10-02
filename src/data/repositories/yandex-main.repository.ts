@@ -1407,6 +1407,7 @@ export function createYandexMainRepository(
     },
     workouts: {
       supportsAtomicLiveRounds: true,
+      supportsLiveSupersetSplit: true,
       async get(id) {
         const result = (await trainingData()).workouts.find((item) => item.id === id)
         if (!result) throw new RepositoryError('PT404', 'Тренировка не найдена.')
@@ -1501,6 +1502,7 @@ export function createYandexMainRepository(
       async appendLiveSet(item, exerciseId) { return liveCommand(`/v1/workout-exercises/${exerciseId}/sets`, 'POST', item.version) },
       async appendLiveRound(item: Workout, blockId: string, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds`, 'POST', item.version, {}, operationId) },
       async removeLastLiveRound(item: Workout, blockId: string, position: number, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds/${position}`, 'DELETE', item.version, {}, operationId) },
+      async splitLiveSuperset(item: Workout, blockId: string, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/split`, 'POST', item.version, {}, operationId) },
       async removeLiveSet(item, setId) {
         const payload = await writeJson(queries, `/v1/workout-sets/${setId}`, 'DELETE', { expectedVersion: item.version, operationId: crypto.randomUUID() }, z.object({ set: z.object({ version: z.number().int().positive() }) }))
         invalidate(); return payload.set.version

@@ -2426,6 +2426,7 @@ export function LiveWorkoutPage() {
   const [liveSetAutosave] = useState(() => createLiveSetAutosave())
   const [liveWorkout] = useState(() => createLiveWorkoutCoordinator())
   const pendingRoundOperations = useRef<Map<string, { operationId: string; expectedVersion: number; position: number }>>(new Map())
+  const pendingSplitOperations = useRef<Map<string, { operationId: string; expectedVersion: number }>>(new Map())
   const [lastAddedRound, setLastAddedRound] = useState<{ blockId: string; position: number } | null>(null)
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
@@ -2963,6 +2964,35 @@ export function LiveWorkoutPage() {
     },
     onSuccess: async () => { await query.refetch() },
   })
+  const splitSuperset = useMutation({
+    mutationFn: async (blockId: string) => {
+      await liveSets.waitForIdle()
+      return runLiveWorkoutMutation(`split-block:${blockId}`,
+        (workout) => {
+          const pending = pendingSplitOperations.current.get(blockId) ?? {
+            operationId: crypto.randomUUID(), expectedVersion: workout.version,
+          }
+          pendingSplitOperations.current.set(blockId, pending)
+          return workoutsRepository.splitLiveSuperset({ ...workout, version: pending.expectedVersion }, blockId, pending.operationId)
+        })
+    },
+    onSuccess: async (_version, blockId) => { pendingSplitOperations.current.delete(blockId); await query.refetch() },
+    onError: (error, blockId) => {
+      if (!(error instanceof RepositoryError && ['live_workout_network', 'service_unavailable', 'invalid_response'].includes(error.code))) {
+        pendingSplitOperations.current.delete(blockId)
+      }
+    },
+  })
+  useEffect(() => {
+    if (!query.data) return
+    for (const [blockId, pending] of pendingSplitOperations.current) {
+      if (query.data.version > pending.expectedVersion
+        && !query.data.exercises.some((exercise) => exercise.blockId === blockId && exercise.blockType === 'group')) {
+        pendingSplitOperations.current.delete(blockId)
+        splitSuperset.reset()
+      }
+    }
+  }, [query.data])
   const replaceLive = useMutation({
     mutationFn: async ({ exerciseId, exercise, discardedSetIds }: { exerciseId: string; exercise: ExerciseSnapshot; discardedSetIds: string[] }) => {
       // A blur-save may already be in flight when the picker opens. Let it
@@ -3097,7 +3127,7 @@ export function LiveWorkoutPage() {
     setConfirmFinish(true)
   }
   const rootMutationPending = appendSet.isPending || appendRound.isPending || removeRound.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
-    || reorderBlock.isPending || mergeBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
+    || reorderBlock.isPending || mergeBlock.isPending || splitSuperset.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
   function draftFrom(form: HTMLFormElement, set: WorkoutSet): LiveSetDraft {
     const values = new FormData(form)
     const runDuration = values.get('runDuration')
@@ -3113,7 +3143,7 @@ export function LiveWorkoutPage() {
     }
   }
   const liveSyncError = save.error ?? confirm.error
-  const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? mergeBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? mergeBlock.error ?? splitSuperset.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
     const note = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
@@ -3367,9 +3397,18 @@ export function LiveWorkoutPage() {
           <div className="circuit-head">
             <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
             <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
-            {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0) && <OverflowMenu items={[
+            {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0 || (workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set')) && <OverflowMenu items={[
               ...(canReorder ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
               ...groupingItems,
+              ...(workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set' ? [{
+                label: 'Разделить суперсет',
+                onClick: async () => {
+                  const rest = block.exercises.map((exercise) => `${exercise.name} — ${exercise.restBetweenSetsSec ?? 90} с`).join('; ')
+                  if (await askConfirm({ message: `Разделить суперсет? Отдых между подходами после разделения: ${rest}. Уже запущенный таймер продолжится.`, confirmLabel: 'Разделить' })) {
+                    splitSuperset.mutate(block.blockId)
+                  }
+                },
+              }] : []),
             ]} />}
             {reorder}
           </div>

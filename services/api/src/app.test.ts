@@ -2690,6 +2690,7 @@ const OPERATION_IDS = {
   finish: '65331570-913c-4faa-9771-4a60d7a5e9f0',
   removeSet: '2fdba3b8-f688-40c9-955b-f84173970d31',
   removeRound: '2fdba3b8-f688-40c9-955b-f84173970d32',
+  split: '2fdba3b8-f688-40c9-955b-f84173970d33',
   reorder: '20c4ab7a-1316-46bf-b5ce-699015a320e8',
   merge: '30c4ab7a-1316-46bf-b5ce-699015a320e8',
   replace: '9761cf15-f83d-423a-a241-8d0bffefb4e0',
@@ -2709,6 +2710,7 @@ function buildWorkoutsWriter(error?: Error): {
   finishLive: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
   removeLastLiveRound: ReturnType<typeof vi.fn>
+  splitLiveSuperset: ReturnType<typeof vi.fn>
   removeLiveExercise: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
   mergeLiveBlockWithNext: ReturnType<typeof vi.fn>
@@ -2776,6 +2778,11 @@ function buildWorkoutsWriter(error?: Error): {
     version: 6,
     replayed: false,
   }))
+  const splitLiveSuperset = vi.fn(() => result({
+    resourceId: WORKOUT_BLOCK_ID,
+    version: 7,
+    replayed: false,
+  }))
   const removeLiveExercise = vi.fn(() => result({ resourceId: WORKOUT_EXERCISE_ID, version: 2, replayed: false }))
   const reorderLiveBlock = vi.fn(() => result({
     resourceId: WORKOUT_BLOCK_ID,
@@ -2817,6 +2824,7 @@ function buildWorkoutsWriter(error?: Error): {
       finishLive,
       removeLiveSet,
       removeLastLiveRound,
+      splitLiveSuperset,
       removeLiveExercise,
       reorderLiveBlock,
       mergeLiveBlockWithNext,
@@ -2842,6 +2850,7 @@ function buildWorkoutsWriter(error?: Error): {
     finishLive,
     removeLiveSet,
     removeLastLiveRound,
+    splitLiveSuperset,
     removeLiveExercise,
     reorderLiveBlock,
     mergeLiveBlockWithNext,
@@ -5421,6 +5430,14 @@ describe('pilot live workout structural commands', () => {
     } })
     expect(writer.removeLastLiveRound).toHaveBeenCalledWith(
       sessionToken, WORKOUT_ID, WORKOUT_BLOCK_ID, 1, 5, OPERATION_IDS.removeRound)
+    const split = await app.inject({ method: 'POST', url: `${url.slice(0, -'/rounds'.length)}/split`, headers,
+      payload: { expectedVersion: 6, operationId: OPERATION_IDS.split } })
+    expect(split.statusCode).toBe(200)
+    expect(split.json()).toEqual({ block: {
+      id: WORKOUT_BLOCK_ID, version: 7, replayed: false,
+    } })
+    expect(writer.splitLiveSuperset).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, WORKOUT_BLOCK_ID, 6, OPERATION_IDS.split)
     expect((await app.inject({ method: 'DELETE', url: `${url}/20`, headers,
       payload: { expectedVersion: 5, operationId: OPERATION_IDS.removeRound } })).statusCode).toBe(400)
     expect((await app.inject({ method: 'POST', url,

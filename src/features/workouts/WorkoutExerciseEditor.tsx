@@ -393,7 +393,12 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <OverflowMenu items={[
             ...(blocks.length > 1 && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
-            { label: 'Разбить', onClick: () => commitExercises(splitBlock([...latestExercises.current], block.blockId)) },
+            { label: 'Разделить суперсет', onClick: async () => {
+              const rest = block.items.map(({ exercise }) => `${exercise.name} — ${exercise.restBetweenSetsSec ?? 90} с`).join('; ')
+              if (await confirm({ message: `Разделить суперсет? Отдых между подходами: ${rest}.`, confirmLabel: 'Разделить' })) {
+                commitExercises(splitBlock([...latestExercises.current], block.blockId))
+              }
+            } },
           ]} />
         </div>
         {roundError && <p className="error" role="alert">{roundError}</p>}

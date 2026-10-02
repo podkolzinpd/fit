@@ -186,6 +186,7 @@ async function findActive(clientId: string): Promise<WorkoutSummary | null> {
 
 export const workoutsRepository = {
   supportsAtomicLiveRounds: false,
+  supportsLiveSupersetSplit: false,
   get,
   listPage,
   async list(from?: string, to?: string, clientId?: string): Promise<Workout[]> {
@@ -295,6 +296,10 @@ export const workoutsRepository = {
   removeLastLiveRound(workout: Workout, blockId: string, position: number, operationId: string): Promise<number> {
     void workout; void blockId; void position; void operationId
     return Promise.reject(new Error('Удаление круга доступно после перехода на новый сервер'))
+  },
+  splitLiveSuperset(workout: Workout, blockId: string, operationId: string): Promise<number> {
+    void workout; void blockId; void operationId
+    return Promise.reject(new Error('Разделение суперсета доступно после перехода на новый сервер'))
   },
   async removeLiveSet(workout: Workout, setId: string): Promise<number> {
     const result = await workoutQueries.removeLiveSet(setId, workout.version)

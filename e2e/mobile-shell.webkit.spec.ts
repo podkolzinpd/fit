@@ -977,7 +977,9 @@ test('iPhone: новый клиент выбирает готовую трени
   await page.screenshot({ path: testInfo.outputPath('review-client-superset-430.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await firstReviewExercise.getByRole('button', { name: /Настройки упражнения/ }).click()
-  await page.getByRole('menuitem', { name: 'Разбить суперсет' }).click()
+  await page.getByRole('menuitem', { name: 'Разделить суперсет' }).click()
+  await expect(page.getByRole('alertdialog', { name: /Отдых между подходами/ })).toBeVisible()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить' }).click()
 
   await page.getByRole('button', { name: 'Далее' }).click()
   await expect(page.getByText('Тренировка будет сохранена в ваш кабинет')).toBeVisible()

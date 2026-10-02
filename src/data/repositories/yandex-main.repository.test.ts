@@ -795,6 +795,7 @@ describe('Yandex main repository', () => {
     await repository.workouts.appendLiveExercise(item, exerciseSnapshot())
     await repository.workouts.appendLiveSet(item, exerciseId)
     expect(repository.workouts.supportsAtomicLiveRounds).toBe(true)
+    expect(repository.workouts.supportsLiveSupersetSplit).toBe(true)
     const roundOperationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f40'
     const removeRoundOperationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f41'
     await repository.workouts.appendLiveRound(item, blockId, roundOperationId)
@@ -803,6 +804,10 @@ describe('Yandex main repository', () => {
     expect(roundCalls.map(([, init]) => init?.method)).toEqual(['POST', 'DELETE'])
     expect(roundCalls.map(([, init]) => (JSON.parse(String(init?.body)) as { operationId: string }).operationId)).toEqual([roundOperationId, removeRoundOperationId])
     expect(String(roundCalls[1]?.[0])).toContain(`/rounds/1`)
+    await repository.workouts.splitLiveSuperset(item, blockId, 'c94ec52e-dc52-4c84-a61e-e45f11cb6f42')
+    const splitCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith(`/blocks/${blockId}/split`))
+    expect(splitCall?.[1]?.method).toBe('POST')
+    expect((JSON.parse(String(splitCall?.[1]?.body)) as { operationId: string }).operationId).toBe('c94ec52e-dc52-4c84-a61e-e45f11cb6f42')
     await repository.workouts.removeLiveSet(item, setId)
     await repository.workouts.removeLiveExercise(item, exerciseId)
     await repository.workouts.reorderLiveBlock(item, blockId, -1)

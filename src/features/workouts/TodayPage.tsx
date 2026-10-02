@@ -658,8 +658,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setRestOverrides(new Map())
   }
 
-  function splitReviewBlock(itemIndex: number) {
-    setItems((current) => splitParsedWorkoutReviewBlock(current, itemIndex))
+  async function splitReviewBlock(itemIndex: number) {
+    const blockId = items[itemIndex]?.structure?.blockId
+    const rest = items.filter((item) => item.structure?.blockId === blockId)
+      .map((item) => `${item.exercise.name} — ${item.structure?.restBetweenSetsSec ?? 90} с`).join('; ')
+    if (await askConfirm({ message: `Разделить суперсет? Отдых между подходами: ${rest}.`, confirmLabel: 'Разделить' })) {
+      setItems((current) => splitParsedWorkoutReviewBlock(current, itemIndex))
+    }
   }
 
   function clearDraftAndForm(openComposer = false) {
@@ -842,7 +847,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
             ...(block.items.length === 1 ? [{ label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) }] : []),
             { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(index) },
             ...(canMergeNext ? [{ label: block.items.length > 1 ? 'Добавить следующее в суперсет' : 'Создать суперсет со следующим', onClick: () => mergeReviewBlock(index) }] : []),
-            ...(block.items.length > 1 && itemInBlockIndex === 0 && item.structure?.blockPreset === 'set' ? [{ label: 'Разбить суперсет', onClick: () => splitReviewBlock(index) }] : []),
+            ...(block.items.length > 1 && itemInBlockIndex === 0 && item.structure?.blockPreset === 'set' ? [{ label: 'Разделить суперсет', onClick: () => void splitReviewBlock(index) }] : []),
             { label: 'Заменить', onClick: () => { setReplaceIndex(index); setPickerOpen(true) } },
             { label: 'Удалить', danger: true, onClick: () => removeExercise(index) },
           ]} />} />

@@ -73,6 +73,7 @@ import {
   recordPlannedWorkoutResult,
   removeLiveSet,
   removeLastLiveRound,
+  splitLiveSuperset,
   removeLiveExercise,
   reorderLiveBlock,
   rescheduleWorkout,
@@ -5582,6 +5583,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         'a6945b50-5eb0-4ee4-99d1-39534eb1c103',
         'a6945b50-5eb0-4ee4-99d1-39534eb1c104',
         'a6945b50-5eb0-4ee4-99d1-39534eb1c105',
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c106',
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c107',
       ]
       const blockId = (await ownerPool.query<{ block_id: string }>(
         'select block_id from public.workout_exercises where id=$1', [ROOT_WORKOUT_EXERCISE_ID],
@@ -5641,12 +5644,43 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           join public.workout_exercises exercise on exercise.id=workout_set.workout_exercise_id
           where exercise.workout_id=$1 and exercise.block_id=$2 and workout_set.position=1`,
           [ROOT_WORKOUT_ID, blockId])).rows[0]?.count).toBe('0')
+        await ownerPool.query('update public.workout_sets set fact_reps=11,confirmed_at=now() where id=$1', [ROOT_WORKOUT_SET_ID])
+        await ownerPool.query('update public.workout_exercises set rest_between_sets_sec=55 where id=$1', [ROOT_WORKOUT_EXERCISE_ID])
+        await ownerPool.query('update public.workout_exercises set rest_between_sets_sec=70 where id=$1', [second.resourceId])
+        const before = await ownerPool.query<{ id: string; workout_exercise_id: string; position: number; fact_reps: number | null; confirmed_at: Date | null }>(`
+          select workout_set.id,workout_set.workout_exercise_id,workout_set.position,
+            workout_set.fact_reps,workout_set.confirmed_at
+          from public.workout_sets workout_set
+          join public.workout_exercises exercise on exercise.id=workout_set.workout_exercise_id
+          where exercise.workout_id=$1 order by workout_set.id`, [ROOT_WORKOUT_ID])
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => splitLiveSuperset(client, ROOT_WORKOUT_ID, blockId, 6, operationIds[6]!),
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        const split = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => splitLiveSuperset(client, ROOT_WORKOUT_ID, blockId, 6, operationIds[5]!))
+        expect(split).toEqual({ resourceId: blockId, version: 7, replayed: false })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => splitLiveSuperset(client, ROOT_WORKOUT_ID, blockId, 6, operationIds[5]!),
+        )).resolves.toEqual({ ...split, replayed: true })
+        const after = await ownerPool.query<{ id: string; workout_exercise_id: string; position: number; fact_reps: number | null; confirmed_at: Date | null }>(`
+          select workout_set.id,workout_set.workout_exercise_id,workout_set.position,
+            workout_set.fact_reps,workout_set.confirmed_at
+          from public.workout_sets workout_set
+          join public.workout_exercises exercise on exercise.id=workout_set.workout_exercise_id
+          where exercise.workout_id=$1 order by workout_set.id`, [ROOT_WORKOUT_ID])
+        expect(after.rows).toEqual(before.rows)
+        const members = await ownerPool.query<{ id: string; block_id: string; block_type: string; rest_between_sets_sec: number }>(`
+          select id,block_id,block_type,rest_between_sets_sec from public.workout_exercises
+          where workout_id=$1 order by position`, [ROOT_WORKOUT_ID])
+        expect(members.rows.map((row) => row.block_type)).toEqual(['single', 'single'])
+        expect(new Set(members.rows.map((row) => row.block_id)).size).toBe(2)
+        expect(members.rows.map((row) => row.rest_between_sets_sec)).toEqual([55, 70])
       } finally {
         await ownerPool.query('delete from app_private.live_workout_operations where operation_id=any($1::uuid[])', [operationIds])
         await ownerPool.query('delete from public.workout_exercises where workout_id=$1 and id<>$2', [ROOT_WORKOUT_ID, ROOT_WORKOUT_EXERCISE_ID])
         await ownerPool.query('delete from public.workout_sets where workout_exercise_id=$1 and id<>$2', [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_SET_ID])
         await ownerPool.query('update public.workout_sets set confirmed_at=null,fact_reps=null where id=$1', [ROOT_WORKOUT_SET_ID])
-        await ownerPool.query("update public.workout_exercises set block_id=$2,block_type='single',block_preset='set',block_rounds=1 where id=$1",
+        await ownerPool.query("update public.workout_exercises set block_id=$2,block_type='single',block_preset='set',block_rounds=1,rest_between_sets_sec=90 where id=$1",
           [ROOT_WORKOUT_EXERCISE_ID, blockId])
         await ownerPool.query("update public.workouts set status='planned',started_at=null,version=1 where id=$1", [ROOT_WORKOUT_ID])
       }
