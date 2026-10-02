@@ -1,0 +1,319 @@
+{
+  "fileKey": "neJztMaNITn7pwti82uDS6",
+  "retrievedAt": "2026-10-02",
+  "status": "Source exports only; not integrated or deployed.",
+  "icons": [
+    {
+      "nodeId": "209:682",
+      "name": "Check",
+      "file": "assets/check.svg"
+    },
+    {
+      "nodeId": "209:687",
+      "name": "Checkbox",
+      "file": "assets/checkbox.svg"
+    },
+    {
+      "nodeId": "209:692",
+      "name": "Calendar",
+      "file": "assets/calendar.svg"
+    },
+    {
+      "nodeId": "209:697",
+      "name": "Users",
+      "file": "assets/users.svg"
+    },
+    {
+      "nodeId": "209:702",
+      "name": "Assistant",
+      "file": "assets/assistant.svg"
+    },
+    {
+      "nodeId": "209:707",
+      "name": "Plus",
+      "file": "assets/plus.svg"
+    },
+    {
+      "nodeId": "260:3821",
+      "name": "Plus-2",
+      "file": "assets/plus2.svg"
+    },
+    {
+      "nodeId": "209:712",
+      "name": "Settings",
+      "file": "assets/settings.svg"
+    },
+    {
+      "nodeId": "209:717",
+      "name": "Bell",
+      "file": "assets/bell.svg"
+    },
+    {
+      "nodeId": "209:722",
+      "name": "Chat",
+      "file": "assets/chat.svg"
+    },
+    {
+      "nodeId": "212:667",
+      "name": "Arrow Left",
+      "file": "assets/arrow-left.svg"
+    },
+    {
+      "nodeId": "212:670",
+      "name": "Arrow Right",
+      "file": "assets/arrow-right.svg"
+    },
+    {
+      "nodeId": "235:1200",
+      "name": "Microphone",
+      "file": "assets/microphone.svg"
+    },
+    {
+      "nodeId": "235:1205",
+      "name": "Sun",
+      "file": "assets/sun.svg"
+    },
+    {
+      "nodeId": "235:1206",
+      "name": "Arrow Up",
+      "file": "assets/arrow-up.svg"
+    },
+    {
+      "nodeId": "241:2376",
+      "name": "Close",
+      "file": "assets/close.svg"
+    },
+    {
+      "nodeId": "260:4045",
+      "name": "Close-2",
+      "file": "assets/close2.svg"
+    },
+    {
+      "nodeId": "241:2381",
+      "name": "Check Large",
+      "file": "assets/check-large.svg"
+    },
+    {
+      "nodeId": "260:3811",
+      "name": "Check small",
+      "file": "assets/check-small.svg"
+    },
+    {
+      "nodeId": "256:3002",
+      "name": "Clock",
+      "file": "assets/clock.svg"
+    },
+    {
+      "nodeId": "258:3309",
+      "name": "Refresh",
+      "file": "assets/refresh.svg"
+    },
+    {
+      "nodeId": "280:5584",
+      "name": "whistle",
+      "file": "assets/whistle.svg"
+    }
+  ],
+  "files": [
+    {
+      "file": "assets/199-384-imgIcon.svg",
+      "sha256": "175be4e2d006de6085e09233c01d3ff34aa3f320828ed6cd69dff500717d4fc8",
+      "bytes": 1206,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/204-387-imgGlow.svg",
+      "sha256": "bfdc9016d99629d2c7f10f2ab4ec31b8ba9852d170915c101b6feedef0cd701e",
+      "bytes": 666,
+      "width": "364",
+      "height": "281",
+      "viewBox": "0 0 364 281"
+    },
+    {
+      "file": "assets/204-387-imgIcon.svg",
+      "sha256": "824051a347629631be93ce2a04e1597d78d81045bd160480a5af4cbabd7dffec",
+      "bytes": 1105,
+      "width": "48",
+      "height": "48",
+      "viewBox": "0 0 48 48"
+    },
+    {
+      "file": "assets/arrow-left.svg",
+      "sha256": "6bed60b5df2d7f22001fd466b80c6d1d062111099b6ebc1f817af0d87afc0e81",
+      "bytes": 339,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/arrow-right.svg",
+      "sha256": "c4a941f6e148cbd17c83212c4c86a56b0f218536d3052e6d0bf9d27e35661ff2",
+      "bytes": 339,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/arrow-up.svg",
+      "sha256": "29504467a17feeaed1b524c63e9b32466d50675753d56cfe4be87b848c7a8b07",
+      "bytes": 347,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/assistant.svg",
+      "sha256": "f93af6e30f3280ff6d6a95f5675b3896673fe8fea5d04bd3ce938e47b746434c",
+      "bytes": 3430,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/bell.svg",
+      "sha256": "6814cdebf99e6e2b524506aa2327bfdb8be791bb6f55fb667e80fef3018e4efb",
+      "bytes": 1116,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/calendar.svg",
+      "sha256": "a11c78357d3ed864ca01e51f9a7ea20df24996f7cd39158d83fbfda58581f0b7",
+      "bytes": 2089,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/chat.svg",
+      "sha256": "5082a160d0e692b068541f44f6aa026a60918bda12bd18c8387e0ac4dee3f64a",
+      "bytes": 463,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/check-large.svg",
+      "sha256": "d81189e974a6e35b600ffdf359af7b427dfdc6546e2e6de8701dcb2517507502",
+      "bytes": 313,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/check-small.svg",
+      "sha256": "fbc960265d50e8f744caf86a33690ea4d507b9165388433c70080eaf685f0e04",
+      "bytes": 310,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/check.svg",
+      "sha256": "873cd3adab754eae3e73b0cdfa46a710f41d365a644c092e5f8ace7cdf811c51",
+      "bytes": 309,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/checkbox.svg",
+      "sha256": "045c2bffe4c555dac2f4dffa9901d27e064c116c33479dd821f31a4b311a0241",
+      "bytes": 1766,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/clock.svg",
+      "sha256": "eff0bd217a1562d9ec9c663991ad539cb0d7146cae7c5f351ad061042d2f806e",
+      "bytes": 1008,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/close.svg",
+      "sha256": "406d4469678b407b16ca68d2139670c5a2101c55f176ef2f9a83f8644cd506f7",
+      "bytes": 397,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/close2.svg",
+      "sha256": "f31c7c55d1f805bf537913846512004e6b65dd6b2caff976dfe4c8e38ccdba64",
+      "bytes": 464,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/microphone.svg",
+      "sha256": "e97e6e438e2d3ec2cd33d8afd351f39979aa724647f54bf48b73adbefc7b95fb",
+      "bytes": 721,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/plus.svg",
+      "sha256": "48e74eb5902a9dee3a29f0d0f9d8cb3cdde718f71cec9573d0faad73fc2851ca",
+      "bytes": 312,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/plus2.svg",
+      "sha256": "b5fc728965fcb39d92497c09218edd18edc930300034d6a7efad8550c940e4ae",
+      "bytes": 359,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/refresh.svg",
+      "sha256": "e152972adb93ba16bd7062b3d2982ccc2c97edd5bcec6426fd5f2664e648c4f1",
+      "bytes": 816,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/settings.svg",
+      "sha256": "5f6f5d66c1a725f537290c1adb088000ecf0646346e77812e0efcaf47dfed671",
+      "bytes": 1215,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/sun.svg",
+      "sha256": "ed13c3cce614c69796d46ee990cd8a11a736dcae59d3f17137245088c6b9e7c1",
+      "bytes": 1141,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/users.svg",
+      "sha256": "f8284ab7951b15538a8285f917f16c9258cb733da46d21c3aa8090636d0d3a57",
+      "bytes": 2443,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    },
+    {
+      "file": "assets/whistle.svg",
+      "sha256": "72f4bc5135f0dc47932e56dc0edd60a3a0085c00ee79a56cf1d87534544e8b16",
+      "bytes": 3904,
+      "width": "24",
+      "height": "24",
+      "viewBox": "0 0 24 24"
+    }
+  ]
+}
