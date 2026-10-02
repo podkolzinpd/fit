@@ -2,7 +2,7 @@
 .fit-lime-shell.chat-identity .content-immersive:has(.chat-conversation-page) {
   overflow: hidden;
   padding-bottom: 0;
-  background: #080908;
+  background: var(--lime-bg);
 }
 
 .fit-lime-shell .chat-conversation-page {
@@ -10,14 +10,14 @@
   height: 100%;
   margin: 0 auto;
   padding: max(12px, env(safe-area-inset-top)) 16px 0;
-  color: #f8f8f6;
+  color: var(--lime-text);
 }
 
 .fit-lime-shell .chat-conversation-page > .page-header {
   gap: 6px;
   margin-bottom: 8px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #303034;
+  border-bottom: 1px solid var(--lime-divider);
 }
 
 .fit-lime-shell .chat-conversation-page > .page-header h1 {
@@ -31,10 +31,10 @@
 .fit-lime-shell .chat-page-actions .overflow-trigger {
   width: 44px;
   height: 44px;
-  border: 1px solid #303034;
+  border: 1px solid var(--lime-divider);
   border-radius: 15px;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
 
 .fit-lime-shell .chat-page-actions { gap: 6px }
@@ -43,86 +43,86 @@
 .fit-lime-shell .chat-message {
   max-width: min(88%, 560px);
   padding: 12px 14px 9px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 22px 22px 22px 7px;
-  background: #19191c;
-  color: #f8f8f6;
+  background: var(--lime-surface);
+  color: var(--lime-text);
 }
 .fit-lime-shell .chat-message.own {
   border-color: #405620;
   border-radius: 22px 22px 7px 22px;
-  background: #25360c;
+  background: var(--lime-accent-muted);
 }
 .fit-lime-shell .chat-message p { font-size: 15px; line-height: 1.45 }
-.fit-lime-shell .chat-message small { color: #b8b8bd; font-size: 11px }
+.fit-lime-shell .chat-message small { color: var(--lime-text-secondary); font-size: 11px }
 .fit-lime-shell .chat-message.with-photo { width: min(88%, 340px); padding: 5px 5px 9px }
 .fit-lime-shell .chat-message.with-photo p { padding: 8px 9px 2px }
 .fit-lime-shell .chat-reply-quote {
   min-height: 44px;
   align-content: center;
-  border-left-color: #baff36;
+  border-left-color: var(--lime-accent);
   border-radius: 8px 12px 12px 8px;
-  background: #232328;
+  background: var(--lime-surface-raised);
 }
-.fit-lime-shell .chat-reply-quote strong { color: #baff36 }
-.fit-lime-shell .chat-reply-quote span { color: #b8b8bd }
-.fit-lime-shell .chat-unread-divider { color: #baff36; font-size: 12px }
+.fit-lime-shell .chat-reply-quote strong { color: var(--lime-accent) }
+.fit-lime-shell .chat-reply-quote span { color: var(--lime-text-secondary) }
+.fit-lime-shell .chat-unread-divider { color: var(--lime-accent); font-size: 12px }
 .fit-lime-shell .chat-unread-divider::before,
 .fit-lime-shell .chat-unread-divider::after { background: #729b27 }
 .fit-lime-shell .chat-new-button,
 .fit-lime-shell .chat-load-older {
   min-height: 44px;
-  border: 1px solid #303034;
+  border: 1px solid var(--lime-divider);
   border-radius: 999px;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
-.fit-lime-shell .chat-new-button b { background: #baff36; color: #111111 }
+.fit-lime-shell .chat-new-button b { background: var(--lime-accent); color: var(--lime-text-on-accent) }
 .fit-lime-shell .chat-older-error { margin: 4px auto; color: var(--danger); font-size: 12px }
 .fit-lime-shell .chat-connection-card {
   padding: 16px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 24px;
-  background: #19191c;
+  background: var(--lime-surface);
 }
-.fit-lime-shell .chat-connection-card span { color: #b8b8bd }
+.fit-lime-shell .chat-connection-card span { color: var(--lime-text-secondary) }
 .fit-lime-shell .chat-search form,
 .fit-lime-shell .chat-search-results {
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 18px;
-  background: #232328;
+  background: var(--lime-surface-raised);
 }
-.fit-lime-shell .chat-search input { color: #f8f8f6; font-size: 16px }
-.fit-lime-shell .chat-search-results > button:hover { background: #303034 }
-.fit-lime-shell .chat-search-results span { color: #f8f8f6 }
+.fit-lime-shell .chat-search input { color: var(--lime-text); font-size: 16px }
+.fit-lime-shell .chat-search-results > button:hover { background: var(--lime-divider) }
+.fit-lime-shell .chat-search-results span { color: var(--lime-text) }
 .fit-lime-shell .chat-composer,
 .fit-lime-shell .chat-blocked-state {
-  border-top: 1px solid #303034;
-  background: #080908;
+  border-top: 1px solid var(--lime-divider);
+  background: var(--lime-bg);
 }
 .fit-lime-shell .chat-composer { padding: 12px 0 max(12px, env(safe-area-inset-bottom)) }
 .fit-lime-shell .chat-composer textarea {
   min-height: 48px;
-  border: 1px solid #303034;
+  border: 1px solid var(--lime-divider);
   border-radius: 18px;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
   font-size: 16px;
 }
-.fit-lime-shell .chat-composer-context { border-left-color: #baff36; background: #232328 }
-.fit-lime-shell .chat-attach { width: 48px; height: 48px; border: 1px solid #303034; background: #232328; color: #f8f8f6 }
-.fit-lime-shell .chat-send { width: 48px; height: 48px; background: #baff36; color: #111111 }
+.fit-lime-shell .chat-composer-context { border-left-color: var(--lime-accent); background: var(--lime-surface-raised) }
+.fit-lime-shell .chat-attach { width: 48px; height: 48px; border: 1px solid var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text) }
+.fit-lime-shell .chat-send { width: 48px; height: 48px; background: var(--lime-accent); color: var(--lime-text-on-accent) }
 .fit-lime-shell .chat-send:disabled { opacity: .48 }
 .fit-lime-chat-sheet { background: rgba(0, 0, 0, .72) }
 .fit-lime-chat-sheet .chat-action-sheet {
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 28px 28px 20px 20px;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
-.fit-lime-chat-sheet .chat-action-sheet button { min-height: 48px; color: #f8f8f6 }
+.fit-lime-chat-sheet .chat-action-sheet button { min-height: 48px; color: var(--lime-text) }
 .fit-lime-chat-sheet .chat-action-sheet button.danger { color: var(--danger) }
-.fit-lime-chat-sheet .chat-action-sheet .chat-sheet-cancel { background: #303034 }
+.fit-lime-chat-sheet .chat-action-sheet .chat-sheet-cancel { background: var(--lime-divider) }
 
 @media (max-width: 380px) {
   .fit-lime-shell .chat-conversation-page { padding-inline: 12px }

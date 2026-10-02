@@ -1,0 +1,28 @@
+/* Undrawn trainer surfaces retain composition and behavior. Shared Figma
+   roles are adapted here; achievement artwork and client themes are excluded. */
+.phone-frame.fit-lime-shell :is(.template-card, .template-source-workout, .finance-package, .finance-card, .finance-panel, .finance-overview-client, .finance-overview-kpi) {
+  border-color: var(--lime-divider); border-radius: var(--lime-radius-card); background: var(--lime-surface); color: var(--lime-text); box-shadow: none;
+}
+.phone-frame.fit-lime-shell :is(.finance-overview-page, .trainer-finance-page, .workout-templates-page, .workout-template-source-page, .workout-template-editor-page) :is(h2, h3, strong, b, button, a.button, .finance-status) { font-weight: 500; }
+.phone-frame.fit-lime-shell :is(.finance-overview-page, .trainer-finance-page, .workout-templates-page, .workout-template-source-page) h2 { font-size: 16px; line-height: 20px; }
+.phone-frame.fit-lime-shell :is(.finance-overview-page, .trainer-finance-page, .workout-templates-page, .workout-template-source-page) :is(button, .button) { border-radius: 999px; min-height: 44px; }
+.phone-frame.fit-lime-shell :is(.finance-overview-page, .trainer-finance-page) :is(input, select, textarea) { font-size: 16px; background: var(--lime-surface-raised); color: var(--lime-text); border-color: var(--lime-surface-high); }
+.phone-frame.fit-lime-shell :is(.clients-primary-actions, .client-form-actions, .profile-actions) :is(button, .button),
+.phone-frame.fit-lime-shell :is(.client-detail-primary-action, .chat-send, .chat-attach, .client-card-menu) { border-radius: 999px; font-weight: 500; }
+.phone-frame.fit-lime-shell :is(.client-detail-upcoming, .client-form-section, .goal-card, .settings-section, .progress-period) h2 { font-size: 16px; line-height: 20px; font-weight: 500; }
+.phone-frame.fit-lime-shell .chat-send svg[data-original-icon] { filter: brightness(0); }
+.phone-frame.fit-lime-shell .finance-filter-row button.is-active { background: var(--lime-accent); border-color: var(--lime-accent); color: var(--lime-text-on-accent); }
+.phone-frame.fit-lime-shell .finance-overview-summary { border-radius: var(--lime-radius-card); }
+.phone-frame.fit-lime-shell.trainer-profile-identity :is(.trainer-profile-publish-cta > .primary, .trainer-profile-edit-action),
+.phone-frame.fit-lime-shell.trainer-client-form-identity .client-profile-form .actions :is(.primary, .secondary) { border-radius: 999px; font-weight: 500; }
+
+/* Portals live outside the phone frame. Tokens are inherited from the
+   layout-owned document flag, which is cleared when leaving the pilot. */
+html.fit-lime-document :is(.schedule-v2-sheet-backdrop, .fit-lime-chat-sheet, .fit-lime-action-backdrop) { font-family: 'YS Geo', 'Onest Variable', sans-serif; font-synthesis: none; }
+html.fit-lime-document :is(.schedule-v2-inbox-sheet, .schedule-v2-action-sheet, .schedule-v2-onboarding-sheet, .fit-lime-chat-sheet .chat-action-sheet) { border-color: var(--lime-divider); border-radius: 40px 40px 0 0; background: var(--lime-surface); color: var(--lime-text); }
+html.fit-lime-document .schedule-v2-sheet-backdrop :is(h2, h3, strong, b, button) { font-weight: 500; }
+html.fit-lime-document .schedule-v2-sheet-backdrop h2 { font-size: 24px; line-height: 24px; }
+html.fit-lime-document .schedule-v2-sheet-backdrop :is(button, .schedule-v2-inbox-all) { font-family: inherit; }
+html.fit-lime-document .schedule-v2-inbox-all { background: var(--lime-accent); color: var(--lime-text-on-accent); border-radius: 999px; }
+html.fit-lime-document .schedule-v2-sheet-backdrop :is(.schedule-v2-inbox-avatar, header button) { background: var(--lime-surface-raised); color: var(--lime-text); }
+html.fit-lime-document .schedule-v2-sheet-backdrop :is(.schedule-v2-inbox-row strong, .schedule-v2-inbox-section-title span) { color: var(--lime-accent); }

@@ -6,12 +6,12 @@
 }
 .fit-lime-shell.assistant-identity .assistant-page .page-header h1 {
   color: var(--lime-text);
-  font-size: clamp(28px, 7vw, 34px);
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.assistant-identity .assistant-session-bar { border-color: var(--lime-divider) }
-.fit-lime-shell.assistant-identity .assistant-session-label strong { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.assistant-identity .assistant-session-label strong { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.assistant-identity .assistant-local-note,
 .fit-lime-shell.assistant-identity .assistant-thread-status,
 .fit-lime-shell.assistant-identity .assistant-flow-guidance,
@@ -36,7 +36,7 @@
   background: var(--lime-accent-muted);
   color: var(--lime-accent);
 }
-.fit-lime-shell.assistant-identity .assistant-first-entry-copy h2 { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.assistant-identity .assistant-first-entry-copy h2 { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.assistant-identity .assistant-first-entry-copy p { color: var(--lime-text-secondary) }
 .fit-lime-shell.assistant-identity .assistant-message:not(.assistant-message-assistant):not(.assistant-message-result) {
   border-color: var(--lime-accent);
@@ -53,7 +53,7 @@
 .fit-lime-shell.assistant-identity .assistant-workout-card,
 .fit-lime-shell.assistant-identity .assistant-inline-summary {
   border-color: var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   color: var(--lime-text);
   box-shadow: none;
@@ -63,7 +63,7 @@
 .fit-lime-shell.assistant-identity .assistant-workout-draft-content > header strong,
 .fit-lime-shell.assistant-identity .assistant-workout-result > header strong {
   color: var(--lime-text);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.assistant-identity .assistant-flow-status,
 .fit-lime-shell.assistant-identity .assistant-flow-checklist span {
@@ -92,7 +92,7 @@
   border-radius: 16px;
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.assistant-identity button.primary:disabled,
 .fit-lime-shell.assistant-identity .assistant-composer > .assistant-icon-button:last-child:disabled {

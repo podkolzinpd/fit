@@ -27,6 +27,7 @@ import './styles/fit-lime-workout-detail.css'
 import './styles/fit-lime-workout-live.css'
 import './styles/fit-lime-workout-completion.css'
 import './styles/fit-lime-assistant.css'
+import './styles/fit-lime-trainer-routes.css'
 import './styles/fit-lime-type.css'
 
 declare global {

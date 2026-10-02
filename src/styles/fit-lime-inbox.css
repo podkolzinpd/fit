@@ -1,7 +1,7 @@
 /* Stage 3, point 18: the inbox list only. Conversation is a separate point. */
 .fit-lime-shell.chat-identity .content-immersive:has(.chat-list-page) {
   overflow-y: auto;
-  background: #080908;
+  background: var(--lime-bg);
 }
 
 .fit-lime-shell .chat-list-page {
@@ -20,41 +20,41 @@
   gap: 0;
   margin-bottom: 22px;
   padding: 18px;
-  border-color: #303034;
-  border-radius: 28px;
-  background: #19191c;
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
 }
 
 .fit-lime-shell .trainer-inbox-questions h2,
 .fit-lime-shell .chat-thread-section-title h2 {
-  color: #f8f8f6;
+  color: var(--lime-text);
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .fit-lime-shell .trainer-inbox-questions > div:first-child > span,
 .fit-lime-shell .chat-thread-section-title > span {
-  color: #baff36;
+  color: var(--lime-accent);
   font-size: 16px;
 }
 
 .fit-lime-shell .trainer-inbox-question {
   min-height: 68px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
 }
 
 .fit-lime-shell .trainer-inbox-question .chat-avatar,
 .fit-lime-shell .chat-thread .chat-avatar {
   border-radius: 50%;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
 
 .fit-lime-shell .trainer-inbox-question small,
 .fit-lime-shell .trainer-inbox-question time,
 .fit-lime-shell .chat-thread-copy small,
 .fit-lime-shell .chat-thread-meta {
-  color: #b8b8bd;
+  color: var(--lime-text-secondary);
 }
 
 .fit-lime-shell .chat-thread-section-title {
@@ -67,15 +67,15 @@
 
 .fit-lime-shell .chat-thread {
   min-height: 80px;
-  border: 1px solid #303034;
-  border-radius: 28px;
-  background: #19191c;
+  border: 1px solid var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
   box-shadow: none;
 }
 
 .fit-lime-shell .chat-thread-meta b {
-  color: #111111;
-  background: #baff36;
+  color: var(--lime-text-on-accent);
+  background: var(--lime-accent);
 }
 
 @media (max-width: 480px) {
