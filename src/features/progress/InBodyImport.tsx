@@ -51,7 +51,7 @@ const LABELS: ReadonlyArray<[keyof InBodyRecognitionResult['inBody'], string, st
   ['proteinKg', 'Белок', 'кг'], ['mineralsKg', 'Минералы', 'кг'], ['bodyMassIndex', 'ИМТ', ''],
   ['ecwTbwRatio', 'ECW/TBW', ''], ['visceralFatAreaCm2', 'Висцеральный жир', 'см²'],
   ['visceralFatLevel', 'Уровень висцерального жира', ''], ['waistHipRatio', 'Талия/бёдра', ''], ['phaseAngleDeg', 'Фазовый угол', '°'],
-  ['basalMetabolicRateKcal', 'Основной обмен', 'ккал'], ['inBodyScore', 'Оценка InBody', ''],
+  ['basalMetabolicRateKcal', 'Базальный метаболизм', 'ккал'], ['recommendedCalorieIntakeKcal', 'Рекомендуемая калорийность', 'ккал'], ['inBodyScore', 'Оценка InBody', ''],
   ['targetWeightKg', 'Целевой вес', 'кг'], ['weightControlKg', 'Контроль веса', 'кг'],
   ['fatControlKg', 'Контроль жира', 'кг'], ['muscleControlKg', 'Контроль мышц', 'кг'],
   ['obesityDegreePercent', 'Степень ожирения', '%'], ['skeletalMuscleIndexKgM2', 'SMI', 'кг/м²'],

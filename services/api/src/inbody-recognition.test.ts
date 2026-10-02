@@ -83,12 +83,39 @@ describe('InBody result sheet extraction', () => {
       [InBody270] 03. 06. 2024 13:42
       Безжировая масса 60. 8 kg ( 53. 3 ~ 65. 2 )
       Уровень базального метаболизма 1683 kcal
+      Рекоментуемый
+      2696 kcal
+      Анализ тощей массы по сегментам
+      3.61 kg
+      110.9 %
+      3.75 kg
+      115.4 %
+      28.3 kg
+      109.0 %
+      9.33 kg
+      103.3 %
+      9.40 kg
+      104.0 %
+      История состава тела
+      Анализ жировой массы по сегментам
+      0.2 kg
+      31.7 %
+      1.3 kg
+      70.4 %
+      3.5 kg
+      79.3 %
+      0.1 kg
+      21.3 %
+      1.3 kg
+      71.3 %
       Оценка InBody 80/100 Балл
     `)
     expect(result).toMatchObject({
       recordedOn: '2024-06-03', weightKg: 68.3,
-      inBody: { totalBodyWaterL: 44.6, proteinKg: 12.2, mineralsKg: 4.03, bodyFatMassKg: 7.5, fatFreeMassKg: 60.8, basalMetabolicRateKcal: 1683, inBodyScore: 80 },
+      inBody: { totalBodyWaterL: 44.6, proteinKg: 12.2, mineralsKg: 4.03, bodyFatMassKg: 7.5, fatFreeMassKg: 60.8, basalMetabolicRateKcal: 1683, recommendedCalorieIntakeKcal: 2696, inBodyScore: 80 },
     })
+    expect(result.inBody.segmental).toHaveLength(5)
+    expect(result.inBody.segmental?.[2]).toMatchObject({ segment: 'trunk', leanMassKg: 28.3, leanPercent: 109, fatMassKg: 3.5, fatPercent: 79.3 })
     expect(result.warnings).toEqual([])
   })
 

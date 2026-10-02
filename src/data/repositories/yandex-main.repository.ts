@@ -274,7 +274,7 @@ const inBodySchema = z.object({
   bodyCellMassKg: z.number().optional(), boneMineralContentKg: z.number().optional(), bodyMassIndex: z.number().optional(),
   bodyFatPercent: z.number().optional(), ecwTbwRatio: z.number().optional(), visceralFatAreaCm2: z.number().optional(),
   visceralFatLevel: z.number().optional(), waistHipRatio: z.number().optional(), phaseAngleDeg: z.number().optional(),
-  basalMetabolicRateKcal: z.number().optional(), inBodyScore: z.number().optional(), targetWeightKg: z.number().optional(),
+  basalMetabolicRateKcal: z.number().optional(), recommendedCalorieIntakeKcal: z.number().optional(), inBodyScore: z.number().optional(), targetWeightKg: z.number().optional(),
   weightControlKg: z.number().optional(), fatControlKg: z.number().optional(), muscleControlKg: z.number().optional(),
   obesityDegreePercent: z.number().optional(), skeletalMuscleIndexKgM2: z.number().optional(),
   fatMassIndexKgM2: z.number().optional(), fatFreeMassIndexKgM2: z.number().optional(),
