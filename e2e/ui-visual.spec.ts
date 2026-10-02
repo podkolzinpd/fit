@@ -2317,6 +2317,7 @@ async function openWorkoutForDetailReview(page: import('@playwright/test').Page,
 
 test('workout detail, completion and exercise history keep their visual baselines', async ({ page }, testInfo) => {
   test.setTimeout(120_000)
+  await page.addInitScript(() => { Math.random = () => 0.06 })
   await page.clock.setFixedTime(new Date('2026-09-18T07:00:00.000Z'))
   const trainer = testInfo.project.name === 'visual-trainer-1440'
   let exposeCompletionComparison = false
@@ -2366,7 +2367,8 @@ test('workout detail, completion and exercise history keep their visual baseline
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   const partialFinish = page.getByRole('button', { name: 'Завершить', exact: true })
   if (await partialFinish.isVisible()) await partialFinish.click()
-  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  if (trainer) await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  else await expect(page.getByText(/Тренировка завершена ·/)).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-detail-history-identity/)
   if (trainer) {
     await expect(page.locator('.workout-detail-page .badge.partial')).toHaveText('Частично')
@@ -2451,11 +2453,10 @@ test('workout detail, completion and exercise history keep their visual baseline
       expect(sharedWorkout?.size).toBeGreaterThan(1_000)
       expect(sharedWorkout?.dataUrl).toMatch(/^data:image\/png;base64,/)
       expect(sharedWorkout?.text).not.toContain('Комментарий тренеру')
-      const sharePreview = await page.context().newPage()
-      await sharePreview.setViewportSize({ width: 1_080, height: 1_350 })
-      await sharePreview.setContent(`<style>*{box-sizing:border-box}html,body{margin:0;background:#fff}img{display:block;width:1080px;height:1350px}</style><img src="${sharedWorkout?.dataUrl ?? ''}" alt="Карточка тренировки">`)
-      await expect(sharePreview.getByRole('img', { name: 'Карточка тренировки' })).toHaveScreenshot(screenshotName)
-      await sharePreview.close()
+      // Compare the actual exported PNG directly. Re-rendering it in a second
+      // mobile WebKit page adds no coverage and wastes browser memory.
+      expect(Buffer.from(sharedWorkout!.dataUrl!.split(',')[1]!, 'base64')).toMatchSnapshot(screenshotName)
+
     }
     await shareAndCapture('summary', `workout-share-card-${process.platform}.png`)
     await shareAndCapture('achievement', `workout-share-card-achievement-${process.platform}.png`)
@@ -3416,4 +3417,46 @@ test('reliable chat stays compact on client phones and trainer desktop', async (
   const frameBottom = await page.locator('.phone-frame').evaluate((element) => element.getBoundingClientRect().bottom)
   expect(Math.abs(frameBottom - composerBottom)).toBeLessThanOrEqual(1)
   await expectVisualBaseline(page, `chat-${trainer ? 'trainer' : 'client'}-${process.platform}.png`)
+})
+
+test('completion celebrates a partial workout with stable lightweight art and narrow layouts', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client completion only')
+  test.setTimeout(120_000)
+  await page.addInitScript(() => { Math.random = () => 0.06 })
+  await openWorkoutForDetailReview(page, false)
+  await page.getByLabel('Фактический вес').first().fill('40')
+  await page.getByLabel('Фактические повторы').first().fill('10')
+  await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await page.getByRole('button', { name: 'Завершить тренировку' }).click()
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Вот это мощь!' })).toBeVisible()
+  await expect(page.getByText('Выполнено 1 из 2 подходов')).toBeVisible()
+  const art = page.locator('.workout-completion-report-art img')
+  const src = await art.getAttribute('src')
+  await page.reload()
+  await expect(art).toHaveAttribute('src', src!)
+  await expect(page.getByRole('heading', { name: 'Вот это мощь!' })).toBeVisible()
+  for (const icon of ['star', 'fist', 'medal']) {
+    await page.evaluate((icon) => {
+      const key = Object.keys(localStorage).find((key) => key.startsWith('fit.completion-celebrations.v1:'))!
+      const stored = JSON.parse(localStorage.getItem(key)!) as { entries: Record<string, { phrase: number; icon: string }> }
+      const workoutId = location.pathname.split('/').at(-1)!
+      stored.entries[workoutId] = { phrase: 13, icon }
+      localStorage.setItem(key, JSON.stringify(stored))
+    }, icon)
+    await page.reload()
+    await expect(art).toHaveJSProperty('complete', true)
+    expect(await art.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(288)
+    const response = await page.request.get((await art.getAttribute('src'))!)
+    expect((await response.body()).length).toBeLessThan(12_000)
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((theme) => {
+        localStorage.setItem('fit.appTheme', theme)
+        window.dispatchEvent(new Event('fit-theme-change'))
+      }, theme)
+      await page.setViewportSize({ width: 320, height: 780 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.locator('.workout-completion-share-card').screenshot({ path: testInfo.outputPath(`completion-${icon}-${theme}-320.png`) })
+    }
+  }
 })

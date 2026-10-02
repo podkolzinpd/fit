@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -9,6 +9,8 @@ import { computeAthleteAchievements } from '../../shared/athlete-achievements'
 import { localDate } from '../../shared/local-date'
 
 const baseProps = {
+  workoutId: 'workout',
+  userId: 'athlete',
   date: '16 сентября',
   completedSets: 3,
   totalSets: 3,
@@ -38,13 +40,28 @@ const record: WorkoutResult = {
 }
 
 describe('WorkoutCompletionReport', () => {
+  it('keeps the same celebration for 10/12, 11/12 and 12/12, including loading and retry', () => {
+    const { rerender, container } = render(<MemoryRouter><WorkoutCompletionReport {...baseProps} completedSets={10} totalSets={12} /></MemoryRouter>)
+    const title = screen.getByRole('heading', { level: 1 }).textContent
+    const src = container.querySelector('img')?.src
+    for (const count of [11, 12]) {
+      rerender(<MemoryRouter><WorkoutCompletionReport {...baseProps} completedSets={count} totalSets={12} resultLoading /></MemoryRouter>)
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title!)
+      expect(container.querySelector('img')?.src).toBe(src)
+      expect(screen.getByText(`Выполнено ${count} из 12 подходов`)).toBeVisible()
+    }
+    fireEvent.error(container.querySelector('img')!)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title!)
+    expect(container.querySelector('.workout-completion-report-art svg')).toBeInTheDocument()
+  })
+
   it('adds a new badge without replacing the result, feedback or sharing', () => {
     const completed: Workout = { id: 'new-workout', clientId: 'client', clientName: 'Клиент', status: 'done',
       workoutDate: localDate('2026-09-30'), completedAt: '2026-09-30T12:00:00Z', startedAt: null,
       startTime: null, endTime: null, notes: null, stageId: null, stageTitle: null, version: 1, exercises: [] }
     const newAchievements = computeAthleteAchievements([completed], localDate('2026-09-30')).filter((item) => item.sourceWorkoutId === completed.id)
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} newAchievements={newAchievements} feedback={<button type="button">Оставить отзыв</button>} /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+    expect(screen.getByText(/Тренировка завершена ·/)).toBeVisible()
     expect(screen.getByRole('region', { name: 'Новые ачивки' })).toHaveTextContent('Первый шаг')
     expect(screen.getByRole('button', { name: 'Оставить отзыв' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Поделиться' })).toBeVisible()
@@ -52,7 +69,7 @@ describe('WorkoutCompletionReport', () => {
 
   it('shows the complete result without empty metrics', () => {
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+    expect(screen.getByText(/Тренировка завершена ·/)).toBeVisible()
     expect(screen.getByText('Выполнено 3 из 3 подходов')).toBeVisible()
     expect(screen.getAllByText('100%')).toHaveLength(1)
     expect(screen.queryByText('Главный результат')).not.toBeInTheDocument()
@@ -61,9 +78,9 @@ describe('WorkoutCompletionReport', () => {
     expect(screen.queryByText('С устройства')).not.toBeInTheDocument()
   })
 
-  it('names a partial save and lists unfinished exercises', () => {
+  it('celebrates a completed workout and separately lists unfinished exercises', () => {
     render(<MemoryRouter><WorkoutCompletionReport {...baseProps} completedSets={1} totalSets={4} completedExercises={0} totalExercises={2} incompleteExercises={['Жим лёжа', 'Очень длинное название упражнения для мобильного экрана']} duration={null} tonnage={null} muscleGroups={[]} hasTrainer={false} /></MemoryRouter>)
-    expect(screen.getByRole('heading', { name: 'Тренировка сохранена частично' })).toBeVisible()
+    expect(screen.getByText(/Тренировка завершена ·/)).toBeVisible()
     expect(screen.getByText('Выполнено 1 из 4 подходов')).toBeVisible()
     expect(screen.getAllByText('25%')).toHaveLength(1)
     expect(screen.getByText(/Жим лёжа/)).toBeVisible()
@@ -144,8 +161,8 @@ describe('workout completion calculations', () => {
     expect(workoutCompletionPercent(1, 4)).toBe(25)
     expect(workoutCompletionPercent(5, 4)).toBe(100)
     expect(workoutCompletionPercent(0, 0)).toBeNull()
-    expect(workoutCompletionTitle(1, 4)).toBe('Тренировка сохранена частично')
-    expect(workoutCompletionTitle(4, 4)).toBe('Тренировка завершена')
+    expect(workoutCompletionTitle()).toBe('Тренировка завершена')
+    expect(workoutCompletionTitle()).toBe('Тренировка завершена')
     expect(workoutCompletionCountLine(1, 4, 0, 2)).toBe('0/2 упражнения · 1/4 подхода')
   })
 })

@@ -35,7 +35,7 @@ async function saveFeedback(page: Page, wellbeing: 'Хорошо' | 'Норма�
   await setRpe(page, wellbeing === 'Хорошо' ? 5 : wellbeing === 'Нормально' ? 6 : 7)
   await card.getByRole('button', { name: wellbeing, exact: true }).click()
   await card.getByRole('button', { name: 'Нет', exact: true }).click()
-  await card.getByRole('button', { name: 'Сохранить итоги', exact: true }).click()
+  await card.getByRole('button', { name: /^Сохранить (итоги|самочувствие)$/ }).click()
   await expect(card).toHaveClass(/workout-review-readonly/)
   return card
 }
