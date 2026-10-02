@@ -21,7 +21,7 @@ const bundle: TrainerFinanceClientBundle = {
   sessions: [{ id: sessionId, packageId, workoutId, disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z' }],
 }
 const clients = vi.hoisted(() => ({ get: vi.fn() }))
-const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn(), updatePackage: vi.fn(), addPayment: vi.fn(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn() }))
+const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn(), updatePackage: vi.fn(), addPayment: vi.fn(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn() }))
 const workouts = vi.hoisted(() => ({ saveCompleted: vi.fn() }))
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow' } as SessionActor }) }))
@@ -46,6 +46,7 @@ describe('TrainerFinancePage', () => {
     finance.updatePayment.mockReset().mockResolvedValue(bundle.payments[0])
     finance.voidPayment.mockReset().mockResolvedValue(undefined)
     finance.updateSession.mockReset().mockResolvedValue({ ...bundle.sessions[0], disposition: 'free', packageId: null, version: 2 })
+    finance.createManualSession.mockReset().mockResolvedValue(bundle.sessions[0])
     workouts.saveCompleted.mockReset().mockResolvedValue(workoutId)
   })
 
@@ -120,9 +121,27 @@ describe('TrainerFinancePage', () => {
     await user.clear(date)
     await user.type(date, '2026-09-20')
     await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
-    await waitFor(() => expect(workouts.saveCompleted).toHaveBeenCalledWith(expect.objectContaining({
-      clientId, workoutDate: '2026-09-20', notes: 'Проведённое занятие', exercises: [],
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledWith(clientId, expect.objectContaining({
+      workoutDate: '2026-09-20', disposition: 'unassigned', comment: null, packageId: null,
     })))
+  })
+
+  it('keeps the manual operation identity and input after a lost response', async () => {
+    const user = userEvent.setup()
+    finance.createManualSession.mockRejectedValueOnce(new Error('Нет сети')).mockResolvedValue(bundle.sessions[0])
+    renderPage()
+    await screen.findByRole('heading', { name: 'Персональные тренировки' })
+    await user.click(screen.getByRole('tab', { name: 'Занятия: 1' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await user.type(screen.getByLabelText('Комментарий'), 'Занятие вне Fit')
+    await user.selectOptions(screen.getByLabelText('Учёт'), 'trial')
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await screen.findByText('Нет сети')
+    expect(screen.getByLabelText('Комментарий')).toHaveValue('Занятие вне Fit')
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
+    await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(2))
+    expect(finance.createManualSession.mock.calls[1]).toEqual(finance.createManualSession.mock.calls[0])
+    expect(workouts.saveCompleted).not.toHaveBeenCalled()
   })
 
   it('renews an existing package without changing the original record', async () => {

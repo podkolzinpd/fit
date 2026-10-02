@@ -62,6 +62,6 @@
 | Пункт | Видимый результат | Доказательства | Статус |
 |---|---|---|---|
 | 1 | Пакет автора тренировки, независимо от владельца карточки | 62 actor/RLS tests; clean chain и local:verify (изолированный PostgreSQL 55434) | Реализовано, ожидает CI/выпуска |
-| 2 | Ручной учёт атомарен и повторяем без дублей | Transaction rollback + replay + component tests | Ожидает 1 |
+| 2 | Ручной учёт атомарен и повторяем без дублей | 63 actor/RLS; rollback, concurrent replay, last slot; component retry | Реализовано, проверка выпуска |
 | 3 | Даты и долг согласованы | Date/renew/summary tests | Ожидает 2 |
 | 4 | Формат быстрого старта и корректный фильтр | UI/WebKit + API + screenshots | Ожидает 3 |
