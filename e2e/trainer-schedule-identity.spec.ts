@@ -51,9 +51,13 @@ test('trainer Schedule preview keeps real date controls usable and compact', asy
   await page.getByRole('button', { name: 'Сегодня' }).click()
   await expect(page).toHaveURL(/range=2w/)
   await expect(page.locator('.schedule-fortnight-day').first()).toBeVisible()
-  const firstWeekHeights = await page.locator('.schedule-fortnight-day').evaluateAll((days) => days.slice(0, 7).map((day) => day.getBoundingClientRect().height))
-  expect(new Set(firstWeekHeights.map(Math.round)).size).toBe(1)
-  expect(firstWeekHeights[0]).toBeGreaterThanOrEqual(148)
+  // The query may replace the old week after the Today navigation. Sample
+  // complete, laid-out cells, not the transient loading subtree.
+  await expect.poll(async () => {
+    const heights = await page.locator('.schedule-fortnight-day').evaluateAll((days) => days.slice(0, 7).map((day) => day.getBoundingClientRect().height))
+    return heights.length === 7 && heights.every((height) => height >= 148)
+      && new Set(heights.map(Math.round)).size === 1
+  }).toBe(true)
   await page.locator('.schedule-fortnight-day').nth(7).click()
   await expect(page).toHaveURL(/date=.*range=2w/)
   await page.getByRole('button', { name: 'К 2 неделям' }).click()
