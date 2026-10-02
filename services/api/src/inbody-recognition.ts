@@ -108,7 +108,7 @@ const segmentAliases: ReadonlyArray<[InBodySegment, RegExp]> = [
 ]
 
 function normalizedLines(text: string): string[] {
-  return text.split(/\r?\n/).map((line) => line.replace(/[−–—]/g, '-').replace(/,(?=\d)/g, '.').replace(/\s+/g, ' ').trim()).filter(Boolean)
+  return text.replace(/(\d)\s*[.,]\s*\r?\n\s*(\d)/g, '$1.$2').split(/\r?\n/).map((line) => line.replace(/[−–—]/g, '-').replace(/(\d)\s*[.,]\s*(\d)/g, '$1.$2').replace(/\s+/g, ' ').trim()).filter(Boolean)
 }
 
 function numbers(text: string): number[] {
@@ -161,39 +161,120 @@ function segmental(lines: readonly string[]): InBodySegmentMeasurement[] {
   return result
 }
 
+function inBody270Composition(lines: readonly string[]): { totalBodyWaterL: number; proteinKg: number; mineralsKg: number; bodyFatMassKg: number; weightKg: number } | undefined {
+  const rows = lines.flatMap((line) => {
+    if (!/[()]/.test(line) || !/[~]/.test(line)) return []
+    const values = numbers(line)
+    return values.length >= 3 ? [values[0]!] : []
+  })
+  for (let index = 0; index <= rows.length - 5; index += 1) {
+    const [water, protein, minerals, fat, weight] = rows.slice(index, index + 5)
+    if (water! >= 10 && water! <= 100 && protein! >= 1 && protein! <= 40 && minerals! >= 0.5 && minerals! <= 15
+      && fat! >= 0.5 && fat! <= 200 && weight! >= 15 && weight! <= 350 && Math.abs((water! + protein! + minerals! + fat!) - weight!) <= 1.5) {
+      return { totalBodyWaterL: water!, proteinKg: protein!, mineralsKg: minerals!, bodyFatMassKg: fat!, weightKg: weight! }
+    }
+  }
+  return undefined
+}
+
+function reconcileComposition(result: InBodyRecognitionResult): void {
+  const { inBody, weightKg } = result
+  if (weightKg === undefined) return
+  const fat = inBody.bodyFatMassKg
+  const fatFree = inBody.fatFreeMassKg
+  if (fat !== undefined && fatFree !== undefined && Math.abs(fat + fatFree - weightKg) > Math.max(1.5, weightKg * 0.03)) {
+    delete inBody.bodyFatMassKg
+    delete inBody.fatFreeMassKg
+    result.warnings.push('Жировая и безжировая масса не прошли проверку: их сумма не совпадает с весом. Эти значения не будут сохранены автоматически.')
+    return
+  }
+  if (fat !== undefined && fatFree === undefined) inBody.fatFreeMassKg = Math.round((weightKg - fat) * 10) / 10
+  if (fat === undefined && fatFree !== undefined) inBody.bodyFatMassKg = Math.round((weightKg - fatFree) * 10) / 10
+}
+
+function valuesBetween(lines: readonly string[], start: RegExp, end: RegExp): number[] {
+  const startIndex = lines.findIndex((line) => start.test(line))
+  if (startIndex < 0) return []
+  const values: number[] = []
+  for (let index = startIndex + 1; index < lines.length && !end.test(lines[index]!); index += 1) values.push(...numbers(lines[index]!))
+  return values
+}
+
+function lastValueAfter(lines: readonly string[], alias: RegExp, minimum: number, maximum: number): number | undefined {
+  const indexes = lines.flatMap((line, index) => alias.test(line) ? [index] : [])
+  for (const index of indexes.reverse()) {
+    for (let offset = 0; offset <= 2; offset += 1) {
+      const value = numbers(lines[index + offset] ?? '').find((candidate) => candidate >= minimum && candidate <= maximum)
+      if (value !== undefined) return value
+    }
+  }
+  return undefined
+}
+
+function enrichInBody270(lines: readonly string[], inBody: InBodyMeasurement): void {
+  const bmi = valuesBetween(lines, /массы тела.*kg\/?m2/i, /процентное/i).filter((value) => value >= 10 && value <= 60).at(-1)
+  const bodyFatPercent = valuesBetween(lines, /^процентное/i, /тощ|тоц|оценка|анализ тощей/i).filter((value) => value >= 0.5 && value <= 75).at(-1)
+  const historyIndex = lines.findIndex((line) => /история состава тела/i.test(line))
+  const history = historyIndex < 0 ? [] : lines.slice(historyIndex)
+  const skeletalMuscleMassKg = valuesBetween(history, /масса скелетной/i, /процентное/i).filter((value) => value >= 3 && value <= 150).at(-1)
+  if (bmi !== undefined) inBody.bodyMassIndex = bmi
+  if (bodyFatPercent !== undefined) inBody.bodyFatPercent = bodyFatPercent
+  if (skeletalMuscleMassKg !== undefined) inBody.skeletalMuscleMassKg = skeletalMuscleMassKg
+  const targetWeightKg = lastValueAfter(lines, /идеальный вес/i, 15, 350)
+  const weightControlKg = lastValueAfter(lines, /^контроль веса$/i, -200, 200)
+  const fatControlKg = lastValueAfter(lines, /^контроль жира$/i, -200, 200)
+  const muscleControlKg = lastValueAfter(lines, /^контроль мышц$/i, -100, 100)
+  if (targetWeightKg !== undefined) inBody.targetWeightKg = targetWeightKg
+  if (weightControlKg !== undefined) inBody.weightControlKg = weightControlKg
+  if (fatControlKg !== undefined) inBody.fatControlKg = fatControlKg
+  if (muscleControlKg !== undefined) inBody.muscleControlKg = muscleControlKg
+}
+
 export function extractInBodyFromText(text: string): InBodyRecognitionResult {
   const lines = normalizedLines(text)
+  const normalizedText = lines.join('\n')
   const inBody: InBodyMeasurement = { schemaVersion: 1 }
   for (const definition of metrics) {
     const value = metricValue(lines, definition)
     if (value !== undefined) (inBody as unknown as Record<string, unknown>)[definition.key] = value
   }
-  const model = text.match(/\bInBody\s*([A-Z]?\d{2,4}[A-Z]?)\b/i)
+  const model = normalizedText.match(/\bInBody\s*([A-Z]?\d{2,4}[A-Z]?)\b/i)
   if (model) inBody.deviceModel = `InBody ${model[1]}`
-  const measuredAt = text.match(/\b(?:20\d{2}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]20\d{2})\s+(\d{1,2}:\d{2})\b/)
+  const measuredAt = normalizedText.match(/\b(?:20\d{2}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]20\d{2})\s+(\d{1,2}:\d{2})\b/)
   if (measuredAt?.[1]) inBody.measuredAt = measuredAt[1]
   const segments = segmental(lines)
   if (segments.length > 0) inBody.segmental = segments
 
-  const weightKg = firstMetric(text, [/^weight\b/i, /^вес\b/i], 15, 350)
+  const model270 = /\bInBody\s*270\b/i.test(normalizedText)
+  const composition270 = model270 ? inBody270Composition(lines) : undefined
+  if (composition270) {
+    inBody.totalBodyWaterL = composition270.totalBodyWaterL
+    inBody.proteinKg = composition270.proteinKg
+    inBody.mineralsKg = composition270.mineralsKg
+    inBody.bodyFatMassKg = composition270.bodyFatMassKg
+  }
+  if (model270) enrichInBody270(lines, inBody)
+  const weightKg = composition270?.weightKg ?? firstMetric(text, [/^weight\b/i, /^вес\b/i], 15, 350)
   const waistCm = firstMetric(text, [/waist circumference/i, /окружность талии/i], 30, 250)
   const hipCm = firstMetric(text, [/hip circumference/i, /окружность бедер/i, /окружность бёдер/i], 30, 300)
   const chestCm = firstMetric(text, [/chest circumference/i, /окружность груди/i], 30, 300)
-  const recognizedFieldCount = Object.keys(inBody).filter((key) => !['schemaVersion', 'segmental'].includes(key)).length
-    + (inBody.segmental?.reduce((count, item) => count + Object.keys(item).length - 1, 0) ?? 0)
-    + [weightKg, waistCm, hipCm, chestCm].filter((value) => value !== undefined).length
   const warnings: string[] = []
-  if (recognizedFieldCount < 4) warnings.push('На фото распознано мало показателей. Проверьте резкость и освещение.')
   if (weightKg === undefined) warnings.push('Вес не распознан — его можно указать вручную перед сохранением.')
-  const recordedOn = date(text)
-  return {
+  const recordedOn = date(normalizedText)
+  const result: InBodyRecognitionResult = {
     ...(recordedOn === undefined ? {} : { recordedOn }),
     ...(weightKg === undefined ? {} : { weightKg }),
     ...(waistCm === undefined ? {} : { waistCm }),
     ...(hipCm === undefined ? {} : { hipCm }),
     ...(chestCm === undefined ? {} : { chestCm }),
     inBody,
-    recognizedFieldCount,
+    recognizedFieldCount: 0,
     warnings,
   }
+  reconcileComposition(result)
+  result.recognizedFieldCount = Object.keys(inBody).filter((key) => !['schemaVersion', 'segmental'].includes(key)).length
+    + (inBody.segmental?.reduce((count, item) => count + Object.keys(item).length - 1, 0) ?? 0)
+    + [weightKg, waistCm, hipCm, chestCm].filter((value) => value !== undefined).length
+  if (result.recognizedFieldCount < 4) warnings.unshift('На фото распознано мало показателей. Проверьте резкость и освещение.')
+  return result
 }
