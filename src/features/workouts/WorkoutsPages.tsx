@@ -2346,6 +2346,11 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
 }
 
 // Live elapsed workout time counting up from the start timestamp, "42:07".
+function liveDistanceIsValid(form: HTMLFormElement, report = false): boolean {
+  const input = form.querySelector<HTMLInputElement>('input[name="runDistance"]')
+  return input ? (report ? input.reportValidity() : input.checkValidity()) : true
+}
+
 function formatElapsed(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
@@ -2732,7 +2737,7 @@ export function LiveWorkoutPage() {
     else liveSetAutosave.schedule(set.id, send)
   }
   function captureLiveDraft(set: WorkoutSet, form: HTMLFormElement, target: EventTarget) {
-    if (!form.checkValidity()) { liveSetAutosave.clear(set.id); return }
+    if (!liveDistanceIsValid(form)) { liveSetAutosave.clear(set.id); return }
     markLiveMetricEntered(form, target)
     const draft = draftFrom(form, set)
     // localStorage пишется синхронно на каждом вводе. React-state обновится при
@@ -3072,7 +3077,7 @@ export function LiveWorkoutPage() {
       // into an empty draft while finishing a partially completed exercise.
       if (set?.confirmedAt && !editingSets.has(setId)) continue
       if (!set || (!liveFormChanged(form) && !pendingSetDrafts.current.has(setId))) continue
-      if (!form.reportValidity()) throw new Error('Проверьте введённые значения подхода')
+      if (!liveDistanceIsValid(form, true)) throw new Error('Проверьте дистанцию подхода')
       const draft = draftFrom(form, set)
       liveSetAutosave.clear(setId)
       rememberLiveDraft(setId, draft)
@@ -3241,7 +3246,7 @@ export function LiveWorkoutPage() {
       if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-      if (!event.currentTarget.checkValidity()) { liveSetAutosave.clear(set.id); return }
+      if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
@@ -3251,7 +3256,7 @@ export function LiveWorkoutPage() {
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form?.reportValidity()) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}><span aria-hidden="true">✓</span></button>
+                onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}><span aria-hidden="true">✓</span></button>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
@@ -3259,7 +3264,7 @@ export function LiveWorkoutPage() {
                   prepareGong()
                   liveSetAutosave.clear(set.id)
                   const form = event.currentTarget.form
-                  if (!form?.reportValidity()) { skipBlurForSet.current = null; return }
+                  if (!form || !liveDistanceIsValid(form, true)) { skipBlurForSet.current = null; return }
                   if (form) {
                     const draft = draftFrom(form, set)
                     if (!hasLiveSetResult(draft)) {
