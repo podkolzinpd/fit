@@ -182,7 +182,7 @@ describe('AppLayout: единственная UI Identity', () => {
     expect(document.querySelector('.phone-frame')).not.toHaveClass('theme-light')
     expect(document.documentElement).toHaveClass('fit-lime-document')
     expect(document.documentElement).not.toHaveClass('theme-light')
-    expect(meta).toHaveAttribute('content', '#080908')
+    expect(meta).toHaveAttribute('content', '#000000')
 
     layout.unmount()
     expect(document.documentElement).not.toHaveClass('fit-lime-document')

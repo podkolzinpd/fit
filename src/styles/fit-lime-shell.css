@@ -1,37 +1,54 @@
 /* The root class is assigned in AppLayout's layout effect before paint. */
 html.fit-lime-document,
 html.fit-lime-document body,
-html.fit-lime-document #root { background: #080908; color-scheme: dark }
+html.fit-lime-document #root { background: #000000; color-scheme: dark }
 
-.phone-frame.fit-lime-shell { border-color: #080908; background: #080908 }
-.fit-lime-shell .content { background: #080908 }
+.phone-frame.fit-lime-shell { border-color: var(--lime-bg); background: var(--lime-bg) }
+.fit-lime-shell .content { background: var(--lime-bg) }
 .fit-lime-shell .content:not(.content-immersive):not(:has(.schedule-v2)) {
   padding-bottom: calc(116px + env(safe-area-inset-bottom));
 }
-.fit-lime-shell .page-header h1 { color: #f8f8f6; font-size: clamp(29px, 7vw, 32px); font-weight: 700; line-height: 1.08; letter-spacing: -.04em }
-.fit-lime-shell .page-header p { color: #b8b8bd }
-.fit-lime-shell .page-back { min-width: 44px; min-height: 44px; color: #f8f8f6 }
+.fit-lime-shell .page-header { min-height: 64px; gap: 12px }
+.fit-lime-shell .page-header h1 { color: var(--lime-text); font-size: 24px; font-weight: 500; line-height: 24px; letter-spacing: -.02em }
+.fit-lime-shell .page-header p { color: var(--lime-text-secondary) }
+.fit-lime-shell .page-back { min-width: 44px; min-height: 44px; color: var(--lime-text) }
 
 .fit-lime-shell .trainer-tab-bar {
   position: fixed;
   left: 50%;
   bottom: max(10px, env(safe-area-inset-bottom));
   z-index: 20;
-  width: min(calc(100% - 32px), 408px);
+  width: min(calc(100% - 28px), 346px);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   flex: initial;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, .05);
+  padding: 4px;
+  min-height: 68px;
+  border: 2px solid transparent;
   border-radius: 34px;
-  background: rgba(25, 25, 27, .94);
-  box-shadow: 0 14px 38px rgba(0, 0, 0, .48);
+  background: rgba(31, 31, 33, .4);
+  box-shadow: none;
   backdrop-filter: blur(22px);
   transform: translateX(-50%);
 }
-.fit-lime-shell .trainer-tab-bar a { min-width: 0; gap: 5px; min-height: 50px; padding: 9px 4px; border-radius: 27px; color: #929296; font-size: 12px; font-weight: 500 }
-.fit-lime-shell .trainer-tab-bar a svg { width: 27px; height: 27px; opacity: 1 }
-.fit-lime-shell .trainer-tab-bar a.active { color: #f8f8f6; background: #37373d; font-weight: 600 }
+.fit-lime-shell .trainer-tab-bar::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  padding: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  /* Original Components SVG: (670,324) → (547.946,526.788). */
+  background: linear-gradient(211.04deg, rgba(47,47,50,.15), rgba(47,47,50,.05));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.fit-lime-shell .trainer-tab-bar a { min-width: 0; gap: 4px; min-height: 56px; padding: 8px 4px; border-radius: 28px; color: var(--lime-text-secondary); font-size: 10px; line-height: 12px; font-weight: 400 }
+.fit-lime-shell .trainer-tab-bar a svg { width: 24px; height: 24px; opacity: .6 }
+.fit-lime-shell .trainer-tab-bar a.active { color: var(--lime-text); background: #2f2f33; font-weight: 400 }
+.fit-lime-shell .trainer-tab-bar a.active svg { opacity: 1 }
 .fit-lime-shell .trainer-tab-bar a.active svg { transform: none }
 
 @media (max-width: 480px) {
@@ -43,5 +60,5 @@ html.fit-lime-document #root { background: #080908; color-scheme: dark }
 @media (max-width: 360px) {
   .fit-lime-shell .trainer-tab-bar { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px; }
   .fit-lime-shell .trainer-tab-bar a { gap: 4px; padding-inline: 1px; font-size: 10px; }
-  .fit-lime-shell .trainer-tab-bar a svg { width: 23px; height: 23px; }
+  .fit-lime-shell .trainer-tab-bar a svg { width: 24px; height: 24px; }
 }

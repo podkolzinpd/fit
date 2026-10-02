@@ -1,8 +1,15 @@
-import type { SVGProps } from 'react'
+import { useContext, type SVGProps } from 'react'
+import { FitLimeIconsContext, fitLimeIconNames, fitLimeOriginalIcons } from './fit-lime-icons'
 
-type IconProps = SVGProps<SVGSVGElement>
+type IconProps = SVGProps<SVGSVGElement> & { 'data-icon'?: string }
 
 function Icon({ children, ...props }: IconProps) {
+  const lime = useContext(FitLimeIconsContext)
+  const name = fitLimeIconNames[props['data-icon'] ?? '']
+  const source = lime && name ? fitLimeOriginalIcons[name] : undefined
+  if (source) return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" {...props} data-original-icon={name}>
+    <image href={source} width="24" height="24" />
+  </svg>
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>{children}</svg>
 }
 

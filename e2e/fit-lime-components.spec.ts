@@ -10,7 +10,7 @@ test('Fit Lime component variants stay inert outside the scoped trainer fixture'
   const frame = page.locator('.fit-lime-component-test-frame')
   await expect(frame).toBeVisible()
   const original = await frame.evaluate((element) => getComputedStyle(element).getPropertyValue('--bg').trim())
-  expect(original).not.toBe('#080908')
+  expect(original).not.toBe('#000000')
 
   await frame.evaluate((element) => {
     element.classList.add('fit-lime')
@@ -28,16 +28,16 @@ test('Fit Lime component variants stay inert outside the scoped trainer fixture'
     element.append(fixture)
   })
 
-  await expect(frame).toHaveCSS('background-color', 'rgb(8, 9, 8)')
-  await expect(frame.locator('.fit-lime-component-fixture .primary')).toHaveCSS('background-color', 'rgb(186, 255, 54)')
-  await expect(frame.locator('.fit-lime-component-fixture .secondary')).toHaveCSS('background-color', 'rgb(35, 35, 40)')
-  await expect(frame.locator('.fit-lime-component-fixture .card')).toHaveCSS('border-radius', '28px')
+  await expect(frame).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+  await expect(frame.locator('.fit-lime-component-fixture .primary')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(frame.locator('.fit-lime-component-fixture .secondary')).toHaveCSS('background-color', 'rgb(37, 37, 41)')
+  await expect(frame.locator('.fit-lime-component-fixture .card')).toHaveCSS('border-radius', '32px')
   await expect(frame.locator('.fit-lime-component-fixture .field input')).toHaveCSS('font-size', '16px')
-  await expect(frame.locator('.fit-lime-component-fixture .modal-dialog')).toHaveCSS('background-color', 'rgb(35, 35, 40)')
+  await expect(frame.locator('.fit-lime-component-fixture .modal-dialog')).toHaveCSS('background-color', 'rgb(37, 37, 41)')
   const primaryHeight = await frame.locator('.fit-lime-component-fixture .primary').evaluate((button) => button.getBoundingClientRect().height)
   expect(primaryHeight).toBeGreaterThanOrEqual(44)
 
   await frame.evaluate((element) => element.classList.remove('fit-lime'))
-  await expect(frame).not.toHaveCSS('background-color', 'rgb(8, 9, 8)')
+  await expect(frame).not.toHaveCSS('background-color', 'rgb(0, 0, 0)')
   expect(await frame.evaluate((element) => getComputedStyle(element).getPropertyValue('--bg').trim())).toBe(original)
 })

@@ -40,6 +40,7 @@ jobs:
       - run: npm run db:types:check
       - run: npm run infra:policy:test
       - run: npm run frontend:hosting:test
+      - run: node --test scripts/prepare-fit-lime-fonts.test.mjs
       - run: npm run build
         env:
           VITE_SUPABASE_URL: http://127.0.0.1:54321

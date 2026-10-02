@@ -397,6 +397,43 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const width of [390, 430, 1440]) {
+  test(`Figma foundation preserves native icons, fonts and pilot isolation at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await mockPilot(page, { fitLime: true, workouts: [] })
+    await page.goto('/clients')
+    await expect(page.locator('.fit-lime-shell')).toBeVisible()
+    await expect(page.locator('.trainer-tab-bar [data-original-icon="users"]')).toBeVisible()
+    await expect(page.locator('.page-header h1')).toHaveCSS('font-size', '24px')
+    await expect(page.locator('.page-header h1')).toHaveCSS('font-weight', '500')
+    await expect(page.locator('.fit-lime-shell')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    if (process.env.FIT_LIME_FONTS_REQUIRED === 'true') {
+      expect(await page.evaluate(async () => {
+        const regular = await document.fonts.load('400 16px "YS Geo"', 'АаЁё123')
+        const medium = await document.fonts.load('500 24px "YS Geo"', 'Клиенты')
+        const counter = await document.fonts.load('700 32px REM', '123')
+        return [...regular, ...medium, ...counter].map((font) => font.status)
+      })).toEqual(['loaded', 'loaded', 'loaded'])
+    }
+    for (const asset of await page.locator('.trainer-tab-bar image').all()) {
+      await expect(asset).toHaveAttribute('width', '24')
+      await expect(asset).toHaveAttribute('height', '24')
+      const source = await asset.getAttribute('href')
+      expect(await page.evaluate(async (url) => {
+        const img = new Image()
+        img.src = url!
+        await img.decode()
+        return [img.naturalWidth, img.naturalHeight]
+      }, source)).toEqual([24, 24])
+    }
+    await page.screenshot({ path: testInfo.outputPath('figma-foundation.png'), fullPage: true })
+    await mockPilot(page, { fitLime: false, workouts: [] })
+    await page.reload()
+    await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+    await expect(page.locator('[data-original-icon]')).toHaveCount(0)
+  })
+}
+
 for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
@@ -486,8 +523,8 @@ test('Fit Lime stage 4 keeps workout and assistant routes scoped to the pilot tr
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
     await expect(page.locator(surface)).toBeVisible()
-    await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(8, 9, 8)')
-    if (route === '/assistant') await expect(page.getByPlaceholder('Опишите тренировку')).toBeVisible()
+    await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    if (route === '/assistant') await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
     const screenshotPath = testInfo.outputPath(`stage4-${surface.slice(1)}.png`)
     await page.screenshot({ path: screenshotPath, fullPage: true })
     await testInfo.attach(`stage4-${surface.slice(1)}`, { path: screenshotPath, contentType: 'image/png' })
@@ -1208,7 +1245,7 @@ test('Fit Lime invitation dialog keeps the existing invite entry and close', asy
   await invite.click()
   const dialog = page.getByRole('dialog', { name: 'Кого пригласить?' })
   await expect(dialog).toBeVisible()
-  await expect(dialog).toHaveCSS('background-color', 'rgb(35, 35, 40)')
+  await expect(dialog).toHaveCSS('background-color', 'rgb(37, 37, 41)')
   await expect(dialog.getByLabel('Имя спортсмена')).toBeFocused()
   await page.keyboard.press('Shift+Tab')
   await expect(dialog.getByRole('button', { name: 'Закрыть' })).toBeFocused()
