@@ -169,3 +169,4 @@ Frontend hosting: 27 сентября Gateway публикует candidate `6075
    зависимости по одной; после окна стабильности отключить Supabase и удалить secrets.
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
+- Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Работающий Yandex ID вход в Android ещё не подтверждён: требуются регистрация Android callback URI, отдельное решение по API CORS для `http://localhost` и проверка на устройстве. Подпись release и публикация не выполнялись.

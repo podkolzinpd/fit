@@ -799,6 +799,25 @@ Stage API CORS allowlist обязан содержать как production web o
 `TF_VAR_api_cors_allowed_origins` в deployment workflow, а не вручную в
 активной ревизии контейнера.
 
+### Android shell для RuStore
+
+Исходный Android-проект находится в `android/` и использует тот же Capacitor
+`appId` `com.coachspace.fit`. Для локальной синхронизации выполните
+`npm run android:sync:local`; `npm run android:debug` дополнительно собирает
+debug APK в `android/app/build/outputs/apk/debug/`. Нужны JDK 21, Android SDK
+Platform 36 и Build Tools 36.0.0. В PR Android debug APK проверяется отдельным
+CI workflow. Локальная development-сборка не подключена к production Yandex API.
+
+Android WebView имеет origin `http://localhost`. До рабочего входа требуется
+зарегистрировать точный Redirect URI `http://localhost/auth/yandex/callback`
+в настройках Yandex OAuth и после отдельного согласования добавить ровно
+`http://localhost` в API CORS allowlist через deployment workflow. Эти шаги
+не считаются выполненными по успешной сборке APK. После них нужен ручной smoke
+на устройстве: Yandex ID, callback, загрузка данных обеих ролей, выход и
+повторный вход. Перед публикацией в RuStore нужны отдельный release keystore,
+подписанная release APK/AAB, проверка целевой сборки и карточка приложения.
+Keystore и `google-services.json` не размещаются в репозитории.
+
 Полноценная browser-сессия после Yandex ID использует те же публичные
 `VITE_YANDEX_OAUTH_CLIENT_ID` и `VITE_YANDEX_API_BASE_URL` и общий аварийный
 switch:

@@ -83,3 +83,17 @@ test('maskable icons retain safe margins', async () => {
     assert.ok(icon.logoWidthRatio >= 0.697 && icon.logoWidthRatio <= 0.701)
   }
 })
+
+test('Android launcher icons use the Fit mark and safe adaptive margins', async () => {
+  for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+    const base = `android/app/src/main/res/mipmap-${density}`
+    const launcher = await inspectPng(`${base}/ic_launcher.png`)
+    const round = await inspectPng(`${base}/ic_launcher_round.png`)
+    const foreground = await inspectPng(`${base}/ic_launcher_foreground.png`, true)
+    assert.deepEqual(launcher.background, [251, 250, 247, 255])
+    assert.deepEqual(round.background, [251, 250, 247, 255])
+    assert.deepEqual(foreground.background, [0, 0, 0, 0])
+    assert.ok(foreground.logoWidthRatio >= 0.59 && foreground.logoWidthRatio <= 0.61)
+    assert.equal(launcher.hasPureBlack, true)
+  }
+})

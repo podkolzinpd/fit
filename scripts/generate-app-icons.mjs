@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -47,6 +47,29 @@ const assets = [
   },
 ]
 
+for (const [density, multiplier] of Object.entries({ mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 })) {
+  const directory = `android/app/src/main/res/mipmap-${density}`
+  for (const name of ['ic_launcher', 'ic_launcher_round']) {
+    assets.push({ path: `${directory}/${name}.png`, size: 48 * multiplier, scale: primaryScale })
+  }
+  assets.push({
+    path: `${directory}/ic_launcher_foreground.png`,
+    size: 108 * multiplier,
+    scale: 0.60,
+    transparent: true,
+  })
+}
+
+for (const directory of (await readdir(resolve(root, 'android/app/src/main/res'))).filter((name) => name === 'drawable' || name.startsWith('drawable-'))) {
+  const path = `android/app/src/main/res/${directory}/splash.png`
+  try {
+    const image = PNG.sync.read(await readFile(resolve(root, path)))
+    assets.push({ path, width: image.width, height: image.height, size: Math.min(image.width, image.height), scale: 0.70 })
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+  }
+}
+
 async function hardenIconEdges(path, foreground) {
   const image = PNG.sync.read(await readFile(path))
   const background = [251, 250, 247]
@@ -74,7 +97,7 @@ try {
   for (const asset of assets) {
     const page = await browser.newPage({
       deviceScaleFactor: 1,
-      viewport: { width: asset.size, height: asset.size },
+      viewport: { width: asset.width ?? asset.size, height: asset.height ?? asset.size },
     })
     const foreground = asset.foreground ?? '#000000'
     const logo = source.replaceAll(
@@ -98,7 +121,7 @@ try {
           top: 50%;
           left: 50%;
           display: block;
-          width: ${asset.scale * 100}%;
+          width: ${asset.scale * asset.size}px;
           height: auto;
           transform: translate(-50%, -50%) scaleY(${opticalHeightScale});
         }
