@@ -26,6 +26,9 @@ jobs:
           node-version: 22
       - name: Verify permanent redirects and query preservation
         run: node scripts/verify-production-domain-redirect.mjs --report production-domain-redirect.json
+      - name: Measure canonical frontend DNS, TLS, HTML and assets
+        if: always()
+        run: node scripts/probe-production-frontend.mjs --report production-frontend-network.json
       - name: Publish the sanitized result
         if: always()
         run: |
@@ -36,10 +39,20 @@ jobs:
               + "/" + (.results | length | tostring)
             ' production-domain-redirect.json >>"$GITHUB_STEP_SUMMARY"
           fi
+          if test -f production-frontend-network.json; then
+            jq -r '
+              "Frontend network: " + .status
+              + "; DNS sources=" + (.dns | length | tostring)
+              + "; HTTPS probes=" + (.requests | length | tostring)
+              + "; slow/failing=" + ([.requests[] | select(.slow or (.passed | not))] | length | tostring)
+            ' production-frontend-network.json >>"$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: production-domain-redirect-${{ github.run_id }}
-          path: production-domain-redirect.json
+          path: |
+            production-domain-redirect.json
+            production-frontend-network.json
           if-no-files-found: error
           retention-days: 7
