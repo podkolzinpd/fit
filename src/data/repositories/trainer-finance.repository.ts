@@ -111,6 +111,8 @@ export interface TrainerFinancePaymentDraft {
 export type TrainerFinancePaymentUpdate = TrainerFinancePaymentDraft & { expectedVersion: number }
 export type TrainerFinanceSessionUpdate = Pick<TrainerFinanceSession, 'disposition' | 'packageId' | 'comment' | 'workoutDate'> & { expectedVersion: number }
 
+export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string }
+
 export interface TrainerFinanceRepository {
   listOverview(month: string): Promise<TrainerFinanceOverview>
   listClient(clientId: string): Promise<TrainerFinanceClientBundle>
@@ -119,6 +121,7 @@ export interface TrainerFinanceRepository {
   addPayment(packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(paymentId: string, expectedVersion: number, reason: string): Promise<void>
+  createManualSession(clientId: string, draft: TrainerFinanceManualSessionDraft): Promise<TrainerFinanceSession>
   updateSession(sessionId: string, draft: TrainerFinanceSessionUpdate): Promise<TrainerFinanceSession>
 }
 
@@ -134,5 +137,6 @@ export const trainerFinanceRepository: TrainerFinanceRepository = {
   addPayment: unavailable,
   updatePayment: unavailable,
   voidPayment: unavailable,
+  createManualSession: unavailable,
   updateSession: unavailable,
 }
