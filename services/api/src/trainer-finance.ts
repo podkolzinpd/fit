@@ -168,6 +168,8 @@ export interface TrainerFinanceSessionUpdate {
   workoutDate: string
 }
 
+export type TrainerFinanceManualSessionDraft = Omit<TrainerFinanceSessionUpdate, 'expectedVersion'> & { requestId: string }
+
 type BundleRow = QueryResultRow & { bundle: TrainerFinanceClientBundle }
 type PackageRow = QueryResultRow & { package: TrainerFinancePackage }
 type PaymentRow = QueryResultRow & { payment: TrainerFinancePayment }
@@ -203,6 +205,7 @@ export interface PilotTrainerFinance {
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft): Promise<TrainerFinancePayment>
   updatePayment(session: YandexActorSessionInput, paymentId: string, draft: TrainerFinancePaymentUpdate): Promise<TrainerFinancePayment>
   voidPayment(session: YandexActorSessionInput, paymentId: string, expectedVersion: number, reason: string): Promise<void>
+  createManualSession(session: YandexActorSessionInput, clientId: string, draft: TrainerFinanceManualSessionDraft): Promise<TrainerFinanceSession>
   updateSession(session: YandexActorSessionInput, sessionId: string, draft: TrainerFinanceSessionUpdate): Promise<TrainerFinanceSession>
 }
 
@@ -303,6 +306,16 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
         'select public.void_trainer_finance_payment($1, $2, $3)',
         [paymentId, expectedVersion, reason],
       )
+    })
+  }
+
+  createManualSession(session: YandexActorSessionInput, clientId: string, draft: TrainerFinanceManualSessionDraft) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<SessionRow>(
+        'select public.create_trainer_finance_manual_session($1,$2,$3,$4,$5,$6) as session',
+        [clientId, draft.requestId, draft.workoutDate, draft.disposition, draft.packageId, draft.comment],
+      )
+      return rows[0]!.session
     })
   }
 

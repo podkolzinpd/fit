@@ -1,4 +1,5 @@
 import type {
+  TrainerFinanceManualSessionDraft,
   TrainerFinancePackageDraft,
   TrainerFinancePackageUpdate,
   TrainerFinancePaymentDraft,
@@ -119,4 +120,13 @@ export function readTrainerFinanceSessionUpdate(value: unknown): TrainerFinanceS
     || packageId === undefined || comment === undefined || typeof workoutDate !== 'string'
     || ((disposition === 'charged') !== (packageId !== null))) return undefined
   return { expectedVersion, disposition: disposition as TrainerFinanceSessionUpdate['disposition'], packageId, comment, workoutDate }
+}
+
+export function readTrainerFinanceManualSessionDraft(value: unknown): TrainerFinanceManualSessionDraft | undefined {
+  const input = record(value)
+  if (!input || typeof input.requestId !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.requestId)) return undefined
+  const draft = readTrainerFinanceSessionUpdate({ ...input, expectedVersion: 1 })
+  return draft ? { requestId: input.requestId, disposition: draft.disposition,
+    packageId: draft.packageId, comment: draft.comment, workoutDate: draft.workoutDate } : undefined
 }

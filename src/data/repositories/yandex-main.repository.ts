@@ -51,6 +51,7 @@ import type {
   TrainerFinancePaymentDraft,
   TrainerFinancePaymentUpdate,
   TrainerFinanceSessionUpdate,
+  TrainerFinanceManualSessionDraft,
 } from './trainer-finance.repository'
 import { RepositoryError } from './error'
 import { roundMetric } from './progress.repository'
@@ -1046,6 +1047,10 @@ export function createYandexMainRepository(
       },
       async voidPayment(paymentId: string, expectedVersion: number, reason: string) {
         await writeEmpty(queries, `/v1/finance/payments/${encodeURIComponent(paymentId)}`, 'DELETE', { expectedVersion, reason })
+      },
+      async createManualSession(clientId: string, draft: TrainerFinanceManualSessionDraft) {
+        const payload = await writeJson(queries, `/v1/clients/${encodeURIComponent(clientId)}/finance/sessions`, 'POST', draft, z.object({ session: trainerFinanceSessionSchema }))
+        return payload.session
       },
       async updateSession(sessionId: string, draft: TrainerFinanceSessionUpdate) {
         const payload = await writeJson(queries, `/v1/finance/sessions/${encodeURIComponent(sessionId)}`, 'PUT', draft, z.object({ session: trainerFinanceSessionSchema }))
