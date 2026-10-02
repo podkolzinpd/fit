@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { achievementArt } from './achievement-art'
 
-// SHA-256 of the exact PNG files reviewed by the owner.
+// SHA-256 of the exact source PNG files reviewed by the owner.
 const approvedHashes: Record<string, string> = {
   'achievement-workouts-first-step-v1-20261001.png': '2986d3eeece6c83522f8ce91fb4c6eef4d7ed6b319e483e8f52346d6ce59e24c',
   'achievement-workouts-5-number-v2-20261001.png': '8a99f6ebceb3ccfd5afc44f0c16487266a51550b938beff2024a7d47a24ce3c1',
@@ -42,14 +42,32 @@ const approvedHashes: Record<string, string> = {
 }
 
 describe('owner-approved achievement artwork', () => {
-  it('maps exactly 33 unchanged PNGs, including every original athlete achievement', () => {
+  it('preserves all approved sources and maps every achievement to a small 320 px WebP', () => {
     const entries = Object.entries(achievementArt)
     expect(entries).toHaveLength(33)
-    expect(achievementArt['records-1']?.file).toBe('achievement-distinct-pr-trophy-1-concept-20261001.png')
+    expect(achievementArt['records-1']?.file).toBe('achievement-distinct-pr-trophy-1-concept-20261001.webp')
     expect(new Set(entries.map(([, art]) => art.file)).size).toBe(33)
+    let totalBytes = 0
     for (const [, art] of entries) {
-      const bytes = readFileSync(resolve(process.cwd(), 'public/achievements', art.file))
-      expect(createHash('sha256').update(bytes).digest('hex'), art.file).toBe(approvedHashes[art.file])
+      const sourceFile = art.file.replace(/\.webp$/, '.png')
+      const source = readFileSync(resolve(process.cwd(), 'docs/design/achievement-art-source', sourceFile))
+      expect(createHash('sha256').update(source).digest('hex'), sourceFile).toBe(approvedHashes[sourceFile])
+
+      const derivative = readFileSync(resolve(process.cwd(), 'src/assets/achievements', art.file))
+      expect(derivative.subarray(0, 4).toString('ascii'), art.file).toBe('RIFF')
+      expect(derivative.subarray(8, 12).toString('ascii'), art.file).toBe('WEBP')
+      expect(derivative.subarray(12, 16).toString('ascii'), art.file).toBe('VP8 ')
+      expect(derivative.readUInt16LE(26) & 0x3fff, art.file).toBe(320)
+      expect(derivative.readUInt16LE(28) & 0x3fff, art.file).toBe(320)
+      expect(derivative.byteLength, art.file).toBeLessThanOrEqual(120 * 1024)
+      expect(art.src, art.file).toBeTruthy()
+      totalBytes += derivative.byteLength
     }
+    expect(totalBytes).toBeLessThanOrEqual(500 * 1024)
+  })
+
+  it('keeps the full-size source PNGs out of the production public directory', () => {
+    const publicDirectory = resolve(process.cwd(), 'public/achievements')
+    expect(existsSync(publicDirectory) ? readdirSync(publicDirectory) : []).toEqual([])
   })
 })

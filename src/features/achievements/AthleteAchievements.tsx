@@ -40,7 +40,7 @@ function readDismissed(userId: string): HomePreference {
   } catch { return emptyPreference }
 }
 
-function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: boolean }) {
+function Badge({ item, compact = false, priority = false }: { item: AthleteAchievement; compact?: boolean; priority?: boolean }) {
   const earned = Boolean(item.earnedOn)
   const ratio = earned ? 1 : item.nearest ? item.progress / item.threshold : 0
   const status = earned ? 'получена' : item.kind === 'comeback' ? 'пока не получена' : achievementProgressLabel(item)
@@ -50,7 +50,7 @@ function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: 
   const recordFive = item.id === 'records-5'
   const showNumber = item.kind !== 'comeback' && item.id !== 'records-1'
   return <span className={`athlete-achievement-badge kind-${item.kind} badge-id-${item.id}${earned ? ' is-earned' : ''}${item.nearest ? ' is-nearest' : ''}${compact ? ' is-compact' : ''}${art ? ` has-static-art art-${art.crop}` : ''}`} role="img" aria-label={`${item.title}: ${status}`}>
-    {art ? <img className="athlete-achievement-static-art" src={`/achievements/${art.file}`} alt="" loading="lazy" decoding="async" /> :
+    {art ? <img className="athlete-achievement-static-art" src={art.src} alt="" width="320" height="320" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} decoding="async" /> :
     <svg className="athlete-achievement-art" viewBox="0 0 100 100" aria-hidden="true">
       <circle className="athlete-achievement-ring-track" cx="50" cy="50" r="40" />
       {ratio > 0 && <circle className="athlete-achievement-ring-fill" cx="50" cy="50" r="40" pathLength="100" strokeDasharray={`${ratio * 100} 100`} transform="rotate(-90 50 50)" />}
@@ -93,7 +93,7 @@ function AchievementDetail({ item, onClose, returnFocusTo }: { item: AthleteAchi
   return createPortal(<div className="athlete-achievement-detail-overlay" onClick={onClose}>
     <section className="athlete-achievement-detail" role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(event) => event.stopPropagation()}>
       <div className="athlete-achievement-detail-heading"><h2 id={titleId}>{item.title}</h2><button ref={closeRef} type="button" aria-label="Закрыть подробности ачивки" onClick={onClose}><CloseIcon /></button></div>
-      <Badge item={item} />
+      <Badge item={item} priority />
       <p>{item.description}</p>
       <strong>{item.earnedOn ? `Получена ${formatLocalDate(item.earnedOn)}` : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${achievementProgressLabel(item)}`}</strong>
     </section>
@@ -138,7 +138,7 @@ export function AthleteAchievementHome({ workouts, loading, error, onRetry }: { 
   if (!visible) return null
   return <section className="athlete-achievements-home" aria-labelledby="athlete-achievements-home-title">
     <div className="athlete-achievements-heading"><h2 id="athlete-achievements-home-title">Ачивки</h2>{featured && <button type="button" className="athlete-achievements-close" aria-label="Скрыть карточку ачивок" onClick={close}><CloseIcon /></button>}</div>
-    {!items ? <LoadState loading={loading} error={error} retry={onRetry} /> : featured && <div className="athlete-achievements-home-content"><Badge item={featured} /><div><strong>{featured.title}</strong><p>{latest ? `Получена ${formatLocalDate(latest.earnedOn!)}` : `До первой ачивки: ${achievementProgressLabel(featured)}`}</p><Link to="/me/achievements">Все ачивки →</Link></div></div>}
+    {!items ? <LoadState loading={loading} error={error} retry={onRetry} /> : featured && <div className="athlete-achievements-home-content"><Badge item={featured} priority /><div><strong>{featured.title}</strong><p>{latest ? `Получена ${formatLocalDate(latest.earnedOn!)}` : `До первой ачивки: ${achievementProgressLabel(featured)}`}</p><Link to="/me/achievements">Все ачивки →</Link></div></div>}
   </section>
 }
 
@@ -148,7 +148,7 @@ export function AthleteAchievementPreview({ clientId }: { clientId: string }) {
   const visible = earned.length ? earned.slice(0, 3) : achievements?.slice(0, 1) ?? []
   return <section className="athlete-achievements-preview" aria-labelledby="athlete-achievements-preview-title">
     <div className="athlete-achievements-heading"><h2 id="athlete-achievements-preview-title">Ачивки</h2>{achievements && <span>{earned.length} из {achievements.length}</span>}</div>
-    {!achievements ? <LoadState loading={query.isLoading} error={query.error} retry={() => void query.refetch()} /> : <><div className="athlete-achievements-preview-badges">{visible.map((item) => <Badge key={item.id} item={item} compact />)}</div><Link to="/me/achievements">Все ачивки →</Link></>}
+    {!achievements ? <LoadState loading={query.isLoading} error={query.error} retry={() => void query.refetch()} /> : <><div className="athlete-achievements-preview-badges">{visible.map((item) => <Badge key={item.id} item={item} compact priority />)}</div><Link to="/me/achievements">Все ачивки →</Link></>}
   </section>
 }
 
@@ -165,8 +165,8 @@ export function AthleteAchievementsPage() {
       <p className="athlete-achievements-count">Получено {earned} из {achievements.length}</p>
       {achievementGroups.map((group) => <section className="athlete-achievements-group" key={group.title} aria-label={group.title}>
         <h2>{group.title}</h2>
-        <div className="athlete-achievements-grid">{achievements.filter((item) => group.kinds.includes(item.kind)).map((item) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? 'Получена' : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${achievementProgressLabel(item)}`}. Открыть подробности`}>
-          <Badge item={item} />
+        <div className="athlete-achievements-grid">{achievements.filter((item) => group.kinds.includes(item.kind)).map((item, index) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? 'Получена' : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${achievementProgressLabel(item)}`}. Открыть подробности`}>
+          <Badge item={item} priority={group.title === 'Тренировки' && index < 6} />
           <span className="athlete-achievement-card-title">{item.title}</span>
         </button>)}</div>
       </section>)}
@@ -177,5 +177,5 @@ export function AthleteAchievementsPage() {
 
 export function NewlyEarnedAchievements({ items }: { items: readonly AthleteAchievement[] }) {
   if (!items.length) return null
-  return <section className="athlete-achievements-new" aria-label="Новые ачивки"><h2>{items.length === 1 ? 'Новая ачивка' : 'Новые ачивки'}</h2><div>{items.map((item) => <div key={item.id}><Badge item={item} compact /><strong>{item.title}</strong></div>)}</div><Link to="/me/achievements">Все ачивки →</Link></section>
+  return <section className="athlete-achievements-new" aria-label="Новые ачивки"><h2>{items.length === 1 ? 'Новая ачивка' : 'Новые ачивки'}</h2><div>{items.map((item) => <div key={item.id}><Badge item={item} compact priority /><strong>{item.title}</strong></div>)}</div><Link to="/me/achievements">Все ачивки →</Link></section>
 }
