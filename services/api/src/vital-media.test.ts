@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readVitalMediaRequest } from './vital-media.js'
+import { readVitalMediaBatchRequest, readVitalMediaRequest } from './vital-media.js'
 
 describe('readVitalMediaRequest', () => {
   it('accepts only reviewed Vital media object paths', () => {
@@ -14,5 +14,31 @@ describe('readVitalMediaRequest', () => {
     expect(readVitalMediaRequest({ path: 'avatars/user.jpg' })).toBeUndefined()
     expect(readVitalMediaRequest({ path: 'vital-pro/archive.zip' })).toBeUndefined()
     expect(readVitalMediaRequest(null)).toBeUndefined()
+  })
+})
+
+describe('readVitalMediaBatchRequest', () => {
+  it('accepts a bounded list of unique reviewed paths', () => {
+    expect(readVitalMediaBatchRequest({ paths: [
+      'vital-pro/vital-barbell-squat-ex001.jpg',
+      'vital-pro/vital-barbell-squat-ex001.mp4',
+    ] })).toEqual({ paths: [
+      'vital-pro/vital-barbell-squat-ex001.jpg',
+      'vital-pro/vital-barbell-squat-ex001.mp4',
+    ] })
+  })
+
+  it('rejects empty, duplicate, oversized, and invalid path lists', () => {
+    expect(readVitalMediaBatchRequest({ paths: [] })).toBeUndefined()
+    expect(readVitalMediaBatchRequest({ paths: Array.from(
+      { length: 33 },
+      (_, index) => `vital-pro/exercise-${index}.jpg`,
+    ) })).toBeUndefined()
+    expect(readVitalMediaBatchRequest({ paths: [
+      'vital-pro/exercise.jpg',
+      'vital-pro/exercise.jpg',
+    ] })).toBeUndefined()
+    expect(readVitalMediaBatchRequest({ paths: ['vital-pro/../private.txt'] })).toBeUndefined()
+    expect(readVitalMediaBatchRequest(null)).toBeUndefined()
   })
 })

@@ -7,6 +7,7 @@ import {
   validateVitalMediaManifestFiles,
   YandexVitalMediaDeployment,
 } from './vital-media-deployment.js'
+import { VITAL_MEDIA_CACHE_CONTROL } from './object-storage-media.js'
 
 function validFiles() {
   const files = []
@@ -56,6 +57,7 @@ describe('Vital media deployment contract', () => {
       .mockResolvedValueOnce({ VersionId: 'version-1' })
       .mockResolvedValueOnce({
         Body: { transformToByteArray: () => Promise.resolve(body) },
+        CacheControl: VITAL_MEDIA_CACHE_CONTROL,
         ContentType: 'image/jpeg',
         VersionId: 'version-1',
       })
@@ -71,6 +73,9 @@ describe('Vital media deployment contract', () => {
       versioning: 'verified',
     })
     expect(send).toHaveBeenCalledTimes(3)
+    expect(send.mock.calls[1]?.[0]).toMatchObject({ input: {
+      CacheControl: VITAL_MEDIA_CACHE_CONTROL,
+    } })
   })
 
   it('stops after the first intended write when storage does not return a version', async () => {
@@ -100,6 +105,7 @@ describe('Vital media deployment contract', () => {
     const sha256 = createHash('sha256').update(body).digest('hex')
     const send = vi.fn().mockResolvedValue({
       Body: { transformToByteArray: () => Promise.resolve(body) },
+      CacheControl: VITAL_MEDIA_CACHE_CONTROL,
       ContentType: 'image/jpeg',
       VersionId: 'version-1',
     })
@@ -124,13 +130,47 @@ describe('Vital media deployment contract', () => {
     const send = vi.fn()
       .mockResolvedValueOnce({
         Body: { transformToByteArray: () => Promise.resolve(body) },
+        CacheControl: VITAL_MEDIA_CACHE_CONTROL,
         ContentType: 'image/jpeg',
       })
       .mockResolvedValueOnce({ VersionId: 'version-1' })
       .mockResolvedValueOnce({
         Body: { transformToByteArray: () => Promise.resolve(body) },
+        CacheControl: VITAL_MEDIA_CACHE_CONTROL,
         ContentType: 'image/jpeg',
         VersionId: 'version-1',
+      })
+    const deployment = new YandexVitalMediaDeployment({
+      accessKeyId: 'access-key',
+      bucket: 'private-bucket',
+      secretAccessKey: 'secret-key',
+    })
+    ;(deployment as unknown as { client: { send: typeof send } }).client = { send }
+
+    await expect(deployment.upload({
+      bytes: body.byteLength,
+      path: 'reviewed-image.jpg',
+      sha256,
+    }, body)).resolves.toEqual({ outcome: 'uploaded', versioning: 'verified' })
+    expect(send).toHaveBeenCalledTimes(3)
+  })
+
+  it('rewrites an exact versioned object when its cache policy is stale', async () => {
+    const body = Buffer.from('reviewed-image')
+    const sha256 = createHash('sha256').update(body).digest('hex')
+    const send = vi.fn()
+      .mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(body) },
+        CacheControl: 'private, max-age=3600',
+        ContentType: 'image/jpeg',
+        VersionId: 'version-old',
+      })
+      .mockResolvedValueOnce({ VersionId: 'version-new' })
+      .mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(body) },
+        CacheControl: VITAL_MEDIA_CACHE_CONTROL,
+        ContentType: 'image/jpeg',
+        VersionId: 'version-new',
       })
     const deployment = new YandexVitalMediaDeployment({
       accessKeyId: 'access-key',

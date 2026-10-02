@@ -5,6 +5,7 @@ import {
   mediaObjectKey,
   readYandexMediaStorageConfig,
   type MediaObjectStorage,
+  VITAL_MEDIA_CACHE_CONTROL,
   YandexChatMediaStore,
   YandexMediaObjectStorage,
   YandexVitalMediaSigner,
@@ -64,6 +65,30 @@ describe('mediaObjectKey', () => {
 })
 
 describe('Yandex media adapters', () => {
+  it('stores private exercise media with a cache lifetime inside signed URL expiry', async () => {
+    const storage = new YandexMediaObjectStorage({
+      accessKeyId: `YC${'a'.repeat(23)}`,
+      bucket: 'fit-stage-media-example',
+      secretAccessKey: `YC${'b'.repeat(38)}`,
+    })
+    const send = vi.fn().mockResolvedValue({})
+    Object.assign(storage, { client: { send } })
+
+    await storage.write(
+      'fit-exercise-media',
+      'vital-pro/squat.mp4',
+      Uint8Array.from([1, 2, 3]),
+      'video/mp4',
+      true,
+    )
+
+    expect(send).toHaveBeenCalledOnce()
+    expect(send.mock.calls[0]?.[0]).toMatchObject({ input: {
+      CacheControl: VITAL_MEDIA_CACHE_CONTROL,
+      Key: 'fit-exercise-media/vital-pro/squat.mp4',
+    } })
+  })
+
   it('aborts a stalled object deletion before it can block the profile response', async () => {
     const storage = new YandexMediaObjectStorage({
       accessKeyId: `YC${'a'.repeat(23)}`,

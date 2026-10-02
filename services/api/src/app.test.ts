@@ -1137,6 +1137,59 @@ describe('Vital exercise media', () => {
     expect(invalid.statusCode).toBe(400)
     expect(readOnly.statusCode).toBe(403)
   })
+
+  it('signs a media batch after validating the session once', async () => {
+    const read = vi.fn().mockResolvedValue({})
+    const sign = vi.fn((path: string) => Promise.resolve(`https://signed.example/${path}`))
+    const app = buildApp({
+      yandexAppSessionReader: { read },
+      vitalMediaSigner: { sign },
+      logger: false,
+    })
+    apps.push(app)
+    const paths = [
+      'vital-pro/vital-barbell-squat-ex001.jpg',
+      'vital-pro/vital-barbell-squat-ex001.mp4',
+    ]
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign-batch',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { paths },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.json()).toEqual({ signedUrls: paths.map((path) => ({
+      path,
+      signedUrl: `https://signed.example/${path}`,
+    })) })
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(sign).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects an invalid media batch before session or signing work', async () => {
+    const read = vi.fn()
+    const sign = vi.fn()
+    const app = buildApp({
+      yandexAppSessionReader: { read },
+      vitalMediaSigner: { sign },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/exercise-media/sign-batch',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { paths: ['vital-pro/../private.txt'] },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(read).not.toHaveBeenCalled()
+    expect(sign).not.toHaveBeenCalled()
+  })
 })
 
 describe('legacy Supabase function bridge', () => {

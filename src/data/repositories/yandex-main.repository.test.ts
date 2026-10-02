@@ -531,22 +531,60 @@ describe('Yandex main repository', () => {
     unsubscribe()
   })
 
-  it('requests a private Vital media URL through the authenticated Yandex backend', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
-      signedUrl: 'https://project.supabase.co/storage/v1/object/sign/fit-exercise-media/vital-pro/squat.mp4?token=redacted',
-    }))
+  it('batches and deduplicates private Vital media URL requests', async () => {
+    const fetchMock = vi.fn((_input: string | URL | Request, init?: RequestInit) => {
+      const { paths } = JSON.parse(String(init?.body)) as { paths: string[] }
+      return Promise.resolve(jsonResponse({
+        signedUrls: paths.map((path) => ({
+          path,
+          signedUrl: `https://storage.example/${path}?token=redacted`,
+        })),
+      }))
+    })
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
-    await expect(repository.exercises.createVitalMediaUrl('vital-pro/squat.mp4', 60 * 60))
-      .resolves.toContain('/fit-exercise-media/vital-pro/squat.mp4')
+    await expect(Promise.all([
+      repository.exercises.createVitalMediaUrl('vital-pro/squat.jpg', 60 * 60),
+      repository.exercises.createVitalMediaUrl('vital-pro/squat.mp4', 60 * 60),
+      repository.exercises.createVitalMediaUrl('vital-pro/squat.mp4', 60 * 60),
+    ])).resolves.toEqual([
+      'https://storage.example/vital-pro/squat.jpg?token=redacted',
+      'https://storage.example/vital-pro/squat.mp4?token=redacted',
+      'https://storage.example/vital-pro/squat.mp4?token=redacted',
+    ])
 
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe(`${apiBaseUrl}/v1/exercise-media/sign`)
+    expect(url).toBe(`${apiBaseUrl}/v1/exercise-media/sign-batch`)
     expect(init.method).toBe('POST')
     expect(init.headers).toMatchObject({ 'x-fit-session': sessionToken })
-    expect(init.body).toBe(JSON.stringify({ path: 'vital-pro/squat.mp4' }))
+    expect(init.body).toBe(JSON.stringify({ paths: [
+      'vital-pro/squat.jpg',
+      'vital-pro/squat.mp4',
+    ] }))
+  })
+
+  it('chunks a large private Vital media request burst into bounded batches', async () => {
+    const fetchMock = vi.fn((_input: string | URL | Request, init?: RequestInit) => {
+      const { paths } = JSON.parse(String(init?.body)) as { paths: string[] }
+      return Promise.resolve(jsonResponse({
+        signedUrls: paths.map((path) => ({ path, signedUrl: `https://storage.example/${path}` })),
+      }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const paths = Array.from({ length: 33 }, (_, index) => `vital-pro/exercise-${index}.jpg`)
+
+    await expect(Promise.all(paths.map((path) => (
+      repository.exercises.createVitalMediaUrl(path, 60 * 60)
+    )))).resolves.toHaveLength(33)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const first = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as { paths: string[] }
+    const second = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as { paths: string[] }
+    expect(first.paths).toHaveLength(32)
+    expect(second.paths).toHaveLength(1)
   })
 
   it('rejects a custom exercise photo url request instead of hitting the network (YAFIT-521 gap, see FEATURE_PARITY.md)', async () => {
