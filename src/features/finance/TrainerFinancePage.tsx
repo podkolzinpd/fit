@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
@@ -151,13 +151,14 @@ export function TrainerFinancePage() {
   const location = useLocation()
   const routeState: unknown = location.state
   const { actor } = useAuth()
-  const { clients, trainerFinance, workouts } = useDataBackend()
+  const { clients, trainerFinance } = useDataBackend()
   const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
   const [activeTab, setActiveTab] = useState<FinanceTab>('packages')
   const [sessionFilter, setSessionFilter] = useState<'all' | 'unassigned' | 'trial'>('all')
   const [packageEditor, setPackageEditor] = useState<PackageEditor | null>(null)
   const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment } | null>(null)
+  const manualOperation = useRef<{ payload: string; requestId: string } | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
   const [confirm, confirmDialog] = useConfirm()
@@ -182,24 +183,19 @@ export function TrainerFinancePage() {
   })
   const addManualSession = useMutation({
     mutationFn: async (draft: { workoutDate: string; value: string; comment: string | null }) => {
-      const workoutId = await workouts.saveCompleted({
-        requestId: crypto.randomUUID(), clientId, workoutDate: localDate(draft.workoutDate),
-        notes: 'Проведённое занятие', exercises: [],
-      })
-      const bundle = await trainerFinance.listClient(clientId)
-      const session = bundle.sessions.find((item) => item.workoutId === workoutId)
-      if (!session) return workoutId
+      const payload = JSON.stringify(draft)
+      if (!manualOperation.current) {
+        manualOperation.current = { payload, requestId: crypto.randomUUID() }
+      }
       const [disposition, packageId = ''] = draft.value.split(':')
-      await trainerFinance.updateSession(session.id, {
-        expectedVersion: session.version,
+      return trainerFinance.createManualSession(clientId, {
+        requestId: manualOperation.current.requestId,
         disposition: disposition as TrainerFinanceSession['disposition'],
         packageId: disposition === 'charged' ? packageId : null,
-        comment: draft.comment,
-        workoutDate: draft.workoutDate,
+        comment: draft.comment, workoutDate: draft.workoutDate,
       })
-      return workoutId
     },
-    onSuccess: async () => { setManualOpen(false); await refresh() },
+    onSuccess: async () => { setManualOpen(false); manualOperation.current = null; await refresh() },
   })
   const updateSession = useMutation({
     mutationFn: ({ session, value, workoutDate, comment }: { session: TrainerFinanceSession; value: string; workoutDate: string; comment: string | null }) => {
