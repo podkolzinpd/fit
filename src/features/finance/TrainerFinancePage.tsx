@@ -9,7 +9,7 @@ import type {
   TrainerFinancePayment, TrainerFinanceSession,
   TrainerFinancePaymentDraft,
 } from '../../data/repositories/trainer-finance.repository'
-import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
+import { addDays, daysBetween, formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 
 const PACKAGE_STATUS: Record<TrainerFinancePackage['packageStatus'], string> = {
@@ -55,6 +55,10 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
 }) {
   const [validationError, setValidationError] = useState<string | null>(null)
   const source = current ?? template
+  const renewalStart = template?.endsOn && template.endsOn >= today ? addDays(localDate(template.endsOn), 1) : today
+  const renewalEnd = template?.endsOn && template.endsOn >= template.startsOn
+    ? addDays(localDate(renewalStart), daysBetween(localDate(template.startsOn), localDate(template.endsOn))) : ''
+  const [startsOn, setStartsOn] = useState(current?.startsOn ?? renewalStart)
   const [kind, setKind] = useState<TrainerFinancePackage['kind']>(source?.kind ?? 'session_pack')
   const [title, setTitle] = useState(source?.title ?? 'Персональные тренировки')
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -68,10 +72,12 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
       const openingPaidCents = current ? 0 : cents(form.get('openingPaid'))
       if (kind === 'session_pack' && (sessionsTotal < 1 || openingUsedSessions > sessionsTotal)) throw new Error('Проведённых занятий не может быть больше общего количества')
       if (openingPaidCents > priceCents) throw new Error('Начальная оплата не может быть больше стоимости абонемента')
+      const endsOn = optional(form, 'endsOn')
+      if (endsOn && endsOn < startsOn) throw new Error('Окончание не может быть раньше начала')
       onSubmit({
         kind, title: String(form.get('title') ?? '').trim(), sessionsTotal, openingUsedSessions,
         priceCents, openingPaidCents,
-        startsOn: String(form.get('startsOn') ?? ''), endsOn: optional(form, 'endsOn'),
+        startsOn, endsOn,
         paymentDueOn: optional(form, 'paymentDueOn'), comment: optional(form, 'comment'),
       })
     } catch (cause) {
@@ -91,8 +97,8 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
       {kind === 'session_pack' && !current && <Field label="Уже проведено"><input name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue="0" /></Field>}
       <Field label="Стоимость, ₽"><input name="price" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue={source ? source.priceCents / 100 : ''} /></Field>
       {!current && <Field label="Уже оплачено, ₽"><input name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue="0" /></Field>}
-      <Field label="Начало"><input name="startsOn" type="date" required defaultValue={current?.startsOn ?? today} /></Field>
-      <Field label="Окончание"><input name="endsOn" type="date" required={kind === 'online_coaching'} defaultValue={current?.endsOn ?? template?.endsOn ?? ''} /></Field>
+      <Field label="Начало"><input name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} /></Field>
+      <Field label="Окончание"><input name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={current?.endsOn ?? renewalEnd} /></Field>
       <Field label="Оплатить до"><input name="paymentDueOn" type="date" defaultValue={current?.paymentDueOn ?? ''} /></Field>
     </div>
     <Field label="Комментарий"><textarea name="comment" rows={2} maxLength={2000} defaultValue={source?.comment ?? ''} /></Field>
@@ -231,7 +237,7 @@ export function TrainerFinancePage() {
   }
   const filteredSessions = sessions.filter((session) => sessionFilter === 'all' || session.disposition === sessionFilter)
   const receivedCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0)
-  const dueCents = activePackages.reduce((sum, item) => sum + item.dueCents, 0)
+  const dueCents = packages.filter((item) => item.closedAt === null).reduce((sum, item) => sum + item.dueCents, 0)
   const tabCount: Record<FinanceTab, number> = { packages: packages.length, sessions: sessions.length, payments: payments.length }
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
