@@ -33,7 +33,7 @@ describe('BodyMapAppearanceSetting', () => {
     await user.click(screen.getByRole('radio', { name: 'Список' }))
 
     expect(screen.getByRole('radio', { name: 'Список' })).toHaveAttribute('aria-checked', 'true')
-    expect(window.localStorage.getItem('fit.bodyMapDisplay.client.client-1.client-1')).toBe('list')
+    expect(window.localStorage.getItem('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe('list')
   })
 
   it('renders one trainer account choice for progress maps', async () => {
@@ -50,7 +50,7 @@ describe('BodyMapAppearanceSetting', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Список' }))
 
-    expect(window.localStorage.getItem('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('list')
+    expect(window.localStorage.getItem('fit.bodyMapDisplay.v2.trainer.trainer-1.account')).toBe('list')
   })
 
   it('uses only the list when the client gender is unknown', () => {
@@ -66,27 +66,27 @@ describe('BodyMapAppearanceSetting', () => {
     expect(screen.getByText('Для фигуры укажите пол спортсмена')).toBeInTheDocument()
   })
 
-  it('shows the list for an existing scheme preference and lets the client restore the figure', async () => {
+  it('shows the figure despite an old scheme preference and lets the client hide it', async () => {
     storage.set('fit.bodyMapDisplay.client.client-1.client-1', 'scheme')
     const user = userEvent.setup()
     render(<BodyMapAppearanceSetting viewerUserId="client-1" role="client" clientId="client-1" gender="female" />)
 
-    expect(screen.getByRole('radio', { name: 'Список' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.queryByRole('radio', { name: 'Схема' })).not.toBeInTheDocument()
-    expect(storage.get('fit.bodyMapDisplay.client.client-1.client-1')).toBe('list')
-
-    await user.click(screen.getByRole('radio', { name: 'Фигура' }))
-
     expect(screen.getByRole('radio', { name: 'Фигура' })).toHaveAttribute('aria-checked', 'true')
-    expect(storage.get('fit.bodyMapDisplay.client.client-1.client-1')).toBe('real')
+    expect(screen.queryByRole('radio', { name: 'Схема' })).not.toBeInTheDocument()
+    expect(storage.has('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe(false)
+
+    await user.click(screen.getByRole('radio', { name: 'Список' }))
+
+    expect(screen.getByRole('radio', { name: 'Список' })).toHaveAttribute('aria-checked', 'true')
+    expect(storage.get('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe('list')
   })
 
   it('restores the saved real figure choice when the client gender becomes available', () => {
-    storage.set('fit.bodyMapDisplay.client.client-1.client-1', 'real')
+    storage.set('fit.bodyMapDisplay.v2.client.client-1.client-1', 'real')
     const view = render(<BodyMapAppearanceSetting viewerUserId="client-1" role="client" clientId="client-1" gender={null} />)
 
     expect(screen.getByRole('radio', { name: 'Список' })).toHaveAttribute('aria-checked', 'true')
-    expect(storage.get('fit.bodyMapDisplay.client.client-1.client-1')).toBe('real')
+    expect(storage.get('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe('real')
 
     view.rerender(<BodyMapAppearanceSetting viewerUserId="client-1" role="client" clientId="client-1" gender="female" />)
 

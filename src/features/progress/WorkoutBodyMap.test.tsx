@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Gender, Workout, WorkoutExercise } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { ClientBodyMapDisclosure, PeriodLoadMap, periodLoadMapLink } from './WorkoutBodyMap'
@@ -34,6 +34,8 @@ function renderRoute(initial: string, overrides: { workouts?: Workout[]; gender?
 }
 
 describe('Home and Progress period load map', () => {
+  beforeEach(() => window.localStorage.clear())
+
   it('calculates percentages only from completed confirmed work in the selected period', () => {
     const unconfirmed = { ...workout, id: 'draft', exercises: workout.exercises.map((item) => ({ ...item, sets: item.sets.map((set) => ({ ...set, confirmedAt: null })) })) }
     const outside = { ...workout, id: 'outside', workoutDate: localDate('2026-07-31') }
@@ -102,6 +104,22 @@ describe('Home and Progress period load map', () => {
     await user.click(within(zones).getByRole('button', { name: 'Верх спины. Нагрузка зоны: 33%' }))
     expect(screen.getByRole('status')).toHaveTextContent('Верх спины33%')
     expect(screen.getByText('1 августа – 31 августа 2026')).toBeVisible()
+  })
+
+  it.each(['/me', periodLoadMapLink()])('restores the male figure on %s despite a saved old list', (route) => {
+    window.localStorage.setItem('fit.bodyMapDisplay.client.map-viewer.client-1', 'list')
+    renderRoute(route)
+
+    expect(screen.getByRole('group', { name: 'Атлетичный мужчина, вид спереди' })).toBeVisible()
+    expect(document.querySelector('.body-progress-figure-image')).toHaveAttribute('href', '/illustrations/body-progress-athlete.png')
+  })
+
+  it.each(['/me', periodLoadMapLink()])('keeps an explicit new list choice on %s', (route) => {
+    window.localStorage.setItem('fit.bodyMapDisplay.v2.client.map-viewer.client-1', 'list')
+    renderRoute(route)
+
+    expect(screen.getByRole('group', { name: 'Зоны тела' })).toBeVisible()
+    expect(document.querySelector('.body-progress-figure-image')).toBeNull()
   })
 
   it('lets the zone list select a region on the other side of the figure', async () => {

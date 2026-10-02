@@ -4,8 +4,9 @@ import type { BodyFigureVariant } from './body-progress-geometry'
 
 export type BodyMapDisplayMode = 'real' | 'list'
 
-const STORAGE_PREFIX = 'fit.bodyMapDisplay.'
-const LEGACY_STORAGE_PREFIX = 'fit.bodyMapAppearance.'
+// Earlier versions silently converted the retired scheme to "list". Use a new
+// preference key so that conversion cannot hide a figure when gender is known.
+const STORAGE_PREFIX = 'fit.bodyMapDisplay.v2.'
 const CHANGE_EVENT = 'fit-body-map-display-change'
 
 function storageKey(
@@ -19,26 +20,8 @@ function storageKey(
     : undefined
 }
 
-function legacyStorageKey(viewerUserId: string | undefined, role: AccountRole | undefined) {
-  return viewerUserId && role ? `${LEGACY_STORAGE_PREFIX}${role}.${viewerUserId}` : undefined
-}
-
 function isDisplayMode(value: string | null): value is BodyMapDisplayMode {
   return value === 'real' || value === 'list'
-}
-
-function legacyDisplayMode(value: string | null): BodyMapDisplayMode | null {
-  if (value === 'male' || value === 'female') return 'real'
-  if (value === 'neutral' || value === 'scheme') return 'list'
-  return null
-}
-
-function migrateDisplayMode(key: string, mode: BodyMapDisplayMode) {
-  try {
-    window.localStorage.setItem(key, mode)
-  } catch {
-    // A blocked storage write must not bring the retired scheme back.
-  }
 }
 
 export function defaultBodyMapDisplayMode(
@@ -63,20 +46,7 @@ export function getBodyMapDisplayMode(
   if (typeof window === 'undefined' || !key) return fallback
   try {
     const stored = window.localStorage.getItem(key)
-    if (stored === 'scheme' || stored === 'neutral') {
-      migrateDisplayMode(key, 'list')
-      return 'list'
-    }
     if (isDisplayMode(stored)) return stored === 'real' && !gender ? fallback : stored
-
-    // Список сохраняем для обеих ролей. Старый глобальный выбор пола тренера
-    // не переносим: фигура должна соответствовать конкретному спортсмену.
-    const legacyKey = legacyStorageKey(viewerUserId, role)
-    const migrated = legacyKey ? legacyDisplayMode(window.localStorage.getItem(legacyKey)) : null
-    if (migrated === 'list' || (role === 'client' && migrated === 'real' && gender)) {
-      migrateDisplayMode(key, migrated)
-      return migrated
-    }
     return fallback
   } catch {
     return fallback
