@@ -115,7 +115,7 @@
 .phone-frame.fit-lime-shell.workout-create-edit-identity .workout-composer-card { border-radius: 32px; background: var(--lime-surface-raised); min-height: 189px; }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .workout-composer-card .voice-note-field textarea { background: transparent; border: 0; font-size: 16px; line-height: 20px; }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .voice-input-button.recording { background: var(--lime-pink); border-color: var(--lime-pink); color: var(--lime-text-on-accent); }
-.phone-frame.fit-lime-shell.workout-create-edit-identity .client-picker { max-width: 375px; width: 100%; margin-inline: auto; background: var(--lime-surface); }
+.phone-frame.fit-lime-shell.workout-create-edit-identity .client-picker { max-width: 375px; width: 100%; height: min(752px, 100%); margin-inline: auto; background: var(--lime-surface); }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .client-picker .picker-header { min-height: 64px; }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .client-picker .picker-header h1 { font-size: 16px; line-height: 20px; font-weight: 500; }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .client-picker-item { min-height: 44px; padding-block: 2px; background: transparent; border: 0; border-radius: 0; font-size: 16px; font-weight: 400; }
