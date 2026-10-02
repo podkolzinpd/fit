@@ -1,4 +1,6 @@
 # Logs
+# Licensed webfonts are injected locally/in the trusted production build.
+/public/fonts/ys-geo-*.woff2
 logs
 *.log
 npm-debug.log*

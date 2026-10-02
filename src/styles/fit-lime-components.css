@@ -1,34 +1,39 @@
 /* Fit Lime is inert until an approved trainer route receives .fit-lime.
    Do not infer this class from email, browser storage or Schedule V2. */
 .phone-frame.fit-lime {
-  --lime-bg: #080908;
-  --lime-surface: #19191c;
-  --lime-surface-raised: #232328;
-  --lime-accent: #baff36;
+  --lime-bg: #000000;
+  --lime-surface: #1a1a1c;
+  --lime-surface-raised: #252529;
+  --lime-surface-high: #3b3b40;
+  --lime-accent: #b6ef4d;
   --lime-accent-muted: #25360c;
-  --lime-text: #f8f8f6;
-  --lime-text-secondary: #b8b8bd;
-  --lime-text-tertiary: #929296;
-  --lime-divider: #303034;
-  --lime-text-on-accent: #111111;
+  --lime-pink: #ba60ea;
+  --lime-yellow: #f8b021;
+  --lime-text: #ffffff;
+  --lime-text-secondary: rgba(255, 255, 255, .6);
+  --lime-text-tertiary: rgba(255, 255, 255, .6);
+  --lime-divider: #212124;
+  --lime-text-on-accent: #000000;
+  --lime-radius-card: 32px;
+  --lime-radius-sheet: 40px;
 
   --bg: var(--lime-bg);
   --fg: var(--lime-text);
   --fg-strong: var(--lime-text);
   --fg-on-surface: var(--lime-text);
-  --surface: #111113;
+  --surface: var(--lime-surface);
   --surface-raised: var(--lime-surface);
   --surface-elevated: var(--lime-surface-raised);
-  --surface-sunken: #242428;
-  --surface-muted: #242428;
+  --surface-sunken: var(--lime-surface-raised);
+  --surface-muted: var(--lime-surface-raised);
   --input: var(--lime-surface-raised);
   --border: var(--lime-divider);
-  --hairline: #29292d;
+  --hairline: var(--lime-divider);
   --muted: var(--lime-text-secondary);
   --secondary-label-fg: var(--lime-text-secondary);
   --secondary-bg: var(--lime-surface-raised);
   --secondary-fg: var(--lime-text);
-  --secondary-hover: #303034;
+  --secondary-hover: var(--lime-surface-high);
   --tertiary-fg: var(--lime-text-secondary);
   --mono-primary: var(--lime-accent);
   --mono-on-primary: var(--lime-text-on-accent);
@@ -49,7 +54,7 @@
   --card-fill: var(--lime-surface);
   --frame-bg: var(--lime-bg);
   --frame-border: var(--lime-bg);
-  --bar-bg: rgba(25, 25, 27, .94);
+  --bar-bg: rgba(31, 31, 33, .4);
   --page-back-bg: var(--lime-surface-raised);
   color-scheme: dark;
   color: var(--lime-text);
@@ -60,8 +65,8 @@
    existing semantic colors and always retain a text or icon label. */
 .fit-lime :where(button, .button) {
   min-height: 44px;
-  border-radius: 16px;
-  font-weight: 600;
+  border-radius: 999px;
+  font-weight: 500;
 }
 .fit-lime button.primary,
 .fit-lime .button.primary {
@@ -92,7 +97,7 @@
 .fit-lime .inline-form input,
 .fit-lime .client-picker-trigger {
   min-height: 48px;
-  border: 1px solid var(--lime-divider);
+  border: 1px solid var(--lime-surface-high);
   border-radius: 16px;
   background: var(--lime-surface-raised);
   color: var(--lime-text);
@@ -107,7 +112,7 @@
 .fit-lime .skeleton-card,
 .fit-lime .state-panel {
   border: 1px solid var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   box-shadow: none;
 }
@@ -147,8 +152,8 @@
 .fit-lime .client-picker,
 .fit-lime .exercise-picker {
   border-color: var(--lime-divider);
-  border-radius: 30px 30px 0 0;
-  background: var(--lime-surface-raised);
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
+  background: var(--lime-surface);
 }
 .fit-lime .modal-dialog { border-color: var(--lime-divider); border-radius: 28px; background: var(--lime-surface-raised) }
 .fit-lime .modal-message { color: var(--lime-text) }

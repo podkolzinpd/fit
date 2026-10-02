@@ -9,6 +9,7 @@ import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 import { isFitLimeShellRoute } from './fit-lime'
 import { ContestWinnerDialog } from '../features/contest'
+import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -73,7 +74,7 @@ export function AppLayout() {
     const appleStatusBar = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]')
     const previousAppleStatusBar = appleStatusBar?.content ?? 'default'
     if (trainerScheduleV2Route || fitLimeShell) {
-      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', '#080908')
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', fitLimeShell ? '#000000' : '#080908')
       appleStatusBar?.setAttribute('content', 'black-translucent')
     } else {
       appleStatusBar?.setAttribute('content', 'default')
@@ -166,7 +167,7 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
-  return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
+  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {(redesignedStart || trainerScheduleV2) && ((fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance
@@ -175,5 +176,5 @@ export function AppLayout() {
     {trainerAssistantNav}
     {!trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {!redesignedStart && !trainerScheduleV2 && <NavLink to="/profile"><ProfileIcon />Профиль</NavLink>}
-  </nav>}</div>
+  </nav>}</div></FitLimeIconsContext>
 }

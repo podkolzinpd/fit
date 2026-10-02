@@ -5,6 +5,7 @@ import { isMaintenanceModeEnabled } from './app/feature-flags'
 import { applyAppTheme, getAppTheme } from './app/theme'
 import { initializeWorkoutInactivityNotificationActions } from './features/workouts/workout-inactivity-reminder'
 import '@fontsource-variable/onest/wght.css'
+import '@fontsource/rem/latin-700.css'
 import './styles.css'
 import './styles/fit-lime-components.css'
 import './styles/fit-lime-shell.css'
@@ -26,6 +27,7 @@ import './styles/fit-lime-workout-detail.css'
 import './styles/fit-lime-workout-live.css'
 import './styles/fit-lime-workout-completion.css'
 import './styles/fit-lime-assistant.css'
+import './styles/fit-lime-type.css'
 
 declare global {
   interface Window {
