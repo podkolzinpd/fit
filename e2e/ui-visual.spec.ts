@@ -2236,8 +2236,11 @@ test('workout create keeps its visual baseline', async ({ page }, testInfo) => {
 })
 
 test('workout completed-entry keeps its visual baseline', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client workout form uses mobile visual profiles')
-  await openWorkoutCreate(page)
+  const trainer = testInfo.project.name === 'visual-trainer-1440'
+  if (trainer) {
+    await signIn(page, 'trainer@fit.local', /\/today$/)
+    await gotoStable(page, `/workouts/new?client=${demoClientId}`)
+  } else await openWorkoutCreate(page)
   await addCompletedBenchPress(page)
   const duration = page.getByRole('textbox', { name: 'Длительность тренировки, мин' })
   await duration.fill('50')
@@ -2247,7 +2250,7 @@ test('workout completed-entry keeps its visual baseline', async ({ page }, testI
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('actual-workout-duration.png'), fullPage: true })
   await page.locator('.workout-form-exercises').scrollIntoViewIfNeeded()
-  await expectVisualBaseline(page, `workout-create-fact-${process.platform}.png`)
+  if (!trainer) await expectVisualBaseline(page, `workout-create-fact-${process.platform}.png`)
 })
 
 test('workout create dark keeps its visual baseline', async ({ page }, testInfo) => {
