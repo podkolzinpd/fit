@@ -3385,7 +3385,7 @@ export function LiveWorkoutPage() {
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}
           </div> })}
-          {canManageLiveStructure && dataSource === 'yandex' && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
+          {canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
             <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
               onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : '＋ Круг'}</button>
             {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
