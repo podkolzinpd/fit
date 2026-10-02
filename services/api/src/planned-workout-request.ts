@@ -57,6 +57,7 @@ export interface PlannedWorkoutDraft {
   workoutDate: string
   startTime: string | null
   endTime: string | null
+  actualDurationSec?: number | null
   notes: string | null
   stageId?: string | null
   exercises: PlannedWorkoutExerciseDraft[]
@@ -303,6 +304,8 @@ export function readSavePlannedWorkoutRequest(
   const workoutDate = validDate(input.workoutDate)
   const startTime = nullableTime(input.startTime)
   const endTime = nullableTime(input.endTime)
+  const actualDurationSec = input.actualDurationSec === null || input.actualDurationSec === undefined
+    ? null : integer(input.actualDurationSec, 1, 43_200)
   const notes = text(input.notes, { nullable: true, max: 5_000 })
   const stageId = input.stageId === null || input.stageId === undefined || input.stageId === ''
     ? null
@@ -323,6 +326,7 @@ export function readSavePlannedWorkoutRequest(
     || workoutDate === undefined
     || startTime === undefined
     || endTime === undefined
+    || actualDurationSec === undefined
     || notes === undefined
     || stageId === undefined
     || favoriteTitle === undefined
@@ -344,6 +348,7 @@ export function readSavePlannedWorkoutRequest(
       workoutDate,
       startTime,
       endTime,
+      ...(input.actualDurationSec === undefined ? {} : { actualDurationSec }),
       notes,
       stageId,
       favoriteTitle,

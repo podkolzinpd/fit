@@ -6,6 +6,7 @@ export interface WorkoutFormDraft {
   workoutDate: LocalDate
   startTime: string
   endTime: string
+  actualDurationMinutes?: string
   notes: string
   stageId: string
   recordCompleted: boolean
@@ -20,6 +21,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
     && typeof draft.workoutDate === 'string'
     && typeof draft.startTime === 'string'
     && typeof draft.endTime === 'string'
+    && (draft.actualDurationMinutes === undefined || typeof draft.actualDurationMinutes === 'string')
     && typeof draft.notes === 'string'
     && typeof draft.stageId === 'string'
     && typeof draft.recordCompleted === 'boolean'

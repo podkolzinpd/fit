@@ -1,4 +1,5 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
+import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -981,7 +982,7 @@ const chronicleReactionLabels: Record<TrainerReaction, string> = {
 
 export function WorkoutChronicleCard({ workout, contextLabel, returnTo, historyListActions = false }: { workout: Workout; contextLabel?: string | null; returnTo?: string; historyListActions?: boolean }) {
   const done = workout.status === 'done'
-  const duration = workoutDurationLabel(workout.startedAt, workout.completedAt)
+  const duration = workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec)
   const tonnage = workoutTonnage(workout)
   const meta = done ? [
     duration,
@@ -1145,6 +1146,8 @@ export function WorkoutFormPage() {
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? today))
   const [startTime, setStartTime] = useState('')
+  const [actualDurationMinutes, setActualDurationMinutes] = useState('')
+  const [durationError, setDurationError] = useState<string | null>(null)
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : undefined)
   const trainingFormatTouched = useRef(false)
   const [endTime, setEndTime] = useState('')
@@ -1196,6 +1199,7 @@ export function WorkoutFormPage() {
       setEntryDate(saved.workoutDate)
       setStartTime(saved.startTime.slice(0, 5))
       setEndTime(saved.endTime.slice(0, 5))
+      setActualDurationMinutes(saved.actualDurationMinutes ?? '')
       setShowEndTime(Boolean(saved.endTime))
       setNotes(saved.notes)
       setStageId(saved.stageId)
@@ -1211,6 +1215,7 @@ export function WorkoutFormPage() {
       // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
       setStartTime(initial.startTime?.slice(0, 5) ?? '')
       setEndTime(initial.endTime?.slice(0, 5) ?? '')
+      setActualDurationMinutes(workoutId && source.data?.actualDurationSec ? String(source.data.actualDurationSec / 60) : '')
       setShowEndTime(Boolean(initial.endTime))
       setNotes(initial.notes ?? '')
       setStageId(initial.stageId ?? '')
@@ -1229,8 +1234,8 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!formDraftReady || workoutId) return
-    writeWorkoutFormDraft(draftKey, { clientId, workoutDate: entryDate, startTime, endTime, notes, stageId, recordCompleted, exercises, trainingFormat })
-  }, [clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, recordCompleted, stageId, startTime, trainingFormat, workoutId])
+    writeWorkoutFormDraft(draftKey, { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, stageId, recordCompleted, exercises, trainingFormat })
+  }, [actualDurationMinutes, clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, recordCompleted, stageId, startTime, trainingFormat, workoutId])
 
   useEffect(() => {
     if (!initial || formDraftReady) return
@@ -1383,6 +1388,12 @@ export function WorkoutFormPage() {
         : ''
     endTimeInput?.setCustomValidity(timeError)
     if (timeError) { endTimeInput?.reportValidity(); return }
+    let actualDurationSec: number | null = null
+    if (completedMode) {
+      try { actualDurationSec = actualWorkoutDurationSeconds(actualDurationMinutes) }
+      catch (error) { setDurationError(error instanceof Error ? error.message : 'Проверьте длительность тренировки'); return }
+    }
+    setDurationError(null)
     const missingTimeExercise = completedMode
       ? firstCardioDraftMissingEnteredDuration({ exercises }) : null
     if (missingTimeExercise && !await confirmLeave({
@@ -1392,6 +1403,7 @@ export function WorkoutFormPage() {
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
+      ...(completedMode ? { actualDurationSec } : {}),
       notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
   }
@@ -1432,6 +1444,8 @@ export function WorkoutFormPage() {
         {showEndTime
           ? <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
           : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}>＋ Добавить время окончания</button>}
+        {completedMode && <Field label="Длительность, мин · необязательно"><input aria-label="Длительность тренировки, мин" inputMode="decimal" value={actualDurationMinutes} placeholder="Например, 50" onChange={(event) => { setActualDurationMinutes(event.target.value); setDurationError(null) }} /><small>Сколько длилась сама тренировка, а не её запись в приложении.</small></Field>}
+        {durationError && <p className="error" role="alert">{durationError}</p>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
@@ -1641,7 +1655,7 @@ export function WorkoutDetailPage() {
   })
   const workout = query.data
   const done = workout?.status === 'done'
-  const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt) : null
+  const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec) : null
   const groups = workout ? muscleGroupLabels(workout.exercises) : []
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
@@ -2332,6 +2346,11 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
 }
 
 // Live elapsed workout time counting up from the start timestamp, "42:07".
+function liveDistanceIsValid(form: HTMLFormElement, report = false): boolean {
+  const input = form.querySelector<HTMLInputElement>('input[name="runDistance"]')
+  return input ? (report ? input.reportValidity() : input.checkValidity()) : true
+}
+
 function formatElapsed(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
@@ -2718,6 +2737,7 @@ export function LiveWorkoutPage() {
     else liveSetAutosave.schedule(set.id, send)
   }
   function captureLiveDraft(set: WorkoutSet, form: HTMLFormElement, target: EventTarget) {
+    if (!liveDistanceIsValid(form)) { liveSetAutosave.clear(set.id); return }
     markLiveMetricEntered(form, target)
     const draft = draftFrom(form, set)
     // localStorage пишется синхронно на каждом вводе. React-state обновится при
@@ -3057,6 +3077,7 @@ export function LiveWorkoutPage() {
       // into an empty draft while finishing a partially completed exercise.
       if (set?.confirmedAt && !editingSets.has(setId)) continue
       if (!set || (!liveFormChanged(form) && !pendingSetDrafts.current.has(setId))) continue
+      if (!liveDistanceIsValid(form, true)) throw new Error('Проверьте дистанцию подхода')
       const draft = draftFrom(form, set)
       liveSetAutosave.clear(setId)
       rememberLiveDraft(setId, draft)
@@ -3225,6 +3246,7 @@ export function LiveWorkoutPage() {
       if (set.confirmedAt && !isEditing) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+      if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
       <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
@@ -3234,7 +3256,7 @@ export function LiveWorkoutPage() {
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { const form = event.currentTarget.form; if (form) persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }); skipBlurForSet.current = null }}><span aria-hidden="true">✓</span></button>
+                onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}><span aria-hidden="true">✓</span></button>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
@@ -3242,6 +3264,7 @@ export function LiveWorkoutPage() {
                   prepareGong()
                   liveSetAutosave.clear(set.id)
                   const form = event.currentTarget.form
+                  if (!form || !liveDistanceIsValid(form, true)) { skipBlurForSet.current = null; return }
                   if (form) {
                     const draft = draftFrom(form, set)
                     if (!hasLiveSetResult(draft)) {
