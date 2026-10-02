@@ -62,8 +62,8 @@
 | Пункт | Видимый результат | Доказательства | Статус |
 |---|---|---|---|
 | 1 | Пакет автора тренировки, независимо от владельца карточки | 62 actor/RLS tests; clean chain и local:verify (изолированный PostgreSQL 55434) | PR #1352 опубликован; API 37054559632, frontend 37055182308 |
-| 2 | Ручной учёт атомарен и повторяем без дублей | 63 actor/RLS; rollback, concurrent replay, last slot; component retry | Реализовано, проверка выпуска |
-| 3 | Даты и долг согласованы | 64 actor/RLS; date/renew/debt component tests | Реализовано, проверка выпуска |
+| 2 | Ручной учёт атомарен и повторяем без дублей | 63 actor/RLS; rollback, concurrent replay, last slot; component retry | PR #1355 опубликован; API 37064182002, frontend 37066066527 |
+| 3 | Даты и долг согласованы | 64 actor/RLS; date/renew/debt component tests | PR #1356 слит (2f6a600a), проверка выпуска |
 | 4 | Формат быстрого старта и корректный фильтр | 65 actor/RLS; 36 visual states; 6 real-route visual + 3 Live E2E; npm check | Реализовано, CI/очередь |
 
 ## Итоговая локальная приёмка
