@@ -807,7 +807,8 @@ Stage API CORS allowlist обязан содержать как production web o
 debug APK в `android/app/build/outputs/apk/debug/`. Нужны JDK 21, Android SDK
 Platform 36 и Build Tools 36.0.0. Минимальная версия устройства — Android 8.0
 (API 26), как требует нативный health-плагин. В PR Android debug APK проверяется отдельным
-CI workflow. Локальная development-сборка не подключена к production Yandex API.
+CI workflow и сохраняется на 7 дней как `fit-android-debug`. Локальная
+development-сборка не подключена к production Yandex API.
 
 Android WebView имеет origin `http://localhost`. До рабочего входа требуется
 зарегистрировать точный Redirect URI `http://localhost/auth/yandex/callback`
