@@ -4760,6 +4760,26 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query('delete from public.workouts where id = $1', [POST_WORKOUT_ID])
     })
 
+    it('keeps the selected quick-start format across replay and resume', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const clientId = randomUUID()
+      await ownerPool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Quick format fixture')`,[clientId,ACTOR_ID])
+      try {
+        for (const format of ['with_trainer','self'] as const) {
+          const operationId = randomUUID()
+          const first = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>quickStartLiveWorkout(client,clientId,operationId,format))
+          const opposite = format === 'self' ? 'with_trainer' : 'self'
+          expect(await withActorTransaction(runtimePool,ACTOR_ID,(client)=>quickStartLiveWorkout(client,clientId,operationId,opposite))).toEqual({id:first.id,resumed:true})
+          const row = (await ownerPool.query<{training_format:string;version:string}>('select training_format,version from public.workouts where id=$1',[first.id])).rows[0]!
+          expect(row.training_format).toBe(format)
+          await withActorTransaction(runtimePool,ACTOR_ID,(client)=>cancelEmptyLiveWorkout(client,first.id,Number(row.version)))
+        }
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.clients where id=$1',[clientId])
+      }
+    })
+
     it('quick-starts atomically, resumes by trainer and client, and rejects empty completion', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       await ownerPool.query('delete from public.workouts where client_id = $1', [QUICK_START_CLIENT_ID])
@@ -4808,7 +4828,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(second.id).not.toBe(first.id)
         await withActorTransaction(runtimePool, ACTOR_ID, (client) => cancelEmptyLiveWorkout(client, second.id, 1))
         const clientStarted = await withActorTransaction(runtimePool, QUICK_START_ACTOR_ID, (client) =>
-          quickStartLiveWorkout(client, null, QUICK_START_OPERATION_IDS.clientSecond))
+          quickStartLiveWorkout(client, null, QUICK_START_OPERATION_IDS.clientSecond, 'with_trainer'))
+        expect((await ownerPool.query<{training_format:string}>('select training_format from public.workouts where id=$1',[clientStarted.id])).rows[0]?.training_format).toBe('self')
         const connectedTrainerView = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           client.query<{ id: string }>('select id from public.workouts where id = $1', [clientStarted.id]))
         expect(connectedTrainerView).toEqual([{ id: clientStarted.id }])

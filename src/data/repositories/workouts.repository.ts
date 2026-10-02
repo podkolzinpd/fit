@@ -194,9 +194,10 @@ export const workoutsRepository = {
   },
   listSummaries,
   findActive,
-  quickStart(clientId?: string, operationId?: string): Promise<{ id: string; resumed: boolean }> {
+  quickStart(clientId?: string, operationId?: string, trainingFormat?: 'self' | 'with_trainer'): Promise<{ id: string; resumed: boolean }> {
     void clientId
     void operationId
+    void trainingFormat
     return Promise.reject(new Error('Быстрый старт доступен только в основной версии ФИТ.'))
   },
   cancelEmpty(workout: Workout): Promise<void> {

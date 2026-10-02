@@ -1441,9 +1441,9 @@ export function createYandexMainRepository(
       async findActive(clientId) {
         return (await this.listSummaries(clientId)).find((item) => item.status === 'in_progress') ?? null
       },
-      async quickStart(clientId, operationId) {
+      async quickStart(clientId, operationId, trainingFormat) {
         const payload = await writeJson(queries, '/v1/workouts/quick-start', 'POST',
-          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID() },
+          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID(), ...(trainingFormat ? { trainingFormat } : {}) },
           z.object({ workout: z.object({ id: uuid, resumed: z.boolean() }) }))
         invalidate()
         return payload.workout
