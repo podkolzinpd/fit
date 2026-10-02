@@ -969,7 +969,7 @@ test('iPhone: новый клиент выбирает готовую трени
   const firstReviewExercise = page.locator('.today-exercise').first()
   await firstReviewExercise.getByRole('button', { name: /Настройки упражнения/ }).click()
   await page.getByRole('menuitem', { name: 'Создать суперсет со следующим' }).click()
-  await expect(page.locator('.today-review-block').first().getByText('Суперсет')).toBeVisible()
+  await expect(page.locator('.today-review-block').first().getByText('Суперсет', { exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: testInfo.outputPath('review-client-superset-390.png'), fullPage: true })
   await page.setViewportSize({ width: 430, height: 932 })

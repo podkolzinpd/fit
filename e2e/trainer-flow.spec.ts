@@ -266,7 +266,7 @@ test('тренер объединяет распознанные упражне�
   await page.getByRole('button', { name: /Настройки упражнения «Жим гантелей на наклонной скамье»/ }).click()
   await expect(page.getByRole('menuitem', { name: 'Создать круговую со следующим' })).toHaveCount(0)
   await page.getByRole('menuitem', { name: 'Создать суперсет со следующим' }).click()
-  await expect(page.locator('.today-review-block').first().getByText('Суперсет')).toBeVisible()
+  await expect(page.locator('.today-review-block').first().getByText('Суперсет', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: /Настройки упражнения «Планка»/ }).click()
   await page.getByRole('menuitem', { name: 'Добавить следующее в суперсет' }).click()
   await expect(page.locator('.today-review-block')).toHaveCount(1)
