@@ -3243,10 +3243,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         && (typeof fields.clientId !== 'string' || !uuidPattern.test(fields.clientId)))) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
+    if (fields.trainingFormat !== undefined && fields.trainingFormat !== 'self' && fields.trainingFormat !== 'with_trainer') return reply.code(400).send({ error: 'invalid_request' })
     const writer = options.pilotWorkoutsWriter
     if (!writer) return reply.code(503).send({ error: 'service_unavailable' })
     return sendPilotCommand(reply,
-      () => writer.quickStart(sessionToken, (fields.clientId as string | null | undefined) ?? null, fields.operationId as string),
+      () => writer.quickStart(sessionToken, (fields.clientId as string | null | undefined) ?? null, fields.operationId as string, fields.trainingFormat as 'self' | 'with_trainer' | undefined),
       (started) => reply.header('cache-control', 'no-store').send({ workout: started }))
   })
 

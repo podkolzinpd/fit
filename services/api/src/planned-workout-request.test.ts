@@ -51,6 +51,16 @@ function validRequest() {
 }
 
 describe('planned workout request', () => {
+  it('validates actual duration while preserving missing versus cleared fields', () => {
+    expect(readSavePlannedWorkoutRequest(validRequest(), null)?.draft).not.toHaveProperty('actualDurationSec')
+    for (const actualDurationSec of [null, 1, 3000, 43200]) {
+      expect(readSavePlannedWorkoutRequest({ ...validRequest(), actualDurationSec }, null)?.draft.actualDurationSec).toBe(actualDurationSec)
+    }
+    for (const actualDurationSec of [0, -1, 43201, 1.5, '3000', Infinity]) {
+      expect(readSavePlannedWorkoutRequest({ ...validRequest(), actualDurationSec }, null)).toBeUndefined()
+    }
+  })
+
   it('accepts an overnight workout and a session longer than three hours', () => {
     expect(readSavePlannedWorkoutRequest({ ...validRequest(), startTime: '23:30', endTime: '00:30' }, null)
       ?.draft.endTime).toBe('00:30')

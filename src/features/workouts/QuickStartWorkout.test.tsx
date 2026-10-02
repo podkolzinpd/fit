@@ -36,7 +36,7 @@ describe('QuickStartWorkout', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Начать тренировку' }))
     expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
     expect(mocks.quickStart).toHaveBeenCalledOnce()
-    expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String))
+    expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'self')
   })
 
   it('requires a trainer to select a client before creating the session', async () => {
@@ -46,8 +46,24 @@ describe('QuickStartWorkout', () => {
     await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
     expect(mocks.quickStart).not.toHaveBeenCalled()
     await user.click(screen.getByText('Анна'))
+    expect(mocks.quickStart).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'С тренером' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Начать' }))
     expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
-    expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String))
+    expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'with_trainer')
+  })
+
+  it('keeps a trainers self format and operation on retry', async () => {
+    mocks.quickStart.mockRejectedValueOnce(new Error('network')).mockResolvedValue({ id: workoutId, resumed: true })
+    const user = userEvent.setup()
+    view(<QuickStartWorkout role="trainer" clientId={client.id} clients={[client]} workouts={[]} returnTo="/today" />)
+    await user.click(screen.getByRole('button', { name: 'Начать тренировку' }))
+    await user.click(screen.getByRole('button', { name: 'Самостоятельно' }))
+    await user.click(screen.getByRole('button', { name: 'Начать' }))
+    await user.click(await screen.findByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
+    expect(mocks.quickStart.mock.calls[0]).toEqual(mocks.quickStart.mock.calls[1])
+    expect(mocks.quickStart.mock.calls[1]?.[2]).toBe('self')
   })
 
   it('continues an active client session without another write', async () => {

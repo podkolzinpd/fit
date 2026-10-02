@@ -20,13 +20,36 @@ function renderFields(onCommit = vi.fn()) {
 }
 
 describe('RunMetricsFields', () => {
+  it.each(['22.16', '22,16'])('preserves decimal kilometres entered as %s', async (value) => {
+    const user = userEvent.setup()
+    const commit = renderFields()
+    const input = screen.getByLabelText('Дистанция')
+    await user.clear(input)
+    await user.type(input, value)
+    await user.tab()
+    expect(input).toHaveValue('22.16')
+    expect(commit).toHaveBeenLastCalledWith({ distanceKm: 22.16 })
+  })
+
+  it('does not erase an invalid entry or commit it as an empty distance', async () => {
+    const user = userEvent.setup()
+    const commit = renderFields()
+    const input = screen.getByLabelText('Дистанция')
+    await user.clear(input)
+    await user.type(input, '22,1,6')
+    await user.tab()
+    expect(input).toHaveValue('22,1,6')
+    expect(input).toBeInvalid()
+    expect(commit).not.toHaveBeenCalled()
+  })
+
   afterEach(() => setWorkoutTimeWheel(false))
 
   it('shows runner-friendly values and calculated pace', () => {
     renderFields()
     expect(screen.getByRole('textbox', { name: 'Время: минуты' })).toHaveValue('29')
     expect(screen.getByRole('textbox', { name: 'Время: секунды' })).toHaveValue('40')
-    expect(screen.getByLabelText('Дистанция')).toHaveValue(5.2)
+    expect(screen.getByLabelText('Дистанция')).toHaveValue('5.2')
     expect(screen.getByLabelText('Дистанция')).toHaveAttribute('placeholder', '0')
     expect(screen.getByLabelText('Единица дистанции')).toHaveValue('km')
     expect(screen.getByRole('option', { name: 'км' })).toHaveProperty('selected', true)
@@ -61,26 +84,26 @@ describe('RunMetricsFields', () => {
     render(<Harness />)
     await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'm')
     const distance = screen.getByLabelText('Дистанция')
-    expect(distance).toHaveAttribute('step', 'any')
+    expect(distance).toHaveAttribute('inputmode', 'decimal')
     await user.clear(distance)
     await user.type(distance, '12.25')
     await user.tab()
     expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 0.01225 })
-    expect(distance).toHaveValue(12.25)
+    expect(distance).toHaveValue('12.25')
     await user.selectOptions(screen.getByLabelText('Единица дистанции'), 'km')
-    expect(distance).toHaveValue(0.01225)
+    expect(distance).toHaveValue('0.01225')
   })
 
   it('accepts hundredths of a kilometre without native step validation', async () => {
     const user = userEvent.setup()
     const onCommit = renderFields()
     const distance = screen.getByLabelText('Дистанция')
-    expect(distance).toHaveAttribute('step', 'any')
+    expect(distance).toHaveAttribute('inputmode', 'decimal')
     await user.clear(distance)
     await user.type(distance, '5.25')
     await user.tab()
     expect(onCommit).toHaveBeenLastCalledWith({ distanceKm: 5.25 })
-    expect(distance).toHaveValue(5.25)
+    expect(distance).toHaveValue('5.25')
   })
 
   it('keeps an unsynced Live distance when the unit changes before server data arrives', async () => {
@@ -95,7 +118,7 @@ describe('RunMetricsFields', () => {
     await user.type(distance, '12.25')
     await user.tab()
     await user.selectOptions(unit, 'km')
-    expect(distance).toHaveValue(0.01225)
+    expect(distance).toHaveValue('0.01225')
   })
 
   it('commits duration selected as minutes and seconds', async () => {
@@ -162,6 +185,6 @@ describe('RunMetricsFields', () => {
     const { rerender } = render(fields())
     expect(screen.queryByLabelText('Дистанция')).not.toBeInTheDocument()
     rerender(fields(0.5))
-    expect(screen.getByLabelText('Дистанция')).toHaveValue(500)
+    expect(screen.getByLabelText('Дистанция')).toHaveValue('500')
   })
 })

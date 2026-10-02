@@ -13,6 +13,7 @@ export interface TodayDraft {
   recordMode?: 'planned' | 'completed'
   workoutDate?: string
   startTime?: string
+  actualDurationMinutes?: string
   trainingFormat?: WorkoutTrainingFormat
 }
 
@@ -28,6 +29,7 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.recordMode === undefined || draft.recordMode === 'planned' || draft.recordMode === 'completed')
     && (draft.workoutDate === undefined || typeof draft.workoutDate === 'string')
     && (draft.startTime === undefined || typeof draft.startTime === 'string')
+    && (draft.actualDurationMinutes === undefined || typeof draft.actualDurationMinutes === 'string')
     && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
 }
 

@@ -45,7 +45,9 @@ export function publishedWorkoutCalories(row: WorkoutCalorieEstimateRow, rollout
   }
   if (rolloutPercent > calorieRolloutBucket(row.id) && row.calorie_v2_shadow_kcal !== null) {
     const segments = row.calorie_v2_shadow_details?.segments ?? []
-    const basis = segments.some((segment) => segment.speedKmh !== null && segment.speedKmh !== undefined)
+    const basis = segments.some((segment) => segment.activity === 'stationary-bike' || segment.activity === 'interval-bike')
+      ? 'По времени и весу; без данных о мощности и пульсе'
+      : segments.some((segment) => segment.speedKmh !== null && segment.speedKmh !== undefined)
       ? 'По фактическому времени и темпу'
       : segments.some((segment) => segment.activity && segment.activity !== 'strength' && segment.activity !== 'strength-heavy' && segment.activity !== 'strength-circuit')
         ? 'По фактическому времени; интенсивность приблизительная'

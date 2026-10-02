@@ -2,6 +2,11 @@
 
 Baseline V1: зафиксированный снимок `legacy trainer-app`, commit `049773605235dc2d92dc9b9ccfaa0244d00795f5`.
 
+Факт тренировки (2026-10-02): Yandex сохраняет необязательную фактическую
+длительность отдельно от Live timestamps; отчёт и оценка калорий используют
+ручное уточнение. Ввод дистанции поддерживает 22.16/22,16 км. Приёмка и
+ограничения сравнения калорий: `docs/design/WORKOUT_FACT_METRICS_20261002.md`.
+
 | Область | Обязательный результат V2 | Статус |
 |---|---|---|
 | Auth | Email/password без confirmation для MVP, Google OAuth, session restore, logout, password reset; постоянные роли trainer/client | Implemented; role-aware registration/session routing ready, reset SMTP pending. Отдельная нативная регистрация создаёт trainer/client профиль через PKCE Yandex ID без Supabase Auth, атомарно фиксирует legal acceptance и server-side read-write assignment; связанный старый аккаунт не может использовать этот путь. Новая защищённая `/invite?token=…&source=…` показывает provider-neutral preview без входа, сразу сохраняет bearer-token в browser session и удаляет его из URL; ранее отправленная `/invite#token=…&source=…` остаётся совместимой. Оба формата возвращают связанный или новый аккаунт для явного claim; legacy `/join?code=…` также переживает Yandex OAuth. Финальный Yandex-only switch скрывает email signup/login/reset, не принимает stale Supabase actor и после первого PKCE предлагает неизвестному Yandex ID явный выбор: одноразово подтвердить прежние Supabase credentials и связать уже перенесённый domain-ready UUID либо создать новый Yandex-native профиль. Успешный recovery одной транзакцией связывает identity, включает `yandex/read_write`, расходует handoff и выдаёт первую app-session; ошибка любого шага откатывает всё без пустого аккаунта. Handoff живёт 10 минут, хранится hash-at-rest и используется один раз. Legal acceptance и отменяемый account deletion request используют общий provider-neutral контракт с эквивалентными Supabase/Yandex adapters и actor-scoped SQL. Yandex app-session и main routing используют общие kill switch без публичного UUID allowlist; private server assignment остаётся границей данных. Production server/frontend switches и linked-ready assignments включены после 35-table apply; стартовый экран сохраняет прежнюю Fit-композицию, но содержит только пояснение и primary-действие Yandex ID. Реальный OAuth callback matrix обеих ролей остаётся post-cutover проверкой |
@@ -397,3 +402,7 @@ quiz/generator/validator contract; Yandex читает actor-scoped факты �
 - Этап 1: пакет автора тренировки используется и на карточке самостоятельно зарегистрировавшегося клиента; чужие пакеты недоступны, отключённая связь не создаёт новые списания. История не пересчитывается. План и последующие этапы: `docs/design/FINANCE_RELIABILITY_PLAN_20261002.md`.
 
 - YAFIT-588 / этап 2: ручное финансовое занятие сохраняется транзакционно с учётом и комментарием; повтор не создаёт дубли и не меняет формат ранее созданной тренировки.
+
+- YAFIT-588 / этап 3: перенос даты пересматривает выбранный пакет без автоматической замены; продление задаёт новый период; карточка и обзор учитывают долг истёкших услуг одинаково.
+
+- YAFIT-588 / этап 4: тренер выбирает формат быстрого старта после спортсмена; клиент запускает самостоятельно; Live показывает формат; фильтр без списания включает free/trial/unassigned. Проверены финансовые формы и touch targets.

@@ -586,6 +586,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     endTime: value.endTime,
     startedAt: value.startedAt,
     completedAt: value.completedAt,
+    actualDurationSec: value.actualDurationSec ?? null,
     activeCaloriesKcal: value.activeCaloriesKcal ?? null,
     calorieEstimateVersion: value.calorieEstimateVersion ?? null,
     calorieEstimateBasis: value.calorieEstimateBasis ?? null,
@@ -691,6 +692,7 @@ function workoutDraft(draft: WorkoutDraft): Record<string, unknown> {
     workoutDate: draft.workoutDate,
     startTime: draft.startTime ?? null,
     endTime: draft.endTime ?? null,
+    ...(draft.actualDurationSec === undefined ? {} : { actualDurationSec: draft.actualDurationSec }),
     notes: draft.notes ?? null,
     stageId: draft.stageId ?? null,
     favoriteTitle: draft.favoriteTitle ?? null,
@@ -1439,9 +1441,9 @@ export function createYandexMainRepository(
       async findActive(clientId) {
         return (await this.listSummaries(clientId)).find((item) => item.status === 'in_progress') ?? null
       },
-      async quickStart(clientId, operationId) {
+      async quickStart(clientId, operationId, trainingFormat) {
         const payload = await writeJson(queries, '/v1/workouts/quick-start', 'POST',
-          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID() },
+          { clientId: clientId ?? null, operationId: operationId ?? crypto.randomUUID(), ...(trainingFormat ? { trainingFormat } : {}) },
           z.object({ workout: z.object({ id: uuid, resumed: z.boolean() }) }))
         invalidate()
         return payload.workout

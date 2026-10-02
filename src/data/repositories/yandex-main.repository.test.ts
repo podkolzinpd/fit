@@ -781,7 +781,9 @@ describe('Yandex main repository', () => {
     const draft = { ...workoutDraft(), trainingFormat: 'with_trainer' as const }
     await repository.workouts.save(draft)
     await repository.workouts.save({ ...draft, id: workoutId, version: 1 })
-    await repository.workouts.saveCompleted(draft)
+    await repository.workouts.saveCompleted({ ...draft, actualDurationSec: 3000 })
+    const completedCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/v1/workouts/completed') && init?.method === 'POST')
+    expect(JSON.parse(String(completedCall?.[1]?.body))).toMatchObject({ actualDurationSec: 3000 })
     await repository.workouts.saveCompleted({ ...draft, id: workoutId, version: 1 })
     await repository.workouts.recordPlannedResult({ ...draft, id: workoutId, version: 1 })
     const createCall = fetchMock.mock.calls.find(([url, init]) => String(url).endsWith('/v1/workouts') && init?.method === 'POST')
