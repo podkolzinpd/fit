@@ -1334,6 +1334,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .block-rounds { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; font-weight: 600 }
 /* Live «по кругам»: шапка со счётчиком и точками прогресса. */
 .circuit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+.circuit-head-actions-only { justify-content: flex-end; min-height: 44px }
 .circuit-counter { font-weight: 800; font-size: 15px; color: var(--fg) }
 .circuit-dots { display: inline-flex; gap: 6px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end }
 /* Закреплённая версия (в .live-pinned): плашка под таймером, чтобы «Круг N из M»
@@ -1347,6 +1348,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 /* Текущий круг (в работе) — серая подсветка; пройденный — зелёная. */
 .circuit-round.current { opacity: 1; border-color: var(--neutral-current-border); background: transparent }
 .circuit-round.done { opacity: 1; border-color: var(--success-border); background: transparent }
+.circuit-round.collapsed { padding-top: 0; opacity: 1 }
+.circuit-round-toggle { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 10px; width:100%; min-height:44px; padding:8px 0; border:0; background:transparent; color:var(--fg); text-align:left; cursor:pointer }
+.circuit-round-toggle span:first-child { font-weight:var(--weight-semibold) }
+.circuit-round-toggle span:nth-child(2) { color:var(--secondary-label-fg); font-size:var(--type-caption-size) }
+.circuit-round-toggle span:last-child { color:var(--accent-strong); font-size:var(--type-caption-size) }
 .circuit-round-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px }
 .circuit-round h3 { margin: 6px 0 3px; font-size: 15px }
 .circuit-round .exercise { margin: 0 }
@@ -6256,11 +6262,6 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-exercise-note:not([open]) .live-note-preview { display:inline; min-width:0; margin-left:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .live-exercise-note[open] .live-note-preview { display:none; }
 .live-note-preview { display: block; color: var(--secondary-label-fg); font-weight: 400; overflow-wrap: anywhere; white-space: pre-wrap; }
-.circuit-exercise-notes { display:grid; gap:0; margin-top:12px; border-top:1px solid var(--border); }
-.circuit-exercise-note { min-width:0; padding-top:10px; }
-.circuit-exercise-note + .circuit-exercise-note { margin-top:6px; border-top:1px solid var(--hairline); }
-.circuit-exercise-note > h3 { margin:0; color:var(--fg); font-size:var(--type-caption-size); font-weight:var(--weight-semibold); }
-.circuit-exercise-note .live-exercise-note { margin-top:2px; padding-top:0; border-top:0; }
 .live-trainer-cue { color: var(--secondary-label-fg); font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .live-identity .live-previous-result { min-height: 20px; }
 .live-rest-trigger.resting { color: var(--warning-fg); }

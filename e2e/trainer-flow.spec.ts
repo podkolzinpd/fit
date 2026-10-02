@@ -970,11 +970,17 @@ test('план: суперсет работает в Live без создани�
   await expect(page.locator('.live-timer')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.locator('.live-timer')).toBeVisible()
-  // Счётчик круга закреплён с таймером (.live-pinned) и продублирован в шапке
-  // блока — проверяем закреплённый (всегда виден при скролле по кругам).
+  // Счётчик круга закреплён с таймером; в шапке блока его не дублируем.
   await expect(page.locator('.live-pinned .circuit-counter')).toHaveText('Круг 1 из 2')
+  await expect(page.locator('.exercise-block.live > .circuit-head .circuit-counter')).toHaveCount(0)
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
   await page.screenshot({ path: testInfo.outputPath('superset-live-390.png'), fullPage: true })
+  for (const [width, height] of [[430, 932], [1440, 1000]] as const) {
+    await page.setViewportSize({ width, height })
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`superset-live-${width}.png`), fullPage: true })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
   // Между упражнениями суперсета отдыха нет.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(1)
