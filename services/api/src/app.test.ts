@@ -1877,9 +1877,9 @@ describe('trainer schedule v2 activation claim', () => {
 })
 
 describe('browser pilot CORS', () => {
-  it('allows only explicitly configured web and iOS app origins', async () => {
+  it('allows only explicitly configured web and native app origins', async () => {
     const app = buildApp({
-      allowedOrigins: ['http://localhost:5173', 'capacitor://localhost'],
+      allowedOrigins: ['http://localhost:5173', 'https://localhost', 'capacitor://localhost'],
       logger: false,
     })
     apps.push(app)
@@ -1908,6 +1908,24 @@ describe('browser pilot CORS', () => {
     })
     expect(iosPreflight.statusCode).toBe(204)
     expect(iosPreflight.headers['access-control-allow-origin']).toBe('capacitor://localhost')
+
+    const androidPreflight = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/auth/yandex/session',
+      headers: { origin: 'https://localhost' },
+    })
+    expect(androidPreflight.statusCode).toBe(204)
+    expect(androidPreflight.headers['access-control-allow-origin']).toBe('https://localhost')
+
+    for (const origin of ['http://localhost', 'https://localhost:5173', 'https://localhost.attacker.example']) {
+      const rejectedLocal = await app.inject({
+        method: 'OPTIONS',
+        url: '/v1/auth/yandex/session',
+        headers: { origin },
+      })
+      expect(rejectedLocal.statusCode).toBe(403)
+      expect(rejectedLocal.headers['access-control-allow-origin']).toBeUndefined()
+    }
 
     const rejected = await app.inject({
       method: 'OPTIONS',
