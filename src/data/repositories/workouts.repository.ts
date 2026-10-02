@@ -6,7 +6,7 @@ import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
 import { EXERCISE_PROGRESS_PAGE_SIZE, exerciseProgressPageFromRows } from './exercise-progress-page'
-export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, performedMuscleGroupLabels, workoutFocusTitle, workoutToFavoriteTemplate, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, restSecondsAfterSet, applyRunningIntervalPreset, applyRunningActiveRecoveryPreset, createRunningFormatDrafts, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
+export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, performedMuscleGroupLabels, workoutFocusTitle, workoutToFavoriteTemplate, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, restSecondsAfterSet, applyRunningIntervalPreset, applyRunningActiveRecoveryPreset, createRunningFormatDrafts, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, resizeDraftBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound, WorkoutStatusPresentation, WorkoutStatusTone } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
 
@@ -286,6 +286,14 @@ export const workoutsRepository = {
     const result = await workoutQueries.appendLiveSet(exerciseId, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data
+  },
+  appendLiveRound(workout: Workout, blockId: string, operationId: string): Promise<number> {
+    void workout; void blockId; void operationId
+    return Promise.reject(new Error('Добавление круга доступно после перехода на новый сервер'))
+  },
+  removeLastLiveRound(workout: Workout, blockId: string, position: number, operationId: string): Promise<number> {
+    void workout; void blockId; void position; void operationId
+    return Promise.reject(new Error('Удаление круга доступно после перехода на новый сервер'))
   },
   async removeLiveSet(workout: Workout, setId: string): Promise<number> {
     const result = await workoutQueries.removeLiveSet(setId, workout.version)

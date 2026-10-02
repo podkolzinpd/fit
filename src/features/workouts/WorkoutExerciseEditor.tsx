@@ -4,7 +4,7 @@ import type { BlockPreset, ExerciseSnapshot, WorkoutExerciseDraft, WorkoutSetDra
 import { formatLocalDate } from '../../shared/local-date'
 import { RPE_OPTIONS } from '../../shared/rpe'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactExerciseDetailSummary, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, setBlockPreset, setBlockRest, splitBlock, syncBlockRounds, draftBlockRoundsView } from '../../data/repositories/workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, compactExerciseDetailSummary, groupDraftsIntoBlocks, mergeBlockWithNext, moveBlock, nextSetDraft, previousResultLine, resizeDraftBlockRounds, setBlockPreset, setBlockRest, splitBlock, draftBlockRoundsView } from '../../data/repositories/workout-rules'
 import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
 import { isRowingExerciseRef } from '../../shared/run-metrics'
@@ -21,8 +21,9 @@ import { ExerciseThumbnail, findCatalogExercise } from '../exercises'
 // заменой выделенного). Держим локальный черновик-строку: во время ввода поле
 // может быть пустым (коммита нет). Валидное число фиксируем сразу (чтобы, напр.,
 // круги перерисовывались по мере ввода), а пустое поле зажимаем в min на blur.
-function ClampedNumberInput({ value, min, max, label, onCommit }: {
-  value: number; min: number; max?: number; label: string; onCommit: (next: number) => void
+function ClampedNumberInput({ value, min, max, label, onCommit, commitOnBlur = false }: {
+  value: number; min: number; max?: number; label: string; commitOnBlur?: boolean
+  onCommit: (next: number) => void | boolean | Promise<void | boolean>
 }) {
   const [draft, setDraft] = useState(String(value))
   useEffect(() => { setDraft(String(value)) }, [value])
@@ -34,13 +35,15 @@ function ClampedNumberInput({ value, min, max, label, onCommit }: {
       setDraft(raw)
       if (raw === '') return // пустое поле во время ввода — не коммитим
       const parsed = Number(raw)
-      if (!Number.isNaN(parsed)) { const next = clamp(parsed); if (next !== value) onCommit(next) }
+      if (!Number.isNaN(parsed)) { const next = clamp(parsed); if (next !== value && (!commitOnBlur || next > value)) void onCommit(next) }
     }}
     onBlur={() => { // ушли из пустого/битого поля → откатываем в min
       const parsed = Number(draft)
       const next = draft === '' || Number.isNaN(parsed) ? min : clamp(parsed)
       setDraft(String(next))
-      if (next !== value) onCommit(next)
+      if (next !== value) void Promise.resolve(onCommit(next)).then((accepted) => {
+        if (accepted === false) setDraft(String(value))
+      })
     }}
     onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
 }
@@ -114,6 +117,7 @@ function draftExerciseKey(exercise: WorkoutExerciseDraft, index: number) {
 export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
+  const [roundError, setRoundError] = useState<string | null>(null)
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
   const [settingsExerciseIndex, setSettingsExerciseIndex] = useState<number | null>(null)
   // Два поля одного подхода могут отправить change до перерисовки родителя (особенно
@@ -127,6 +131,20 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   }
   function updateRestBetweenSets(blockId: string, next: number) {
     commitExercises(setBlockRest([...latestExercises.current], blockId, { betweenSets: next }))
+  }
+  async function changeRoundCount(blockId: string, next: number): Promise<boolean> {
+    const members = latestExercises.current.filter((exercise) => exercise.blockId === blockId)
+    const removedSets = members.flatMap((exercise) => exercise.sets.filter((set) => set.position >= next))
+    if (removedSets.some((set) => set.sourceSetId)) {
+      setRoundError('Выполненные подходы нельзя удалить изменением числа кругов.')
+      return false
+    }
+    const hasValues = removedSets.some((set) => set.weightKg !== undefined || set.reps !== undefined
+      || set.durationMin !== undefined || set.durationSec !== undefined || set.distanceKm !== undefined || set.rpe !== undefined)
+    if (hasValues && !await confirm({ message: 'Удалить круги с заполненными значениями?', confirmLabel: 'Удалить круги', danger: true })) return false
+    setRoundError(null)
+    commitExercises(resizeDraftBlockRounds([...latestExercises.current], blockId, next))
+    return true
   }
   function applyRunningPreset(activeRecovery: boolean) {
     if (settingsExerciseIndex === null) return
@@ -371,13 +389,14 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             {block.blockPreset === 'circuit' && <option value="circuit" disabled>Круговая (ранее)</option>}
             <option value="interval">Интервалы</option>
           </select>
-          <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} onCommit={(next) => commitExercises(syncBlockRounds([...latestExercises.current], block.blockId, next))} /></label>
+          <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} commitOnBlur onCommit={(next) => changeRoundCount(block.blockId, next)} /></label>
           {blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <OverflowMenu items={[
             ...(blocks.length > 1 && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
             { label: 'Разбить', onClick: () => commitExercises(splitBlock([...latestExercises.current], block.blockId)) },
           ]} />
         </div>
+        {roundError && <p className="error" role="alert">{roundError}</p>}
         <OptionalDetails className="block-options" summary="Настройки блока" initialOpen={showRestByDefault}>
           <div className="block-rest">
             <label className="block-rest-field">Отдых между упр., с<ClampedNumberInput label="Отдых между упражнениями, с" value={block.restBetweenExercisesSec} min={0} max={600} onCommit={(next) => commitExercises(setBlockRest([...latestExercises.current], block.blockId, { betweenExercises: next }))} /></label>

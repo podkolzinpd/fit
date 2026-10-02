@@ -794,6 +794,14 @@ describe('Yandex main repository', () => {
     await repository.workouts.confirmLiveSet(setId, item.version)
     await repository.workouts.appendLiveExercise(item, exerciseSnapshot())
     await repository.workouts.appendLiveSet(item, exerciseId)
+    const roundOperationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f40'
+    const removeRoundOperationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f41'
+    await repository.workouts.appendLiveRound(item, blockId, roundOperationId)
+    await repository.workouts.removeLastLiveRound(item, blockId, 1, removeRoundOperationId)
+    const roundCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes(`/blocks/${blockId}/rounds`))
+    expect(roundCalls.map(([, init]) => init?.method)).toEqual(['POST', 'DELETE'])
+    expect(roundCalls.map(([, init]) => (JSON.parse(String(init?.body)) as { operationId: string }).operationId)).toEqual([roundOperationId, removeRoundOperationId])
+    expect(String(roundCalls[1]?.[0])).toContain(`/rounds/1`)
     await repository.workouts.removeLiveSet(item, setId)
     await repository.workouts.removeLiveExercise(item, exerciseId)
     await repository.workouts.reorderLiveBlock(item, blockId, -1)

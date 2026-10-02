@@ -8,7 +8,7 @@ import { formatLocalDate, localDate, todayInTimeZone } from '../../shared/local-
 import { isValidRpe } from '../../shared/rpe'
 import type { RunningFormat } from '../../shared/running-formats'
 import { trackGoal } from '../../shared/yandex-metrika'
-import { InlineRequestError, OverflowMenu, Page } from '../../shared/ui'
+import { InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { ExercisePicker, ExerciseThumbnail, findCatalogExercise, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
@@ -115,6 +115,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const location = useLocation()
   const queryClient = useQueryClient()
   const { actor } = useAuth()
+  const [askConfirm, confirmDialog] = useConfirm()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const today = todayInTimeZone(actor?.timezone)
@@ -136,6 +137,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
+  const [lastAddedReviewRound, setLastAddedReviewRound] = useState<{ blockId: string; position: number } | null>(null)
   const [reordering, setReordering] = useState(false)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showRestByDefault = useExercisePlanRestDisplay(actor?.userId)
@@ -565,6 +567,37 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     }))
   }
 
+  function updateReviewGroupRest(blockId: string, field: 'restBetweenExercisesSec' | 'restBetweenRoundsSec', value: number) {
+    const seconds = Number.isFinite(value) ? Math.min(600, Math.max(0, value)) : field === 'restBetweenRoundsSec' ? 90 : 0
+    setItems((current) => current.map((item) => item.structure?.blockId === blockId
+      ? { ...item, structure: { ...item.structure, [field]: seconds } } : item))
+  }
+
+  function addReviewRound(blockId: string) {
+    const members = items.filter((item) => item.structure?.blockId === blockId)
+    const position = Math.max(0, ...members.flatMap((item) => item.sets.map((set) => set.position + 1)))
+    if (members.length < 2 || position >= 20) return
+    setItems((current) => current.map((item) => {
+      if (item.structure?.blockId !== blockId) return item
+      const previous = [...item.sets].sort((left, right) => left.position - right.position).at(-1)
+      return { ...item, structure: { ...item.structure, blockRounds: position + 1 },
+        sets: [...item.sets, { ...(previous ?? { position }), position }] }
+    }))
+    setLastAddedReviewRound({ blockId, position })
+  }
+
+  async function removeAddedReviewRound(blockId: string, position: number) {
+    const members = items.filter((item) => item.structure?.blockId === blockId)
+    const removed = members.flatMap((item) => item.sets.filter((set) => set.position === position))
+    const hasValues = removed.some((set) => set.weightKg !== undefined || set.reps !== undefined
+      || set.durationMin !== undefined || set.durationSec !== undefined || set.distanceKm !== undefined || set.rpe !== undefined)
+    if (hasValues && !await askConfirm({ message: 'Убрать круг с заполненными значениями?', confirmLabel: 'Убрать круг', danger: true })) return
+    setItems((current) => current.map((item) => item.structure?.blockId === blockId
+      ? { ...item, structure: { ...item.structure, blockRounds: Math.max(1, position) },
+        sets: item.sets.filter((set) => set.position !== position) } : item))
+    setLastAddedReviewRound(null)
+  }
+
   function addSet(itemIndex: number) {
     const ref = items[itemIndex]?.exercise.ref
     if (ref) setManualRefs((current) => current.includes(ref) ? current : [...current, ref])
@@ -782,7 +815,15 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div>
         : <button type="button" className="link" onClick={() => { trackGoal('today_review_reorder_started'); setReordering(true) }}>Изменить порядок</button>}
       </div>}
-      {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.length > 1 && <span className="block-badge">{block.items[0]!.item.structure?.blockPreset === 'interval' ? 'Интервалы' : block.items[0]!.item.structure?.blockPreset === 'circuit' ? 'Круговая' : 'Суперсет'}</span>}{block.items.map(({ item, index }, itemInBlockIndex) => {
+      {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.length > 1 && <><span className="block-badge">{block.items[0]!.item.structure?.blockPreset === 'interval' ? 'Интервалы' : block.items[0]!.item.structure?.blockPreset === 'circuit' ? 'Круговая' : 'Суперсет'}</span>{block.items[0]!.item.structure?.blockPreset === 'set' && !reordering && <div className="today-review-round-actions">
+        <span>Кругов: {Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1)))}</span>
+        <button type="button" className="secondary" disabled={Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1))) >= 20} onClick={() => addReviewRound(block.id)}>＋ Круг</button>
+        {lastAddedReviewRound?.blockId === block.id && <button type="button" className="link" onClick={() => void removeAddedReviewRound(block.id, lastAddedReviewRound.position)}>Убрать добавленный круг</button>}
+        <details className="today-review-group-rest"><summary>Отдых в суперсете</summary>
+          <label>Между упражнениями, с<input aria-label="Отдых между упражнениями суперсета" type="number" inputMode="numeric" min="0" max="600" key={`${block.id}-exercise-${block.items[0]!.item.structure?.restBetweenExercisesSec ?? 0}`} defaultValue={block.items[0]!.item.structure?.restBetweenExercisesSec ?? 0} onBlur={(event) => updateReviewGroupRest(block.id, 'restBetweenExercisesSec', Number(event.currentTarget.value || 0))} /></label>
+          <label>Между кругами, с<input aria-label="Отдых между кругами суперсета" type="number" inputMode="numeric" min="0" max="600" key={`${block.id}-round-${block.items[0]!.item.structure?.restBetweenRoundsSec ?? 90}`} defaultValue={block.items[0]!.item.structure?.restBetweenRoundsSec ?? 90} onBlur={(event) => updateReviewGroupRest(block.id, 'restBetweenRoundsSec', Number(event.currentTarget.value || 0))} /></label>
+        </details>
+      </div>}</>}{block.items.map(({ item, index }, itemInBlockIndex) => {
         const showRpe = isRpeVisible(index)
         const showRest = isRestVisible(index)
         const nextBlock = reviewBlocks[blockIndex + 1]
@@ -798,7 +839,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           <WorkoutExerciseHeader as="header" titleAs="strong" className="today-exercise-title" name={item.exercise.name}
             leading={<ExerciseThumbnail exercise={findCatalogExercise(catalog.exercises, item.exercise) ?? item.exercise} />}
             actions={reordering ? reorderActions : <OverflowMenu label={`Настройки упражнения «${item.exercise.name}»`} items={[
-            { label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) },
+            ...(block.items.length === 1 ? [{ label: showRest ? 'Скрыть отдых' : 'Показать отдых', onClick: () => toggleRest(index) }] : []),
             { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(index) },
             ...(canMergeNext ? [{ label: block.items.length > 1 ? 'Добавить следующее в суперсет' : 'Создать суперсет со следующим', onClick: () => mergeReviewBlock(index) }] : []),
             ...(block.items.length > 1 && itemInBlockIndex === 0 && item.structure?.blockPreset === 'set' ? [{ label: 'Разбить суперсет', onClick: () => splitReviewBlock(index) }] : []),
@@ -808,7 +849,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           <p className={workoutParseSetSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{workoutParseSetSummary(item)}</p>
           {!reordering && <details className="today-exercise-editor">
             <summary>{workoutParseSetSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>
-            {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с
+            {showRest && block.items.length === 1 && <label className="exercise-plan-rest-field">Отдых между подходами, с
               <input key={index + '-' + (item.structure?.restBetweenSetsSec ?? 90)} aria-label={'Отдых между подходами, ' + item.exercise.name} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90}
                 onFocus={(event) => event.currentTarget.select()}
                 onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }}
@@ -831,10 +872,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
                 </>}
                 {distanceCapable && <RunMetricsFields idPrefix={'today-run-' + index + '-' + setIndex} rowing={isRowingExerciseRef(item.exercise.ref)} optionalDistance={item.exercise.inputKind === 'duration'} durationSec={set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={item.exercise.name + ': время, подход ' + (setIndex + 1)} distanceLabel={item.exercise.name + ': расстояние, подход ' + (setIndex + 1)} distanceUnitLabel={item.exercise.name + ': единица расстояния, подход ' + (setIndex + 1)} onCommit={(patch) => updateSet(index, setIndex, patch)} />}
                 {showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={item.exercise.name + ': RPE, подход ' + (setIndex + 1)} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}
-                {item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={'Удалить подход ' + (setIndex + 1)} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}
+                {block.items.length === 1 && item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={'Удалить подход ' + (setIndex + 1)} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}
               </WorkoutSetRow>)}
             </WorkoutSetTable>
-            <div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div>
+            {block.items.length === 1 && <div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div>}
           </details>}
         </WorkoutExercise>
       })}</div>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
@@ -874,6 +915,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     </section>}
     {supplementalLoadError && <InlineRequestError error={supplementalLoadError} />}
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
+    {confirmDialog}
   </Page>
 }
 

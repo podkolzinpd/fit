@@ -539,6 +539,31 @@ export function appendLiveSet(
   )
 }
 
+export function appendLiveRound(
+  client: DatabaseClient,
+  workoutId: string,
+  blockId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.append_live_round($1, $2, $3, $4)',
+    [workoutId, blockId, expectedVersion, operationId])
+}
+
+export function removeLastLiveRound(
+  client: DatabaseClient,
+  workoutId: string,
+  blockId: string,
+  position: number,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.remove_last_live_round($1, $2, $3, $4, $5)',
+    [workoutId, blockId, position, expectedVersion, operationId])
+}
+
 export function removeLiveSet(
   client: DatabaseClient,
   setId: string,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
-import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
+import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, resizeDraftBlockRounds, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
 import { SYSTEM_EXERCISE_LEGACY_CATALOG, SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 
@@ -600,6 +600,22 @@ describe('restSecondsAfterSet', () => {
     expect(restSecondsAfterSet(workout, work, work.sets[0]!)).toBe(0)
     expect(restSecondsAfterSet(workout, recovery, recovery.sets[0]!)).toBe(0)
   })
+
+  it('не запускает отдых между кругами, пока в текущем остался подход, даже при выполнении не по порядку', () => {
+    const a = { ...exercise('a', 0, 'group', 'group', [s('a1', 0), s('a2', 1)]), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90 }
+    const b = { ...exercise('b', 1, 'group', 'group', [s('b1', 0), s('b2', 1, true)]), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90 }
+    const workout = workoutWithExercises([a, b])
+    expect(restSecondsAfterSet(workout, b, b.sets[0]!)).toBe(0)
+    expect(restSecondsAfterSet(workout, b, b.sets[1]!)).toBe(0)
+    const afterB = workoutWithExercises([a, { ...b, sets: [s('b1', 0, true), s('b2', 1, true)] }])
+    expect(restSecondsAfterSet(afterB, a, a.sets[0]!)).toBe(90)
+  })
+
+  it('старый неполный круг завершается без несуществующего подхода', () => {
+    const a = { ...exercise('a', 0, 'group', 'group', [s('a1', 0, true), s('a2', 1, true), s('a3', 2)]), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90 }
+    const b = { ...exercise('b', 1, 'group', 'group', [s('b1', 0, true), s('b2', 1, true)]), restBetweenExercisesSec: 0, restBetweenRoundsSec: 90 }
+    expect(restSecondsAfterSet(workoutWithExercises([a, b]), a, a.sets[2]!)).toBe(0)
+  })
 })
 
 describe('copyWorkout blocks', () => {
@@ -790,6 +806,19 @@ describe('draft blocks', () => {
 })
 
 describe('block rounds', () => {
+  it('показывает старый пропущенный подход в правильном круге после добавления нового', () => {
+    const s = (id: string, position: number): WorkoutSet => ({ id, position, fact: {}, confirmedAt: null, version: 1 })
+    const a = exercise('a', 0, 'group', 'group', [s('a0', 0), s('a2', 2), s('a3', 3)])
+    const b = exercise('b', 1, 'group', 'group', [s('b0', 0), s('b1', 1), s('b3', 3)])
+    const rounds = blockRoundsView(groupIntoBlocks([a, b])[0]!)
+    expect(rounds.map((round) => ({ round: round.round, ids: round.items.map(({ set }) => set.id) }))).toEqual([
+      { round: 1, ids: ['a0', 'b0'] },
+      { round: 2, ids: ['b1'] },
+      { round: 3, ids: ['a2'] },
+      { round: 4, ids: ['a3', 'b3'] },
+    ])
+  })
+
   it('syncBlockRounds выставляет N подходов всем упражнениям блока', () => {
     const start = [draft('a', 'b1', 'group'), draft('b', 'b1', 'group')]
     const out = syncBlockRounds(start, 'b1', 3)
@@ -808,6 +837,16 @@ describe('block rounds', () => {
     const withWeight: WorkoutExerciseDraft = { ...draft('a', 'b1', 'group'), sets: [{ position: 0, weightKg: 50, reps: 10 }] }
     const out = syncBlockRounds([withWeight], 'b1', 2)
     expect(out[0]?.sets[1]).toMatchObject({ weightKg: 50, reps: 10 })
+  })
+
+  it('добавляет новый круг старому неполному блоку, сохраняя пропуск и значения', () => {
+    const a: WorkoutExerciseDraft = { ...draft('a', 'b1', 'group'), blockRounds: 3, sets: [{ position: 0 }, { position: 1 }, { position: 2, weightKg: 42 }] }
+    const b: WorkoutExerciseDraft = { ...draft('b', 'b1', 'group'), blockRounds: 3, sets: [{ position: 0 }, { position: 1, weightKg: 30 }] }
+    const added = resizeDraftBlockRounds([a, b], 'b1', 4)
+    expect(added.map((item) => item.sets.map((set) => set.position))).toEqual([[0, 1, 2, 3], [0, 1, 3]])
+    expect(added[0]?.sets[2]?.weightKg).toBe(42)
+    expect(added[1]?.sets[2]?.weightKg).toBe(30)
+    expect(draftBlockRoundsView(groupDraftsIntoBlocks(added)[0]!).map((round) => round.items.length)).toEqual([2, 2, 1, 2])
   })
 
   it('mergeBlockWithNext синхронизирует раунды по максимуму подходов', () => {

@@ -62,6 +62,7 @@ import { DatabasePilotProgressData } from '../progress-data.js'
 import { readAccessibleTrainingData } from '../training-data.js'
 import {
   appendLiveExercise,
+  appendLiveRound,
   appendLiveSet,
   answerWorkoutQuestion,
   askWorkoutQuestion,
@@ -71,6 +72,7 @@ import {
   mergeLiveBlockWithNext,
   recordPlannedWorkoutResult,
   removeLiveSet,
+  removeLastLiveRound,
   removeLiveExercise,
   reorderLiveBlock,
   rescheduleWorkout,
@@ -5568,6 +5570,84 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('delete from public.workout_sets where workout_exercise_id=$1 and id<>$2', [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_SET_ID])
         await ownerPool.query("update public.workout_sets set confirmed_at=null where id=$1", [ROOT_WORKOUT_SET_ID])
         await ownerPool.query("update public.workout_exercises set block_id=$2,block_type='single',block_preset='set',block_rounds=1,rest_between_exercises_sec=0,rest_between_rounds_sec=90 where id=$1", [ROOT_WORKOUT_EXERCISE_ID, blockId])
+        await ownerPool.query("update public.workouts set status='planned',started_at=null,version=1 where id=$1", [ROOT_WORKOUT_ID])
+      }
+    })
+
+    it('atomically adds one set per superset exercise, replays retries, and protects completed rounds', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const operationIds = [
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c101',
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c102',
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c103',
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c104',
+        'a6945b50-5eb0-4ee4-99d1-39534eb1c105',
+      ]
+      const blockId = (await ownerPool.query<{ block_id: string }>(
+        'select block_id from public.workout_exercises where id=$1', [ROOT_WORKOUT_EXERCISE_ID],
+      )).rows[0]?.block_id
+      if (!blockId) throw new Error('Root Live block is missing')
+      try {
+        await ownerPool.query('delete from public.workout_exercises where workout_id=$1 and id<>$2',
+          [ROOT_WORKOUT_ID, ROOT_WORKOUT_EXERCISE_ID])
+        await ownerPool.query('delete from public.workout_sets where workout_exercise_id=$1 and id<>$2',
+          [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_SET_ID])
+        await ownerPool.query('update public.workout_sets set confirmed_at=null,fact_reps=null,plan_reps=12 where id=$1',
+          [ROOT_WORKOUT_SET_ID])
+        await ownerPool.query("update public.workout_exercises set position=0,block_type='single',block_preset='set',block_rounds=1 where id=$1",
+          [ROOT_WORKOUT_EXERCISE_ID])
+        await ownerPool.query("update public.workouts set status='planned',started_at=null,version=1 where id=$1", [ROOT_WORKOUT_ID])
+        await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => startLiveWorkout(client, ROOT_WORKOUT_ID, 1, operationIds[0]!))
+        const second = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => appendLiveExercise(client, ROOT_WORKOUT_ID,
+            { source: 'system', ref: 'push-up', customExerciseId: null,
+              name: 'Отжимания', muscleGroup: 'chest', inputKind: 'reps' },
+            2, operationIds[1]!))
+        await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => mergeLiveBlockWithNext(client, ROOT_WORKOUT_ID, blockId, 'set', 3, operationIds[2]!))
+        const added = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => appendLiveRound(client, ROOT_WORKOUT_ID, blockId, 4, operationIds[3]!))
+        expect(added).toEqual({ resourceId: blockId, version: 5, replayed: false })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => appendLiveRound(client, ROOT_WORKOUT_ID, blockId, 4, operationIds[3]!),
+        )).resolves.toEqual({ ...added, replayed: true })
+        const rounds = await ownerPool.query<{ exercise_id: string; position: number; plan_reps: number | null }>(`
+          select exercise.id as exercise_id, workout_set.position, workout_set.plan_reps
+          from public.workout_exercises exercise
+          join public.workout_sets workout_set on workout_set.workout_exercise_id=exercise.id
+          where exercise.workout_id=$1 and exercise.block_id=$2
+          order by exercise.position, workout_set.position`, [ROOT_WORKOUT_ID, blockId])
+        expect(rounds.rows).toHaveLength(4)
+        expect(rounds.rows.filter((row) => row.position === 1)).toHaveLength(2)
+        expect(rounds.rows.find((row) => row.exercise_id === ROOT_WORKOUT_EXERCISE_ID && row.position === 1)?.plan_reps).toBe(12)
+        await ownerPool.query(`update public.workout_sets set confirmed_at=now()
+          where workout_exercise_id=$1 and position=1`, [second.resourceId])
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => removeLastLiveRound(client, ROOT_WORKOUT_ID, blockId, 1, 5, operationIds[4]!),
+        )).rejects.toMatchObject({ failure: 'invalid' })
+        expect((await ownerPool.query<{ version: string }>('select version::text as version from public.workouts where id=$1',
+          [ROOT_WORKOUT_ID])).rows[0]?.version).toBe('5')
+        await ownerPool.query(`update public.workout_sets set confirmed_at=null
+          where workout_exercise_id=$1 and position=1`, [second.resourceId])
+        const removed = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => removeLastLiveRound(client, ROOT_WORKOUT_ID, blockId, 1, 5, operationIds[4]!))
+        expect(removed).toEqual({ resourceId: blockId, version: 6, replayed: false })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => removeLastLiveRound(client, ROOT_WORKOUT_ID, blockId, 1, 5, operationIds[4]!),
+        )).resolves.toEqual({ ...removed, replayed: true })
+        expect((await ownerPool.query<{ count: string }>(`
+          select count(*)::text as count from public.workout_sets workout_set
+          join public.workout_exercises exercise on exercise.id=workout_set.workout_exercise_id
+          where exercise.workout_id=$1 and exercise.block_id=$2 and workout_set.position=1`,
+          [ROOT_WORKOUT_ID, blockId])).rows[0]?.count).toBe('0')
+      } finally {
+        await ownerPool.query('delete from app_private.live_workout_operations where operation_id=any($1::uuid[])', [operationIds])
+        await ownerPool.query('delete from public.workout_exercises where workout_id=$1 and id<>$2', [ROOT_WORKOUT_ID, ROOT_WORKOUT_EXERCISE_ID])
+        await ownerPool.query('delete from public.workout_sets where workout_exercise_id=$1 and id<>$2', [ROOT_WORKOUT_EXERCISE_ID, ROOT_WORKOUT_SET_ID])
+        await ownerPool.query('update public.workout_sets set confirmed_at=null,fact_reps=null where id=$1', [ROOT_WORKOUT_SET_ID])
+        await ownerPool.query("update public.workout_exercises set block_id=$2,block_type='single',block_preset='set',block_rounds=1 where id=$1",
+          [ROOT_WORKOUT_EXERCISE_ID, blockId])
         await ownerPool.query("update public.workouts set status='planned',started_at=null,version=1 where id=$1", [ROOT_WORKOUT_ID])
       }
     })

@@ -11,11 +11,13 @@ import type { PlannedWorkoutDraft } from './planned-workout-request.js'
 import {
   appendLiveExercise,
   appendLiveSet,
+  appendLiveRound,
   cancelPlannedWorkout,
   confirmLiveSet,
   finishLiveWorkout,
   recordPlannedWorkoutResult,
   removeLiveSet,
+  removeLastLiveRound,
   removeLiveExercise,
   reorderLiveBlock,
   mergeLiveBlockWithNext,
@@ -66,6 +68,21 @@ export interface PilotWorkoutsWriter {
   appendLiveSet(
     sessionToken: YandexActorSessionInput,
     exerciseId: string,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult>
+  appendLiveRound(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult>
+  removeLastLiveRound(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    position: number,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
@@ -259,6 +276,27 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
       expectedVersion,
       operationId,
     ))
+  }
+
+  appendLiveRound(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult> {
+    return this.withSession(sessionToken, (client) => appendLiveRound(client, workoutId, blockId, expectedVersion, operationId))
+  }
+
+  removeLastLiveRound(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    position: number,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult> {
+    return this.withSession(sessionToken, (client) => removeLastLiveRound(client, workoutId, blockId, position, expectedVersion, operationId))
   }
 
   cancelPlanned(
