@@ -8,8 +8,8 @@
 .fit-lime-shell.workout-create-edit-identity .today-review { gap: 18px }
 .fit-lime-shell.workout-create-edit-identity .today-greeting {
   color: var(--lime-text);
-  font-size: clamp(27px, 7vw, 34px);
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.workout-create-edit-identity .today-text-fallback,
@@ -18,7 +18,7 @@
 .fit-lime-shell.workout-create-edit-identity .today-empty,
 .fit-lime-shell.workout-create-edit-identity .today-assignment {
   border: 1px solid var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   color: var(--lime-text);
   box-shadow: none;
@@ -29,7 +29,7 @@
 .fit-lime-shell.workout-create-edit-identity .today-recognized strong,
 .fit-lime-shell.workout-create-edit-identity .today-assignment .today-save-question {
   color: var(--lime-text);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-create-edit-identity .today-text-fallback-head small,
 .fit-lime-shell.workout-create-edit-identity .today-resume small,
@@ -43,7 +43,7 @@
   border-radius: 18px;
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-create-edit-identity .today-primary-cta:disabled,
 .fit-lime-shell.workout-create-edit-identity .today-review-next:disabled,
@@ -64,11 +64,11 @@
 }
 .fit-lime-shell.workout-create-edit-identity .today-exercise-list {
   border-color: var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
 }
 .fit-lime-shell.workout-create-edit-identity .today-exercise.planned-exercise { border-color: var(--lime-divider) }
-.fit-lime-shell.workout-create-edit-identity .today-exercise-title strong { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.workout-create-edit-identity .today-exercise-title strong { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.workout-create-edit-identity .today-exercise-editor summary { color: var(--lime-accent) }
 .fit-lime-shell.workout-create-edit-identity .planned-set-input,
 .fit-lime-shell.workout-create-edit-identity .planned-set-rpe,
@@ -88,7 +88,7 @@
   border-radius: 14px;
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-create-edit-identity .today-assignment {
   padding: 20px;
@@ -104,3 +104,4 @@
   .fit-lime-shell.workout-create-edit-identity .today-assignment,
   .fit-lime-shell.workout-create-edit-identity .today-text-fallback { padding: 18px }
 }
+.phone-frame.fit-lime-shell.workout-create-edit-identity :is(.today-primary-cta, .today-review-next, .today-save-actions .workout-cta, .today-voice-hero-compact .voice-input-button) { border-radius: 999px; font-weight: 500; }

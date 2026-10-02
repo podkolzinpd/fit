@@ -423,6 +423,29 @@ for (const width of [390, 430, 1440]) {
       await expect(page.locator('[data-original-icon]')).toHaveCount(0)
     }
   })
+  test(`Figma workout editor and client picker at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockPilot(page, { fitLime: true })
+    await page.goto('/workouts/new?date=2026-09-24')
+    await expect(page.locator('.workout-form-page')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await expect(page.locator('.workout-header-contract h2')).toHaveCSS('font-size', '24px')
+    await expect(page.locator('.workout-header-contract h2')).toHaveCSS('font-weight', '500')
+    await expect(page.locator('.workout-composer-card')).toHaveCSS('border-radius', '32px')
+    await page.screenshot({ path: testInfo.outputPath('figma-workout-editor.png'), fullPage: true })
+    await page.locator('.client-picker-trigger').click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента' })
+    await expect(picker).toBeVisible()
+    await expect(picker).toHaveCSS('border-top-left-radius', '40px')
+    await expect(picker.locator('.client-picker-avatar').first()).toHaveCSS('width', '40px')
+    await picker.getByRole('textbox', { name: 'Поиск клиента' }).fill('Алексей')
+    await page.screenshot({ path: testInfo.outputPath('figma-workout-client-picker.png') })
+    await picker.getByRole('button', { name: /Алексей Смирнов/ }).click()
+    await expect(picker).not.toBeVisible()
+    await expect(page.locator('.client-picker-trigger')).toContainText('Алексей Смирнов')
+    await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  })
   test(`Figma calendar month chooser applies and cancels at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await mockPilot(page, { fitLime: true })
@@ -1822,7 +1845,7 @@ test('direct pilot workout link returns to its dated calendar instead of clients
 })
 
 test('failed calendar save preserves the form and retry returns to the selected day once', async ({ page }) => {
-  const backend = await mockPilot(page, { failFirstSave: true })
+  const backend = await mockPilot(page, { fitLime: true, failFirstSave: true })
   await page.goto('/today?date=2026-09-29&week=2026-09-21&range=2w')
   await page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-29' }).click()
   await page.locator('.client-picker-trigger').click()

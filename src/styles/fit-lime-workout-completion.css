@@ -8,21 +8,21 @@
 .fit-lime-shell.workout-detail-history-identity .exercise-progress-chart,
 .fit-lime-shell.workout-detail-history-identity .exercise-technique {
   border: 1px solid var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   color: var(--lime-text);
   box-shadow: none;
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report h1 {
   color: var(--lime-text);
-  font-size: clamp(28px, 7vw, 34px);
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-kicker,
 .fit-lime-shell.workout-detail-history-identity .workout-completion-record strong {
   color: var(--lime-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-kicker {
   color: var(--warning-fg);
@@ -44,7 +44,7 @@
 .fit-lime-shell.workout-detail-history-identity .workout-completion-count-line,
 .fit-lime-shell.workout-detail-history-identity .workout-completion-highlight h2 {
   color: var(--lime-text);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts dt,
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-date,
@@ -58,13 +58,13 @@
 .fit-lime-shell.workout-detail-history-identity .workout-completion-progress span { background: var(--lime-accent) }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-progress span { background: var(--warning-fg) }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-recorded > summary { min-height: 70px }
-.fit-lime-shell.workout-detail-history-identity .workout-completion-recorded > summary strong { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.workout-detail-history-identity .workout-completion-recorded > summary strong { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-share-card .workout-cta[data-variant='primary'] {
   border-color: var(--lime-accent);
   border-radius: 18px;
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-share-card .workout-cta[data-variant='primary']:disabled {
   border-color: var(--lime-divider);
@@ -73,7 +73,7 @@
 }
 .fit-lime-shell.workout-detail-history-identity .workout-share-sheet {
   border-color: var(--lime-divider);
-  border-radius: 30px 30px 0 0;
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
   background: var(--lime-surface-raised);
 }
 .fit-lime-shell.workout-detail-history-identity .workout-share-options > button {
@@ -87,7 +87,7 @@
   background: var(--lime-accent-muted);
 }
 .fit-lime-shell.workout-detail-history-identity .exercise-card-meta h2,
-.fit-lime-shell.workout-detail-history-identity .exercise-progress-chart h2 { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.workout-detail-history-identity .exercise-progress-chart h2 { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.workout-detail-history-identity .exercise-card-tabs {
   border-color: var(--lime-divider);
   border-radius: 18px;
@@ -99,7 +99,7 @@
   border-radius: 14px;
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.workout-detail-history-identity .exercise-technique .how-steps { color: var(--lime-text) }
 @media (max-width: 480px) {
