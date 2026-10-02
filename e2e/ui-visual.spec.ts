@@ -1237,9 +1237,10 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   expect(first.width).toBeLessThan(130)
   const weekBadge = page.locator('.athlete-achievements-group').nth(1).locator('.athlete-achievement-badge').first()
   await weekBadge.scrollIntoViewIfNeeded()
-  await expect(weekBadge.locator('img')).toHaveAttribute('src', /achievement-regularity-4w-calendar-v1-20261001(?:-[A-Za-z0-9_-]+)?\.webp$/)
+  const weekArt = weekBadge.locator('.athlete-achievement-static-art')
+  await expect(weekArt).toHaveCSS('background-position', '40% 60%')
   await weekBadge.evaluate((badge) => badge.classList.add('is-compact'))
-  await expect(weekBadge.locator('img')).toBeVisible()
+  await expect(weekArt).toBeVisible()
   await weekBadge.evaluate((badge) => badge.classList.remove('is-compact'))
   await cards.first().click()
   const detail = page.getByRole('dialog', { name: 'Первый шаг' })
@@ -1254,11 +1255,11 @@ test('athlete achievements keep their selected style and placement', async ({ pa
   const fiveWorkouts = page.locator('.badge-id-workouts-5').first()
   const fiveRecords = page.locator('.badge-id-records-5').first()
   await fiveRecords.scrollIntoViewIfNeeded()
-  await expect(fiveWorkouts.locator('img')).toHaveAttribute('src', /achievement-workouts-5-number-v2-20261001(?:-[A-Za-z0-9_-]+)?\.webp$/)
-  await expect(fiveRecords.locator('img')).toHaveAttribute('src', /achievement-records-5-trophy-v1-20261001(?:-[A-Za-z0-9_-]+)?\.webp$/)
+  await expect(fiveWorkouts.locator('.athlete-achievement-static-art')).toHaveCSS('background-position', '0% 100%')
+  await expect(fiveRecords.locator('.athlete-achievement-static-art')).toHaveCSS('background-position', '100% 40%')
   await fiveRecords.evaluate((badge) => { badge.classList.add('is-compact'); badge.style.width = '64px'; badge.style.height = '64px' })
   await expect(fiveRecords).toHaveCSS('width', '64px')
-  await expect.poll(() => fiveRecords.locator('img').evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBe(320)
+  await expect(fiveRecords.locator('.athlete-achievement-static-art')).toBeVisible()
   await fiveRecords.screenshot({ path: testInfo.outputPath('achievement-record-five-64.png') })
   await fiveRecords.evaluate((badge) => { badge.classList.remove('is-compact'); badge.style.removeProperty('width'); badge.style.removeProperty('height') })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -1317,13 +1318,13 @@ test('dense athlete achievement art stays inside compact squares without glyph c
       const badgeGeometry = await page.locator('.athlete-achievement-card .athlete-achievement-badge').evaluateAll((nodes) => nodes.map((node) => {
         const badge = node as HTMLElement
         const box = badge.getBoundingClientRect()
-        return { width: box.width, height: box.height, hasArt: badge.classList.contains('has-static-art'), images: badge.querySelectorAll('img').length, svgs: badge.querySelectorAll('svg').length }
+        return { width: box.width, height: box.height, hasArt: badge.classList.contains('has-static-art'), staticArt: badge.querySelectorAll('.athlete-achievement-static-art').length, images: badge.querySelectorAll('img').length, svgs: badge.querySelectorAll('svg').length }
       }))
       expect(badgeGeometry).toHaveLength(33)
       for (const badge of badgeGeometry) {
         expect(badge.width).toBeLessThanOrEqual(81)
         expect(Math.abs(badge.width - badge.height)).toBeLessThan(2)
-        expect(badge.hasArt && badge.images === 1 && badge.svgs === 0).toBe(true)
+        expect(badge.hasArt && badge.staticArt === 1 && badge.images === 0 && badge.svgs === 0).toBe(true)
       }
       await expect(page.locator('.badge-id-comeback-21 .athlete-achievement-static-art')).toHaveCount(1)
       await expect(page.locator('.badge-id-weeks-12 .athlete-achievement-static-art')).toHaveCount(1)
@@ -1376,13 +1377,19 @@ test('all 33 approved raster drawings render without fallback or changed crop ge
   await gotoStable(page, '/me/achievements')
   const art = page.locator('.athlete-achievement-card .athlete-achievement-badge.has-static-art')
   await expect(art).toHaveCount(33)
+  const spriteCells = await art.locator('.athlete-achievement-static-art').evaluateAll((nodes) => nodes.map((node) => {
+    const style = getComputedStyle(node)
+    return { image: style.backgroundImage, position: style.backgroundPosition }
+  }))
+  expect(new Set(spriteCells.map((cell) => cell.position)).size).toBe(33)
+  expect(spriteCells.every((cell) => cell.image.startsWith('url("data:image/webp;base64,'))).toBe(true)
   for (const badge of await art.all()) {
     await badge.scrollIntoViewIfNeeded()
-    const image = badge.locator('img')
+    const image = badge.locator('.athlete-achievement-static-art')
     await expect(image).toHaveCount(1)
-    await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBe(320)
+    await expect(image).toBeVisible()
     const geometry = await badge.evaluate((node) => {
-      const imageNode = node.querySelector('img')!
+      const imageNode = node.querySelector('.athlete-achievement-static-art')!
       const square = node.getBoundingClientRect()
       const imageBox = imageNode.getBoundingClientRect()
       return { square: square.width, ratio: imageBox.width / square.width,

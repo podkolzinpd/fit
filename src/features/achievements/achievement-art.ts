@@ -1,17 +1,47 @@
 import type { AchievementId } from '../../shared/athlete-achievements'
 
-type AchievementArt = { file: string; src: string; crop: 'standard' | 'dark' | 'distance' }
+type AchievementArt = { file: string; crop: 'standard' | 'dark' | 'distance'; column: number; row: number }
 
-const achievementAssets = import.meta.glob('../../assets/achievements/*.webp', {
-  eager: true,
-  import: 'default',
-  query: '?url',
-}) as Record<string, string>
+const achievementSpriteFiles = [
+  'achievement-cardio-10h-concept-20261001.webp',
+  'achievement-cardio-50h-concept-20261001.webp',
+  'achievement-cardio-first-hour-concept-20261001.webp',
+  'achievement-distance-250km-concept-20261001.webp',
+  'achievement-distance-50km-concept-v2-20261001.webp',
+  'achievement-distance-5km-concept-20261001.webp',
+  'achievement-distinct-pr-trophy-1-concept-20261001.webp',
+  'achievement-distinct-pr-trophy-10-concept-20261001.webp',
+  'achievement-distinct-pr-trophy-3-concept-20261001.webp',
+  'achievement-exercise-variety-15-concept-20261001.webp',
+  'achievement-exercise-variety-3-concept-20261001.webp',
+  'achievement-exercise-variety-40-concept-20261001.webp',
+  'achievement-lifetime-tonnage-100t-concept-20261001.webp',
+  'achievement-lifetime-tonnage-10t-concept-20261001.webp',
+  'achievement-lifetime-tonnage-500t-concept-v2-20261001.webp',
+  'achievement-plank-2h-concept-20261001.webp',
+  'achievement-plank-30m-concept-20261001.webp',
+  'achievement-records-5-trophy-v1-20261001.webp',
+  'achievement-reference-plank-20261001.webp',
+  'achievement-regularity-12w-calendar-v1-20261001.webp',
+  'achievement-regularity-4w-calendar-v1-20261001.webp',
+  'achievement-regularity-52w-calendar-v1-20261001.webp',
+  'achievement-regularity-8w-calendar-v1-20261001.webp',
+  'achievement-regularity-comeback-calendar-v1-20261001.webp',
+  'achievement-workout-tonnage-10t-concept-20261001.webp',
+  'achievement-workout-tonnage-1t-concept-20261001.webp',
+  'achievement-workout-tonnage-5t-concept-20261001.webp',
+  'achievement-workouts-10-number-v2-20261001.webp',
+  'achievement-workouts-100-number-v2-20261001.webp',
+  'achievement-workouts-25-number-v2-20261001.webp',
+  'achievement-workouts-5-number-v2-20261001.webp',
+  'achievement-workouts-50-number-v2-20261001.webp',
+  'achievement-workouts-first-step-v1-20261001.webp',
+] as const
 
-function art(file: string, crop: AchievementArt['crop']): AchievementArt {
-  const src = achievementAssets[`../../assets/achievements/${file}`]
-  if (!src) throw new Error(`Missing achievement artwork: ${file}`)
-  return { file, src, crop }
+function art(file: typeof achievementSpriteFiles[number], crop: AchievementArt['crop']): AchievementArt {
+  const index = achievementSpriteFiles.indexOf(file)
+  if (index < 0) throw new Error(`Missing achievement artwork: ${file}`)
+  return { file, crop, column: index % 6, row: Math.floor(index / 6) }
 }
 
 /** UI-sized derivatives of the exact owner-reviewed source artwork. */
