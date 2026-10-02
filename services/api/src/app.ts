@@ -3751,6 +3751,45 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
+  app.post('/v1/workouts/:workoutId/blocks/:blockId/rounds', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const { workoutId, blockId } = request.params as { workoutId?: unknown; blockId?: unknown }
+    const command = readLiveOperationRequest(request.body)
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || typeof blockId !== 'string' || !uuidPattern.test(blockId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => writer.appendLiveRound(sessionToken, workoutId, blockId, command.expectedVersion, command.operationId),
+      (result) => reply.header('cache-control', 'no-store').code(201).send({ block: {
+        id: result.resourceId, replayed: result.replayed, version: result.version,
+      } }),
+    )
+  })
+
+  app.delete('/v1/workouts/:workoutId/blocks/:blockId/rounds/:position', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const { workoutId, blockId, position } = request.params as { workoutId?: unknown; blockId?: unknown; position?: unknown }
+    const command = readLiveOperationRequest(request.body)
+    const roundPosition = typeof position === 'string' && /^(0|[1-9][0-9]?)$/.test(position) ? Number(position) : NaN
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || typeof blockId !== 'string' || !uuidPattern.test(blockId)
+      || !Number.isInteger(roundPosition) || roundPosition < 1 || roundPosition > 19
+      || command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => writer.removeLastLiveRound(sessionToken, workoutId, blockId, roundPosition, command.expectedVersion, command.operationId),
+      (result) => reply.header('cache-control', 'no-store').send({ block: {
+        id: result.resourceId, replayed: result.replayed, version: result.version,
+      } }),
+    )
+  })
+
   app.delete('/v1/workout-sets/:setId', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { setId } = request.params as { setId?: unknown }

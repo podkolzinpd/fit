@@ -49,7 +49,43 @@ function RunningEditorHarness() {
   return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
 }
 
+function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
+  const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
+    { ...exercises[0]!, blockId: 'group-one', blockType: 'group', blockPreset: 'set', blockRounds: 2,
+      sets: [{ position: 0, weightKg: 40, reps: 10 }, { position: 1, weightKg: 42, reps: 8,
+        ...(completed ? { sourceSetId: 'a0000000-0000-4000-8000-000000000001' } : {}) }] },
+    { ...exercises[0]!, ref: 'bench', name: 'Жим лёжа', position: 1,
+      blockId: 'group-one', blockType: 'group', blockPreset: 'set', blockRounds: 2,
+      sets: [{ position: 0, weightKg: 30, reps: 10 }, { position: 1, weightKg: 32, reps: 8 }] },
+  ])
+  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+}
+
 describe('workout exercise editor rules', () => {
+  it('warns before removing a filled superset round and removes it for both exercises', async () => {
+    const user = userEvent.setup()
+    render(<GroupEditorHarness />)
+    const rounds = screen.getByLabelText<HTMLInputElement>('Кругов')
+    await user.clear(rounds)
+    await user.type(rounds, '1')
+    await user.tab()
+    expect(screen.getByRole('alertdialog', { name: 'Удалить круги с заполненными значениями?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Удалить круги' }))
+    expect(screen.getByLabelText('Кругов')).toHaveValue(1)
+    expect(screen.queryAllByText('Круг 2')).toHaveLength(0)
+  })
+
+  it('refuses to remove a superset round linked to a completed set', async () => {
+    const user = userEvent.setup()
+    render(<GroupEditorHarness completed />)
+    const rounds = screen.getByLabelText<HTMLInputElement>('Кругов')
+    await user.clear(rounds)
+    await user.type(rounds, '1')
+    await user.tab()
+    expect(screen.getByRole('alert')).toHaveTextContent('Выполненные подходы нельзя удалить')
+    expect(screen.getByLabelText('Кругов')).toHaveValue(2)
+    expect(screen.getByText('Круг 2')).toBeInTheDocument()
+  })
   it('rounds adjusted weights to 2.5 kg', () => {
     expect(roundToStep(52.5 * 1.05, 2.5)).toBe(55)
     expect(adjustWorkoutLoad(exercises, 1.05)[0]?.sets).toEqual([

@@ -2682,12 +2682,14 @@ const WORKOUT_BLOCK_ID = '44c414cc-542b-4f29-a17f-b451e44fd778'
 const OPERATION_IDS = {
   appendExercise: 'f516e6e8-c275-4ed5-9b5e-e40b7198bc0b',
   appendSet: '4afaf90b-a2ba-45dd-bf97-73c7098c2cca',
+  appendRound: '4afaf90b-a2ba-45dd-bf97-73c7098c2ccb',
   comment: 'd9c05d5c-e868-40f2-8fab-df079adcfef7',
   start: '723fa5d1-d3f0-4daa-b080-8fd354b89b86',
   save: '305a5b42-8b8b-44a9-a1e3-7c188511b25f',
   confirm: '3c6c84f1-80e6-4ba5-94cc-550fca410dbd',
   finish: '65331570-913c-4faa-9771-4a60d7a5e9f0',
   removeSet: '2fdba3b8-f688-40c9-955b-f84173970d31',
+  removeRound: '2fdba3b8-f688-40c9-955b-f84173970d32',
   reorder: '20c4ab7a-1316-46bf-b5ce-699015a320e8',
   merge: '30c4ab7a-1316-46bf-b5ce-699015a320e8',
   replace: '9761cf15-f83d-423a-a241-8d0bffefb4e0',
@@ -2699,12 +2701,14 @@ function buildWorkoutsWriter(error?: Error): {
   cancelEmpty: ReturnType<typeof vi.fn>
   appendLiveExercise: ReturnType<typeof vi.fn>
   appendLiveSet: ReturnType<typeof vi.fn>
+  appendLiveRound: ReturnType<typeof vi.fn>
   cancelPlanned: ReturnType<typeof vi.fn>
   confirmLiveSet: ReturnType<typeof vi.fn>
   deletePlanned: ReturnType<typeof vi.fn>
   deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
+  removeLastLiveRound: ReturnType<typeof vi.fn>
   removeLiveExercise: ReturnType<typeof vi.fn>
   reorderLiveBlock: ReturnType<typeof vi.fn>
   mergeLiveBlockWithNext: ReturnType<typeof vi.fn>
@@ -2753,6 +2757,11 @@ function buildWorkoutsWriter(error?: Error): {
     version: 4,
     replayed: false,
   }))
+  const appendLiveRound = vi.fn(() => result({
+    resourceId: WORKOUT_BLOCK_ID,
+    version: 5,
+    replayed: false,
+  }))
   const startLive = vi.fn(() => result({ version: 2, replayed: false }))
   const saveLiveSet = vi.fn(() => result({ version: 2, replayed: false }))
   const confirmLiveSet = vi.fn(() => result({ version: 3, replayed: false }))
@@ -2760,6 +2769,11 @@ function buildWorkoutsWriter(error?: Error): {
   const removeLiveSet = vi.fn(() => result({
     resourceId: WORKOUT_SET_ID,
     version: 5,
+    replayed: false,
+  }))
+  const removeLastLiveRound = vi.fn(() => result({
+    resourceId: WORKOUT_BLOCK_ID,
+    version: 6,
     replayed: false,
   }))
   const removeLiveExercise = vi.fn(() => result({ resourceId: WORKOUT_EXERCISE_ID, version: 2, replayed: false }))
@@ -2795,12 +2809,14 @@ function buildWorkoutsWriter(error?: Error): {
       snoozeAttention,
       appendLiveExercise,
       appendLiveSet,
+      appendLiveRound,
       cancelPlanned,
       confirmLiveSet,
       deletePlanned,
       deleteWorkout,
       finishLive,
       removeLiveSet,
+      removeLastLiveRound,
       removeLiveExercise,
       reorderLiveBlock,
       mergeLiveBlockWithNext,
@@ -2818,12 +2834,14 @@ function buildWorkoutsWriter(error?: Error): {
     cancelEmpty,
     appendLiveExercise,
     appendLiveSet,
+    appendLiveRound,
     cancelPlanned,
     confirmLiveSet,
     deletePlanned,
     deleteWorkout,
     finishLive,
     removeLiveSet,
+    removeLastLiveRound,
     removeLiveExercise,
     reorderLiveBlock,
     mergeLiveBlockWithNext,
@@ -5379,6 +5397,34 @@ describe('pilot live workout structural commands', () => {
       7,
       OPERATION_IDS.comment,
     )
+  })
+
+  it('adds and removes a whole Live superset round through one authenticated command', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const url = `/v1/workouts/${WORKOUT_ID}/blocks/${WORKOUT_BLOCK_ID}/rounds`
+    const headers = { 'x-fit-pilot-session': sessionToken }
+    const added = await app.inject({ method: 'POST', url, headers,
+      payload: { expectedVersion: 4, operationId: OPERATION_IDS.appendRound } })
+    expect(added.statusCode).toBe(201)
+    expect(added.json()).toEqual({ block: {
+      id: WORKOUT_BLOCK_ID, version: 5, replayed: false,
+    } })
+    expect(writer.appendLiveRound).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, WORKOUT_BLOCK_ID, 4, OPERATION_IDS.appendRound)
+    const removed = await app.inject({ method: 'DELETE', url: `${url}/1`, headers,
+      payload: { expectedVersion: 5, operationId: OPERATION_IDS.removeRound } })
+    expect(removed.statusCode).toBe(200)
+    expect(removed.json()).toEqual({ block: {
+      id: WORKOUT_BLOCK_ID, version: 6, replayed: false,
+    } })
+    expect(writer.removeLastLiveRound).toHaveBeenCalledWith(
+      sessionToken, WORKOUT_ID, WORKOUT_BLOCK_ID, 1, 5, OPERATION_IDS.removeRound)
+    expect((await app.inject({ method: 'DELETE', url: `${url}/20`, headers,
+      payload: { expectedVersion: 5, operationId: OPERATION_IDS.removeRound } })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'POST', url,
+      payload: { expectedVersion: 4, operationId: OPERATION_IDS.appendRound } })).statusCode).toBe(401)
   })
 
   it('rejects malformed structure commands before calling the writer', async () => {

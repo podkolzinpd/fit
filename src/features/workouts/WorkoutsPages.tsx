@@ -42,6 +42,7 @@ import {
   writePendingLiveSetDraft,
 } from './live-set-draft-storage'
 import { createLiveWorkoutCoordinator, liveWorkoutRecoveryError } from './live-workout-coordinator'
+import { RepositoryError } from '../../data/repositories/error'
 import { setLiveScreenAwake } from './live-keep-awake'
 import { LoadMoreButton } from './LoadMoreButton'
 import { workoutCountLabel } from './workout-count-label'
@@ -2424,6 +2425,8 @@ export function LiveWorkoutPage() {
   ))
   const [liveSetAutosave] = useState(() => createLiveSetAutosave())
   const [liveWorkout] = useState(() => createLiveWorkoutCoordinator())
+  const pendingRoundOperations = useRef<Map<string, { operationId: string; expectedVersion: number; position: number }>>(new Map())
+  const [lastAddedRound, setLastAddedRound] = useState<{ blockId: string; position: number } | null>(null)
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -2879,7 +2882,52 @@ export function LiveWorkoutPage() {
     })
   }
   const appendSet = useMutation({ mutationFn: (exerciseId: string) => runLiveWorkoutMutation(`append-set:${exerciseId}`, (workout) => workoutsRepository.appendLiveSet(workout, exerciseId)), onSuccess: async () => { await query.refetch() } })
+  const appendRound = useMutation({
+    mutationFn: async (blockId: string) => {
+      await liveSets.waitForIdle()
+      return runLiveWorkoutMutation(`append-round:${blockId}`, (workout) => {
+        const block = groupIntoBlocks(workout.exercises).find((item) => item.blockId === blockId)
+        if (!block) throw new Error('Суперсет больше не найден. Обновите тренировку.')
+        const pending = pendingRoundOperations.current.get(blockId) ?? {
+          operationId: crypto.randomUUID(), expectedVersion: workout.version,
+          position: Math.max(...block.exercises.flatMap((exercise) => exercise.sets.map((set) => set.position))) + 1,
+        }
+        pendingRoundOperations.current.set(blockId, pending)
+        return workoutsRepository.appendLiveRound({ ...workout, version: pending.expectedVersion }, blockId, pending.operationId)
+      })
+    },
+    onSuccess: async (_version, blockId) => {
+      const pending = pendingRoundOperations.current.get(blockId)
+      if (pending) setLastAddedRound({ blockId, position: pending.position })
+      pendingRoundOperations.current.delete(blockId)
+      await query.refetch()
+    },
+    onError: (error, blockId) => {
+      // A timeout, 5xx or malformed gateway response can arrive after commit.
+      // Keep the same receipt ID for a manual retry unless rejection is definite.
+      if (!(error instanceof RepositoryError && ['live_workout_network', 'service_unavailable', 'invalid_response'].includes(error.code))) {
+        pendingRoundOperations.current.delete(blockId)
+      }
+    },
+  })
+  const removeRound = useMutation({
+    mutationFn: ({ blockId, position }: { blockId: string; position: number }) => runLiveWorkoutMutation(`remove-round:${blockId}:${position}`,
+      (workout) => workoutsRepository.removeLastLiveRound(workout, blockId, position, crypto.randomUUID())),
+    onSuccess: async () => { setLastAddedRound(null); await query.refetch() },
+  })
   const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => workoutsRepository.removeLiveSet(workout, setId)), onSuccess: async () => { await query.refetch() } })
+  useEffect(() => {
+    if (!query.data) return
+    for (const [blockId, pending] of pendingRoundOperations.current) {
+      const block = groupIntoBlocks(query.data.exercises).find((item) => item.blockId === blockId)
+      if (block && query.data.version > pending.expectedVersion
+        && block.exercises.every((exercise) => exercise.sets.some((set) => set.position === pending.position))) {
+        pendingRoundOperations.current.delete(blockId)
+        setLastAddedRound({ blockId, position: pending.position })
+        appendRound.reset()
+      }
+    }
+  }, [query.data])
   const removeExercise = useMutation({
     mutationFn: async (exercise: WorkoutExerciseModel) => {
       // Let blur saves finish before deleting their parent, including on iOS.
@@ -3048,7 +3096,7 @@ export function LiveWorkoutPage() {
     inactivityReminder.dismiss()
     setConfirmFinish(true)
   }
-  const rootMutationPending = appendSet.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
+  const rootMutationPending = appendSet.isPending || appendRound.isPending || removeRound.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending
     || reorderBlock.isPending || mergeBlock.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
   function draftFrom(form: HTMLFormElement, set: WorkoutSet): LiveSetDraft {
     const values = new FormData(form)
@@ -3065,7 +3113,7 @@ export function LiveWorkoutPage() {
     }
   }
   const liveSyncError = save.error ?? confirm.error
-  const error = appendSet.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? mergeBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? mergeBlock.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel) {
     const note = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
@@ -3179,8 +3227,13 @@ export function LiveWorkoutPage() {
       {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
-  const activeLiveExercise = query.data?.exercises.find((exercise) => exercise.id === activeExerciseId && exercise.sets.some((set) => !set.confirmedAt))
+  const selectedLiveExercise = query.data?.exercises.find((exercise) => exercise.id === activeExerciseId && exercise.sets.some((set) => !set.confirmedAt))
     ?? query.data?.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
+  const selectedLiveBlock = groupIntoBlocks(query.data?.exercises ?? [])
+    .find((block) => block.exercises.some((exercise) => exercise.id === selectedLiveExercise?.id))
+  const activeLiveExercise = selectedLiveBlock && selectedLiveBlock.exercises.length > 1
+    ? blockRoundsView(selectedLiveBlock)[currentRoundIndex(blockRoundsView(selectedLiveBlock))]?.items.find(({ set }) => !set.confirmedAt)?.exercise ?? selectedLiveExercise
+    : selectedLiveExercise
   const sessionProgress = liveSessionProgress(query.data?.exercises ?? [], activeLiveExercise?.id)
   const currentLiveBlock = groupIntoBlocks(query.data?.exercises ?? [])
     .find((block) => block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id))
@@ -3220,11 +3273,7 @@ export function LiveWorkoutPage() {
         const activeCircuit = liveBlocks.find((block) => block.exercises.length > 1
           && block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id))
         const circuitRounds = activeCircuit ? blockRoundsView(activeCircuit) : null
-        const activeCircuitSetId = activeLiveExercise?.sets.find((set) => !set.confirmedAt)?.id
-        const selectedCircuitRound = circuitRounds && activeCircuitSetId
-          ? circuitRounds.findIndex((round) => round.items.some(({ set }) => set.id === activeCircuitSetId))
-          : -1
-        const circuitCurrent = circuitRounds ? selectedCircuitRound >= 0 ? selectedCircuitRound : currentRoundIndex(circuitRounds) : 0
+        const circuitCurrent = circuitRounds ? currentRoundIndex(circuitRounds) : 0
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
@@ -3303,6 +3352,10 @@ export function LiveWorkoutPage() {
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
         const rounds = blockRoundsView(block)
         const current = currentRoundIndex(rounds)
+        const latestRound = rounds.at(-1)
+        const canUndoAddedRound = lastAddedRound?.blockId === block.blockId && latestRound?.round === lastAddedRound.position + 1
+          && Boolean(latestRound?.items.length === block.exercises.length
+            && latestRound.items.every(({ set }) => !set.confirmedAt && !hasLiveSetResult(set.fact)))
         const activeCircuitSetId = blockStatus === 'current'
           ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
           : undefined
@@ -3332,6 +3385,12 @@ export function LiveWorkoutPage() {
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
             </section>)}
           </div> })}
+          {canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
+            <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
+              onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : '＋ Круг'}</button>
+            {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
+              onClick={async () => { if (await askConfirm({ message: 'Убрать последний пустой круг?', confirmLabel: 'Убрать', danger: true })) removeRound.mutate({ blockId: block.blockId, position: latestRound!.round - 1 }) }}>Убрать добавленный круг</button>}
+          </div>}
           <div className="circuit-exercise-notes" aria-label="Заметки к упражнениям">
             {block.exercises.map((exercise) => <section className="circuit-exercise-note" key={exercise.id}>
               <h3>{exercise.name}</h3>

@@ -995,9 +995,9 @@ export function createYandexMainRepository(
     invalidate()
     return payload.workout.version
   }
-  const liveCommand = async (path: string, method: 'POST' | 'PUT' | 'DELETE', expectedVersion: number, body: object = {}) => {
+  const liveCommand = async (path: string, method: 'POST' | 'PUT' | 'DELETE', expectedVersion: number, body: object = {}, operationId: string = crypto.randomUUID()) => {
     const payload = await writeJson(queries, path, method, {
-      ...body, expectedVersion, operationId: crypto.randomUUID(),
+      ...body, expectedVersion, operationId,
     }, z.union([
       z.object({ workout: z.object({ version: z.number().int().positive() }) }),
       z.object({ exercise: z.object({ version: z.number().int().positive() }) }),
@@ -1406,6 +1406,7 @@ export function createYandexMainRepository(
       },
     },
     workouts: {
+      supportsAtomicLiveRounds: true,
       async get(id) {
         const result = (await trainingData()).workouts.find((item) => item.id === id)
         if (!result) throw new RepositoryError('PT404', 'Тренировка не найдена.')
@@ -1498,6 +1499,8 @@ export function createYandexMainRepository(
       async confirmLiveSet(id, version) { return liveCommand(`/v1/workout-sets/${id}/confirm`, 'POST', version) },
       async appendLiveExercise(item, exercise: ExerciseSnapshot) { return liveCommand(`/v1/workouts/${item.id}/exercises`, 'POST', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }) },
       async appendLiveSet(item, exerciseId) { return liveCommand(`/v1/workout-exercises/${exerciseId}/sets`, 'POST', item.version) },
+      async appendLiveRound(item: Workout, blockId: string, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds`, 'POST', item.version, {}, operationId) },
+      async removeLastLiveRound(item: Workout, blockId: string, position: number, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds/${position}`, 'DELETE', item.version, {}, operationId) },
       async removeLiveSet(item, setId) {
         const payload = await writeJson(queries, `/v1/workout-sets/${setId}`, 'DELETE', { expectedVersion: item.version, operationId: crypto.randomUUID() }, z.object({ set: z.object({ version: z.number().int().positive() }) }))
         invalidate(); return payload.set.version

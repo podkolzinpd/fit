@@ -57,16 +57,15 @@ export interface BlockRound {
   items: { exercise: WorkoutExercise; set: WorkoutSet }[]
 }
 
-// Раскладывает многоэлементный блок «по кругам»: круг R = по одному подходу
-// (позиция R-1) каждого упражнения блока, в порядке упражнений. Число кругов
-// = максимум подходов среди упражнений блока (1 круг = 1 подход каждого).
+// Раскладывает блок по сохранённой позиции подхода. У старых тренировок
+// позиции могут быть неполными: новый круг не заполняет старые пропуски.
 export function blockRoundsView(block: ExerciseBlock): BlockRound[] {
-  const roundCount = Math.max(block.blockRounds, ...block.exercises.map((e) => e.sets.length), 1)
+  const roundCount = Math.max(block.blockRounds, ...block.exercises.flatMap((e) => e.sets.map((set) => set.position + 1)), 1)
   const rounds: BlockRound[] = []
   for (let r = 0; r < roundCount; r++) {
     const items: BlockRound['items'] = []
     for (const exercise of block.exercises) {
-      const set = [...exercise.sets].sort((a, b) => a.position - b.position)[r]
+      const set = exercise.sets.find((item) => item.position === r)
       if (set) items.push({ exercise, set })
     }
     if (items.length) rounds.push({ round: r + 1, items })
@@ -102,11 +101,12 @@ export const DEFAULT_REST_BETWEEN_SETS = 90
 export function restSecondsAfterSet(workout: Workout, exercise: WorkoutExercise, set: WorkoutSet): number {
   const block = groupIntoBlocks(workout.exercises).find((item) => item.blockId === exercise.blockId)
   const multi = Boolean(block && block.exercises.length > 1)
-  const lastExerciseOfRound = block?.exercises.at(-1)?.id === exercise.id
   const workoutFinished = workout.exercises.every((item) => item.sets.every((itemSet) => itemSet.id === set.id || itemSet.confirmedAt))
   if (workoutFinished) return 0
   if (!multi) return exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS
-  return lastExerciseOfRound ? block!.restBetweenRoundsSec : block?.restBetweenExercisesSec ?? 0
+  const hasPendingBeforeNextRound = blockRoundsView(block!).some((round) => round.round <= set.position + 1
+    && round.items.some(({ set: roundSet }) => roundSet.id !== set.id && !roundSet.confirmedAt))
+  return hasPendingBeforeNextRound ? block!.restBetweenExercisesSec : block!.restBetweenRoundsSec
 }
 
 const RUNNING_INTERVAL_ROUNDS = 6
@@ -219,12 +219,13 @@ export interface DraftBlockRound {
 // Раскладывает многоэлементный черновик-блок «по кругам» для формы плана:
 // круг R = по одному подходу (позиция R-1) каждого упражнения блока по очереди.
 export function draftBlockRoundsView(block: DraftBlock): DraftBlockRound[] {
-  const roundCount = Math.max(block.blockRounds, ...block.items.map(({ exercise }) => exercise.sets.length), 1)
+  const roundCount = Math.max(block.blockRounds, ...block.items.flatMap(({ exercise }) => exercise.sets.map((set) => set.position + 1)), 1)
   const rounds: DraftBlockRound[] = []
   for (let r = 0; r < roundCount; r++) {
     const items: DraftBlockRound['items'] = []
     for (const { exercise, index } of block.items) {
-      if (exercise.sets[r]) items.push({ exercise, exerciseIndex: index, setIndex: r })
+      const setIndex = exercise.sets.findIndex((set) => set.position === r)
+      if (setIndex >= 0) items.push({ exercise, exerciseIndex: index, setIndex })
     }
     if (items.length) rounds.push({ round: r + 1, items })
   }
@@ -272,6 +273,23 @@ export function syncBlockRounds(exercises: WorkoutExerciseDraft[], blockId: stri
     while (sets.length < target) sets.push(nextSetDraft(sets, exercise.inputKind))
     sets.length = target
     return { ...exercise, blockRounds: target, sets: sets.map((set, position) => ({ ...set, position })) }
+  })
+}
+
+// Редактирование существующего блока не заполняет старые неполные круги.
+// Новый круг добавляется на одну общую позицию всем упражнениям блока.
+export function resizeDraftBlockRounds(exercises: WorkoutExerciseDraft[], blockId: string, rounds: number): WorkoutExerciseDraft[] {
+  const target = Math.max(1, Math.min(20, Math.round(rounds)))
+  const list = ensureBlockIds(exercises)
+  const members = list.filter((exercise) => exercise.blockId === blockId)
+  const firstNewPosition = Math.max(0, ...members.flatMap((exercise) => exercise.sets.map((set) => set.position + 1)))
+  return list.map((exercise) => {
+    if (exercise.blockId !== blockId) return exercise
+    const sets = exercise.sets.filter((set) => set.position < target)
+    for (let position = firstNewPosition; position < target; position++) {
+      sets.push({ ...nextSetDraft(sets, exercise.inputKind), position })
+    }
+    return { ...exercise, blockRounds: target, sets }
   })
 }
 
