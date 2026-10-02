@@ -18,6 +18,7 @@ import {
   recordPlannedWorkoutResult,
   removeLiveSet,
   removeLastLiveRound,
+  splitLiveSuperset,
   removeLiveExercise,
   reorderLiveBlock,
   mergeLiveBlockWithNext,
@@ -83,6 +84,13 @@ export interface PilotWorkoutsWriter {
     workoutId: string,
     blockId: string,
     position: number,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult>
+  splitLiveSuperset(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
     expectedVersion: number,
     operationId: string,
   ): Promise<PilotLiveStructureResult>
@@ -297,6 +305,16 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     operationId: string,
   ): Promise<PilotLiveStructureResult> {
     return this.withSession(sessionToken, (client) => removeLastLiveRound(client, workoutId, blockId, position, expectedVersion, operationId))
+  }
+
+  splitLiveSuperset(
+    sessionToken: YandexActorSessionInput,
+    workoutId: string,
+    blockId: string,
+    expectedVersion: number,
+    operationId: string,
+  ): Promise<PilotLiveStructureResult> {
+    return this.withSession(sessionToken, (client) => splitLiveSuperset(client, workoutId, blockId, expectedVersion, operationId))
   }
 
   cancelPlanned(

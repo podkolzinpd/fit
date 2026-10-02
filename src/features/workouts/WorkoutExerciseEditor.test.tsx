@@ -86,6 +86,21 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Кругов')).toHaveValue(2)
     expect(screen.getByText('Круг 2')).toBeInTheDocument()
   })
+
+  it('confirms splitting a planned superset and explains the resulting rest', async () => {
+    const user = userEvent.setup()
+    render(<GroupEditorHarness />)
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Разделить суперсет' }))
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Отдых между подходами')
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByLabelText('Кругов')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Разделить суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Разделить' }))
+    expect(screen.queryByLabelText('Кругов')).not.toBeInTheDocument()
+    expect(screen.getAllByLabelText('Вес, подход 2')).toHaveLength(2)
+  })
   it('rounds adjusted weights to 2.5 kg', () => {
     expect(roundToStep(52.5 * 1.05, 2.5)).toBe(55)
     expect(adjustWorkoutLoad(exercises, 1.05)[0]?.sets).toEqual([

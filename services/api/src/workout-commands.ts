@@ -564,6 +564,18 @@ export function removeLastLiveRound(
     [workoutId, blockId, position, expectedVersion, operationId])
 }
 
+export function splitLiveSuperset(
+  client: DatabaseClient,
+  workoutId: string,
+  blockId: string,
+  expectedVersion: number,
+  operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.split_live_superset($1, $2, $3, $4)',
+    [workoutId, blockId, expectedVersion, operationId])
+}
+
 export function removeLiveSet(
   client: DatabaseClient,
   setId: string,

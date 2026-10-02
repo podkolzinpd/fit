@@ -296,6 +296,10 @@ export const workoutsRepository = {
     void workout; void blockId; void position; void operationId
     return Promise.reject(new Error('Удаление круга доступно после перехода на новый сервер'))
   },
+  splitLiveSuperset(workout: Workout, blockId: string, operationId: string): Promise<number> {
+    void workout; void blockId; void operationId
+    return Promise.reject(new Error('Разделение суперсета доступно после перехода на новый сервер'))
+  },
   async removeLiveSet(workout: Workout, setId: string): Promise<number> {
     const result = await workoutQueries.removeLiveSet(setId, workout.version)
     if (result.error) throw repositoryError(result.error)

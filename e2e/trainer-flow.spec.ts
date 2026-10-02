@@ -279,7 +279,9 @@ test('тренер объединяет распознанные упражне�
   await page.reload()
   await expect(page.locator('.today-review-block')).toHaveCount(1)
   await page.getByRole('button', { name: /Настройки упражнения «Жим гантелей на наклонной скамье»/ }).click()
-  await page.getByRole('menuitem', { name: 'Разбить суперсет' }).click()
+  await page.getByRole('menuitem', { name: 'Разделить суперсет' }).click()
+  await expect(page.getByRole('alertdialog', { name: /Отдых между подходами/ })).toBeVisible()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить' }).click()
   await expect(page.locator('.today-review-block')).toHaveCount(3)
 })
 
