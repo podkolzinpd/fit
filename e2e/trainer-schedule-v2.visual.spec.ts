@@ -541,6 +541,7 @@ for (const width of [390, 430, 1440]) {
     await page.goto('/clients')
     await expect(page.locator('.fit-lime-shell')).toBeVisible()
     await expect(page.locator('.trainer-tab-bar [data-original-icon="users"]')).toBeVisible()
+    await expect(page.locator('.trainer-tab-bar')).toHaveCSS('backdrop-filter', 'blur(22px)')
     await expect(page.locator('.page-header h1')).toHaveCSS('font-size', '24px')
     await expect(page.locator('.page-header h1')).toHaveCSS('font-weight', '500')
     await expect(page.locator('.fit-lime-shell')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
