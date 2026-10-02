@@ -1,4 +1,6 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
+import { WhistleIcon } from '../../shared/icons'
+import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -764,6 +766,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     ? '—'
     : value === undefined ? '…' : scheduleCount(value)
   const openDatePicker = () => {
+    if (isFitLimeEnabled(actor)) {
+      document.querySelector<HTMLButtonElement>('.schedule-v2-topbar button.schedule-v2-calendar')?.click()
+      return
+    }
     const input = dateInputRef.current
     if (!input) return
     if (typeof input.showPicker === 'function') input.showPicker()
@@ -784,7 +790,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   ]
 
   const homeActions = showHomeActions && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
-    <QuickStartWorkout role="trainer" clients={homeClients.data} workouts={homeWorkouts.data} loading={homeClients.isLoading || homeWorkouts.isLoading} error={homeClients.error ?? homeWorkouts.error} onRetry={() => { void homeClients.refetch(); void homeWorkouts.refetch() }} returnTo={returnTo} />
+    <QuickStartWorkout role="trainer" compact={fitLimeToday} clients={homeClients.data} workouts={homeWorkouts.data} loading={homeClients.isLoading || homeWorkouts.isLoading} error={homeClients.error ?? homeWorkouts.error} onRetry={() => { void homeClients.refetch(); void homeWorkouts.refetch() }} returnTo={returnTo} />
     <div className="schedule-v2-entry-actions">
       <span className="schedule-v2-compose-label"><strong>Составить тренировку</strong><small>Голосом или вручную</small></span>
       <Link className="schedule-v2-voice-entry" to="/today?view=compose" aria-label="Надиктовать тренировку" onClick={() => trackGoal('schedule_v2_voice_entry_opened')}><MicIcon /></Link>
@@ -801,11 +807,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {actor && <button ref={onboardingTriggerRef} type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
   </section>
   const daySummary = isDayView && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
-    <button ref={actionTriggerRef} type="button" className="schedule-v2-action-card" aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
-      <span className="schedule-v2-summary-icon"><BellIcon /></span>
+    <button ref={actionTriggerRef} type="button" className={`schedule-v2-action-card${fitLimeToday && !actionsError && !planningError && !actionsLoading && !planningLoading && actionItems.length + planningItems.length > 0 ? ' is-active' : ''}`} aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
+      <span className="schedule-v2-summary-icon">{fitLimeToday ? <WhistleIcon /> : <BellIcon />}</span>
       <strong>{actionCount}</strong>
     </button>
-    <button ref={inboxTriggerRef} type="button" className="schedule-v2-message-card" aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
+    <button ref={inboxTriggerRef} type="button" className={`schedule-v2-message-card${fitLimeToday && !workspace.isError && (workspace.data?.summary.inboxCount ?? 0) > 0 ? ' is-active' : ''}`} aria-label={`${summaryValue(workspace.data?.summary.inboxCount)} Вопросы и сообщения`} onClick={() => { trackGoal('schedule_v2_inbox_tile_opened'); setInboxOpen(true) }}>
       <span className="schedule-v2-summary-icon"><MessageIcon /></span>
       <strong>{summaryValue(workspace.data?.summary.inboxCount)}</strong>
     </button>
@@ -818,7 +824,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   >
     <header className={`schedule-v2-topbar${isDayView ? ' schedule-v2-topbar-day' : ''}`}>
       {isDayView ? <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
-      {isDayView
+      {(fitLimeToday || fitLimeSchedule)
+        ? <div className="schedule-v2-day-actions"><FitLimeDatePicker value={selected} onChange={openDay} /><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
+        : isDayView
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>

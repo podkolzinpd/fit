@@ -31,4 +31,4 @@
 }
 /* Preserve original 24×24 export geometry. The enclosing button owns its hit
    target. Inverse surfaces invert only the white monochrome original. */
-.fit-lime :where(.primary, .schedule-v2-fab) svg[data-original-icon] image { filter: brightness(0); }
+:is(.fit-lime, .fit-lime-shell) :where(.primary, .schedule-v2-fab) svg[data-original-icon] { filter: brightness(0); }
