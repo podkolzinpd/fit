@@ -20,6 +20,8 @@ const VITAL_MEDIA_PREFIX = 'fit-exercise-media'
 const TRAINER_PROFILE_MEDIA_PREFIX = 'trainer-profile-media'
 const SAFE_OBJECT_PATH = /^[A-Za-z0-9][A-Za-z0-9/_.-]{0,511}$/
 
+export const VITAL_MEDIA_CACHE_CONTROL = 'private, max-age=3000, immutable'
+
 export interface YandexMediaStorageConfig {
   accessKeyId: string
   bucket: string
@@ -167,6 +169,9 @@ export class YandexMediaObjectStorage implements MediaObjectStorage {
       await this.client.send(new PutObjectCommand({
         Body: bytes,
         Bucket: this.config.bucket,
+        ...(namespace === 'fit-exercise-media'
+          ? { CacheControl: VITAL_MEDIA_CACHE_CONTROL }
+          : {}),
         ContentLength: bytes.byteLength,
         ContentType: contentType,
         ...(overwrite ? {} : { IfNoneMatch: '*' }),

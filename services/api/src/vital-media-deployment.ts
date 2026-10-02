@@ -6,7 +6,10 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3'
 
-import type { YandexMediaStorageConfig } from './object-storage-media.js'
+import {
+  VITAL_MEDIA_CACHE_CONTROL,
+  type YandexMediaStorageConfig,
+} from './object-storage-media.js'
 
 const OBJECT_STORAGE_ENDPOINT = 'https://storage.yandexcloud.net'
 const OBJECT_STORAGE_REGION = 'ru-central1'
@@ -205,7 +208,7 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
     const put = await this.client.send(new PutObjectCommand({
       Body: body,
       Bucket: this.config.bucket,
-      CacheControl: 'private, max-age=3600',
+      CacheControl: VITAL_MEDIA_CACHE_CONTROL,
       ContentLength: body.byteLength,
       ContentType: expectedType,
       Key: objectKey,
@@ -271,7 +274,8 @@ export class YandexVitalMediaDeployment implements VitalMediaDeploymentService {
       return {
         matches: body.byteLength === file.bytes
           && createHash('sha256').update(body).digest('hex') === file.sha256
-          && response.ContentType === contentType(file.path),
+          && response.ContentType === contentType(file.path)
+          && response.CacheControl === VITAL_MEDIA_CACHE_CONTROL,
         versionId: response.VersionId,
       }
     } catch (error) {

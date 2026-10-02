@@ -148,7 +148,11 @@ import {
   readVersionedMetricRequest,
   readVersionedProgressRequest,
 } from './progress-request.js'
-import { readVitalMediaRequest, type VitalMediaSigner } from './vital-media.js'
+import {
+  readVitalMediaBatchRequest,
+  readVitalMediaRequest,
+  type VitalMediaSigner,
+} from './vital-media.js'
 import { MAX_TRAINER_CATALOG_PAGE_SIZE, readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
 import { readTrainerPhotoUpload } from './trainer-profile-media.js'
 import {
@@ -321,6 +325,32 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await options.yandexAppSessionReader.read(session.token)
       const signedUrl = await options.vitalMediaSigner.sign(command.path)
       return reply.header('cache-control', 'no-store').send({ signedUrl })
+    } catch (error) {
+      if (error instanceof YandexAppSessionInvalidError) {
+        return reply.code(401).send({ error: 'unauthorized' })
+      }
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+  })
+
+  app.post('/v1/exercise-media/sign-batch', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    const command = readVitalMediaBatchRequest(request.body)
+    const sessionReader = options.yandexAppSessionReader
+    const signer = options.vitalMediaSigner
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    if (sessionReader === undefined || signer === undefined) {
+      return reply.code(503).send({ error: 'service_unavailable' })
+    }
+    try {
+      await sessionReader.read(session.token)
+      const signedUrls = await Promise.all(command.paths.map(async (path) => ({
+        path,
+        signedUrl: await signer.sign(path),
+      })))
+      return reply.header('cache-control', 'no-store').send({ signedUrls })
     } catch (error) {
       if (error instanceof YandexAppSessionInvalidError) {
         return reply.code(401).send({ error: 'unauthorized' })

@@ -67,6 +67,10 @@ import {
 
 const uuid = z.uuid()
 const yandexDateTimeSchema = z.iso.datetime({ offset: true })
+const vitalMediaBatchSchema = z.object({
+  signedUrls: z.array(z.object({ path: z.string(), signedUrl: z.url() })),
+})
+const MAX_VITAL_MEDIA_BATCH = 32
 const chatThreadSchema = z.object({
   conversationId: uuid.nullable(), clientId: uuid, trainerId: uuid, partnerUserId: uuid,
   partnerName: z.string(), activeConnection: z.boolean(), lastMessageBody: z.string().nullable(),
@@ -867,6 +871,50 @@ export function createYandexMainRepository(
   let activeClientsPromise: Promise<Client[]> | null = null
   let archivedClientsPromise: Promise<Client[]> | null = null
   let connectionsPromise: Promise<z.infer<typeof connectionsSchema>> | null = null
+  let vitalMediaBatchScheduled = false
+  let pendingVitalMedia = new Map<string, Array<{
+    reject: (error: unknown) => void
+    resolve: (signedUrl: string) => void
+  }>>()
+  const flushVitalMediaBatch = async () => {
+    vitalMediaBatchScheduled = false
+    const batch = pendingVitalMedia
+    pendingVitalMedia = new Map()
+    const paths = [...batch.keys()]
+    for (let offset = 0; offset < paths.length; offset += MAX_VITAL_MEDIA_BATCH) {
+      const chunk = paths.slice(offset, offset + MAX_VITAL_MEDIA_BATCH)
+      try {
+        const payload = await writeJson(
+          queries,
+          '/v1/exercise-media/sign-batch',
+          'POST',
+          { paths: chunk },
+          vitalMediaBatchSchema,
+        )
+        const signedUrls = new Map(payload.signedUrls.map((item) => [item.path, item.signedUrl]))
+        for (const path of chunk) {
+          const signedUrl = signedUrls.get(path)
+          const waiters = batch.get(path) ?? []
+          if (signedUrl === undefined) {
+            const error = new RepositoryError('invalid_media_response', 'Сервер не вернул ссылку на медиа')
+            waiters.forEach(({ reject }) => reject(error))
+          } else {
+            waiters.forEach(({ resolve }) => resolve(signedUrl))
+          }
+        }
+      } catch (error) {
+        chunk.forEach((path) => batch.get(path)?.forEach(({ reject }) => reject(error)))
+      }
+    }
+  }
+  const createVitalMediaUrl = (path: string): Promise<string> => new Promise((resolve, reject) => {
+    const waiters = pendingVitalMedia.get(path) ?? []
+    waiters.push({ reject, resolve })
+    pendingVitalMedia.set(path, waiters)
+    if (vitalMediaBatchScheduled) return
+    vitalMediaBatchScheduled = true
+    queueMicrotask(() => { void flushVitalMediaBatch() })
+  })
   const invalidate = () => {
     trainingDataPromise = null
     activeClientsPromise = null
@@ -1178,14 +1226,7 @@ export function createYandexMainRepository(
         if (expiresIn !== 60 * 60) {
           throw new RepositoryError('invalid_media_expiry', 'Некорректный срок ссылки на медиа')
         }
-        const payload = await writeJson(
-          queries,
-          '/v1/exercise-media/sign',
-          'POST',
-          { path },
-          z.object({ signedUrl: z.url() }),
-        )
-        return payload.signedUrl
+        return createVitalMediaUrl(path)
       },
       createCustomExercisePhotoUrl() {
         // customExercise() всегда отдаёт imagePath: null на этом бэкенде
