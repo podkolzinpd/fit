@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
@@ -2173,6 +2173,55 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('delete from public.trainer_finance_sessions where client_id = $1', [CLIENT_ID])
         await ownerPool.query('delete from public.trainer_finance_packages where client_id = $1', [CLIENT_ID])
         if (workoutId) await ownerPool.query('delete from public.workouts where id = $1', [workoutId])
+      }
+    })
+
+    it('charges the author service across client-owned partitions and stops after disconnect', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const clientId = randomUUID()
+      await ownerPool.query(`insert into public.clients (id, trainer_id, auth_user_id, full_name)
+        values ($1, $2, null, 'Finance author fixture')`, [clientId, OTHER_ACTOR_ID])
+      await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id)
+        values ($1, $2), ($1, $3)`, [clientId, ACTOR_ID, MEMBER_TRAINER_ID])
+      try {
+        for (const actor of [ACTOR_ID, MEMBER_TRAINER_ID]) {
+          await withActorTransaction(runtimePool, actor, (client) => client.query(
+            `select public.create_trainer_finance_service($1, 'session_pack', 'Author package',
+              5, 0, 100000, 0, date '2026-10-01', date '2026-10-31', null, null)`, [clientId]))
+        }
+        const draft: PlannedWorkoutDraft = { id: null, requestId: randomUUID(), clientId,
+          workoutDate: '2026-10-02', startTime: null, endTime: null, notes: null, exercises: [] }
+        const saved = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveCompletedWorkout(client, draft, null))
+        const sessions = await ownerPool.query<{id: string; trainer_id: string; package_trainer: string}>(
+          `select session.id, session.trainer_id, package.trainer_id as package_trainer
+           from public.trainer_finance_sessions session join public.trainer_finance_packages package
+           on package.id=session.package_id where session.workout_id=$1 and session.voided_at is null`, [saved.id])
+        expect(sessions.rows).toHaveLength(1)
+        expect(sessions.rows[0]?.trainer_id).toBe(ACTOR_ID)
+        expect(sessions.rows[0]?.package_trainer).toBe(ACTOR_ID)
+        await expect(withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) => client.query(
+          `select public.update_trainer_finance_session_details_v2($1,1,'free',null,null,date '2026-10-02')`,
+          [sessions.rows[0]!.id]))).rejects.toThrow('trainer_finance_session_not_found')
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query(
+          `select public.update_trainer_finance_session_details_v2($1,1,'free',null,null,date '2026-10-02')`,
+          [sessions.rows[0]!.id]))
+        const self = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveCompletedWorkout(client,
+          {...draft, requestId: randomUUID(), trainingFormat: 'self'}, null))
+        expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1 and voided_at is null', [self.id])).rowCount).toBe(0)
+        const planned = await withActorTransaction(runtimePool, ACTOR_ID, (client) => savePlannedWorkout(client,
+          {...draft, requestId: randomUUID(), trainingFormat: 'with_trainer'}, null))
+        await ownerPool.query('delete from public.client_trainers where client_id=$1 and trainer_id=$2',[clientId, ACTOR_ID])
+        await ownerPool.query("update public.workouts set status='done', completed_at=now() where id=$1",[planned.id])
+        expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1', [planned.id])).rowCount).toBe(0)
+        expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1', [saved.id])).rowCount).toBe(1)
+      } finally {
+        await ownerPool.query('delete from public.trainer_finance_events where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.trainer_finance_sessions where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.trainer_finance_payments where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.workouts where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.client_trainers where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.clients where id=$1',[clientId])
       }
     })
 
