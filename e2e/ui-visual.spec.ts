@@ -1898,7 +1898,8 @@ test('measurement trends stay readable for client and trainer in both themes', a
   }
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css',
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    stylePath: ['e2e/visual-legacy-without-achievements.css', 'e2e/visual-without-inbody-import.css'],
   })
 
   await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
@@ -1908,7 +1909,8 @@ test('measurement trends stay readable for client and trainer in both themes', a
   await expect(measurements.getByRole('heading', { name: trainer ? 'Тренд по значениям' : 'Замеры' })).toBeVisible()
   await measurements.scrollIntoViewIfNeeded()
   await expect(measurements).toHaveScreenshot(`${trainer ? 'trainer' : 'client'}-measurement-trends-dark-${process.platform}.png`, {
-    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015, stylePath: 'e2e/visual-legacy-without-achievements.css',
+    animations: 'disabled', caret: 'hide', maxDiffPixelRatio: 0.015,
+    stylePath: ['e2e/visual-legacy-without-achievements.css', 'e2e/visual-without-inbody-import.css'],
   })
 })
 
@@ -3295,7 +3297,7 @@ test('best results show several real records and keep the remaining achievements
   await expect(results).toHaveScreenshot(`best-results-${process.platform}.png`, {
     animations: 'disabled',
     maxDiffPixelRatio: 0.01,
-    stylePath: 'e2e/visual-legacy-without-achievements.css',
+    stylePath: ['e2e/visual-legacy-without-achievements.css', 'e2e/visual-without-inbody-import.css'],
   })
   await page.getByRole('tab', { name: 'ПРО' }).click()
   await page.getByText('Все результаты', { exact: true }).click()

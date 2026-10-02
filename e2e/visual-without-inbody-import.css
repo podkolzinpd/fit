@@ -1,0 +1,6 @@
+/* These baselines cover charts/results, while the InBody uploader has its own
+   client measurement-management visual contract. Keep unrelated element
+   screenshots stable when the uploader changes the document offset. */
+.inbody-import {
+  display: none !important;
+}
