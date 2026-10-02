@@ -2428,6 +2428,7 @@ export function LiveWorkoutPage() {
   const pendingRoundOperations = useRef<Map<string, { operationId: string; expectedVersion: number; position: number }>>(new Map())
   const pendingSplitOperations = useRef<Map<string, { operationId: string; expectedVersion: number }>>(new Map())
   const [lastAddedRound, setLastAddedRound] = useState<{ blockId: string; position: number } | null>(null)
+  const [expandedCircuitRounds, setExpandedCircuitRounds] = useState<Set<string>>(() => new Set())
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -3145,11 +3146,11 @@ export function LiveWorkoutPage() {
   const liveSyncError = save.error ?? confirm.error
   const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? mergeBlock.error ?? splitSuperset.error ?? replaceLive.error ?? commentLive.error ?? finish.error
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
-  function liveCommentField(exercise: WorkoutExerciseModel) {
+  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name) {
     const note = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
     return <details className="live-exercise-note">
       <summary>{clientMode ? 'Заметка' : 'Заметка тренера'}{note ? <span className="live-note-preview">{note}</span> : null}</summary>
-      <textarea className="exercise-comment" aria-label={`Заметка: ${exercise.name}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} defaultValue={note} disabled={rootMutationPending}
+      <textarea className="exercise-comment" aria-label={`Заметка: ${displayName}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} defaultValue={note} disabled={rootMutationPending}
         onBlur={(event) => { const next = event.target.value.trim(); if (next !== note) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
     </details>
   }
@@ -3381,7 +3382,7 @@ export function LiveWorkoutPage() {
         }
         // Многоэлементный блок — по кругам, со счётчиком «Круг R из N».
         const rounds = blockRoundsView(block)
-        const current = currentRoundIndex(rounds)
+        const current = blockDone ? -1 : currentRoundIndex(rounds)
         const latestRound = rounds.at(-1)
         const canUndoAddedRound = lastAddedRound?.blockId === block.blockId && latestRound?.round === lastAddedRound.position + 1
           && Boolean(latestRound?.items.length === block.exercises.length
@@ -3389,14 +3390,14 @@ export function LiveWorkoutPage() {
         const activeCircuitSetId = blockStatus === 'current'
           ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
           : undefined
-        // Счётчик «Круг N из M» + точки закреплены сверху (.live-pinned) для
-        // активной круговой; здесь в шапке блока — бейдж, счётчик и стрелки.
-        // Точки не дублируем (они в закрепе), но счётчик оставляем как заголовок
-        // блока (актуален и для неактивных/завершённых круговых при скролле).
+        // Активный счётчик закреплён под таймером; в карточке не повторяем его.
+        // Меню блока остаётся доступным и во время выполнения.
         return <div className="exercise-block live" key={block.blockId}>
-          <div className="circuit-head">
-            <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
-            <span className="circuit-counter">Круг {rounds[current]?.round ?? 1} из {rounds.length}</span>
+          <div className={`circuit-head${blockStatus === 'current' ? ' circuit-head-actions-only' : ''}`}>
+            {blockStatus === 'current' ? <span className="sr-only">Действия суперсета</span> : <>
+              <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
+              <span className="circuit-counter">{blockDone ? `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'} · завершено` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
+            </>}
             {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0 || (workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set')) && <OverflowMenu items={[
               ...(canReorder ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
               ...groupingItems,
@@ -3412,30 +3413,37 @@ export function LiveWorkoutPage() {
             ]} />}
             {reorder}
           </div>
-          {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt); return <div className={`circuit-round ${roundDone ? 'done' : roundIndex === current ? 'current' : ''}`} key={round.round}>
-            <div className="circuit-round-label">Круг {round.round}</div>
-            {round.items.map(({ exercise, set }) => <section key={set.id}>
-              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={exercise.name}
-                leading={roundIndex === 0 ? liveHeaderThumbnail(exercise) : undefined}
-                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0
-                  ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])
-                  : undefined} />
-              {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
-              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
-            </section>)}
-          </div> })}
           {canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
             <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
               onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : '＋ Круг'}</button>
             {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
               onClick={async () => { if (await askConfirm({ message: 'Убрать последний пустой круг?', confirmLabel: 'Убрать', danger: true })) removeRound.mutate({ blockId: block.blockId, position: latestRound!.round - 1 }) }}>Убрать добавленный круг</button>}
           </div>}
-          <div className="circuit-exercise-notes" aria-label="Заметки к упражнениям">
-            {block.exercises.map((exercise) => <section className="circuit-exercise-note" key={exercise.id}>
-              <h3>{exercise.name}</h3>
-              {liveCommentField(exercise)}
-            </section>)}
-          </div>
+          {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt)
+            const roundKey = `${block.blockId}:${round.round}`
+            const isCurrent = roundIndex === current
+            const collapsed = !isCurrent && !expandedCircuitRounds.has(roundKey)
+            const doneCount = round.items.filter(({ set }) => set.confirmedAt).length
+            return <div className={`circuit-round ${roundDone ? 'done' : isCurrent ? 'current' : ''}${collapsed ? ' collapsed' : ''}`} key={round.round}>
+            {isCurrent ? <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
+              onClick={() => setExpandedCircuitRounds((previous) => { const next = new Set(previous); if (next.has(roundKey)) next.delete(roundKey); else next.add(roundKey); return next })}>
+              <span>Круг {round.round}</span><span>{doneCount} из {round.items.length} выполнено</span><span>{collapsed ? 'Показать' : 'Свернуть'}</span>
+            </button>}
+            {!collapsed && round.items.map(({ exercise, set }) => { const duplicateNames = block.exercises.filter((item) => item.name === exercise.name)
+              const displayName = duplicateNames.length > 1 ? `${exercise.name} №${duplicateNames.findIndex((item) => item.id === exercise.id) + 1}` : exercise.name
+              const showNote = isCurrent || (blockDone && roundIndex === 0)
+              return <section key={set.id}>
+              <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
+                leading={roundIndex === 0 ? liveHeaderThumbnail(exercise) : undefined}
+                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0
+                  ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])
+                  : undefined} />
+              {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
+              {showNote && clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
+              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
+              {showNote && liveCommentField(exercise, displayName)}
+            </section>})}
+          </div> })}
         </div>
       }) })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>}
