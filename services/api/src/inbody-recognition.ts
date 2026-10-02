@@ -226,6 +226,22 @@ function massPercentPairs(lines: readonly string[], start: RegExp, end: RegExp):
   return result
 }
 
+function inBody270VisceralFatLevel(lines: readonly string[]): number | undefined {
+  const headingIndex = lines.findIndex((line) => /уровень висцерального жира/i.test(line))
+  if (headingIndex < 0) return undefined
+  const nearbyLines = lines.slice(headingIndex + 1, headingIndex + 7)
+  for (let index = 0; index < nearbyLines.length; index += 1) {
+    const line = nearbyLines[index]!
+    const levelLabel = line.match(/^уровень(?:\s|:|$)/i)
+    if (!levelLabel) continue
+    const sameLine = numbers(line.slice(levelLabel[0].length)).find((value) => value >= 1 && value <= 60)
+    if (sameLine !== undefined) return sameLine
+    const nextLine = numbers(nearbyLines[index + 1] ?? '').find((value) => value >= 1 && value <= 60)
+    if (nextLine !== undefined) return nextLine
+  }
+  return undefined
+}
+
 function enrichInBody270(lines: readonly string[], inBody: InBodyMeasurement): void {
   const bmi = valuesBetween(lines, /массы тела.*kg\/?m2/i, /процентное/i).filter((value) => value >= 10 && value <= 60).at(-1)
   const bodyFatPercent = valuesBetween(lines, /^процентное/i, /тощ|тоц|оценка|анализ тощей/i).filter((value) => value >= 0.5 && value <= 75).at(-1)
@@ -240,11 +256,13 @@ function enrichInBody270(lines: readonly string[], inBody: InBodyMeasurement): v
   const fatControlKg = lastValueAfter(lines, /^контроль жира$/i, -200, 200)
   const muscleControlKg = lastValueAfter(lines, /^контроль мышц$/i, -100, 100)
   const recommendedCalorieIntakeKcal = lastValueAfter(lines, /реком.*уем/i, 500, 10_000)
+  const visceralFatLevel = inBody270VisceralFatLevel(lines)
   if (targetWeightKg !== undefined) inBody.targetWeightKg = targetWeightKg
   if (weightControlKg !== undefined) inBody.weightControlKg = weightControlKg
   if (fatControlKg !== undefined) inBody.fatControlKg = fatControlKg
   if (muscleControlKg !== undefined) inBody.muscleControlKg = muscleControlKg
   if (recommendedCalorieIntakeKcal !== undefined) inBody.recommendedCalorieIntakeKcal = recommendedCalorieIntakeKcal
+  if (visceralFatLevel !== undefined) inBody.visceralFatLevel = visceralFatLevel
   const lean = massPercentPairs(lines, /анализ тощей массы по сегментам/i, /история состава тела/i)
   const fat = massPercentPairs(lines, /анализ жировой массы по сегментам/i, /оценка inbody/i)
   if (lean.length >= 5 && fat.length >= 5) {

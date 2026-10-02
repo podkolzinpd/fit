@@ -85,6 +85,9 @@ describe('InBody result sheet extraction', () => {
       Уровень базального метаболизма 1683 kcal
       Рекоментуемый
       2696 kcal
+      Уровень висцерального жира
+      Низкий 10 Высокий
+      Уровень 2
       Анализ тощей массы по сегментам
       3.61 kg
       110.9 %
@@ -112,7 +115,7 @@ describe('InBody result sheet extraction', () => {
     `)
     expect(result).toMatchObject({
       recordedOn: '2024-06-03', weightKg: 68.3,
-      inBody: { totalBodyWaterL: 44.6, proteinKg: 12.2, mineralsKg: 4.03, bodyFatMassKg: 7.5, fatFreeMassKg: 60.8, basalMetabolicRateKcal: 1683, recommendedCalorieIntakeKcal: 2696, inBodyScore: 80 },
+      inBody: { totalBodyWaterL: 44.6, proteinKg: 12.2, mineralsKg: 4.03, bodyFatMassKg: 7.5, fatFreeMassKg: 60.8, visceralFatLevel: 2, basalMetabolicRateKcal: 1683, recommendedCalorieIntakeKcal: 2696, inBodyScore: 80 },
     })
     expect(result.inBody.segmental).toHaveLength(5)
     expect(result.inBody.segmental?.[2]).toMatchObject({ segment: 'trunk', leanMassKg: 28.3, leanPercent: 109, fatMassKg: 3.5, fatPercent: 79.3 })
