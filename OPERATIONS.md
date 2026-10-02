@@ -793,9 +793,10 @@ assignment, не включает Yandex app-session и не меняет выб
 Для аварийного возврата необязательной привязки нужен новый deployment со
 значением `false`.
 
-Stage API CORS allowlist обязан содержать как production web origin, так и
-точный `capacitor://localhost` origin нативной iOS-оболочки. Произвольные
-`capacitor://` origins не разрешаются. Изменение выполняется через
+Stage API CORS allowlist обязан содержать production web origin, точный
+`capacitor://localhost` для iOS и точный `https://localhost` для Android.
+`http://localhost` без порта и произвольные `capacitor://` origins не
+разрешаются. Изменение выполняется через
 `TF_VAR_api_cors_allowed_origins` в deployment workflow, а не вручную в
 активной ревизии контейнера.
 
@@ -810,11 +811,11 @@ Platform 36 и Build Tools 36.0.0. Минимальная версия устр�
 CI workflow и сохраняется на 7 дней как `fit-android-debug`. Локальная
 development-сборка не подключена к production Yandex API.
 
-Android WebView имеет origin `http://localhost`. До рабочего входа требуется
-зарегистрировать точный Redirect URI `http://localhost/auth/yandex/callback`
-в настройках Yandex OAuth и после отдельного согласования добавить ровно
-`http://localhost` в API CORS allowlist через deployment workflow. Эти шаги
-не считаются выполненными по успешной сборке APK. После них нужен ручной smoke
+Android WebView имеет origin `https://localhost`; scheme и hostname закреплены
+в `capacitor.config.ts`. До рабочего входа требуется зарегистрировать точный
+Redirect URI `https://localhost/auth/yandex/callback` в настройках Yandex
+OAuth. Этот шаг не считается выполненным по успешной сборке APK или настройке
+CORS. После него нужен ручной smoke
 на устройстве: Yandex ID, callback, загрузка данных обеих ролей, выход и
 повторный вход. Перед публикацией в RuStore нужны отдельный release keystore,
 подписанная release APK/AAB, проверка целевой сборки и карточка приложения.
