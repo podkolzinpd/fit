@@ -1514,7 +1514,7 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
 }
 
 export function WorkoutDetailPage() {
-  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
@@ -1531,6 +1531,7 @@ export function WorkoutDetailPage() {
   const clientMode = actor?.role === 'client'
   const justCompleted = query.data?.status === 'done' && navigationState?.justCompleted === true
   const clientCompletionReport = Boolean(justCompleted && clientMode)
+  const completionClient = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientCompletionReport })
   const backTo = workoutListFallback(actor?.role === 'client', query.data?.clientId)
   const goBack = useWorkoutBack(backTo)
   const calendarReturnTo = isTrainerScheduleV2Enabled(actor) ? safeWorkoutReturnTo(navigationState?.returnTo) : undefined
@@ -1773,6 +1774,10 @@ export function WorkoutDetailPage() {
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
       {clientCompletionReport && <WorkoutCompletionReport
+        key={workout.id}
+        workoutId={workout.id}
+        userId={actor!.userId}
+        gender={completionClient.data?.gender}
         date={formatLocalDate(workout.workoutDate)}
         completedSets={completedSets}
         totalSets={sets.length}
@@ -1792,8 +1797,17 @@ export function WorkoutDetailPage() {
         volumeComparison={completionVolumeComparison}
         comparisonLoading={completionHistory.isLoading}
         hasTrainer={hasActiveTrainer}
-        feedback={<WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+        feedback={<WorkoutClientFeedback completion workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
         newAchievements={newAchievements}
+        details={<details className="workout-completion-recorded">
+          <summary><span><span className="eyebrow">РЕЗУЛЬТАТ</span><strong>Что записано</strong></span><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</span></summary>
+          {exerciseCards}
+          {canManage && <Link className="button secondary wide workout-completion-edit" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Исправить результат</Link>}
+        </details>}
+        actions={<>
+          <Link className="button primary wide" to="/me" replace>Готово</Link>
+          <Link className="button secondary wide" to="/me/progress">Посмотреть прогресс</Link>
+        </>}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
@@ -1830,21 +1844,14 @@ export function WorkoutDetailPage() {
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
-      {clientCompletionReport ? <details className="workout-completion-recorded">
-        <summary><span><span className="eyebrow">РЕЗУЛЬТАТ</span><strong>Что записано</strong></span><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</span></summary>
-        {exerciseCards}
-        {canManage && <Link className="button secondary wide workout-completion-edit" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Исправить результат</Link>}
-      </details> : exerciseCards}
+      {!clientCompletionReport && exerciseCards}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
         if (!removeCompletedExercise.variables) return
         const refreshed = await query.refetch()
         if (refreshed.data) removeCompletedExercise.mutate({ ...removeCompletedExercise.variables, workout: refreshed.data })
       }}>Повторить</button></p>}
       {workout.notes && !clientCompletionReport && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
-      {clientCompletionReport && <div className="workout-completion-actions">
-        <Link className="button primary wide" to="/me" replace>Готово</Link>
-        <Link className="button secondary wide" to="/me/progress">Посмотреть прогресс</Link>
-      </div>}
+
       {canManage && !clientCompletionReport && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
@@ -1894,7 +1901,8 @@ function trainerResponseTime(value: string | undefined) {
   }).format(new Date(value))
 }
 
-function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
+function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave, completion = false }: {
+  completion?: boolean
   workout: Workout
   canEdit: boolean
   saving: boolean
@@ -1979,7 +1987,7 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
     {error && <p className="error">{error.message}</p>}
     <div className="actions workout-review-actions workout-action-row">
       {hasFeedback && <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => setEditing(false)}>Отмена</WorkoutCta>}
-      <WorkoutCta type="submit" pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>Сохранить итоги</WorkoutCta>
+      <WorkoutCta type="submit" variant={completion ? 'secondary' : 'primary'} pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>{completion ? 'Сохранить самочувствие' : 'Сохранить итоги'}</WorkoutCta>
     </div>
   </form>
 }

@@ -1,3 +1,4 @@
+import { completionIcons, type CompletionCelebration } from './workout-completion-celebration'
 import { copyText } from '../../shared/clipboard'
 
 export type WorkoutShareVariant = 'summary' | 'achievement' | 'progress'
@@ -16,6 +17,7 @@ export interface WorkoutShareProgress {
 
 export interface WorkoutShareSummary {
   title: string
+  celebration?: CompletionCelebration
   date: string
   countLine: string
   metrics: WorkoutShareMetric[]
@@ -35,7 +37,7 @@ function signedPercent(value: number): string {
 }
 
 export function workoutShareText(summary: WorkoutShareSummary, variant: WorkoutShareVariant = 'summary'): string {
-  const common = [summary.date, summary.countLine]
+  const common = [summary.celebration?.title, summary.date, summary.countLine]
   const metrics = summary.metrics.map((metric) => metric.value).join(' · ')
   const muscles = summary.muscleGroups.length > 0 ? `Нагрузка: ${summary.muscleGroups.join(', ')}` : ''
   if (variant === 'achievement') {
@@ -178,7 +180,7 @@ function drawSummaryCard(context: CanvasRenderingContext2D, summary: WorkoutShar
   context.fillText('РЕЗУЛЬТАТ СОХРАНЁН', 80, 205)
   context.fillStyle = palette.ink
   context.font = '600 76px Onest, Arial, sans-serif'
-  const titleLines = wrapLines(context, summary.title, 920, 2)
+  const titleLines = wrapLines(context, summary.celebration?.title ?? summary.title, summary.celebration ? 740 : 920, 2)
   titleLines.forEach((line, index) => context.fillText(line, 80, 300 + index * 82))
   const countY = titleLines.length > 1 ? 445 : 365
   context.fillStyle = palette.muted
@@ -287,6 +289,16 @@ function drawProgressCard(context: CanvasRenderingContext2D, summary: WorkoutSha
   }
 }
 
+function loadCelebrationArt(source: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image()
+    const timer = window.setTimeout(() => resolve(null), 2000)
+    image.onload = () => { window.clearTimeout(timer); resolve(image) }
+    image.onerror = () => { window.clearTimeout(timer); resolve(null) }
+    image.src = source
+  })
+}
+
 async function workoutShareFile(summary: WorkoutShareSummary, variant: WorkoutShareVariant): Promise<File | null> {
   if (typeof document === 'undefined') return null
   const canvas = document.createElement('canvas')
@@ -310,6 +322,19 @@ async function workoutShareFile(summary: WorkoutShareSummary, variant: WorkoutSh
   if (variant === 'achievement') drawAchievementCard(context, summary, palette)
   else if (variant === 'progress') drawProgressCard(context, summary, palette)
   else drawSummaryCard(context, summary, palette)
+  if (summary.celebration) {
+    // Reuse the tiny same-origin asset already shown on screen. A failed image
+    // must not prevent sharing the saved facts.
+    const art = await loadCelebrationArt(completionIcons[summary.celebration.icon])
+    if (variant === 'summary') {
+      if (art) context.drawImage(art, 850, 215, 150, 150)
+    } else {
+      if (art) context.drawImage(art, 80, 1140, 64, 64)
+      context.fillStyle = palette.ink
+      context.font = '500 28px Onest, Arial, sans-serif'
+      wrapLines(context, summary.celebration.title, 830, 2).forEach((line, index) => context.fillText(line, 160, 1165 + index * 34))
+    }
+  }
   drawFooter(context, palette)
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
