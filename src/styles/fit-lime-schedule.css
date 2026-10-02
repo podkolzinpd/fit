@@ -40,7 +40,7 @@
     white-space: normal;
   }
   .fit-lime-shell .fit-lime-schedule .schedule-v2-weekstrip {
-    margin-inline: -12px;
+    margin-inline: 0;
   }
 
   .fit-lime-shell .fit-lime-schedule .schedule-v2-day-card {

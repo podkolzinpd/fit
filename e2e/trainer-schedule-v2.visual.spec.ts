@@ -403,6 +403,36 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const width of [390, 430]) {
+  test(`Figma long client name and constrained-height picker at ${width}`, async ({ page }, testInfo) => {
+    const fullName = 'Александр Константинопольский-Рождественский'
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { fitLime: true, clientRecords: [{ id: clientId, fullName, archivedAt: null, version: 1 }] })
+    await page.goto('/workouts/new?date=2026-09-24')
+    await page.locator('.client-picker-trigger').click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента' })
+    const search = picker.getByRole('textbox', { name: 'Поиск клиента' })
+    await search.focus()
+    // Model reduced available space; this is not a claim to emulate an OS keyboard.
+    await page.setViewportSize({ width, height: 400 })
+    await search.fill('Константинопольский')
+    await expect(search).toBeFocused()
+    const option = picker.getByRole('button', { name: new RegExp(fullName) })
+    await option.scrollIntoViewIfNeeded()
+    await expect(option).toBeVisible()
+    const bounds = await option.boundingBox()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(400)
+    await page.screenshot({ path: testInfo.outputPath('figma-picker-constrained-height.png') })
+    await option.click()
+    await expect(picker).not.toBeVisible()
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.client-picker-trigger')).toContainText(fullName)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  })
+}
+
 for (const width of [390, 430, 1440]) {
   test(`Figma trainer routes include finance and templates at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
@@ -1771,9 +1801,10 @@ test('today keeps workout entry usable while clients fail and recover', async ({
   })
   await page.goto('/today')
   await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
-  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить клиентов')
+  const clientError = page.getByRole('alert').filter({ hasText: 'Не удалось загрузить клиентов' })
+  await expect(clientError).toBeVisible()
   recovered = true
-  await page.getByRole('alert').getByRole('button', { name: 'Повторить' }).click()
+  await clientError.getByRole('button', { name: 'Повторить' }).click()
   await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toBeVisible()
 })
 
@@ -1888,6 +1919,7 @@ test('editing a pilot workout returns to its calendar day with the changed time'
 })
 
 test('rescheduling refreshes both the former day and the two-week overview', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-25T09:00:00+03:00'))
   await mockPilot(page)
   await page.goto('/today?date=2026-09-24&week=2026-09-21&range=2w')
   await page.locator('.schedule-v2-event').click()

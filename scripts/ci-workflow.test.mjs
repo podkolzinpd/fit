@@ -34,12 +34,22 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
   assert.match(workflow, /e2e-visual:/)
   assert.match(workflow, /e2e-chromium:/)
   assert.match(workflow, /if: needs\.e2e-scope\.outputs\.required == 'true'/)
-  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-yandex-auth, e2e-visual, e2e-chromium, e2e-webkit\]/)
+  assert.match(workflow, /e2e:\n    needs: \[e2e-scope, e2e-yandex-auth, e2e-visual, e2e-chromium, e2e-webkit, e2e-fit-lime\]/)
   assert.match(workflow, /YANDEX_AUTH_RESULT: \$\{\{ needs\.e2e-yandex-auth\.result \}\}/)
   assert.match(workflow, /"\$YANDEX_AUTH_RESULT" != "success"/)
   assert.match(workflow, /VISUAL_RESULT: \$\{\{ needs\.e2e-visual\.result \}\}/)
   assert.match(workflow, /CHROMIUM_RESULT: \$\{\{ needs\.e2e-chromium\.result \}\}/)
   assert.match(workflow, /E2E skipped: changes do not affect the browser runtime/)
+})
+
+test('requires Fit Lime route checks in both engines without production secrets', () => {
+  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
+  assert.match(job, /FIT_SCHEDULE_V2_VISUAL: '1'/)
+  assert.match(job, /project: \[mobile-chromium, lime-acceptance-webkit\]/)
+  assert.match(job, /playwright test e2e\/trainer-schedule-v2\.visual\.spec\.ts/)
+  assert.doesNotMatch(job, /secrets\.|supabase start|environment:/)
+  assert.match(workflow, /FIT_LIME_RESULT: \$\{\{ needs\.e2e-fit-lime\.result \}\}/)
+  assert.match(workflow, /"\$FIT_LIME_RESULT" != "success"/)
 })
 
 test('runs required Yandex-only browser auth without starting local Supabase', () => {
