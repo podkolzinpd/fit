@@ -11,7 +11,7 @@ export default defineConfig({
   // Устаревший rollout-флаг здесь маскировал регрессии нового основного сценария.
   webServer: { command: `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI },
   projects: [
-    { name: 'lime-figma-webkit', testMatch: /trainer-schedule-v2\.visual\.spec\.ts/, grep: /Figma (foundation|calendar)/, use: { ...devices['iPhone 13'] } },
+    { name: 'lime-figma-webkit', testMatch: /trainer-schedule-v2\.visual\.spec\.ts/, grep: /Figma (foundation|calendar|workout)/, use: { ...devices['iPhone 13'] } },
     { name: 'mobile-chromium', testIgnore: [/.*\.webkit\.spec\.ts/, /ui-visual\.spec\.ts/], use: { ...devices['Pixel 7'] } },
     // Отдельный iPhone smoke покрывает реальный движок iOS и ширину 390 px,
     // не дублируя полный Chromium-набор. Он обязателен и локально, и в CI.

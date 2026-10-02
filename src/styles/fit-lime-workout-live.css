@@ -6,8 +6,8 @@
 }
 .fit-lime-shell.live-identity .live-workout-page .page-header h1 {
   color: var(--lime-text);
-  font-size: clamp(28px, 7vw, 34px);
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.live-identity .live-session-progress-copy,
@@ -19,10 +19,10 @@
 .fit-lime-shell.live-identity .live-pinned { background: var(--lime-bg) }
 .fit-lime-shell.live-identity .live-timer {
   border: 1px solid var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   color: var(--lime-text);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.live-identity .live-timer .live-dot-mark { background: var(--lime-accent) }
 .fit-lime-shell.live-identity .live-timer.resting {
@@ -36,7 +36,7 @@
 .fit-lime-shell.live-identity .live-exercise-upcoming,
 .fit-lime-shell.live-identity .circuit-head.pinned {
   border: 1px solid var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   box-shadow: none;
 }
@@ -46,7 +46,7 @@
   background: var(--warning-surface);
 }
 .fit-lime-shell.live-identity .live-exercise-head h2,
-.fit-lime-shell.live-identity .live-exercise-head h3 { color: var(--lime-text); font-weight: 700 }
+.fit-lime-shell.live-identity .live-exercise-head h3 { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.live-identity .live-set-grid {
   border-color: var(--lime-divider);
   border-radius: 16px;
@@ -70,13 +70,13 @@
 }
 .fit-lime-shell.live-identity .live-bottom-bar {
   border-color: var(--lime-divider);
-  background: rgba(25, 25, 28, .96);
+  background: rgba(26, 26, 28, .96);
 }
 .fit-lime-shell.live-identity .live-bottom-bar .workout-cta[data-variant='primary'] {
   border-color: var(--lime-accent);
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
-  font-weight: 700;
+  font-weight: 500;
 }
 .fit-lime-shell.live-identity .live-bottom-bar .workout-cta:disabled {
   border-color: var(--lime-divider);
@@ -91,3 +91,4 @@
 @media (max-width: 480px) {
   .fit-lime-shell.live-identity .live-workout-page { padding-inline: 16px }
 }
+.phone-frame.fit-lime-shell.live-identity .workout-cta { border-radius: 999px; font-weight: 500; }
