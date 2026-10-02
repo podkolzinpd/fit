@@ -2260,10 +2260,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('update public.trainer_finance_packages set closed_at=now() where client_id=$1',[clientId])
         await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query(
           `select public.create_trainer_finance_service($1,'session_pack','Один',1,0,10000,0,date '2026-10-01',date '2026-10-31',null,null)`,[clientId]))
-        const draft: PlannedWorkoutDraft = {id:null,requestId:randomUUID(),clientId,workoutDate:'2026-10-02',startTime:null,endTime:null,notes:null,exercises:[]}
+        const draft: PlannedWorkoutDraft = {id:null,requestId:randomUUID(),clientId,workoutDate:'2026-10-02',startTime:null,endTime:null,notes:null,actualDurationSec:3000,exercises:[]}
         const saved = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>saveCompletedWorkout(client,draft,null))
         const repeated = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>saveCompletedWorkout(client,draft,null))
         expect(repeated).toEqual(saved)
+        expect((await ownerPool.query<{actual_duration_sec:number;training_format:string}>(
+          'select actual_duration_sec,training_format from public.workouts where id=$1',[saved.id])).rows).toEqual([{actual_duration_sec:3000,training_format:'with_trainer'}])
         expect((await ownerPool.query("select disposition from public.trainer_finance_sessions where workout_id=$1 and voided_at is null",[saved.id])).rows).toEqual([{disposition:'charged'}])
       } finally {
         await ownerPool.query("delete from app_private.finance_manual_requests where payload->>'clientId'=$1",[clientId])
