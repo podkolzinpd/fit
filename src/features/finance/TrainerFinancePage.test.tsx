@@ -144,6 +144,20 @@ describe('TrainerFinancePage', () => {
     expect(workouts.saveCompleted).not.toHaveBeenCalled()
   })
 
+  it('shows free, trial and unassigned sessions in the non-charged filter', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle, sessions: [bundle.sessions[0], ...(['free','trial','unassigned'] as const).map((disposition) => ({ ...bundle.sessions[0], id: disposition, disposition, packageId: null, comment: `Запись ${disposition}` }))] })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Занятия: 4' }))
+    await user.click(screen.getByRole('button', { name: 'Без списания' }))
+    const list = document.querySelector('.finance-session-list')!
+    expect(list.children).toHaveLength(3)
+    expect(list).toHaveTextContent('Без списания')
+    expect(list).toHaveTextContent('Пробное')
+    expect(list).toHaveTextContent('Нужно выбрать абонемент')
+    expect(list).not.toHaveTextContent('Списано')
+  })
+
   it('renews the period from today or the day after the current end', () => {
     const item = { ...bundle.packages[0]!, startsOn: '2026-09-01', endsOn: '2026-09-30' }
     const view = render(<PackageForm template={item} today="2026-10-02" saving={false} error={null} onCancel={vi.fn()} onSubmit={vi.fn()} />)

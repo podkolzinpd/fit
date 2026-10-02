@@ -3308,10 +3308,10 @@ export function LiveWorkoutPage() {
   // falls back to its workout detail because the tab bar is hidden here.
   return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" showStatus={query.data.exercises.length > 0} className="live-session-header" meta={sessionProgress.setCount > 0 ? <div className="live-session-progress">
+      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" showStatus={query.data.exercises.length > 0} className="live-session-header" meta={<><span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{sessionProgress.setCount > 0 ? <div className="live-session-progress">
         <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
         <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
-      </div> : undefined} />
+      </div> : null}</>} />
       {inactivityReminder.visible && <section className="live-inactivity-reminder" role="alert" aria-labelledby="live-inactivity-reminder-title">
         <div><strong id="live-inactivity-reminder-title">Тренировка ещё идёт</strong><span>Продолжить или завершить её?</span></div>
         <div className="actions">
