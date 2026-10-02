@@ -18,8 +18,11 @@ describe('InBodyImport', () => {
     expect(apply).toHaveBeenCalledOnce()
   })
 
-  it('keeps the native camera input out of the visual and accessibility layout', () => {
+  it('opens the native image picker without forcing the camera', () => {
     const { container } = render(<InBodyImport busy={false} error={null} result={null} onRecognize={vi.fn()} onApply={vi.fn()} onReset={vi.fn()} />)
-    expect(container.querySelector('input[type="file"]')).toHaveAttribute('hidden')
+    const input = container.querySelector('input[type="file"]')
+    expect(input).toHaveAttribute('hidden')
+    expect(input).toHaveAttribute('accept', 'image/*')
+    expect(input).not.toHaveAttribute('capture')
   })
 })
