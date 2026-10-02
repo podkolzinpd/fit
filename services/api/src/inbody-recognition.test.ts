@@ -65,4 +65,37 @@ describe('InBody result sheet extraction', () => {
     expect(result.inBody).toEqual({ schemaVersion: 1 })
     expect(result.warnings).toHaveLength(2)
   })
+
+  it('reconstructs the separated InBody 270 composition table and validates its arithmetic', () => {
+    const result = extractInBodyFromText(`
+      InBody270
+      Общее количество воды в теле
+      Протеин
+      Минералы
+      Содержание жира в теле
+      Вес
+      Дата проверки / Время
+      44. 6 ( 39. 2 ~47. 8 )
+      12. 2 ( 10. 5~12. 9 )
+      4. 03 ( 3. 63 ~ 4. 43 )
+      7. 5 ( 8. 4 ~16. 7 )
+      68. 3 ( 59. 2 ~ 80. 2 )
+      [InBody270] 03. 06. 2024 13:42
+      Безжировая масса 60. 8 kg ( 53. 3 ~ 65. 2 )
+      Уровень базального метаболизма 1683 kcal
+      Оценка InBody 80/100 Балл
+    `)
+    expect(result).toMatchObject({
+      recordedOn: '2024-06-03', weightKg: 68.3,
+      inBody: { totalBodyWaterL: 44.6, proteinKg: 12.2, mineralsKg: 4.03, bodyFatMassKg: 7.5, fatFreeMassKg: 60.8, basalMetabolicRateKcal: 1683, inBodyScore: 80 },
+    })
+    expect(result.warnings).toEqual([])
+  })
+
+  it('drops physically inconsistent fat values instead of presenting them as valid', () => {
+    const result = extractInBodyFromText('Weight 68.3\nBody Fat Mass 65\nFat Free Mass 22')
+    expect(result.inBody.bodyFatMassKg).toBeUndefined()
+    expect(result.inBody.fatFreeMassKg).toBeUndefined()
+    expect(result.warnings.join(' ')).toContain('не прошли проверку')
+  })
 })
