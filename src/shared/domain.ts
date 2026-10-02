@@ -431,6 +431,8 @@ export interface WorkoutDraft {
   workoutDate: LocalDate
   startTime?: string
   endTime?: string
+  /** Фактическая длительность; null удаляет ручное уточнение, отсутствие сохраняет. */
+  actualDurationSec?: number | null
   notes?: string
   stageId?: UUID | null
   exercises: WorkoutExerciseDraft[]
@@ -528,6 +530,7 @@ export interface Workout {
   endTime: string | null
   startedAt: string | null
   completedAt: string | null
+  actualDurationSec?: number | null
   activeCaloriesKcal?: number | null
   calorieEstimateVersion?: number | null
   calorieEstimateBasis?: string | null

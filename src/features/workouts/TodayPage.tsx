@@ -21,6 +21,7 @@ import { formatLlmWorkoutText, orderParsedWorkoutItems, parsedWorkoutItems, pars
 import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 import { type WorkoutRecordMode } from './workout-entry-rules'
 import { firstCardioDraftMissingEnteredDuration } from './calorie-duration-prompt'
+import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { WorkoutComposer } from './WorkoutComposer'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
@@ -154,6 +155,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [missingCardioTime, setMissingCardioTime] = useState<string | null>(null)
   const [workoutDate, setWorkoutDate] = useState(today)
   const [startTime, setStartTime] = useState('')
+  const [actualDurationMinutes, setActualDurationMinutes] = useState('')
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : undefined)
   const trainingFormatTouched = useRef(false)
   const finance = useQuery({
@@ -243,6 +245,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setRecordMode(draft.recordMode ?? 'planned')
       setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
+      setActualDurationMinutes(draft.actualDurationMinutes ?? '')
       setTrainingFormat(clientMode ? 'self' : draft.trainingFormat)
       trainingFormatTouched.current = Boolean(draft.trainingFormat)
       setManualRefs(draft.manualRefs ?? [])
@@ -275,8 +278,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       removeTodayDraft(draftKey)
       return
     }
-    writeTodayDraft(draftKey, { screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, trainingFormat })
-  }, [choices, clientId, draftKey, draftReady, items, lastLlmText, manualRefs, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
+    writeTodayDraft(draftKey, { screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat })
+  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, manualRefs, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
   const resolved = recognized
@@ -312,7 +315,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { clientId: effectiveClientId, workoutDate, startTime: mode === 'planned' ? startTime || undefined : undefined, trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
+      const draft = { clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -900,8 +903,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       <section className="today-save-actions" aria-label="Тип записи">
         <p className="today-save-question">Как сохранить?</p>
         <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => { setRecordMode('planned'); setMissingCardioTime(null) }}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
-        <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label>{recordMode === 'planned' && <label className="today-date-field"><span>Время</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label>}</div>
+        <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label><label className="today-date-field"><span>{recordMode === 'planned' ? 'Время' : 'Время начала'}</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
         {!clientMode && <div className="today-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
+        {recordMode === 'completed' && <label className="today-date-field"><span>Длительность, мин · необязательно</span><input aria-label="Длительность тренировки, мин" inputMode="decimal" value={actualDurationMinutes} placeholder="Например, 50" onChange={(event) => setActualDurationMinutes(event.target.value)} /><small>Сколько длилась сама тренировка, а не её запись в приложении.</small></label>}
         {recordMode === 'completed' && missingCardioTime
           ? <div className="finish-confirm" role="status">
               <p>У «{missingCardioTime}» есть дистанция, но нет фактического времени. Добавьте время на шаге проверки или сохраните результат без оценки активных калорий FIT.</p>

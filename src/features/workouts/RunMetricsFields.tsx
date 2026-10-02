@@ -58,6 +58,7 @@ export function RunMetricsFields({
   const [localDuration, setLocalDuration] = useState(durationSec)
   const [distanceText, setDistanceText] = useState(() => formatRunDistanceInput(distanceKm, unit))
   const lastSyncedDistanceKm = useRef(distanceKm)
+  const distanceInput = useRef<HTMLInputElement>(null)
   const [distanceVisible, setDistanceVisible] = useState(() => !optionalDistance || distanceKm !== undefined)
   const [strokeRateText, setStrokeRateText] = useState(() => strokeRate === undefined ? '' : String(strokeRate))
   const parsedDuration = localDuration
@@ -70,6 +71,7 @@ export function RunMetricsFields({
     // may replace it. Live autosave can still be pending when the unit changes.
     if (Object.is(lastSyncedDistanceKm.current, distanceKm)) return
     lastSyncedDistanceKm.current = distanceKm
+    if (document.activeElement === distanceInput.current) return
     setDistanceText(formatRunDistanceInput(distanceKm, unit))
   }, [distanceKm, unit])
   useEffect(() => { if (distanceKm !== undefined) setDistanceVisible(true) }, [distanceKm])
@@ -77,12 +79,20 @@ export function RunMetricsFields({
 
   function commitDistance() {
     const next = runDistanceKmFromInput(distanceText, unit)
+    if (distanceText.trim() && next === undefined) {
+      distanceInput.current?.reportValidity()
+      return
+    }
     setDistanceText(formatRunDistanceInput(next, unit))
     onCommit?.({ distanceKm: next })
   }
 
   function changeUnit(next: RunDistanceUnit) {
     const currentKm = runDistanceKmFromInput(distanceText, unit)
+    if (distanceText.trim() && currentKm === undefined) {
+      distanceInput.current?.reportValidity()
+      return
+    }
     setUnit(next)
     setDistanceText(formatRunDistanceInput(currentKm, next))
   }
@@ -111,14 +121,14 @@ export function RunMetricsFields({
       <div className="run-distance-control">
         <label className="sr-only" htmlFor={`${idPrefix}-distance`}>{distanceLabel}</label>
         <input
+          ref={distanceInput}
           id={`${idPrefix}-distance`}
           className={`${inputClassName}${planDistanceHint ? ' plan-hint' : ''}`}
           name={distanceName}
           aria-label={distanceLabel}
-          type="number"
+          type="text"
           inputMode="decimal"
-          min="0"
-          step="any"
+          pattern="[0-9]+([.,][0-9]+)?"
           placeholder="0"
           value={distanceText}
           disabled={disabled}

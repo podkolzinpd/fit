@@ -1,0 +1,406 @@
+[
+  {
+    "width": 320,
+    "name": "packages",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "name": "payments",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "paymentSummary": "Получено\n10 000 ₽\n\nК оплате\n22 000 ₽"
+  },
+  {
+    "width": 320,
+    "name": "sessions",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "freeFilter": "ЗАНЯТИЯ\n\nПроведённые\nДобавить\nВсе\nБез списания\nПробные\n—\n6 сентября 2026 г.\nИз завершённой тренировки\nБез списания\nБез абонемента"
+  },
+  {
+    "width": 320,
+    "name": "manual-form",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "manualRetry": {
+      "creates": 1,
+      "requests": [
+        {
+          "requestId": "60f3e4b6-dea6-4b97-8ec0-4f74a886860c",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        },
+        {
+          "requestId": "60f3e4b6-dea6-4b97-8ec0-4f74a886860c",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        }
+      ]
+    }
+  },
+  {
+    "width": 320,
+    "name": "new-package",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "name": "new-payment",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "name": "overview",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "name": "client",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "name": "quick-format",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 320,
+    "quickStart": {
+      "clientId": "1a0c5295-0a0f-4ccb-a39a-e58090967245",
+      "operationId": "b50a8a41-218a-4ce0-ae39-7b75750e91c7",
+      "trainingFormat": "self"
+    }
+  },
+  {
+    "width": 390,
+    "name": "packages",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "name": "payments",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "paymentSummary": "Получено\n10 000 ₽\n\nК оплате\n22 000 ₽"
+  },
+  {
+    "width": 390,
+    "name": "sessions",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "freeFilter": "ЗАНЯТИЯ\n\nПроведённые\nДобавить\nВсе\nБез списания\nПробные\n—\n6 сентября 2026 г.\nИз завершённой тренировки\nБез списания\nБез абонемента"
+  },
+  {
+    "width": 390,
+    "name": "manual-form",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "manualRetry": {
+      "creates": 1,
+      "requests": [
+        {
+          "requestId": "01652276-28b7-4736-8f0a-6bafdba65858",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        },
+        {
+          "requestId": "01652276-28b7-4736-8f0a-6bafdba65858",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        }
+      ]
+    }
+  },
+  {
+    "width": 390,
+    "name": "new-package",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "name": "new-payment",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "name": "overview",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "name": "client",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "name": "quick-format",
+    "font": "Onest Variable, -apple-system, BlinkMacSystemFont, SF Pro Text, Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 390,
+    "quickStart": {
+      "clientId": "1a0c5295-0a0f-4ccb-a39a-e58090967245",
+      "operationId": "ce2b0430-e132-4254-b5c0-78d811ab03b4",
+      "trainingFormat": "self"
+    }
+  },
+  {
+    "width": 430,
+    "name": "packages",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "name": "payments",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "paymentSummary": "Получено\n10 000 ₽\n\nК оплате\n22 000 ₽"
+  },
+  {
+    "width": 430,
+    "name": "sessions",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "freeFilter": "ЗАНЯТИЯ\n\nПроведённые\nДобавить\nВсе\nБез списания\nПробные\n—\n6 сентября 2026 г.\nИз завершённой тренировки\nБез списания\nБез абонемента"
+  },
+  {
+    "width": 430,
+    "name": "manual-form",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "manualRetry": {
+      "creates": 1,
+      "requests": [
+        {
+          "requestId": "759be05a-47f3-43d6-a1f6-7a2d91737bac",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        },
+        {
+          "requestId": "759be05a-47f3-43d6-a1f6-7a2d91737bac",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        }
+      ]
+    }
+  },
+  {
+    "width": 430,
+    "name": "new-package",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "name": "new-payment",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "name": "overview",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "name": "client",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "name": "quick-format",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 430,
+    "quickStart": {
+      "clientId": "1a0c5295-0a0f-4ccb-a39a-e58090967245",
+      "operationId": "91f2372e-eeea-4028-921e-c4f398008b9a",
+      "trainingFormat": "self"
+    }
+  },
+  {
+    "width": 1440,
+    "name": "packages",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "name": "payments",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "paymentSummary": "Получено\n10 000 ₽\n\nК оплате\n22 000 ₽"
+  },
+  {
+    "width": 1440,
+    "name": "sessions",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "freeFilter": "ЗАНЯТИЯ\n\nПроведённые\nДобавить\nВсе\nБез списания\nПробные\n—\n6 сентября 2026 г.\nИз завершённой тренировки\nБез списания\nБез абонемента"
+  },
+  {
+    "width": 1440,
+    "name": "manual-form",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "manualRetry": {
+      "creates": 1,
+      "requests": [
+        {
+          "requestId": "98976ccf-2f96-4271-8f1a-cc32f331c0f8",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        },
+        {
+          "requestId": "98976ccf-2f96-4271-8f1a-cc32f331c0f8",
+          "disposition": "unassigned",
+          "packageId": null,
+          "comment": null,
+          "workoutDate": "2026-10-02"
+        }
+      ]
+    }
+  },
+  {
+    "width": 1440,
+    "name": "new-package",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "name": "new-payment",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "name": "overview",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "name": "client",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "name": "quick-format",
+    "font": "\"Onest Variable\", -apple-system, \"system-ui\", \"SF Pro Text\", Inter, system-ui, sans-serif",
+    "overflow": false,
+    "buttons": []
+  },
+  {
+    "width": 1440,
+    "quickStart": {
+      "clientId": "1a0c5295-0a0f-4ccb-a39a-e58090967245",
+      "operationId": "35c92ea2-4f24-47e5-a52c-c69a7added9c",
+      "trainingFormat": "self"
+    }
+  }
+]
