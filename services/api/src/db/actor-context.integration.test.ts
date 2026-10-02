@@ -2225,6 +2225,55 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('saves manual accounting atomically and replays without losing the last slot', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const clientId = randomUUID()
+      await ownerPool.query(`insert into public.clients(id,trainer_id,full_name) values($1,$2,'Manual finance fixture')`, [clientId, ACTOR_ID])
+      const call = (requestId: string, disposition: string, packageId: string | null, actor = ACTOR_ID) =>
+        withActorTransaction(runtimePool!, actor, (client) => client.query<{ session: { id: string; workoutId: string; disposition: string; comment: string; source: string } }>(
+          `select public.create_trainer_finance_manual_session($1,$2,date '2026-10-02',$3,$4,'Занятие вне Fit') as session`,
+          [clientId,requestId,disposition,packageId]))
+      try {
+        const requestId = randomUUID()
+        const [first, replay] = await Promise.all([call(requestId,'unassigned',null),call(requestId,'unassigned',null)])
+        expect(first).toEqual(replay)
+        expect(first[0]?.session).toMatchObject({disposition:'unassigned',comment:'Занятие вне Fit',source:'manual'})
+        await expect(call(requestId,'free',null)).rejects.toThrow('trainer_finance_conflict')
+        await expect(call(randomUUID(),'free',null,OTHER_ACTOR_ID)).rejects.toThrow()
+        await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query(
+          `select public.create_trainer_finance_service($1,'online_coaching','Онлайн',0,0,10000,0,date '2026-10-01',date '2026-10-31',null,null)`,[clientId]))
+        for (const disposition of ['free','trial','unassigned']) {
+          expect((await call(randomUUID(),disposition,null))[0]?.session.disposition).toBe(disposition)
+        }
+        const before = await ownerPool.query('select id from public.workouts where client_id=$1',[clientId])
+        const failedRequest = randomUUID()
+        await expect(call(failedRequest,'charged',randomUUID())).rejects.toThrow('trainer_finance_invalid')
+        expect((await ownerPool.query('select id from public.workouts where client_id=$1',[clientId])).rowCount).toBe(before.rowCount)
+        expect((await ownerPool.query('select * from app_private.finance_manual_requests where request_id=$1',[failedRequest])).rowCount).toBe(0)
+        const pack = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query<{item:{id:string}}>(
+          `select public.create_trainer_finance_service($1,'session_pack','Последнее занятие',1,0,10000,0,date '2026-10-01',date '2026-10-31',null,null) as item`,[clientId]))
+        const chargedId = randomUUID()
+        const charged = await call(chargedId,'charged',pack[0]!.item.id)
+        expect((await call(chargedId,'charged',pack[0]!.item.id))).toEqual(charged)
+        expect(charged[0]?.session.disposition).toBe('charged')
+        // A regular completed-workout retry must preserve a defaulted last slot too.
+        await ownerPool.query('update public.trainer_finance_packages set closed_at=now() where client_id=$1',[clientId])
+        await withActorTransaction(runtimePool,ACTOR_ID,(client)=>client.query(
+          `select public.create_trainer_finance_service($1,'session_pack','Один',1,0,10000,0,date '2026-10-01',date '2026-10-31',null,null)`,[clientId]))
+        const draft: PlannedWorkoutDraft = {id:null,requestId:randomUUID(),clientId,workoutDate:'2026-10-02',startTime:null,endTime:null,notes:null,exercises:[]}
+        const saved = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>saveCompletedWorkout(client,draft,null))
+        const repeated = await withActorTransaction(runtimePool,ACTOR_ID,(client)=>saveCompletedWorkout(client,draft,null))
+        expect(repeated).toEqual(saved)
+        expect((await ownerPool.query("select disposition from public.trainer_finance_sessions where workout_id=$1 and voided_at is null",[saved.id])).rows).toEqual([{disposition:'charged'}])
+      } finally {
+        await ownerPool.query("delete from app_private.finance_manual_requests where payload->>'clientId'=$1",[clientId])
+        for (const table of ['trainer_finance_events','trainer_finance_sessions','trainer_finance_payments','trainer_finance_packages','workouts']) {
+          await ownerPool.query(`delete from public.${table} where client_id=$1`,[clientId])
+        }
+        await ownerPool.query('delete from public.clients where id=$1',[clientId])
+      }
+    })
+
     it('defaults the workout format from services and reverses finance on format changes', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')

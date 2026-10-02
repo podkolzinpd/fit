@@ -967,9 +967,10 @@ describe('trainer finance', () => {
     const addPayment = vi.fn<PilotTrainerFinance['addPayment']>().mockResolvedValue(payment)
     const updatePayment = vi.fn<PilotTrainerFinance['updatePayment']>().mockResolvedValue({ ...payment, version: 2 })
     const voidPayment = vi.fn<PilotTrainerFinance['voidPayment']>().mockResolvedValue(undefined)
+    const createManualSession = vi.fn<PilotTrainerFinance['createManualSession']>().mockResolvedValue(financeSession)
     const updateSession = vi.fn<PilotTrainerFinance['updateSession']>().mockResolvedValue({ ...financeSession, disposition: 'free', packageId: null, version: 2 })
-    return { service: { listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession } satisfies PilotTrainerFinance,
-      listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession }
+    return { service: { listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession } satisfies PilotTrainerFinance,
+      listClientSelf, listOverview, listClient, createPackage, updatePackage, addPayment, updatePayment, voidPayment, updateSession, createManualSession }
   }
 
   it('reads client finance from the authenticated session without a client id', async () => {
@@ -1061,6 +1062,21 @@ describe('trainer finance', () => {
     expect(malformed.statusCode).toBe(400)
     expect(readOnly.statusCode).toBe(403)
     expect(addPayment).not.toHaveBeenCalled()
+  })
+
+  it('accepts one atomic manual session and rejects invalid or read-only requests', async () => {
+    const { service: pilotTrainerFinance, createManualSession } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const draft = { requestId: financeSessionId, disposition: 'trial', packageId: null, comment: 'Вне Fit', workoutDate: '2026-09-06' }
+    const url = `/v1/clients/${clientId}/finance/sessions`
+    const response = await app.inject({ method: 'POST', url, headers: { 'x-fit-session': session.token }, payload: draft })
+    expect(response.statusCode).toBe(201)
+    expect(createManualSession).toHaveBeenCalledWith(session, clientId, draft)
+    const malformed = await app.inject({ method: 'POST', url, headers: { 'x-fit-session': session.token }, payload: { ...draft, requestId: '' } })
+    const readOnly = await app.inject({ method: 'POST', url, headers: { 'x-fit-pilot-session': session.token }, payload: draft })
+    expect(malformed.statusCode).toBe(400)
+    expect(readOnly.statusCode).toBe(403)
+    expect(createManualSession).toHaveBeenCalledTimes(1)
   })
 
   it('corrects session accounting and workout date', async () => {
