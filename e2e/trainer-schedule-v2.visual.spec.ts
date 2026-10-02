@@ -524,7 +524,7 @@ test('Fit Lime stage 4 keeps workout and assistant routes scoped to the pilot tr
     await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
     await expect(page.locator(surface)).toBeVisible()
     await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
-    if (route === '/assistant') await expect(page.getByPlaceholder('Опишите тренировку')).toBeVisible()
+    if (route === '/assistant') await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
     const screenshotPath = testInfo.outputPath(`stage4-${surface.slice(1)}.png`)
     await page.screenshot({ path: screenshotPath, fullPage: true })
     await testInfo.attach(`stage4-${surface.slice(1)}`, { path: screenshotPath, contentType: 'image/png' })
