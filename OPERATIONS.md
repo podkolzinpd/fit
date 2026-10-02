@@ -805,7 +805,8 @@ Stage API CORS allowlist обязан содержать как production web o
 `appId` `com.coachspace.fit`. Для локальной синхронизации выполните
 `npm run android:sync:local`; `npm run android:debug` дополнительно собирает
 debug APK в `android/app/build/outputs/apk/debug/`. Нужны JDK 21, Android SDK
-Platform 36 и Build Tools 36.0.0. В PR Android debug APK проверяется отдельным
+Platform 36 и Build Tools 36.0.0. Минимальная версия устройства — Android 8.0
+(API 26), как требует нативный health-плагин. В PR Android debug APK проверяется отдельным
 CI workflow. Локальная development-сборка не подключена к production Yandex API.
 
 Android WebView имеет origin `http://localhost`. До рабочего входа требуется
