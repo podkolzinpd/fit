@@ -40,7 +40,7 @@ function readDismissed(userId: string): HomePreference {
   } catch { return emptyPreference }
 }
 
-function Badge({ item, compact = false, priority = false }: { item: AthleteAchievement; compact?: boolean; priority?: boolean }) {
+function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: boolean; priority?: boolean }) {
   const earned = Boolean(item.earnedOn)
   const ratio = earned ? 1 : item.nearest ? item.progress / item.threshold : 0
   const status = earned ? 'получена' : item.kind === 'comeback' ? 'пока не получена' : achievementProgressLabel(item)
@@ -50,7 +50,7 @@ function Badge({ item, compact = false, priority = false }: { item: AthleteAchie
   const recordFive = item.id === 'records-5'
   const showNumber = item.kind !== 'comeback' && item.id !== 'records-1'
   return <span className={`athlete-achievement-badge kind-${item.kind} badge-id-${item.id}${earned ? ' is-earned' : ''}${item.nearest ? ' is-nearest' : ''}${compact ? ' is-compact' : ''}${art ? ` has-static-art art-${art.crop}` : ''}`} role="img" aria-label={`${item.title}: ${status}`}>
-    {art ? <img className="athlete-achievement-static-art" src={art.src} alt="" width="320" height="320" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : 'auto'} decoding="async" /> :
+    {art ? <span className="athlete-achievement-static-art" aria-hidden="true" style={{ backgroundPosition: `${art.column * 20}% ${art.row * 20}%` }} /> :
     <svg className="athlete-achievement-art" viewBox="0 0 100 100" aria-hidden="true">
       <circle className="athlete-achievement-ring-track" cx="50" cy="50" r="40" />
       {ratio > 0 && <circle className="athlete-achievement-ring-fill" cx="50" cy="50" r="40" pathLength="100" strokeDasharray={`${ratio * 100} 100`} transform="rotate(-90 50 50)" />}

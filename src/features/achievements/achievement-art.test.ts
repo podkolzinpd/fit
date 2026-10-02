@@ -42,7 +42,7 @@ const approvedHashes: Record<string, string> = {
 }
 
 describe('owner-approved achievement artwork', () => {
-  it('preserves all approved sources and maps every achievement to a small 320 px WebP', () => {
+  it('preserves all approved sources and maps every achievement to a unique sprite cell', () => {
     const entries = Object.entries(achievementArt)
     expect(entries).toHaveLength(33)
     expect(achievementArt['records-1']?.file).toBe('achievement-distinct-pr-trophy-1-concept-20261001.webp')
@@ -60,10 +60,22 @@ describe('owner-approved achievement artwork', () => {
       expect(derivative.readUInt16LE(26) & 0x3fff, art.file).toBe(320)
       expect(derivative.readUInt16LE(28) & 0x3fff, art.file).toBe(320)
       expect(derivative.byteLength, art.file).toBeLessThanOrEqual(120 * 1024)
-      expect(art.src, art.file).toBeTruthy()
+      expect(art.column, art.file).toBeGreaterThanOrEqual(0)
+      expect(art.column, art.file).toBeLessThan(6)
+      expect(art.row, art.file).toBeGreaterThanOrEqual(0)
+      expect(art.row, art.file).toBeLessThan(6)
       totalBytes += derivative.byteLength
     }
+    expect(new Set(entries.map(([, art]) => `${art.column}:${art.row}`)).size).toBe(33)
     expect(totalBytes).toBeLessThanOrEqual(500 * 1024)
+
+    const sprite = readFileSync(resolve(process.cwd(), 'src/assets/achievement-art-sprite-20261002.webp'))
+    expect(sprite.subarray(0, 4).toString('ascii')).toBe('RIFF')
+    expect(sprite.subarray(8, 12).toString('ascii')).toBe('WEBP')
+    expect(sprite.subarray(12, 16).toString('ascii')).toBe('VP8 ')
+    expect(sprite.readUInt16LE(26) & 0x3fff).toBe(1920)
+    expect(sprite.readUInt16LE(28) & 0x3fff).toBe(1920)
+    expect(sprite.byteLength).toBeLessThanOrEqual(250 * 1024)
   })
 
   it('keeps the full-size source PNGs out of the production public directory', () => {
