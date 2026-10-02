@@ -819,8 +819,8 @@ Yandex API/ID конфигурацией и сохранит артефакт `f
 Android WebView имеет origin `https://localhost`; scheme и hostname закреплены
 в `capacitor.config.ts`. Yandex OAuth открывается во внешнем браузере, поэтому
 Android регистрирует callback `com.coachspace.fit://auth/yandex/callback` и
-возвращает код через app deep link. Зарегистрируйте именно этот Redirect URI
-в настройках Yandex OAuth; `https://localhost/auth/yandex/callback` во внешнем
+возвращает код через app deep link. Этот Redirect URI зарегистрирован в
+настройках Yandex OAuth 2 октября 2026 г.; `https://localhost/auth/yandex/callback` во внешнем
 браузере не вернёт код в Android WebView. Этот шаг не считается выполненным по
 успешной сборке APK или настройке CORS. После него нужен ручной smoke
 на устройстве: Yandex ID, callback, загрузка данных обеих ролей, выход и
