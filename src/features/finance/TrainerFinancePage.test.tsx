@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, SessionActor } from '../../shared/domain'
 import type { TrainerFinanceClientBundle } from '../../data/repositories/trainer-finance.repository'
-import { TrainerFinancePage } from './TrainerFinancePage'
+import { PackageForm, TrainerFinancePage } from './TrainerFinancePage'
 
 const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
 const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
@@ -142,6 +142,45 @@ describe('TrainerFinancePage', () => {
     await waitFor(() => expect(finance.createManualSession).toHaveBeenCalledTimes(2))
     expect(finance.createManualSession.mock.calls[1]).toEqual(finance.createManualSession.mock.calls[0])
     expect(workouts.saveCompleted).not.toHaveBeenCalled()
+  })
+
+  it('shows free, trial and unassigned sessions in the non-charged filter', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle, sessions: [bundle.sessions[0], ...(['free','trial','unassigned'] as const).map((disposition) => ({ ...bundle.sessions[0], id: disposition, disposition, packageId: null, comment: `Запись ${disposition}` }))] })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Занятия: 4' }))
+    await user.click(screen.getByRole('button', { name: 'Без списания' }))
+    const list = document.querySelector('.finance-session-list')!
+    expect(list.children).toHaveLength(3)
+    expect(list).toHaveTextContent('Без списания')
+    expect(list).toHaveTextContent('Пробное')
+    expect(list).toHaveTextContent('Нужно выбрать абонемент')
+    expect(list).not.toHaveTextContent('Списано')
+  })
+
+  it('renews the period from today or the day after the current end', () => {
+    const item = { ...bundle.packages[0]!, startsOn: '2026-09-01', endsOn: '2026-09-30' }
+    const view = render(<PackageForm template={item} today="2026-10-02" saving={false} error={null} onCancel={vi.fn()} onSubmit={vi.fn()} />)
+    expect(screen.getByLabelText('Начало')).toHaveValue('2026-10-02')
+    expect(screen.getByLabelText('Окончание')).toHaveValue('2026-10-31')
+    expect(screen.getByLabelText('Окончание')).toHaveAttribute('min','2026-10-02')
+    view.unmount()
+    render(<PackageForm template={item} today="2026-09-15" saving={false} error={null} onCancel={vi.fn()} onSubmit={vi.fn()} />)
+    expect(screen.getByLabelText('Начало')).toHaveValue('2026-10-01')
+    expect(screen.getByLabelText('Окончание')).toHaveValue('2026-10-30')
+  })
+
+  it('keeps expired and exhausted debt in the payments total', async () => {
+    finance.listClient.mockResolvedValue({ ...bundle, packages: [
+      { ...bundle.packages[0], packageStatus: 'expired', dueCents: 100000 },
+      { ...bundle.packages[0], id: 'second', packageStatus: 'completed', dueCents: 200000 },
+      { ...bundle.packages[0], id: 'closed', packageStatus: 'closed', closedAt: '2026-09-20T00:00:00Z', dueCents: 500000 },
+    ] })
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Оплаты: 1' }))
+    const total = within(screen.getByRole('tabpanel')).getByText('К оплате').closest('p')!
+    expect(total).toHaveTextContent(/3\s000/)
   })
 
   it('renews an existing package without changing the original record', async () => {

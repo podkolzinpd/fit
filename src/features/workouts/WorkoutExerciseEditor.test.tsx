@@ -232,7 +232,7 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByText('Подход 6')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Время, подход 1: минуты' })).toHaveValue('1')
     expect(screen.getByRole('textbox', { name: 'Время, подход 1: секунды' })).toHaveValue('40')
-    expect(screen.getByLabelText('Расстояние, подход 1')).toHaveValue(400)
+    expect(screen.getByLabelText('Расстояние, подход 1')).toHaveValue('400')
 
     await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
     await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))

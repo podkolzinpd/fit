@@ -439,6 +439,7 @@ export function quickStartLiveWorkout(
   client: DatabaseClient,
   clientId: string | null,
   operationId: string,
+  trainingFormat?: 'self' | 'with_trainer',
 ): Promise<PilotQuickStartResult> {
   return runCommand(async () => {
     const rows = await client.query<QuickStartRow>(
@@ -449,8 +450,8 @@ export function quickStartLiveWorkout(
     if (!result?.workout_id) throw new Error('Quick start returned no workout')
     if (!result.resumed) {
       await client.query(
-        'select public.set_workout_training_format($1, null, null, true)',
-        [result.workout_id],
+        'select public.set_workout_training_format($1, $2, null, true)',
+        [result.workout_id, trainingFormat ?? null],
       )
     }
     return { id: result.workout_id, resumed: result.resumed }
