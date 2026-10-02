@@ -137,7 +137,7 @@ const inBodyNumbers: ReadonlyArray<[keyof InBodyMeasurement, number, number]> = 
   ['bodyCellMassKg', 0, 200], ['boneMineralContentKg', 0, 30], ['bodyMassIndex', 0, 150],
   ['bodyFatPercent', 0, 100], ['ecwTbwRatio', 0, 1], ['visceralFatAreaCm2', 0, 1000],
   ['visceralFatLevel', 0, 100], ['waistHipRatio', 0, 3], ['phaseAngleDeg', 0, 30],
-  ['basalMetabolicRateKcal', 0, 10_000], ['inBodyScore', 0, 200], ['targetWeightKg', 0, 500],
+  ['basalMetabolicRateKcal', 0, 10_000], ['recommendedCalorieIntakeKcal', 0, 15_000], ['inBodyScore', 0, 200], ['targetWeightKg', 0, 500],
   ['weightControlKg', -300, 300], ['fatControlKg', -300, 300], ['muscleControlKg', -200, 200],
   ['obesityDegreePercent', 0, 500], ['skeletalMuscleIndexKgM2', 0, 50],
   ['fatMassIndexKgM2', 0, 100], ['fatFreeMassIndexKgM2', 0, 100],

@@ -714,6 +714,7 @@ export interface InBodyMeasurement {
   waistHipRatio?: number
   phaseAngleDeg?: number
   basalMetabolicRateKcal?: number
+  recommendedCalorieIntakeKcal?: number
   inBodyScore?: number
   targetWeightKg?: number
   weightControlKg?: number

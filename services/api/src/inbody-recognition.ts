@@ -35,6 +35,7 @@ export interface InBodyMeasurement {
   waistHipRatio?: number
   phaseAngleDeg?: number
   basalMetabolicRateKcal?: number
+  recommendedCalorieIntakeKcal?: number
   inBodyScore?: number
   targetWeightKg?: number
   weightControlKg?: number
@@ -88,6 +89,7 @@ const metrics: readonly MetricDefinition[] = [
   { key: 'waistHipRatio', aliases: [/waist[- /]?hip ratio/i, /соотношение талии.*бед/i, /\bWHR\b/i], minimum: 0.4, maximum: 2 },
   { key: 'phaseAngleDeg', aliases: [/whole body phase angle/i, /^phase angle/i, /фазовый угол/i], minimum: 0.5, maximum: 20 },
   { key: 'basalMetabolicRateKcal', aliases: [/basal metabolic rate/i, /основной обмен/i, /базальн.*метабол/i, /\bBMR\b/i], minimum: 300, maximum: 5000 },
+  { key: 'recommendedCalorieIntakeKcal', aliases: [/recommended calorie intake/i, /реком.*калори/i], minimum: 500, maximum: 10000 },
   { key: 'inBodyScore', aliases: [/inbody score/i, /оценка inbody/i], minimum: 1, maximum: 150 },
   { key: 'targetWeightKg', aliases: [/target weight/i, /целевой вес/i], minimum: 15, maximum: 350 },
   { key: 'weightControlKg', aliases: [/weight control/i, /коррекция веса/i], minimum: -200, maximum: 200 },
@@ -211,6 +213,19 @@ function lastValueAfter(lines: readonly string[], alias: RegExp, minimum: number
   return undefined
 }
 
+function massPercentPairs(lines: readonly string[], start: RegExp, end: RegExp): Array<[number, number]> {
+  const startIndex = lines.findIndex((line) => start.test(line))
+  if (startIndex < 0) return []
+  const result: Array<[number, number]> = []
+  for (let index = startIndex + 1; index < lines.length && !end.test(lines[index]!); index += 1) {
+    if (!/kg/i.test(lines[index]!)) continue
+    const mass = numbers(lines[index]!)[0]
+    const percent = numbers(lines[index + 1] ?? '')[0]
+    if (mass !== undefined && percent !== undefined && mass > 0 && mass < 100 && percent > 0 && percent < 500) result.push([mass, percent])
+  }
+  return result
+}
+
 function enrichInBody270(lines: readonly string[], inBody: InBodyMeasurement): void {
   const bmi = valuesBetween(lines, /массы тела.*kg\/?m2/i, /процентное/i).filter((value) => value >= 10 && value <= 60).at(-1)
   const bodyFatPercent = valuesBetween(lines, /^процентное/i, /тощ|тоц|оценка|анализ тощей/i).filter((value) => value >= 0.5 && value <= 75).at(-1)
@@ -224,10 +239,23 @@ function enrichInBody270(lines: readonly string[], inBody: InBodyMeasurement): v
   const weightControlKg = lastValueAfter(lines, /^контроль веса$/i, -200, 200)
   const fatControlKg = lastValueAfter(lines, /^контроль жира$/i, -200, 200)
   const muscleControlKg = lastValueAfter(lines, /^контроль мышц$/i, -100, 100)
+  const recommendedCalorieIntakeKcal = lastValueAfter(lines, /реком.*уем/i, 500, 10_000)
   if (targetWeightKg !== undefined) inBody.targetWeightKg = targetWeightKg
   if (weightControlKg !== undefined) inBody.weightControlKg = weightControlKg
   if (fatControlKg !== undefined) inBody.fatControlKg = fatControlKg
   if (muscleControlKg !== undefined) inBody.muscleControlKg = muscleControlKg
+  if (recommendedCalorieIntakeKcal !== undefined) inBody.recommendedCalorieIntakeKcal = recommendedCalorieIntakeKcal
+  const lean = massPercentPairs(lines, /анализ тощей массы по сегментам/i, /история состава тела/i)
+  const fat = massPercentPairs(lines, /анализ жировой массы по сегментам/i, /оценка inbody/i)
+  if (lean.length >= 5 && fat.length >= 5) {
+    const segmentOrder: readonly InBodySegment[] = ['leftArm', 'rightArm', 'trunk', 'leftLeg', 'rightLeg']
+    const fatOrder: readonly number[] = [0, 3, 2, 1, 4]
+    inBody.segmental = segmentOrder.map((segment, index) => ({
+      segment,
+      leanMassKg: lean[index]![0], leanPercent: lean[index]![1],
+      fatMassKg: fat[fatOrder[index]!]![0], fatPercent: fat[fatOrder[index]!]![1],
+    }))
+  }
 }
 
 export function extractInBodyFromText(text: string): InBodyRecognitionResult {
