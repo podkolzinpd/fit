@@ -38,7 +38,7 @@ describe('body map display', () => {
 
     expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('list')
     expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'male')).toBe('list')
-    expect(storage.get('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('list')
+    expect(storage.get('fit.bodyMapDisplay.v2.trainer.trainer-1.account')).toBe('list')
   })
 
   it('keeps trainer and client choices private for the same subject', () => {
@@ -49,66 +49,54 @@ describe('body map display', () => {
     expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('real')
   })
 
-  it('migrates the old client preference but ignores a legacy trainer gender', () => {
-    storage.set('fit.bodyMapAppearance.client.client-1', 'neutral')
-    storage.set('fit.bodyMapAppearance.trainer.trainer-1', 'female')
-
-    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('list')
-    expect(storage.get('fit.bodyMapDisplay.client.client-1.client-1')).toBe('list')
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'male')).toBe('real')
-  })
-
-  it.each(['neutral', 'scheme'])('preserves the legacy trainer %s choice as a list', (stored) => {
-    storage.set('fit.bodyMapAppearance.trainer.trainer-1', stored)
-
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('list')
-    expect(storage.get('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('list')
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'male')).toBe('list')
-  })
-
-  it('does not replace a newer trainer preference with a legacy list choice', () => {
-    storage.set('fit.bodyMapDisplay.trainer.trainer-1.account', 'real')
-    storage.set('fit.bodyMapAppearance.trainer.trainer-1', 'neutral')
-
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', undefined, null)).toBe('real')
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('real')
-    expect(storage.get('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('real')
-  })
-
-  it.each(['scheme', 'neutral'])('migrates stored %s to the list for both roles', (stored) => {
+  it.each(['list', 'scheme', 'neutral'])('shows the matching figure despite the old %s choice', (stored) => {
     storage.set('fit.bodyMapDisplay.client.client-1.client-1', stored)
     storage.set('fit.bodyMapDisplay.trainer.trainer-1.account', stored)
+    storage.set('fit.bodyMapAppearance.client.client-1', stored)
+    storage.set('fit.bodyMapAppearance.trainer.trainer-1', stored)
 
-    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('list')
-    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'male')).toBe('list')
-    expect(storage.get('fit.bodyMapDisplay.client.client-1.client-1')).toBe('list')
-    expect(storage.get('fit.bodyMapDisplay.trainer.trainer-1.account')).toBe('list')
+    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'male')).toBe('real')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'female')).toBe('real')
+    expect(storage.has('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe(false)
+    expect(storage.has('fit.bodyMapDisplay.v2.trainer.trainer-1.account')).toBe(false)
+  })
+
+  it('lets both roles explicitly hide the figure after the one-time preference reset', () => {
+    storage.set('fit.bodyMapDisplay.client.client-1.client-1', 'list')
+    storage.set('fit.bodyMapDisplay.trainer.trainer-1.account', 'list')
+
+    setBodyMapDisplayMode('client-1', 'client', 'client-1', 'list')
+    setBodyMapDisplayMode('trainer-1', 'trainer', 'client-1', 'list')
+
+    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'male')).toBe('list')
+    expect(getBodyMapDisplayMode('trainer-1', 'trainer', 'client-2', 'female')).toBe('list')
+    expect(storage.get('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe('list')
+    expect(storage.get('fit.bodyMapDisplay.v2.trainer.trainer-1.account')).toBe('list')
   })
 
   it('keeps an explicit real preference while gender is missing', () => {
-    storage.set('fit.bodyMapDisplay.client.client-1.client-1', 'real')
-    storage.set('fit.bodyMapAppearance.client.client-1', 'neutral')
+    storage.set('fit.bodyMapDisplay.v2.client.client-1.client-1', 'real')
 
     expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', null)).toBe('list')
-    expect(storage.get('fit.bodyMapDisplay.client.client-1.client-1')).toBe('real')
+    expect(storage.get('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe('real')
     expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('real')
   })
 
-  it('does not infer gender from a legacy appearance preference', () => {
+  it('does not infer gender from an old appearance preference', () => {
     storage.set('fit.bodyMapAppearance.client.client-1', 'male')
 
     expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', null)).toBe('list')
-    expect(storage.has('fit.bodyMapDisplay.client.client-1.client-1')).toBe(false)
+    expect(storage.has('fit.bodyMapDisplay.v2.client.client-1.client-1')).toBe(false)
     expect(resolveBodyFigureVariant(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female'), 'female')).toBe('female')
   })
 
-  it('keeps the retired scheme on the list when preference migration cannot be saved', () => {
+  it('shows the gender-matched figure when old storage cannot be read', () => {
     vi.stubGlobal('localStorage', {
-      getItem: () => 'scheme',
+      getItem: () => { throw new Error('Storage blocked') },
       setItem: () => { throw new Error('Storage blocked') },
     })
 
-    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('list')
+    expect(getBodyMapDisplayMode('client-1', 'client', 'client-1', 'female')).toBe('real')
   })
 
   it('uses a safe list without gender when storage cannot be read', () => {

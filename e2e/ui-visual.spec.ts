@@ -429,17 +429,20 @@ test('body maps keep route, gender and saved-list preferences without AI request
 
   for (const gender of ['female', 'male', null] as const) {
     await mockBodyMapClientGender(page, gender, trainer)
-    const modes = gender ? ['real', 'legacy-list'] as const : ['list'] as const
+    const modes = gender ? ['real', 'list', 'legacy-reset'] as const : ['list'] as const
     for (const mode of modes) {
       await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
-      const choice = page.getByRole('radio', { name: mode === 'real' ? 'Фигура' : 'Список', exact: true })
+      const choice = page.getByRole('radio', { name: mode === 'list' ? 'Список' : 'Фигура', exact: true })
       await choice.click()
       await expect(choice).toHaveAttribute('aria-checked', 'true')
       if (!trainer && gender === null) await expect(page.getByRole('radio', { name: 'Фигура', exact: true })).toHaveCount(0)
-      if (mode === 'legacy-list') {
-        // Existing users keep a working view after the old scheme is retired.
+      if (mode === 'legacy-reset') {
+        // A retired scheme or migrated list must no longer hide a known-gender figure.
         await page.evaluate(() => {
-          for (const key of Object.keys(localStorage).filter((name) => name.startsWith('fit.bodyMapDisplay.'))) localStorage.setItem(key, 'scheme')
+          for (const key of Object.keys(localStorage).filter((name) => name.startsWith('fit.bodyMapDisplay.v2.'))) {
+            localStorage.setItem(key.replace('fit.bodyMapDisplay.v2.', 'fit.bodyMapDisplay.'), 'list')
+            localStorage.removeItem(key)
+          }
         })
       }
       for (const theme of ['light', 'dark'] as const) {
@@ -454,7 +457,7 @@ test('body maps keep route, gender and saved-list preferences without AI request
           await gotoStable(page, route)
           const map = page.locator(route === '/me' ? '.workout-load-map' : '.body-progress-map').first()
           await expect(map).toBeVisible()
-          const hasFigure = mode === 'real' && gender !== null
+          const hasFigure = mode !== 'list' && gender !== null
           if (hasFigure) {
             const figureName = gender === 'male' ? 'Атлетичный мужчина' : 'Атлетичная женщина'
             for (const side of [{ label: 'Спереди', alt: 'спереди' }, { label: 'Сзади', alt: 'сзади' }]) {
