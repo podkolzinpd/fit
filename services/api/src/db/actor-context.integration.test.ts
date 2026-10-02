@@ -3388,6 +3388,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             status: 'done',
             startedAt: '2026-08-22T07:00:00.000Z',
             completedAt: '2026-08-22T08:00:00.000Z',
+            actualDurationSec: null,
             activeCaloriesKcal: null,
             calorieEstimateVersion: null,
             calorieEstimateBasis: null,
@@ -3791,6 +3792,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(afterUpdate.rows).toEqual([{ favorite_title: 'Ноги и спина' }])
 
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('persists actual duration with authorization, replay safety, clearing and calorie recalculation', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const draft: PlannedWorkoutDraft = {
+        id: null, requestId: 'f6477000-0000-4000-8000-000000000001',
+        clientId: CLIENT_ID, workoutDate: '2026-08-20', startTime: '10:00', endTime: null,
+        actualDurationSec: 3000, notes: null,
+        exercises: [{
+          position: 0, source: 'system', ref: 'stationary-bike', customExerciseId: null,
+          name: 'Велотренажёр', muscleGroup: 'cardio', inputKind: 'duration',
+          blockId: 'f6477000-0000-4000-8000-000000000002', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0, trainerComment: null,
+          sets: [{ position: 0, weightKg: null, reps: null, durationMin: null, durationSec: 3000,
+            distanceKm: 22.16, rpe: null, metricSources: { duration: 'entered', distance: 'entered', rpe: 'unknown' } }],
+        }],
+      }
+      const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveCompletedWorkout(client, draft, null))
+      try {
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, { ...draft, actualDurationSec: 600 }, null))).resolves.toEqual(created)
+        const stored = await ownerPool.query<{ actual_duration_sec: number | null; started_at: Date | null; completed_at: Date | null }>(
+          'select actual_duration_sec, started_at, completed_at from public.workouts where id=$1', [created.id])
+        expect(stored.rows[0]).toMatchObject({ actual_duration_sec: 3000, started_at: null })
+        const distance = await ownerPool.query<{ fact_distance_km: string | null }>(
+          'select fact_distance_km from public.workout_sets where workout_exercise_id in (select id from public.workout_exercises where workout_id=$1)', [created.id])
+        expect(Number(distance.rows[0]?.fact_distance_km)).toBe(22.16)
+        const edited: PlannedWorkoutDraft = { ...draft, id: created.id, actualDurationSec: 3600 }
+        delete edited.requestId
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => saveCompletedWorkout(client, edited, created.version))).rejects.toMatchObject({ failure: 'forbidden' })
+        const corrected = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, edited, created.version))
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, { ...edited, actualDurationSec: 1200 }, created.version))).rejects.toMatchObject({ failure: 'conflict' })
+        const omittedDuration = { ...edited }
+        delete omittedDuration.actualDurationSec
+        const preserved = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, omittedDuration, corrected.version))
+        const afterEdit = await ownerPool.query<{ actual_duration_sec: number | null; completed_at: Date | null; calorie_v2_shadow_details: unknown }>(
+          'select actual_duration_sec, completed_at, calorie_v2_shadow_details from public.workouts where id=$1', [created.id])
+        expect(afterEdit.rows[0]?.actual_duration_sec).toBe(3600)
+        expect(afterEdit.rows[0]?.calorie_v2_shadow_details).toMatchObject({ elapsedSeconds: 3600 })
+        expect(afterEdit.rows[0]?.completed_at).toEqual(stored.rows[0]?.completed_at)
+        const cleared = await withActorTransaction(runtimePool, ACTOR_ID,
+          (client) => saveCompletedWorkout(client, { ...edited, actualDurationSec: null }, preserved.version))
+        expect(cleared.version).toBeGreaterThan(preserved.version)
+        expect((await ownerPool.query<{ actual_duration_sec: number | null }>('select actual_duration_sec from public.workouts where id=$1', [created.id])).rows[0]?.actual_duration_sec).toBeNull()
+      } finally {
+        await ownerPool.query('delete from app_private.workout_create_requests where request_id=$1', [draft.requestId])
+        await ownerPool.query('delete from public.workouts where id=$1', [created.id])
+      }
     })
 
     it('saves and corrects completed facts idempotently without rewriting the plan', async () => {

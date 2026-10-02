@@ -46,6 +46,7 @@ export function formatRunDistanceInput(distanceKm: number | undefined, unit: Run
 export function runDistanceKmFromInput(value: string, unit: RunDistanceUnit): number | undefined {
   const normalized = value.trim().replace(',', '.')
   if (!normalized) return undefined
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return undefined
   const parsed = Number(normalized)
   if (!Number.isFinite(parsed) || parsed < 0) return undefined
   // Hundredths of a metre require five decimal places in the kilometre model.

@@ -505,9 +505,9 @@ export function computeClientStats(summaries: WorkoutSummary[], today: LocalDate
 
 // Actual workout duration by the timer (start → finish), as "42 мин" or
 // "1 ч 05 мин". Returns null when timestamps are missing or non-positive.
-export function workoutDurationLabel(startedAt: string | null, completedAt: string | null): string | null {
-  if (!startedAt || !completedAt) return null
-  const ms = Date.parse(completedAt) - Date.parse(startedAt)
+export function workoutDurationLabel(startedAt: string | null, completedAt: string | null, actualDurationSec?: number | null): string | null {
+  if (!actualDurationSec && (!startedAt || !completedAt)) return null
+  const ms = actualDurationSec ? actualDurationSec * 1000 : Date.parse(completedAt!) - Date.parse(startedAt!)
   if (!Number.isFinite(ms) || ms <= 0) return null
   const totalMinutes = Math.round(ms / 60000)
   const hours = Math.floor(totalMinutes / 60)
@@ -965,6 +965,7 @@ export function completedWorkoutDraft(source: Workout): WorkoutDraft {
   const draft = copyWorkout(editable)
   return {
     ...draft,
+    actualDurationSec: source.actualDurationSec,
     exercises: draft.exercises.map((exercise, exerciseIndex) => ({
       ...exercise,
       position: exerciseIndex,

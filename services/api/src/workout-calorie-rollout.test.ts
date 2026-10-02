@@ -22,7 +22,7 @@ describe('workout calorie rollout', () => {
     expect(publishedWorkoutCalories(current, 0)).toMatchObject({ kcal: 270, version: 1 })
     expect(publishedWorkoutCalories(current, 100)).toEqual({
       kcal: 425, version: 2,
-      basis: 'По фактическому времени; интенсивность приблизительная',
+      basis: 'По времени и весу; без данных о мощности и пульсе',
       notice: null,
     })
   })
