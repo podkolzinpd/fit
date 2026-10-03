@@ -12,6 +12,7 @@ import type {
 } from './post-workout-request.js'
 
 interface SavedWorkoutRow extends QueryResultRow {
+  replayed?: boolean
   workout_id: string
   version: string
 }
@@ -187,13 +188,14 @@ export function savePlannedWorkout(
   return runCommand(async () => {
     const rows = await client.query<SavedWorkoutRow>(
       `
-        select workout_id, version
+        select workout_id, version, replayed
         from public.save_planned_workout($1::jsonb, $2)
       `,
       [JSON.stringify(draft), expectedVersion],
     )
     const saved = rows[0]
     if (saved === undefined) throw new Error('Workout was not saved')
+    if (saved.replayed) return { id: saved.workout_id, version: safeVersion(saved.version) }
     await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
     const formatted = await client.query<{ version: string }>(
       'select public.set_workout_training_format($1, $2, $3, $4) as version',

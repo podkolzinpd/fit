@@ -19,6 +19,8 @@
 
 ## Актуальный порядок
 
+YAFIT-589 / PR #1363: реализованы поздравления после любой завершённой тренировки, три компактные объёмные иконки и совпадающая карточка публикации. Утверждённый план и проверки: [workout-completion-celebration-20261003.md](./workout-completion-celebration-20261003.md). Выпуск — после CI и очереди активных PR.
+
 ### P0 — завершено
 
 Visual regression защищает Client Progress/Workouts/Live и Trainer

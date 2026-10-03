@@ -27,6 +27,7 @@ afterEach(() => {
 
 function mockCanvasRendering() {
   const fillText = vi.fn()
+  const drawImage = vi.fn()
   const context = {
     beginPath: vi.fn(),
     moveTo: vi.fn(),
@@ -35,6 +36,7 @@ function mockCanvasRendering() {
     fill: vi.fn(),
     stroke: vi.fn(),
     fillRect: vi.fn(),
+    drawImage,
     fillText,
     measureText: vi.fn((text: string) => ({ width: text.length * 18 })),
   } as unknown as CanvasRenderingContext2D
@@ -42,10 +44,28 @@ function mockCanvasRendering() {
   vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
     callback(new Blob(['png'], { type: 'image/png' }))
   })
-  return { context, fillText }
+  return { context, fillText, drawImage }
 }
 
 describe('workout completion sharing', () => {
+  it.each(['summary', 'achievement', 'progress'] as const)('reuses the selected phrase and icon in %s without private feedback', async (variant) => {
+    const { drawImage, fillText } = mockCanvasRendering()
+    const images: HTMLImageElement[] = []
+    vi.stubGlobal('Image', class {
+      onload?: () => void
+      set src(value: string) { expect(value).toContain('fist.webp'); images.push(this as unknown as HTMLImageElement); this.onload?.() }
+    })
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: vi.fn().mockReturnValue(true) })
+    const selected = { ...summary, celebration: { title: 'Вот это мощь!', icon: 'fist' as const } }
+    await expect(shareWorkoutSummary(selected, variant)).resolves.toBe('shared')
+    expect(workoutShareText(selected, variant)).toContain('Вот это мощь!')
+    expect(drawImage).toHaveBeenCalledWith(images[0], expect.any(Number), expect.any(Number), expect.any(Number), expect.any(Number))
+    expect(fillText).toHaveBeenCalledWith('Вот это мощь!', expect.any(Number), expect.any(Number))
+    vi.unstubAllGlobals()
+  })
+
   it('builds a compact post without private feedback', () => {
     expect(workoutShareText(summary)).toBe([
       'Тренировка завершена',

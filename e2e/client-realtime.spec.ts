@@ -190,7 +190,7 @@ test('client and trainer receive progress and workout changes without reload', a
     await feedbackCard.getByRole('button', { name: 'Нормально', exact: true }).click()
     await feedbackCard.getByRole('button', { name: 'Да', exact: true }).click()
     await client.getByRole('textbox', { name: 'Заметка к итогам тренировки', exact: true }).fill(clientComment)
-    await feedbackCard.getByRole('button', { name: 'Сохранить итоги', exact: true }).click()
+    await feedbackCard.getByRole('button', { name: 'Сохранить самочувствие', exact: true }).click()
     await expect(trainer.getByText('RPE 7/10', { exact: true })).toBeVisible({ timeout: 10_000 })
     await expect(trainer.locator('.workout-feedback .workout-review-text')).toContainText(clientComment, { timeout: 10_000 })
 

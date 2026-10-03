@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import type { Gender } from '../../shared/domain'
+import { celebrationCopy, completionIcons, completionSubtitle, selectCompletionCelebration } from './workout-completion-celebration'
 import { tonnageLabel } from '../../data/repositories/workouts.repository'
 import { CheckIcon, CloseIcon, RecordIcon, ShareIcon } from '../../shared/icons'
 import { formatLocalDate, localDate } from '../../shared/local-date'
@@ -22,10 +24,8 @@ export function workoutCompletionPercent(completedSets: number, totalSets: numbe
   return Math.round((Math.min(Math.max(completedSets, 0), totalSets) / totalSets) * 100)
 }
 
-export function workoutCompletionTitle(completedSets: number, totalSets: number): string {
-  return totalSets > 0 && completedSets < totalSets
-    ? 'Тренировка сохранена частично'
-    : 'Тренировка завершена'
+export function workoutCompletionTitle(): string {
+  return 'Тренировка завершена'
 }
 
 export function workoutCompletionCountLine(
@@ -46,6 +46,11 @@ function resultValue(result: WorkoutResult): string {
 }
 
 export function WorkoutCompletionReport({
+  workoutId,
+  userId,
+  gender,
+  details,
+  actions,
   date,
   completedSets,
   totalSets,
@@ -68,6 +73,11 @@ export function WorkoutCompletionReport({
   feedback,
   newAchievements = [],
 }: {
+  workoutId: string
+  userId: string
+  gender?: Gender | null
+  details?: ReactNode
+  actions?: ReactNode
   date: string
   completedSets: number
   totalSets: number
@@ -90,12 +100,15 @@ export function WorkoutCompletionReport({
   feedback?: ReactNode
   newAchievements?: readonly AthleteAchievement[]
 }) {
+  const [selection] = useState(() => selectCompletionCelebration(userId, workoutId))
+  const celebration = celebrationCopy(selection, gender)
+  const [imageFailed, setImageFailed] = useState(false)
   const [shareState, setShareState] = useState<'idle' | 'sharing' | 'shared' | 'copied' | 'error'>('idle')
   const [shareOpen, setShareOpen] = useState(false)
   const [shareVariant, setShareVariant] = useState<WorkoutShareVariant>('summary')
   const percent = workoutCompletionPercent(completedSets, totalSets)
   const partial = percent !== null && percent < 100
-  const title = workoutCompletionTitle(completedSets, totalSets)
+  const title = workoutCompletionTitle()
   const countLine = workoutCompletionCountLine(completedSets, totalSets, completedExercises, totalExercises)
   const metrics: WorkoutShareMetric[] = [
     ...(duration ? [{ label: 'Время', value: duration }] : []),
@@ -141,6 +154,7 @@ export function WorkoutCompletionReport({
       : null
   const shareSummary: WorkoutShareSummary = {
     title,
+    celebration,
     date,
     countLine,
     metrics,
@@ -176,14 +190,16 @@ export function WorkoutCompletionReport({
 
   const hiddenIncompleteCount = Math.max(0, incompleteExercises.length - 2)
 
-  return <section className={`workout-completion-report${partial ? ' is-partial' : ''}`} aria-labelledby="workout-completion-title">
+  return <section className="workout-completion-report" aria-label="Тренировка завершена">
     <div className="workout-completion-share-card">
       <header className="workout-completion-report-hero">
-        <span className="workout-completion-report-mark" aria-hidden="true">{personalAchievement?.state === 'record' ? <RecordIcon /> : <CheckIcon />}</span>
+        <span className="workout-completion-report-art" aria-hidden="true">
+          {imageFailed ? <CheckIcon /> : <img src={completionIcons[celebration.icon]} alt="" width={96} height={96} loading="eager" fetchPriority="high" decoding="async" onError={() => setImageFailed(true)} />}
+        </span>
         <div>
-          <p className="workout-completion-report-kicker">Результат сохранён</p>
-          <h1 id="workout-completion-title">{title}</h1>
-          <p className="workout-completion-report-date">{date}</p>
+          <h1 id="workout-completion-title">{celebration.title}</h1>
+          <p className="workout-completion-report-subtitle">{completionSubtitle}</p>
+          <p className="workout-completion-report-date">{title} · {date}</p>
         </div>
       </header>
 
@@ -218,7 +234,9 @@ export function WorkoutCompletionReport({
     <NewlyEarnedAchievements items={newAchievements} />
     {hasTrainer && <p className="workout-completion-trainer-status"><CheckIcon /> Результат доступен тренеру</p>}
     {feedback}
-    <div className="workout-completion-share-actions">
+    {details}
+    <div className="workout-completion-share-actions workout-completion-actions">
+      {actions}
       <button type="button" className="button secondary wide workout-completion-share" disabled={highlightLoading || highlightError} onClick={openShareOptions}>
         <ShareIcon /> Поделиться
       </button>

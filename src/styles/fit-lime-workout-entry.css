@@ -1,3 +1,50 @@
+/* The quick-plan composer is a pilot-only calendar overlay. */
+.fit-lime-shell .fit-lime-plan-dialog {
+  position: fixed;
+  inset: auto 0 max(12px, env(safe-area-inset-bottom));
+  width: min(calc(100% - 16px), 359px);
+  max-height: calc(var(--app-viewport-height, 100dvh) - 24px);
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  overflow: visible;
+}
+.fit-lime-shell .fit-lime-plan-dialog::backdrop { background: var(--overlay) }
+.app-keyboard-open .fit-lime-shell .fit-lime-plan-dialog {
+  top: calc(var(--app-viewport-offset-top, 0px) + var(--app-viewport-height, 100dvh) - 12px);
+  bottom: auto;
+  transform: translateY(-100%);
+}
+.fit-lime-shell .fit-lime-plan-composer { position: relative; min-height: 189px; padding: 24px 16px 8px; }
+.fit-lime-shell .fit-lime-plan-composer > input {
+  width: 100%; padding: 4px 36px 12px 0; border: 0; border-radius: 0;
+  background: transparent; color: var(--lime-text); font-size: 20px; font-weight: 400;
+}
+.fit-lime-shell .fit-lime-plan-composer fieldset { min-width: 0; margin: 0; padding: 0; border: 0 }
+.fit-lime-shell .fit-lime-plan-composer button { border: 0 }
+.fit-lime-shell .fit-lime-plan-composer svg { flex: 0 0 24px; width: 24px; height: 24px }
+.fit-lime-shell .fit-lime-plan-send svg { filter: brightness(0) }
+.fit-lime-shell .fit-lime-plan-close { position: absolute; top: 8px; right: 4px; width: 44px; padding: 10px; background: transparent; color: var(--lime-text-secondary) }
+.fit-lime-shell .fit-lime-plan-controls { display: flex; align-items: center; gap: 4px; min-width: 0 }
+.fit-lime-shell .fit-lime-plan-controls > button { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px; min-width: 44px }
+.fit-lime-shell .fit-lime-plan-chip { max-width: 42%; background: transparent; color: var(--lime-text); font-size: 12px }
+.fit-lime-shell .fit-lime-plan-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.fit-lime-shell .fit-lime-plan-avatar { display: grid; place-items: center; flex: 0 0 24px; height: 24px; border-radius: 50%; background: var(--lime-surface-high) }
+.fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar { width: auto; max-width: 46%; color: var(--lime-accent); background: transparent; font-size: 12px }
+.fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.fit-lime-shell .fit-lime-plan-send,
+.fit-lime-shell .fit-lime-plan-mic { flex: 0 0 44px; margin-left: auto; background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.fit-lime-shell .fit-lime-plan-mic { background: var(--lime-surface-high); color: var(--lime-text) }
+.fit-lime-shell .fit-lime-plan-exercises { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; border-top: 1px solid var(--lime-divider); border-radius: 0; color: var(--lime-text); background: transparent; font-size: 12px }
+.fit-lime-shell .fit-lime-plan-composer > p { margin: 8px 0; font-size: 14px }
+.fit-lime-shell .fit-lime-date-times { display: grid; gap: 8px; padding: 16px 0 }
+.fit-lime-shell .fit-lime-date-times label { display: flex; align-items: center; justify-content: space-between; gap: 12px }
+.fit-lime-shell .fit-lime-date-times input { width: 130px; min-height: 44px }
+.fit-lime-shell .fit-lime-plan-dialog > .client-picker-control > .client-picker-label { display: none }
+
 /* Stage 4 / compose, review and save. The route remains the existing
    three-step draft flow; this file only styles its trainer pilot variant. */
 .fit-lime-shell.workout-create-edit-identity .today-start-page {
