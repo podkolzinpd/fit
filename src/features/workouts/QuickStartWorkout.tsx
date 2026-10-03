@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { useAuth } from '../../app/auth-context'
@@ -18,9 +18,11 @@ interface QuickStartWorkoutProps {
   onRetry?: () => void
   returnTo: string
   compact?: boolean
+  startLabel?: string
+  onPendingChange?: (pending: boolean) => void
 }
 
-export function QuickStartWorkout({ role, clientId, clients = [], workouts, loading, error, onRetry, returnTo, compact = false }: QuickStartWorkoutProps) {
+export function QuickStartWorkout({ role, clientId, clients = [], workouts, loading, error, onRetry, returnTo, compact = false, startLabel = 'Начать тренировку', onPendingChange }: QuickStartWorkoutProps) {
   const { workouts: repository } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
@@ -71,7 +73,8 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
     setFormatOpen(true)
   }
 
-  const buttonLabel = canContinue ? 'Продолжить тренировку' : 'Начать тренировку'
+  useEffect(() => { onPendingChange?.(start.isPending) }, [onPendingChange, start.isPending])
+  const buttonLabel = canContinue ? 'Продолжить тренировку' : startLabel
   const unavailable = Boolean(error || loading || (role === 'client' && !clientId) || (role === 'trainer' && !clientId && !clients.length))
   const action = () => {
     if (canContinue && active) {

@@ -13,6 +13,9 @@ import { ExercisePicker, ExerciseThumbnail, findCatalogExercise, recentExercises
 import { ClientPicker, type ClientPickerSelection } from '../clients'
 import { useAuth } from '../../app/auth-context'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
+import { isFitLimeEnabled } from '../../app/fit-lime'
+import { safeWorkoutReturnTo } from './workout-navigation'
+import { removeWorkoutFormDraft, workoutFormDraftKey } from './workout-form-draft'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
@@ -116,6 +119,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const location = useLocation()
   const queryClient = useQueryClient()
   const { actor } = useAuth()
+  const limePlanning = !clientMode && isFitLimeEnabled(actor)
+  const entryState = location.state as { returnTo?: unknown; planClientId?: string; planStartTime?: string; planTitle?: string; planRequestId?: string; sourceFormDraftKey?: string } | null
+  const returnTo = limePlanning ? safeWorkoutReturnTo(entryState?.returnTo) ?? '/today' : clientMode ? '/me' : '/today'
+  const [planMetadata, setPlanMetadata] = useState(() => ({
+    title: limePlanning ? entryState?.planTitle : undefined,
+    requestId: limePlanning ? entryState?.planRequestId ?? crypto.randomUUID() : undefined,
+    sourceFormDraftKey: limePlanning ? entryState?.sourceFormDraftKey : undefined,
+  }))
   const [askConfirm, confirmDialog] = useConfirm()
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
@@ -148,13 +159,18 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [pickerSelectionDraft, setPickerSelectionDraft] = useState<ExerciseSnapshot[]>([])
   const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
-  const [clientId, setClientId] = useState('')
+  const [clientId, setClientId] = useState(limePlanning ? entryState?.planClientId ?? '' : '')
   const effectiveClientId = clientMode ? mine.data?.id ?? clientId : clientId
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', effectiveClientId], queryFn: () => workoutsRepository.list(undefined, undefined, effectiveClientId), enabled: Boolean(effectiveClientId) })
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [missingCardioTime, setMissingCardioTime] = useState<string | null>(null)
-  const [workoutDate, setWorkoutDate] = useState(today)
-  const [startTime, setStartTime] = useState('')
+  const [workoutDate, setWorkoutDate] = useState(() => {
+    if (limePlanning) {
+      try { return localDate(new URLSearchParams(location.search).get('date') ?? today) } catch { return today }
+    }
+    return today
+  })
+  const [startTime, setStartTime] = useState(limePlanning ? entryState?.planStartTime ?? '' : '')
   const [actualDurationMinutes, setActualDurationMinutes] = useState('')
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : undefined)
   const trainingFormatTouched = useRef(false)
@@ -224,13 +240,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       navigate(-1)
       return
     }
-    navigate(next === 'compose' ? composePath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen } })
+    navigate(next === 'compose' ? composePath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen, ...(limePlanning ? { returnTo } : {}) } })
   }
 
   function closeTextComposer() {
     setTextComposerOpen(false)
     if (compactClientEntry) navigate(todayPath, { replace: true })
-    if (compactTrainerTextEntry) navigate(composePath, { replace: true })
+    if (compactTrainerTextEntry) navigate(composePath, { replace: true, state: limePlanning ? { returnTo } : undefined })
   }
 
   useEffect(() => {
@@ -242,6 +258,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setChoices(draft.choices)
       setItems(draft.items)
       setClientId(draft.clientId)
+      if (limePlanning) setPlanMetadata({ title: draft.title, requestId: draft.requestId ?? crypto.randomUUID(), sourceFormDraftKey: draft.sourceFormDraftKey })
       setRecordMode(draft.recordMode ?? 'planned')
       setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
@@ -252,7 +269,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setRemovedRefs(draft.removedRefs ?? [])
     }
     setDraftReady(true)
-  }, [draftKey, today])
+  }, [draftKey, today, limePlanning])
 
   useEffect(() => {
     if (clientMode && mine.data?.id) setClientId(mine.data.id)
@@ -274,12 +291,12 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   useEffect(() => {
     if (!draftReady) return
-    if (!text.trim() && !items.length) {
+    if (!text.trim() && !items.length && !(limePlanning && planMetadata.sourceFormDraftKey)) {
       removeTodayDraft(draftKey)
       return
     }
-    writeTodayDraft(draftKey, { screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat })
-  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, manualRefs, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
+    writeTodayDraft(draftKey, { ...(limePlanning ? planMetadata : {}), screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat })
+  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
   const resolved = recognized
@@ -315,7 +332,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
+      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -329,10 +346,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       trackGoal('today_review_confirmed')
       setDraftReady(false)
       removeTodayDraft(draftKey)
+      if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))) removeWorkoutFormDraft(planMetadata.sourceFormDraftKey)
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate(`/workouts/${id}`, { replace: true, state: { returnTo: clientMode ? '/me' : '/today', firstPlanClient: firstPlanClientState } })
+      navigate(`/workouts/${id}`, { replace: true, state: { returnTo, firstPlanClient: firstPlanClientState } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
   const snoozeAttention = useMutation({
@@ -672,6 +690,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   function clearDraftAndForm(openComposer = false) {
     removeTodayDraft(draftKey)
+    if (limePlanning) setPlanMetadata({ title: undefined, requestId: crypto.randomUUID(), sourceFormDraftKey: undefined })
     setScreen('compose')
     setText('')
     setLastLlmText(null)
@@ -735,10 +754,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
   const supplementalLoadError = catalog.error ?? (!clientMode ? todayWorkouts.error : null)
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
-    {actor && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
+    {actor && !limePlanning && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
-      {!greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
+      {limePlanning ? <div><button type="button" className="link today-review-back" onClick={() => navigate(returnTo)}>← В календарь</button><h1>Составить план</h1><p className="muted">{planMetadata.title || 'Новая тренировка'} · {formatLocalDate(workoutDate)}</p></div> : !greetingHeaderPilotEnabled && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview
         today={today}
         gender={mine.data?.gender}
@@ -782,7 +801,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
-      {!clientMode && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={workouts.data} loading={clients.isLoading || workouts.isLoading} error={clients.error ?? workouts.error} onRetry={() => { void clients.refetch(); void workouts.refetch() }} returnTo="/today" />}
+      {!clientMode && !limePlanning && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={workouts.data} loading={clients.isLoading || workouts.isLoading} error={clients.error ?? workouts.error} onRetry={() => { void clients.refetch(); void workouts.refetch() }} returnTo="/today" />}
       {!textComposerOpen && <div className="today-voice-hero-compact compose-workout-entry">
         <VoiceInputButton
           variant="hero"
@@ -790,10 +809,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           idleLabel="Надиктовать тренировку"
           heroTitle="Составить тренировку"
           heroSubtitle="Голосом или вручную"
-          onStart={() => { if (restoredDraftScreen) clearDraftAndForm(false) }}
+          onStart={() => { if (restoredDraftScreen && !limePlanning) clearDraftAndForm(false) }}
           onPhaseChange={setVoicePhase}
           onTranscript={handleHeroTranscript}
-          secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => { if (restoredDraftScreen) clearDraftAndForm(true); else setTextComposerOpen(true) }}><KeyboardIcon /></button> : undefined}
+          secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => { if (restoredDraftScreen && !limePlanning) clearDraftAndForm(true); else setTextComposerOpen(true) }}><KeyboardIcon /></button> : undefined}
         />
       </div>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
@@ -813,8 +832,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
        {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
-      {!clientMode && !textComposerOpen && <TrainerActiveWorkouts workouts={workouts.data} returnTo="/today" />}
-      {voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
+      {!clientMode && !limePlanning && !textComposerOpen && <TrainerActiveWorkouts workouts={workouts.data} returnTo="/today" />}
+      {!limePlanning && voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
       <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>

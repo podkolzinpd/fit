@@ -53,6 +53,19 @@ describe('QuickStartWorkout', () => {
     expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'with_trainer')
   })
 
+  it('supports the calendar label without changing the start command', async () => {
+    mocks.quickStart.mockResolvedValue({ id: workoutId, resumed: false })
+    const pending = vi.fn()
+    const user = userEvent.setup()
+    view(<QuickStartWorkout role="trainer" clientId={client.id} workouts={[]} returnTo="/today?date=2026-09-29" compact startLabel="Начать сейчас" onPendingChange={pending} />)
+    await user.click(screen.getByRole('button', { name: 'Начать сейчас' }))
+    expect(mocks.quickStart).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Начать' }))
+    expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
+    expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'with_trainer')
+    expect(pending).toHaveBeenCalledWith(false)
+  })
+
   it('keeps a trainers self format and operation on retry', async () => {
     mocks.quickStart.mockRejectedValueOnce(new Error('network')).mockResolvedValue({ id: workoutId, resumed: true })
     const user = userEvent.setup()

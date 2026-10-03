@@ -15,6 +15,13 @@ describe('today draft', () => {
     expect(todayDraftKey('trainer-a')).not.toBe(todayDraftKey('trainer-b'))
   })
 
+  it('keeps the Lime plan identity and selected calendar context across reload', () => {
+    const key = todayDraftKey('trainer-a')
+    const draft = { screen: 'compose' as const, text: '', choices: {}, items: [], clientId: 'client-a', workoutDate: '2026-09-29', title: 'Сила', requestId: 'stable-operation', sourceFormDraftKey: 'fit.workout-form-draft.trainer-a.new--2026-09-29--quick' }
+    writeTodayDraft(key, draft)
+    expect(readTodayDraft(key)).toEqual(draft)
+  })
+
   it('восстанавливает валидный черновик и удаляет его', () => {
     const key = todayDraftKey('trainer-a')
     writeTodayDraft(key, { screen: 'review', text: 'Планка 3 по 45 сек', choices: {}, items: [], clientId: 'client-a' })
