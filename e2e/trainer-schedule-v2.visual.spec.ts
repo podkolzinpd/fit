@@ -406,6 +406,51 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
+  test(`Lime notification settings separate permission, device connection and retry for ${profileId}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await mockPilot(page, { profileId, fitLime: true })
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
+      Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+      Object.defineProperty(window, 'Notification', { value: { permission: 'granted' }, configurable: true })
+      Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {
+        getRegistration: () => Promise.resolve({ pushManager: { getSubscription: () => Promise.resolve({ endpoint: 'https://push.example/device', toJSON: () => ({ keys: { p256dh: 'public-test', auth: 'test-auth' } }) }) } }),
+        addEventListener() {}, removeEventListener() {},
+      } })
+    })
+    let fail = false
+    let endpointChecks = 0
+    await page.route('http://127.0.0.1:4100/v1/push-notifications/**', async (route) => {
+      if (fail) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+      const path = new URL(route.request().url()).pathname
+      if (path.endsWith('/subscription/status')) {
+        endpointChecks += 1
+        expect(route.request().postDataJSON()).toEqual({ endpoint: 'https://push.example/device' })
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: true } } }) })
+    })
+    await page.goto('/profile/settings')
+    await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Как установить Fit' })).toHaveCount(0)
+    await expect(page.getByText('Разрешено', { exact: true })).toBeVisible()
+    await expect(page.getByText('Уведомления включены', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Включить', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).not.toBeChecked()
+    expect(endpointChecks).toBeGreaterThan(0)
+    await page.screenshot({ path: testInfo.outputPath('lime-notification-settings.png'), fullPage: true })
+    fail = true
+    await page.getByRole('button', { name: 'Повторить проверку' }).click()
+    await expect(page.getByRole('alert').filter({ hasText: 'подписку устройства' })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+    fail = false
+    await page.getByRole('button', { name: 'Повторить проверку' }).click()
+    await expect(page.getByText('Уведомления включены', { exact: true })).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeEnabled()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
 for (const width of [390, 430, 1440]) {
   test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })

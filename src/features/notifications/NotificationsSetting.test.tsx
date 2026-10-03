@@ -73,7 +73,65 @@ describe('NotificationsSetting', () => {
     nativeReminder.requestPermission.mockReset()
     nativeReminder.cancelAll.mockReset()
   })
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+  it('Lime does not mistake loading for missing permission or invent category preferences', () => {
+    primeDefaults()
+    repository.status.mockImplementation(() => new Promise(() => undefined))
+    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    expect(screen.getByText('Проверяем уведомления…')).toBeVisible()
+    expect(screen.queryByText('Нужно разрешение')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Включить' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+  })
+
+  it('Lime shows status errors with retry and recovers without asking permission again', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    repository.status.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ state: 'working', workoutReminderEnabled: false, chatMessageEnabled: true })
+    const user = userEvent.setup()
+    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Проверьте интернет')
+    expect(screen.getByText('Разрешено')).toBeVisible()
+    expect(screen.queryByText('Нужно разрешение')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Повторить проверку' }))
+    expect(await screen.findByText('Уведомления включены')).toBeVisible()
+    expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).not.toBeChecked()
+    expect(repository.enable).not.toHaveBeenCalled()
+  })
+
+  it('Lime separates granted permission from an unready subscription', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, chatMessageEnabled: true })
+    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    expect(await screen.findByText('Разрешение есть, подключение не готово')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Включить' })).not.toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+  })
+
+  it('Lime explains iOS installation even when PushManager is absent before installation', () => {
+    primeDefaults()
+    detectInstallPlatform.mockReturnValue('ios')
+    isAppInstalled.mockReturnValue(false)
+    isPushSupported.mockReturnValue(false)
+    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    expect(screen.getByText('Сначала установите Fit')).toBeVisible()
+    expect(repository.status).not.toHaveBeenCalled()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+  })
+
+  it('Lime refreshes after returning from device settings', async () => {
+    primeDefaults()
+    vi.stubGlobal('Notification', { permission: 'denied' })
+    repository.status.mockResolvedValueOnce({ state: 'denied' }).mockResolvedValue({ state: 'working', workoutReminderEnabled: true, chatMessageEnabled: true })
+    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    await screen.findByText('Уведомления выключены')
+    vi.stubGlobal('Notification', { permission: 'granted' })
+    window.dispatchEvent(new Event('focus'))
+    expect(await screen.findByText('Уведомления включены')).toBeVisible()
+    expect(screen.getByText('Разрешено')).toBeVisible()
+  })
 
   it('shows that notifications are unavailable when the device has no supported channel', () => {
     primeDefaults()

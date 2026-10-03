@@ -82,9 +82,9 @@ Scope: только два ранее согласованных server-assigned
 | Этап | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | 1 | Чистый день, возврат сегодня, доступ к незавершённому | 2307 frontend + 1044 API tests; 244 Chromium/WebKit cases; визуально 390/1440 и подсказка, suite 390/430/1440 | PR #1364 выпущен; main 5b2eed62, CI37119953990 и deployment37120470911 success; SHA HTML/JS/CSS/YS Geo совпали |
-| 2 | Два понятных сценария из «+» без потери данных | 18 адресных browser cases; 247/248 full browser + 4 адресных pass (повтор зависшего page.goto и новый retry); полный check: 2309 frontend/1044 API; визуально выбор и форма | PR #1365 слит после зелёного CI; main 4470af4e, production выполняется |
-| 3 | Календарь/история с фильтрами и контекстом | 2310 frontend/1044 API; 255/256 browser + 2/2 адресный повтор WebKit page.goto прошли; оба пилота в новом flow; 390/430/1440 | локально проверен; CI/production впереди |
-| 4 | Корректный статус установки и подписки | permission/subscription/retry tests | не начат |
+| 2 | Два понятных сценария из «+» без потери данных | 18 адресных browser cases; 247/248 full browser + 4 адресных pass; полный check: 2309 frontend/1044 API; визуально выбор и форма | PR #1365 выпущен; main4470af4e, CI37121605753/frontend37122082235 success, SHA HTML/JS/CSS/fonts совпали |
+| 3 | Календарь/история с фильтрами и контекстом | 2310 frontend/1044 API; 255/256 browser + 2/2 адресный повтор WebKit page.goto прошли; оба пилота в новом flow; 390/430/1440 | PR #1366 слит в ae01ff14, production выполняется |
+| 4 | Корректный статус установки и подписки | 2318 frontend/1044 API; 259/260 browser + 2/2 повтор page.goto, 4 новых адресных; визуально WebKit390 | локально проверен, CI/production впереди |
 | 5 | 30 клиентов и 120 тренировок, безопасный повтор | clean Yandex actor/RLS + isolation + exact counts | не начат |
 | 6 | Заполненные экраны проверены, regressions закрыты | full check + Chromium/WebKit + production readback | не начат |
 
