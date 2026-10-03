@@ -144,4 +144,23 @@ describe('schedule presentation', () => {
     expect(scheduleHourLabelCollidesWithNow(15, 15 * 60 + 11)).toBe(false)
     expect(scheduleHourLabelCollidesWithNow(14, 15 * 60 + 3)).toBe(false)
   })
+
+  it('Lime protects labels on both sides of the hour at both densities', () => {
+    for (const height of [44, 56]) {
+      expect(scheduleHourLabelCollidesWithNow(17, 16 * 60 + 51, height)).toBe(true)
+      expect(scheduleHourLabelCollidesWithNow(17, 17 * 60 + 3, height)).toBe(true)
+      expect(scheduleHourLabelCollidesWithNow(17, 17 * 60 + 30, height)).toBe(false)
+    }
+  })
+
+  it('Lime adjacent hourly sessions do not acquire false collision lanes', () => {
+    for (const height of [44, 56]) {
+      const events = layoutScheduleTimelineEvents([
+        workout({ id: 'a', startTime: '14:00', endTime: '15:00' }),
+        workout({ id: 'b', startTime: '15:00', endTime: '16:00' }),
+      ], height, height === 44 ? 44 : 54, 0)
+      expect(events.map((event) => event.columns)).toEqual([1, 1])
+      expect(events.every((event) => event.height >= 44)).toBe(true)
+    }
+  })
 })

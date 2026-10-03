@@ -62,6 +62,10 @@
 .fit-lime-shell .schedule-v2-event small { font-size: 12px; font-weight: 400; color: var(--lime-text-secondary); }
 .fit-lime-shell .schedule-v2-event.schedule-event-done { background: var(--lime-surface); }
 .fit-lime-shell .schedule-v2-event.schedule-event-done b { color: var(--lime-text); }
+.fit-lime-shell .schedule-v2-event.is-compact { grid-template-columns: minmax(0, 1fr) auto; gap: 4px; padding-inline: 6px; }
+.fit-lime-shell .schedule-v2-event.is-compact > .schedule-v2-avatar { display: none; }
+.fit-lime-shell .schedule-v2-event.is-compact b { font-size: 14px; line-height: 18px; }
+.fit-lime-shell .schedule-v2-event.is-dense > svg { display: none; }
 .fit-lime-shell .schedule-v2-now time { font-size: 12px; font-weight: 500; }
 .fit-lime-shell .schedule-v2-now span { height: 1px; box-shadow: none; }
 .fit-lime-shell .schedule-v2-now span::before { width: 4px; height: 4px; left: -2px; }

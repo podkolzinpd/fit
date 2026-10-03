@@ -3,6 +3,7 @@ import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { FitLimeWorkoutEntry } from './FitLimeWorkoutEntry'
 import { FitLimeScheduleList } from './FitLimeScheduleList'
+import { readScheduleScroll, writeScheduleScroll } from './schedule-scroll'
 import { filterScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -78,7 +79,7 @@ import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
 import { chronicleExercisePreview } from './workout-chronicle'
-import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleTimelineScrollTop } from './schedule-presentation'
+import { compactScheduleEventLabel, formatScheduleDateLabel, layoutScheduleTimelineEvents, mondayWeekStart, scheduleDurationMinutes, scheduleEventStatus, scheduleExerciseLine, scheduleFocusMinutes, scheduleHourLabelCollidesWithNow, scheduleLaneClientName, scheduleTimelineScrollTop } from './schedule-presentation'
 import { InvitationCodeCard } from '../../shared/invitation-code-card'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { latestWorkoutFact } from '../../shared/workout-results'
@@ -172,6 +173,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const overviewDays = Array.from({ length: overviewDayCount }, (_, offset) => addDays(weekStart, offset))
   const scrollRef = useRef<HTMLDivElement>(null)
   const autoScrolledDateRef = useRef<LocalDate | null>(null)
+  const scrollKey = `${actor?.userId}:${selected}:${clientFilter}:${statusFilter}`
 
   function openDay(date: LocalDate, preservePeriodStart?: LocalDate) {
     const anchor = preservePeriodStart ?? (daysBetween(weekStart, date) >= 0 && daysBetween(weekStart, date) < overviewDayCount
@@ -215,19 +217,29 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const untimed = dayItems.filter((workout) => !workout.startTime)
 
   useEffect(() => {
+    if (!lime || !isDayView || query.isLoading) return
+    const viewport = scrollRef.current
+    if (!viewport) return
+    const save = () => writeScheduleScroll(scrollKey, viewport.scrollTop / hourHeight)
+    viewport.addEventListener('scroll', save, { passive: true })
+    return () => { viewport.removeEventListener('scroll', save) }
+  }, [lime, isDayView, scrollKey, hourHeight, query.isLoading])
+
+  useEffect(() => {
     if (!isDayView) {
       autoScrolledDateRef.current = null
       return
     }
     if (query.isLoading || query.isError || !scrollRef.current || autoScrolledDateRef.current === selected) return
     const focusMinutes = scheduleFocusMinutes(timed, currentTimeInTimeZone(actor?.timezone))
-    scrollRef.current.scrollTop = scheduleTimelineScrollTop(
+    const retained = lime ? readScheduleScroll(scrollKey) : null
+    scrollRef.current.scrollTop = retained !== null ? retained * hourHeight : scheduleTimelineScrollTop(
       focusMinutes,
       scrollRef.current.clientHeight,
       hourHeight,
     )
     autoScrolledDateRef.current = selected
-  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed])
+  }, [actor?.timezone, hourHeight, isDayView, query.isError, query.isLoading, selected, timed, lime, scrollKey])
 
   const todayDisabled = isDayView ? selected === today : weekStart === todayWeekStart
 
@@ -708,7 +720,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const restoreOnboardingFocus = useCallback(() => onboardingTriggerRef.current?.focus(), [])
   const currentTime = currentTimeInTimeZone(actor?.timezone)
   const currentMinutes = minutesOf(currentTime)
-  const timelineEvents = layoutScheduleTimelineEvents(timed, hourHeight, densityPreference.density === 'compact' ? 44 : 54)
+  const timelineEvents = layoutScheduleTimelineEvents(timed, hourHeight, densityPreference.density === 'compact' ? 44 : 54, isFitLimeEnabled(actor) ? 0 : 4)
   const timelineHeight = Math.max(HOURS.length * hourHeight, ...timelineEvents.map((event) => event.top + event.height + 8))
   const previousHourHeightRef = useRef(hourHeight)
 
@@ -912,14 +924,14 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
-            {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
+            {HOURS.map((hour) => <div key={hour} className={`day-grid-hour${selected === today && scheduleHourLabelCollidesWithNow(hour, currentMinutes, fitLimeToday ? hourHeight : undefined) ? ' is-near-current-time' : ''}`} style={{ top: hour * hourHeight }}><span className="day-grid-hour-label">{String(hour).padStart(2, '0')}:00</span><div className="day-grid-hour-line" /></div>)}
             {selected === today && <div className="schedule-v2-now" style={{ top: (currentMinutes / 60) * hourHeight }}><time>{currentTime}</time><span /></div>}
             <div className="schedule-v2-event-layer">
             {timelineEvents.map(({ workout, top, height, column, columns }) => {
               const status = scheduleEventStatus(workout, today)
               return <Link key={workout.id} className={`schedule-v2-event schedule-event-${status.tone}${columns > 1 ? ' is-compact' : ''}${columns > 2 ? ' is-dense' : ''}${height <= 44 ? ' is-short' : ''}`} style={{ top, height, left: `${column * 100 / columns}%`, width: `calc(${100 / columns}% - ${columns > 1 ? 4 : 0}px)` }} aria-label={`${eventTime(workout)} ${workout.clientName} · ${status.label}`} title={`${eventTime(workout)} · ${workout.clientName}`} to={`/workouts/${workout.id}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_opened')}>
                 <span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span>
-                <span><b>{workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
+                <span><b>{fitLimeToday && columns > 1 ? scheduleLaneClientName(workout.clientName) : workout.clientName}</b><small>{scheduleV2WorkoutLine(workout)}</small><span className="sr-only">{status.label}</span></span>
                 {workout.status === 'done' && <CheckIcon />}
               </Link>
             })}

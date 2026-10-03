@@ -91,6 +91,7 @@ export function layoutScheduleTimelineEvents(
   workouts: readonly Workout[],
   hourHeight: number,
   minimumHeight = 54,
+  laneGap = 4,
 ): ScheduleTimelineEvent[] {
   const entries = workouts.filter((workout) => workout.startTime).map((workout) => {
     const start = minutesOfTime(workout.startTime!)
@@ -103,7 +104,7 @@ export function layoutScheduleTimelineEvents(
   const flushGroup = () => {
     const laneBottoms: number[] = []
     const assigned = group.map((entry) => {
-      let column = laneBottoms.findIndex((bottom) => bottom + 4 <= entry.top)
+      let column = laneBottoms.findIndex((bottom) => bottom + laneGap <= entry.top)
       if (column < 0) column = laneBottoms.length
       laneBottoms[column] = entry.top + entry.height
       return { ...entry, column }
@@ -111,7 +112,7 @@ export function layoutScheduleTimelineEvents(
     for (const entry of assigned) result.push({ ...entry, columns: laneBottoms.length })
   }
   for (const entry of entries) {
-    if (group.length > 0 && entry.top >= groupBottom + 4) {
+    if (group.length > 0 && entry.top >= groupBottom + laneGap) {
       flushGroup()
       group = []
       groupBottom = -Infinity
@@ -148,7 +149,14 @@ export function scheduleTimelineScrollTop(
   return Math.max(0, (focusMinutes / 60) * hourHeight - contextHeight)
 }
 
-export function scheduleHourLabelCollidesWithNow(hour: number, currentMinutes: number): boolean {
+export function scheduleHourLabelCollidesWithNow(hour: number, currentMinutes: number, hourHeight?: number): boolean {
+  if (hourHeight !== undefined) return Math.abs(hour * 60 - currentMinutes) * hourHeight / 60 < 18
   const minute = currentMinutes % 60
   return Math.floor(currentMinutes / 60) === hour && minute <= 10
+}
+
+/** Keep a useful name instead of spending a narrow lane on a duplicate avatar. */
+export function scheduleLaneClientName(value: string): string {
+  const [first = '', ...rest] = value.trim().split(/\s+/)
+  return rest.length ? `${first} ${rest.map((part) => `${part[0]}.`).join(' ')}` : first
 }
