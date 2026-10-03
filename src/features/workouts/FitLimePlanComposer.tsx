@@ -47,6 +47,7 @@ export function FitLimePlanComposer({ date, returnTo, onClose }: {
       return
     }
     dialog.current?.showModal()
+    dialog.current?.focus({ preventScroll: true })
   }, [date, navigate, returnTo, saved?.recordCompleted])
   useEffect(() => { if (!savedSuccessfully.current && !saved?.recordCompleted) writeWorkoutFormDraft(key, draft) }, [key, draft, saved?.recordCompleted])
   const mutation = useMutation({
@@ -92,10 +93,10 @@ export function FitLimePlanComposer({ date, returnTo, onClose }: {
   const dateLabel = selectedDate === today ? 'Сегодня' : selectedDate.slice(0, 4) === today.slice(0, 4)
     ? formatLocalDate(selectedDate).replace(/\s+\d{4}\s*г\.$/, '') : formatLocalDate(selectedDate)
   if (!isFitLimeEnabled(actor) || saved?.recordCompleted) return null
-  return <dialog ref={dialog} role="dialog" className="fit-lime-plan-dialog" aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
+  return <dialog ref={dialog} tabIndex={-1} role="dialog" className="fit-lime-plan-dialog" aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
     <form className="fit-lime-plan-composer" onSubmit={submit}>
-      <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" disabled={mutation.isPending} onClick={() => dialog.current?.close()}><CloseIcon /></button>
-      <input aria-label="Название тренировки" placeholder="Название тренировки" maxLength={120} value={title} disabled={mutation.isPending} onChange={(event) => setTitle(event.target.value)} autoFocus />
+      <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={() => dialog.current?.close()}><CloseIcon /></button>
+      <input aria-label="Название тренировки" placeholder="Название тренировки" maxLength={120} value={title} disabled={mutation.isPending} onChange={(event) => setTitle(event.target.value)} />
       <fieldset disabled={mutation.isPending}>
         <div className="fit-lime-plan-controls">
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
