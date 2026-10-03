@@ -996,6 +996,12 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
     await page.reload()
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/today\?date=2026-09-24/)
+    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    await page.getByRole('button', { name: 'Продолжить черновик' }).click()
+    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
   })
 
   test(`Figma workout editor and client picker at ${width}`, async ({ page }, testInfo) => {
