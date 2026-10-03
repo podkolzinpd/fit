@@ -35,3 +35,5 @@ html.fit-client-lime-document.theme-light .athlete-achievement-detail-heading sv
 html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
 .phone-frame.fit-client-lime :is(.athlete-achievements-home, .athlete-achievements-page) :focus-visible { outline-color: var(--lime-accent-ink); }
 /* Authored badge artwork retains its original background and colors. */
+
+.phone-frame.fit-client-lime .athlete-achievement-card { background: transparent; border-radius: 14px; padding: 4px 0; }

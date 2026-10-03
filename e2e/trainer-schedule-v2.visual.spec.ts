@@ -96,6 +96,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     }))
     localStorage.setItem(`fit.coachmarks-seen.${profileId}`, JSON.stringify([
       'assistant-all-trainers-2026-09',
+      'client-assistant-2026-09',
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
       'lime-quick-plan-2026-10',
@@ -2919,10 +2920,11 @@ test('pilot calendar keeps workout review and save in the existing entry flow', 
 })
 
 
-test('Client Lime baseline real client route before redesign', async ({ page }, testInfo) => {
-  await mockPilot(page, { role: 'client', profileId: clientId })
+test('Client Lime baseline keeps another client outside the redesign', async ({ page }, testInfo) => {
+  await mockPilot(page, { role: 'client', profileId: '10000000-0000-4000-8000-000000000099' })
   await page.goto('/me')
   await expect(page.locator('.client-home-identity')).toBeVisible()
+  await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-client-lime/)
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('client-before.png'), fullPage: true })
 })
@@ -2934,6 +2936,7 @@ for (const width of [390, 430]) {
     await page.goto('/me/settings')
     const theme = page.getByLabel('Тема оформления')
     await expect(theme).toBeVisible()
+    expect(await theme.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
     for (const value of ['dark', 'light', 'system']) {
       await theme.selectOption(value)
       if (value === 'system') await page.emulateMedia({ colorScheme: 'dark' })
@@ -2969,6 +2972,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.goto('/me')
     await expect(page.locator('.fit-client-lime')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeEnabled()
+    await expect(page.locator('.voice-action-button svg[data-original-icon]')).toHaveCSS('filter', theme === 'light' ? 'brightness(0)' : 'none')
     await page.screenshot({ path: testInfo.outputPath(`client-home-${theme}.png`) })
     await page.goto('/me/workouts')
     await expect(page.locator('.client-workouts-identity')).toBeVisible()
@@ -3000,6 +3004,10 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await page.goto(route)
       await expect(page.locator('.fit-client-lime')).toBeVisible()
       await expect(page.locator('h1').first()).toBeVisible()
+      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
+        await expect(page).toHaveURL(/\/assistant$/)
+        await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
+      }
       await expect(page.getByText('Загружаем…', { exact: true })).toHaveCount(0)
       await expect(page.locator('.state-panel-error')).toHaveCount(0)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
@@ -3051,5 +3059,44 @@ for (const theme of ['light', 'dark']) {
     await page.screenshot({ path: testInfo.outputPath('chat-menu.png') })
     await page.keyboard.press('Escape')
     await expect(sheet).toHaveCount(0)
+  })
+}
+
+test('Client Lime logout resets document scope and return preserves only its own preference', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  await page.goto('/me/settings')
+  await page.getByLabel('Тема оформления').selectOption('dark')
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  await expect(page).toHaveURL(/\/auth/)
+  await expect(page.locator('html')).not.toHaveClass(/fit-client-lime-document/)
+  await expect(page.locator('.fit-client-lime')).toHaveCount(0)
+  await mockPilot(page, { role: 'client', profileId: '10000000-0000-4000-8000-000000000099' })
+  await page.goto('/me/settings')
+  await expect(page.getByLabel('Тёмная тема')).toBeVisible()
+  await expect(page.locator('.fit-client-lime')).toHaveCount(0)
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  await page.goto('/me/settings')
+  await expect(page.getByLabel('Тема оформления')).toHaveValue('dark')
+  await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+})
+
+for (const theme of ['light', 'dark']) {
+  test(`Client Lime editor and exercise history ${theme}`, async ({ page }, testInfo) => {
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self' }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      for (const [route, surface] of [
+        ['/workouts/new', '.workout-form-page'],
+        [`/workouts/${workoutId}/edit`, '.workout-form-page'],
+        [`/workouts/${workoutId}/history/fedb-barbell-squat`, '.exercise-card-tabs'],
+      ] as const) {
+        await page.goto(route)
+        await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+        await expect(page.locator(surface)).toBeVisible()
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
+      }
+    }
   })
 }
