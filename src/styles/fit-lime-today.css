@@ -1,5 +1,6 @@
 /* Figma calendar presentation; the schedule model and density stay unchanged. */
 .phone-frame.fit-lime-shell {
+  position: relative;
   --schedule-v2-accent: var(--lime-accent);
   --schedule-v2-bg: var(--lime-bg);
   --schedule-v2-card: var(--lime-surface);
