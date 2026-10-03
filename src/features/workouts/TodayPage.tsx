@@ -255,7 +255,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     const draft = readTodayDraft(draftKey)
     if (draft) {
-      setRestoredDraftScreen(screen === 'compose' ? draft.screen : null)
+      setRestoredDraftScreen(screen === 'compose' && (!limePlanning || draft.text.trim() || draft.items.length) ? draft.screen : null)
       setText(draft.text)
       setLastLlmText(draft.lastLlmText ?? null)
       setChoices(draft.choices)
@@ -357,7 +357,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       trackGoal('today_review_confirmed')
       setDraftReady(false)
       removeTodayDraft(draftKey)
-      if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))) removeWorkoutFormDraft(planMetadata.sourceFormDraftKey)
+      if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))
+        && readWorkoutFormDraft(planMetadata.sourceFormDraftKey)?.requestId === planMetadata.requestId) removeWorkoutFormDraft(planMetadata.sourceFormDraftKey)
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
