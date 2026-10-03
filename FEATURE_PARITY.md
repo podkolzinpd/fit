@@ -71,6 +71,12 @@ checks, идемпотентный повтор и независимый чер
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; default-off maintenance switch replaces every direct route before auth/data providers mount, exposes one reload action and prevents product requests from the maintenance bundle; an independent default-off Supabase gate rejects DML from stale bundles, RPC and background writers on all 37 source product/operational tables; mobile WebKit 390/430 light/dark covered, broader acceptance matrix pending |
 
+Дополнение Auth/Navigation: HTML bootstrap и восстановление сессии используют
+одну оптимизированную фотографию из материалов владельца; nonblocking CSS не
+задерживает её первую отрисовку, но остаётся обязательным перед показом React.
+Ошибки запуска/входа сохраняют прежние действия повтора; домашний экран,
+иконки, auth/API и данные не меняются. Приёмка — `docs/design/startup-photo-splash-20261003.md`.
+
 Статус меняется на Done только после component/E2E и, где применимо, DB/RLS теста.
 
 `Implemented` означает, что код сценария существует и его основной контракт покрыт тестами. Это не `Done`: релиз блокируют незакрытые acceptance tests, visual parity и пункты из `OPERATIONS.md`.

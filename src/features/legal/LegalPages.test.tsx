@@ -95,6 +95,21 @@ describe('legal pages', () => {
     expect(legal.acceptCurrent).toHaveBeenCalledWith('existing_user')
   })
 
+  it('keeps the photo through the initial legal check, but exposes errors and retry', async () => {
+    const user = userEvent.setup()
+    useAuth.mockReturnValue({ actor: { userId: 'user-1' }, signOut: vi.fn(() => Promise.resolve()) })
+    let rejectCheck!: (error: Error) => void
+    legal.getAcceptanceStatus.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectCheck = reject }))
+    render(wrapper(<LegalAcceptanceGate><p>Приложение открыто</p></LegalAcceptanceGate>))
+    expect(screen.getByRole('status', { name: 'Загружаем Fit' })).toBeVisible()
+    rejectCheck(new Error('Нет соединения'))
+    expect(await screen.findByRole('heading', { name: 'Не удалось проверить документы' })).toBeVisible()
+    expect(screen.queryByRole('status', { name: 'Загружаем Fit' })).not.toBeInTheDocument()
+    legal.getAcceptanceStatus.mockResolvedValueOnce({ applicable: true, accepted: true, acceptedAt: '2026-09-09' })
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByText('Приложение открыто')).toBeVisible()
+  })
+
   it('creates and cancels the current account deletion request through the selected backend', async () => {
     const user = userEvent.setup()
     useAuth.mockReturnValue({ actor: { userId: 'user-1' }, signOut: vi.fn(() => Promise.resolve()) })
