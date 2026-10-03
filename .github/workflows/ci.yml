@@ -9,6 +9,15 @@ on:
 permissions:
   contents: read
 
+env:
+  # The frozen pgTAP chain only needs PostgreSQL; none of the local product
+  # services participate in database-only checks.
+  SUPABASE_DATABASE_EXCLUDE: edge-runtime,gotrue,imgproxy,kong,logflare,mailpit,postgres-meta,postgrest,realtime,storage-api,studio,supavisor,vector
+  # Legacy browser scenarios still need auth, PostgREST and Realtime. They do
+  # not upload to local Storage or use the dashboard, mail, metadata, logging,
+  # vector or Edge Function services.
+  SUPABASE_E2E_EXCLUDE: edge-runtime,imgproxy,logflare,mailpit,postgres-meta,storage-api,studio,supavisor,vector
+
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -123,9 +132,9 @@ jobs:
       # The official Docker Hub mirror uses the runner's preconfigured pull auth.
       - name: Use Docker Hub for Supabase images
         run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
-      # Database tests do not exercise the local mail inbox. Skipping Mailpit
-      # avoids its fixed 54324 port colliding with a hosted runner process.
-      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
+      # pgTAP runs directly against PostgreSQL. Starting the local API, auth,
+      # realtime, storage and observability services only adds image pulls.
+      - run: supabase start --exclude "$SUPABASE_DATABASE_EXCLUDE"
       - run: supabase db reset --local
       - run: supabase test db --local
 
@@ -274,9 +283,9 @@ jobs:
           version: 2.116.0
       - name: Use Docker Hub for Supabase images
         run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
-      # E2E authenticates through the local API; it does not inspect emails.
-      # Keep the CI container set minimal and avoid Mailpit's fixed port.
-      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
+      # E2E authenticates through the local API and observes Realtime. Keep
+      # those services, but skip unrelated mail, storage and admin containers.
+      - run: supabase start --exclude "$SUPABASE_E2E_EXCLUDE"
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
@@ -334,7 +343,7 @@ jobs:
           version: 2.116.0
       - name: Use Docker Hub for Supabase images
         run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
-      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
+      - run: supabase start --exclude "$SUPABASE_E2E_EXCLUDE"
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime
@@ -396,7 +405,7 @@ jobs:
           version: 2.116.0
       - name: Use Docker Hub for Supabase images
         run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
-      - run: supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector
+      - run: supabase start --exclude "$SUPABASE_E2E_EXCLUDE"
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
       - name: Pull pinned Playwright runtime

@@ -131,11 +131,24 @@ test('waits for local auth readiness before auth-dependent E2E jobs', () => {
 })
 
 test('does not start Supabase services that CI scenarios do not use', () => {
-  assert.doesNotMatch(workflow, /supabase start --exclude mailpit(?:\s|$)/)
   assert.match(
     workflow,
-    /supabase start --exclude mailpit,studio,imgproxy,edge-runtime,vector/,
+    /SUPABASE_DATABASE_EXCLUDE: edge-runtime,gotrue,imgproxy,kong,logflare,mailpit,postgres-meta,postgrest,realtime,storage-api,studio,supavisor,vector/,
   )
+  assert.match(
+    workflow,
+    /SUPABASE_E2E_EXCLUDE: edge-runtime,imgproxy,logflare,mailpit,postgres-meta,storage-api,studio,supavisor,vector/,
+  )
+
+  const databaseJob = workflow.slice(workflow.indexOf('  database:\n'), workflow.indexOf('  yandex-database:\n'))
+  assert.match(databaseJob, /supabase start --exclude "\$SUPABASE_DATABASE_EXCLUDE"/)
+
+  for (const job of ['e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
+    const start = workflow.indexOf(`  ${job}:\n`)
+    assert.notEqual(start, -1, `${job} job is missing`)
+    const body = workflow.slice(start).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0]
+    assert.match(body, /supabase start --exclude "\$SUPABASE_E2E_EXCLUDE"/)
+  }
 })
 
 test('uses the Docker Hub mirror before Supabase image pulls in every database-backed CI job', () => {
