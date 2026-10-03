@@ -145,7 +145,64 @@ test('Yandex restore exits loading after a network error and offers retry', asyn
     }))
   })
   await page.goto('/')
-  await expect(page.getByText('Восстанавливаем сессию…', { exact: true })).toHaveCount(0, { timeout: 15_000 })
+  await expect(page.locator('.fit-startup-photo')).toHaveCount(0, { timeout: 15_000 })
   await expect(page).toHaveURL(/\/auth$/)
   await expect(page.getByRole('button', { name: /Повторить/ })).toBeVisible()
 })
+
+for (const path of ['/', '/auth', '/auth/yandex/session']) {
+  test(`photograph bridges bootstrap and session restoration on ${path}`, async ({ page }, testInfo) => {
+    test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires Yandex session switches.')
+    let releaseSession!: () => void
+    const sessionReady = new Promise<void>((resolve) => { releaseSession = resolve })
+    let releaseLegal!: () => void
+    let legalRequested = false
+    const legalReady = new Promise<void>((resolve) => { releaseLegal = resolve })
+    await page.route('https://stage.example.test/v1/auth/yandex/session', async (route) => {
+      await sessionReady
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          accessMode: 'read_write',
+          profile: {
+            id: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b',
+            firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow', accountRole: 'trainer',
+          },
+        }),
+      })
+    })
+    await page.route('https://stage.example.test/v1/legal/acceptance', async (route) => {
+      legalRequested = true
+      await legalReady
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ applicable: true, accepted: false, acceptedAt: null }),
+      })
+    })
+    await page.addInitScript(() => localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
+      token: 'a'.repeat(43), expiresAt: '2099-09-01T12:00:00.000Z',
+    })))
+    try {
+      await page.goto(path, { waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#fit-startup-shell')).toHaveCount(0)
+      const splash = page.getByRole('status', { name: 'Загружаем Fit' })
+      await expect(splash).toBeVisible()
+      const photo = splash.locator('img')
+      await expect(photo).toBeVisible()
+      await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(940)
+      await expect(page.getByText(/Восстанавливаем сессию/)).toHaveCount(0)
+      await page.screenshot({ path: testInfo.outputPath('session-photo.png') })
+      releaseSession()
+      await expect.poll(() => legalRequested).toBe(true)
+      await expect(splash).toBeVisible()
+      await expect(page.getByText('Проверяем документы…')).toHaveCount(0)
+      releaseLegal()
+      await expect(page.getByRole('heading', { name: 'Условия обновились' })).toBeVisible()
+      await expect(page.locator('.fit-startup-photo')).toHaveCount(0)
+    } finally {
+      releaseSession()
+      releaseLegal()
+    }
+  })
+}

@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+YAFIT-591 / PR1: окно Lime-плана использует видимую область над клавиатурой,
+не фокусирует ввод при открытии и блокирует прокрутку фонового календаря.
+План четырёх PR: `docs/design/FIT_LIME_VIDEO_FIXES_20261003.md`.
+Модель visualViewport проверяется отдельно от физической клавиатуры телефона.
+
 YAFIT-590 / этап 1: Fit Lime «День» очищен от старых home-блоков; Live и локальный
 черновик доступны из рабочей очереди, счётчик не дублирует одну тренировку.
 Прежний UI вне Lime сохранён. Матрица: `docs/design/FIT_LIME_DAY_UX_20261003.md`.
@@ -65,6 +70,12 @@ checks, идемпотентный повтор и независимый чер
 | Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; default-off maintenance switch replaces every direct route before auth/data providers mount, exposes one reload action and prevents product requests from the maintenance bundle; an independent default-off Supabase gate rejects DML from stale bundles, RPC and background writers on all 37 source product/operational tables; mobile WebKit 390/430 light/dark covered, broader acceptance matrix pending |
+
+Дополнение Auth/Navigation: HTML bootstrap и восстановление сессии используют
+одну оптимизированную фотографию из материалов владельца; nonblocking CSS не
+задерживает её первую отрисовку, но остаётся обязательным перед показом React.
+Ошибки запуска/входа сохраняют прежние действия повтора; домашний экран,
+иконки, auth/API и данные не меняются. Приёмка — `docs/design/startup-photo-splash-20261003.md`.
 
 Статус меняется на Done только после component/E2E и, где применимо, DB/RLS теста.
 
