@@ -15,7 +15,7 @@ import { useAuth } from '../../app/auth-context'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { safeWorkoutReturnTo } from './workout-navigation'
-import { removeWorkoutFormDraft, workoutFormDraftKey } from './workout-form-draft'
+import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { useRpeDisplay } from '../../app/rpe-display'
@@ -202,9 +202,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const firstIntentConsumed = useRef(false)
   const [firstClientCreating, setFirstClientCreating] = useState(false)
   const [firstClientError, setFirstClientError] = useState<Error | null>(null)
-  const draftKey = todayDraftKey(actor!.userId)
+  const planId = limePlanning ? new URLSearchParams(location.search).get('plan') ?? entryState?.planRequestId : undefined
+  const draftKey = todayDraftKey(actor!.userId, planId)
   const todayPath = clientMode ? '/me' : '/today'
-  const composePath = !clientMode && isTrainerScheduleV2Enabled(actor) ? '/today?view=compose' : todayPath
+  const planQuery = planId ? `&plan=${encodeURIComponent(planId)}` : ''
+  const composePath = !clientMode && isTrainerScheduleV2Enabled(actor) ? `/today?view=compose${planQuery}` : todayPath
   const view = new URLSearchParams(location.search).get('view')
   const requestedScreen: Screen = view === 'review' || view === 'save' ? view : 'compose'
   const screen: Screen = draftReady && requestedScreen === 'save' && items.length === 0
@@ -241,7 +243,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       navigate(-1)
       return
     }
-    navigate(next === 'compose' ? composePath : `${todayPath}?view=${next}`, { replace: next === 'compose', state: { fromTodayScreen: screen, ...(limePlanning ? { returnTo } : {}) } })
+    navigate(next === 'compose' ? composePath : `${todayPath}?view=${next}${planQuery}`, { replace: next === 'compose', state: { fromTodayScreen: screen, ...(limePlanning ? { returnTo } : {}) } })
   }
 
   function closeTextComposer() {
@@ -286,9 +288,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   useEffect(() => {
     if (!draftReady || requestedScreen !== 'save' || items.length > 0) return
     const nextScreen: Screen = text.trim() ? 'review' : 'compose'
-    navigate(nextScreen === 'compose' ? composePath : `${todayPath}?view=${nextScreen}`, { replace: true })
+    navigate(nextScreen === 'compose' ? composePath : `${todayPath}?view=${nextScreen}${planQuery}`, { replace: true, state: limePlanning ? { returnTo } : undefined })
     if (nextScreen === 'compose' && text.trim()) setTextComposerOpen(true)
-  }, [composePath, draftReady, items.length, navigate, requestedScreen, text, todayPath])
+  }, [composePath, draftReady, items.length, navigate, requestedScreen, text, todayPath, planQuery, limePlanning, returnTo])
 
   useEffect(() => {
     if (!draftReady) return
@@ -297,6 +299,14 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       return
     }
     writeTodayDraft(draftKey, { ...(limePlanning ? planMetadata : {}), screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat })
+    if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))) {
+      const source = readWorkoutFormDraft(planMetadata.sourceFormDraftKey)
+      // A different quick plan may now occupy this date's slot. Never overwrite it.
+      if (source && source.requestId === planMetadata.requestId) writeWorkoutFormDraft(planMetadata.sourceFormDraftKey, {
+        ...source, title: planMetadata.title, clientId, workoutDate, startTime,
+        endTime: planMetadata.endTime ?? '', trainingFormat, exercises: items.map(draftExercise),
+      })
+    }
   }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
@@ -816,8 +826,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => { if (restoredDraftScreen && !limePlanning) clearDraftAndForm(true); else setTextComposerOpen(true) }}><KeyboardIcon /></button> : undefined}
         />
       </div>}
-      {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>Есть незавершённая тренировка</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
+      {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>{limePlanning ? 'Есть черновик плана' : 'Есть незавершённая тренировка'}</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>Новая тренировка</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); if (!limePlanning) setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">

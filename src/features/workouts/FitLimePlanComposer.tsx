@@ -11,6 +11,7 @@ import { formatLocalDate, todayInTimeZone, type LocalDate } from '../../shared/l
 import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
 import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
+import { readTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 
 /** Figma's quick planned-workout entry. Live and completed entry stay separate. */
 export function FitLimePlanComposer({ date, returnTo, onClose, onBack }: {
@@ -136,7 +137,18 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   }
   function openComposer(entry: 'voice' | 'text') {
     writeWorkoutFormDraft(key, draft)
-    const params = new URLSearchParams({ view: 'compose', entry, date: selectedDate })
+    const voiceKey = todayDraftKey(actor!.userId, requestId)
+    const previous = readTodayDraft(voiceKey)
+    writeTodayDraft(voiceKey, {
+      ...previous, screen: 'compose', text: previous?.text ?? '', choices: previous?.choices ?? {},
+      items: draft.exercises.map((exercise) => ({
+        line: exercise.name, exercise, sets: exercise.sets, hasValues: true,
+        trainerComment: exercise.trainerComment, structure: exercise,
+      })),
+      clientId, workoutDate: selectedDate, startTime: time.start, endTime: time.end,
+      trainingFormat, title, requestId, sourceFormDraftKey: key, recordMode: 'planned',
+    })
+    const params = new URLSearchParams({ view: 'compose', entry, date: selectedDate, plan: requestId })
     navigate(`/today?${params}`, { state: { returnTo, planClientId: clientId, planStartTime: time.start, planEndTime: time.end, planTrainingFormat: trainingFormat, planTitle: title, planRequestId: requestId, sourceFormDraftKey: key } })
     onClose()
   }
