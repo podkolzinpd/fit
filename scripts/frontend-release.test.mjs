@@ -12,6 +12,44 @@ import { createHash } from 'node:crypto'
 import { uploadCandidate } from './upload-frontend-candidate.mjs'
 
 const commit = 'a'.repeat(40)
+test('Fit Lime original exports retain all approved bytes and native dimensions', async () => {
+  const root = new URL('../docs/design/figma-20261002/', import.meta.url)
+  const manifest = JSON.parse(await readFile(new URL('manifest.json', root), 'utf8'))
+  assert.equal(manifest.icons.length, 22)
+  assert.equal(manifest.files.length, 25)
+  for (const file of manifest.files) {
+    const bytes = await readFile(new URL(file.file, root))
+    assert.equal(bytes.length, file.bytes, file.file)
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), file.sha256, file.file)
+    const svg = bytes.toString('utf8').match(/<svg\b[^>]*>/)?.[0]
+    assert.ok(svg, file.file)
+    for (const attribute of ['width', 'height', 'viewBox']) {
+      assert.ok(svg.includes(`${attribute}="${file[attribute]}"`), `${file.file}: ${attribute}`)
+    }
+  }
+})
+
+test('webfonts have explicit gateway routes and font MIME, not the SPA fallback', async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), 'fit-font-delivery-test-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  await mkdir(join(dir, 'assets'))
+  await mkdir(join(dir, 'fonts'))
+  const fontKey = 'fonts/ys-geo-regular-916b7f4a.woff2'
+  for (const [key, bytes] of Object.entries({
+    'index.html': '<html>fixture</html>', 'sw.js': '// sw', 'asset-recovery.js': '// recovery',
+    'site.webmanifest': '{}', 'assets/app-12345678.js': '// app',
+    [fontKey]: 'wOF2 synthetic routing fixture; not a licensed font',
+  })) await writeFile(join(dir, key), bytes)
+  const bundle = await packageRelease(dir, commit, supportedRouting)
+  const plan = gatewayPlan(bundle, [], { bucket: 'fit-frontend-candidate', reader: 'a'.repeat(20) })
+  const file = plan.objects.find((entry) => entry.key === fontKey)
+  assert.equal(file.contentType, 'font/woff2')
+  const route = plan.specification.paths[`/${fontKey}`]
+  assert.equal(route.get['x-yc-apigateway-integration'].object, file.object)
+  assert.deepEqual(route.get, route.head)
+  assert.notEqual(file.object, plan.specification.paths['/{path+}'].get['x-yc-apigateway-integration'].object)
+})
+
 test('large immutable JS upload uses verified gzip bytes without changing its URL', () => {
   const bytes = Buffer.from('export const message = "test";\n'.repeat(100_000))
   const file = { key: 'assets/app-12345678.js', size: bytes.length,

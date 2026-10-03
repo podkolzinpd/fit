@@ -438,10 +438,51 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Real routes with an isolated Yandex API contract fixture. No production
+  # sessions/data or licensed font secrets enter untrusted PR jobs. Exact-font
+  # rendering is separately verified locally and in the trusted release build.
+  e2e-fit-lime:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.required == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [mobile-chromium, lime-acceptance-webkit]
+    env:
+      FIT_SCHEDULE_V2_VISUAL: '1'
+      VITE_SUPABASE_URL: http://127.0.0.1:54321
+      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+      VITE_YANDEX_API_BASE_URL: http://127.0.0.1:4100
+      VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
+      VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+      VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+      VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+      VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+      VITE_ASSISTANT_NAV_ENABLED: 'true'
+      VITE_ASSISTANT_NAV_PILOT_USER_IDS: 10000000-0000-4000-8000-000000000001,10000000-0000-4000-8000-000000000010
+      VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright test e2e/trainer-schedule-v2.visual.spec.ts --project=${{ matrix.project }} --workers=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fit-lime-diagnostics-${{ matrix.project }}
+          path: test-results/
+          retention-days: 7
+
   # Preserve one stable required check regardless of whether the heavy browser
   # jobs ran, passed, failed or were intentionally skipped by the scope gate.
   e2e:
-    needs: [e2e-scope, e2e-yandex-auth, e2e-visual, e2e-chromium, e2e-webkit]
+    needs: [e2e-scope, e2e-yandex-auth, e2e-visual, e2e-chromium, e2e-webkit, e2e-fit-lime]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -453,6 +494,7 @@ jobs:
           VISUAL_RESULT: ${{ needs.e2e-visual.result }}
           CHROMIUM_RESULT: ${{ needs.e2e-chromium.result }}
           WEBKIT_RESULT: ${{ needs.e2e-webkit.result }}
+          FIT_LIME_RESULT: ${{ needs.e2e-fit-lime.result }}
         run: |
           set -euo pipefail
           if [[ "$SCOPE_RESULT" != "success" ]]; then
@@ -463,8 +505,8 @@ jobs:
             echo "E2E skipped: changes do not affect the browser runtime"
             exit 0
           fi
-          if [[ "$YANDEX_AUTH_RESULT" != "success" || "$VISUAL_RESULT" != "success" || "$CHROMIUM_RESULT" != "success" || "$WEBKIT_RESULT" != "success" ]]; then
-            echo "E2E failed: yandex-auth=$YANDEX_AUTH_RESULT visual=$VISUAL_RESULT chromium=$CHROMIUM_RESULT webkit=$WEBKIT_RESULT"
+          if [[ "$YANDEX_AUTH_RESULT" != "success" || "$VISUAL_RESULT" != "success" || "$CHROMIUM_RESULT" != "success" || "$WEBKIT_RESULT" != "success" || "$FIT_LIME_RESULT" != "success" ]]; then
+            echo "E2E failed: yandex-auth=$YANDEX_AUTH_RESULT visual=$VISUAL_RESULT chromium=$CHROMIUM_RESULT webkit=$WEBKIT_RESULT fit-lime=$FIT_LIME_RESULT"
             exit 1
           fi
           echo "All E2E lanes passed"

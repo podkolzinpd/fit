@@ -404,6 +404,35 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const width of [390, 430]) {
+  test(`Figma long client name and constrained-height picker at ${width}`, async ({ page }, testInfo) => {
+    const fullName = 'Александр Константинопольский-Рождественский'
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { fitLime: true, clientRecords: [{ id: clientId, fullName, archivedAt: null, version: 1 }] })
+    await page.goto('/workouts/new?date=2026-09-24')
+    await page.locator('.client-picker-trigger').click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента' })
+    const search = picker.getByRole('textbox', { name: 'Поиск клиента' })
+    await search.focus()
+    // Model reduced available space; this is not a claim to emulate an OS keyboard.
+    await page.setViewportSize({ width, height: 400 })
+    await search.fill('Константинопольский')
+    await expect(search).toBeFocused()
+    const option = picker.getByRole('button', { name: new RegExp(fullName) })
+    await option.scrollIntoViewIfNeeded()
+    await expect(option).toBeVisible()
+    const bounds = await option.boundingBox()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(400)
+    await page.screenshot({ path: testInfo.outputPath('figma-picker-constrained-height.png') })
+    await option.click()
+    await expect(picker).not.toBeVisible()
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.client-picker-trigger')).toContainText(fullName)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  })
+}
 test('Figma workout second pilot keeps quick-plan guidance and completed draft', async ({ page }) => {
   const profileId = '10000000-0000-4000-8000-000000000010'
   await mockPilot(page, { profileId, fitLime: true })
@@ -429,6 +458,35 @@ test('Figma workout second pilot keeps quick-plan guidance and completed draft',
 })
 
 for (const width of [390, 430, 1440]) {
+  test(`Figma quick start preserves the finance format choice at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
+    const fullName = 'Александр Константинопольский-Рождественский'
+    await mockPilot(page, { fitLime: true, workouts: [], clientRecords: [{ id: clientId, fullName, archivedAt: null, version: 1 }] })
+    await page.goto('/today?date=2026-09-24')
+    await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: new RegExp(fullName) }).click()
+    const format = page.locator('.quick-start-format')
+    await expect(format).toContainText(fullName)
+    await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+    await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    const start = format.getByRole('button', { name: 'Начать', exact: true })
+    await expect(start).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await start.scrollIntoViewIfNeeded()
+    for (const button of await format.getByRole('button').all()) {
+      const bounds = await button.boundingBox()
+      expect(bounds!.height).toBeGreaterThanOrEqual(44)
+      expect(bounds!.x).toBeGreaterThanOrEqual(0)
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await page.screenshot({ path: testInfo.outputPath('figma-quick-start-format.png') })
+    await format.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(format).not.toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+  })
+
   test(`Figma trainer routes include finance and templates at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await mockPilot(page, { fitLime: true })
@@ -585,6 +643,7 @@ for (const width of [390, 430, 1440]) {
     await page.goto('/clients')
     await expect(page.locator('.fit-lime-shell')).toBeVisible()
     await expect(page.locator('.trainer-tab-bar [data-original-icon="users"]')).toBeVisible()
+    await expect(page.locator('.trainer-tab-bar')).toHaveCSS('backdrop-filter', 'blur(22px)')
     await expect(page.locator('.page-header h1')).toHaveCSS('font-size', '24px')
     await expect(page.locator('.page-header h1')).toHaveCSS('font-weight', '500')
     await expect(page.locator('.fit-lime-shell')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
