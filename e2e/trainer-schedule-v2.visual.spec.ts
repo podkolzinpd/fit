@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 
 const trainerId = '10000000-0000-4000-8000-000000000001'
 const clientId = '10000000-0000-4000-8000-000000000002'
@@ -405,6 +406,56 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 }
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+
+for (const width of [320, 390, 430, 1440]) {
+  test(`Lime filled calendar audit with the production seed recipe at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.clock.setFixedTime(new Date('2026-10-03T12:00:00+03:00'))
+    const profileId = width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId
+    const plan = buildFitLimeCalendarPlan(profileId, '2026-09-28', '2026-10-03')
+    await mockPilot(page, { profileId, fitLime: true,
+      clientRecords: plan.clients.map((item) => ({ ...item, archivedAt: null, version: 1 })),
+      workouts: plan.workouts.map((item) => ({ ...workout, ...item, trainerId: profileId,
+        clientName: plan.clients.find((client) => client.id === item.clientId)!.fullName,
+        completedAt: item.status === 'done' ? `${item.workoutDate}T12:00:00Z` : null,
+      })),
+    })
+    await page.goto('/schedule?week=2026-09-28')
+    await expect(page.locator('.schedule-v2-day-card')).toHaveCount(7)
+    for (const select of await page.locator('.fit-lime-schedule-filters select').all()) {
+      const size = await select.boundingBox()
+      expect(size!.height).toBeGreaterThanOrEqual(44)
+      expect(await select.evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16)
+    }
+    const shell = await page.locator('.phone-frame').boundingBox()
+    const fab = await page.locator('.schedule-v2-fab').boundingBox()
+    expect(fab!.x).toBeGreaterThanOrEqual(shell!.x)
+    expect(fab!.x + fab!.width).toBeLessThanOrEqual(shell!.x + shell!.width)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await page.screenshot({ path: testInfo.outputPath('filled-week.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Список', exact: true }).click()
+    const list = page.getByRole('region', { name: 'Список тренировок' })
+    await expect(list.getByRole('link')).toHaveCount(60)
+    await page.getByRole('combobox', { name: 'Фильтр по клиенту' }).selectOption(plan.clients[12]!.id)
+    await expect(list.getByRole('link')).toHaveCount(4)
+    await expect(list.getByRole('link').first()).toContainText('Константинопольская-Рождественская')
+    await page.screenshot({ path: testInfo.outputPath('filled-history-long-name.png'), fullPage: true })
+    const lastRow = list.getByRole('link').last()
+    await lastRow.scrollIntoViewIfNeeded()
+    await expect(lastRow).toBeInViewport()
+    const lastBox = await lastRow.boundingBox()
+    const navBox = await page.locator('.trainer-tab-bar').boundingBox()
+    expect(lastBox!.y + lastBox!.height).toBeLessThanOrEqual(navBox!.y)
+    await page.goto('/today?date=2026-09-30&week=2026-09-28')
+    await expect(page.locator('.fit-lime-today')).toBeVisible()
+    await expect(page.locator('.schedule-v2-event').first()).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await page.screenshot({ path: testInfo.outputPath('filled-dense-day.png'), fullPage: true })
+    await page.locator('.schedule-v2-fab').click()
+    await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('filled-calendar-entry.png') })
+  })
+}
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   test(`Lime notification settings separate permission, device connection and retry for ${profileId}`, async ({ page }, testInfo) => {
