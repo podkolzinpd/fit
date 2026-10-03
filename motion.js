@@ -17,8 +17,11 @@
   let index = Math.max(0, all.findIndex(s => s.classList.contains('active')));
   let step = 0, playing = false, timer = null;
   const animations = new Set();
-  const max = [1, 3, 8, 2, 4, 8, 4, 5, 5, 3];
-  const labels = [
+  // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
+  // overview stops; numbers, source diagrams and the moving object stay intact.
+  const timeline = [[1],[0,1,2],[3,7],[0,1],[0,1,2,3],[0,1,2,3,4,5,6,7],[2,4],[0,4],[0,4],[0,1,2]];
+  const max = timeline.map(stops=>stops.length-1);
+  const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
     ['Для клиента','Для тренера','Масштаб рынка','Вся идея'],
     ['Жители России','15–59 лет','Занимаются спортом','Аудитория Fit','Товары и одежда','Фитнес-услуги','Секции и питание','Устройства и онлайн','Весь рынок'],
@@ -30,6 +33,7 @@
     ['Мессенджер · Телемост','Pay · Сплит','Бенефит для компаний','Директ · Практикум','Лавка · Еда · Маркет','Все сценарии'],
     ['Подписка','Комиссия','Реклама','Вся модель']
   ];
+  const labels = timeline.map((stops,i)=>stops.map(n=>sceneLabels[i][n]));
   scope.forEach((s,i) => { s.classList.add('motion-slide'); s.dataset.motionSlide = i; });
   function phase(el, n) { if(el) { el.classList.add('m-reveal'); el.dataset.phase=n; } }
   function note(s, text) { const el=document.createElement('div');el.className='m-status-note';el.textContent=text;s.append(el);return el; }
@@ -80,7 +84,7 @@
       <h3 class="m-client-title">Голосом<br>или текстом.</h3>
       <p class="m-client-sub">Составляешь программу с ИИ.<br>Сам или с ИИ — под свою цель,<br>время и оборудование.</p>
       <div class="m-input-rule"></div>
-      <p class="m-client-note">Постановочная демонстрация ввода, не запись работы ИИ. Упражнение и значения — из экрана итогов 21 сентября 2026.</p>
+      <p class="m-client-note">Демонстрация ввода · данные из итогов 21.09.2026 · не запись работы ИИ.</p>
     </section>
     <section class="m-scene m-loop">
       <div class="m-client-eyebrow">05 · ДЛЯ КЛИЕНТА / ЗАПИСАТЬ</div>
@@ -90,7 +94,7 @@
         <div class="m-station"><label>02 · Выполнение</label><small>Запись подходов</small><div class="m-ghost">70 кг<br><small>10 / 12 / 12 повторений</small></div></div>
         <div class="m-station"><label>03 · Завершение</label><small>Сохранённый результат</small></div>
       </div>
-      <p class="m-client-note">Постановочная демонстрация одного фрагмента тренировки. Тренер видит результаты и корректирует программу.</p>
+      <p class="m-client-note">Демонстрация фрагмента тренировки. Результаты доступны тренеру для корректировки программы.</p>
     </section>
     <section class="m-scene m-result">
       <div class="m-client-eyebrow">05 · ДЛЯ КЛИЕНТА / СРАВНИТЬ</div>
@@ -102,15 +106,15 @@
           <div class="m-result-bar"><label>Стало<strong>60 кг</strong></label><i style="width:100%"></i></div>
         </div><div class="m-result-gain">+10 кг</div><p>Показатель из исходного экрана приложения.</p>
       </div>
-      <p class="m-client-note">Отдельный пример из приложения, не результат показанного выше фрагмента. Не оценка роста мышц.</p>
+      <p class="m-client-note">Отдельная тренировка · сравниваем рабочий вес, не рост мышц.</p>
     </section>
     <section class="m-scene m-map">
       <div class="m-client-eyebrow">05 · ДЛЯ КЛИЕНТА / ПОНЯТЬ</div>
       <h3 class="m-client-title">Твой прогресс.</h3>
       <div class="m-body-screen"><img alt="Исходная карта тела Fit: грудь, результат вырос на 33%"></div>
       <svg class="m-body-line" viewBox="0 0 260 120" aria-hidden="true"><path d="M0 0 H55 Q90 0 90 55 V85 Q90 120 130 120 H260" pathLength="1"/></svg>
-      <div class="m-body-data"><h3>Где выросли результаты</h3><div class="m-body-number">+33%</div><p>Грудь · показатель карты тела<br>из исходного экрана Fit.</p><p>Результаты упражнений,<br>а не рост мышц по фотографии.</p></div>
-      <p class="m-client-note">Экраны относятся к разным тренировкам и срезам. +33% не приписываем предыдущему примеру.</p>
+      <div class="m-body-data"><h3>Прогресс<br>на карте тела</h3><p>Результаты упражнений<br>по группам мышц.</p><p class="m-map-caption">Пример из приложения Fit.</p></div>
+      <p class="m-client-note">Отдельный срез · не результат предыдущего примера и не оценка роста мышц.</p>
     </section>
     <div class="m-workout" role="img" aria-label="Постановочная карточка: жим гантелей лёжа, 70 кг, 10 / 12 / 12 повторений">
       <div class="m-workout-head"><div class="m-workout-kicker">ФРАГМЕНТ ТРЕНИРОВКИ</div><h3>Грудь</h3><span class="m-workout-status">План</span></div>
@@ -131,6 +135,17 @@
   // Distribution, ecosystem, monetisation: controlled emphasis, not new claims.
   [7,8].forEach(i=>{scope[i].classList.add('m-editorial');qa('.content>div',scope[i]).forEach((el,j)=>phase(el,j));});
   note(scope[8],'Все интеграции — предложения; условия с сервисами не согласованы.');
+  // Practicum already has its own explanation on the acquisition slide.
+  const direct=qa('.content h3',scope[8]).find(el=>el.textContent.includes('Директ'));
+  if(direct)direct.textContent='Директ';
+  const acquisition=q('.content>div:first-child p',scope[7]);
+  acquisition.innerHTML=acquisition.innerHTML.replace('Личные договорённости с клубами и тренерами. Уже есть договорённость со <strong>Spirit — 47 клубов</strong>.','Личные договорённости с клубами и тренерами.<span class="m-spirit-line">Есть договорённость: <strong>Spirit — 47 клубов</strong>.</span>');
+  const commission=qa('.fm1-blk',scope[9])[1];
+  scope[9].dataset.notes+=' Полное пояснение комиссии: '+q('.fm1-how',commission).textContent;
+  q('.fm1-how',commission).innerHTML='Оплата тренировки или программы через Fit.<br>Деньги тренеру — после подтверждения.<br>При споре Fit разбирает ситуацию.<br>За это удерживает комиссию.';
+  // Only the agreed photographic framing changes on the team slide. Source
+  // photographs, roles, dates and staffing values are not altered.
+  all[13].classList.add('motion-team-framing');
   qa('.fm1-blk',scope[9]).forEach((el,i)=>phase(el,i));
   const toolbar=document.createElement('nav');toolbar.className='m-toolbar';toolbar.setAttribute('aria-label','Управление motion-презентацией');
   toolbar.innerHTML=`<button data-action="prev" aria-label="Предыдущий шаг">←</button><span class="m-step-counter" aria-live="polite"></span><button data-action="next" aria-label="Следующий шаг">→</button><select aria-label="Перейти к слайду">${all.map((s,i)=>`<option value="${i}">${i?String(i).padStart(2,'0')+' · '+q('h2',s).textContent:'Обложка'}</option>`).join('')}</select><button data-action="play">▶ Автопоказ</button><button data-action="static">Без анимации</button><button data-action="full" aria-label="Полный экран">⛶</button>`;
@@ -168,30 +183,33 @@
     toolbar.hidden=index>=10;
     if(index>=10)return updateToolbar();
     const s=scope[index];s.dataset.motionStep=n;
+    const scene=timeline[index][n],previousScene=timeline[index][prev];
     s.classList.toggle('m-static',staticMode);
-    qa('.m-reveal',s).forEach(el=>{const p=+el.dataset.phase;el.classList.toggle('m-pending',!staticMode&&p>n);el.classList.toggle('m-current',!staticMode&&p===n);});
-    if(index===0){coverTitle.style.opacity=n||staticMode?'1':'0';if(motion&&n===1)animate(coverTitle,[{clipPath:'inset(20% 100% 33% 0)',opacity:.5},{clipPath:'inset(20% 45% 33% 0)',opacity:1}],1000);}
+    qa('.m-reveal',s).forEach(el=>{const p=+el.dataset.phase;el.classList.toggle('m-pending',!staticMode&&p>scene);el.classList.toggle('m-current',!staticMode&&p===scene);});
+    if(index===0){coverTitle.style.opacity='1';}
     if(index===3){
       const spread=[[0,140],[1040,140],[30,355],[1080,355]], gathered=[[0,375],[370,375],[740,375],[1110,375]];
       categories.forEach((el,i)=>{const a=n===0&&!staticMode?spread[i]:gathered[i];el.style.transform=`translate(${a[0]}px,${a[1]}px)`;});
       children[1].style.opacity=n||staticMode?'1':'.12';children[1].style.transform=n||staticMode?'scale(1)':'scale(.9)';
     }
     if(index===4){
-      const focus=staticMode||n===0||n===4?-1:n-1;
+      const focus=staticMode||scene===0?-1:scene-1;
       figures.forEach((f,i)=>{
-        const t=focus<0?`translate(${254*i}px,0) scale(1)`:i===focus?'translate(140px,15px) scale(1.14)':`translate(${i<focus?0:603}px,160px) scale(.48)`;
-        f.style.transform=t;f.style.opacity=focus<0||i===focus?'1':'.22';f.style.zIndex=i===focus?'3':'1';
+        f.classList.toggle('m-screen-focus',i===focus);
+        const t=focus<0?`translate(${254*i}px,0) scale(1)`:i===focus?'translate(140px,15px) scale(1.14)':`translate(${i===(focus===0?1:0)?0:603}px,160px) scale(.48)`;
+        f.style.transform=t;f.style.opacity=focus<0||i===focus?'1':'.45';f.style.zIndex=i===focus?'3':'1';
         q('img',f).style.transform='scale(1)';
       });
-      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus||i===1&&focus===2?'1':'.35');
+      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus||i===1&&focus===2?'1':'.58');
       q('span',route).style.width=(focus<0?100:(focus+1)/3*100)+'%';
     }
-    if(index===5)renderClient(staticMode?8:n,prev,motion&&!staticMode);
+    if(index===5)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
   }
   function updateToolbar(){q('.m-step-counter',toolbar).textContent=index<10?`${step+1} / ${max[index]+1}`:'—';q('select',toolbar).value=index;toolbar.title=index<10?labels[index][step]:'';q('[data-action="static"]',toolbar).textContent=staticMode?'Включить анимацию':'Без анимации';q('[data-action="play"]',toolbar).textContent=playing?'Ⅱ Пауза':'▶ Автопоказ';}
   function stop(){playing=false;clearTimeout(timer);timer=null;animations.forEach(a=>a.pause());updateToolbar();}
-  function go(i,n=0){settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index);apply(staticMode&&index<10?max[index]:n,false);}
+  function revealCover(){if(index===0&&!staticMode)animate(coverTitle,[{clipPath:'inset(20% 100% 33% 0)',opacity:.5},{clipPath:'inset(20% 45% 33% 0)',opacity:1}],850);}
+  function go(i,n=0){settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index);apply(staticMode&&index<10?max[index]:n,false);revealCover();}
   function next(manual=true){if(manual)stop();settle();if(index<10&&!staticMode&&step<max[index])apply(step+1,true,step);else if(index<all.length-1)go(index+1);else stop();}
   function prev(){stop();settle();if(index<10&&!staticMode&&step>0)apply(step-1,true,step);else if(index>0)go(index-1,index-1<10?max[index-1]:0);}
   function run(){playing=true;animations.forEach(a=>a.play());updateToolbar();clearTimeout(timer);timer=setTimeout(()=>{if(!playing)return;next(false);if(playing)run();},4200);}
@@ -202,21 +220,26 @@
   // Capture prevents the original next-slide handlers from skipping motion steps.
   document.addEventListener('click',e=>{const btn=e.target.closest('#prev,#next');if(btn){e.preventDefault();e.stopImmediatePropagation();btn.id==='next'?next():prev();}},true);
   document.addEventListener('keydown',e=>{
-    if(e.target.matches('select,input,textarea,button')||e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
     const key=e.key.toLowerCase();
+    // Keep native field/button interactions, but never leak their keys to the
+    // legacy slide-level handler (which otherwise skips the current motion).
+    if(e.target.closest('select,input,textarea,[contenteditable="true"]')){e.stopImmediatePropagation();return;}
+    if(e.target.closest('button')&&(key===' '||key==='enter')){e.stopImmediatePropagation();return;}
     const actions={arrowright:next,pagedown:next,' ':next,enter:next,arrowleft:prev,pageup:prev,backspace:prev,home:()=>{stop();go(0);},end:()=>{stop();go(all.length-1);},f:full,p:()=>playing?stop():run(),m:toggleStatic,r:()=>{stop();go(index);}};
     if(actions[key]){e.preventDefault();e.stopImmediatePropagation();actions[key]();}
   },true);
   // The original hash listener resolves this function dynamically.
-  window.show=(i,hash=true)=>{stop();settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index,hash);apply(staticMode&&index<10?max[index]:0,false);};
+  window.show=(i,hash=true)=>{stop();settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index,hash);apply(staticMode&&index<10?max[index]:0,false);revealCover();};
   let beforePrint=null;
   window.addEventListener('beforeprint',()=>{stop();beforePrint={index,step,staticMode};staticMode=true;scope.forEach((s,i)=>{index=i;apply(max[i],false);});index=beforePrint.index;});
   window.addEventListener('afterprint',()=>{if(beforePrint){({index,step,staticMode}=beforePrint);apply(step,false);beforePrint=null;}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
-  window.FIT_MOTION={version:1,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
+  window.FIT_MOTION={version:2,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
     state:()=>({index,step,staticMode,playing,animations:animations.size}),
     seek:(i,n=0)=>{stop();go(i,n);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
   if(params.has('step'))step=Math.max(0,Math.min(max[index]||0,Number(params.get('step'))||0));
   apply(staticMode&&index<10?max[index]:step,false);
+  revealCover();
 })();
