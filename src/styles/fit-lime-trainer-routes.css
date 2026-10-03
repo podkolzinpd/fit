@@ -27,7 +27,7 @@ html.fit-lime-document .schedule-v2-inbox-all { background: var(--lime-accent); 
 html.fit-lime-document .schedule-v2-sheet-backdrop :is(.schedule-v2-inbox-avatar, header button) { background: var(--lime-surface-raised); color: var(--lime-text); }
 html.fit-lime-document .schedule-v2-sheet-backdrop :is(.schedule-v2-inbox-row strong, .schedule-v2-inbox-section-title span) { color: var(--lime-accent); }
 html.fit-lime-document .schedule-v2-sheet-backdrop { padding: 12px 12px max(12px, env(safe-area-inset-bottom)); }
-html.fit-lime-document :is(.schedule-v2-inbox-sheet, .schedule-v2-action-sheet, .schedule-v2-onboarding-sheet) { width: min(100%, 375px); max-height: calc(var(--app-visible-height, 100dvh) - 24px); border-radius: var(--lime-radius-card); background: var(--lime-surface-raised); }
+html.fit-lime-document :is(.schedule-v2-inbox-sheet, .schedule-v2-action-sheet, .schedule-v2-onboarding-sheet) { width: min(100%, 375px); max-height: calc(var(--app-visible-height, 100dvh) - 24px); border-radius: 40px; background: var(--lime-surface-raised); }
 html.fit-lime-document .schedule-v2-inbox-row { overflow-wrap: anywhere; }
 html.fit-lime-document .schedule-v2-inbox-row :is(b, strong) { font-size: 16px; line-height: 20px; }
 html.fit-lime-document .schedule-v2-inbox-row small { font-size: 14px; line-height: 20px; }
