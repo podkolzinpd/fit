@@ -216,6 +216,12 @@
 
         function attachStartupShell() {
           var elements = findShellElements()
+          // Guard only genuinely unstyled content. A ready form must not
+          // briefly lose editability while waiting for the next paint.
+          var root = document.getElementById('root')
+          if (root && document.querySelector('link[data-fit-app-styles][media="print"]')) {
+            root.setAttribute('inert', '')
+          }
           bindReload(elements.reload)
           if (errorPending) showStartupError()
         }
@@ -310,7 +316,7 @@
     </script>
   </head>
   <body>
-    <div id="root" inert></div>
+    <div id="root"></div>
     <main id="fit-startup-shell" class="fit-startup-shell fit-startup-photo" aria-live="polite">
       <img class="fit-startup-photo-image" src="/assets/startup-photo-983c93dc4df8.jpg" width="940" height="1673" alt="" aria-hidden="true" fetchpriority="high" />
       <img class="fit-startup-mark" src="/fit-logo.svg" alt="" aria-hidden="true" />

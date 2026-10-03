@@ -65,6 +65,18 @@ test('production stylesheet does not block the photograph or reveal an unstyled 
   }
 })
 
+test('ready styles do not temporarily make mounted form fields inert before the first frame', async ({ page }) => {
+  await page.addInitScript(() => { window.requestAnimationFrame = () => 0 })
+  await page.route('**/src/main.tsx*', (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: `document.getElementById('root').innerHTML = '<main style="min-height:100vh"><input aria-label="Email"></main>'; window.__fitMarkAppStarted()`,
+  }))
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('#root')).not.toHaveAttribute('inert')
+  await page.getByLabel('Email').fill('fixture@example.test')
+  await expect(page.getByLabel('Email')).toHaveValue('fixture@example.test')
+})
+
 test('missing photograph leaves a readable loading fallback, not an application error', async ({ page }) => {
   await page.route('**/src/main.tsx*', () => undefined)
   await page.route('**/assets/startup-photo-*.jpg', (route) => route.abort())

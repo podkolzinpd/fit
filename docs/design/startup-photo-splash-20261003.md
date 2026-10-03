@@ -67,3 +67,10 @@ loading доступен скринридеру, движения нет. На �
 (18 legacy failures); следующий при конкурирующей нагрузке дал два прежних
 ExercisePicker timeout. Ограниченный по workers полный прогон зелёный;
 таймауты/проверки продукта не ослаблялись.
+
+Первый CI выявил регрессию быстрого legacy login: безусловный inert на root
+до первого rAF позволял Playwright fill завершиться без сохранения значения.
+Контрольное воспроизведение с замедленным rAF: до исправления emailRetained=false,
+submitted=false; после — true/true. Теперь inert ставится только при действительно
+pending production CSS, не на готовую форму. Добавлен отдельный regression test;
+startup WebKit 12/12. Условия доступа и отправка credentials не менялись.
