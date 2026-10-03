@@ -1490,6 +1490,10 @@ export function WorkoutFormPage() {
   const headerMeta = [copiedWorkout ? 'Скопировано' : templateId ? templateSource.data?.name : plannedFromFavorite ? 'Из избранного' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
   const hasMeaningfulDraft = exercises.length > 0 || Boolean(title.trim() || notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
   async function leaveForm() {
+    if (limePlan && !workoutId && params.get('entry') === 'quick' && pilotCalendarReturnTo) {
+      navigate(pilotCalendarReturnTo, { replace: true })
+      return
+    }
     if (!workoutId && hasMeaningfulDraft) {
       const shouldLeave = await confirmLeave({ message: 'Выйти из тренировки? Черновик и введённые значения будут удалены.', confirmLabel: 'Выйти', danger: true })
       if (!shouldLeave) return

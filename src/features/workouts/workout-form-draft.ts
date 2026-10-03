@@ -4,6 +4,7 @@ import type { LocalDate } from '../../shared/local-date'
 export interface WorkoutFormDraft {
   title?: string
   requestId?: string
+  composerText?: string
   clientId: string
   workoutDate: LocalDate
   startTime: string
@@ -22,6 +23,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
   return typeof draft.clientId === 'string'
     && (draft.title === undefined || typeof draft.title === 'string')
     && (draft.requestId === undefined || typeof draft.requestId === 'string')
+    && (draft.composerText === undefined || typeof draft.composerText === 'string')
     && typeof draft.workoutDate === 'string'
     && typeof draft.startTime === 'string'
     && typeof draft.endTime === 'string'
@@ -48,6 +50,10 @@ export function readWorkoutFormDraft(key: string): WorkoutFormDraft | null {
 }
 
 export function writeWorkoutFormDraft(key: string, draft: WorkoutFormDraft): void {
+  const previous = readWorkoutFormDraft(key)
+  if (draft.composerText === undefined && draft.requestId && previous?.requestId === draft.requestId && previous.composerText) {
+    draft = { ...draft, composerText: previous.composerText }
+  }
   try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* приватный режим: ввод остаётся в текущей сессии */ }
 }
 
@@ -56,7 +62,7 @@ export function removeWorkoutFormDraft(key: string): void {
 }
 
 export function hasWorkoutFormContent(draft: WorkoutFormDraft | null, initialDate: LocalDate): draft is WorkoutFormDraft {
-  return Boolean(draft && (draft.clientId || draft.title?.trim() || draft.notes.trim()
+  return Boolean(draft && (draft.clientId || draft.title?.trim() || draft.composerText?.trim() || draft.notes.trim()
     || draft.exercises.length || draft.startTime || draft.endTime || draft.recordCompleted
     || draft.trainingFormat === 'self' || draft.workoutDate !== initialDate))
 }

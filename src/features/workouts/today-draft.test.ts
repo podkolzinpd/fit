@@ -15,6 +15,17 @@ describe('today draft', () => {
     expect(todayDraftKey('trainer-a')).not.toBe(todayDraftKey('trainer-b'))
   })
 
+  it('isolates a new plan from the old voice draft and other plans', () => {
+    const old = { screen: 'compose' as const, text: 'Старый текст', choices: {}, items: [], clientId: 'old-client', workoutDate: '2026-10-06' }
+    writeTodayDraft(todayDraftKey('trainer-a'), old)
+    const key = todayDraftKey('trainer-a', 'new-plan')
+    expect(readTodayDraft(key)).toBeNull()
+    writeTodayDraft(key, { ...old, clientId: 'new-client', workoutDate: '2026-10-04' })
+    expect(readTodayDraft(todayDraftKey('trainer-a'))).toEqual(old)
+    expect(readTodayDraft(todayDraftKey('trainer-a', 'other-plan'))).toBeNull()
+    expect(readTodayDraft(key)?.clientId).toBe('new-client')
+  })
+
   it('keeps the Lime plan identity and selected calendar context across reload', () => {
     const key = todayDraftKey('trainer-a')
     const draft = { screen: 'compose' as const, text: '', choices: {}, items: [], clientId: 'client-a', workoutDate: '2026-09-29', title: 'Сила', requestId: 'stable-operation', sourceFormDraftKey: 'fit.workout-form-draft.trainer-a.new--2026-09-29--quick' }

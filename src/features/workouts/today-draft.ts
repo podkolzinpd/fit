@@ -41,8 +41,8 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
 }
 
-export function todayDraftKey(userId: string): string {
-  return `fit.today-draft.${userId}`
+export function todayDraftKey(userId: string, planId?: string | null): string {
+  return `fit.today-draft.${userId}${planId ? `.plan.${encodeURIComponent(planId)}` : ''}`
 }
 
 export function readTodayDraft(key: string): TodayDraft | null {

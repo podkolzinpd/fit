@@ -636,6 +636,21 @@ test('Lime retained plan offers old date and preserves it when starting a new pl
   await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('Lime keeps unparsed plan text when returning before choosing a client', async ({ page }) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Планка три раза по минуте')
+  await page.getByRole('button', { name: '← В календарь' }).click()
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Продолжить черновик' }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('textbox', { name: 'Тренировка', exact: true })).toHaveValue('Планка три раза по минуте')
+})
+
 test('Lime plan rejects an end time without start before any save command', async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true })
   await page.goto('/today?date=2026-09-24')
@@ -729,11 +744,34 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
     const sourceKey = `fit.workout-form-draft.${profileId}.new--2026-09-29--quick`
     const source = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as { requestId: string }, sourceKey)
+    const legacyKey = `fit.today-draft.${profileId}`
+    const legacyDraft = { screen: 'compose', text: 'Прежняя диктовка', choices: {}, items: [], clientId: 'old-client', workoutDate: '2026-10-06', trainingFormat: 'self' }
+    await page.evaluate(({ key, draft }) => localStorage.setItem(key, JSON.stringify(draft)), { key: legacyKey, draft: legacyDraft })
     await plan.getByRole('button', { name: 'Ввести текстом' }).click()
     await expect(page).toHaveURL(/view=compose&entry=text&date=2026-09-29/)
-    await expect.poll(async () => page.evaluate((id) => JSON.parse(localStorage.getItem(`fit.today-draft.${id}`)!) as unknown, profileId)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', requestId: source.requestId, sourceFormDraftKey: sourceKey })
+    const voiceKey = `${legacyKey}.plan.${source.requestId}`
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', requestId: source.requestId, sourceFormDraftKey: sourceKey, trainingFormat: 'with_trainer', text: '' })
     await page.reload()
     await expect(page.getByRole('button', { name: 'Выбрать упражнения вручную' })).toBeVisible()
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, legacyKey)).toEqual(legacyDraft)
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, voiceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, trainingFormat: 'with_trainer' })
+    // A real editor step must keep the plan identity through review, save and back.
+    await page.evaluate((key) => {
+      const draft = JSON.parse(localStorage.getItem(key)!) as Record<string, unknown>
+      draft.items = [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'reps' }, sets: [{ position: 0, reps: 8 }], hasValues: true }]
+      draft.screen = 'review'
+      localStorage.setItem(key, JSON.stringify(draft))
+    }, voiceKey)
+    await page.goto(`/today?view=review&plan=${source.requestId}`)
+    await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+    await page.getByRole('button', { name: 'Далее', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`view=save&plan=${source.requestId}$`))
+    await page.reload()
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key)!) as unknown, sourceKey)).toMatchObject({ workoutDate: '2026-09-29', clientId, title: 'Сила и баланс', exercises: [{ name: 'Приседания', sets: [{ reps: 8 }] }] })
+    await expect(page.getByRole('button', { name: 'Для кого тренировка: Алексей Смирнов' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('lime-isolated-plan-save.png'), fullPage: true })
+    await page.getByRole('button', { name: '← К проверке' }).click()
+    await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
     expect(mutations).toHaveLength(0)
   })
   test(`Lime day removes duplicate blocks but keeps live and draft access for ${profileId}`, async ({ page }, testInfo) => {
@@ -972,6 +1010,12 @@ for (const width of [390, 430, 1440]) {
     await expect(page).toHaveURL(/workouts\/new\?date=2026-09-24/)
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
     await page.reload()
+    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(/today\?date=2026-09-24/)
+    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    await page.getByRole('button', { name: 'Продолжить черновик' }).click()
     await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
   })
 
