@@ -811,11 +811,18 @@ Platform 36 и Build Tools 36.0.0. Минимальная версия устр�
 CI workflow и сохраняется на 7 дней как `fit-android-debug`. Локальная
 development-сборка не подключена к production Yandex API.
 
+Для проверки входа вручную запустите `Android debug build` на `main` через
+GitHub Actions `workflow_dispatch`. Job `auth-smoke` соберёт APK с production
+Yandex API/ID конфигурацией и сохранит артефакт `fit-android-auth-smoke-apk`
+на 7 дней. Это debug-подпись и сборка только для тестирования, не для RuStore.
+
 Android WebView имеет origin `https://localhost`; scheme и hostname закреплены
-в `capacitor.config.ts`. До рабочего входа требуется зарегистрировать точный
-Redirect URI `https://localhost/auth/yandex/callback` в настройках Yandex
-OAuth. Этот шаг не считается выполненным по успешной сборке APK или настройке
-CORS. После него нужен ручной smoke
+в `capacitor.config.ts`. Yandex OAuth открывается во внешнем браузере, поэтому
+Android регистрирует callback `com.coachspace.fit://auth/yandex/callback` и
+возвращает код через app deep link. Этот Redirect URI зарегистрирован в
+настройках Yandex OAuth 2 октября 2026 г.; `https://localhost/auth/yandex/callback` во внешнем
+браузере не вернёт код в Android WebView. Этот шаг не считается выполненным по
+успешной сборке APK или настройке CORS. После него нужен ручной smoke
 на устройстве: Yandex ID, callback, загрузка данных обеих ролей, выход и
 повторный вход. Перед публикацией в RuStore нужны отдельный release keystore,
 подписанная release APK/AAB, проверка целевой сборки и карточка приложения.

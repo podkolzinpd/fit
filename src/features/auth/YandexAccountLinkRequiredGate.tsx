@@ -14,6 +14,7 @@ import { LEGAL_PATHS } from '../../shared/legal'
 import { StatePanel } from '../../shared/ui'
 import { LogoutButton } from './LogoutButton'
 import { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
+import { yandexAuthorizationRedirectUri } from './yandex-redirect-uri'
 
 interface YandexAccountLinkRequiredGateProps extends PropsWithChildren {
   onNavigate?: (url: string) => void
@@ -53,7 +54,7 @@ export function YandexAccountLinkRequiredGate({
     setBusy(true)
     setLinkError(null)
     try {
-      const redirectUri = `${window.location.origin}/auth/yandex/callback`
+      const redirectUri = yandexAuthorizationRedirectUri()
       const url = await createYandexAuthorizationUrl(
         config.clientId,
         redirectUri,

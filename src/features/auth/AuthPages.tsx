@@ -41,6 +41,7 @@ import {
   readPendingYandexNativeRegistration,
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
+import { yandexAuthorizationRedirectUri } from './yandex-redirect-uri'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
@@ -149,7 +150,7 @@ export function AuthPage() {
       try {
         const url = await createYandexAuthorizationUrl(
           nativeRegistrationConfig.clientId,
-          `${window.location.origin}/auth/yandex/callback`,
+          yandexAuthorizationRedirectUri(),
           sessionStorage,
           'register',
         )
@@ -176,7 +177,7 @@ export function AuthPage() {
     setYandexBusy(true)
     void createYandexAuthorizationUrl(
       config.clientId,
-      `${window.location.origin}/auth/yandex/callback`,
+      yandexAuthorizationRedirectUri(),
       sessionStorage,
       yandexAppSessionConfig === null ? 'pilot' : 'app',
     )
@@ -355,7 +356,7 @@ function YandexNativeRegistrationCallbackPage() {
     try {
       const url = await createYandexAuthorizationUrl(
         config.clientId,
-        `${window.location.origin}/auth/yandex/callback`,
+        yandexAuthorizationRedirectUri(),
         sessionStorage,
         'register',
       )
@@ -828,7 +829,7 @@ function YandexAccountLinkingCallbackPage() {
     setRestartBusy(true)
     setError(null)
     try {
-      const redirectUri = `${window.location.origin}/auth/yandex/callback`
+      const redirectUri = yandexAuthorizationRedirectUri()
       const url = await createYandexAuthorizationUrl(clientId, redirectUri, sessionStorage, 'link')
       window.location.assign(url)
     } catch {

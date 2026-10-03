@@ -6,6 +6,7 @@ import { authRepository } from '../../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
 import type { SessionActor } from '../../shared/domain'
 import { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
+import { yandexAuthorizationRedirectUri } from './yandex-redirect-uri'
 
 interface YandexAccountLinkingCardProps {
   actor: SessionActor
@@ -41,7 +42,7 @@ export function YandexAccountLinkingCard({
     setBusy(true)
     setError(null)
     try {
-      const redirectUri = `${window.location.origin}/auth/yandex/callback`
+      const redirectUri = yandexAuthorizationRedirectUri()
       const url = await createYandexAuthorizationUrl(
         clientId,
         redirectUri,
