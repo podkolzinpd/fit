@@ -53,9 +53,9 @@
 | --- | --- | --- | --- |
 | 1 | Исходный план сохранён без сокращений | Этот файл | Готово |
 | 2 | Используются существующие Lime tokens/assets; новый scope пока не назначается | CSS и main import | Локально |
-| 3 | Светлая и тёмная палитры одного client scope | Component browser cases | Проверяется |
+| 3 | Светлая и тёмная палитры одного client scope | 3 Chromium component cases | Готово |
 | 4 | Независимый single-ID gate, default-off | 56 feature flag tests | Готово; production UUID ещё не разрешён |
-| 5 | Ни один production route пока не получает scope | Локальный Client Home WebKit; full check | Проверяется |
+| 5 | Ни один production route пока не получает scope | Client Home WebKit; полный npm run check | Готово |
 
 Реальный исходный `/me` открыт в локальном WebKit с синтетической Yandex-сессией.
 Текущий primary — «Начать тренировку», ниже сохранён composer с голосом/текстом;
@@ -63,3 +63,5 @@
 переставлять существующие действия. Скриншот: `client-before.png` в test-results.
 Production browser inspection недоступен: CUA не смог проверить административную
 политику. Этот отказ не обходится; локальная проверка не считается production.
+
+PR1: полный `npm run check` завершён успешно; 56 flag tests и 3 Chromium component cases прошли. Production остаётся выключенным.
