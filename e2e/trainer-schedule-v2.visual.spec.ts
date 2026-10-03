@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
+import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
 
 const trainerId = '10000000-0000-4000-8000-000000000001'
 const clientId = '10000000-0000-4000-8000-000000000002'
@@ -38,10 +39,10 @@ const workout = {
   startedAt: null,
   completedAt: null,
   version: 1,
-  exercises: [],
+  exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer' }
 
 async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -179,7 +180,12 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
           trainerReviewedAt: questionAnswered ? '2026-09-24T12:30:00.000Z' : null,
           completedAt: '2026-09-24T11:00:00.000Z',
           version: questionAnswered ? 2 : 1,
-        }] : workouts,
+        }] : workouts.map((item) => ({ ...item, exercises: item.exercises.map((exercise) => ({ ...exercise, customExerciseId: exercise.customExerciseId ?? null, trainerComment: exercise.trainerComment ?? null,
+          sets: exercise.sets.map((set) => ({ ...set,
+            plan: { weightKg: set.weightKg ?? null, reps: set.reps ?? null, durationMin: set.durationMin ?? null, durationSec: set.durationSec ?? null, distanceKm: set.distanceKm ?? null, rpe: set.rpe ?? null },
+            fact: { weightKg: set.fact.weightKg ?? null, reps: set.fact.reps ?? null, durationMin: set.fact.durationMin ?? null, durationSec: set.fact.durationSec ?? null, distanceKm: set.fact.distanceKm ?? null, rpe: set.fact.rpe ?? null },
+          })),
+        })) })),
         attention: options.questionWorkout && !questionAnswered ? [{
           workoutId,
           clientId,
@@ -287,6 +293,11 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     } else if (url.pathname === `/v1/workouts/${workoutId}/question/answer` && route.request().method() === 'PUT') {
       questionAnswered = true
       body = { workout: { version: 2 } }
+    } else if (/^\/v1\/workouts\/[0-9a-f-]+\/(start|finish)$/.test(url.pathname) && route.request().method() === 'POST') {
+      const id = url.pathname.split('/')[3]
+      const finished = url.pathname.endsWith('/finish')
+      workouts = workouts.map((item) => item.id === id ? { ...item, status: finished ? 'done' : 'in_progress', completedAt: finished ? '2026-09-24T12:00:00Z' : null, version: item.version + 1 } : item)
+      body = { workout: { version: workouts.find((item) => item.id === id)!.version } }
     } else if (url.pathname === '/v1/workouts/quick-start' && route.request().method() === 'POST') {
       workouts = [{ ...workout, id: newWorkoutId, status: 'in_progress' }]
       body = { workout: { id: newWorkoutId, resumed: false } }
@@ -296,9 +307,15 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
         return
       }
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null }
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; exercises?: WorkoutExerciseDraft[] }
       lastSavedStartTime = draft.startTime ?? null
-      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null }]
+      const exercises: WorkoutExercise[] = (draft.exercises ?? []).map((exercise, index) => ({ ...exercise,
+        id: `10000000-0000-4000-8000-${String(100 + index).padStart(12, '0')}`, blockId: `10000000-0000-4000-8000-${String(200 + index).padStart(12, '0')}`,
+        blockType: exercise.blockType ?? 'single', blockPreset: exercise.blockPreset ?? 'set', blockRounds: exercise.blockRounds ?? 1,
+        restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0, restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0, restBetweenSetsSec: exercise.restBetweenSetsSec ?? 60,
+        sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: {}, confirmedAt: null, version: 1 })),
+      }))
+      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null }]
       body = { workout: { id: newWorkoutId } }
     } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {
       const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null }
@@ -617,6 +634,50 @@ test('Lime retained plan offers old date and preserves it when starting a new pl
   await choice.getByRole('button', { name: 'Продолжить черновик' }).first().click()
   await expect(plan.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Новый план')
   await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('Lime plan rejects an end time without start before any save command', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
+  await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await page.getByRole('button', { name: 'Выбрать дату и время' }).click()
+  await page.getByLabel('Окончание', { exact: true }).fill('15:00')
+  await page.getByRole('button', { name: 'Применить дату' }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page.getByRole('alert')).toContainText('Укажите начало тренировки')
+  expect(backend.getSaveAttempts()).toBe(0)
+  await page.getByRole('button', { name: 'Выбрать дату и время' }).click()
+  await page.getByLabel('Начало', { exact: true }).fill('14:00')
+  await page.getByRole('button', { name: 'Применить дату' }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page.getByRole('dialog', { name: 'Быстрое создание тренировки' })).toHaveCount(0)
+  expect(backend.getSaveAttempts()).toBe(1)
+})
+
+test('Lime plan keeps actions reachable with enlarged text on a narrow viewport', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  const plan = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+  // Model enlarged text independently of device scale; not a physical OS setting.
+  await plan.evaluate((element) => {
+    const text = Array.from(element.querySelectorAll<HTMLElement>('h2, input, button, p, button span'))
+      .map((node) => ({ node, size: parseFloat(getComputedStyle(node).fontSize) }))
+    for (const { node, size } of text) { node.style.fontSize = `${size * 1.3}px`; node.style.lineHeight = '1.3' }
+  })
+  await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text-before-scroll.png') })
+  expect(await plan.evaluate((element) => Array.from(element.querySelectorAll('*')).filter((child) => child.getBoundingClientRect().right > element.getBoundingClientRect().right + 1).map((child) => child.className))).toEqual([])
+  expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await plan.getByRole('button', { name: 'Сохранить план' }).scrollIntoViewIfNeeded()
+  await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeInViewport()
+  await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text.png') })
+  await plan.getByRole('button', { name: 'Закрыть создание' }).click()
+  await expect(plan).toHaveCount(0)
 })
 
 test('Lime start now retries one command without using the selected future date', async ({ page }) => {
@@ -2341,6 +2402,63 @@ test('direct pilot workout link returns to its dated calendar instead of clients
   await expect(page.getByLabel('Дата')).toHaveValue('2026-09-29')
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/today\?date=2026-09-29$/)
+})
+
+test('Lime complete lifecycle preserves one plan through start resume and finish', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  const writes: string[] = []
+  page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(new URL(request.url()).pathname) })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить упражнения' }).click()
+  await page.locator('.client-picker-trigger').click()
+  await page.locator(`.client-picker-item[data-client-id="${clientId}"]`).click()
+  await page.getByLabel('Начало').fill('14:00')
+  await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'С тренером', exact: true }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+  await page.locator('.schedule-v2-event').click()
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка завершена' })).toBeVisible()
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.locator('.schedule-v2-event.schedule-event-done')).toHaveCount(1)
+  expect(writes).toEqual(['/v1/workouts', `/v1/workouts/${newWorkoutId}/start`, `/v1/workouts/${newWorkoutId}/finish`])
+})
+
+test('Lime adjacent sessions and current time remain readable and scroll returns', async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T16:51:00+03:00'))
+  await mockPilot(page, { fitLime: true, workouts: [{ ...workout, startTime: '14:00', endTime: '15:00' }, { ...workout, id: newWorkoutId, startTime: '15:00', endTime: '16:00' }] })
+  await page.goto('/today?date=2026-09-24')
+  const events = page.locator('.schedule-v2-event')
+  await expect(events).toHaveCount(2)
+  await expect(events.first()).not.toHaveClass(/is-compact/)
+  await expect(events.last()).not.toHaveClass(/is-compact/)
+  await expect(page.locator('.day-grid-hour-label').filter({ hasText: /^17:00$/ })).toHaveCSS('visibility', 'hidden')
+  const timeline = page.locator('.day-grid-scroll')
+  await timeline.evaluate((element) => { element.scrollTop = 650; element.dispatchEvent(new Event('scroll')) })
+  const position = await timeline.evaluate((element) => element.scrollTop)
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Закрыть выбор действия' }).click()
+  expect(await timeline.evaluate((element) => element.scrollTop)).toBe(position)
+  await page.goto(`/workouts/${workoutId}`)
+  await page.goto('/today?date=2026-09-24')
+  await expect.poll(() => timeline.evaluate((element) => element.scrollTop)).toBe(position)
+  await page.screenshot({ path: testInfo.outputPath('lime-calendar-readable.png') })
 })
 
 test('failed calendar save preserves the form and retry returns to the selected day once', async ({ page }) => {
