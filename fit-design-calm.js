@@ -38,4 +38,5 @@ if (marketForecast) {
   source.setAttribute('fill', '#a7acae');
   source.textContent = 'Оценка Fit';
   marketForecast.after(source);
+  document.querySelector('.market-polished svg text[x="804"][y="94"]')?.remove();
 }
