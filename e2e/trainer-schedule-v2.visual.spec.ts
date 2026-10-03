@@ -636,6 +636,29 @@ test('Lime retained plan offers old date and preserves it when starting a new pl
   await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('Lime plan keeps actions reachable with enlarged text on a narrow viewport', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  const plan = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+  // Model enlarged text independently of device scale; not a physical OS setting.
+  await plan.evaluate((element) => {
+    const text = Array.from(element.querySelectorAll<HTMLElement>('h2, input, button, p, button span'))
+      .map((node) => ({ node, size: parseFloat(getComputedStyle(node).fontSize) }))
+    for (const { node, size } of text) { node.style.fontSize = `${size * 1.3}px`; node.style.lineHeight = '1.3' }
+  })
+  await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text-before-scroll.png') })
+  expect(await plan.evaluate((element) => Array.from(element.querySelectorAll('*')).filter((child) => child.getBoundingClientRect().right > element.getBoundingClientRect().right + 1).map((child) => child.className))).toEqual([])
+  expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await plan.getByRole('button', { name: 'Сохранить план' }).scrollIntoViewIfNeeded()
+  await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeInViewport()
+  await page.screenshot({ path: testInfo.outputPath('lime-enlarged-text.png') })
+  await plan.getByRole('button', { name: 'Закрыть создание' }).click()
+  await expect(plan).toHaveCount(0)
+})
+
 test('Lime start now retries one command without using the selected future date', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, workouts: [] })
