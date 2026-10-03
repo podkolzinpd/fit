@@ -2361,6 +2361,7 @@ test('direct pilot workout link returns to its dated calendar instead of clients
 })
 
 test('Lime complete lifecycle preserves one plan through start resume and finish', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, workouts: [] })
   const writes: string[] = []
   page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(new URL(request.url()).pathname) })
@@ -2375,6 +2376,7 @@ test('Lime complete lifecycle preserves one plan through start resume and finish
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'С тренером', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
   await page.locator('.schedule-v2-event').click()

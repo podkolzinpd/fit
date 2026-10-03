@@ -94,7 +94,7 @@
 .fit-lime-shell .fit-lime-schedule .schedule-v2-day-events b { font-weight: 400; }
 
 /* Native modal owns focus trapping, Escape and focus restoration. */
-.fit-lime-shell .fit-lime-date-picker { position: fixed; inset: auto 0 max(12px, env(safe-area-inset-bottom)); margin: auto auto 0; width: min(calc(100% - 24px), 375px); max-width: 100%; max-height: calc(var(--app-visible-height, 100dvh) - 24px); padding: 16px; overflow: auto; overscroll-behavior: contain; border: 0; border-radius: var(--lime-radius-card); background: var(--lime-surface-raised); color: var(--lime-text); }
+.fit-lime-shell .fit-lime-date-picker { position: fixed; inset: auto 0 max(12px, env(safe-area-inset-bottom)); margin: auto auto 0; width: min(calc(100% - 24px), 375px); max-width: 100%; max-height: calc(var(--app-visible-height, 100dvh) - 24px); padding: 16px; overflow: auto; overscroll-behavior: contain; border: 0; border-radius: 40px; background: var(--lime-surface-raised); color: var(--lime-text); }
 .fit-lime-date-picker::backdrop { background: rgba(0,0,0,.75); }
 .fit-lime-shell .fit-lime-date-picker header { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
 .fit-lime-shell .fit-lime-date-picker h2 { margin: 0; text-align: center; font-size: 16px; font-weight: 500; }
