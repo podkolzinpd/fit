@@ -636,6 +636,27 @@ test('Lime retained plan offers old date and preserves it when starting a new pl
   await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('Lime plan rejects an end time without start before any save command', async ({ page }) => {
+  const backend = await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
+  await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await page.getByRole('button', { name: 'Выбрать дату и время' }).click()
+  await page.getByLabel('Окончание', { exact: true }).fill('15:00')
+  await page.getByRole('button', { name: 'Применить дату' }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page.getByRole('alert')).toContainText('Укажите начало тренировки')
+  expect(backend.getSaveAttempts()).toBe(0)
+  await page.getByRole('button', { name: 'Выбрать дату и время' }).click()
+  await page.getByLabel('Начало', { exact: true }).fill('14:00')
+  await page.getByRole('button', { name: 'Применить дату' }).click()
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect(page.getByRole('dialog', { name: 'Быстрое создание тренировки' })).toHaveCount(0)
+  expect(backend.getSaveAttempts()).toBe(1)
+})
+
 test('Lime plan keeps actions reachable with enlarged text on a narrow viewport', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 720 })
   await mockPilot(page, { fitLime: true })

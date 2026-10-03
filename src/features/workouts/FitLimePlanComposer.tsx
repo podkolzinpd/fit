@@ -118,6 +118,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     event.preventDefault()
     if (submitting.current || !isFitLimeEnabled(actor)) return
     if (!clientId) { setError('Выберите клиента для тренировки'); setPickerOpen(true); return }
+    if (time.end && !time.start) { setError('Укажите начало тренировки или уберите время окончания.'); return }
     const minutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5))
     const duration = (minutes(time.end) - minutes(time.start) + 1440) % 1440
     if (time.start && time.end && (duration === 0 || duration > 720)) {
@@ -154,7 +155,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
           <FitLimeDatePicker value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
         </div>
-        {!time.start && <p className="fit-lime-plan-time-hint">Без времени</p>}
+        {!time.start && <p className="fit-lime-plan-time-hint">{time.end ? 'Начало не указано' : 'Без времени'}</p>}
         <div className="workout-record-mode" role="group" aria-label="Формат тренировки">
           <button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button>
           <button type="button" className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button>
