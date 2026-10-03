@@ -40,3 +40,18 @@ if (marketForecast) {
   marketForecast.after(source);
   document.querySelector('.market-polished svg text[x="804"][y="94"]')?.remove();
 }
+
+// Keep every commission scenario, but show each approved rate only once.
+const commissionRates = document.querySelector('.fm1 .fm1-blk:nth-child(2) .fm1-price');
+if (commissionRates) {
+  commissionRates.classList.add('fm1-commission');
+  commissionRates.innerHTML = `
+    <div class="fm1-pl">
+      <span class="fm1-p">3,5%</span>
+      <span class="fm1-s">Онлайн и офлайн —<br>свой клиент.<br>Программа тренировок /<br>разовая консультация.</span>
+    </div>
+    <div class="fm1-pl">
+      <span class="fm1-p">15%</span>
+      <span class="fm1-s">Онлайн и офлайн —<br>клиент Fit.</span>
+    </div>`;
+}
