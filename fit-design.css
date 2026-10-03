@@ -25,3 +25,24 @@ body { background:#141719; }
 .meeting-growth-slide .meeting-growth-workouts { background:transparent!important; }
 .progress span { background:#d6f500!important; }
 .nav { background:#141719aa; color:#f5f4ef; }
+
+/* Market slide: spacing and legibility only; preserve the approved composition. */
+#deck > .market-polished svg text[x="1022"] {
+  transform: translateX(-60px);
+  font-size: 20px;
+}
+#deck > .market-polished svg rect[x="1000"] {
+  transform: translate(-60px, 5.5px);
+}
+#deck > .market-polished svg text[x="1300"],
+#deck > .market-polished svg text[x="1410"] {
+  font-variant-numeric: tabular-nums;
+  font-size: 23px;
+}
+#deck > .market-polished svg text[x="1300"][y="109"],
+#deck > .market-polished svg text[x="1410"][y="109"] {
+  font-size: 17px;
+}
+#deck > .market-polished svg line[x1="700"] {
+  stroke: #3b4144;
+}
