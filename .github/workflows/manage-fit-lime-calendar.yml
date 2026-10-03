@@ -1,0 +1,93 @@
+name: Manage Fit Lime calendar fixtures
+run-name: ${{ inputs.action }} the two reviewed Fit Lime calendars
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Bounded operation on the existing two-trainer allowlist
+        required: true
+        type: choice
+        options: [inspect, seed, cleanup]
+      confirmation:
+        description: SEED_FIT_LIME_30_CLIENTS_120_WORKOUTS or CLEANUP_FIT_LIME_CALENDAR
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+
+jobs:
+  calendar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bounded operation
+        env:
+          CALENDAR_ACTION: ${{ inputs.action }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          case "$CALENDAR_ACTION" in
+            inspect) test -z "$CONFIRMATION" ;;
+            seed) test "$CONFIRMATION" = SEED_FIT_LIME_30_CLIENTS_120_WORKOUTS ;;
+            cleanup) test "$CONFIRMATION" = CLEANUP_FIT_LIME_CALENDAR ;;
+            *) exit 1 ;;
+          esac
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - name: Exchange GitHub OIDC for short-lived IAM
+        run: scripts/yandex-github-oidc.sh
+      - name: Read existing private runner address
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply and read back exact cohort counts
+        working-directory: infra/yandex
+        env:
+          CALENDAR_ACTION: ${{ inputs.action }}
+        run: |
+          set -euo pipefail
+          umask 077
+          migration_url=$(terraform output -raw migration_container_url)
+          jq -n --arg action "$CALENDAR_ACTION" '{action: $action}' > calendar-request.json
+          status=$(curl --silent --show-error --max-time 120 \
+            --output calendar-response.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            --header 'Content-Type: application/json' --data-binary @calendar-request.json \
+            "${migration_url%/}/stage/experiments/fit-lime-calendar")
+          test "$status" = 200 || { echo "Calendar operation returned HTTP $status." >&2; exit 1; }
+          jq -e '.status == "fit_lime_calendar_ready" and .isolated == true and (.trainers | length == 2)' calendar-response.json >/dev/null
+          if test "$CALENDAR_ACTION" = seed; then
+            jq -e 'all(.trainers[]; .clients == 15 and .workouts == 60 and .cleaned == false)' calendar-response.json >/dev/null
+          fi
+          curl --fail --silent --show-error --max-time 120 \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            --header 'Content-Type: application/json' --data '{"action":"inspect"}' \
+            "${migration_url%/}/stage/experiments/fit-lime-calendar" --output calendar-readback.json
+          jq -e '.status == "fit_lime_calendar_ready" and .isolated == true' calendar-readback.json >/dev/null
+          diff <(jq -S '.trainers' calendar-response.json) <(jq -S '.trainers' calendar-readback.json)
+          jq '{batch, created, trainers, isolated}' calendar-response.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fit-lime-calendar-readback
+          path: infra/yandex/calendar-readback.json
+          retention-days: 7
