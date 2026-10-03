@@ -7,8 +7,8 @@
 .fit-lime-shell.trainer-client-goal-identity .page-header { margin-bottom: 20px }
 .fit-lime-shell.trainer-client-goal-identity .page-header h1 {
   color: var(--lime-text);
-  font-size: clamp(29px, 7vw, 32px);
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.trainer-client-goal-identity .page-back {
@@ -24,14 +24,14 @@
   gap: 14px;
   padding: 20px;
   border-color: var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
 }
 .fit-lime-shell.trainer-client-goal-identity .goal-head h2,
 .fit-lime-shell.trainer-client-goal-identity .goal-criterion-form-head h2 {
   color: var(--lime-text);
   font-size: 19px;
-  font-weight: 650;
+  font-weight: 500;
 }
 .fit-lime-shell.trainer-client-goal-identity .goal-head .link { color: var(--lime-accent) }
 .fit-lime-shell.trainer-client-goal-identity .goal-head .link.danger { color: var(--danger) }
@@ -55,7 +55,7 @@
   border-color: var(--lime-accent);
   background: var(--lime-surface-raised);
 }
-.fit-lime-shell.trainer-client-goal-identity .stage-row strong { color: var(--lime-text); font-size: 15px; font-weight: 650 }
+.fit-lime-shell.trainer-client-goal-identity .stage-row strong { color: var(--lime-text); font-size: 15px; font-weight: 500 }
 .fit-lime-shell.trainer-client-goal-identity .stage-row.done strong,
 .fit-lime-shell.trainer-client-goal-identity .stage-row.done .muted { color: var(--lime-text-secondary) }
 .fit-lime-shell.trainer-client-goal-identity .stage-actions .link { color: var(--lime-text) }
@@ -105,7 +105,7 @@
 }
 .fit-lime-shell.trainer-client-goal-identity .state-panel {
   border-color: var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
 }
 

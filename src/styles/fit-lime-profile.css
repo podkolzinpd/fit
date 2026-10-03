@@ -7,8 +7,8 @@
 .fit-lime-shell.trainer-profile-identity .profile-page > .page-header { margin-bottom: 4px }
 .fit-lime-shell.trainer-profile-identity .profile-page > .page-header h1 {
   color: var(--lime-text);
-  font-size: clamp(29px, 7vw, 32px);
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.trainer-profile-identity .profile-settings-link,
@@ -21,7 +21,7 @@
 .fit-lime-shell.trainer-profile-identity .trainer-professional-embedded { margin: 0 }
 .fit-lime-shell.trainer-profile-identity :where(.trainer-card-compact, .trainer-profile-edit-card, .profile-settings, .body-map-appearance-setting, .account-settings-card, .menu, .app-install-card, .app-feedback-card) {
   border-color: var(--lime-divider);
-  border-radius: 28px;
+  border-radius: var(--lime-radius-card);
   background: var(--lime-surface);
   color: var(--lime-text);
   box-shadow: none;
@@ -30,7 +30,7 @@
 .fit-lime-shell.trainer-profile-identity .trainer-profile-edit-card { padding: 20px }
 .fit-lime-shell.trainer-profile-identity .trainer-card-identity h2,
 .fit-lime-shell.trainer-profile-identity .trainer-profile-edit-head h2,
-.fit-lime-shell.trainer-profile-identity .settings-section h2 { color: var(--lime-text); font-size: 20px; font-weight: 650 }
+.fit-lime-shell.trainer-profile-identity .settings-section h2 { color: var(--lime-text); font-size: 20px; font-weight: 500 }
 .fit-lime-shell.trainer-profile-identity :where(.trainer-card-identity p, .trainer-profile-empty-copy, .trainer-card-facts dt, .trainer-publication-disclosure > summary small, .trainer-photo-editor > p, .account-settings-summary span, .body-map-appearance-setting > div:first-child span) { color: var(--lime-text-secondary) }
 .fit-lime-shell.trainer-profile-identity .trainer-card-avatar-placeholder {
   border-radius: 20px;

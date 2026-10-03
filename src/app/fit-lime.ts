@@ -7,7 +7,14 @@ export function isFitLimeEnabled(actor: SessionActor | null | undefined): boolea
 }
 
 /** Released Fit Lime routes. This list alone does not activate styling. */
+function isAdditionalTrainerRoute(pathname: string): boolean {
+  return pathname === '/finance' || /^\/clients\/[^/]+\/finance$/.test(pathname)
+    || ['/schedule/templates', '/schedule/templates/new', '/schedule/templates/new/editor', '/schedule/templates/from-workout'].includes(pathname)
+    || /^\/schedule\/templates\/[^/]+\/(?:edit|assign)$/.test(pathname)
+}
+
 export function isFitLimeApprovedTrainerRoute(pathname: string, search: string): boolean {
+  if (isAdditionalTrainerRoute(pathname)) return true
   if (pathname === '/today') return isTrainerScheduleV2CalendarRoute(pathname, search)
     || ['compose', 'review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   if (pathname === '/schedule' || pathname === '/join' || pathname === '/chat'
@@ -33,7 +40,7 @@ export function isFitLimeShellRoute(
 ): boolean {
   if (!isFitLimeEnabled(actor) || !isFitLimeApprovedTrainerRoute(pathname, search)) return false
   return isTrainerScheduleV2Enabled(actor)
-    && (isTrainerScheduleV2CalendarRoute(pathname, search)
+    && (isAdditionalTrainerRoute(pathname) || isTrainerScheduleV2CalendarRoute(pathname, search)
       || (pathname === '/today' && ['compose', 'review', 'save'].includes(new URLSearchParams(search).get('view') ?? ''))
       || pathname === '/chat' || /^\/chat\/[^/]+$/.test(pathname)
       || pathname === '/clients' || pathname === '/clients/archive'

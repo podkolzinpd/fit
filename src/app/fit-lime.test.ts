@@ -46,10 +46,22 @@ describe('Fit Lime route boundary', () => {
     ['/workouts/workout-1/live', '', true],
     ['/workouts/workout-1/history/exercise-1', '', true],
     ['/assistant', '', true],
+    ['/finance', '', true],
+    ['/clients/client-1/finance', '', true],
+    ['/schedule/templates', '', true],
+    ['/schedule/templates/new', '', true],
+    ['/schedule/templates/new/editor', '', true],
+    ['/schedule/templates/from-workout', '', true],
+    ['/schedule/templates/template-1/edit', '', true],
+    ['/schedule/templates/template-1/assign', '', true],
+    ['/schedule/templates/template-1/unknown', '', false],
+    ['/clients/client-1/finance/extra', '', false],
     ['/me', '', false],
     ['/auth', '', false],
   ] as const)('%s%s has the released Fit Lime boundary', (pathname, search, approved) => {
     expect(isFitLimeApprovedTrainerRoute(pathname, search)).toBe(approved)
+    expect(isFitLimeShellRoute(pilot, pathname, search)).toBe(approved)
+    expect(isFitLimeShellRoute(trainer, pathname, search)).toBe(false)
   })
 
   it('activates released calendar, chat, clients and connection routes only', () => {

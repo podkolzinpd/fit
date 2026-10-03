@@ -123,6 +123,12 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       if (draft.scheduleDensity) scheduleDensity = draft.scheduleDensity
       await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' })
       return
+    } else if (url.pathname === '/v1/finance/overview') {
+      body = { overview: { month: url.searchParams.get('month'), receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] } }
+    } else if (url.pathname === `/v1/clients/${clientId}/finance`) {
+      body = { finance: { clientId, packages: [], payments: [], sessions: [] } }
+    } else if (url.pathname === '/v1/workout-templates') {
+      body = { templates: [] }
     } else if (url.pathname === '/v1/legal/acceptance') {
       body = { applicable: true, accepted: true, acceptedAt: '2026-09-01T00:00:00.000Z' }
     } else if (url.pathname === '/v1/trainer-profile' && route.request().method() === 'GET') {
@@ -423,6 +429,25 @@ test('Figma workout second pilot keeps quick-plan guidance and completed draft',
 })
 
 for (const width of [390, 430, 1440]) {
+  test(`Figma trainer routes include finance and templates at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockPilot(page, { fitLime: true })
+    for (const route of ['/finance', `/clients/${clientId}/finance`, '/schedule/templates', '/schedule/templates/new/editor', '/profile', '/clients', '/chat', '/assistant']) {
+      await page.goto(route)
+      await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+      await page.evaluate(() => document.fonts.ready)
+      await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+      await page.screenshot({ path: testInfo.outputPath(`routes-${route.replace(/[^a-z]+/g, '-')}.png`) })
+    }
+    await mockPilot(page, { fitLime: false })
+    for (const route of ['/finance', `/clients/${clientId}/finance`, '/schedule/templates', '/schedule/templates/new/editor']) {
+      await page.goto(route)
+      await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+      await expect(page.locator('html')).not.toHaveClass(/fit-lime-document/)
+      await expect(page.locator('[data-original-icon]')).toHaveCount(0)
+    }
+  })
   test(`Figma workout quick empty plan at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await mockPilot(page, { fitLime: true, workouts: [], failFirstSave: true })
@@ -1200,8 +1225,10 @@ for (const [account, profileId] of [
     await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
-    await expect(page.locator('.chat-message.partner')).toHaveCSS('background-color', 'rgb(25, 25, 28)')
-    await expect(page.getByRole('button', { name: 'Отправить' })).toHaveCSS('background-color', 'rgb(186, 255, 54)')
+    await expect(page.getByRole('button', { name: 'Назад' })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Назад' })).toHaveCSS('opacity', '1')
+    await expect(page.locator('.chat-message.partner')).toHaveCSS('background-color', 'rgb(26, 26, 28)')
+    await expect(page.getByRole('button', { name: 'Отправить' })).toHaveCSS('background-color', 'rgb(182, 239, 77)')
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-conversation.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
@@ -1252,7 +1279,7 @@ for (const [account, profileId] of [
     await page.goto('/clients')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
-    await expect(page.locator('.client-card').first()).toHaveCSS('background-color', 'rgb(25, 25, 28)')
+    await expect(page.locator('.client-card').first()).toHaveCSS('background-color', 'rgb(26, 26, 28)')
     await page.getByRole('searchbox', { name: 'Поиск клиента' }).fill('кузнец')
     await expect(page.getByRole('link', { name: /Вера Кузнецова/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Алексей Смирнов/ })).toHaveCount(0)
@@ -1310,7 +1337,10 @@ for (const [account, profileId] of [
     await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /История тренировок/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Прогресс и замеры/ })).toBeVisible()
-    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(186, 255, 54)')
+    await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    for (const icon of await page.locator('.client-detail-plan svg[data-original-icon]').all()) {
+      await expect(icon).toHaveCSS('filter', 'brightness(0)')
+    }
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-card.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })

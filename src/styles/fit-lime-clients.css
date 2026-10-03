@@ -6,57 +6,57 @@
 }
 .fit-lime-shell.trainer-clients-identity .clients-page > .page-header { gap: 14px; margin-bottom: 22px }
 .fit-lime-shell.trainer-clients-identity .clients-page > .page-header h1 {
-  color: #f8f8f6;
-  font-size: clamp(29px, 7vw, 32px);
-  font-weight: 700;
+  color: var(--lime-text);
+  font-size: 24px;
+  font-weight: 500;
   line-height: 1.08;
   letter-spacing: -.04em;
 }
 .fit-lime-shell.trainer-clients-identity .clients-page-header-actions { gap: 8px }
 .fit-lime-shell.trainer-clients-identity .clients-page .page-header .button {
   min-height: 48px;
-  border-color: #baff36;
+  border-color: var(--lime-accent);
   border-radius: 16px;
-  background: #baff36;
-  color: #111111;
-  font-weight: 650;
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+  font-weight: 500;
 }
 .fit-lime-shell.trainer-clients-identity .clients-page .page-header .button.secondary {
-  border-color: #303034;
-  background: #232328;
-  color: #f8f8f6;
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
 .fit-lime-shell.trainer-clients-identity .clients-search {
   min-height: 52px;
   margin-bottom: 12px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 18px;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
-.fit-lime-shell.trainer-clients-identity .clients-search:focus-within { border-color: #baff36 }
-.fit-lime-shell.trainer-clients-identity .clients-search input { color: #f8f8f6; font-size: 16px }
+.fit-lime-shell.trainer-clients-identity .clients-search:focus-within { border-color: var(--lime-accent) }
+.fit-lime-shell.trainer-clients-identity .clients-search input { color: var(--lime-text); font-size: 16px }
 .fit-lime-shell.trainer-clients-identity .clients-search input::placeholder,
-.fit-lime-shell.trainer-clients-identity .clients-search > svg { color: #b8b8bd }
-.fit-lime-shell.trainer-clients-identity .clients-search-clear { color: #f8f8f6 }
+.fit-lime-shell.trainer-clients-identity .clients-search > svg { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-clients-identity .clients-search-clear { color: var(--lime-text) }
 .fit-lime-shell.trainer-clients-identity .clients-list { gap: 8px }
-.fit-lime-shell.trainer-clients-identity .client-swipe-row { border-radius: 28px; background: #19191c }
+.fit-lime-shell.trainer-clients-identity .client-swipe-row { border-radius: var(--lime-radius-card); background: var(--lime-surface) }
 .fit-lime-shell.trainer-clients-identity .client-card {
   min-height: 84px;
-  border-color: #303034;
-  border-radius: 28px;
-  background: #19191c;
-  color: #f8f8f6;
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  color: var(--lime-text);
 }
 .fit-lime-shell.trainer-clients-identity .client-card:hover { border-color: #729b27 }
 .fit-lime-shell.trainer-clients-identity .client-card-main { min-height: 84px; padding: 14px 8px 14px 16px }
 .fit-lime-shell.trainer-clients-identity .client-avatar {
   width: 48px;
   height: 48px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 50%;
-  background: #232328;
-  color: #b8b8bd;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
 }
 .fit-lime-shell.trainer-clients-identity .client-card-copy > strong {
   display: -webkit-box;
@@ -66,53 +66,53 @@
   line-clamp: 2;
   overflow-wrap: anywhere;
   white-space: normal;
-  color: #f8f8f6;
+  color: var(--lime-text);
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 500;
 }
-.fit-lime-shell.trainer-clients-identity .client-card-copy > span { color: #b8b8bd; font-size: 12px }
+.fit-lime-shell.trainer-clients-identity .client-card-copy > span { color: var(--lime-text-secondary); font-size: 12px }
 .fit-lime-shell.trainer-clients-identity .client-chat-action,
 .fit-lime-shell.trainer-clients-identity .client-card-menu {
   width: 44px;
   height: 44px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 15px;
-  background: #232328;
-  color: #f8f8f6;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
 }
 .fit-lime-shell.trainer-clients-identity .client-chat-action:hover,
 .fit-lime-shell.trainer-clients-identity .client-card-menu:hover { border-color: #729b27 }
-.fit-lime-shell.trainer-clients-identity .client-swipe-actions.is-restore { background: #baff36 }
-.fit-lime-shell.trainer-clients-identity .client-swipe-actions.is-restore button { color: #111111 }
+.fit-lime-shell.trainer-clients-identity .client-swipe-actions.is-restore { background: var(--lime-accent) }
+.fit-lime-shell.trainer-clients-identity .client-swipe-actions.is-restore button { color: var(--lime-text-on-accent) }
 .fit-lime-shell.trainer-clients-identity .clients-archive-link {
   min-height: 62px;
   margin-top: 12px;
-  border-color: #303034;
+  border-color: var(--lime-divider);
   border-radius: 24px;
-  background: #232328;
-  color: #f8f8f6;
-  font-weight: 600;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-weight: 500;
 }
-.fit-lime-shell.trainer-clients-identity .clients-archive-link svg { color: #baff36 }
+.fit-lime-shell.trainer-clients-identity .clients-archive-link svg { color: var(--lime-accent) }
 .fit-lime-shell.trainer-clients-identity .clients-archive-link:hover { border-color: #729b27 }
 .fit-lime-shell.trainer-clients-identity .clients-archive-feedback {
   border-color: #729b27;
   border-radius: 18px;
-  background: #25360c;
-  color: #f8f8f6;
+  background: var(--lime-accent-muted);
+  color: var(--lime-text);
 }
-.fit-lime-shell.trainer-clients-identity .clients-archive-feedback .link { min-height: 44px; color: #baff36 }
-.fit-lime-shell.trainer-clients-identity .clients-archive-feedback-close { width: 44px; min-height: 44px; color: #f8f8f6 }
+.fit-lime-shell.trainer-clients-identity .clients-archive-feedback .link { min-height: 44px; color: var(--lime-accent) }
+.fit-lime-shell.trainer-clients-identity .clients-archive-feedback-close { width: 44px; min-height: 44px; color: var(--lime-text) }
 .fit-lime-shell.trainer-clients-identity .clients-search-empty,
 .fit-lime-shell.trainer-clients-identity .state-panel {
-  border-color: #303034;
-  border-radius: 28px;
-  background: #19191c;
-  color: #f8f8f6;
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  color: var(--lime-text);
 }
 .fit-lime-shell.trainer-clients-identity .state-panel p,
-.fit-lime-shell.trainer-clients-identity .clients-search-empty { color: #b8b8bd }
-.fit-lime-shell.trainer-clients-identity .clients-code-fallback { color: #b8b8bd }
+.fit-lime-shell.trainer-clients-identity .clients-search-empty { color: var(--lime-text-secondary) }
+.fit-lime-shell.trainer-clients-identity .clients-code-fallback { color: var(--lime-text-secondary) }
 
 @media (max-width: 560px) {
   .fit-lime-shell.trainer-clients-identity .clients-page { padding: 18px 16px calc(116px + env(safe-area-inset-bottom)) }
