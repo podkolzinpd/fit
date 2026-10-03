@@ -107,7 +107,7 @@
 .fit-lime-shell.workout-create-edit-identity .picker-muscle.active {
   border-color: var(--accent-surface-border);
   background: var(--lime-accent-muted);
-  color: var(--lime-accent);
+  color: var(--lime-accent-ink);
 }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .workout-header-contract h2 { line-height: 24px; letter-spacing: -.02em; }
 .phone-frame.fit-lime-shell.workout-create-edit-identity .workout-form-section-head h2 { font-size: 16px; line-height: 20px; }

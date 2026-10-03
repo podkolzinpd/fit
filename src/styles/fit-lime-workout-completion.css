@@ -21,7 +21,7 @@
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-kicker,
 .fit-lime-shell.workout-detail-history-identity .workout-completion-record strong {
-  color: var(--lime-accent);
+  color: var(--lime-accent-ink);
   font-weight: 500;
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-kicker {
@@ -32,7 +32,7 @@
   border-color: var(--accent-surface-border);
   border-radius: 18px;
   background: var(--lime-accent-muted);
-  color: var(--lime-accent);
+  color: var(--lime-accent-ink);
 }
 .fit-lime-shell.workout-detail-history-identity .workout-completion-report-facts {
   border-color: var(--lime-divider);

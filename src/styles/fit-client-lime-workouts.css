@@ -1,0 +1,29 @@
+/* Existing client content and workout actions, expressed through Lime tokens. */
+.phone-frame.fit-client-lime.client-home-identity :is(.quick-start-workout, .voice-action,
+  .app-install-card, .client-home-next, .client-home-past-plan, .client-home-week,
+  .client-home-highlight, .first-run-benefits, .client-home-progress) {
+  border-radius: var(--lime-radius-card);
+}
+.phone-frame.fit-client-lime.client-home-identity :is(.quick-start-button, .today-text-toggle, .button, button.primary, button.secondary) { border-radius: 999px; }
+.phone-frame.fit-client-lime.client-home-identity .quick-start-workout { padding: 20px; }
+.phone-frame.fit-client-lime.client-home-identity .quick-start-copy h2 { font-size: 24px; line-height: 28px; font-weight: 500; }
+.phone-frame.fit-client-lime.client-home-identity .quick-start-copy p { opacity: 1; }
+.phone-frame.fit-client-lime.client-home-identity .quick-start-button { background: var(--lime-text-on-accent); color: var(--lime-accent); font-weight: 500; }
+.phone-frame.fit-client-lime.client-home-identity .quick-start-button:disabled { background: var(--lime-surface-raised); color: var(--lime-text-secondary); opacity: 1; }
+.phone-frame.fit-client-lime.client-home-identity :is(.voice-action-button, .today-voice-text-inline) { border-radius: 50%; }
+.phone-frame.fit-client-lime.theme-light.client-home-identity :is(.voice-action-button, .today-voice-text-inline) svg[data-original-icon] { filter: brightness(0); }
+.phone-frame.fit-client-lime.client-workouts-identity :is(.client-workout-card, .client-history-calendar, .workout-decision-card) {
+  border-radius: var(--lime-radius-card);
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.client-workouts-identity .client-history-calendar button { border-radius: 50%; }
+.phone-frame.fit-client-lime.client-workouts-identity :is(.client-workout-card h2, .client-workout-card h3) { font-weight: 500; }
+.phone-frame.fit-client-lime.live-identity .live-bottom-bar,
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-form .workout-action-row { background: var(--lime-surface); }
+.phone-frame.fit-client-lime.live-identity .live-timer { font-family: 'REM', sans-serif; }
+.phone-frame.fit-client-lime.live-identity .live-bottom-bar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.phone-frame.fit-client-lime.theme-light.live-identity .finish-confirm .workout-cta[data-variant='primary'] { color: var(--lime-surface); }
+.phone-frame.fit-client-lime :is(.workout-completion-report, .workout-completion-share-card) { overflow-wrap: anywhere; }
+
+.phone-frame.fit-client-lime.live-identity .live-add-set { width: fit-content; min-height: 44px; padding-inline: 12px; }

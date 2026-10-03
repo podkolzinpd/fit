@@ -62,7 +62,7 @@
   color: var(--lime-text-on-accent);
 }
 .fit-lime-shell.live-identity .live-set-check.done { background: var(--lime-surface-raised); color: var(--success-fg) }
-.fit-lime-shell.live-identity .live-set.editing .live-set-save { background: transparent; color: var(--lime-accent) }
+.fit-lime-shell.live-identity .live-set.editing .live-set-save { background: transparent; color: var(--lime-accent-ink) }
 .fit-lime-shell.live-identity .exercise-comment {
   border-color: var(--lime-divider);
   background: var(--lime-surface-raised);
