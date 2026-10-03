@@ -48,10 +48,10 @@ if (commissionRates) {
   commissionRates.innerHTML = `
     <div class="fm1-pl">
       <span class="fm1-p">3,5%</span>
-      <span class="fm1-s">Онлайн и офлайн —<br>свой клиент.<br>Программа тренировок /<br>разовая консультация.</span>
+      <span class="fm1-s">Онлайн и офлайн — свой клиент.<br>Программа тренировок /<br>разовая консультация.</span>
     </div>
     <div class="fm1-pl">
       <span class="fm1-p">15%</span>
-      <span class="fm1-s">Онлайн и офлайн —<br>клиент Fit.</span>
+      <span class="fm1-s">Онлайн и офлайн — клиент Fit.</span>
     </div>`;
 }
