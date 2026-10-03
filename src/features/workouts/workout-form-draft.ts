@@ -2,6 +2,8 @@ import type { WorkoutDraft, WorkoutTrainingFormat } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 
 export interface WorkoutFormDraft {
+  title?: string
+  requestId?: string
   clientId: string
   workoutDate: LocalDate
   startTime: string
@@ -18,6 +20,8 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<WorkoutFormDraft>
   return typeof draft.clientId === 'string'
+    && (draft.title === undefined || typeof draft.title === 'string')
+    && (draft.requestId === undefined || typeof draft.requestId === 'string')
     && typeof draft.workoutDate === 'string'
     && typeof draft.startTime === 'string'
     && typeof draft.endTime === 'string'
