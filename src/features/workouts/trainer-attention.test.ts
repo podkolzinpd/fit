@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Client, TrainerAttentionWorkout, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { trainerActionItems, trainerDayActionItems, trainerPlanningItems } from './trainer-attention'
+import { filterScheduleWorkouts, scheduleStatusFilter } from './schedule-filters'
 
 const client = { id: 'c1', fullName: 'Анна', archivedAt: null } as Client
 const workout = (patch: Partial<Workout>): Workout => ({
@@ -11,6 +12,16 @@ const workout = (patch: Partial<Workout>): Workout => ({
 })
 
 describe('trainer attention', () => {
+  it('filters history by client and saved status without treating a past plan as completed', () => {
+    const items = [workout({ id: 'done' }), workout({ id: 'plan', status: 'planned' }), workout({ id: 'cancel', status: 'cancelled' }), workout({ id: 'other', clientId: 'c2' })]
+    expect(filterScheduleWorkouts(items, 'c1', 'done').map((item) => item.id)).toEqual(['done'])
+    expect(filterScheduleWorkouts(items, '', 'cancelled').map((item) => item.id)).toEqual(['cancel'])
+    expect(filterScheduleWorkouts(items, '', 'all')).toEqual(items)
+    expect(filterScheduleWorkouts(items, 'unknown', 'all')).toEqual([])
+    expect(scheduleStatusFilter('invalid')).toBe('all')
+    expect(scheduleStatusFilter('done')).toBe('done')
+    expect(items).toHaveLength(4)
+  })
   it('keeps every active workout reachable in Lime without counting the same workout twice', () => {
     const active = [workout({ id: 'w1', status: 'in_progress' }), workout({ id: 'w2', status: 'in_progress' })]
     const actions = trainerActionItems([client], active, [{ workoutId: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-08-20'), clientQuestion: 'Вопрос', discomfort: false, version: 1 }], localDate('2026-08-21'))
