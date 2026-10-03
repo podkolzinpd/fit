@@ -634,6 +634,53 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
 }
 
 for (const width of [390, 430]) {
+  test(`Lime keyboard visual viewport keeps composer above keyboard at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    // Model Safari's separate layout/visual viewports, not a physical OS keyboard.
+    await page.addInitScript(() => {
+      const viewport = new EventTarget()
+      Object.defineProperties(viewport, {
+        height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? window.innerHeight) },
+        offsetTop: { get: () => Number(document.documentElement.dataset.testViewportTop ?? 0) },
+      })
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+    })
+    await mockPilot(page, { fitLime: true })
+    await page.goto('/today?date=2026-09-24')
+    const trigger = page.getByRole('button', { name: 'Новая тренировка', exact: true })
+    await trigger.click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+    const input = dialog.getByRole('textbox', { name: 'Название тренировки' })
+    await expect(input).not.toBeFocused()
+    await input.fill('Тренировка над клавиатурой')
+    for (const offset of [0, 24]) {
+      await page.evaluate((top) => {
+        document.documentElement.dataset.testVisibleHeight = '400'
+        document.documentElement.dataset.testViewportTop = String(top)
+        window.visualViewport?.dispatchEvent(new Event('resize'))
+      }, offset)
+      await expect(page.locator('html')).toHaveClass(/app-keyboard-open/)
+      await expect.poll(async () => {
+        const box = await dialog.boundingBox()
+        return box ? box.y + box.height : 1000
+      }).toBeLessThanOrEqual(400 + offset)
+      const box = await dialog.boundingBox()
+      expect(box!.y).toBeGreaterThanOrEqual(offset)
+      await expect(dialog).toHaveCSS('transform', 'none')
+    }
+    await page.screenshot({ path: testInfo.outputPath('lime-keyboard-visible-form.png') })
+    await dialog.getByRole('button', { name: 'Закрыть создание' }).click()
+    await expect(dialog).not.toBeVisible()
+    await expect(trigger).toBeVisible()
+    await page.evaluate(() => {
+      delete document.documentElement.dataset.testVisibleHeight
+      delete document.documentElement.dataset.testViewportTop
+      window.visualViewport?.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
+  })
+
   test(`Figma long client name and constrained-height picker at ${width}`, async ({ page }, testInfo) => {
     const fullName = 'Александр Константинопольский-Рождественский'
     await page.setViewportSize({ width, height: 844 })

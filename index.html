@@ -50,6 +50,7 @@
     <link rel="apple-touch-icon" href="/assets/home-icon-180-1879755a4578.png" sizes="180x180" />
     <link rel="preload" as="image" href="/assets/home-icon-180-1879755a4578.png" data-home-screen-icon />
     <link rel="manifest" href="/site.webmanifest?v=5" />
+    <link rel="preload" as="image" href="/assets/startup-photo-983c93dc4df8.jpg" fetchpriority="high" />
     <title>Fit</title>
     <style id="fit-startup-shell-styles">
       html, body, #root { min-height: 100%; }
@@ -90,6 +91,41 @@
         color: #fbfaf7;
         font: inherit;
         font-weight: 600;
+      }
+    </style>
+    <!-- Shared by the pre-JS shell and React session restoration. Keep after shell cleanup. -->
+    <style id="fit-startup-photo-styles">
+      .fit-startup-photo {
+        position: relative;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 100dvh;
+        display: grid;
+        place-content: center;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #111214;
+        color: #f1ede6;
+        font: 16px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      }
+      #fit-startup-shell.fit-startup-photo { position: fixed; gap: 0; }
+      .fit-startup-photo-image { display: none; }
+      .fit-startup-photo > .fit-startup-photo-image:not([hidden]) {
+        display: block;
+        position: absolute;
+        z-index: 1;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
+      .fit-startup-photo > .fit-startup-mark,
+      .fit-startup-photo > #fit-startup-message { display: none; }
+      .fit-startup-photo > #fit-startup-title { margin: 0; font: inherit; }
+      @media (min-aspect-ratio: 1/1) {
+        .fit-startup-photo > .fit-startup-photo-image:not([hidden]) { object-fit: contain; }
       }
     </style>
     <script id="fit-startup-controller">
@@ -155,6 +191,7 @@
           elements.title.textContent = 'Не удалось открыть Fit'
           elements.message.textContent = 'Обновите приложение. Ваши данные и тренировки сохранены.'
           elements.reload.hidden = false
+          elements.shell.classList.remove('fit-startup-photo')
           elements.shell.setAttribute('aria-live', 'assertive')
           bindReload(elements.reload)
           if (emergencyShell) emergencyShell.remove()
@@ -163,6 +200,10 @@
         function handleLoadError(event) {
           var target = event && event.target
           var tagName = target && target.tagName
+          if (tagName === 'IMG' && target.classList.contains('fit-startup-photo-image')) {
+            target.hidden = true
+            return
+          }
           var source = target && (target.src || target.href || '')
           var isAppResource = target && (
             target.id === 'fit-app-entry'
@@ -175,11 +216,20 @@
 
         function attachStartupShell() {
           var elements = findShellElements()
+          // Guard only genuinely unstyled content. A ready form must not
+          // briefly lose editability while waiting for the next paint.
+          var root = document.getElementById('root')
+          if (root && document.querySelector('link[data-fit-app-styles][media="print"]')) {
+            root.setAttribute('inert', '')
+          }
           bindReload(elements.reload)
           if (errorPending) showStartupError()
         }
 
         function appIsVisible() {
+          // Production styles load without blocking the photographic shell.
+          // Never reveal React until those styles are applied.
+          if (document.querySelector('link[data-fit-app-styles][media="print"]')) return false
           var root = document.getElementById('root')
           if (!root || root.childElementCount === 0) return false
           var bounds = root.getBoundingClientRect()
@@ -193,9 +243,11 @@
             return
           }
           finished = true
+          document.getElementById('root').removeAttribute('inert')
           window.clearTimeout(timeout)
           if (probeTimer !== null) window.clearTimeout(probeTimer)
           window.removeEventListener('error', handleLoadError, true)
+          document.removeEventListener('load', handleStyleLoad, true)
           window.removeEventListener('unhandledrejection', showStartupError)
           window.removeEventListener('fit:asset-load-error', showStartupError)
           document.removeEventListener('DOMContentLoaded', attachStartupShell)
@@ -209,6 +261,14 @@
         }
 
         var timeout = window.setTimeout(showStartupError, timeoutMs)
+        function handleStyleLoad(event) {
+          var target = event.target
+          if (target && target.tagName === 'LINK' && target.hasAttribute('data-fit-app-styles')) {
+            target.media = 'all'
+            window.requestAnimationFrame(finishStartupWhenVisible)
+          }
+        }
+        document.addEventListener('load', handleStyleLoad, true)
         window.addEventListener('error', handleLoadError, true)
         window.addEventListener('unhandledrejection', showStartupError)
         window.addEventListener('fit:asset-load-error', showStartupError)
@@ -257,7 +317,8 @@
   </head>
   <body>
     <div id="root"></div>
-    <main id="fit-startup-shell" class="fit-startup-shell" aria-live="polite">
+    <main id="fit-startup-shell" class="fit-startup-shell fit-startup-photo" aria-live="polite">
+      <img class="fit-startup-photo-image" src="/assets/startup-photo-983c93dc4df8.jpg" width="940" height="1673" alt="" aria-hidden="true" fetchpriority="high" />
       <img class="fit-startup-mark" src="/fit-logo.svg" alt="" aria-hidden="true" />
       <h1 id="fit-startup-title">Открываем Fit…</h1>
       <p id="fit-startup-message">Загружаем приложение.</p>
