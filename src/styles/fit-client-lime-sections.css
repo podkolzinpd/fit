@@ -1,0 +1,37 @@
+/* Client surfaces share the same light/dark tokens, including body portals. */
+.phone-frame.fit-client-lime :is(.client-profile-card, .client-finance-home,
+  .client-finance-package, .client-finance-payments, .client-progress-measurement,
+  .progress-story-summary, .client-progress-insight, .client-progress-card,
+  .progress-form-card, .client-goal-card) {
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime :is(.client-progress-page, .client-profile-page, .client-finance-page) :is(h1, h2, h3, strong) { font-weight: 500; }
+.phone-frame.fit-client-lime :is(.client-progress-page, .client-finance-page) :is(input, select, textarea) { font-size: 16px; }
+.phone-frame.fit-client-lime :is(.chat-reply-quote strong, .chat-unread-divider) { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime .chat-message.own { border-color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime .chat-surface { scrollbar-color: var(--lime-divider) transparent; }
+html.fit-client-lime-document .fit-lime-chat-sheet { background: var(--lime-overlay); }
+
+.phone-frame.fit-client-lime :is(.athlete-achievements-home, .athlete-achievements-preview, .athlete-achievements-new),
+html.fit-client-lime-document .athlete-achievement-detail {
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime :is(.athlete-achievements-heading h2, .athlete-achievements-new h2,
+  .athlete-achievements-home-content strong, .athlete-achievements-new strong),
+html.fit-client-lime-document .athlete-achievement-detail-heading h2 { color: var(--lime-text); font-weight: 500; }
+.phone-frame.fit-client-lime :is(.athlete-achievements-heading > span, .athlete-achievement-card small,
+  .athlete-achievements-home-content p, .athlete-achievements-state, .athlete-achievements-close),
+html.fit-client-lime-document .athlete-achievement-detail p { color: var(--lime-text-secondary); }
+.phone-frame.fit-client-lime :is(.athlete-achievements-home a, .athlete-achievements-preview a, .athlete-achievements-new a),
+html.fit-client-lime-document .athlete-achievement-detail > strong { color: var(--lime-accent-ink); font-weight: 500; }
+html.fit-client-lime-document .athlete-achievement-detail-overlay { background: var(--lime-overlay); }
+html.fit-client-lime-document .athlete-achievement-detail-heading button { background: var(--lime-surface-raised); color: var(--lime-text); }
+html.fit-client-lime-document.theme-light .athlete-achievement-detail-heading svg[data-original-icon] { filter: brightness(0); }
+html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
+.phone-frame.fit-client-lime :is(.athlete-achievements-home, .athlete-achievements-page) :focus-visible { outline-color: var(--lime-accent-ink); }
+/* Authored badge artwork retains its original background and colors. */

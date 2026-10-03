@@ -28,13 +28,13 @@
 .fit-lime-shell.assistant-identity .assistant-session-history button.selected {
   border-color: var(--accent-surface-border);
   background: var(--lime-accent-muted);
-  color: var(--lime-accent);
+  color: var(--lime-accent-ink);
 }
 .fit-lime-shell.assistant-identity .assistant-first-entry-icon {
   border-color: var(--accent-surface-border);
   border-radius: 18px;
   background: var(--lime-accent-muted);
-  color: var(--lime-accent);
+  color: var(--lime-accent-ink);
 }
 .fit-lime-shell.assistant-identity .assistant-first-entry-copy h2 { color: var(--lime-text); font-weight: 500 }
 .fit-lime-shell.assistant-identity .assistant-first-entry-copy p { color: var(--lime-text-secondary) }
