@@ -11,6 +11,7 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import { FitLimeCalendarNotReadyError, type FitLimeCalendarManager } from './db/fit-lime-calendar-fixtures.js'
 import type { StageCalorieAuditor } from './db/workout-calorie-audit.js'
 import type { RuntimeDomainReadinessResult } from './db/runtime-domain-readiness.js'
 import {
@@ -71,6 +72,7 @@ interface BuildMigrationAppOptions {
   rolloutAssignment?: StageRolloutAssignmentManager
   trainerScheduleV2Pilot?: TrainerScheduleV2PilotManager
   fitLimePilot?: FitLimePilotManager
+  fitLimeCalendar?: FitLimeCalendarManager
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
@@ -583,6 +585,25 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'trainer_profile_not_ready' })
         }
         return reply.code(500).send({ status: 'fit_lime_failed' })
+      }
+    })
+  }
+
+  // Exposed only on the existing IAM-protected migration runner, never the
+  // public application API. Targets are fixed server-side, not request IDs.
+  if (options.fitLimeCalendar !== undefined) {
+    const calendar = options.fitLimeCalendar
+    app.post('/stage/experiments/fit-lime-calendar', async (request, reply) => {
+      const body = request.body
+      if (typeof body !== 'object' || body === null || !('action' in body)
+        || Object.keys(body).some((key) => key !== 'action')
+        || (body.action !== 'inspect' && body.action !== 'seed' && body.action !== 'cleanup')) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+      try { return { status: 'fit_lime_calendar_ready', ...await calendar.apply(body.action) } }
+      catch (error) {
+        if (error instanceof FitLimeCalendarNotReadyError) return reply.code(409).send({ status: 'fit_lime_calendar_not_ready' })
+        return reply.code(500).send({ status: 'fit_lime_calendar_failed' })
       }
     })
   }

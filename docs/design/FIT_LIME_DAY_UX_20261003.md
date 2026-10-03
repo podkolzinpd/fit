@@ -83,12 +83,15 @@ Scope: только два ранее согласованных server-assigned
 | --- | --- | --- | --- |
 | 1 | Чистый день, возврат сегодня, доступ к незавершённому | 2307 frontend + 1044 API tests; 244 Chromium/WebKit cases; визуально 390/1440 и подсказка, suite 390/430/1440 | PR #1364 выпущен; main 5b2eed62, CI37119953990 и deployment37120470911 success; SHA HTML/JS/CSS/YS Geo совпали |
 | 2 | Два понятных сценария из «+» без потери данных | 18 адресных browser cases; 247/248 full browser + 4 адресных pass; полный check: 2309 frontend/1044 API; визуально выбор и форма | PR #1365 выпущен; main4470af4e, CI37121605753/frontend37122082235 success, SHA HTML/JS/CSS/fonts совпали |
-| 3 | Календарь/история с фильтрами и контекстом | 2310 frontend/1044 API; 255/256 browser + 2/2 адресный повтор WebKit page.goto прошли; оба пилота в новом flow; 390/430/1440 | PR #1366 слит в ae01ff14, production выполняется |
-| 4 | Корректный статус установки и подписки | 2318 frontend/1044 API; 259/260 browser + 2/2 повтор page.goto, 4 новых адресных; визуально WebKit390 | локально проверен, CI/production впереди |
-| 5 | 30 клиентов и 120 тренировок, безопасный повтор | clean Yandex actor/RLS + isolation + exact counts | не начат |
+| 3 | Календарь/история с фильтрами и контекстом | 2310 frontend/1044 API; 255/256 browser + 2/2 адресный повтор WebKit page.goto прошли; оба пилота в новом flow; 390/430/1440 | PR #1366 выпущен, ae01ff14, frontend37123485887 success, SHA HTML/JS/CSS/fonts совпали |
+| 4 | Корректный статус установки и подписки | 2318 frontend/1044 API; 259/260 browser + 2/2 повтор page.goto, 4 новых адресных; визуально WebKit390 | PR #1367 слит в 4d1212c7, main CI/production выполняются |
+| 5 | 30 клиентов и 120 тренировок, безопасный повтор | 68/68 clean Yandex actor/RLS, exact counts, repeat/edit/cleanup isolation; 1507 legacy SQL tests pass | локально реализован, полный check и production впереди |
 | 6 | Заполненные экраны проверены, regressions закрыты | full check + Chromium/WebKit + production readback | не начат |
 
 ## Наблюдения для итогового аудита
+
+- PR5: migration 000119 создаёт только provenance/guards/analytics filters. Данные — отдельный manual main-only workflow `manage-fit-lime-calendar.yml`, существующий IAM-private migration runner; нельзя передать произвольного тренера. Перед записью обе привязки и оба флага проверяются. Repeatable-read transaction и advisory lock защищают двойной запуск. `inspect` возвращает только счётчики. `cleanup` — только мягкое скрытие своего неизменённого набора; при ручных изменениях нужен отдельный разбор, production cleanup не запрашивался и не запускается.
+- PR5 local:verify упёрся в прежний конфликт общей базы 000112 (`append_live_round already exists`); общая база не сбрасывалась. В отдельной чистой PostgreSQL17: вся цепочка до 000119 и 68 actor/RLS tests прошли; legacy SQL107 files/1507 tests отдельно зелёные.
 
 - Скриншот WebKit 1440 px в PR1: календарь находится в компактной центральной оболочке, а FAB привязан к правому краю viewport. В PR6 проверить и исправить привязку FAB к оболочке, не расширяя desktop scope.
 - PR1: подсказка «Все дела — в календаре» визуально проверена на WebKit; закрывается «Понятно», входы в Live и локальный черновик сохранены для обоих пилотов.

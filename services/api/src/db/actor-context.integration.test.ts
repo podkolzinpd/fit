@@ -106,6 +106,8 @@ import {
   StageDatabaseReaderNotReadyError,
 } from './stage-database-reader-access.js'
 import { DatabaseStageRolloutAssignmentManager } from './stage-rollout-assignment.js'
+import { DatabaseFitLimeCalendarManager, FitLimeCalendarNotReadyError } from './fit-lime-calendar-fixtures.js'
+import { FIT_LIME_CALENDAR_LOGINS } from './fit-lime-calendar-plan.js'
 import type { DatabasePool } from './types.js'
 import {
   DatabasePilotEnroller,
@@ -896,6 +898,78 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       } finally {
         await connection.query('rollback')
         connection.release()
+      }
+    })
+
+    it('seeds exactly two isolated calendars once, enforces actor RLS and protects edited fixtures', async () => {
+      if (!ownerPool || !enrollmentPool || !runtimePool) throw new Error('Pools not ready')
+      const pilotIds = [randomUUID(), randomUUID()]
+      const tables = ['app_private.fit_lime_pilot_allowlist', 'app_private.trainer_schedule_v2_allowlist']
+      const saved: Array<Array<{ login_sha256: string; profile_id: string | null; enabled: boolean }>> = []
+      for (const table of tables) saved.push((await ownerPool.query<{ login_sha256: string; profile_id: string | null; enabled: boolean }>(`select login_sha256, profile_id, ${table.includes('fit_lime') ? 'enabled' : 'true as enabled'} from ${table}`)).rows)
+      const manager = new DatabaseFitLimeCalendarManager(enrollmentPool)
+      try {
+        for (const table of tables) await ownerPool.query(`update ${table} set profile_id = null`)
+        await expect(manager.apply('seed')).rejects.toBeInstanceOf(FitLimeCalendarNotReadyError)
+        expect((await ownerPool.query<{ count: number }>('select count(*)::int count from app_private.fit_lime_calendar_batches')).rows[0]?.count).toBe(0)
+        for (const [index, id] of pilotIds.entries()) {
+          await ownerPool.query(`insert into public.profiles(id, first_name, account_role, timezone) values ($1, 'Calendar fixture owner', 'trainer', 'Europe/Moscow')`, [id])
+          await ownerPool.query('insert into public.trainers(profile_id) values ($1)', [id])
+          for (const table of tables) await ownerPool.query(`update ${table} set profile_id = $1${table.includes('fit_lime') ? ', enabled = true' : ''} where login_sha256 = $2`, [id, FIT_LIME_CALENDAR_LOGINS[index]])
+          await ownerPool.query(`insert into app_private.user_experiment_assignments (profile_id, experiment_key, enabled) values ($1, 'trainer_schedule_v2', true)`, [id])
+        }
+        const metricsSql = `select to_jsonb(a) - 'refreshed_at' result from analytics.trainer_overview a where trainer_id = any($1::uuid[]) order by trainer_id`
+        const beforeMetrics = (await ownerPool.query(metricsSql, [pilotIds])).rows
+        const result = await manager.apply('seed')
+        expect(result.created).toBe(true)
+        expect(result.isolated).toBe(true)
+        expect(result.trainers).toHaveLength(2)
+        for (const item of result.trainers) expect(item).toMatchObject({ clients: 15, workouts: 60, visible: 60, active: 1, cleaned: false })
+        expect((await ownerPool.query(metricsSql, [pilotIds])).rows).toEqual(beforeMetrics)
+        expect((await manager.apply('seed')).created).toBe(false)
+        const seedClients = (await ownerPool.query<{ client_id: string }>('select client_id from app_private.fit_lime_calendar_clients')).rows.map((item) => item.client_id)
+        for (const id of pilotIds) {
+          const roster = await withActorTransaction(runtimePool, id, readAccessibleClients)
+          expect(roster.clients).toHaveLength(15)
+          expect(roster.clients.every((item) => !item.hasAccount && !/демо|тест/i.test(item.fullName))).toBe(true)
+          const data = await withActorTransaction(runtimePool, id, readAccessibleTrainingData)
+          expect(data.workouts).toHaveLength(60)
+          expect(data.workouts.every((item) => item.trainerId === id)).toBe(true)
+          expect(data.workouts.some((item) => item.exercises.length > 0)).toBe(true)
+          expect(data.workouts.some((item) => item.exercises.length === 0)).toBe(true)
+        }
+        const other = await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleClients)
+        expect(other.clients.some((item) => seedClients.includes(item.id))).toBe(false)
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query('select * from app_private.fit_lime_calendar_clients'))).rejects.toThrow()
+        await expect(ownerPool.query('update public.clients set auth_user_id = $1 where id = $2', [OTHER_ACTOR_ID, seedClients[0]])).rejects.toThrow('synthetic_client_identity_is_fixed')
+        const seededWorkout = (await ownerPool.query<{ id: string; client_id: string; trainer_id: string }>(`select w.id, w.client_id, w.trainer_id from public.workouts w join app_private.fit_lime_calendar_workouts f on f.workout_id = w.id limit 1`)).rows[0]!
+        await expect(ownerPool.query('update public.workouts set client_id = $1 where id = $2', [seedClients.find((id) => id !== seededWorkout.client_id), seededWorkout.id])).rejects.toThrow('synthetic_workout_partition_is_fixed')
+        await ownerPool.query(`update public.workouts set title = 'Сохранённая пользовательская правка', version = version + 1 where id = $1`, [seededWorkout.id])
+        expect((await manager.apply('seed')).created).toBe(false)
+        expect((await ownerPool.query<{ title: string }>('select title from public.workouts where id = $1', [seededWorkout.id])).rows[0]?.title).toBe('Сохранённая пользовательская правка')
+        await expect(manager.apply('cleanup')).rejects.toBeInstanceOf(FitLimeCalendarNotReadyError)
+        expect((await manager.apply('inspect')).trainers.every((item) => item.visible === 60)).toBe(true)
+        await ownerPool.query('update public.workouts set version = 1 where id = $1', [seededWorkout.id])
+        expect((await manager.apply('cleanup')).trainers.every((item) => item.visible === 0 && item.cleaned)).toBe(true)
+        expect((await manager.apply('cleanup')).trainers.every((item) => item.cleaned)).toBe(true)
+        await expect(manager.apply('seed')).rejects.toBeInstanceOf(FitLimeCalendarNotReadyError)
+      } finally {
+        // Only this test's two newly generated owner IDs in a localhost-only DB.
+        await ownerPool.query(`delete from app_private.fit_lime_calendar_workouts f using public.workouts w where w.id = f.workout_id and w.trainer_id = any($1::uuid[])`, [pilotIds])
+        await ownerPool.query('delete from public.workouts where trainer_id = any($1::uuid[])', [pilotIds])
+        await ownerPool.query('delete from app_private.fit_lime_calendar_clients where trainer_id = any($1::uuid[])', [pilotIds])
+        await ownerPool.query('delete from app_private.fit_lime_calendar_batches where trainer_id = any($1::uuid[])', [pilotIds])
+        await ownerPool.query('delete from public.client_trainer_relationships where trainer_id = any($1::uuid[])', [pilotIds])
+        await ownerPool.query('delete from public.clients where trainer_id = any($1::uuid[])', [pilotIds])
+        for (const [index, table] of tables.entries()) {
+          await ownerPool.query(`update ${table} set profile_id = null`)
+          for (const row of saved[index] ?? []) {
+            if (table.includes('fit_lime')) await ownerPool.query(`update ${table} set profile_id = $1, enabled = $2 where login_sha256 = $3`, [row.profile_id, row.enabled, row.login_sha256])
+            else await ownerPool.query(`update ${table} set profile_id = $1 where login_sha256 = $2`, [row.profile_id, row.login_sha256])
+          }
+        }
+        await ownerPool.query('delete from public.trainers where profile_id = any($1::uuid[])', [pilotIds])
+        await ownerPool.query('delete from public.profiles where id = any($1::uuid[])', [pilotIds])
       }
     })
 
