@@ -7,7 +7,7 @@ import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThe
 import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
 import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
-import { isFitLimeShellRoute } from './fit-lime'
+import { isFitLimeEnabled, isFitLimeShellRoute } from './fit-lime'
 import { ContestWinnerDialog } from '../features/contest'
 import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 
@@ -168,7 +168,7 @@ export function AppLayout() {
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div>
   return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
-    <NavLink to="/today"><TodayIcon />Сегодня</NavLink>
+    <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {(redesignedStart || trainerScheduleV2) && ((fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance
       ? <Link to="/clients" className="active" aria-current="page"><ClientsIcon />Клиенты</Link>

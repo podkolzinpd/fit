@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Client, TrainerAttentionWorkout, Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { trainerActionItems, trainerPlanningItems } from './trainer-attention'
+import { trainerActionItems, trainerDayActionItems, trainerPlanningItems } from './trainer-attention'
 
 const client = { id: 'c1', fullName: 'Анна', archivedAt: null } as Client
 const workout = (patch: Partial<Workout>): Workout => ({
@@ -11,6 +11,16 @@ const workout = (patch: Partial<Workout>): Workout => ({
 })
 
 describe('trainer attention', () => {
+  it('keeps every active workout reachable in Lime without counting the same workout twice', () => {
+    const active = [workout({ id: 'w1', status: 'in_progress' }), workout({ id: 'w2', status: 'in_progress' })]
+    const actions = trainerActionItems([client], active, [{ workoutId: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-08-20'), clientQuestion: 'Вопрос', discomfort: false, version: 1 }], localDate('2026-08-21'))
+    expect(trainerDayActionItems(actions, [...active, workout({ id: 'done' }), workout({ id: 'cancelled', status: 'cancelled' })])).toEqual([
+      expect.objectContaining({ workoutId: 'w1', reason: 'in_progress', actionLabel: 'Продолжить' }),
+      expect.objectContaining({ workoutId: 'w2', reason: 'in_progress', actionLabel: 'Продолжить' }),
+    ])
+    expect(actions[0]?.reason).toBe('question')
+  })
+
   it('keeps one highest-priority action per client', () => {
     const attention: TrainerAttentionWorkout[] = [
       { workoutId: 'w1', clientId: 'c1', clientName: 'Анна', workoutDate: localDate('2026-08-20'), clientQuestion: 'Как дышать?', discomfort: true, clientComment: 'Плечо', version: 2 },

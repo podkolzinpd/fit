@@ -1,5 +1,9 @@
 # Feature parity с trainer-app
 
+YAFIT-590 / этап 1: Fit Lime «День» очищен от старых home-блоков; Live и локальный
+черновик доступны из рабочей очереди, счётчик не дублирует одну тренировку.
+Прежний UI вне Lime сохранён. Матрица: `docs/design/FIT_LIME_DAY_UX_20261003.md`.
+
 Baseline V1: зафиксированный снимок `legacy trainer-app`, commit `049773605235dc2d92dc9b9ccfaa0244d00795f5`.
 
 Fit Lime / YAFIT-586: для двух существующих пилотных тренеров реализуется

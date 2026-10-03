@@ -291,6 +291,19 @@ describe('AppLayout navigation', () => {
     }
   })
 
+  it('называет календарь Днём только при обоих флагах тренера', () => {
+    authState.role = 'trainer'
+    authState.trainerScheduleV2 = true
+    authState.fitLime = true
+    const lime = renderLayout('/today?date=2026-09-24')
+    expect(screen.getByRole('link', { name: 'День' })).toHaveAttribute('aria-current', 'page')
+    lime.unmount()
+    authState.fitLime = false
+    renderLayout('/today')
+    expect(screen.getByRole('link', { name: 'Сегодня' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: 'День' })).not.toBeInTheDocument()
+  })
+
   it('оставляет навигацию на вложенных экранах и скрывает её в полноэкранных шагах пилота', () => {
     authState.role = 'trainer'
     authState.trainerScheduleV2 = true

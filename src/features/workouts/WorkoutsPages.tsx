@@ -99,7 +99,7 @@ import { NotificationOnboarding } from '../notifications'
 import { readTodayDraft, todayDraftKey } from './today-draft'
 import { trainerHomeContext } from './trainer-home-context'
 import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
-import { trainerActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
+import { trainerActionItems, trainerDayActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
 import { cloneWorkoutTemplate } from '../../data/repositories/workout-templates.repository'
 import { SCHEDULE_HOUR_HEIGHT, useScheduleDensityPreference } from '../../app/schedule-density'
 import { defaultWorkoutTrainingFormat, workoutTrainingFormatLabel } from './workout-training-format'
@@ -608,7 +608,7 @@ function ScheduleV2OnboardingSheet({ userId, onClose, onReturnFocus }: { userId:
   </div>, document.body)
 }
 
-function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError, planningLoading, planningError, snoozingClientId, snoozeError, returnTo, fitLime, onSnooze, onRetryActions, onRetryPlanning, onClose, onReturnFocus }: {
+function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError, planningLoading, planningError, snoozingClientId, snoozeError, returnTo, fitLime, hasDraft, onSnooze, onRetryActions, onRetryPlanning, onClose, onReturnFocus }: {
   actions: TrainerActionItem[]
   planning: TrainerPlanningItem[]
   actionsLoading: boolean
@@ -619,6 +619,7 @@ function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError
   snoozeError: boolean
   returnTo: string
   fitLime: boolean
+  hasDraft: boolean
   onSnooze: (clientId: string) => void
   onRetryActions: () => void
   onRetryPlanning: () => void
@@ -647,8 +648,9 @@ function ScheduleV2ActionSheet({ actions, planning, actionsLoading, actionsError
         {actionsLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем действия…</p>}
         {actionsError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось загрузить действия <button type="button" aria-label="Повторить загрузку действий" onClick={onRetryActions}>Повторить</button></p>}
         {snoozeError && <p className="schedule-v2-inbox-empty schedule-v2-inbox-error" role="alert">Не удалось отложить напоминание. Попробуйте ещё раз.</p>}
-        {!actionsLoading && !actionsError && !planningLoading && !planningError && actions.length + planning.length === 0 && <p className="schedule-v2-inbox-empty">Незавершённых действий нет</p>}
-        {!actionsLoading && !actionsError && actions.length > 0 && <section aria-labelledby="schedule-v2-actions-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-actions-heading">Требует действия</h3><span>{scheduleCount(actions.length)}</span></div>{actions.map((item) => <Link key={item.clientId} className="schedule-v2-action-row" to={`/workouts/${item.workoutId}${item.reason === 'question' ? '?reply=1' : ''}`} state={{ returnTo }} onClick={onClose}>
+        {hasDraft && <Link className="schedule-v2-action-row" to="/today?view=compose" state={{ returnTo }} onClick={onClose}><span><strong>Черновик тренировки</strong><small>Сохранён на этом устройстве</small></span><b>Продолжить</b></Link>}
+        {!hasDraft && !actionsLoading && !actionsError && !planningLoading && !planningError && actions.length + planning.length === 0 && <p className="schedule-v2-inbox-empty">Незавершённых действий нет</p>}
+        {!actionsLoading && !actionsError && actions.length > 0 && <section aria-labelledby="schedule-v2-actions-heading"><div className="schedule-v2-inbox-section-title"><h3 id="schedule-v2-actions-heading">Требует действия</h3><span>{scheduleCount(actions.length)}</span></div>{actions.map((item) => <Link key={item.workoutId} className="schedule-v2-action-row" to={`/workouts/${item.workoutId}${item.reason === 'in_progress' ? '/live' : item.reason === 'question' ? '?reply=1' : ''}`} state={{ returnTo }} onClick={onClose}>
           <span><strong>{item.clientName}</strong><small>{item.title}</small><em>{item.reason === 'past_plan' ? formatLocalDate(localDate(item.detail)) : item.detail}</em></span><b>{item.actionLabel}</b>
         </Link>)}</section>}
         {planningLoading && <p className="schedule-v2-inbox-empty" role="status">Загружаем планы…</p>}
@@ -732,14 +734,18 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     queryFn: () => clientsRepository.listAttentionPreferences(actor!.userId),
     enabled: isDayView && Boolean(actor?.userId),
   })
-  const actionItems = trainerActionItems(homeClients.data ?? [], homeWorkouts.data ?? [], attention.data ?? [], today)
+  const baseActionItems = trainerActionItems(homeClients.data ?? [], homeWorkouts.data ?? [], attention.data ?? [], today)
+  const actionItems = fitLimeToday ? trainerDayActionItems(baseActionItems, homeWorkouts.data ?? []) : baseActionItems
+  const draft = actor && isDayView ? readTodayDraft(todayDraftKey(actor.userId)) : null
+  const hasQueueDraft = fitLimeToday && Boolean(draft)
   const actionClientIds = new Set(actionItems.map((item) => item.clientId))
   const planningItems = trainerPlanningItems(homeClients.data ?? [], homeWorkouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today)
+  const pendingCount = actionItems.length + planningItems.length + Number(hasQueueDraft)
   const actionsLoading = homeClients.isLoading || homeWorkouts.isLoading || attention.isLoading
   const actionsError = homeClients.isError || homeWorkouts.isError || attention.isError
   const planningLoading = homeClients.isLoading || homeWorkouts.isLoading || attentionPreferences.isLoading
   const planningError = homeClients.isError || homeWorkouts.isError || attentionPreferences.isError
-  const actionCount = actionsError || planningError ? '—' : actionsLoading || planningLoading ? '…' : scheduleCount(actionItems.length + planningItems.length)
+  const actionCount = actionsError || planningError ? '—' : actionsLoading || planningLoading ? '…' : scheduleCount(pendingCount)
   const snoozeAttention = useMutation({
     mutationFn: (clientId: string) => workoutsRepository.snoozeClientAttention(clientId),
     onSuccess: async () => {
@@ -758,7 +764,6 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     void attentionPreferences.refetch()
   }
   const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data.filter((workout) => workout.status !== 'in_progress'), today) : null
-  const draft = actor && showHomeActions ? readTodayDraft(todayDraftKey(actor.userId)) : null
   const [planComposerOpen, setPlanComposerOpen] = useState(false)
 
   useEffect(() => {
@@ -793,7 +798,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     { label: 'Настройки', onClick: () => navigate('/profile/settings') },
   ]
 
-  const homeActions = showHomeActions && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
+  const homeActions = showHomeActions && !fitLimeToday && <section className="schedule-v2-home-actions" aria-label="Рабочие действия">
     <QuickStartWorkout role="trainer" compact={fitLimeToday} clients={homeClients.data} workouts={homeWorkouts.data} loading={homeClients.isLoading || homeWorkouts.isLoading} error={homeClients.error ?? homeWorkouts.error} onRetry={() => { void homeClients.refetch(); void homeWorkouts.refetch() }} returnTo={returnTo} />
     <div className="schedule-v2-entry-actions">
       <span className="schedule-v2-compose-label"><strong>Составить тренировку</strong><small>Голосом или вручную</small></span>
@@ -811,7 +816,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {actor && <button ref={onboardingTriggerRef} type="button" className="schedule-v2-onboarding-trigger" onClick={() => setOnboardingOpen(true)}>Установка и уведомления <ChevronRightIcon /></button>}
   </section>
   const daySummary = isDayView && <section className="schedule-v2-summary" aria-label="Рабочая сводка">
-    <button ref={actionTriggerRef} type="button" className={`schedule-v2-action-card${fitLimeToday && !actionsError && !planningError && !actionsLoading && !planningLoading && actionItems.length + planningItems.length > 0 ? ' is-active' : ''}`} aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
+    <button ref={actionTriggerRef} type="button" className={`schedule-v2-action-card${fitLimeToday && !actionsError && !planningError && !actionsLoading && !planningLoading && pendingCount > 0 ? ' is-active' : ''}`} aria-label={`${actionCount} Незавершённые действия`} onClick={() => { trackGoal('schedule_v2_action_tile_opened'); setActionOpen(true) }}>
       <span className="schedule-v2-summary-icon">{fitLimeToday ? <WhistleIcon /> : <BellIcon />}</span>
       <strong>{actionCount}</strong>
     </button>
@@ -834,6 +839,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
+    {fitLimeToday && selected !== today && <button className="schedule-v2-return-today" type="button" onClick={() => openDay(today)}>Сегодня</button>}
+    {fitLimeToday && <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Начатые тренировки и черновик доступны в незавершённых действиях."><span className="sr-only">Рабочий день</span></Coachmark>}
     {fitLimeToday && daySummary}
     {homeActions}
     {!fitLimeToday && daySummary}
@@ -870,7 +877,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
           })}
         </section>
       </> : <>
-        {timelineEvents.length === 0 && untimed.length === 0 && <p className="schedule-v2-empty-day" role="status">Свободный день</p>}
+        {timelineEvents.length === 0 && untimed.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
@@ -914,6 +921,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       snoozeError={snoozeAttention.isError}
       returnTo={returnTo}
       fitLime={fitLimeToday}
+      hasDraft={hasQueueDraft}
       onSnooze={(clientId) => snoozeAttention.mutate(clientId)}
       onRetryActions={retryActionQueue}
       onRetryPlanning={retryPlanning}
