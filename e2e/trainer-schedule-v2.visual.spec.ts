@@ -98,6 +98,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
       'lime-quick-plan-2026-10',
+      'lime-direct-client-start-2026-10',
       'lime-day-workspace-2026-10',
       'lime-schedule-history-2026-10',
     ]))
@@ -286,6 +287,9 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
     } else if (url.pathname === `/v1/workouts/${workoutId}/question/answer` && route.request().method() === 'PUT') {
       questionAnswered = true
       body = { workout: { version: 2 } }
+    } else if (url.pathname === '/v1/workouts/quick-start' && route.request().method() === 'POST') {
+      workouts = [{ ...workout, id: newWorkoutId, status: 'in_progress' }]
+      body = { workout: { id: newWorkoutId, resumed: false } }
     } else if (url.pathname === '/v1/workouts' && route.request().method() === 'POST') {
       saveAttempts += 1
       if (options.failFirstSave && saveAttempts === 1) {
@@ -541,6 +545,48 @@ for (const width of [390, 430, 1440]) {
   })
 }
 
+test('Lime direct start opens Live immediately after choosing the client', async ({ page }) => {
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  const commands: unknown[] = []
+  page.on('request', (request) => { if (request.url().endsWith('/workouts/quick-start')) commands.push(request.postDataJSON() as unknown) })
+  await page.goto('/today?date=2026-12-31')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Начать сейчас', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live$`))
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+  expect(commands).toHaveLength(1)
+  expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'with_trainer' })
+})
+
+test('Lime retained plan offers old date and preserves it when starting a new plan', async ({ page }, testInfo) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  const key = `fit.workout-form-draft.${trainerId}.new--2026-09-24--quick`
+  await page.evaluate(({ key, clientId }) => localStorage.setItem(key, JSON.stringify({ clientId, workoutDate: '2026-10-05', title: 'Старый план', requestId: 'retained-plan', startTime: '13:30', endTime: '', notes: '', stageId: '', recordCompleted: false, exercises: [] })), { key, clientId })
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  const choice = page.getByRole('dialog', { name: 'Черновик плана' })
+  await expect(choice).toContainText('5 октября')
+  await expect(choice).toContainText('Алексей Смирнов')
+  await page.screenshot({ path: testInfo.outputPath('lime-retained-plan.png') })
+  await choice.getByRole('button', { name: 'Создать новый план' }).click()
+  const plan = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+  await expect(plan.getByRole('button', { name: 'Выбрать дату и время' })).toContainText('24 сентября')
+  await expect(plan).toContainText('Без времени')
+  await expect(plan.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('')
+  await plan.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+  await plan.getByRole('textbox', { name: 'Название тренировки' }).fill('Новый план')
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(`${key}.saved.retained-plan`)!) as { title: string }, key)).toMatchObject({ title: 'Старый план' })
+  await plan.getByRole('button', { name: 'Закрыть создание' }).click()
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await expect(choice.getByRole('button', { name: 'Продолжить черновик' })).toHaveCount(2)
+  await choice.getByRole('button', { name: 'Продолжить черновик' }).first().click()
+  await expect(plan.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Новый план')
+  await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
 test('Lime start now retries one command without using the selected future date', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, workouts: [] })
@@ -553,13 +599,13 @@ test('Lime start now retries one command without using the selected future date'
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Начать сейчас' }).click()
   await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
-  await page.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
-  await page.getByRole('button', { name: 'Начать', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Начать', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toHaveCount(0)
   await expect(page.getByRole('alert')).toContainText('Не удалось начать тренировку')
   await page.getByRole('button', { name: 'Повторить', exact: true }).click()
   await expect.poll(() => commands.length).toBe(2)
   expect(commands[1]).toEqual(commands[0])
-  expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'self', operationId: expect.any(String) })
+  expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'with_trainer', operationId: expect.any(String) })
   expect(commands[0]).not.toHaveProperty('workoutDate')
   await page.getByRole('button', { name: 'Закрыть выбор действия' }).click()
   await expect(page).toHaveURL(/date=2026-12-31/)
@@ -730,6 +776,7 @@ test('Figma workout second pilot keeps quick-plan guidance and completed draft',
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
   await expect(page).toHaveURL(/workouts\/new\?date=2026-09-24&entry=quick$/)
   await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { name: 'Записать тренировку', exact: true })).toBeDisabled()
@@ -802,8 +849,8 @@ for (const width of [390, 430, 1440]) {
     await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('width', '24px')
     await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('height', '24px')
     const composerBox = await composer.boundingBox()
-    expect(composerBox!.height).toBeLessThanOrEqual(320)
-    await expect(composer.locator('.fit-lime-plan-send svg')).toHaveCSS('filter', 'brightness(0)')
+    expect(composerBox!.height).toBeLessThanOrEqual(876)
+    await expect(composer.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('figma-quick-plan.png') })
     const sent: Array<{ title?: string; requestId: string; exercises: unknown[] }> = []
     page.on('request', (request) => {

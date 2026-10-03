@@ -54,3 +54,34 @@ export function writeWorkoutFormDraft(key: string, draft: WorkoutFormDraft): voi
 export function removeWorkoutFormDraft(key: string): void {
   try { localStorage.removeItem(key) } catch { /* localStorage недоступен */ }
 }
+
+export function hasWorkoutFormContent(draft: WorkoutFormDraft | null, initialDate: LocalDate): draft is WorkoutFormDraft {
+  return Boolean(draft && (draft.clientId || draft.title?.trim() || draft.notes.trim()
+    || draft.exercises.length || draft.startTime || draft.endTime || draft.recordCompleted
+    || draft.trainingFormat === 'self' || draft.workoutDate !== initialDate))
+}
+
+/** Explicitly retained alternatives when a trainer starts a new quick plan. */
+export function quickPlanDraftChoices(key: string, date: LocalDate): Array<{ key: string; draft: WorkoutFormDraft }> {
+  const result: Array<{ key: string; draft: WorkoutFormDraft }> = []
+  const current = readWorkoutFormDraft(key)
+  if (hasWorkoutFormContent(current, date)) result.push({ key, draft: current })
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const candidate = localStorage.key(index)
+      if (!candidate?.startsWith(`${key}.saved.`)) continue
+      const draft = readWorkoutFormDraft(candidate)
+      if (hasWorkoutFormContent(draft, date)) result.push({ key: candidate, draft })
+    }
+  } catch { /* Current in-memory choice remains available when storage is denied. */ }
+  return result
+}
+
+export function retainQuickPlanDraft(key: string, date: LocalDate): boolean {
+  const draft = readWorkoutFormDraft(key)
+  if (!hasWorkoutFormContent(draft, date)) return true
+  try {
+    localStorage.setItem(`${key}.saved.${draft.requestId ?? crypto.randomUUID()}`, JSON.stringify(draft))
+    return true
+  } catch { return false }
+}

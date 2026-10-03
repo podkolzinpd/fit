@@ -5,6 +5,7 @@ export interface TodayDraft {
   title?: string
   requestId?: string
   sourceFormDraftKey?: string
+  endTime?: string
   screen: 'compose' | 'review' | 'save'
   text: string
   lastLlmText?: string
@@ -27,6 +28,7 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.title === undefined || typeof draft.title === 'string')
     && (draft.requestId === undefined || typeof draft.requestId === 'string')
     && (draft.sourceFormDraftKey === undefined || typeof draft.sourceFormDraftKey === 'string')
+    && (draft.endTime === undefined || typeof draft.endTime === 'string')
     && typeof draft.text === 'string'
     && (draft.lastLlmText === undefined || typeof draft.lastLlmText === 'string')
     && typeof draft.clientId === 'string'

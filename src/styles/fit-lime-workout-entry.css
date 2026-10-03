@@ -55,6 +55,13 @@
 .fit-lime-shell .fit-lime-workout-entry .quick-start-button { width: 100%; min-height: 44px }
 .fit-lime-shell .fit-lime-plan-input-methods { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px }
 .fit-lime-shell .fit-lime-plan-input-methods button { display: flex; align-items: center; gap: 6px; min-height: 44px; background: transparent; color: var(--lime-text); font-size: 12px }
+.fit-lime-shell .fit-lime-plan-back { min-width: 44px; min-height: 44px; padding: 10px; background: transparent; color: var(--lime-text); }
+.fit-lime-shell .fit-lime-plan-composer h2 { margin: 8px 36px 16px 0; font-size: 20px; line-height: 24px; }
+.fit-lime-shell .fit-lime-plan-composer .workout-record-mode { margin-block: 12px; }
+.fit-lime-shell .fit-lime-plan-time-hint { color: var(--lime-text-secondary); font-size: 14px; margin: 4px 0; }
+.fit-lime-shell .fit-lime-plan-save { margin-top: 16px; min-height: 44px; }
+.fit-lime-shell .fit-lime-draft-choice { padding-block: 12px; border-bottom: 1px solid var(--lime-divider); overflow-wrap: anywhere; }
+.fit-lime-shell .fit-lime-draft-choice p { color: var(--lime-text-secondary); font-size: 14px; }
 
 /* Stage 4 / compose, review and save. The route remains the existing
    three-step draft flow; this file only styles its trainer pilot variant. */
