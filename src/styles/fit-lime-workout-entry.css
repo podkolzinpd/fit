@@ -2,12 +2,12 @@
 .fit-lime-shell .fit-lime-plan-dialog {
   position: fixed;
   inset: auto 0 max(12px, env(safe-area-inset-bottom));
-  width: min(calc(100% - 16px), 359px);
+  width: min(calc(100% - 24px), 375px);
   max-height: calc(var(--app-visible-height, 100dvh) - 24px);
   margin: 0 auto;
   padding: 0;
   border: 0;
-  border-radius: var(--lime-radius-card);
+  border-radius: 40px;
   background: var(--lime-surface-raised);
   color: var(--lime-text);
   overflow: auto;
@@ -23,27 +23,27 @@
   bottom: calc(100% - var(--app-viewport-offset-top, 0px) - var(--app-visible-height, 100dvh));
   max-height: calc(var(--app-visible-height, 100dvh) - 24px);
 }
-.fit-lime-shell .fit-lime-plan-composer { position: relative; min-height: 189px; padding: 24px 16px 8px; }
+.fit-lime-shell .fit-lime-plan-composer { position: relative; min-height: 189px; padding: 16px; }
 .fit-lime-shell .fit-lime-plan-composer > input {
   width: 100%; padding: 4px 36px 12px 0; border: 0; border-radius: 0;
-  background: transparent; color: var(--lime-text); font-size: 20px; font-weight: 400;
+  background: transparent; color: var(--lime-text); font-size: 16px; line-height: 20px; font-weight: 400;
 }
 .fit-lime-shell .fit-lime-plan-composer fieldset { min-width: 0; margin: 0; padding: 0; border: 0 }
 .fit-lime-shell .fit-lime-plan-composer button { border: 0 }
 .fit-lime-shell .fit-lime-plan-composer svg { flex: 0 0 24px; width: 24px; height: 24px }
 .fit-lime-shell .fit-lime-plan-send svg { filter: brightness(0) }
-.fit-lime-shell .fit-lime-plan-close { position: absolute; top: 8px; right: 4px; width: 44px; padding: 10px; background: transparent; color: var(--lime-text-secondary) }
+.fit-lime-shell .fit-lime-plan-close { position: absolute; top: 12px; right: 12px; width: 44px; min-height: 44px; padding: 10px; border-radius: 50%; background: var(--lime-surface-high); color: var(--lime-text-secondary) }
 .fit-lime-shell .fit-lime-plan-controls { display: flex; align-items: center; gap: 4px; min-width: 0 }
 .fit-lime-shell .fit-lime-plan-controls > button { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 4px; min-width: 44px }
-.fit-lime-shell .fit-lime-plan-chip { max-width: 42%; background: transparent; color: var(--lime-text); font-size: 12px }
+.fit-lime-shell .fit-lime-plan-chip { max-width: 48%; background: transparent; color: var(--lime-text); font-size: 14px; line-height: 20px; min-height: 44px; }
 .fit-lime-shell .fit-lime-plan-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .fit-lime-shell .fit-lime-plan-avatar { display: grid; place-items: center; flex: 0 0 24px; height: 24px; border-radius: 50%; background: var(--lime-surface-high) }
-.fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar { width: auto; max-width: 46%; color: var(--lime-accent); background: transparent; font-size: 12px }
+.fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar { width: auto; max-width: 50%; color: var(--lime-accent); background: transparent; font-size: 14px; line-height: 20px; min-height: 44px; }
 .fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .fit-lime-shell .fit-lime-plan-send,
 .fit-lime-shell .fit-lime-plan-mic { flex: 0 0 44px; margin-left: auto; background: var(--lime-accent); color: var(--lime-text-on-accent) }
 .fit-lime-shell .fit-lime-plan-mic { background: var(--lime-surface-high); color: var(--lime-text) }
-.fit-lime-shell .fit-lime-plan-exercises { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; border-top: 1px solid var(--lime-divider); border-radius: 0; color: var(--lime-text); background: transparent; font-size: 12px }
+.fit-lime-shell .fit-lime-plan-exercises { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 12px; border-top: 1px solid var(--lime-divider); border-radius: 0; color: var(--lime-text); background: transparent; font-size: 14px; line-height: 20px; }
 .fit-lime-shell .fit-lime-plan-composer > p { margin: 8px 0; font-size: 14px }
 .fit-lime-shell .fit-lime-date-times { display: grid; gap: 8px; padding: 16px 0 }
 .fit-lime-shell .fit-lime-date-times label { display: flex; align-items: center; justify-content: space-between; gap: 12px }
@@ -54,7 +54,7 @@
 .fit-lime-shell .fit-lime-workout-entry > p { margin: 8px 0 20px; color: var(--lime-text-secondary); font-size: 14px }
 .fit-lime-shell .fit-lime-workout-entry .quick-start-button { width: 100%; min-height: 44px }
 .fit-lime-shell .fit-lime-plan-input-methods { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px }
-.fit-lime-shell .fit-lime-plan-input-methods button { display: flex; align-items: center; gap: 6px; min-height: 44px; background: transparent; color: var(--lime-text); font-size: 12px }
+.fit-lime-shell .fit-lime-plan-input-methods button { display: flex; align-items: center; gap: 6px; min-height: 44px; background: transparent; color: var(--lime-text); font-size: 14px; line-height: 20px; }
 .fit-lime-shell .fit-lime-plan-back { min-width: 44px; min-height: 44px; padding: 10px; background: transparent; color: var(--lime-text); }
 .fit-lime-shell .fit-lime-plan-composer h2 { margin: 8px 36px 16px 0; font-size: 20px; line-height: 24px; }
 .fit-lime-shell .fit-lime-plan-composer .workout-record-mode { margin-block: 12px; }
@@ -62,6 +62,24 @@
 .fit-lime-shell .fit-lime-plan-save { margin-top: 16px; min-height: 44px; }
 .fit-lime-shell .fit-lime-draft-choice { padding-block: 12px; border-bottom: 1px solid var(--lime-divider); overflow-wrap: anywhere; }
 .fit-lime-shell .fit-lime-draft-choice p { color: var(--lime-text-secondary); font-size: 14px; }
+
+/* One pilot window system; unrelated monochrome sheets are unchanged. */
+.fit-lime-shell .fit-lime-plan-composer h2 { font-size: 16px; line-height: 20px; font-weight: 500; }
+.fit-lime-shell .fit-lime-plan-composer:has(> .fit-lime-plan-back) h2 { margin: -40px 44px 24px; min-height: 40px; display: flex; align-items: center; }
+.fit-lime-shell .fit-lime-plan-composer .workout-record-mode button { font-size: 14px; line-height: 20px; min-height: 44px; }
+.fit-lime-shell .fit-lime-plan-dialog:has(.client-picker) { background: transparent; }
+.fit-lime-shell .fit-lime-plan-dialog:has(.client-picker) > :is(h2, .fit-lime-plan-back, .fit-lime-plan-close) { visibility: hidden; }
+.fit-lime-shell .sheet-overlay:has(.client-picker) { padding: 12px; }
+.phone-frame.fit-lime-shell .client-picker { width: min(100%, 375px); height: auto; max-height: 100%; border-radius: 40px; background: var(--lime-surface-raised); padding: 16px; }
+.phone-frame.fit-lime-shell .client-picker:focus { outline: none; }
+.phone-frame.fit-lime-shell .client-picker .picker-header { flex-shrink: 0; min-height: 44px; }
+.phone-frame.fit-lime-shell .client-picker .picker-header h1 { font-size: 16px; line-height: 20px; font-weight: 500; }
+.phone-frame.fit-lime-shell .client-picker .picker-close { width: 44px; min-height: 44px; border-radius: 50%; background: var(--lime-surface-high); }
+.phone-frame.fit-lime-shell .client-picker .picker-search { flex-shrink: 0; font-size: 16px; line-height: 20px; }
+.phone-frame.fit-lime-shell .client-picker-item { font-size: 16px; line-height: 20px; font-weight: 400; }
+.phone-frame.fit-lime-shell .client-picker-item > span:nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
+.phone-frame.fit-lime-shell .client-picker-list { min-height: 0; }
+.phone-frame.fit-lime-shell:has(.client-picker) :is(.content, .day-grid-scroll) { overflow: hidden; }
 
 /* Stage 4 / compose, review and save. The route remains the existing
    three-step draft flow; this file only styles its trainer pilot variant. */

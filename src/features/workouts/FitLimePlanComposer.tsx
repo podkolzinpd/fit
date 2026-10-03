@@ -144,7 +144,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     ? formatLocalDate(selectedDate).replace(/\s+\d{4}\s*г\.$/, '') : formatLocalDate(selectedDate)
   if (!isFitLimeEnabled(actor) || saved?.recordCompleted) return null
   return <dialog ref={dialog} tabIndex={-1} role="dialog" className="fit-lime-plan-dialog" aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
-    <form className="fit-lime-plan-composer" onSubmit={submit}>
+    <form className="fit-lime-plan-composer" onSubmit={submit} inert={pickerOpen} style={pickerOpen ? { visibility: 'hidden' } : undefined}>
       <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={() => dialog.current?.close()}><CloseIcon /></button>
       {onBack && <button type="button" className="fit-lime-plan-back" aria-label="Назад к выбору действия" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={onBack}><BackIcon /></button>}
       <h2>Запланировать тренировку</h2>

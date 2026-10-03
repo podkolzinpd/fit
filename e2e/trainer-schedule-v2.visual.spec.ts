@@ -559,6 +559,38 @@ test('Lime direct start opens Live immediately after choosing the client', async
   expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'with_trainer' })
 })
 
+for (const width of [390, 430, 1440]) {
+  test(`Lime window typography and client step stay bounded at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { fitLime: true, clientRecords: [{ id: clientId, fullName: 'Александра Константинопольская-Рождественская', archivedAt: null, version: 1 }] })
+    await page.goto('/today?date=2026-09-24')
+    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    const plan = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+    await page.evaluate(() => document.fonts.ready)
+    await expect(plan.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '16px')
+    await expect(plan.getByRole('button', { name: 'Надиктовать тренировку' })).toHaveCSS('font-size', '14px')
+    expect(await plan.evaluate((element) => getComputedStyle(element).fontFamily)).toContain('YS Geo')
+    await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
+    const picker = page.getByRole('dialog', { name: 'Выбор клиента' })
+    await expect(picker).toBeFocused()
+    await expect(plan.getByRole('button', { name: 'Сохранить план' })).not.toBeVisible()
+    const box = await picker.boundingBox()
+    expect(box!.x).toBeGreaterThanOrEqual(12)
+    expect(box!.width).toBeLessThanOrEqual(375)
+    expect(box!.y + box!.height).toBeLessThanOrEqual(844)
+    await page.keyboard.press('Shift+Tab')
+    expect(await picker.evaluate((element) => element.contains(document.activeElement))).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(picker).toHaveCount(0)
+    await expect(plan.getByRole('button', { name: 'Сохранить план' })).toBeVisible()
+    await plan.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
+    await page.getByRole('button', { name: /Александра Константинопольская/ }).click()
+    expect(await plan.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('lime-window-type.png') })
+  })
+}
+
 test('Lime retained plan offers old date and preserves it when starting a new plan', async ({ page }, testInfo) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/today?date=2026-09-24')
