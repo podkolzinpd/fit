@@ -4572,13 +4572,12 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-detail-history-identity .workout-completion-page { display:grid; gap:14px }
 .workout-detail-history-identity .workout-completion-report { display:grid; gap:12px; margin-bottom:0 }
 .workout-detail-history-identity .workout-completion-share-card { display:grid; gap:14px; padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--surface-raised) }
-.workout-detail-history-identity .workout-completion-report-hero { display:flex; align-items:center; gap:12px }
-.workout-detail-history-identity .workout-completion-report-mark { flex:0 0 auto; width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--success-border); border-radius:14px; background:var(--surface-sunken); color:var(--success-fg) }
-.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-mark { border-color:var(--border); color:var(--warning-fg) }
-.workout-detail-history-identity .workout-completion-report-mark svg { width:24px; height:24px; stroke-width:1.8 }
-.workout-detail-history-identity .workout-completion-report-hero > div { min-width:0; display:grid; gap:3px }
-.workout-detail-history-identity .workout-completion-report-kicker { margin:0; color:var(--success-fg); font-size:12px; font-weight:500; letter-spacing:.06em; text-transform:uppercase }
-.workout-detail-history-identity .workout-completion-report.is-partial .workout-completion-report-kicker { color:var(--warning-fg) }
+.workout-detail-history-identity .workout-completion-report-hero { display:grid; justify-items:center; gap:8px; text-align:center }
+.workout-detail-history-identity .workout-completion-report-art { width:96px; height:96px; display:grid; place-items:center; color:var(--success-fg) }
+.workout-detail-history-identity .workout-completion-report-art img { display:block; width:96px; height:96px; object-fit:contain }
+.workout-detail-history-identity .workout-completion-report-art svg { width:48px; height:48px }
+.workout-detail-history-identity .workout-completion-report-hero > div { min-width:0; display:grid; gap:8px }
+.workout-detail-history-identity .workout-completion-report-subtitle { margin:0; color:var(--secondary-label-fg); font-size:14px; line-height:1.4 }
 .workout-detail-history-identity .workout-completion-report h1 { margin:0; overflow-wrap:anywhere; color:var(--fg); font-size:24px; font-weight:600; line-height:1.12; letter-spacing:-.018em }
 .workout-detail-history-identity .workout-completion-report-date { margin:0; color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .workout-detail-history-identity .workout-completion-count-line { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0; color:var(--fg); font-size:14px; font-weight:500; line-height:1.4 }

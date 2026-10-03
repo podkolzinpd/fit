@@ -1,6 +1,7 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
+import { FitLimePlanComposer } from './FitLimePlanComposer'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
@@ -478,6 +479,7 @@ function scheduleV2Range(start: LocalDate, end: LocalDate): string {
 }
 
 function scheduleV2WorkoutLine(workout: Workout): string {
+  if (workout.title) return workout.title
   const duration = workout.startTime ? scheduleDurationMinutes(workout.startTime, workout.endTime) : 60
   const durationLabel = duration % 60 === 0 ? `${duration / 60} ч` : `${duration} мин`
   return `${durationLabel} · ${scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}`
@@ -757,6 +759,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   }
   const homeContext = homeWorkouts.data ? trainerHomeContext(homeWorkouts.data.filter((workout) => workout.status !== 'in_progress'), today) : null
   const draft = actor && showHomeActions ? readTodayDraft(todayDraftKey(actor.userId)) : null
+  const [planComposerOpen, setPlanComposerOpen] = useState(false)
 
   useEffect(() => {
     trackGoal('schedule_v2_exposed')
@@ -887,7 +890,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         </div>
       </>}
     </AsyncView>
-    <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>
+    {isFitLimeEnabled(actor)
+      ? <button type="button" className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
+      : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>}
+    {planComposerOpen && <FitLimePlanComposer date={selected} returnTo={returnTo} onClose={() => setPlanComposerOpen(false)} />}
     {inboxOpen && <ScheduleV2InboxSheet
       questions={workspace.data?.questions ?? []}
       questionsLoading={workspace.isLoading}
@@ -1150,7 +1156,7 @@ export function WorkoutFormPage() {
   const catalog = useExerciseCatalog()
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
   const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
-  const createRequestId = useRef(crypto.randomUUID())
+  const createRequestId = useRef<string>(crypto.randomUUID())
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? today))
   const [startTime, setStartTime] = useState('')
@@ -1161,6 +1167,7 @@ export function WorkoutFormPage() {
   const [endTime, setEndTime] = useState('')
   const [showEndTime, setShowEndTime] = useState(false)
   const [notes, setNotes] = useState('')
+  const [title, setTitle] = useState('')
   const [clientSelectionError, setClientSelectionError] = useState<string | null>(null)
   const [stageId, setStageId] = useState('')
   const [formDraftReady, setFormDraftReady] = useState(false)
@@ -1178,7 +1185,7 @@ export function WorkoutFormPage() {
     ? (workoutId ? { ...(source.data.status === 'done' || recordPlannedResult ? completedWorkoutDraft(source.data) : copyWorkout(source.data)), id: source.data.id, version: source.data.version } : copyWorkout(source.data, today, { refreshCatalogNames: true }))
     : favorite ? favoriteTemplateToWorkoutDraft(favorite.exercises, mine.data?.id ?? '', today, favorite.title) : undefined
   const exercises = draftExercises ?? initial?.exercises ?? []
-  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (templateId ? `template-${templateId}` : favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}`))
+  const draftKey = workoutFormDraftKey(actor?.userId ?? 'anonymous', sourceId ?? (templateId ? `template-${templateId}` : favoriteId ? `favorite-${favoriteId}` : `new-${params.get('client') ?? ''}-${params.get('date') ?? ''}${params.get('entry') === 'quick' ? '--quick' : ''}`))
   useEffect(() => { setPickerSelectionDraft([]) }, [draftKey])
   // Клиент, для которого выбираем этап (реактивно — при смене в селекте).
   const defaultClientId = clientMode ? (mine.data?.id ?? '') : (initial?.clientId ?? routeClientId)
@@ -1198,11 +1205,13 @@ export function WorkoutFormPage() {
   // тренировки — это новый план, который тренер при необходимости может
   // переключить в «Завершённую».
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
+  const limePlan = isFitLimeEnabled(actor) && !completedMode
   useEffect(() => {
     if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && favorites.isLoading) || formDraftReady) return
     // Only creation persists drafts. An unfinished copy must never populate an edit.
     const saved = workoutId ? null : readWorkoutFormDraft(draftKey)
     if (saved) {
+      if (saved.requestId) createRequestId.current = saved.requestId
       setSelectedClientId(routeClientId || saved.clientId)
       setEntryDate(saved.workoutDate)
       setStartTime(saved.startTime.slice(0, 5))
@@ -1210,6 +1219,7 @@ export function WorkoutFormPage() {
       setActualDurationMinutes(saved.actualDurationMinutes ?? '')
       setShowEndTime(Boolean(saved.endTime))
       setNotes(saved.notes)
+      setTitle(saved.title ?? '')
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
       setTrainingFormat(clientMode ? 'self' : saved.trainingFormat)
@@ -1226,6 +1236,7 @@ export function WorkoutFormPage() {
       setActualDurationMinutes(workoutId && source.data?.actualDurationSec ? String(source.data.actualDurationSec / 60) : '')
       setShowEndTime(Boolean(initial.endTime))
       setNotes(initial.notes ?? '')
+      setTitle(source.data?.title ?? '')
       setStageId(initial.stageId ?? '')
       setTrainingFormat(clientMode ? 'self' : workoutId ? source.data?.trainingFormat ?? 'self' : undefined)
       trainingFormatTouched.current = Boolean(workoutId)
@@ -1242,8 +1253,8 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!formDraftReady || workoutId) return
-    writeWorkoutFormDraft(draftKey, { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, stageId, recordCompleted, exercises, trainingFormat })
-  }, [actualDurationMinutes, clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, recordCompleted, stageId, startTime, trainingFormat, workoutId])
+    writeWorkoutFormDraft(draftKey, { clientId, requestId: createRequestId.current, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat })
+  }, [actualDurationMinutes, clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, workoutId])
 
   useEffect(() => {
     if (!initial || formDraftReady) return
@@ -1378,7 +1389,7 @@ export function WorkoutFormPage() {
   function closePicker() { parsedExerciseSelection.current = null; setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (exercises.length === 0) return
+    if (mutation.isPending || (exercises.length === 0 && !limePlan)) return
     const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
@@ -1412,6 +1423,7 @@ export function WorkoutFormPage() {
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
       ...(completedMode ? { actualDurationSec } : {}),
+      ...(limePlan ? { title: title.trim() || null } : {}),
       notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
   }
@@ -1423,9 +1435,9 @@ export function WorkoutFormPage() {
   const error = source.error ?? templateSource.error ?? mine.error
   const pageTitle = recordPlannedResult ? 'Записать результат' : workoutId ? 'Редактировать тренировку' : 'Новая тренировка'
   const documentTitle = recordPlannedResult ? 'Запись результата' : workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : templateId ? 'Тренировка из шаблона' : 'Создание тренировки'
-  const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : 'Сначала добавьте упражнения'
+  const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : limePlan ? 'Упражнения можно добавить позже' : 'Сначала добавьте упражнения'
   const headerMeta = [copiedWorkout ? 'Скопировано' : templateId ? templateSource.data?.name : plannedFromFavorite ? 'Из избранного' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
-  const hasMeaningfulDraft = exercises.length > 0 || Boolean(notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
+  const hasMeaningfulDraft = exercises.length > 0 || Boolean(title.trim() || notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
   async function leaveForm() {
     if (!workoutId && hasMeaningfulDraft) {
       const shouldLeave = await confirmLeave({ message: 'Выйти из тренировки? Черновик и введённые значения будут удалены.', confirmLabel: 'Выйти', danger: true })
@@ -1440,6 +1452,7 @@ export function WorkoutFormPage() {
       meta={headerMeta} showStatus={Boolean(workoutId)} />
     <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form className="stack workout-form" onSubmit={(event) => void submit(event)}>
       <section className="workout-form-section">
+        {limePlan && <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>}
         {clientMode
           ? <input type="hidden" name="clientId" value={mine.data?.id ?? ''} />
           : clientContextLocked
@@ -1469,7 +1482,7 @@ export function WorkoutFormPage() {
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
-        {exercises.length === 0 && <p className="workout-empty-hint" role="status">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
+        {exercises.length === 0 && <p className="workout-empty-hint" role="status">{limePlan ? 'Можно сохранить план сейчас и добавить упражнения позже.' : 'Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.'}</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
@@ -1478,7 +1491,7 @@ export function WorkoutFormPage() {
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
-      <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
+      <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
@@ -1514,7 +1527,7 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
 }
 
 export function WorkoutDetailPage() {
-  const { favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
+  const { clients: clientsRepository, favoriteWorkouts: favoriteWorkoutsRepository, goals: goalsRepository, invitations: invitationsRepository, trainerFinance, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams(); const navigate = useNavigate(); const location = useLocation(); const queryClient = useQueryClient()
   const navigationState = location.state as WorkoutNavigationState | null
   const { actor } = useAuth()
@@ -1531,6 +1544,7 @@ export function WorkoutDetailPage() {
   const clientMode = actor?.role === 'client'
   const justCompleted = query.data?.status === 'done' && navigationState?.justCompleted === true
   const clientCompletionReport = Boolean(justCompleted && clientMode)
+  const completionClient = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientCompletionReport })
   const backTo = workoutListFallback(actor?.role === 'client', query.data?.clientId)
   const goBack = useWorkoutBack(backTo)
   const calendarReturnTo = isTrainerScheduleV2Enabled(actor) ? safeWorkoutReturnTo(navigationState?.returnTo) : undefined
@@ -1773,6 +1787,10 @@ export function WorkoutDetailPage() {
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
       {clientCompletionReport && <WorkoutCompletionReport
+        key={workout.id}
+        workoutId={workout.id}
+        userId={actor!.userId}
+        gender={completionClient.data?.gender}
         date={formatLocalDate(workout.workoutDate)}
         completedSets={completedSets}
         totalSets={sets.length}
@@ -1792,8 +1810,17 @@ export function WorkoutDetailPage() {
         volumeComparison={completionVolumeComparison}
         comparisonLoading={completionHistory.isLoading}
         hasTrainer={hasActiveTrainer}
-        feedback={<WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
+        feedback={<WorkoutClientFeedback completion workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
         newAchievements={newAchievements}
+        details={<details className="workout-completion-recorded">
+          <summary><span><span className="eyebrow">РЕЗУЛЬТАТ</span><strong>Что записано</strong></span><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</span></summary>
+          {exerciseCards}
+          {canManage && <Link className="button secondary wide workout-completion-edit" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Исправить результат</Link>}
+        </details>}
+        actions={<>
+          <Link className="button primary wide" to="/me" replace>Готово</Link>
+          <Link className="button secondary wide" to="/me/progress">Посмотреть прогресс</Link>
+        </>}
       />}
       {justCompleted && !clientMode && <WorkoutCompletionCard completedSets={completedSets} totalSets={sets.length} record={completionRecords.data?.[0]} clientMode={false} clientId={workout.clientId} />}
       {justCompleted && !clientMode && <WorkoutFinanceConfirmation bundle={completionFinance.data} workoutId={workout.id} clientId={workout.clientId} trainingFormat={workout.trainingFormat ?? 'self'} />}
@@ -1802,6 +1829,7 @@ export function WorkoutDetailPage() {
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
         meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
+      {isFitLimeEnabled(actor) && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {plannedActions && canExecute && <div className="workout-detail-primary-actions">
         {workout.workoutDate < today ? <Coachmark id="missed-workout-actions-2026-08" userId={actor?.userId} title="План можно закрыть спокойно" description="Запишите результат, перенесите тренировку или сохраните, что она не состоялась.">
           <WorkoutCta className="wide" pending={start.isPending || cancelPlanned.isPending || reschedule.isPending} pendingLabel="Сохраняем…" onClick={() => setDecisionSheet('actions')}>{plannedActions.primary}</WorkoutCta>
@@ -1830,21 +1858,14 @@ export function WorkoutDetailPage() {
       {done && (clientMode || !workout.clientQuestion) && <WorkoutTrainerReview workout={workout} canEdit={canReview} authorName={responseAuthorName} saving={review.isPending} error={review.error} onSave={(value) => review.mutateAsync(value)} />}
       {!clientMode && workout.clientComment && workout.sessionRpe === undefined && <WorkoutClientComment workout={workout} />}
       {!done && <div className="workout-detail-exercise-overview"><p>ПЛАН ТРЕНИРОВКИ</p><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)} · {sets.length} {setCountLabel(sets.length)}</span></div>}
-      {clientCompletionReport ? <details className="workout-completion-recorded">
-        <summary><span><span className="eyebrow">РЕЗУЛЬТАТ</span><strong>Что записано</strong></span><span>{workout.exercises.length} {exerciseCountLabel(workout.exercises.length)}</span></summary>
-        {exerciseCards}
-        {canManage && <Link className="button secondary wide workout-completion-edit" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>Исправить результат</Link>}
-      </details> : exerciseCards}
+      {!clientCompletionReport && exerciseCards}
       {removeCompletedExercise.error && <p className="error workout-exercise-removal-error" role="alert">Не удалось удалить упражнение. <button type="button" className="link" disabled={removeCompletedExercise.isPending} onClick={async () => {
         if (!removeCompletedExercise.variables) return
         const refreshed = await query.refetch()
         if (refreshed.data) removeCompletedExercise.mutate({ ...removeCompletedExercise.variables, workout: refreshed.data })
       }}>Повторить</button></p>}
       {workout.notes && !clientCompletionReport && <section className="workout-review workout-review-readonly"><div className="workout-review-head"><div><p className="eyebrow">{clientMode && !clientOwned ? 'ОТ ТРЕНЕРА' : 'К ТРЕНИРОВКЕ'}</p><h2>{clientMode && !clientOwned ? 'Инструкции' : 'Заметка'}</h2></div></div><p className="workout-review-text">{workout.notes}</p></section>}
-      {clientCompletionReport && <div className="workout-completion-actions">
-        <Link className="button primary wide" to="/me" replace>Готово</Link>
-        <Link className="button secondary wide" to="/me/progress">Посмотреть прогресс</Link>
-      </div>}
+
       {canManage && !clientCompletionReport && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
         {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
@@ -1894,7 +1915,8 @@ function trainerResponseTime(value: string | undefined) {
   }).format(new Date(value))
 }
 
-function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
+function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave, completion = false }: {
+  completion?: boolean
   workout: Workout
   canEdit: boolean
   saving: boolean
@@ -1979,7 +2001,7 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave }: {
     {error && <p className="error">{error.message}</p>}
     <div className="actions workout-review-actions workout-action-row">
       {hasFeedback && <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => setEditing(false)}>Отмена</WorkoutCta>}
-      <WorkoutCta type="submit" pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>Сохранить итоги</WorkoutCta>
+      <WorkoutCta type="submit" variant={completion ? 'secondary' : 'primary'} pending={saving} pendingLabel="Сохраняем…" disabled={!valid}>{completion ? 'Сохранить самочувствие' : 'Сохранить итоги'}</WorkoutCta>
     </div>
   </form>
 }

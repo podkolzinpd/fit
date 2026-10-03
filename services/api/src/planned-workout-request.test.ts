@@ -51,6 +51,17 @@ function validRequest() {
 }
 
 describe('planned workout request', () => {
+  it('accepts a named empty plan and distinguishes omitted and cleared names', () => {
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), title: ' Всё тело ', exercises: [] }, null)?.draft)
+      .toMatchObject({ title: 'Всё тело', exercises: [] })
+    expect(readSavePlannedWorkoutRequest(validRequest(), null)?.draft).not.toHaveProperty('title')
+    for (const title of [null, '', '   ']) {
+      expect(readSavePlannedWorkoutRequest({ ...validRequest(), title }, null)?.draft.title).toBeNull()
+    }
+    for (const title of [15, {}, [], 'x'.repeat(121)]) {
+      expect(readSavePlannedWorkoutRequest({ ...validRequest(), title }, null)).toBeUndefined()
+    }
+  })
   it('validates actual duration while preserving missing versus cleared fields', () => {
     expect(readSavePlannedWorkoutRequest(validRequest(), null)?.draft).not.toHaveProperty('actualDurationSec')
     for (const actualDurationSec of [null, 1, 3000, 43200]) {

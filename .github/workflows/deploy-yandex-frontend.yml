@@ -32,7 +32,7 @@ jobs:
         github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-24.04
     environment: fit-frontend-candidate
-    timeout-minutes: 20
+    timeout-minutes: 40
     outputs:
       commit: ${{ steps.source.outputs.commit }}
     steps:
@@ -58,6 +58,37 @@ jobs:
         with:
           ref: ${{ steps.source.outputs.commit }}
           persist-credentials: false
+          fetch-depth: 2
+      - name: Require matching API rollout when this release changes its contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          changed=$(git diff-tree --no-commit-id --name-only -r "$SOURCE_COMMIT")
+          if ! grep -q '^services/api/' <<<"$changed"; then
+            echo 'No API changes in this release.'
+            exit 0
+          fi
+          for attempt in $(seq 1 120); do
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-yandex-stage.yml/runs?head_sha=$SOURCE_COMMIT&event=push&per_page=10")
+            result=$(jq -r --arg sha "$SOURCE_COMMIT" '
+              [.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main")]
+              | sort_by(.run_number) | last
+              | if . == null then "waiting" elif .status != "completed" then "waiting" else .conclusion end
+            ' <<<"$runs")
+            if [ "$result" = success ]; then
+              echo 'Matching API and migration rollout succeeded.'
+              exit 0
+            fi
+            if [ "$result" != waiting ]; then
+              echo "API rollout did not succeed ($result); frontend remains unchanged." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          echo 'Matching API rollout timed out; frontend remains unchanged.' >&2
+          exit 1
       - uses: actions/setup-node@v4
         with:
           node-version: 22

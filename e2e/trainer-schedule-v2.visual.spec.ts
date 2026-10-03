@@ -40,7 +40,7 @@ const workout = {
   exercises: [],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null; title?: string | null }
 
 async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -96,6 +96,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       'assistant-all-trainers-2026-09',
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
+      'lime-quick-plan-2026-10',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -288,9 +289,9 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
         return
       }
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null }
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null }
       lastSavedStartTime = draft.startTime ?? null
-      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, id: newWorkoutId, workoutDate: draft.workoutDate, startTime: draft.startTime || '10:00', endTime: draft.endTime || '11:00' }]
+      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null }]
       body = { workout: { id: newWorkoutId } }
     } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {
       const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null }
@@ -403,6 +404,30 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+test('Figma workout second pilot keeps quick-plan guidance and completed draft', async ({ page }) => {
+  const profileId = '10000000-0000-4000-8000-000000000010'
+  await mockPilot(page, { profileId, fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.evaluate((id) => {
+    const key = `fit.coachmarks-seen.${id}`
+    const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+    localStorage.setItem(key, JSON.stringify(seen.filter((item) => item !== 'lime-quick-plan-2026-10')))
+  }, profileId)
+  await page.getByRole('button', { name: 'Запланировать тренировку на 2026-09-24' }).click()
+  const guidance = page.getByRole('status').filter({ hasText: 'План можно сохранить сразу' })
+  await expect(guidance).toBeVisible()
+  await guidance.getByRole('button', { name: 'Понятно' }).click()
+  await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая')
+  await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
+  await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Записать тренировку', exact: true })).toBeDisabled()
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Запланировать тренировку на 2026-09-24' }).click()
+  await expect(page).toHaveURL(/workouts\/new\?date=2026-09-24&entry=quick$/)
+  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Записать тренировку', exact: true })).toBeDisabled()
+})
+
 for (const width of [390, 430, 1440]) {
   test(`Figma trainer routes include finance and templates at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
@@ -423,6 +448,55 @@ for (const width of [390, 430, 1440]) {
       await expect(page.locator('[data-original-icon]')).toHaveCount(0)
     }
   })
+  test(`Figma workout quick empty plan at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockPilot(page, { fitLime: true, workouts: [], failFirstSave: true })
+    await page.goto('/today?date=2026-09-24')
+    await page.getByRole('button', { name: 'Запланировать тренировку на 2026-09-24' }).click()
+    const composer = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
+    await expect(composer).toBeVisible()
+    await composer.getByRole('textbox', { name: 'Название тренировки' }).fill('Всё тело')
+    await composer.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
+    await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    await composer.getByRole('button', { name: 'Выбрать дату и время' }).click()
+    const dates = page.getByRole('dialog', { name: 'Дата и время' })
+    await dates.getByLabel('Начало', { exact: true }).fill('12:00')
+    await dates.getByRole('button', { name: 'Применить дату' }).click()
+    await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('width', '24px')
+    await expect(composer.locator('.fit-lime-plan-exercises svg')).toHaveCSS('height', '24px')
+    const composerBox = await composer.boundingBox()
+    expect(composerBox!.height).toBeLessThanOrEqual(210)
+    await expect(composer.locator('.fit-lime-plan-send svg')).toHaveCSS('filter', 'brightness(0)')
+    await page.screenshot({ path: testInfo.outputPath('figma-quick-plan.png') })
+    const sent: Array<{ title?: string; requestId: string; exercises: unknown[] }> = []
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number])
+    })
+    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await expect(composer.getByRole('alert')).toBeVisible()
+    await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Всё тело')
+    await composer.getByRole('button', { name: 'Сохранить план' }).click()
+    await expect(composer).not.toBeVisible()
+    expect(sent).toHaveLength(2)
+    expect(sent[0]).toMatchObject({ title: 'Всё тело', exercises: [] })
+    expect(sent[1]?.requestId).toBe(sent[0]?.requestId)
+    await expect(page.locator('.schedule-v2-event')).toContainText('Всё тело')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  })
+
+  test(`Figma workout quick draft survives editor handoff at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockPilot(page, { fitLime: true })
+    await page.goto('/today?date=2026-09-24')
+    await page.getByRole('button', { name: 'Запланировать тренировку на 2026-09-24' }).click()
+    await page.getByRole('textbox', { name: 'Название тренировки' }).fill('План с очень длинным названием для проверки переноса')
+    await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
+    await expect(page).toHaveURL(/workouts\/new\?date=2026-09-24/)
+    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+    await page.reload()
+    await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('План с очень длинным названием для проверки переноса')
+  })
+
   test(`Figma workout editor and client picker at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await mockPilot(page, { fitLime: true })
@@ -443,7 +517,7 @@ for (const width of [390, 430, 1440]) {
     await picker.getByRole('button', { name: /Алексей Смирнов/ }).click()
     await expect(picker).not.toBeVisible()
     await expect(page.locator('.client-picker-trigger')).toContainText('Алексей Смирнов')
-    await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeEnabled()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
   })
   test(`Figma calendar month chooser applies and cancels at ${width}`, async ({ page }, testInfo) => {
@@ -1503,7 +1577,7 @@ for (const fitLime of [false, true]) {
       await page.evaluate((value) => localStorage.setItem('fit.appTheme', value), theme)
       await page.reload()
       await expect(cards).toHaveCount(3)
-      for (const width of [390, 430, 1440]) {
+for (const width of [390, 430, 1440]) {
         await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
         await page.screenshot({ path: testInfo.outputPath(`upcoming-${fitLime}-${theme}-${width}.png`), fullPage: true })
@@ -1771,9 +1845,10 @@ test('today keeps workout entry usable while clients fail and recover', async ({
   })
   await page.goto('/today')
   await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
-  await expect(page.getByRole('alert')).toContainText('Не удалось загрузить клиентов')
+  const clientError = page.getByRole('alert').filter({ hasText: 'Не удалось загрузить клиентов' })
+  await expect(clientError).toBeVisible()
   recovered = true
-  await page.getByRole('alert').getByRole('button', { name: 'Повторить' }).click()
+  await clientError.getByRole('button', { name: 'Повторить' }).click()
   await expect(page.getByRole('link', { name: 'Добавить первого клиента' })).toBeVisible()
 })
 
@@ -1847,7 +1922,8 @@ test('direct pilot workout link returns to its dated calendar instead of clients
 test('failed calendar save preserves the form and retry returns to the selected day once', async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failFirstSave: true })
   await page.goto('/today?date=2026-09-29&week=2026-09-21&range=2w')
-  await page.getByRole('link', { name: 'Запланировать тренировку на 2026-09-29' }).click()
+  await page.getByRole('button', { name: 'Запланировать тренировку на 2026-09-29' }).click()
+  await page.getByRole('button', { name: 'Добавить упражнения' }).click()
   await page.locator('.client-picker-trigger').click()
   await page.locator(`.client-picker-item[data-client-id="${clientId}"]`).click()
   await page.getByLabel('Начало').fill('14:00')
@@ -1888,6 +1964,7 @@ test('editing a pilot workout returns to its calendar day with the changed time'
 })
 
 test('rescheduling refreshes both the former day and the two-week overview', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-25T09:00:00+03:00'))
   await mockPilot(page)
   await page.goto('/today?date=2026-09-24&week=2026-09-21&range=2w')
   await page.locator('.schedule-v2-event').click()

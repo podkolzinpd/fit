@@ -425,6 +425,8 @@ export interface WorkoutExerciseDraft extends ExerciseSnapshot {
 
 export interface WorkoutDraft {
   id?: UUID
+  /** Отдельное название плана; отсутствие сохраняет прежнее, null очищает. */
+  title?: string | null
   /** Стабильный ключ одного действия «Сохранить» для повтора после сбоя сети. */
   requestId?: UUID
   clientId: UUID
@@ -514,6 +516,7 @@ export interface WorkoutFeedbackDraft {
 
 export interface Workout {
   id: UUID
+  title?: string | null
   clientId: UUID
   trainerId?: UUID
   clientName: string
