@@ -1,7 +1,7 @@
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
-import { FitLimePlanComposer } from './FitLimePlanComposer'
+import { FitLimeWorkoutEntry } from './FitLimeWorkoutEntry'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
@@ -898,9 +898,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       </>}
     </AsyncView>
     {isFitLimeEnabled(actor)
-      ? <button type="button" className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
+      ? <button type="button" className="schedule-v2-fab" aria-label="Новая тренировка" onClick={() => { trackGoal('schedule_v2_workout_create_started'); setPlanComposerOpen(true) }}><AddIcon /></button>
       : <Link className="schedule-v2-fab" aria-label={`Запланировать тренировку на ${selected}`} to={`/workouts/new?date=${selected}`} state={{ returnTo }} onClick={() => trackGoal('schedule_v2_workout_create_started')}><AddIcon /></Link>}
-    {planComposerOpen && <FitLimePlanComposer date={selected} returnTo={returnTo} onClose={() => setPlanComposerOpen(false)} />}
+    {planComposerOpen && <FitLimeWorkoutEntry date={selected} returnTo={returnTo} onClose={() => setPlanComposerOpen(false)} />}
     {inboxOpen && <ScheduleV2InboxSheet
       questions={workspace.data?.questions ?? []}
       questionsLoading={workspace.isLoading}
