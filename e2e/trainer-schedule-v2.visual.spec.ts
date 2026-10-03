@@ -1284,6 +1284,8 @@ for (const [account, profileId] of [
     await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Назад' })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Назад' })).toHaveCSS('opacity', '1')
     await expect(page.locator('.chat-message.partner')).toHaveCSS('background-color', 'rgb(26, 26, 28)')
     await expect(page.getByRole('button', { name: 'Отправить' })).toHaveCSS('background-color', 'rgb(182, 239, 77)')
     if (account === 'first') {
@@ -1395,6 +1397,9 @@ for (const [account, profileId] of [
     await expect(page.getByRole('link', { name: /История тренировок/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Прогресс и замеры/ })).toBeVisible()
     await expect(page.locator('.client-detail-plan')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    for (const icon of await page.locator('.client-detail-plan svg[data-original-icon]').all()) {
+      await expect(icon).toHaveCSS('filter', 'brightness(0)')
+    }
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-client-card.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
