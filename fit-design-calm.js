@@ -24,3 +24,18 @@ const synthesis=document.querySelector('.superapp-simple .content > div:first-of
 synthesis.style.color='#f5f4ef';
 synthesis.innerHTML=synthesis.innerHTML.replace('Fit','<span style="color:#d6f500">Fit</span>');
 document.title='Fit Design — презентация';
+
+// Market subtitle: keep the forecast compact and its source visually separate.
+const marketForecast = document.querySelector('.market-polished svg text[x="754"][y="64"]');
+if (marketForecast) {
+  marketForecast.textContent = '≈1,5 трлн ₽ (2025) → ≈2,3 трлн ₽ (2031)';
+  const source = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  source.setAttribute('x', '1410');
+  source.setAttribute('y', '64');
+  source.setAttribute('text-anchor', 'end');
+  source.setAttribute('font-size', '16');
+  source.style.fontSize = '16px';
+  source.setAttribute('fill', '#a7acae');
+  source.textContent = 'Оценка Fit';
+  marketForecast.after(source);
+}
