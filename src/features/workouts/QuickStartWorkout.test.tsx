@@ -53,6 +53,28 @@ describe('QuickStartWorkout', () => {
     expect(mocks.quickStart).toHaveBeenCalledWith(client.id, expect.any(String), 'with_trainer')
   })
 
+  it('starts Lime immediately on client selection and retries the same command', async () => {
+    mocks.quickStart.mockRejectedValueOnce(new Error('network')).mockResolvedValue({ id: workoutId, resumed: true })
+    const user = userEvent.setup()
+    view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[]} returnTo="/today" startOnClientSelection initialPickerOpen />)
+    expect(mocks.quickStart).not.toHaveBeenCalled()
+    await user.click(screen.getByText('Анна'))
+    await user.click(await screen.findByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByText('Открыта Live-тренировка')).toBeVisible()
+    expect(mocks.quickStart).toHaveBeenCalledTimes(2)
+    expect(mocks.quickStart.mock.calls[0]).toEqual(mocks.quickStart.mock.calls[1])
+    expect(mocks.quickStart.mock.calls[0]).toEqual([client.id, expect.any(String), 'with_trainer'])
+    expect(screen.queryByRole('button', { name: 'Начать' })).not.toBeInTheDocument()
+  })
+
+  it('does not start a workout when Lime client selection is cancelled', async () => {
+    const cancel = vi.fn()
+    view(<QuickStartWorkout role="trainer" clients={[client]} workouts={[]} returnTo="/today" startOnClientSelection initialPickerOpen onPickerCancel={cancel} />)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(mocks.quickStart).not.toHaveBeenCalled()
+  })
+
   it('supports the calendar label without changing the start command', async () => {
     mocks.quickStart.mockResolvedValue({ id: workoutId, resumed: false })
     const pending = vi.fn()

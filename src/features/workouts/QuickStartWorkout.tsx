@@ -20,9 +20,12 @@ interface QuickStartWorkoutProps {
   compact?: boolean
   startLabel?: string
   onPendingChange?: (pending: boolean) => void
+  startOnClientSelection?: boolean
+  initialPickerOpen?: boolean
+  onPickerCancel?: () => void
 }
 
-export function QuickStartWorkout({ role, clientId, clients = [], workouts, loading, error, onRetry, returnTo, compact = false, startLabel = 'Начать тренировку', onPendingChange }: QuickStartWorkoutProps) {
+export function QuickStartWorkout({ role, clientId, clients = [], workouts, loading, error, onRetry, returnTo, compact = false, startLabel = 'Начать тренировку', onPendingChange, startOnClientSelection = false, initialPickerOpen = false, onPickerCancel }: QuickStartWorkoutProps) {
   const { workouts: repository } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
@@ -30,7 +33,9 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
   const [formatLocked, setFormatLocked] = useState(false)
   const [formatOpen, setFormatOpen] = useState(false)
   const [trainingFormat, setTrainingFormat] = useState<'self' | 'with_trainer'>('with_trainer')
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(initialPickerOpen)
+  const choosing = useRef(false)
+  const submitting = useRef(false)
   const [targetClientId, setTargetClientId] = useState<string | null>(null)
   const operation = useRef<{ clientId: string | null; id: string; format: 'self' | 'with_trainer' } | null>(null)
   const active = clientId && workouts?.find((workout) => workout.clientId === clientId && workout.status === 'in_progress')
@@ -48,10 +53,12 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
       navigate(`/workouts/${id}/live`, { state: { returnTo } })
     },
     onError: () => trackGoal('quick_start_failed'),
+    onSettled: () => { submitting.current = false },
   })
 
   function begin(selectedClientId: string | null) {
-    if (start.isPending) return
+    if (submitting.current) return
+    choosing.current = true
     setPickerOpen(false)
     setTargetClientId(selectedClientId)
     const current = workouts?.find((workout) => workout.clientId === selectedClientId && workout.status === 'in_progress')
@@ -60,10 +67,13 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
       return
     }
     setFormatLocked(true)
+    submitting.current = true
     start.mutate(selectedClientId)
   }
 
   function chooseClient(selectedClientId: string | null) {
+    choosing.current = true
+    if (startOnClientSelection) { begin(selectedClientId); return }
     setPickerOpen(false)
     setTargetClientId(selectedClientId)
     const current = workouts?.find((workout) => workout.clientId === selectedClientId && workout.status === 'in_progress')
@@ -90,7 +100,7 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
 
   return <section className={`quick-start-workout${compact ? ' compact' : ''}`} aria-label="Тренировка сейчас">
     {!compact && <div className="quick-start-copy"><h2>{buttonLabel}</h2><p>{canContinue ? 'Вернитесь к упражнениям и результатам.' : role === 'trainer' ? 'Выберите клиента и добавляйте упражнения по ходу занятия.' : 'Тренировка начнётся сразу. Упражнения добавите по ходу.'}</p></div>}
-    {!formatOpen && <button type="button" className="quick-start-button" disabled={unavailable || start.isPending} onClick={action}>{start.isPending ? 'Начинаем…' : buttonLabel}</button>}
+    {!formatOpen && !pickerOpen && !(startOnClientSelection && start.error) && <button type="button" className="quick-start-button" disabled={unavailable || start.isPending} onClick={() => { choosing.current = false; action() }}>{start.isPending ? 'Начинаем…' : buttonLabel}</button>}
     {formatOpen && <div className="quick-start-format" aria-busy={start.isPending}>
       <p>{clients.find((item) => item.id === targetClientId)?.fullName ?? 'Формат тренировки'}</p>
       <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" disabled={start.isPending || formatLocked} className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button><button type="button" disabled={start.isPending || formatLocked} className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button></div>
@@ -101,7 +111,7 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
     {start.error && <p className="quick-start-status" role="alert">{start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists'
       ? 'У клиента уже есть активная тренировка другого тренера.'
       : 'Не удалось начать тренировку. Данные не потеряны.'} {!formatOpen && <button type="button" onClick={() => begin(targetClientId)}>Повторить</button>}</p>}
-    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients} selectedId="" onChange={chooseClient} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} label="Для кого тренировка" />}
+    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients} selectedId="" onChange={chooseClient} loading={loading} error={error} onRetry={onRetry} autoFocusSearch={!startOnClientSelection} initialOpen hideTrigger onDismiss={() => { setPickerOpen(false); if (!choosing.current) onPickerCancel?.() }} label="Для кого тренировка" />}
   </section>
 }
 

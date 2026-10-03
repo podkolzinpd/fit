@@ -19,6 +19,7 @@ interface ClientPickerProps {
   initialOpen?: boolean
   onDismiss?: () => void
   hideTrigger?: boolean
+  autoFocusSearch?: boolean
 }
 
 function useVisualViewportStyle() {
@@ -42,7 +43,7 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ClientPicker({ userId, clients, selectedId, onChange, label = 'Клиент', selectionError, loading = false, error, onRetry, onCreate, initialOpen = false, onDismiss, hideTrigger = false }: ClientPickerProps) {
+export function ClientPicker({ userId, clients, selectedId, onChange, label = 'Клиент', selectionError, loading = false, error, onRetry, onCreate, initialOpen = false, onDismiss, hideTrigger = false, autoFocusSearch = true }: ClientPickerProps) {
   const [open, setOpen] = useState(initialOpen)
   const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState('')
@@ -61,6 +62,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
   const list = normalizedSearch ? filtered : filtered.filter((client) => !recent.some((recentClient) => recentClient.id === client.id))
 
   function close() {
+    if (!autoFocusSearch && document.activeElement instanceof HTMLInputElement) document.activeElement.blur()
     setOpen(false)
     setCreating(false)
     setSearch('')
@@ -110,7 +112,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
           {createError && <p className="error">{createError}</p>}
           <button type="button" className="primary" disabled={name.trim().length < 2 || creatingClient} onClick={() => void createClient()}>{creatingClient ? 'Создаю…' : 'Создать и выбрать'}</button>
         </div> : <>
-          <input className="picker-search" aria-label="Поиск клиента" placeholder="Имя клиента" value={search} onChange={(event) => setSearch(event.target.value)} autoFocus />
+          <input className="picker-search" aria-label="Поиск клиента" placeholder="Имя клиента" value={search} onChange={(event) => setSearch(event.target.value)} autoFocus={autoFocusSearch} />
           {loading && <p className="state">Загружаем клиентов…</p>}
           {error && <div className="state"><p className="error">{error.message}</p>{onRetry && <button type="button" className="secondary" onClick={onRetry}>Повторить</button>}</div>}
           {!loading && !error && <div className="client-picker-list">
