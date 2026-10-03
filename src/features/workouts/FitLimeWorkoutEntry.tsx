@@ -18,9 +18,9 @@ export function FitLimeWorkoutEntry({ date, returnTo, onClose }: {
   const dialog = useRef<HTMLDialogElement>(null)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
   const workouts = useQuery({ queryKey: ['workouts', undefined], queryFn: () => workoutsRepository.list(undefined, undefined) })
-  useEffect(() => { if (!planning) dialog.current?.showModal() }, [planning])
+  useEffect(() => { if (!planning) { dialog.current?.showModal(); dialog.current?.focus({ preventScroll: true }) } }, [planning])
   if (planning) return <FitLimePlanComposer date={date} returnTo={returnTo} onClose={onClose} />
-  return <dialog ref={dialog} className="fit-lime-plan-dialog fit-lime-workout-entry" aria-label="Новая тренировка"
+  return <dialog ref={dialog} tabIndex={-1} className="fit-lime-plan-dialog fit-lime-workout-entry" aria-label="Новая тренировка"
     onClose={(event) => { if (event.target === event.currentTarget) onClose() }}
     onCancel={(event) => { if (starting) event.preventDefault() }}>
     <button type="button" className="fit-lime-plan-close" aria-label="Закрыть выбор действия" disabled={starting} onClick={() => dialog.current?.close()}><CloseIcon /></button>
