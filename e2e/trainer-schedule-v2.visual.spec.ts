@@ -44,7 +44,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -118,7 +118,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
           firstName: 'Антон',
           lastName: null,
           timezone: 'Europe/Moscow',
-          accountRole: 'trainer',
+          accountRole: options.role ?? 'trainer',
+          ...(options.role === 'client' ? { client: { id: clientId, trainerId, fullName: 'Алексей Смирнов' } } : {}),
           experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true },
           preferences: { scheduleDensity },
         },
@@ -128,6 +129,8 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       if (draft.scheduleDensity) scheduleDensity = draft.scheduleDensity
       await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' })
       return
+    } else if (url.pathname === '/v1/me/finance') {
+      body = { finance: { trainers: [] } }
     } else if (url.pathname === '/v1/finance/overview') {
       body = { overview: { month: url.searchParams.get('month'), receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] } }
     } else if (url.pathname === `/v1/clients/${clientId}/finance`) {
@@ -2902,4 +2905,13 @@ test('pilot calendar keeps workout review and save in the existing entry flow', 
   await page.goto('/today?classic=1#trainer-attention')
   await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Продолжить' })).toBeVisible()
+})
+
+
+test('Client Lime baseline real client route before redesign', async ({ page }, testInfo) => {
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  await page.goto('/me')
+  await expect(page.locator('.client-home-identity')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('client-before.png'), fullPage: true })
 })

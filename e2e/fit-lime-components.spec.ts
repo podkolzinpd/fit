@@ -41,3 +41,21 @@ test('Fit Lime component variants stay inert outside the scoped trainer fixture'
   await expect(frame).not.toHaveCSS('background-color', 'rgb(0, 0, 0)')
   expect(await frame.evaluate((element) => getComputedStyle(element).getPropertyValue('--bg').trim())).toBe(original)
 })
+
+for (const theme of ['light', 'dark']) {
+  test(`Client Lime foundation ${theme} keeps readable text and the approved lime fill`, async ({ page }) => {
+    await page.goto('/auth')
+    await page.evaluate((theme) => {
+      const frame = document.createElement('div')
+      frame.className = `phone-frame ui-identity fit-lime fit-client-lime ${theme === 'light' ? 'theme-light' : ''}`
+      frame.id = 'client-lime-foundation'
+      frame.innerHTML = '<section class="card"><strong>Тренировка</strong><p>План на сегодня</p><button class="primary">Начать</button></section>'
+      document.body.append(frame)
+    }, theme)
+    const frame = page.locator('#client-lime-foundation')
+    await expect(frame).toHaveCSS('background-color', theme === 'light' ? 'rgb(246, 247, 242)' : 'rgb(0, 0, 0)')
+    await expect(frame.locator('.primary')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    await expect(frame.locator('.primary')).toHaveCSS('color', 'rgb(0, 0, 0)')
+    await expect(frame.locator('p')).toHaveCSS('color', theme === 'light' ? 'rgb(85, 92, 76)' : 'rgb(184, 184, 189)')
+  })
+}

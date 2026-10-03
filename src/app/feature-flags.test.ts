@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  isClientLimePilotEnabled,
   getYandexIdPilotConfig,
   getYandexAppSessionEntryConfig,
   getYandexNativeRegistrationConfig,
@@ -451,5 +452,27 @@ describe('contest winner announcement pilot flag', () => {
     vi.stubEnv('VITE_TODAY_GREETING_ENABLED', 'true')
     vi.stubEnv('VITE_TODAY_GREETING_PILOT_USER_IDS', 'client-1')
     expect(isContestWinnerPilotEnabled('client-1')).toBe(false)
+  })
+})
+
+describe('single-account client Lime pilot', () => {
+  it.each(['', 'false', 'TRUE', '1'])('fails closed for flag %s', (value) => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', value)
+    vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', 'client-1')
+    expect(isClientLimePilotEnabled('client-1')).toBe(false)
+  })
+  it.each(['', ' , ', 'client-1,client-2'])('rejects empty or expanded scope %s', (ids) => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', ids)
+    expect(isClientLimePilotEnabled('client-1')).toBe(false)
+  })
+  it('enables only the exact single ID and supports disabling', () => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', ' , client-1, ')
+    expect(isClientLimePilotEnabled('client-1')).toBe(true)
+    expect(isClientLimePilotEnabled('client-2')).toBe(false)
+    expect(isClientLimePilotEnabled('')).toBe(false)
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'false')
+    expect(isClientLimePilotEnabled('client-1')).toBe(false)
   })
 })
