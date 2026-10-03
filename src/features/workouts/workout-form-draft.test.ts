@@ -28,4 +28,10 @@ describe('workout form draft storage', () => {
     removeWorkoutFormDraft(key)
     expect(readWorkoutFormDraft(key)).toBeNull()
   })
+
+  it('preserves the quick-plan name and retry identity through editor handoff', () => {
+    const named = { ...draft, title: 'Всё тело', requestId: '10000000-0000-4000-8000-000000000001' }
+    writeWorkoutFormDraft(key, named)
+    expect(readWorkoutFormDraft(key)).toEqual(named)
+  })
 })

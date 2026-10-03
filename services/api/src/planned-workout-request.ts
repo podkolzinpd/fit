@@ -52,6 +52,7 @@ export interface PlannedWorkoutExerciseDraft {
 
 export interface PlannedWorkoutDraft {
   id: string | null
+  title?: string | null
   requestId?: string
   clientId: string
   workoutDate: string
@@ -307,6 +308,7 @@ export function readSavePlannedWorkoutRequest(
   const actualDurationSec = input.actualDurationSec === null || input.actualDurationSec === undefined
     ? null : integer(input.actualDurationSec, 1, 43_200)
   const notes = text(input.notes, { nullable: true, max: 5_000 })
+  const title = text(input.title, { nullable: true, max: 120 })
   const stageId = input.stageId === null || input.stageId === undefined || input.stageId === ''
     ? null
     : uuid(input.stageId)
@@ -328,6 +330,7 @@ export function readSavePlannedWorkoutRequest(
     || endTime === undefined
     || actualDurationSec === undefined
     || notes === undefined
+    || title === undefined
     || stageId === undefined
     || favoriteTitle === undefined
     || trainingFormat === undefined
@@ -350,6 +353,7 @@ export function readSavePlannedWorkoutRequest(
       endTime,
       ...(input.actualDurationSec === undefined ? {} : { actualDurationSec }),
       notes,
+      ...(input.title === undefined ? {} : { title }),
       stageId,
       favoriteTitle,
       ...(trainingFormat === null ? {} : { trainingFormat }),

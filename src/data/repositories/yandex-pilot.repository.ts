@@ -176,6 +176,7 @@ const workoutSchema = z.object({
   createdBy: z.uuid().nullable(),
   origin: z.enum(['manual', 'ai']).optional(),
   favoriteTitle: z.string().nullable().optional(),
+  title: z.string().max(120).nullable().optional(),
   trainingFormat: z.enum(['self', 'with_trainer']).optional(),
   startedBy: z.uuid().nullable(),
   completedBy: z.uuid().nullable(),

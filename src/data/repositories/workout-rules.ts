@@ -916,6 +916,7 @@ export function copyWorkout(source: Workout, workoutDate = source.workoutDate, o
   }
   return {
     clientId: source.clientId, workoutDate, startTime: source.startTime ?? undefined,
+    title: source.title,
     endTime: source.endTime ?? undefined, notes: source.notes ?? undefined,
     trainingFormat: source.trainingFormat,
     exercises: source.exercises.map((exercise) => {
