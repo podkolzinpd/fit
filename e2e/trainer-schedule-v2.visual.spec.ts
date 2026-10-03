@@ -97,6 +97,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
       'lime-quick-plan-2026-10',
+      'lime-day-workspace-2026-10',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -404,6 +405,43 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
+  test(`Lime day removes duplicate blocks but keeps live and draft access for ${profileId}`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+    await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout, status: 'in_progress', workoutDate: '2026-09-26' }] })
+    await page.addInitScript((id) => localStorage.setItem(`fit.today-draft.${id}`, JSON.stringify({ screen: 'compose', text: 'Приседания 3 по 10', choices: {}, items: [], clientId: '' })), profileId)
+    await page.goto('/today?date=2026-09-26')
+    await expect(page.getByRole('link', { name: 'День', exact: true })).toBeVisible()
+    await expect(page.locator('.schedule-v2-home-actions')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Установка и уведомления' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '2 Незавершённые действия', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '2 Незавершённые действия', exact: true }).click()
+    const queue = page.getByRole('dialog', { name: 'Рабочая очередь' })
+    await expect(queue.getByRole('link', { name: /Тренировка идёт/ })).toHaveAttribute('href', `/workouts/${workoutId}/live`)
+    await expect(queue.getByRole('link', { name: /Черновик тренировки/ })).toHaveAttribute('href', '/today?view=compose')
+    await page.getByRole('button', { name: 'Закрыть рабочую очередь' }).click()
+    await page.getByRole('button', { name: 'Сегодня', exact: true }).click()
+    await expect(page).toHaveURL(/date=2026-09-27/)
+    await expect(page.getByText('На этот день тренировок нет')).toBeVisible()
+    await expect(page.locator('.schedule-v2-home-actions')).toHaveCount(0)
+    await page.screenshot({ path: testInfo.outputPath('lime-clean-day.png'), fullPage: true })
+    await page.evaluate((id) => {
+      const key = `fit.coachmarks-seen.${id}`
+      const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+      localStorage.setItem(key, JSON.stringify(seen.filter((item) => item !== 'lime-day-workspace-2026-10')))
+    }, profileId)
+    await page.getByRole('link', { name: 'Расписание', exact: true }).click()
+    await page.getByRole('link', { name: 'День', exact: true }).click()
+    const guidance = page.getByRole('status').filter({ hasText: 'Все дела — в календаре' })
+    await expect(guidance).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('lime-day-guidance.png'), fullPage: true })
+    await guidance.getByRole('button', { name: 'Понятно' }).click()
+    await expect(guidance).not.toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('button', { name: '2 Незавершённые действия', exact: true })).toBeVisible()
+  })
+}
+
 for (const width of [390, 430]) {
   test(`Figma long client name and constrained-height picker at ${width}`, async ({ page }, testInfo) => {
     const fullName = 'Александр Константинопольский-Рождественский'
@@ -463,11 +501,11 @@ for (const width of [390, 430, 1440]) {
     await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
     const fullName = 'Александр Константинопольский-Рождественский'
     await mockPilot(page, { fitLime: true, workouts: [], clientRecords: [{ id: clientId, fullName, archivedAt: null, version: 1 }] })
-    await page.goto('/today?date=2026-09-24')
+    await page.goto(`/clients/${clientId}`)
     await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
-    await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: new RegExp(fullName) }).click()
     const format = page.locator('.quick-start-format')
-    await expect(format).toContainText(fullName)
+    await expect(page.getByRole('heading', { name: fullName, exact: true })).toBeVisible()
+    await expect(format).toContainText('Формат тренировки')
     await expect(format.getByRole('button', { name: 'С тренером', exact: true })).toHaveAttribute('aria-pressed', 'true')
     await format.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await expect(format.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -616,7 +654,8 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toHaveClass(/is-active/)
     await expect(page.locator('.schedule-v2-summary > button').first()).toHaveCSS('border-radius', '32px')
     await expect(page.locator('.schedule-v2-topbar h1')).toHaveCSS('font-size', '24px')
-    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+    await expect(page.locator('.schedule-v2-home-actions')).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'День', exact: true })).toBeVisible()
     await ready()
     await page.screenshot({ path: testInfo.outputPath('figma-calendar-day.png') })
     const fab = await page.locator('.schedule-v2-fab').boundingBox()
@@ -735,15 +774,15 @@ for (const [account, profileId] of [
     await expect(page.locator('.schedule-v2 > section').first()).toHaveClass(/schedule-v2-summary/)
     await expect(page.getByRole('button', { name: '0 Незавершённые действия' })).toBeVisible()
     await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Надиктовать тренировку' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Ввести текстом' })).toBeVisible()
+    await expect(page.locator('.schedule-v2-home-actions')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Запланировать тренировку на 2026-09-24' })).toBeVisible()
     await expect(page.locator('.schedule-v2-now')).toBeVisible()
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-today.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
       await testInfo.attach('fit-lime-today', { path: screenshotPath, contentType: 'image/png' })
     }
-    await page.getByRole('link', { name: 'Ввести текстом' }).click()
+    await page.goto('/today?view=compose&entry=text')
     await expect(page).toHaveURL(/\/today\?view=compose&entry=text/)
     await expect(page.locator('.fit-lime-shell')).toBeVisible()
   })
@@ -1105,7 +1144,7 @@ test('reading a chat message updates the inbox count on return', async ({ page }
   await expect(page.getByRole('button', { name: '1 Вопросы и сообщения' })).toBeVisible()
 })
 
-test('today keeps voice, text, draft, workout context and onboarding beside the calendar', async ({ page }, testInfo) => {
+test('non-Lime today keeps voice, text, draft, workout context and onboarding beside the calendar', async ({ page }, testInfo) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await page.addInitScript((profileId) => {
     localStorage.setItem(`fit.today-draft.${profileId}`, JSON.stringify({

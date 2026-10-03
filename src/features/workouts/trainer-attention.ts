@@ -1,7 +1,7 @@
 import type { Client, ClientAttentionPreference, TrainerAttentionWorkout, Workout } from '../../shared/domain'
 import { daysBetween, formatLocalDate, localDate, type LocalDate } from '../../shared/local-date'
 
-export type TrainerActionReason = 'question' | 'discomfort' | 'past_plan'
+export type TrainerActionReason = 'question' | 'discomfort' | 'past_plan' | 'in_progress'
 
 export interface TrainerActionItem {
   clientId: string
@@ -18,6 +18,24 @@ export interface TrainerPlanningItem {
   clientName: string
   title: string
   detail: string
+}
+
+/** Lime replaces the home resume list with this queue; keep every live session reachable. */
+export function trainerDayActionItems(actions: TrainerActionItem[], workouts: Workout[]): TrainerActionItem[] {
+  const active = workouts.filter((workout) => workout.status === 'in_progress')
+  const activeIds = new Set(active.map((workout) => workout.id))
+  return [
+    ...active.map((workout): TrainerActionItem => ({
+      clientId: workout.clientId,
+      clientName: workout.clientName,
+      workoutId: workout.id,
+      reason: 'in_progress',
+      title: 'Тренировка идёт',
+      detail: formatLocalDate(workout.workoutDate),
+      actionLabel: 'Продолжить',
+    })),
+    ...actions.filter((item) => !activeIds.has(item.workoutId)),
+  ]
 }
 
 export function trainerPlanningDetail(value: string): string {

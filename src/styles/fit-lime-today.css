@@ -51,6 +51,7 @@
 .fit-lime-shell .fit-lime-today .schedule-v2-compose-label strong { font-weight: 500; }
 .fit-lime-shell .fit-lime-today .schedule-v2-compose-label small { color: var(--lime-text-secondary); }
 .fit-lime-shell .fit-lime-today .schedule-v2-empty-day { margin-inline: 18px; color: var(--lime-text-secondary); }
+.fit-lime-shell .schedule-v2-return-today { align-self: flex-start; min-height: 44px; margin: -8px 18px 8px; padding: 0 16px; border: 0; border-radius: 24px; background: var(--lime-surface-raised); color: var(--lime-text); font: inherit; }
 .fit-lime-shell .schedule-v2-timeline { padding-inline: 18px; }
 .fit-lime-shell .schedule-v2-timeline .day-grid-hour-label { color: var(--lime-text-secondary); font-size: 12px; font-weight: 400; }
 .fit-lime-shell .schedule-v2-timeline .day-grid-hour-line { background: var(--lime-divider); }
