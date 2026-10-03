@@ -620,11 +620,37 @@ UTC-время каждого запроса и DNS/TCP/TLS/TTFB/total, но н�
 сетей. Порог 5 секунд делает job красным и помогает зафиксировать интермиттентный
 сбой, но сам по себе не устанавливает его источник.
 
+### Frontend Gateway cold-start experiment
+
+Support ticket [WD756227](https://center.yandex.cloud/support/tickets/WD756227)
+suggests Gateway idle/cold start as a possible cause of slow initial HTML, but
+did not provide per-request traces. The frontend deployment specification now
+reserves `GET/HEAD /healthz` for a tiny `dummy` response
+`fit-gateway-ready` (`text/plain`, `no-store`). This checks only that Gateway
+can execute a static route; it does **not** verify Object Storage or the app.
+The deploy smoke verifies the exact status, body and headers before accepting
+a release. The route is not an auth/API endpoint and carries no user data.
+
+`.github/workflows/warm-yandex-frontend-gateway.yml` is an opt-in, read-only
+five-minute experiment. After `/healthz` is live, run it manually once, then
+set repository variable `YC_FRONTEND_GATEWAY_WARMUP_ENABLED=true` to enable the
+schedule. Each run requests `/healthz`, then `/auth` on the same resolved IP and
+logs only UTC time, IP, status and connection/TTFB/total timings. A slow response
+is recorded but does not fail the run; an invalid/unreachable route does. No
+chat notification, credential or production data is sent. Disable the variable
+after the observation window if this does not improve HTML latency. Scheduled
+GitHub runs can be delayed or dropped, so this is **not** a reliable permanent
+availability mechanism; the separate six-hour frontend probe remains active.
+Compare the paired timings and Yandex Monitoring before and after activation,
+including whether a slow dummy is followed by fast HTML. That pattern supports
+but does not prove cold start; a fast dummy with slow HTML points beyond the
+static Gateway route.
+
 В Yandex Monitoring для frontend API Gateway настроены `FIT frontend gateway:
 slow responses` (p99 latency, warning >5 c, alarm >10 c) и `FIT frontend
-gateway: HTTP 5xx` (ошибки 5xx). Они используют существующий Telegram-канал
-`fit-stage-postgres-alerts-telegram`, отправляют warning/alarm/recovery с
-двухминутным подавлением повторов. Метрика задержки охватывает весь ответ
+gateway: HTTP 5xx` (ошибки 5xx). Slow-response alert остаётся на графике без
+уведомлений в чат; 5xx уведомляет только при Alarm/Error с часовым подавлением
+повторов, не при каждом срабатывании. Метрика задержки охватывает весь ответ
 шлюза; она не разделяет время самого Gateway и получения объекта из Storage.
 Когда экран ещё пуст, сопоставляйте UTC-время и IP из probe artifact с графиком
 задержки; если HTML быстро получен, отдельно диагностируйте загрузку JS и

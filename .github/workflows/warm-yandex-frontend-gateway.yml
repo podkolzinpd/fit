@@ -1,0 +1,30 @@
+name: Warm Yandex frontend gateway
+
+on:
+  # GitHub's minimum cadence is five minutes; this is a bounded experiment,
+  # not an uptime guarantee. Offset from the top of the hour to reduce delays.
+  schedule:
+    - cron: '3-58/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yandex-frontend-gateway-warmup
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    if: github.event_name == 'workflow_dispatch' || vars.YC_FRONTEND_GATEWAY_WARMUP_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Warm dummy route, then measure HTML first byte on the same gateway IP
+        run: node scripts/probe-frontend-gateway-warmup.mjs

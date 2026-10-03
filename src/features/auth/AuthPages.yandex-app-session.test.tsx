@@ -149,6 +149,27 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByRole('button', { name: 'Войти по email' })).toHaveClass('secondary')
   })
 
+  it.each([AuthPage, YandexAppSessionPage])('shows the startup photo during restoration, with a missing-image fallback', (Page) => {
+    appSessionState.mockReturnValue({
+      session: null, loading: true, error: null, establish, retry, reset, signOut,
+    })
+    const view = render(<MemoryRouter><Page /></MemoryRouter>)
+    const splash = screen.getByRole('status', { name: 'Загружаем Fit' })
+    expect(splash).toHaveClass('fit-startup-photo')
+    const image = splash.querySelector('img')!
+    expect(image).toHaveAttribute('src', '/assets/startup-photo-983c93dc4df8.jpg')
+    expect(image).toHaveAttribute('fetchpriority', 'high')
+    expect(screen.queryByText(/Восстанавливаем сессию/)).not.toBeInTheDocument()
+    fireEvent.error(image)
+    expect(image).toHaveAttribute('hidden')
+    expect(screen.getByText('Загружаем Fit…')).toBeVisible()
+    appSessionState.mockReturnValue({
+      session: null, loading: false, error: null, establish, retry, reset, signOut,
+    })
+    view.rerender(<MemoryRouter><Page /></MemoryRouter>)
+    expect(screen.queryByRole('status', { name: 'Загружаем Fit' })).not.toBeInTheDocument()
+  })
+
   it('shows only Yandex ID when the final auth cutover flag and its dependencies are enabled', () => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')

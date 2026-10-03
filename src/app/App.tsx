@@ -2,6 +2,7 @@ import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } fr
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
 import { AuthenticatedMetrika } from './authenticated-metrika'
+import { StartupSplash } from '../shared/StartupSplash'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, isTrainerFinancePilotEnabled, trainerHomePath } from './feature-flags'
@@ -23,7 +24,7 @@ import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './
 function Protected() {
   const { actor, loading, error } = useAuth(); const location = useLocation()
   const systemStateClass = 'state ui-identity system-state-identity'
-  if (loading) return <main className={systemStateClass}>Восстанавливаем сессию…</main>
+  if (loading) return <StartupSplash />
   if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}${location.hash}` }} replace />
   if (error) return <main className={`${systemStateClass} error`}>{error}</main>
   return <LegalAcceptanceGate><YandexAccountLinkRequiredGate><Outlet /></YandexAccountLinkRequiredGate></LegalAcceptanceGate>

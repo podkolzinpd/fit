@@ -2,7 +2,21 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), {
+    name: 'fit-nonblocking-startup-styles',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html) => html.replace(
+        /<link\b[^>]*\brel="stylesheet"[^>]*>/g,
+        (link) => [
+          // Retain normal critical-CSS priority without blocking the first paint.
+          link.replace('rel="stylesheet"', 'rel="preload" as="style"'),
+          link.replace(/\s*\/?>$/, ' media="print" data-fit-app-styles>'),
+        ].join('\n'),
+      ),
+    },
+  }],
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
