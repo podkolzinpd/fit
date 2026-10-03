@@ -2915,3 +2915,31 @@ test('Client Lime baseline real client route before redesign', async ({ page }, 
   await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('client-before.png'), fullPage: true })
 })
+
+for (const width of [390, 430]) {
+  test(`Client Lime shell themes and account isolation ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await page.goto('/me/settings')
+    const theme = page.getByLabel('Тема оформления')
+    await expect(theme).toBeVisible()
+    for (const value of ['dark', 'light', 'system']) {
+      await theme.selectOption(value)
+      if (value === 'system') await page.emulateMedia({ colorScheme: 'dark' })
+      await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+      const expected = value === 'light' ? 'rgb(246, 247, 242)' : 'rgb(0, 0, 0)'
+      await expect(page.locator('.phone-frame')).toHaveCSS('background-color', expected)
+      await expect(page.locator('body')).toHaveCSS('background-color', expected)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`client-settings-${value}-${width}.png`), fullPage: true })
+      await page.reload()
+      await expect(theme).toHaveValue(value)
+    }
+    await page.emulateMedia({ colorScheme: 'light' })
+    await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(246, 247, 242)')
+    await mockPilot(page, { role: 'client', profileId: '10000000-0000-4000-8000-000000000099' })
+    await page.reload()
+    await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-client-lime/)
+    await expect(page.getByLabel('Тёмная тема')).toBeVisible()
+  })
+}

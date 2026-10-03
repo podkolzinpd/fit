@@ -1,3 +1,5 @@
+import { isClientLimeEnabled } from '../../app/client-lime'
+import { setClientLimeThemePreference, useClientLimeTheme } from '../../app/client-lime-theme'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -51,6 +53,7 @@ export function ClientProfileSettingsPage() {
   const { actor } = useAuth()
   const { clients: clientsRepository } = useDataBackend()
   const theme = useAppTheme()
+  const limeTheme = useClientLimeTheme(actor?.userId ?? '')
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const useTimeWheel = useWorkoutTimeWheel()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -75,7 +78,12 @@ export function ClientProfileSettingsPage() {
     </SettingsSection>
 
     <SettingsSection title="Оформление">
-      <div className="profile-settings"><Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} /></div>
+      <div className="profile-settings">{isClientLimeEnabled(actor)
+        ? <label className="field">Тема оформления<select value={limeTheme.preference} onChange={(event) => {
+          const value = event.target.value
+          if (value === 'light' || value === 'dark' || value === 'system') setClientLimeThemePreference(actor.userId, value)
+        }}><option value="light">Светлая</option><option value="dark">Тёмная</option><option value="system">Как на устройстве</option></select></label>
+        : <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />}</div>
       {client.data && <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} clientId={client.data.id} gender={client.data.gender} />}
     </SettingsSection>
 

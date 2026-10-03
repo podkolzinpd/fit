@@ -65,3 +65,13 @@ Production browser inspection недоступен: CUA не смог прове
 политику. Этот отказ не обходится; локальная проверка не считается production.
 
 PR1: полный `npm run check` завершён успешно; 56 flag tests и 3 Chromium component cases прошли. Production остаётся выключенным.
+## PR 2 — локальная приёмка
+
+1. Оболочка, фон, шапки и плавающая клиентская навигация используют client scope.
+2. Переиспользованы Fit primitives и оригинальные Lime icons/YS Geo. Disabled,
+   focus, error и destructive не теряют семантику.
+3. Light/dark/system сохраняются per-actor; системная тема реагирует на устройство.
+4. 64 unit/component tests, WebKit 390/430 theme/reload/account switch прошли.
+   Просмотрены обе темы настроек; исправлены padding поля и контраст off-switch.
+
+Полный check и итоговая проверка после исправлений обязательны перед PR2.

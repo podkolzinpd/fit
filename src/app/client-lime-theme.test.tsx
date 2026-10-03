@@ -1,0 +1,39 @@
+import { act, renderHook } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { clientLimeThemeKey, getClientLimeThemePreference, setClientLimeThemePreference, useClientLimeTheme } from './client-lime-theme'
+afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+it('keeps preferences per actor, validates storage and handles deletion', () => {
+  expect(getClientLimeThemePreference('a')).toBe('system')
+  setClientLimeThemePreference('a', 'dark')
+  expect(getClientLimeThemePreference('a')).toBe('dark')
+  expect(getClientLimeThemePreference('b')).toBe('system')
+  localStorage.setItem(clientLimeThemeKey('a'), 'invalid')
+  expect(getClientLimeThemePreference('a')).toBe('system')
+  localStorage.removeItem(clientLimeThemeKey('a'))
+  expect(getClientLimeThemePreference('a')).toBe('system')
+})
+it('updates every mounted subscriber and falls back in private storage', () => {
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+  const first = renderHook(() => useClientLimeTheme('private'))
+  const second = renderHook(() => useClientLimeTheme('private'))
+  act(() => setClientLimeThemePreference('private', 'dark'))
+  expect(first.result.current.theme).toBe('dark')
+  expect(second.result.current.preference).toBe('dark')
+  act(() => setClientLimeThemePreference('private', 'light'))
+  expect(first.result.current.theme).toBe('light')
+})
+it('follows the device only when system is selected and unsubscribes', () => {
+  const media = new EventTarget()
+  let matches = false
+  const remove = vi.spyOn(media, 'removeEventListener')
+  vi.stubGlobal('matchMedia', () => ({ get matches() { return matches }, addEventListener: media.addEventListener.bind(media), removeEventListener: media.removeEventListener.bind(media) }))
+  const hook = renderHook(() => useClientLimeTheme('device'))
+  expect(hook.result.current.theme).toBe('light')
+  act(() => { matches = true; media.dispatchEvent(new Event('change')) })
+  expect(hook.result.current.theme).toBe('dark')
+  act(() => setClientLimeThemePreference('device', 'light'))
+  expect(hook.result.current.theme).toBe('light')
+  hook.unmount()
+  expect(remove).toHaveBeenCalled()
+})

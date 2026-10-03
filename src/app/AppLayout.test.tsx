@@ -428,3 +428,21 @@ describe('AppLayout: объявление победителю конкурса'
     expect(screen.getByRole('dialog', { name: 'Вы выиграли персональную тренировку' })).toBeTruthy()
   })
 })
+
+
+describe('single-account client Lime shell', () => {
+  it('honors the selected light palette and removes the scope for another account', () => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', 'user-1')
+    localStorage.setItem('fit.clientLime.theme.user-1', 'light')
+    const first = renderLayout('/me/settings')
+    expect(document.querySelector('.phone-frame')).toHaveClass('fit-client-lime', 'fit-lime-shell', 'theme-light')
+    expect(document.documentElement).toHaveClass('fit-client-lime-document', 'theme-light')
+    first.unmount()
+    expect(document.documentElement).not.toHaveClass('fit-client-lime-document')
+    authState.userId = 'user-2'
+    renderLayout('/me/settings')
+    expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-client-lime', 'fit-lime-shell')
+    localStorage.removeItem('fit.clientLime.theme.user-1')
+  })
+})
