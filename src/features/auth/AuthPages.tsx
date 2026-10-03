@@ -26,6 +26,7 @@ import {
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from '../../app/theme'
 import { FitLogo } from '../../shared/FitLogo'
+import { StartupSplash } from '../../shared/StartupSplash'
 import { ProfileIcon } from '../../shared/icons'
 import { AsyncView, Field, RequestDiagnosticDetails, StatePanel } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
@@ -127,9 +128,7 @@ export function AuthPage() {
   const yandexAppSessionConfig = getYandexAppSessionEntryConfig()
   const yandexPilotConfig = getYandexIdPilotConfig()
   if (actor) return <InvitationAuthRedirect role={actor.role} preferred={directReturnTo} />
-  if (yandexAppSession.loading) return <AuthIdentityScreen>
-    <StatePanel tone="info" title="Восстанавливаем сессию" description="Проверяем действующую сессию Yandex ID…" />
-  </AuthIdentityScreen>
+  if (yandexAppSession.loading) return <StartupSplash />
   if (yandexAppSession.session) return <Navigate to="/auth/yandex/session" replace />
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -563,9 +562,7 @@ export function YandexAppSessionPage() {
   const config = getYandexAppSessionEntryConfig()
 
   if (config === null) return <Navigate to="/auth" replace />
-  if (authLoading || loading) return <AuthIdentityScreen>
-    <StatePanel tone="info" title="Восстанавливаем сессию" description="Проверяем действующую сессию Yandex ID…" />
-  </AuthIdentityScreen>
+  if (authLoading || loading) return <StartupSplash />
   if (actor !== null) {
     return <InvitationAuthRedirect role={actor.role} />
   }

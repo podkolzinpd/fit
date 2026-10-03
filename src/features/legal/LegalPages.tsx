@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { FitLogo } from '../../shared/FitLogo'
+import { StartupSplash } from '../../shared/StartupSplash'
 import legalDocuments from '../../shared/legal-documents.json'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { StatePanel, useConfirm } from '../../shared/ui'
@@ -114,7 +115,7 @@ export function LegalAcceptanceGate({ children }: PropsWithChildren) {
   // Profile refresh clears server-state queries. Keep an already accepted user
   // inside the app while the same actor's audit row is checked again.
   if ((actorKey !== null && acceptedActorKey === actorKey) || status.data?.accepted) return children
-  if (status.isLoading) return <main className="legal-gate ui-identity"><p>Проверяем документы…</p></main>
+  if (status.isLoading) return <StartupSplash />
   if (status.error) return <main className="legal-gate ui-identity"><StatePanel
     tone="error"
     title="Не удалось проверить документы"

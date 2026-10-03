@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { localDate } from '../../shared/local-date'
-import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
+import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 
 describe('workout form draft storage', () => {
   const key = workoutFormDraftKey('trainer', 'workout-1')
@@ -11,6 +11,8 @@ describe('workout form draft storage', () => {
   beforeEach(() => {
     const values = new Map<string, string>()
     vi.stubGlobal('localStorage', {
+      get length() { return values.size },
+      key: (index: number) => Array.from(values.keys())[index] ?? null,
       getItem: (itemKey: string) => values.get(itemKey) ?? null,
       setItem: (itemKey: string, value: string) => values.set(itemKey, value),
       removeItem: (itemKey: string) => values.delete(itemKey),
@@ -33,5 +35,22 @@ describe('workout form draft storage', () => {
     const named = { ...draft, title: 'Всё тело', requestId: '10000000-0000-4000-8000-000000000001' }
     writeWorkoutFormDraft(key, named)
     expect(readWorkoutFormDraft(key)).toEqual(named)
+  })
+
+  it('ignores an untouched quick form, but retains every previous meaningful draft', () => {
+    const date = localDate('2026-08-04')
+    expect(hasWorkoutFormContent({ ...draft, clientId: '', notes: '', startTime: '' }, date)).toBe(false)
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'one' })
+    expect(retainQuickPlanDraft(key, date)).toBe(true)
+    writeWorkoutFormDraft(key, { ...draft, requestId: 'two', title: 'Новый план' })
+    expect(quickPlanDraftChoices(key, date).map((choice) => choice.draft.requestId)).toEqual(['two', 'one'])
+    expect(quickPlanDraftChoices(workoutFormDraftKey('another-user'), date)).toEqual([])
+  })
+
+  it('refuses to replace a meaningful draft when storage cannot retain it', () => {
+    writeWorkoutFormDraft(key, draft)
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    expect(retainQuickPlanDraft(key, draft.workoutDate)).toBe(false)
+    expect(readWorkoutFormDraft(key)).toEqual(draft)
   })
 })

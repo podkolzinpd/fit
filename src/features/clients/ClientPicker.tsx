@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import type { Client } from '../../shared/domain'
 import { AddIcon, BackIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import { recentClientIds, recordRecentClient, resolveRecentClients } from './recent-clients'
@@ -19,6 +19,7 @@ interface ClientPickerProps {
   initialOpen?: boolean
   onDismiss?: () => void
   hideTrigger?: boolean
+  autoFocusSearch?: boolean
 }
 
 function useVisualViewportStyle() {
@@ -42,8 +43,17 @@ function useVisualViewportStyle() {
   return { style, keyboardOpen }
 }
 
-export function ClientPicker({ userId, clients, selectedId, onChange, label = 'Клиент', selectionError, loading = false, error, onRetry, onCreate, initialOpen = false, onDismiss, hideTrigger = false }: ClientPickerProps) {
+export function ClientPicker({ userId, clients, selectedId, onChange, label = 'Клиент', selectionError, loading = false, error, onRetry, onCreate, initialOpen = false, onDismiss, hideTrigger = false, autoFocusSearch = true }: ClientPickerProps) {
   const [open, setOpen] = useState(initialOpen)
+  const panel = useRef<HTMLElement>(null)
+  // The Lime flow opens a list, not a keyboard. Keep focus within this step
+  // without changing the legacy auto-focused search behavior.
+  useEffect(() => {
+    if (!open || autoFocusSearch) return
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    panel.current?.focus({ preventScroll: true })
+    return () => { if (previous?.isConnected) previous.focus({ preventScroll: true }) }
+  }, [open, autoFocusSearch])
   const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState('')
   const [name, setName] = useState('')
@@ -61,6 +71,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
   const list = normalizedSearch ? filtered : filtered.filter((client) => !recent.some((recentClient) => recentClient.id === client.id))
 
   function close() {
+    if (!autoFocusSearch && document.activeElement instanceof HTMLInputElement) document.activeElement.blur()
     setOpen(false)
     setCreating(false)
     setSearch('')
@@ -101,7 +112,16 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
     {!hideTrigger && <button type="button" className="client-picker-trigger" aria-label={`${label}: ${selected?.fullName ?? 'Выберите клиента'}`} aria-describedby={selectionError ? 'client-picker-selection-error' : undefined} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(true)}><span>{selected?.fullName ?? 'Выберите клиента'}</span><ChevronDownIcon /></button>}
     {selectionError && <p id="client-picker-selection-error" className="error" role="alert">{selectionError}</p>}
     {open && <div className={`sheet-overlay${keyboardOpen ? ' keyboard-open' : ''}`} style={viewportStyle} onClick={close}>
-      <section className="client-picker" role="dialog" aria-modal="true" aria-label="Выбор клиента" onClick={stopPropagation}>
+      <section ref={panel} tabIndex={-1} className="client-picker" role="dialog" aria-modal="true" aria-label="Выбор клиента" onClick={stopPropagation} onKeyDown={(event) => {
+        if (autoFocusSearch) return
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); return }
+        if (event.key !== 'Tab') return
+        const targets = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]')).filter((element) => element.getClientRects().length > 0)
+        const first = targets[0], last = targets.at(-1)
+        if (!first) { event.preventDefault(); return }
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) { event.preventDefault(); last?.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+      }}>
         <header className="picker-header"><h1>{creating ? 'Новый клиент' : 'Выберите клиента'}</h1><button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? () => { setCreating(false); setCreateError(null) } : close}><CloseIcon /></button></header>
         {creating ? <div className="client-picker-create">
           <button type="button" className="link" onClick={() => { setCreating(false); setCreateError(null) }}><BackIcon />К выбору</button>
@@ -110,7 +130,7 @@ export function ClientPicker({ userId, clients, selectedId, onChange, label = '�
           {createError && <p className="error">{createError}</p>}
           <button type="button" className="primary" disabled={name.trim().length < 2 || creatingClient} onClick={() => void createClient()}>{creatingClient ? 'Создаю…' : 'Создать и выбрать'}</button>
         </div> : <>
-          <input className="picker-search" aria-label="Поиск клиента" placeholder="Имя клиента" value={search} onChange={(event) => setSearch(event.target.value)} autoFocus />
+          <input className="picker-search" aria-label="Поиск клиента" placeholder="Имя клиента" value={search} onChange={(event) => setSearch(event.target.value)} autoFocus={autoFocusSearch} />
           {loading && <p className="state">Загружаем клиентов…</p>}
           {error && <div className="state"><p className="error">{error.message}</p>{onRetry && <button type="button" className="secondary" onClick={onRetry}>Повторить</button>}</div>}
           {!loading && !error && <div className="client-picker-list">

@@ -120,10 +120,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const queryClient = useQueryClient()
   const { actor } = useAuth()
   const limePlanning = !clientMode && isFitLimeEnabled(actor)
-  const entryState = location.state as { returnTo?: unknown; planClientId?: string; planStartTime?: string; planTitle?: string; planRequestId?: string; sourceFormDraftKey?: string } | null
+  const entryState = location.state as { returnTo?: unknown; planClientId?: string; planStartTime?: string; planEndTime?: string; planTrainingFormat?: WorkoutTrainingFormat; planTitle?: string; planRequestId?: string; sourceFormDraftKey?: string } | null
   const returnTo = limePlanning ? safeWorkoutReturnTo(entryState?.returnTo) ?? '/today' : clientMode ? '/me' : '/today'
   const [planMetadata, setPlanMetadata] = useState(() => ({
     title: limePlanning ? entryState?.planTitle : undefined,
+    endTime: limePlanning ? entryState?.planEndTime : undefined,
     requestId: limePlanning ? entryState?.planRequestId ?? crypto.randomUUID() : undefined,
     sourceFormDraftKey: limePlanning ? entryState?.sourceFormDraftKey : undefined,
   }))
@@ -172,8 +173,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   })
   const [startTime, setStartTime] = useState(limePlanning ? entryState?.planStartTime ?? '' : '')
   const [actualDurationMinutes, setActualDurationMinutes] = useState('')
-  const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : undefined)
-  const trainingFormatTouched = useRef(false)
+  const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : limePlanning ? entryState?.planTrainingFormat : undefined)
+  const trainingFormatTouched = useRef(limePlanning && Boolean(entryState?.planTrainingFormat))
   const finance = useQuery({
     queryKey: ['trainer-finance-client', effectiveClientId],
     queryFn: () => trainerFinance.listClient(effectiveClientId),
@@ -258,7 +259,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setChoices(draft.choices)
       setItems(draft.items)
       setClientId(draft.clientId)
-      if (limePlanning) setPlanMetadata({ title: draft.title, requestId: draft.requestId ?? crypto.randomUUID(), sourceFormDraftKey: draft.sourceFormDraftKey })
+      if (limePlanning) setPlanMetadata({ title: draft.title, endTime: draft.endTime, requestId: draft.requestId ?? crypto.randomUUID(), sourceFormDraftKey: draft.sourceFormDraftKey })
       setRecordMode(draft.recordMode ?? 'planned')
       setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
@@ -332,7 +333,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
+      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -690,7 +691,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   function clearDraftAndForm(openComposer = false) {
     removeTodayDraft(draftKey)
-    if (limePlanning) setPlanMetadata({ title: undefined, requestId: crypto.randomUUID(), sourceFormDraftKey: undefined })
+    if (limePlanning) setPlanMetadata({ title: undefined, endTime: undefined, requestId: crypto.randomUUID(), sourceFormDraftKey: undefined })
     setScreen('compose')
     setText('')
     setLastLlmText(null)

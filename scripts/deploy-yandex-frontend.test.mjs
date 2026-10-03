@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { packageRelease, supportedRouting } from './frontend-release.mjs'
-import { gatewayPlan } from './frontend-gateway-plan.mjs'
+import { frontendHealthBody, frontendHealthPath, gatewayPlan } from './frontend-gateway-plan.mjs'
 import { gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
 import { deployFrontend, retainAssets, target, validateSpecification, smoke, createCloud, verifyStorageAccess } from './deploy-yandex-frontend.mjs'
 
@@ -232,10 +232,30 @@ test('conflicting immutable bytes and unexpected gateway targets fail before upl
   assert.throws(() => validateSpecification(changed), /outside/)
 })
 
+test('health route is exact, static and cannot be changed into another integration', async (t) => {
+  const spec = gatewayPlan(await fixture(t), [], target).specification
+  assert.equal(spec.paths[frontendHealthPath].get['x-yc-apigateway-integration'].type, 'dummy')
+  assert.equal(spec.paths[frontendHealthPath].get['x-yc-apigateway-integration'].content['*'], frontendHealthBody)
+  assert.doesNotThrow(() => validateSpecification(spec))
+  for (const change of [
+    (route) => { route.get['x-yc-apigateway-integration'].http_code = 301 },
+    (route) => { route.get['x-yc-apigateway-integration'].content['*'] = 'private-data' },
+    (route) => { route.get['x-yc-apigateway-integration'].type = 'object_storage' },
+    (route) => { route.head['x-yc-apigateway-integration'].http_code = 404 },
+  ]) {
+    const candidate = structuredClone(spec)
+    change(candidate.paths[frontendHealthPath])
+    assert.throws(() => validateSpecification(candidate), /Unexpected gateway health route/)
+  }
+})
+
 function responses(bundle, broken = '') {
   const plan = gatewayPlan(bundle, [], target)
   return async (url, options) => {
     const path = new URL(url).pathname
+    if (path === frontendHealthPath) return new Response(frontendHealthBody, {
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    })
     const asset = path.startsWith(`/${target.bucket}/`) ? plan.objects.find((o) => path.endsWith(o.object)) : undefined
     if (asset) return new Response(Buffer.from(asset.content, 'base64'), { headers: { 'access-control-allow-origin': options.headers.Origin } })
     if (path === '/assets/fit-deploy-missing.css') return new Response('Not found', { status: 404 })
@@ -254,6 +274,11 @@ test('smoke checks routes, all asset hashes, caches, WASM redirect/CORS and miss
   const bundle = await fixture(t, 'new', true)
   await smoke(bundle, target.frontendOrigin, responses(bundle))
   await assert.rejects(smoke(bundle, target.frontendOrigin, responses(bundle, 'assets/new-12345678.js')), /smoke failed/)
+  const working = responses(bundle)
+  await assert.rejects(smoke(bundle, target.frontendOrigin, (url, options) =>
+    new URL(url).pathname === frontendHealthPath
+      ? Promise.resolve(new Response('<title>Fit</title>', { headers: { 'content-type': 'text/html' } }))
+      : working(url, options)), /health route mismatch/)
 })
 
 test('cloud adapter only updates spec and has no ACL mutation operation', async (t) => {

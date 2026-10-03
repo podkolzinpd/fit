@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+YAFIT-591 / PR2: Lime-календарь запускает Live сразу после выбора клиента,
+без промежуточного формата/подтверждения; обычный QuickStart сохранён.
+Планирование имеет явный save, формат и выбор сохранённого черновика без потери
+прежних данных. Матрица в том же плане четырёх PR.
+
 YAFIT-591 / PR1: окно Lime-плана использует видимую область над клавиатурой,
 не фокусирует ввод при открытии и блокирует прокрутку фонового календаря.
 План четырёх PR: `docs/design/FIT_LIME_VIDEO_FIXES_20261003.md`.
@@ -70,6 +75,12 @@ checks, идемпотентный повтор и независимый чер
 | Assistant | Trainer-only history, idempotent turns, proposed actions and explicit confirmation | Implemented in production Supabase; default-off sticky routing can pin one migrated trainer to Yandex API for the unchanged main UI. The same app-session now selects Yandex for all main feature repositories, including Assistant dependencies; errors do not fall back per request. Production enablement and tenant data rehearsal remain pending |
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; default-off maintenance switch replaces every direct route before auth/data providers mount, exposes one reload action and prevents product requests from the maintenance bundle; an independent default-off Supabase gate rejects DML from stale bundles, RPC and background writers on all 37 source product/operational tables; mobile WebKit 390/430 light/dark covered, broader acceptance matrix pending |
+
+Дополнение Auth/Navigation: HTML bootstrap и восстановление сессии используют
+одну оптимизированную фотографию из материалов владельца; nonblocking CSS не
+задерживает её первую отрисовку, но остаётся обязательным перед показом React.
+Ошибки запуска/входа сохраняют прежние действия повтора; домашний экран,
+иконки, auth/API и данные не меняются. Приёмка — `docs/design/startup-photo-splash-20261003.md`.
 
 Статус меняется на Done только после component/E2E и, где применимо, DB/RLS теста.
 
@@ -447,3 +458,6 @@ quiz/generator/validator contract; Yandex читает actor-scoped факты �
 ### YAFIT-589 — поздравление после тренировки
 
 Клиентский completion: 20 фраз с грамматическими вариантами, три компактные объёмные иконки, одинаковая ротация для любого процента плана, сохранение сочетания на устройстве, тот же рисунок и текст в публикации. Факты/рекорды/ачивки сохранены; действия сгруппированы внизу. Приёмка: `docs/design/workout-completion-celebration-20261003.md`.
+# YAFIT-591 / PR3
+
+Единые pilot-only окна календаря: bounded375/viewport, внутренние списки,16px поля/14px действия, YS Geo, длинные имена и фокус ClientPicker без авто-клавиатуры. 30 адресных browser cases зелёные; расширенный прогон и полный check обязательны перед выпуском.
