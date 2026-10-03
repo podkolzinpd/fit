@@ -140,7 +140,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     const voiceKey = todayDraftKey(actor!.userId, requestId)
     const previous = readTodayDraft(voiceKey)
     writeTodayDraft(voiceKey, {
-      ...previous, screen: 'compose', text: previous?.text ?? '', choices: previous?.choices ?? {},
+      ...previous, screen: 'compose', text: previous?.text ?? saved?.composerText ?? '', choices: previous?.choices ?? {},
       items: draft.exercises.map((exercise) => ({
         line: exercise.name, exercise, sets: exercise.sets, hasValues: true,
         trainerComment: exercise.trainerComment, structure: exercise,

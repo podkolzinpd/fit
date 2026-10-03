@@ -53,4 +53,14 @@ describe('workout form draft storage', () => {
     expect(retainQuickPlanDraft(key, draft.workoutDate)).toBe(false)
     expect(readWorkoutFormDraft(key)).toEqual(draft)
   })
+
+  it('retains unparsed text even before a client or exercise is selected', () => {
+    const pending = { ...draft, requestId: 'voice-plan', clientId: '', notes: '', startTime: '', composerText: 'Планка три раза' }
+    expect(hasWorkoutFormContent(pending, draft.workoutDate)).toBe(true)
+    writeWorkoutFormDraft(key, pending)
+    writeWorkoutFormDraft(key, { ...pending, composerText: undefined })
+    expect(readWorkoutFormDraft(key)?.composerText).toBe('Планка три раза')
+    writeWorkoutFormDraft(key, { ...pending, requestId: 'another-plan', composerText: undefined })
+    expect(readWorkoutFormDraft(key)?.composerText).toBeUndefined()
+  })
 })

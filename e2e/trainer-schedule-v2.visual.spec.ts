@@ -636,6 +636,21 @@ test('Lime retained plan offers old date and preserves it when starting a new pl
   await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('Lime keeps unparsed plan text when returning before choosing a client', async ({ page }) => {
+  await mockPilot(page, { fitLime: true })
+  await page.goto('/today?date=2026-09-24')
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Планка три раза по минуте')
+  await page.getByRole('button', { name: '← В календарь' }).click()
+  await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Продолжить черновик' }).click()
+  await page.getByRole('button', { name: 'Ввести текстом' }).click()
+  await expect(page.getByRole('textbox', { name: 'Тренировка', exact: true })).toHaveValue('Планка три раза по минуте')
+})
+
 test('Lime plan rejects an end time without start before any save command', async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true })
   await page.goto('/today?date=2026-09-24')

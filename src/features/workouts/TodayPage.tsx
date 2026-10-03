@@ -303,7 +303,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       const source = readWorkoutFormDraft(planMetadata.sourceFormDraftKey)
       // A different quick plan may now occupy this date's slot. Never overwrite it.
       if (source && source.requestId === planMetadata.requestId) writeWorkoutFormDraft(planMetadata.sourceFormDraftKey, {
-        ...source, title: planMetadata.title, clientId, workoutDate, startTime,
+        ...source, title: planMetadata.title, composerText: text, clientId, workoutDate, startTime,
         endTime: planMetadata.endTime ?? '', trainingFormat, exercises: items.map(draftExercise),
       })
     }
