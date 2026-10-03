@@ -5,7 +5,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
-import { gatewayPlan } from './frontend-gateway-plan.mjs'
+import { frontendHealthBody, frontendHealthPath, frontendHealthRoute, gatewayPlan } from './frontend-gateway-plan.mjs'
 import { gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
 import { uploadCandidate } from './upload-frontend-candidate.mjs'
 import { releaseBatch, reuseReleaseObjects, releaseManifest, manifestKey } from './frontend-release-storage.mjs'
@@ -31,7 +31,11 @@ export function validateSpecification(spec) {
   if (spec?.openapi !== '3.0.0' || !spec.paths?.['/'] || !spec.paths?.['/assets/{file+}']) {
     throw new Error('Unknown gateway contract; activation refused')
   }
-  for (const route of Object.values(spec.paths)) {
+  if (spec.paths[frontendHealthPath] !== undefined
+      && !isDeepStrictEqual(spec.paths[frontendHealthPath], frontendHealthRoute())) {
+    throw new Error('Unexpected gateway health route')
+  }
+  for (const [path, route] of Object.entries(spec.paths)) {
     for (const method of ['get', 'head']) {
       const op = route[method]?.[integration]
       if (op?.type === 'object_storage') {
@@ -44,6 +48,9 @@ export function validateSpecification(spec) {
         if (!location.startsWith(prefix) || !objectKey(location.slice(prefix.length)) || !location.endsWith('.wasm')) {
           throw new Error('Unexpected public redirect')
         }
+      } else if (path === frontendHealthPath && op?.type === 'dummy'
+          && op.http_code === 200) {
+        // The exact route, headers and body were checked above.
       } else if (op?.type !== 'dummy' || op.http_code !== 404) {
         throw new Error('Unexpected gateway integration')
       }
@@ -108,6 +115,14 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
     }
   }
   for (const path of ['/', '/auth', '/auth/yandex/callback', '/today']) await check(path, index)
+  const health = await request(`${origin}${frontendHealthPath}`, {
+    redirect: 'manual', signal: AbortSignal.timeout(20_000),
+  })
+  if (health.status !== 200 || (health.headers.get('content-type') ?? '').split(';')[0] !== 'text/plain'
+      || !(health.headers.get('cache-control') ?? '').includes('no-store')
+      || await health.text() !== frontendHealthBody) {
+    throw new DeploymentCheckError('Frontend gateway health route mismatch')
+  }
   await releaseBatch(bundle.files, async (file) => {
     const object = plan.objects.find((entry) => entry.key === file.key)
     if (object.delivery === 'public-object-redirect') {

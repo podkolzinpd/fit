@@ -5,6 +5,21 @@ import { verifyRelease } from './frontend-release.mjs'
 import { gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 
+export const frontendHealthPath = '/healthz'
+export const frontendHealthBody = 'fit-gateway-ready'
+
+export function frontendHealthRoute() {
+  const operation = {
+    responses: { 200: { description: 'Gateway warmup; not an Object Storage health check' } },
+    'x-yc-apigateway-integration': {
+      type: 'dummy', http_code: 200,
+      http_headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+      content: { '*': frontendHealthBody },
+    },
+  }
+  return { get: operation, head: structuredClone(operation) }
+}
+
 export function gatewayUpload(file) {
   const compressed = file.size > 2_400_000 && file.key.endsWith('.js')
     && file.cacheControl.includes('immutable')
@@ -67,6 +82,7 @@ export function gatewayPlan(active, previous, { bucket, reader, frontendOrigin }
     } : operation(file.object))
   }
   paths['/'] = pair(operation(files.get('index.html').object))
+  paths[frontendHealthPath] = frontendHealthRoute()
   const parameter = (name) => [{ name, in: 'path', required: true, schema: { type: 'string' } }]
   paths['/assets/{file+}.js'] = {
     parameters: parameter('file'), ...pair(operation(files.get('asset-recovery.js').object)),
