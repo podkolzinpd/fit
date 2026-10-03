@@ -13,6 +13,7 @@ import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
 import { Coachmark, Page, Switch } from '../../shared/ui'
 import { LogoutButton } from '../auth'
 import { AppInstallPanel } from '../install'
+import { FitLimeInstallSetting } from '../install/FitLimeInstallSetting'
 import { NotificationsSetting } from '../notifications'
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 import { AppFeedbackForm } from './AppFeedbackForm'
@@ -48,8 +49,9 @@ export function TrainerProfileSettingsPage() {
   if (!actor || actor.role !== 'trainer') return null
 
   return <Page title="Настройки" back="/profile" swipeBack className="profile-page profile-settings-page settings-page">
+    {fitLimeSettings && <SettingsSection title="Приложение"><FitLimeInstallSetting /></SettingsSection>}
     <SettingsSection title="Уведомления">
-      <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" /></div>
+      <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" detailed={fitLimeSettings} /></div>
     </SettingsSection>
 
     <SettingsSection title="Тренировки">
@@ -78,7 +80,7 @@ export function TrainerProfileSettingsPage() {
     <SettingsSection title="Аккаунт и помощь">
       <AccountSettingsCard />
       <div className="menu">
-        <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>
+        {!fitLimeSettings && <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>}
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>
         <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noopener noreferrer">Поддержка в Telegram</a>
         <Link to={LEGAL_PATHS.terms}>Условия использования</Link>
