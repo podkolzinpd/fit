@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { packageRelease, supportedRouting } from './frontend-release.mjs'
 import { gatewayPlan } from './frontend-gateway-plan.mjs'
 import { gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
@@ -352,9 +353,41 @@ test('workflow is gated by successful exact-main CI, least privilege OIDC and se
   assert.match(workflow, /\.head_branch == "main"/)
   assert.match(workflow, /\.conclusion == "success"/)
   assert.match(workflow, /cancel-in-progress: false/)
+  assert.match(workflow, /fetch-depth: 2/)
+  assert.match(workflow, /grep -q '\^services\/api\//)
+  assert.match(workflow, /deploy-yandex-stage.yml\/runs\?head_sha=\$SOURCE_COMMIT&event=push/)
+  assert.match(workflow, /select\(\.head_sha == \$sha and \.head_branch == "main"\)/)
+  assert.match(workflow, /if \[ "\$result" = success \]/)
+  assert.match(workflow, /API rollout did not succeed/)
+  assert.match(workflow, /Matching API rollout timed out/)
+  assert.ok(workflow.indexOf('Require matching API rollout') < workflow.indexOf('Build with reviewed public production configuration'))
   assert.match(workflow, /environment: fit-frontend-production/)
   assert.match(workflow, /vars.YC_FRONTEND_DEPLOY_SA_ID/)
   assert.match(workflow, /scripts\/yandex-github-oidc.sh/)
   assert.match(workflow, /if: always\(\)/)
   assert.doesNotMatch(workflow, /pull_request_target|secrets.YC_|service-account-key|supabase db|terraform apply/)
+})
+
+test('API rollout gate fails closed and permits only matching successful deployments', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-yandex-frontend.yml', import.meta.url), 'utf8')
+  const step = workflow.split('name: Require matching API rollout')[1].split('      - uses:')[0]
+  const script = step.split('        run: |\n')[1].replace(/^          /gm, '')
+  const sha = 'a'.repeat(40)
+  const base = { head_sha: sha, head_branch: 'main', run_number: 1, status: 'completed', conclusion: 'success' }
+  for (const [label, changed, runs, expected] of [
+    ['frontend only', 'src/main.tsx', [], 0],
+    ['matching success', 'services/api/src/server.ts', [base], 0],
+    ['failure', 'services/api/src/server.ts', [{ ...base, conclusion: 'failure' }], 1],
+    ['cancelled', 'services/api/src/server.ts', [{ ...base, conclusion: 'cancelled' }], 1],
+    ['pending', 'services/api/src/server.ts', [{ ...base, status: 'in_progress' }], 1],
+    ['missing', 'services/api/src/server.ts', [], 1],
+    ['wrong commit', 'services/api/src/server.ts', [{ ...base, head_sha: 'b'.repeat(40) }], 1],
+  ]) {
+    const result = spawnSync('bash', [], {
+      encoding: 'utf8',
+      input: `git() { printf '%s' "$FIXTURE_CHANGED"; }; gh() { printf '%s' "$FIXTURE_RUNS"; }; seq() { echo 1; }; sleep() { :; };\n${script}`,
+      env: { ...process.env, SOURCE_COMMIT: sha, GITHUB_REPOSITORY: 'fixture/fit', FIXTURE_CHANGED: changed, FIXTURE_RUNS: JSON.stringify({ workflow_runs: runs }) },
+    })
+    assert.equal(result.status, expected, `${label}: ${result.stderr}`)
+  }
 })

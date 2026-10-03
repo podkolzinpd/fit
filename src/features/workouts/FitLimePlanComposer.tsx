@@ -8,6 +8,7 @@ import { isFitLimeEnabled } from '../../app/fit-lime'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { AddIcon, ArrowUpIcon, CloseIcon, MicIcon } from '../../shared/icons'
 import { formatLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
 import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 
@@ -41,9 +42,13 @@ export function FitLimePlanComposer({ date, returnTo, onClose }: {
     recordCompleted: false, exercises: saved?.exercises ?? [], trainingFormat: saved?.trainingFormat,
   }
   useEffect(() => {
+    if (saved?.recordCompleted) {
+      navigate(`/workouts/new?date=${date}&entry=quick`, { replace: true, state: { returnTo } })
+      return
+    }
     dialog.current?.showModal()
-  }, [])
-  useEffect(() => { if (!savedSuccessfully.current) writeWorkoutFormDraft(key, draft) }, [key, draft])
+  }, [date, navigate, returnTo, saved?.recordCompleted])
+  useEffect(() => { if (!savedSuccessfully.current && !saved?.recordCompleted) writeWorkoutFormDraft(key, draft) }, [key, draft, saved?.recordCompleted])
   const mutation = useMutation({
     mutationFn: () => workouts.save({
       ...draft, title: title.trim() || null, stageId: draft.stageId || null,
@@ -77,18 +82,23 @@ export function FitLimePlanComposer({ date, returnTo, onClose }: {
     navigate(`/workouts/new?date=${date}&entry=quick`, { state: { returnTo } })
     onClose()
   }
-  if (!isFitLimeEnabled(actor)) return null
-  return <dialog ref={dialog} className="fit-lime-plan-dialog" aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
+  const today = todayInTimeZone(actor?.timezone)
+  const dateLabel = selectedDate === today ? 'Сегодня' : selectedDate.slice(0, 4) === today.slice(0, 4)
+    ? formatLocalDate(selectedDate).replace(/\s+\d{4}\s*г\.$/, '') : formatLocalDate(selectedDate)
+  if (!isFitLimeEnabled(actor) || saved?.recordCompleted) return null
+  return <dialog ref={dialog} role="dialog" className="fit-lime-plan-dialog" aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
     <form className="fit-lime-plan-composer" onSubmit={submit}>
       <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" disabled={mutation.isPending} onClick={() => dialog.current?.close()}><CloseIcon /></button>
       <input aria-label="Название тренировки" placeholder="Название тренировки" maxLength={120} value={title} disabled={mutation.isPending} onChange={(event) => setTitle(event.target.value)} autoFocus />
       <fieldset disabled={mutation.isPending}>
         <div className="fit-lime-plan-controls">
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
-          <FitLimeDatePicker value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} triggerLabel={`${selectedDate === todayInTimeZone(actor?.timezone) ? 'Сегодня' : formatLocalDate(selectedDate)}${time.start ? ` ${time.start}` : ''}`} />
+          <FitLimeDatePicker value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
           {title.trim() || clientId || draft.exercises.length ? <button type="submit" className="fit-lime-plan-send" aria-label="Сохранить план" aria-busy={mutation.isPending}><ArrowUpIcon /></button> : <button type="button" className="fit-lime-plan-mic" aria-label="Надиктовать тренировку" onClick={() => { navigate('/today?view=compose', { state: { returnTo } }); onClose() }}><MicIcon /></button>}
         </div>
-        <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
+        <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
+          <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
+        </Coachmark>
       </fieldset>
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}
