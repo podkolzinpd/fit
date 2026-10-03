@@ -2,6 +2,8 @@ import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { FitLimeWorkoutEntry } from './FitLimeWorkoutEntry'
+import { FitLimeScheduleList } from './FitLimeScheduleList'
+import { filterScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
@@ -156,6 +158,10 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const scheduleRange = params.get('range') === '2w' ? '2w' : 'week'
   const isTwoWeekView = scheduleRange === '2w'
   const isDayView = forceDayView || Boolean(dateParam)
+  const lime = pilot && isFitLimeEnabled(actor)
+  const isListView = lime && !isDayView && params.get('mode') === 'list'
+  const clientFilter = lime ? params.get('client') ?? '' : ''
+  const statusFilter = lime ? scheduleStatusFilter(params.get('status')) : 'all'
   const overviewDayCount = isTwoWeekView ? 14 : 7
   const selected = dateParam ?? (forceDayView ? today : weekParam ?? today)
   const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
@@ -172,6 +178,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
       ? weekStart : mondayWeekStart(date))
     const next = new URLSearchParams({ date, week: anchor })
     if (isTwoWeekView) next.set('range', '2w')
+    if (lime) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next.set(key, value) }
     if (pilot) navigate(`/today?${next}`)
     else setParams(next)
   }
@@ -180,16 +187,17 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     const next: Record<string, string> = {}
     if (pilot || start !== todayWeekStart) next.week = start
     if (range === '2w') next.range = '2w'
+    if (lime) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
     if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
     else setParams(next)
   }
   function shiftOverview(direction: -1 | 1) { showOverview(addDays(weekStart, direction * overviewDayCount)) }
 
   const query = useQuery({
-    queryKey: ['workouts', 'schedule-overview', weekStart, periodEnd],
-    queryFn: () => workoutsRepository.list(weekStart, periodEnd),
+    queryKey: ['workouts', 'schedule-overview', isListView ? 'all' : weekStart, isListView ? 'all' : periodEnd],
+    queryFn: () => workoutsRepository.list(isListView ? undefined : weekStart, isListView ? undefined : periodEnd),
   })
-  const items = query.data ?? []
+  const items = filterScheduleWorkouts(query.data ?? [], clientFilter, statusFilter)
   const itemsByDay = new Map<LocalDate, Workout[]>()
   for (const day of overviewDays) itemsByDay.set(day, [])
   for (const workout of items) itemsByDay.get(workout.workoutDate)?.push(workout)
@@ -227,7 +235,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     actor, selected, scheduleRange, isTwoWeekView, isDayView, weekStart,
     overviewDayCount, periodEnd, overviewDays, today, scrollRef, openDay,
     showOverview, shiftOverview, query, itemsByDay, dayItems, totalCount,
-    timed, untimed, todayDisabled,
+    timed, untimed, todayDisabled, isListView, clientFilter, statusFilter, filteredItems: items,
   }
 }
 
@@ -671,6 +679,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
     overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
     query, itemsByDay, timed, untimed, todayDisabled,
+    isListView, clientFilter, statusFilter, filteredItems,
   } = useTrainerScheduleModel(forceDayView, hourHeight)
   const workspace = useTrainerWorkspace(isDayView)
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
@@ -678,6 +687,12 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const location = useLocation()
   const navigate = useNavigate()
   const returnTo = `${location.pathname}${location.search}`
+  const changeScheduleFilter = (key: 'mode' | 'client' | 'status', value: string) => {
+    const next = new URLSearchParams(location.search)
+    if (value && value !== 'all' && value !== 'calendar') next.set(key, value)
+    else next.delete(key)
+    navigate(`${location.pathname}?${next}`)
+  }
   const dateInputRef = useRef<HTMLInputElement>(null)
   const actionTriggerRef = useRef<HTMLButtonElement>(null)
   const inboxTriggerRef = useRef<HTMLButtonElement>(null)
@@ -707,7 +722,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     }
     previousHourHeightRef.current = hourHeight
   }, [hourHeight, scrollRef])
-  const periodWorkouts = (query.data ?? []).filter((workout) => workout.status !== 'cancelled')
+  const periodWorkouts = filteredItems.filter((workout) => statusFilter === 'cancelled' || workout.status !== 'cancelled')
   const periodClients = new Set(periodWorkouts.map((workout) => workout.clientId)).size
   const periodLabel = scheduleV2Range(weekStart, periodEnd)
   const showHomeActions = isDayView && selected === today
@@ -716,7 +731,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
-    enabled: isDayView,
+    enabled: isDayView || isFitLimeEnabled(actor),
   })
   const homeWorkouts = useQuery({
     queryKey: ['workouts', undefined],
@@ -844,9 +859,25 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {fitLimeToday && daySummary}
     {homeActions}
     {!fitLimeToday && daySummary}
+    {fitLimeSchedule && <Coachmark id="lime-schedule-history-2026-10" userId={actor?.userId} title="История — в списке" description="Переключитесь на список, чтобы найти проведённые тренировки за все даты. Фильтры сохраняются при переходе в день."><span className="sr-only">История тренировок</span></Coachmark>}
+    {fitLimeSchedule && <div className="schedule-v2-range-toggle" role="group" aria-label="Вид расписания">
+      <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
+      <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
+    </div>}
+    {(fitLimeSchedule || (fitLimeToday && (clientFilter || statusFilter !== 'all'))) && <div className="fit-lime-schedule-filters">
+      <label>Клиент<select aria-label="Фильтр по клиенту" value={clientFilter} onChange={(event) => changeScheduleFilter('client', event.target.value)}>
+        <option value="">Все клиенты</option>
+        {clientFilter && !homeClients.data?.some((client) => client.id === clientFilter) && <option value={clientFilter}>{query.data?.find((workout) => workout.clientId === clientFilter)?.clientName ?? 'Выбранный клиент'}</option>}
+        {(homeClients.data ?? []).map((client) => <option key={client.id} value={client.id}>{client.fullName}</option>)}
+        {[...new Map((query.data ?? []).filter((workout) => workout.clientId !== clientFilter && !homeClients.data?.some((client) => client.id === workout.clientId)).map((workout) => [workout.clientId, workout.clientName])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+      </select></label>
+      <label>Статус<select aria-label="Фильтр по статусу" value={statusFilter} onChange={(event) => changeScheduleFilter('status', event.target.value)}>{SCHEDULE_STATUSES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      {homeClients.isLoading && <p role="status">Загружаем клиентов…</p>}
+      {homeClients.isError && <p role="alert">Не удалось загрузить клиентов. <button type="button" className="link" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
+    </div>}
     {densityPreference.status === 'error' && <p className="schedule-v2-density-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
-      {!isDayView ? <>
+      {isListView ? <FitLimeScheduleList workouts={filteredItems} today={today} returnTo={returnTo} onOpenDay={openDay} /> : !isDayView ? <>
         <div className="schedule-v2-range-toggle" role="group" aria-label="Период расписания">
           <button type="button" aria-pressed={!isTwoWeekView} onClick={() => showOverview(weekStart, 'week')}>Неделя</button>
           <button type="button" aria-pressed={isTwoWeekView} onClick={() => showOverview(weekStart, '2w')}>2 недели</button>

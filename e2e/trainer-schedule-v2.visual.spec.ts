@@ -40,7 +40,7 @@ const workout = {
   exercises: [],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime'> & { startTime: string | null; endTime: string | null; title?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null }
 
 async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -98,6 +98,7 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
       'live-timer-2026-09',
       'lime-quick-plan-2026-10',
       'lime-day-workspace-2026-10',
+      'lime-schedule-history-2026-10',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -404,6 +405,45 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 }
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+
+for (const width of [390, 430, 1440]) {
+  test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    const otherClient = '10000000-0000-4000-8000-000000000099'
+    await mockPilot(page, { fitLime: true, profileId: width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId, workouts: [
+      { ...workout, status: 'done', completedAt: '2026-09-24T08:00:00.000Z', title: 'Силовая' },
+      { ...workout, id: newWorkoutId, clientId: otherClient, clientName: 'Александра Константинопольская-Рождественская', status: 'done', workoutDate: '2026-08-01', startTime: null, endTime: null, completedAt: '2026-08-01T08:00:00.000Z' },
+      { ...workout, id: '10000000-0000-4000-8000-000000000080', status: 'cancelled' },
+      { ...workout, id: '10000000-0000-4000-8000-000000000081', workoutDate: '2026-10-10' },
+    ] })
+    await page.goto('/schedule?week=2026-09-21')
+    await page.getByRole('button', { name: 'Список', exact: true }).click()
+    const list = page.getByRole('region', { name: 'Список тренировок' })
+    await expect(list.getByRole('link')).toHaveCount(4)
+    await expect(list.getByText('Без времени', { exact: true })).toBeVisible()
+    await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('done')
+    await expect(list.getByRole('link')).toHaveCount(2)
+    await expect(list.getByText('Проведена', { exact: true })).toHaveCount(2)
+    await page.screenshot({ path: testInfo.outputPath('lime-history.png'), fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    await page.getByRole('combobox', { name: 'Фильтр по клиенту' }).selectOption(clientId)
+    await expect(list.getByRole('link')).toHaveCount(1)
+    await list.getByRole('button', { name: '24 сентября 2026 г.' }).click()
+    await expect(page).toHaveURL(/date=2026-09-24/)
+    await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+    await page.goBack()
+    await expect(list.getByRole('link')).toHaveCount(1)
+    await page.reload()
+    await expect(page.getByRole('combobox', { name: 'Фильтр по клиенту' })).toHaveValue(clientId)
+    await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('in_progress')
+    await expect(page.getByText('По этим фильтрам тренировок нет.')).toBeVisible()
+    await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('cancelled')
+    await expect(list.getByRole('link')).toHaveCount(1)
+    await expect(list.getByText('Отменена', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+    await expect(page.locator('.schedule-v2-day-card')).toHaveCount(7)
+  })
+}
 
 test('Lime start now retries one command without using the selected future date', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
