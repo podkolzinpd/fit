@@ -3186,7 +3186,7 @@ async function mockClientStreamingVoice(page: import('@playwright/test').Page, t
         if (typeof data !== 'string') return
         const message = JSON.parse(data) as { type?: string }
         if (message.type === 'config') window.setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'partial', text: recognizedText.slice(0, 22) }) }), 20)
-        if (message.type === 'stop') window.setTimeout(() => { this.onmessage?.({ data: JSON.stringify({ type: 'final', text: recognizedText }) }); this.onmessage?.({ data: JSON.stringify({ type: 'complete' }) }) }, 20)
+        if (message.type === 'stop') window.setTimeout(() => { this.onmessage?.({ data: JSON.stringify({ type: 'final', text: recognizedText }) }); this.onmessage?.({ data: JSON.stringify({ type: 'done' }) }) }, 20)
       }
       close() { this.readyState = 3 }
     }
