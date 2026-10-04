@@ -68,8 +68,7 @@
     markSteps(coach,n);
   }});
   const post=(name,initial,meta,photo,alt,caption,likes,challenge='')=>`<article class="cs-post"><header><span class="cs-avatar">${initial}</span><div><strong>${name}</strong><span>${meta}</span></div><span class="cs-post-more">···</span></header><img class="cs-post-photo" src="assets/client-stories/${photo}.png" alt="${alt}"><div class="cs-post-copy"><p>${caption}</p>${challenge}<div class="cs-reactions">${heart}<span>${likes}</span><span class="cs-comment-icon">◯</span><span>Обсудить</span></div></div></article>`;
-  const community=create('community','Тренируешься<br>вместе с сообществом','Делишься тренировками, поддерживаешь друзей и участвуешь в челленджах.',6,`
-    <div class="cs-community-tags"><span>Зал</span><span>Бег</span><span>Велосипед</span></div>
+  const community=create('community','Тренируешься<br>вместе с сообществом','Делишься тренировками, поддерживаешь друзей, участвуешь в челленджах.',6,`
     ${phone('Сообщество',`<div class="cs-feed-tabs"><span class="selected">Лента</span><span>Челленджи</span></div><div class="cs-feed-window"><div class="cs-feed-track">
     ${post('Анна','А','Сегодня · силовая','gym','Иллюстративное фото: спортсменка после занятия в современном зале','Тренировка закончена. Хорошо, что сегодня дошла до зала.',12)}
     ${post('Алексей','А','Сегодня · велосипед','bike','Иллюстративное фото: велосипедист на прогулке','Выбрались на набережную. Отличный маршрут на выходной.',18)}
