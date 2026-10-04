@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), assert = require('assert');
-const root=__dirname, out=path.resolve(root,'../greatfinal-motion-qa-v2');
+const root=__dirname, out=path.resolve(root,'../greatfinal-motion-qa-v3');
 const uri=(file)=>'file://'+path.join(root,file);
 (async()=>{
  fs.mkdirSync(out,{recursive:true});
@@ -9,7 +9,7 @@ const uri=(file)=>'file://'+path.join(root,file);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(uri('motion.html'));await page.evaluate(()=>document.fonts.ready);
  await page.waitForFunction(()=>!!window.FIT_MOTION);
- const report={baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',steps:[],errors};
+ const report={baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',iterationBaseline:'d8bf8f0a7a8228490c80b66ba8567d2b9b851f14',steps:[],errors};
  const max=await page.evaluate(()=>FIT_MOTION.max);
  for(let i=0;i<15;i++){
    await page.evaluate(i=>FIT_MOTION.seek(i,i<10?FIT_MOTION.max[i]:0),i);
@@ -53,22 +53,47 @@ const uri=(file)=>'file://'+path.join(root,file);
  await page.locator('.m-toolbar select').evaluate(el=>el.blur());
  report.mixedInput=true;
  await page.evaluate(()=>FIT_MOTION.seek(7,0));await page.keyboard.press('ArrowLeft');assert.deepEqual(await page.evaluate(()=>[FIT_MOTION.state().index,FIT_MOTION.state().step]),[6,1]);
- await page.evaluate(()=>FIT_MOTION.seek(4,3));await page.evaluate(()=>FIT_MOTION.seek(3,0));await page.evaluate(()=>FIT_MOTION.seek(4,0));assert.equal((await page.evaluate(()=>FIT_MOTION.state())).step,0);
+ await page.evaluate(()=>FIT_MOTION.seek(4,2));await page.evaluate(()=>FIT_MOTION.seek(3,0));await page.evaluate(()=>FIT_MOTION.seek(4,0));assert.equal((await page.evaluate(()=>FIT_MOTION.state())).step,0);
+ // Stationary context: only the main trainer proof changes between steps.
+ const positions=[];
+ for(let n=0;n<3;n++){await page.evaluate(n=>FIT_MOTION.seek(4,n),n);positions.push(await page.locator('.m-trainer-gallery>.m-context-current').count());}
+ assert.deepEqual(positions,[1,1,1]);
+ await page.evaluate(()=>FIT_MOTION.seek(4,0));const rail=await page.locator('.m-trainer-gallery>figure').evaluateAll(es=>es.map(e=>e.style.transform));
+ await page.keyboard.press('ArrowRight');await page.evaluate(()=>FIT_MOTION.ready());
+ assert.deepEqual(await page.locator('.m-trainer-gallery>figure').evaluateAll(es=>es.map(e=>e.style.transform)),rail);
+ report.stationaryTrainerContext=true;
+ // Same text nodes enter the actual fields; same card survives plan/live/fact.
+ await page.evaluate(()=>{FIT_MOTION.seek(5,1);window.testTokens=[...document.querySelectorAll('.m-token')];window.testCard=document.querySelector('.m-workout');});
+ await page.keyboard.press('ArrowRight');await page.waitForTimeout(350);
+ await page.screenshot({path:path.join(out,'tokens-in-flight.png')});
+ await page.evaluate(()=>FIT_MOTION.pause());
+ assert(await page.evaluate(()=>testTokens.every(t=>document.querySelector('.m-workout').contains(t))));
+ assert(await page.evaluate(()=>[...document.querySelectorAll('.m-slot-name,.m-slot-weight,.m-slot-reps')].every(e=>e.children.length===1)));
+ assert(await page.evaluate(()=>testTokens.every(t=>getComputedStyle(t).transform==='none')));
+ for(let n=3;n<=5;n++){await page.keyboard.press('ArrowRight');await page.evaluate(()=>FIT_MOTION.ready());assert(await page.evaluate(()=>document.querySelector('.m-workout')===testCard&&testTokens.every(t=>testCard.contains(t))));}
+ assert.equal(await page.locator('.m-workout .m-slot-name').innerText(),'Жим гантелей лёжа');
+ assert(await page.locator('.m-workout').evaluate(e=>e.classList.contains('m-card-complete')));
+ await page.evaluate(()=>FIT_MOTION.seek(5,6));await page.evaluate(()=>window.testResult=document.querySelector('.m-result-data'));await page.keyboard.press('ArrowRight');await page.evaluate(()=>FIT_MOTION.ready());
+ assert(await page.evaluate(()=>document.querySelector('.m-result-data')===testResult&&getComputedStyle(testResult.parentElement).visibility==='visible'));
+ await page.keyboard.press('ArrowLeft');await page.evaluate(()=>FIT_MOTION.ready());assert.equal((await page.evaluate(()=>FIT_MOTION.state())).step,6);
+ await page.evaluate(()=>FIT_MOTION.seek(5,2));await page.keyboard.press('ArrowLeft');await page.evaluate(()=>FIT_MOTION.ready());
+ assert(await page.evaluate(()=>testTokens.every(t=>document.querySelector('.m-utterance').contains(t))));
+ report.persistentTokensCardAndResult=true;report.pauseSettles=true;
  await page.evaluate(()=>FIT_MOTION.seek(5,1));await page.evaluate(()=>FIT_MOTION.play());await page.waitForTimeout(4350);await page.evaluate(()=>FIT_MOTION.pause());const paused=await page.evaluate(()=>FIT_MOTION.state());await page.waitForTimeout(4500);assert.equal((await page.evaluate(()=>FIT_MOTION.state())).step,paused.step);
  await page.evaluate(()=>FIT_MOTION.seek(0,0));await page.keyboard.press('f');await page.waitForTimeout(100);report.fullscreen=await page.evaluate(()=>!!document.fullscreenElement);await page.keyboard.press('f');
  await page.selectOption('.m-toolbar select','8');assert.equal((await page.evaluate(()=>FIT_MOTION.state())).index,8);
  await page.evaluate(()=>location.hash='#6');await page.waitForTimeout(100);assert.equal((await page.evaluate(()=>FIT_MOTION.state())).index,5);
  await page.goto(uri('motion.html')+'?static');await page.evaluate(()=>document.fonts.ready);await page.evaluate(()=>FIT_MOTION.seek(5));assert.equal(await page.locator('.m-client-stage').getAttribute('aria-hidden'),'true');
- const baseline=await browser.newPage({viewport:{width:1920,height:1080}});await baseline.goto(uri('index.html'));await baseline.evaluate(()=>document.fonts.ready);
+ await page.evaluate(()=>FIT_MOTION.seek(3));
+ assert(await page.locator('.m-concept-categories>div').evaluateAll(es=>es.every(e=>getComputedStyle(e).transitionDuration==='0s')),'Static mode must not interpolate layout');
+ assert(await page.evaluate(()=>{const a=document.querySelector('.m-concept-hub').getBoundingClientRect();return [...document.querySelectorAll('.m-concept-categories>div')].every(e=>{const b=e.getBoundingClientRect();return Math.min(a.right,b.right)<=Math.max(a.left,b.left)||Math.min(a.bottom,b.bottom)<=Math.max(a.top,b.top);});}),'Static concept blocks must not overlap');
+ report.staticConceptClear=true;
+ const baseline=await browser.newPage({viewport:{width:1920,height:1080}});await baseline.goto('file://'+path.resolve(root,'../motion-iteration2-baseline/motion.html'));await baseline.evaluate(()=>document.fonts.ready);
  await page.goto(uri('motion.html'));await page.evaluate(()=>document.fonts.ready);
  report.untouched=[];
  for(let i=10;i<15;i++){
    await baseline.evaluate(i=>show(i),i);await page.evaluate(i=>FIT_MOTION.seek(i),i);await page.waitForTimeout(1400);
    const before=await baseline.locator('#deck>.slide.active').evaluate(el=>el.outerHTML),after=await page.locator('#deck>.slide.active').evaluate(el=>el.outerHTML);
-   if(i===13){
-     assert.equal(after.replace(' motion-team-framing',''),before,'Team content changed beyond photo framing');
-     report.teamContentPreserved=true;continue;
-   }
    assert.equal(after,before,'Out of scope DOM changed');
    const a=await baseline.screenshot(),b=await page.screenshot();
    report.untouched.push({slide:i+1,domIdentical:true,pixelsIdentical:a.equals(b)});
