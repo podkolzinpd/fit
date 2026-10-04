@@ -19,7 +19,7 @@
   const animations = new Set();
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
-  const timeline = [[1],[0,1,2],[3,7],[0,1],[0,1,2,3],[0,1,2,3,4,5,6,7],[2,4],[0,4],[0,4],[0,1,2]];
+  const timeline = [[1],[0,1,2],[3,7],[0,1],[1,2,3],[0,1,2,3,4,5,6,7],[2,4],[0,4],[0,4],[0,1,2]];
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
@@ -67,11 +67,23 @@
   children[0].classList.add('m-concept-intro');children[1].classList.add('m-concept-hub');children[2].classList.add('m-concept-market');children[3].classList.add('m-concept-categories');
   const conceptLabel=document.createElement('span');conceptLabel.className='m-concept-label';conceptLabel.textContent='КОНЦЕПЦИЯ РАЗВИТИЯ';cc.append(conceptLabel);
   const categories=[...children[3].children];
-  // Trainer: persistent real screenshots, focus changes by position and scale.
+  // Trainer: fixed context rail; only the selected working fragment is revealed.
   const trainer=scope[4], gallery=q('.content>div:last-child',trainer), trainerCopy=q('.content>div:first-child',trainer);
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
   const figures=qa('figure',gallery);
   figures.forEach((f,i)=>{f.style.setProperty('--overview-x',`${254*i}px`);const img=q('img',f);const win=document.createElement('div');win.className='m-screen-window';img.before(win);win.append(img);});
+  const proof=document.createElement('div');proof.className='m-trainer-proof';
+  figures.forEach((f,i)=>{
+    const panel=document.createElement('figure');panel.className='m-proof-panel';
+    const win=document.createElement('div');win.className='m-proof-window';win.append(q('img',f).cloneNode());panel.append(win);
+    if(i===2){
+      panel.classList.add('m-proof-progress');
+      const lower=document.createElement('div');lower.className='m-proof-window m-proof-map';lower.append(q('img',f).cloneNode());panel.append(lower);
+    }
+    panel.append(q('figcaption',f).cloneNode(true));
+    if(i===2){const caption=document.createElement('p');caption.className='m-proof-caption';caption.textContent='Два фрагмента одного экрана';panel.append(caption);}
+    proof.append(panel);
+  });gallery.append(proof);
   const route=document.createElement('div');route.className='m-route';route.innerHTML='<span></span>';trainer.append(route);
   note(trainer,'Реальные экраны с тестовыми данными. Платежи, связь и продвижение — в плане развития.');
   // Client: preserve the original overview for entry, exit, static view and print.
@@ -84,6 +96,7 @@
       <h3 class="m-client-title">Голосом<br>или текстом.</h3>
       <p class="m-client-sub">Составляешь программу с ИИ.<br>Сам или с ИИ — под свою цель,<br>время и оборудование.</p>
       <div class="m-input-rule"></div>
+      <div class="m-utterance"><div class="m-utterance-name"></div><div class="m-utterance-values"></div></div>
       <p class="m-client-note">Демонстрация ввода · данные из итогов 21.09.2026 · не запись работы ИИ.</p>
     </section>
     <section class="m-scene m-loop">
@@ -113,21 +126,33 @@
       <h3 class="m-client-title">Твой прогресс.</h3>
       <div class="m-body-screen"><img alt="Исходная карта тела Fit: грудь, результат вырос на 33%"></div>
       <svg class="m-body-line" viewBox="0 0 260 120" aria-hidden="true"><path d="M0 0 H55 Q90 0 90 55 V85 Q90 120 130 120 H260" pathLength="1"/></svg>
-      <div class="m-body-data"><h3>Прогресс<br>на карте тела</h3><p>Результаты упражнений<br>по группам мышц.</p><p class="m-map-caption">Пример из приложения Fit.</p></div>
+      <div class="m-body-data"><h3>Карта тела — отдельный срез</h3><p>Результаты упражнений<br>по группам мышц.</p><p class="m-map-caption">Пример из приложения Fit.</p></div>
       <p class="m-client-note">Отдельный срез · не результат предыдущего примера и не оценка роста мышц.</p>
     </section>
     <div class="m-workout" role="img" aria-label="Постановочная карточка: жим гантелей лёжа, 70 кг, 10 / 12 / 12 повторений">
       <div class="m-workout-head"><div class="m-workout-kicker">ФРАГМЕНТ ТРЕНИРОВКИ</div><h3>Грудь</h3><span class="m-workout-status">План</span></div>
-      <div class="m-workout-detail"><strong>Жим гантелей лёжа</strong><div class="m-workout-value"><span>70 кг</span><span>10 / 12 / 12 повторений</span></div><div class="m-sets"><i></i><i></i><i></i></div></div>
+      <div class="m-workout-detail"><div class="m-slot-name"></div><div class="m-workout-value"><span class="m-slot-weight"></span><span class="m-slot-reps"></span></div><div class="m-sets"><i><small>1-й подход</small><b>10</b><span>повторений</span></i><i><small>2-й подход</small><b>12</b><span>повторений</span></i><i><small>3-й подход</small><b>12</b><span>повторений</span></i></div></div>
       <div class="m-workout-action">Проверить и сохранить →</div>
-      <div class="m-workout-complete"><strong>Подходы сохранены</strong><p>Жим гантелей лёжа<br>70 кг · 10 / 12 / 12</p></div>
     </div>
     <span class="m-token">Жим гантелей лёжа</span><span class="m-token value">70 кг</span><span class="m-token value">10 / 12 / 12 повторений</span>`;
   client.append(stage);
   q('.m-result-screen img',stage).src=clientImgs[0];q('.m-body-screen img',stage).src=clientImgs[2];
   const card=q('.m-workout',stage),tokens=qa('.m-token',stage);
-  const tokenFrom=[[80,478],[80,540],[250,540]], tokenTo=[[967,423],[967,469],[1038,469]];
-  const cardTransforms=['translate(940px,300px) scale(1)','translate(940px,300px) scale(1)','translate(940px,300px) scale(1)','translate(86px,400px) scale(.94)','translate(578px,400px) scale(.94)','translate(1070px,400px) scale(.94)'];
+  const tokenHomes=[q('.m-utterance-name',stage),q('.m-utterance-values',stage),q('.m-utterance-values',stage)];
+  const tokenSlots=[q('.m-slot-name',card),q('.m-slot-weight',card),q('.m-slot-reps',card)];
+  const cardTransforms=['translate(930px,285px) scale(1)','translate(930px,285px) scale(1)','translate(930px,285px) scale(1)','translate(86px,395px) scale(.82)','translate(578px,395px) scale(.82)','translate(1070px,395px) scale(.82)'];
+  function placeTokens(n,prev,motion){
+    const targets=n>=2?tokenSlots:tokenHomes;
+    const before=tokens.map(el=>el.getBoundingClientRect());
+    tokens.forEach((el,i)=>targets[i].append(el));
+    if(motion&&((prev===1&&n===2)||(prev===2&&n===1))){
+      const scale=stage.getBoundingClientRect().width/1600;
+      tokens.forEach((el,i)=>{
+        const after=el.getBoundingClientRect(),dx=(before[i].left-after.left)/scale,dy=(before[i].top-after.top)/scale;
+        animate(el,[{transform:`translate(${dx}px,${dy}px)`},{transform:`translate(${dx*.48}px,${dy*.48-36}px)`,offset:.5},{transform:'translate(0,0)'}],1050);
+      });
+    }
+  }
   // Growth: no interpolated metrics; existing cuts and warnings remain exact.
   const growth=scope[6];growth.classList.add('m-growth');
   qa('.meeting-growth-bar-row',growth).forEach((el,i)=>phase(el,i));
@@ -154,29 +179,34 @@
   function renderClient(n, prev, motion) {
     const active=n>0&&n<8;
     client.classList.toggle('m-client-active',active);stage.setAttribute('aria-hidden',String(!active));
-    qa('.m-scene',stage).forEach((el,i)=>el.classList.toggle('is-visible',active && (i===0?n<=2:i===1?n>=3&&n<=5:i===2?n===6:n===7)));
+    qa('.m-scene',stage).forEach((el,i)=>el.classList.toggle('is-visible',active && (i===0?n<=2:i===1?n>=3&&n<=5:i===2?n>=6:n===7)));
+    stage.classList.toggle('m-map-context',n===7);
+    const resultData=q('.m-result-data',stage),previousData=resultData.getBoundingClientRect();
+    resultData.classList.toggle('m-result-compact',n===7);
     const cardVisible=n>=2&&n<=5;
     card.style.visibility=cardVisible?'visible':'hidden';card.style.opacity=cardVisible?'1':'0';
     const dest=cardTransforms[Math.min(n,5)];card.style.transform=dest;
-    if(motion&&cardVisible&&prev>=2&&prev<=5)animate(card,[{transform:cardTransforms[prev]},{transform:dest}],1150);
-    else if(motion&&n===2)animate(card,[{opacity:0,transform:dest},{opacity:1,transform:dest}],950);
+    if(motion&&cardVisible&&prev>=2&&prev<=5)animate(card,[{transform:cardTransforms[prev]},{transform:dest}],900);
     q('.m-workout-status',card).textContent=n<4?'План':n===4?'Выполнение':'Завершено';
-    q('.m-workout-action',card).textContent=n<3?'Проверить и сохранить →':n===3?'Начать тренировку →':n===4?'Записываем подходы':'Подходы сохранены';
-    const detail=q('.m-workout-detail',card);detail.style.opacity=n===2?'1':'1';
-    if(motion&&n===2)animate(detail,[{opacity:0,offset:0},{opacity:0,offset:.7},{opacity:1}],1300);
-    const complete=q('.m-workout-complete',card);complete.style.opacity=n===5?'1':'0';
-    if(motion&&n===5)animate(complete,[{opacity:0},{opacity:1}],1100);
-    qa('.m-sets i',card).forEach((el,i)=>{el.classList.toggle('done',n>=4);if(motion&&n===4)animate(el,[{background:'#d6ded0',offset:0},{background:'#d6ded0',offset:i*.22},{background:'#2f6b4f'}],1000);});
-    tokens.forEach((el,i)=>{
-      const src=`translate(${tokenFrom[i][0]}px,${tokenFrom[i][1]}px) scale(1)`,dst=`translate(${tokenTo[i][0]}px,${tokenTo[i][1]}px) scale(.82)`;
-      el.style.transform=n===1?src:dst;el.style.opacity=n===1?'1':'0';el.style.visibility=n===1||n===2?'visible':'hidden';
-      if(motion&&prev===1&&n===2)animate(el,[{transform:src,opacity:1},{transform:`translate(${(tokenFrom[i][0]+tokenTo[i][0])/2}px,${(tokenFrom[i][1]+tokenTo[i][1])/2-70}px) scale(.92)`,opacity:1,offset:.5},{transform:dst,opacity:0}],1350);
-      if(motion&&prev===2&&n===1)animate(el,[{transform:dst,opacity:0},{transform:src,opacity:1}],1100);
-    });
+    q('.m-workout-action',card).textContent=n<3?'Проверить и сохранить →':n===3?'Начать тренировку →':n===4?'Записываем подходы':'✓ Подходы сохранены';
+    card.classList.toggle('m-card-complete',n===5);
+    placeTokens(n,prev,motion);
+    qa('.m-sets i',card).forEach((el,i)=>{el.classList.toggle('done',n>=4);if(motion&&n===4)animate(el,[{background:'#f0f2ed',color:'#596166',offset:0},{background:'#f0f2ed',color:'#596166',offset:.45+i*.15},{background:'#e0ecdf',color:'#2f6b4f'}],1300);});
     qa('.m-station',stage).forEach((s,i)=>{s.classList.toggle('is-current',i===n-3);const ghost=q('.m-ghost',s);if(ghost)ghost.style.opacity=i<n-3?'1':'0';});
-    if(motion&&n===6)qa('.m-result-bar i',stage).forEach((el,i)=>animate(el,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],850+i*250));
+    if(motion&&n===6&&prev!==7){
+      qa('.m-result-bar i',stage).forEach(el=>animate(el,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],600));
+      animate(q('.m-result-gain',stage),[{opacity:0,offset:0},{opacity:0,offset:.65},{opacity:1}],900);
+    }
+    if(motion&&((n===7&&prev===6)||(n===6&&prev===7))){
+      const after=resultData.getBoundingClientRect(),scale=stage.getBoundingClientRect().width/1600;
+      animate(resultData,[{transform:`translate(${(previousData.left-after.left)/scale}px,${(previousData.top-after.top)/scale}px)`},{transform:'none'}],450);
+    }
     const line=q('.m-body-line path',stage);line.style.strokeDasharray='1';line.style.strokeDashoffset='0';
-    if(motion&&n===7)animate(line,[{strokeDashoffset:1},{strokeDashoffset:0}],1000);
+    if(motion&&n===7){
+      animate(q('.m-body-screen',stage),[{opacity:0,offset:0},{opacity:0,offset:.45},{opacity:1}],900);
+      animate(q('.m-body-data',stage),[{opacity:0,offset:0},{opacity:0,offset:.6},{opacity:1}],1050);
+      animate(line,[{strokeDashoffset:1,offset:0},{strokeDashoffset:1,offset:.7},{strokeDashoffset:0}],1400);
+    }
   }
   function apply(n=step, motion=true, prev=step) {
     step=n;
@@ -194,20 +224,24 @@
     }
     if(index===4){
       const focus=staticMode||scene===0?-1:scene-1;
+      trainer.classList.toggle('m-trainer-overview',focus<0);
       figures.forEach((f,i)=>{
-        f.classList.toggle('m-screen-focus',i===focus);
-        const t=focus<0?`translate(${254*i}px,0) scale(1)`:i===focus?'translate(140px,15px) scale(1.14)':`translate(${i===(focus===0?1:0)?0:603}px,160px) scale(.48)`;
-        f.style.transform=t;f.style.opacity=focus<0||i===focus?'1':'.45';f.style.zIndex=i===focus?'3':'1';
-        q('img',f).style.transform='scale(1)';
+        f.style.transform=focus<0?`translate(${254*i}px,0)`:`translate(480px,${i*205}px)`;
+        f.style.opacity=focus<0||i===focus?'1':'.62';
+        f.classList.toggle('m-context-current',i===focus);
       });
-      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus||i===1&&focus===2?'1':'.58');
+      qa('.m-proof-panel',proof).forEach((el,i)=>{
+        el.classList.toggle('is-visible',i===focus);el.setAttribute('aria-hidden',String(i!==focus));
+        if(i===focus&&motion&&previousScene!==scene)animate(el,[{opacity:0},{opacity:1}],380);
+      });
+      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===(focus===0?0:1)?'1':'.7');
       q('span',route).style.width=(focus<0?100:(focus+1)/3*100)+'%';
     }
     if(index===5)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
   }
   function updateToolbar(){q('.m-step-counter',toolbar).textContent=index<10?`${step+1} / ${max[index]+1}`:'—';q('select',toolbar).value=index;toolbar.title=index<10?labels[index][step]:'';q('[data-action="static"]',toolbar).textContent=staticMode?'Включить анимацию':'Без анимации';q('[data-action="play"]',toolbar).textContent=playing?'Ⅱ Пауза':'▶ Автопоказ';}
-  function stop(){playing=false;clearTimeout(timer);timer=null;animations.forEach(a=>a.pause());updateToolbar();}
+  function stop(){playing=false;clearTimeout(timer);timer=null;settle();updateToolbar();}
   function revealCover(){if(index===0&&!staticMode)animate(coverTitle,[{clipPath:'inset(20% 100% 33% 0)',opacity:.5},{clipPath:'inset(20% 45% 33% 0)',opacity:1}],850);}
   function go(i,n=0){settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index);apply(staticMode&&index<10?max[index]:n,false);revealCover();}
   function next(manual=true){if(manual)stop();settle();if(index<10&&!staticMode&&step<max[index])apply(step+1,true,step);else if(index<all.length-1)go(index+1);else stop();}
@@ -235,7 +269,7 @@
   window.addEventListener('beforeprint',()=>{stop();beforePrint={index,step,staticMode};staticMode=true;scope.forEach((s,i)=>{index=i;apply(max[i],false);});index=beforePrint.index;});
   window.addEventListener('afterprint',()=>{if(beforePrint){({index,step,staticMode}=beforePrint);apply(step,false);beforePrint=null;}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
-  window.FIT_MOTION={version:2,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
+  window.FIT_MOTION={version:3,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',iterationBaseline:'d8bf8f0a7a8228490c80b66ba8567d2b9b851f14',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
     state:()=>({index,step,staticMode,playing,animations:animations.size}),
     seek:(i,n=0)=>{stop();go(i,n);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
