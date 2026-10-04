@@ -1,4 +1,4 @@
-/* All rules limited to review 6.3; previous slides retain their exact rendering. */
+/* Fixed phone and expanding day; other slides retain their exact rendering. */
 #deck>.ca-phone>h2{top:165px;width:700px;font-size:62px!important;line-height:1.08!important}
 .ca-phone .ca-copy{top:389px;width:650px}
 .ca-phone .ca-explain{font-size:29px;line-height:1.46;color:#c7cbcc;max-width:640px}
@@ -35,3 +35,6 @@
 .ca-phone .ca-screen h4{font-size:24px!important;margin-top:0!important}.ca-phone .ca-exercise-info p{font-size:18px;margin:10px 0 0}
 .ca-phone .ca-still::after{width:100%;height:184px;flex:none}
 .ca-phone .ca-exercise-row{height:82px;margin-top:12px;gap:12px;padding:8px}.ca-phone .ca-exercise-row img{width:64px;height:64px;border-radius:12px}.ca-phone .ca-exercise-row strong{font-size:20px}.ca-phone .ca-exercise-row div>span{font-size:16px;line-height:1.3}.ca-phone .ca-ex-num{display:none}
+.ca-phone .ca-day-expansion{position:absolute;pointer-events:none;background:#1a1a1c;border:1px solid #414938;z-index:1;opacity:.65}
+.ca-phone .ca-screen{z-index:2}
+.ca-phone .ca-day-title-flight{position:absolute;z-index:5;pointer-events:none;color:#fff;line-height:1.1;letter-spacing:-.7px;transform-origin:0 0}

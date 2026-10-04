@@ -9884,10 +9884,12 @@ DataLens: https://datalens.ru/wnvsw21o9r7af-svodnye-metriki-prilozheniya?tab=Y3.
 
 <link rel="stylesheet" href="client-ai-story.css?v=1">
 <script src="client-ai-story.js?v=1"></script>
-<link rel="stylesheet" href="client-ai-phone.css">
-<script src="client-ai-phone.js"></script>
-<link rel="stylesheet" href="client-stories.css">
-<script src="client-stories.js"></script>
+<link rel="stylesheet" href="client-ai-phone-v2.css">
+<script src="client-ai-phone-v2.js"></script>
+<link rel="stylesheet" href="client-stories-v2.css">
+<script src="client-stories-v2.js"></script>
+<link rel="stylesheet" href="client-progress.css">
+<script src="client-progress.js"></script>
 <script>
 document.querySelector('.idea-polished .foot').style.display = 'none';
 const cover = document.querySelector('#deck > .slide');
@@ -9919,7 +9921,7 @@ if (slides.length <= 1) document.querySelectorAll('.nav').forEach(button => { bu
 // One retained version per slide: keep revision suffixes, renumber after the approved reorder.
 slides.forEach((slide, index) => {
   const revision = slide.dataset.version?.split('.')[1] || '1'
-  const logical = index - slides.slice(0,index+1).filter(s=>s.classList.contains('client-ai-story')).length
+  const logical = index - slides.slice(0,index+1).filter(s=>s.classList.contains('client-ai-story')).length + (index >= 5 ? 1 : 0)
   slide.dataset.slideFamily = String(logical + 1)
   slide.dataset.version = `${logical + 1}.${revision}`
   const eyebrow = slide.querySelector(':scope > .eyebrow')
@@ -10058,8 +10060,9 @@ show(current, false)
   trainer.querySelector('h2').innerHTML = 'Меньше рутины<br>Больше клиентов';
   const blocks = trainer.querySelectorAll('.content>div:first-child>div');
   blocks[2].querySelector('p').innerHTML = 'Запись, пакеты и разбор споров,<br>финансовый кабинет, чеки и налоги.';
-  blocks[3].querySelector('p').innerHTML = 'Страница тренера, публикации,<br>челленджи и приглашения за бонус.';
+  blocks[3].querySelector('h3').textContent = 'Клиенты находят вас';
+  blocks[3].querySelector('p').textContent = 'Так ваш профиль видят клиенты';
 }
 </script>
-<script src="motion-client-stories-v1.js"></script>
+<script src="motion-client-stories-v2.js"></script>
 </body></html>

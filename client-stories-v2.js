@@ -1,4 +1,4 @@
-/* Three scoped client scenarios. Illustrative data, no live microphone or API calls. */
+/* Scoped client scenarios. Shared-text voice transition; no microphone or API calls. */
 (() => {
   const anchor=window.FIT_CLIENT_AI_PHONE?.slide;
   if(!anchor)return;
@@ -18,7 +18,7 @@
     slide.dataset.version=`6.${revision}`;slide.dataset.slideType='product-flow';slide.dataset.golden='linear/03-linear-product-flow.png';
     slide.innerHTML=`<div class="eyebrow"><span class="design-number">05</span> · ДЛЯ КЛИЕНТА</div><h2>${title}</h2><p class="cs-lead">${lead}</p>${body}<aside class="speaker-notes">${baseNote}${notes}</aside>`;
     tail.after(slide);tail=slide;
-    slide.addEventListener('click',e=>{const button=e.target.closest('[data-cs-step]');if(button&&window.FIT_MOTION)FIT_MOTION.seek([...document.querySelectorAll('#deck>.slide')].indexOf(slide),+button.dataset.csStep);});
+    slide.addEventListener('click',e=>{const button=e.target.closest('[data-cs-step]');if(button&&window.FIT_MOTION)FIT_MOTION.transitionTo([...document.querySelectorAll('#deck>.slide')].indexOf(slide),+button.dataset.csStep);});
     return slide;
   }
   const sets=`<table class="cs-set-table"><thead><tr><th>Подход</th><th>Вес, кг</th><th>Повторы</th><th></th></tr></thead><tbody>${[1,2,3].map(i=>`<tr><td>${i}</td><td>60</td><td>10</td><td class="cs-check">✓</td></tr>`).join('')}</tbody></table>`;
@@ -27,12 +27,35 @@
     <div class="cs-dictation"><div class="cs-record-label">${mic}<span>Запись тренировки</span><small>00:08</small></div><div class="cs-wave" aria-hidden="true">${wave}</div><blockquote>«Жим ногами —<br>три подхода по десять,<br><em>шестьдесят килограммов</em>»</blockquote><button class="cs-pill" data-cs-step="1">Готово ${arrow}</button><span class="cs-text-alternative">Можно записать текстом</span></div>
     <div class="cs-voice-result" aria-hidden="true" inert><div class="cs-voice-recap"><span class="cs-kicker">ТВОЯ ЗАПИСЬ</span><p>Жим ногами —<br>3 подхода × 10,<br>60 кг</p><span class="cs-recap-note">Остаётся проверить<br>и сохранить</span></div>${phone('Тренировка',`<div class="cs-app-label">Сегодня · самостоятельно</div><h3>Запись готова</h3><div class="cs-exercise"><img src="assets/client-ai/leg-press-machine.jpg" alt="Жим ногами из каталога Fit"><div><h4>Жим ногами</h4><p>3 подхода</p></div></div>${sets}<div class="cs-source"><span>Исходный текст</span><p>Жим ногами — три подхода по десять, шестьдесят килограммов.</p></div><div class="cs-bottom"><div class="cs-pill">Сохранить тренировку ${arrow}</div></div>`)}</div>${steps(['Надиктовал','Проверил запись'])}`,
     'Голос → структурированная запись: два состояния, одно нажатие. Пример 60 кг / 3×10 не является рекомендацией нагрузки. Источники поведения: QuickWorkoutEntry.tsx, VoiceInputButton.tsx, WorkoutSetTable.tsx. Обязательная проверка перед сохранением остаётся видимой. Микрофон не активируется. Композиция linear/03: один вход и один результат, без цепочки промежуточных карточек.');
-  stories.push({slide:voice,stops:[0,1],labels:['Голосом или текстом','Готовая запись'],pause(){},render(n,motion,animate,still){
-    const previous=+(voice.dataset.csStep||0);voice.dataset.csStep=n;
+  // One shared phrase travels to the source field; only a transient visual copy
+  // sits above the phone's clipping boundary during the FLIP transition.
+  const quote=voice.querySelector('blockquote'),sourceText=voice.querySelector('.cs-source p');
+  const phrase=document.createElement('p');phrase.className='cs-spoken-text';
+  phrase.textContent=sourceText.textContent;sourceText.remove();quote.replaceChildren(phrase);
+  let clearVoiceFlight=()=>{};
+  stories.push({slide:voice,stops:[0,1],labels:['Голосом или текстом','Готовая запись'],pause(){clearVoiceFlight();},render(n,motion,animate,still){
+    clearVoiceFlight();
+    const previous=+(voice.dataset.csStep||0),before=phrase.getBoundingClientRect(),oldFont=parseFloat(getComputedStyle(phrase).fontSize);
+    voice.dataset.csStep=n;
+    (n?voice.querySelector('.cs-source'):quote).append(phrase);
     const a=voice.querySelector('.cs-dictation'),b=voice.querySelector('.cs-voice-result');
     [a,b].forEach((el,i)=>{el.setAttribute('aria-hidden',String(i!==n));el.inert=i!==n;});
     voice.querySelector('.cs-lead').textContent=n?'Проверяешь подходы и сохраняешь тренировку. Вводить каждое число отдельно не нужно.':'Рассказываешь, что сделал. Fit разбирает запись по упражнениям и подходам.';
-    if(motion&&n!==previous){animate(n?b:a,[{opacity:0,transform:`translateY(${n?28:-18}px)`},{opacity:1,transform:'none'}],600);}
+    if(motion&&n!==previous){
+      const after=phrase.getBoundingClientRect(),root=voice.getBoundingClientRect(),scale=root.width/1600;
+      const ghost=phrase.cloneNode(true);ghost.className='cs-phrase-flight';ghost.setAttribute('aria-hidden','true');
+      const style=getComputedStyle(phrase);
+      ghost.style.cssText=`position:absolute;z-index:30;pointer-events:none;margin:0;left:${(after.left-root.left)/scale}px;top:${(after.top-root.top)/scale}px;width:${after.width/scale}px;font-size:${style.fontSize};line-height:${style.lineHeight};letter-spacing:${style.letterSpacing};color:${style.color};transform-origin:0 0`;
+      voice.append(ghost);phrase.style.visibility='hidden';
+      clearVoiceFlight=()=>{ghost.remove();phrase.style.removeProperty('visibility');};
+      const flight=animate(ghost,[{transform:`translate(${(before.left-after.left)/scale}px,${(before.top-after.top)/scale}px) scale(${oldFont/parseFloat(style.fontSize)})`},{transform:'none'}],950);
+      const cleanup=clearVoiceFlight;flight?.finished.then(cleanup,cleanup);
+      if(n){
+        animate(voice.querySelector('.cs-phone'),[{opacity:0},{opacity:1}],500);
+        animate(voice.querySelector('.cs-set-table'),[{opacity:0,transform:'translateY(22px)'},{opacity:0,transform:'translateY(22px)',offset:.22},{opacity:1,transform:'none'}],950);
+        animate(voice.querySelector('.cs-voice-recap'),[{opacity:0},{opacity:0,offset:.55},{opacity:1}],950);
+      }
+    }
     markSteps(voice,n);
   }});
   const coach=create('coach','Занимаешься<br>с тренером','Тренер видит результаты и помогает скорректировать занятия.',5,`
