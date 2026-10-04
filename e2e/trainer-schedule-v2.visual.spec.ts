@@ -129,6 +129,8 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       if (draft.scheduleDensity) scheduleDensity = draft.scheduleDensity
       await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' })
       return
+    } else if (url.pathname === '/v1/trainers/catalog') {
+      body = { items: [], totalCount: 0, nextOffset: null }
     } else if (url.pathname === '/v1/me/finance') {
       body = { finance: { trainers: [] } }
     } else if (url.pathname === '/v1/finance/overview') {
@@ -2985,5 +2987,69 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(page.getByText('Выполнено 1 из 1 подходов')).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`client-completion-${theme}.png`) })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime sections ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    for (const route of ['/me/progress', '/me/goal', '/me/profile', '/me/settings', '/me/edit', '/me/finance', '/me/trainers', '/me/achievements', '/chat', `/chat/${conversationId}`, '/assistant', '/join']) {
+      await page.goto(route)
+      await expect(page.locator('.fit-client-lime')).toBeVisible()
+      await expect(page.locator('h1').first()).toBeVisible()
+      await expect(page.getByText('Загружаем…', { exact: true })).toHaveCount(0)
+      await expect(page.locator('.state-panel-error')).toHaveCount(0)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
+    }
+    await page.goto('/me/achievements')
+    await page.locator('.athlete-achievement-card').first().click()
+    const detail = page.locator('.athlete-achievement-detail')
+    await expect(detail).toBeVisible()
+    await expect(detail).toHaveCSS('background-color', theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 28)')
+    await page.screenshot({ path: testInfo.outputPath('achievement-detail.png') })
+    await page.keyboard.press('Escape')
+    await expect(detail).toHaveCount(0)
+  })
+}
+
+for (const theme of ['light', 'dark']) {
+  test(`Client Lime loading error retry empty and keyboard ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [], failTrainingData: true })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    let release = () => {}
+    const ready = new Promise<void>((resolve) => { release = resolve })
+    await page.route('**/v1/training-data**', async (route) => { await ready; await route.fallback() })
+    await page.goto('/me/workouts')
+    await expect(page.getByRole('status', { name: 'Загрузка' }).first()).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('loading.png') })
+    release()
+    await expect(page.locator('.state-panel-error')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('error.png') })
+    backend.setTrainingDataFailure(false)
+    await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(page.locator('.state-panel-error')).toHaveCount(0)
+    await expect(page.locator('.state-panel-empty')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('empty.png') })
+    await page.goto('/me/progress')
+    await page.getByRole('button', { name: 'Добавить замер', exact: true }).click()
+    await page.getByLabel('Заметка', { exact: true }).fill('Длинная заметка о тренировке и самочувствии спортсмена. '.repeat(12))
+    await page.setViewportSize({ width: 390, height: 430 })
+    await page.getByRole('button', { name: 'Сохранить замер', exact: true }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('button', { name: 'Сохранить замер', exact: true })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('measurement-keyboard.png') })
+    await page.goto(`/chat/${conversationId}`)
+    await page.locator('.chat-message').last().click()
+    const sheet = page.getByRole('dialog', { name: 'Действия с сообщением' })
+    await expect(sheet).toBeVisible()
+    await expect(sheet).toHaveCSS('background-color', theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 28)')
+    await page.screenshot({ path: testInfo.outputPath('chat-menu.png') })
+    await page.keyboard.press('Escape')
+    await expect(sheet).toHaveCount(0)
   })
 }

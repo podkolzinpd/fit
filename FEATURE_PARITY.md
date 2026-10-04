@@ -10,6 +10,13 @@ YAFIT-593 / PR2: единое завершение календарного пл
 
 YAFIT-593 / PR1: изоляция календарного plan/voice draft по requestId, синхронизация упражнений с исходной формой с проверкой ID, сохранение идентичности между review/save/reload. Legacy draft и непилотный поток не меняются. Полный план пяти PR: docs/design/FIT_LIME_VIDEO_FIXES_20261004.md.
 
+Client Lime pilot (2026-10-04): existing client routes and workout lifecycle retain
+behavior under an independent single-account flag. Light/dark/system preferences
+are isolated per actor. Local WebKit verifies 390/430 route inventory, workout
+completion, loading/error/retry/empty and themed portals; release/account activation
+is pending. This is visual adaptation, not a new parity implementation.
+
+
 YAFIT-591 / PR2: Lime-календарь запускает Live сразу после выбора клиента,
 без промежуточного формата/подтверждения; обычный QuickStart сохранён.
 Планирование имеет явный save, формат и выбор сохранённого черновика без потери

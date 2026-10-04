@@ -11,6 +11,7 @@ import { CloseIcon, MessageIcon, PhotoIcon, SearchIcon } from '../../shared/icon
 import { AsyncView, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { prepareChatImage } from './chat-image'
 import { useChatThreads } from './use-chat-threads'
+import { isClientLimeEnabled } from '../../app/client-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { useTrainerWorkspace } from '../workouts/use-trainer-workspace'
 
@@ -409,7 +410,7 @@ export function ChatConversationPage() {
       </form>}
     </AsyncView>
   </Page>
-  {actionMessage && <ChatActionSheet message={actionMessage} own={actionMessage.senderId === actor?.userId} local={pending.some((item) => item.id === actionMessage.id)} busy={deletingMessageId === actionMessage.id} error={deleteErrorMessageId === actionMessage.id} fitLime={fitLimeConversation}
+  {actionMessage && <ChatActionSheet message={actionMessage} own={actionMessage.senderId === actor?.userId} local={pending.some((item) => item.id === actionMessage.id)} busy={deletingMessageId === actionMessage.id} error={deleteErrorMessageId === actionMessage.id} fitLime={fitLimeConversation || isClientLimeEnabled(actor)}
     onClose={() => setActionMessage(null)} onReply={() => { setReplyingTo(actionMessage); setEditing(null); messageInputRef.current?.focus() }} onCopy={() => void copyMessage(actionMessage)} onEdit={() => startEdit(actionMessage)} onDelete={() => void removeMessage(actionMessage, pending.find((item) => item.id === actionMessage.id))} onOpenPhoto={() => setPhotoMessage(actionMessage)} />}
   {photoMessage?.image?.url && <FullscreenImageViewer src={photoMessage.image.url} alt="Фото в сообщении" label="Просмотр фото"
     saveFileName={`fit-${photoMessage.id}.jpg`} onClose={() => setPhotoMessage(null)} />}

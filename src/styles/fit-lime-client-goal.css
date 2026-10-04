@@ -33,7 +33,7 @@
   font-size: 19px;
   font-weight: 500;
 }
-.fit-lime-shell.trainer-client-goal-identity .goal-head .link { color: var(--lime-accent) }
+.fit-lime-shell.trainer-client-goal-identity .goal-head .link { color: var(--lime-accent-ink) }
 .fit-lime-shell.trainer-client-goal-identity .goal-head .link.danger { color: var(--danger) }
 .fit-lime-shell.trainer-client-goal-identity .goal-block .muted,
 .fit-lime-shell.trainer-client-goal-identity .page > form.stack > .muted,
