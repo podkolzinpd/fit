@@ -1413,31 +1413,33 @@ test('workout and assistant routes keep the previous presentation outside Fit Li
   }
 })
 
-test('Fit Lime trainer screens fit a narrow phone without horizontal page clipping', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 320, height: 720 })
-  await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
-  await mockPilot(page, { fitLime: true })
-  for (const route of [
-    '/today?date=2026-09-24',
-    '/schedule?week=2026-09-21',
-    '/chat',
-    `/chat/${conversationId}`,
-    '/clients',
-    `/clients/${clientId}`,
-    '/clients/new',
-    `/clients/${clientId}/goal`,
-    `/progress/${clientId}`,
-    `/clients/${clientId}/workouts`,
-    '/profile',
-    '/profile/settings',
-    '/profile/trainer',
-    '/exercises',
-    '/workouts/new?date=2026-09-24',
-    `/workouts/${workoutId}`,
-    `/workouts/${workoutId}/live`,
-    `/workouts/${workoutId}/history/fedb-barbell-squat`,
-    '/assistant',
-  ]) {
+// Each screen has its own timeout and isolated page context. A single navigation
+// loop couples all 19 screens to one 30-second budget on a busy CI runner.
+for (const route of [
+  '/today?date=2026-09-24',
+  '/schedule?week=2026-09-21',
+  '/chat',
+  `/chat/${conversationId}`,
+  '/clients',
+  `/clients/${clientId}`,
+  '/clients/new',
+  `/clients/${clientId}/goal`,
+  `/progress/${clientId}`,
+  `/clients/${clientId}/workouts`,
+  '/profile',
+  '/profile/settings',
+  '/profile/trainer',
+  '/exercises',
+  '/workouts/new?date=2026-09-24',
+  `/workouts/${workoutId}`,
+  `/workouts/${workoutId}/live`,
+  `/workouts/${workoutId}/history/fedb-barbell-squat`,
+  '/assistant',
+]) {
+  test(`Fit Lime trainer screens fit a narrow phone without horizontal page clipping: ${route}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 720 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
+    await mockPilot(page, { fitLime: true })
     await page.goto(route)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     if (route.startsWith('/today')) await expect(page.locator('.fit-lime-today')).toBeVisible()
@@ -1472,8 +1474,8 @@ test('Fit Lime trainer screens fit a narrow phone without horizontal page clippi
       await page.screenshot({ path: screenshotPath, fullPage: true })
       await testInfo.attach(label, { path: screenshotPath, contentType: 'image/png' })
     }
-  }
-})
+  })
+}
 
 test('trainer without Fit Lime keeps the existing day hierarchy', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
