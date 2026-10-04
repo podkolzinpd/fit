@@ -1,7 +1,8 @@
-# Client AI program · review 6.2 · 2026-10-04
+# Client AI program · review 6.3 · 2026-10-04
 
 Scope: first client scenario only. Added immediately after the unchanged client
-slide 6.1 in `greatfinal-motion-v2`. No changes to the old published branch.
+slide 6.1 in `greatfinal-motion-v2`. The mobile 6.3 replaces the wide 6.2;
+no comparison duplicate remains, as requested. No changes to the old published branch.
 
 Three presenter-controlled states: request/confirmed conditions → draft program
 for review → workout after confirmation and adding to schedule. Example numbers

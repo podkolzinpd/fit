@@ -1,0 +1,37 @@
+/* All rules limited to review 6.3; previous slides retain their exact rendering. */
+#deck>.ca-phone>h2{top:165px;width:700px;font-size:62px!important;line-height:1.08!important}
+.ca-phone .ca-copy{top:389px;width:650px}
+.ca-phone .ca-explain{font-size:29px;line-height:1.46;color:#c7cbcc;max-width:640px}
+.ca-phone .ca-route{bottom:106px;width:610px}
+.ca-phone .ca-route button{font-size:22px;padding-block:14px}
+.ca-phone .ca-app{left:960px;top:43px;width:456px;height:808px;border:2px solid #505559;border-radius:46px;box-shadow:inset 0 0 0 5px #0c0e0f}
+.ca-phone .ca-app::after{content:'';position:absolute;bottom:13px;left:calc(50% - 64px);height:4px;width:128px;border-radius:99px;background:#b6b9bc}
+.ca-phone .ca-phone-status{height:34px;display:flex;align-items:center;justify-content:space-between;padding:8px 26px 0;color:#d4d7d9;font-size:14px;font-weight:500}
+.ca-phone .ca-phone-status svg{width:42px;height:16px}
+.ca-phone .ca-app-header{height:57px;margin:0 23px;gap:13px;font-size:23px}
+.ca-phone .ca-app-mark{font-size:18px}.ca-phone .ca-back{font-size:30px}
+.ca-phone .ca-screen{top:108px;left:22px;right:22px;bottom:41px}
+.ca-phone .ca-bubble{margin-left:20px;padding:17px 18px;font-size:20px;line-height:1.35}
+.ca-phone .ca-answer{gap:12px;margin:21px 0}.ca-phone .ca-answer p{font-size:20px;line-height:1.35}.ca-phone .ca-ai{width:34px;height:34px;font-size:23px;border-radius:13px}
+.ca-phone .ca-context{padding:18px;border-radius:26px}
+.ca-phone .ca-context-heading{font-size:20px;margin-bottom:14px}
+.ca-phone .ca-context-row{font-size:18px;line-height:1.45;gap:8px;margin-top:9px}.ca-phone .ca-context-row>span{font-size:16px}.ca-phone .ca-context-row strong{font-size:18px;text-align:right}
+.ca-phone .ca-history{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;padding-top:16px}.ca-phone .ca-history>span{width:100%;font-size:12px}.ca-phone .ca-history strong{font-size:20px}.ca-phone .ca-history small{font-size:13px}
+.ca-phone .ca-primary,.ca-phone .ca-start{height:53px;font-size:20px;gap:12px}
+.ca-phone .ca-program-heading,.ca-phone .ca-workout-heading{align-items:flex-start;gap:8px}
+.ca-phone .ca-screen h3{font-size:28px!important;margin-top:8px!important}
+.ca-phone .ca-overline{font-size:12px;letter-spacing:.7px}
+.ca-phone .ca-ready{font-size:12px;padding:7px 9px;margin-top:3px;white-space:nowrap}
+.ca-phone .ca-summary{gap:18px;justify-content:space-between;margin:22px 0;color:#b9b9c0;font-size:16px}.ca-phone .ca-summary b{font-size:21px}
+.ca-phone .ca-weeks{gap:6px;margin-bottom:22px}.ca-phone .ca-weeks span{font-size:15px;padding:10px 11px}
+.ca-phone .ca-days{gap:12px}.ca-phone .ca-day{gap:12px;padding:17px 13px;border-radius:24px;min-height:94px}
+.ca-phone .ca-date{width:42px;font-size:19px}.ca-phone .ca-day strong{font-size:21px}.ca-phone .ca-day small{font-size:14px;max-width:220px;line-height:1.3}.ca-phone .ca-date small{font-size:12px}
+.ca-phone .ca-day-tail{font-size:0;gap:0}.ca-phone .ca-day-tail svg{width:19px;height:19px}
+.ca-phone .ca-program-hint{font-size:17px;line-height:1.5;margin-top:20px}
+.ca-phone .ca-exercise-hero{height:288px;margin-top:20px;flex-direction:column-reverse}
+.ca-phone .ca-exercise-hero video{width:100%;height:184px;flex:none;object-fit:contain}
+.ca-phone .ca-exercise-info{padding:14px 18px;width:100%;height:104px}
+.ca-phone .ca-exercise-info>.ca-overline,.ca-phone .ca-last{display:none}
+.ca-phone .ca-screen h4{font-size:24px!important;margin-top:0!important}.ca-phone .ca-exercise-info p{font-size:18px;margin:10px 0 0}
+.ca-phone .ca-still::after{width:100%;height:184px;flex:none}
+.ca-phone .ca-exercise-row{height:82px;margin-top:12px;gap:12px;padding:8px}.ca-phone .ca-exercise-row img{width:64px;height:64px;border-radius:12px}.ca-phone .ca-exercise-row strong{font-size:20px}.ca-phone .ca-exercise-row div>span{font-size:16px;line-height:1.3}.ca-phone .ca-ex-num{display:none}
