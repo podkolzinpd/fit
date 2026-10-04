@@ -529,6 +529,9 @@ export interface Workout {
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate
+  plannedDate?: string
+  plannedStartTime?: string | null
+  plannedEndTime?: string | null
   startTime: string | null
   endTime: string | null
   startedAt: string | null
