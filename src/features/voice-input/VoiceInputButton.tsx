@@ -70,6 +70,7 @@ export function VoiceInputButton({
   const startingStreamingRef = useRef<StreamingSpeechSession | null>(null)
   const streamingTextRef = useRef('')
   const streamingInterimTextRef = useRef('')
+  const streamingStartsNewUtteranceRef = useRef(false)
   const sessionGenerationRef = useRef(0)
   const isCurrentSession = (sessionId: number) => mountedRef.current && sessionGenerationRef.current === sessionId
 
@@ -101,20 +102,22 @@ export function VoiceInputButton({
       startingStreamingRef.current = streaming
       streamingTextRef.current = ''
       streamingInterimTextRef.current = ''
+      streamingStartsNewUtteranceRef.current = false
       try {
         await withTimeout(
           streaming.start(
             (text) => {
               if (!isCurrentSession(sessionId)) return
               streamingInterimTextRef.current = text.trim()
-              const cumulative = joinStreamingTranscript(streamingTextRef.current, streamingInterimTextRef.current)
+              const cumulative = mergeStreamingTranscript(streamingTextRef.current, streamingInterimTextRef.current, streamingStartsNewUtteranceRef.current)
               onInterimTranscript?.(cumulative)
               if (variant !== 'icon') setMessage(`Сейчас распознаю: ${text}`)
             },
-            (text) => {
+            (text, result) => {
               if (!isCurrentSession(sessionId)) return
-              streamingTextRef.current = joinStreamingTranscript(streamingTextRef.current, text)
+              streamingTextRef.current = mergeStreamingTranscript(streamingTextRef.current, text, streamingStartsNewUtteranceRef.current)
               streamingInterimTextRef.current = ''
+              streamingStartsNewUtteranceRef.current = result?.endOfUtterance === true
               onInterimTranscript?.(streamingTextRef.current)
             },
           ),
@@ -176,8 +179,9 @@ export function VoiceInputButton({
     try {
       await streaming.stop()
       if (!wasCurrent || !isCurrentSession(sessionId)) return
-      const text = joinStreamingTranscript(streamingTextRef.current, streamingInterimTextRef.current).trim()
+      const text = mergeStreamingTranscript(streamingTextRef.current, streamingInterimTextRef.current, streamingStartsNewUtteranceRef.current).trim()
       streamingInterimTextRef.current = ''
+      streamingStartsNewUtteranceRef.current = false
       sessionGenerationRef.current += 1
       if (!text) throw new Error('Речь не распознана. Попробуйте говорить ближе к микрофону.')
       setPhase('transcribing')
@@ -260,6 +264,7 @@ export function VoiceInputButton({
     if (startingStreaming) void startingStreaming.stop()
     streamingTextRef.current = ''
     streamingInterimTextRef.current = ''
+    streamingStartsNewUtteranceRef.current = false
     stoppingRef.current = false
     setElapsedSeconds(0)
     setProgress(0)
@@ -371,11 +376,30 @@ function recordingErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Не удалось включить микрофон.'
 }
 
-function joinStreamingTranscript(committed: string, next: string): string {
+function mergeStreamingTranscript(committed: string, next: string, startsNewUtterance = false): string {
   const normalized = next.trim()
   if (!normalized) return committed
   const existing = committed.trim()
-  return existing ? `${existing} ${normalized}` : normalized
+  if (!existing) return normalized
+  if (startsNewUtterance) return `${existing}\n${normalized}`
+
+  const existingWords = existing.split(/\s+/u)
+  const nextWords = normalized.split(/\s+/u)
+  const comparable = (word: string) => word.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е')
+  const sameWords = (left: string[], right: string[]) => left.length === right.length
+    && left.every((word, index) => comparable(word) === comparable(right[index] ?? ''))
+
+  if (sameWords(existingWords, nextWords)) return existing
+  if (nextWords.length > existingWords.length && sameWords(existingWords, nextWords.slice(0, existingWords.length))) return normalized
+  if (existingWords.length > nextWords.length && sameWords(existingWords.slice(-nextWords.length), nextWords)) return existing
+
+  for (let overlap = Math.min(existingWords.length, nextWords.length) - 1; overlap >= 2; overlap -= 1) {
+    if (!sameWords(existingWords.slice(-overlap), nextWords.slice(0, overlap))) continue
+    const suffix = nextWords.slice(overlap).join(' ')
+    return suffix ? `${existing} ${suffix}` : existing
+  }
+
+  return `${existing} ${normalized}`
 }
 
 function isMicrophoneStartFailure(error: unknown) {

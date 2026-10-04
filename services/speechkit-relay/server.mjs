@@ -40,7 +40,11 @@ wss.on('connection', async (socket) => {
       if (text) {
         if (chunk.final) finals += 1
         else partials += 1
-        socket.send(JSON.stringify({ type: chunk.final ? 'final' : 'partial', text }))
+        socket.send(JSON.stringify({
+          type: chunk.final ? 'final' : 'partial',
+          text,
+          endOfUtterance: Boolean(chunk.end_of_utterance),
+        }))
       }
     }
   })

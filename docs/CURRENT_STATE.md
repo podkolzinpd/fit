@@ -74,6 +74,8 @@ Yandex Cloud PostgreSQL17. Vercel — legacy redirect; новые Vercel deploym
 зависимостью; нельзя включать его обратно поверх новых Yandex writes.
 Клиентский pilot — только оформление, не авторизация данных. RLS/ownership
 проверяются сервером. Откат: CLIENT_LIME_ENABLED=false и новый frontend deployment.
+Голосовой transcript устраняет перекрывающиеся финальные фрагменты SpeechKit,
+сохраняет границы реплик и разделяет однословные упражнения с параметрами.
 Предыдущая продуктовая история и полные чеклисты — PRODUCT_WIKI, docs/design и Git.
 
 ## Ранее открытые post-cutover задачи
