@@ -103,3 +103,76 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
 .fit-client-lime .profile-settings select { appearance: none; height: 48px; padding-right: 36px; }
 .fit-client-lime .profile-settings > .field:has(select) { position: relative; }
 .fit-client-lime .profile-settings > .field:has(select)::after { content: ''; position: absolute; right: 28px; bottom: 32px; width: 16px; height: 16px; background: var(--lime-text-secondary); mask: url('../../docs/design/figma-20261002/assets/arrow-right.svg') center / contain no-repeat; transform: rotate(90deg); pointer-events: none; }
+
+/* Client screen rules are more specific than shared Lime primitives. Keep the
+   approved control contract across profile, progress, creation and overlays. */
+.phone-frame.fit-client-lime :is(.client-trainer-search, .client-trainer-invite-button,
+  .today-primary-cta, .today-picker-cta, .today-review-next, .today-save-actions .workout-cta,
+  .quick-start-button, .profile-settings-link, .workout-completion-share, .workout-completion-actions .button) {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime :is(.today-primary-cta, .today-review-next):not(:disabled) {
+  background: var(--lime-accent);
+  border-color: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime :is(.today-picker-cta, .client-trainer-invite-button) {
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  border: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-client-lime .today-picker-cta { min-height: 48px; padding: 12px 16px; }
+.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs) {
+  padding: 4px;
+  gap: 4px;
+  border-radius: 28px;
+  background: var(--lime-surface-raised);
+  border: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs) button {
+  min-height: 44px;
+  border-radius: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--lime-text-secondary);
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime .ai-progress-periods button::before { content: none; }
+.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs) button.active {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime :is(.today-date-field input, .planned-set-input, .planned-set-rpe,
+  .workout-composer-card textarea, .exercise-plan-rest-field input) {
+  border: 1px solid var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime .today-exercise-editor > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--lime-accent-ink);
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime .today-resume { margin-block: 12px; border-radius: var(--lime-radius-card); }
+.phone-frame.fit-client-lime .today-resume button { min-height: 44px; }
+.phone-frame.fit-client-lime .modal-dialog,
+html.fit-client-lime-document .sheet-overlay .modal-dialog {
+  border-radius: var(--lime-radius-card);
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime .modal-dialog .actions button { min-height: 48px; border-radius: 999px; }
+.phone-frame.fit-client-lime :is(.today-primary-cta, .today-review-next, .today-save-actions .workout-cta):disabled {
+  background: var(--lime-surface-raised);
+  border-color: var(--lime-divider);
+  color: var(--lime-text-secondary);
+}
