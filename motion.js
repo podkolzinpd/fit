@@ -69,23 +69,34 @@
   const categories=[...children[3].children];
   // Trainer: fixed context rail; only the selected working fragment is revealed.
   const trainer=scope[4], gallery=q('.content>div:last-child',trainer), trainerCopy=q('.content>div:first-child',trainer);
-  trainer.classList.add('m-trainer-lime','m-trainer-four');
+  trainer.classList.add('m-trainer-lime','m-trainer-four','m-trainer-approved');
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
   const trainerScreens=['client','ai','finance','marketplace'];
   const trainerCaptions=['Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск тренера'];
   gallery.replaceChildren();
-  trainerScreens.forEach((name,i)=>{const f=document.createElement('figure');f.innerHTML=`<div class="m-screen-window"><img src="assets/trainer-scenarios/${name}.png" alt="Иллюстрация сценария Fit: ${trainerCaptions[i]}. Демонстрационные данные."></div><figcaption><span>0${i+1}</span> ${trainerCaptions[i]}</figcaption>`;gallery.append(f);});
+  trainerScreens.forEach((name,i)=>{const f=document.createElement('figure');f.innerHTML=`<div class="m-screen-window"><img src="assets/trainer-approved/${name}.png" alt="Иллюстрация сценария Fit: ${trainerCaptions[i]}. Демонстрационные данные."></div><figcaption><span>0${i+1}</span> ${trainerCaptions[i]}</figcaption>`;gallery.append(f);});
   const figures=qa('figure',gallery);
   const proof=document.createElement('div');proof.className='m-trainer-proof';
   figures.forEach((f,i)=>{
     const panel=document.createElement('figure');panel.className='m-proof-panel';
     const win=document.createElement('div');win.className='m-proof-window';win.append(q('img',f).cloneNode());panel.append(win);
     panel.classList.add(`m-proof-${trainerScreens[i]}`);
-    panel.append(q('figcaption',f).cloneNode(true));
+    if(i===1){
+      const video=document.createElement('video');video.className='m-trainer-exercise-video';
+      video.src='assets/trainer-approved/ai.mp4';video.poster='assets/trainer-approved/ai.png';
+      video.muted=true;video.loop=true;video.playsInline=true;video.preload='metadata';
+      video.setAttribute('aria-label','Программа с ИИ: анимации упражнений из каталога Fit');
+      video.addEventListener('playing',()=>video.classList.add('is-playing'));
+      video.addEventListener('error',()=>video.classList.remove('is-playing'));
+      win.append(video);
+    }
     proof.append(panel);
   });gallery.append(proof);
   const route=document.createElement('div');route.className='m-route';route.innerHTML='<span></span>';trainer.append(route);
-  note(trainer,'Иллюстрации сценариев · демонстрационные данные. Платежи, связь и продвижение — концепт развития.');
+  // Concept/demonstration status remains in alt text and presenter notes, not in
+  // the visible footer. The user approved these four visual scenarios in chat.
+  const trainerNotes=q('.speaker-notes',trainer);
+  if(trainerNotes)trainerNotes.append(document.createTextNode(' Экраны — согласованные иллюстрации сценариев с демонстрационными данными и вымышленными портретами. Анимации упражнений — из каталога приложения Fit.'));
   // Client: preserve the original overview for entry, exit, static view and print.
   const client=scope[5], clientImgs=qa('figure img',client).map(x=>x.src);
   note(client,'Экраны разных тренировок. Сообщество — план развития.');
@@ -210,6 +221,7 @@
   }
   function apply(n=step, motion=true, prev=step) {
     step=n;
+    qa('video',proof).forEach(v=>{v.pause();v.classList.remove('is-playing');});
     toolbar.hidden=index>=10;
     if(index>=10)return updateToolbar();
     const s=scope[index];s.dataset.motionStep=n;
@@ -226,7 +238,7 @@
       const focus=staticMode||scene===0?-1:scene-1;
       trainer.classList.toggle('m-trainer-overview',focus<0);
       figures.forEach((f,i)=>{
-        f.style.transform=focus<0?`translate(${i%2*382}px,${Math.floor(i/2)*330}px)`:`translate(480px,${i*156}px)`;
+        f.style.transform=focus<0?`translate(${i%2*390}px,${Math.floor(i/2)*380}px)`:`translate(520px,${i*183}px)`;
         f.style.opacity=focus<0||i===focus?'1':'.62';
         f.classList.toggle('m-context-current',i===focus);
       });
@@ -236,6 +248,7 @@
       });
       qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus?'1':'.7');
       q('span',route).style.width=(focus<0?100:(focus+1)/4*100)+'%';
+      if(focus===1&&!document.hidden){const video=q('video',proof);video.play().catch(()=>video.classList.remove('is-playing'));}
     }
     if(index===5)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
@@ -268,7 +281,7 @@
   let beforePrint=null;
   window.addEventListener('beforeprint',()=>{stop();beforePrint={index,step,staticMode};staticMode=true;scope.forEach((s,i)=>{index=i;apply(max[i],false);});index=beforePrint.index;});
   window.addEventListener('afterprint',()=>{if(beforePrint){({index,step,staticMode}=beforePrint);apply(step,false);beforePrint=null;}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();qa('video',proof).forEach(v=>v.pause());}else if(index===4&&!staticMode&&step===1){q('video',proof).play().catch(()=>{});}});
   window.FIT_MOTION={version:3,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',iterationBaseline:'d8bf8f0a7a8228490c80b66ba8567d2b9b851f14',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
     state:()=>({index,step,staticMode,playing,animations:animations.size}),
     seek:(i,n=0)=>{stop();go(i,n);},settle,
