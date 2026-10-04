@@ -1,0 +1,25 @@
+/* Two distinct, single-stop scenes. Existing Fit phone and lime tokens. */
+#deck>.progress-month>h2{width:790px;top:154px;font-size:60px!important;line-height:1.1!important}
+.progress-month .pm-copy{position:absolute;left:76px;top:337px;width:700px}
+.progress-month .pm-copy>p{font-size:27px;line-height:1.45;color:#b7bcbe;margin:0 0 40px}
+.progress-month .pm-lime{color:#b6ef4d}
+.progress-month .pm-main-result{border-top:1px solid #384043;padding-top:27px}
+.progress-month .pm-main-result>span{font-size:23px;color:#b7bcbe}
+.progress-month .pm-main-result>div{display:flex;gap:25px;align-items:baseline;margin:14px 0 11px}
+.progress-month .pm-main-result b{font-size:105px;line-height:1;letter-spacing:-5px;font-weight:600}
+.progress-month .pm-main-result small{font-size:35px;letter-spacing:-1px;font-weight:500}
+.progress-month .pm-main-result em{font-size:49px;font-style:normal;color:#777f81}
+.progress-month .pm-summary{display:flex;align-items:baseline;gap:22px;margin-top:36px}.progress-month .pm-summary strong{font-size:36px;color:#b6ef4d}.progress-month .pm-summary span{font-size:23px;color:#b7bcbe}
+.progress-month .pm-phone{left:957px;width:470px;height:808px;top:43px;font-family:FitUI,Arial,sans-serif}
+.progress-month .pm-phone .cs-phone-body{top:108px;bottom:36px}
+.pm-period{display:flex;justify-content:space-between;align-items:center;font-size:17px;color:#d2d2d8;margin:0 0 17px}.pm-period small{font-size:13px;color:#909098}
+.pm-card{background:#1a1a1c;border-radius:25px;padding:19px}.pm-phone-result{display:flex;align-items:baseline;justify-content:space-between;margin-top:10px}.pm-phone-result strong{font-size:42px;font-weight:500;line-height:1}.pm-phone-result small{font-size:24px}.pm-phone-result>span{font-size:17px;color:#b6ef4d}
+.pm-chart{width:100%;height:172px;display:block;margin-top:10px;overflow:visible}.pm-last{display:flex;justify-content:space-between;border-top:1px solid #343438;padding-top:14px;font-size:15px;color:#a3a3aa}.pm-last b{font-weight:500;color:#f5f5f5;font-size:17px}
+.pm-load{margin-top:15px;padding:17px 19px 10px}.pm-load-title{display:flex;justify-content:space-between;align-items:baseline;font-size:19px}.pm-load-title strong{font-weight:500}.pm-load-title span{font-size:14px;color:#9b9ba4}
+.pm-map-row{display:flex;align-items:center;gap:23px;height:229px}.pm-body-map{width:114px;height:229px;flex:none}.pm-dot{width:8px;height:8px;background:#b6ef4d;border-radius:50%;display:block;margin-bottom:10px}
+.client-story .pm-map-row h4{font-size:19px!important;line-height:1.25!important}.pm-map-row p{font-size:15px;color:#a0a0a7;margin:12px 0 7px}.pm-map-row strong{font-size:23px;font-weight:500;color:#b6ef4d}
+.pm-award-copy{border-top:1px solid #384043;padding-top:30px;margin-top:49px}.pm-award-copy>span{font-size:23px}.pm-award-copy>strong{display:block;font-size:60px;line-height:1.13;letter-spacing:-1.8px;margin:20px 0 24px}.pm-award-copy>p{font-size:24px;color:#b7bcbe;margin:0}
+.pm-award-hero{background:#1a1a1c;border:1px solid #33343a;border-radius:28px;text-align:center;padding:24px 22px 20px}.pm-badge{position:relative;display:block;width:88px;height:88px;overflow:hidden;border-radius:20%;background:#232328}.pm-badge img{position:absolute;max-width:none;width:125%;height:125%;left:-12.5%;top:-12.5%;object-fit:cover}.pm-hero-badge{width:170px;height:170px;margin:0 auto 16px}.pm-earned{font-size:15px;color:#b6ef4d}.client-story .pm-award-hero h3{font-size:25px!important;margin:12px 0 10px!important}.pm-award-hero p{font-size:17px;color:#aaaab2;margin:0 0 23px}.pm-award-bar{height:5px;background:#30352a;border-radius:99px}.pm-award-bar i{display:block;width:100%;height:100%;border-radius:99px;background:#b6ef4d}.pm-award-count{display:block;text-align:right;font-size:15px;color:#b6ef4d;margin-top:9px}.pm-other-title{font-size:18px;margin:23px 0 17px}.pm-other-awards{display:grid;grid-template-columns:1fr 1fr;gap:14px}.pm-other-awards>div{background:#1a1a1c;border-radius:22px;padding:17px 10px;text-align:center}.pm-other-awards .pm-badge{margin:0 auto 11px}.pm-other-awards strong{display:block;font-size:17px;font-weight:500}.pm-other-awards small{display:block;margin-top:7px;font-size:13px;line-height:1.3;color:#a0a0a7}
+#deck .progress-month svg.pm-chart{width:100%!important;height:172px!important;max-width:none!important;stroke:none}
+#deck .progress-month svg.pm-body-map{width:114px!important;height:229px!important;max-width:none!important}
+@media(prefers-reduced-motion:reduce){.progress-month *{transition:none!important;animation:none!important}}
