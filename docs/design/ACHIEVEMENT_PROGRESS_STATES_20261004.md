@@ -57,7 +57,7 @@
 ## Статус и доказательства
 
 - PR 1: #1425 слит, CI и production readback успешны (`8fc46a31`).
-- PR 2: #1427 слит, локальный check и WebKit/Chromium 390/430 пройдены;
-  merge-CI и production-проверка ожидаются.
+- PR 2: #1427 слит; локальный check, WebKit/Chromium 390/430, merge-CI,
+  production smoke и readback успешны (`63226678`).
 - PR 3: #1428 открыт; полный локальный check и сквозные WebKit/Chromium
   тесты, включая повторный вход, прошли. Выпуск после PR 2.
