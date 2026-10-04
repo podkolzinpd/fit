@@ -38,7 +38,7 @@
 .fit-lime-shell .fit-lime-plan-chip { max-width: 48%; background: transparent; color: var(--lime-text); font-size: 14px; line-height: 20px; min-height: 44px; }
 .fit-lime-shell .fit-lime-plan-chip > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .fit-lime-shell .fit-lime-plan-avatar { display: grid; place-items: center; flex: 0 0 24px; height: 24px; border-radius: 50%; background: var(--lime-surface-high) }
-.fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar { width: auto; max-width: 50%; color: var(--lime-accent); background: transparent; font-size: 14px; line-height: 20px; min-height: 44px; }
+.fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar { width: auto; max-width: 50%; color: var(--lime-accent-ink); background: transparent; font-size: 14px; line-height: 20px; min-height: 44px; }
 .fit-lime-shell .fit-lime-plan-controls > .schedule-v2-calendar > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .fit-lime-shell .fit-lime-plan-send,
 .fit-lime-shell .fit-lime-plan-mic { flex: 0 0 44px; margin-left: auto; background: var(--lime-accent); color: var(--lime-text-on-accent) }
@@ -138,7 +138,7 @@
 }
 .fit-lime-shell.workout-create-edit-identity .today-voice-text-inline,
 .fit-lime-shell.workout-create-edit-identity .today-picker-cta,
-.fit-lime-shell.workout-create-edit-identity .today-review-back { color: var(--lime-accent) }
+.fit-lime-shell.workout-create-edit-identity .today-review-back { color: var(--lime-accent-ink) }
 .fit-lime-shell.workout-create-edit-identity .today-recognized,
 .fit-lime-shell.workout-create-edit-identity .today-clarification,
 .fit-lime-shell.workout-create-edit-identity .today-unparsed {
@@ -153,7 +153,7 @@
 }
 .fit-lime-shell.workout-create-edit-identity .today-exercise.planned-exercise { border-color: var(--lime-divider) }
 .fit-lime-shell.workout-create-edit-identity .today-exercise-title strong { color: var(--lime-text); font-weight: 500 }
-.fit-lime-shell.workout-create-edit-identity .today-exercise-editor summary { color: var(--lime-accent) }
+.fit-lime-shell.workout-create-edit-identity .today-exercise-editor summary { color: var(--lime-accent-ink) }
 .fit-lime-shell.workout-create-edit-identity .planned-set-input,
 .fit-lime-shell.workout-create-edit-identity .planned-set-rpe,
 .fit-lime-shell.workout-create-edit-identity .exercise-plan-rest-field input,

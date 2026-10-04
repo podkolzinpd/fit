@@ -7,6 +7,7 @@ html.fit-lime-document,
   --lime-surface-raised: #252529;
   --lime-surface-high: #3b3b40;
   --lime-accent: #b6ef4d;
+  --lime-accent-ink: var(--lime-accent);
   --lime-accent-muted: #25360c;
   --lime-pink: #ba60ea;
   --lime-yellow: #f8b021;

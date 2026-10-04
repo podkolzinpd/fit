@@ -296,6 +296,15 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     } else if (url.pathname === `/v1/workouts/${workoutId}/question/answer` && route.request().method() === 'PUT') {
       questionAnswered = true
       body = { workout: { version: 2 } }
+    } else if (/^\/v1\/workout-sets\/[0-9a-f-]+\/(draft|confirm)$/.test(url.pathname)) {
+      const id = url.pathname.split('/')[3]
+      const command = route.request().postDataJSON() as { expectedVersion: number; draft?: { reps?: number; weightKg?: number } }
+      const confirmed = url.pathname.endsWith('/confirm')
+      workouts = workouts.map((item) => ({ ...item, exercises: item.exercises.map((exercise) => ({ ...exercise,
+        sets: exercise.sets.map((set) => set.id === id ? { ...set, fact: command.draft ?? set.fact,
+          confirmedAt: confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 } : set),
+      })) }))
+      body = { set: { version: command.expectedVersion + 1 } }
     } else if (/^\/v1\/workouts\/[0-9a-f-]+\/(start|finish)$/.test(url.pathname) && route.request().method() === 'POST') {
       const id = url.pathname.split('/')[3]
       const finished = url.pathname.endsWith('/finish')
@@ -2941,5 +2950,40 @@ for (const width of [390, 430]) {
     await page.reload()
     await expect(page.locator('.phone-frame')).not.toHaveClass(/fit-client-lime/)
     await expect(page.getByLabel('Тёмная тема')).toBeVisible()
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime workout lifecycle ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises: [{
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'reps', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, reps: 8, fact: {}, confirmedAt: null, version: 1 }],
+    }] }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    await expect(page.locator('.fit-client-lime')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeEnabled()
+    await page.screenshot({ path: testInfo.outputPath(`client-home-${theme}.png`) })
+    await page.goto('/me/workouts')
+    await expect(page.locator('.client-workouts-identity')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`client-workouts-${theme}.png`) })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+    await expect(page.locator('.live-workout-page')).toBeVisible()
+    await expect(page.locator('.live-bottom-bar')).toHaveCSS('background-color', theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 28)')
+    await page.screenshot({ path: testInfo.outputPath(`client-live-${theme}.png`) })
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect(page.getByText('Готово 1 из 1', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+    const confirm = page.getByRole('button', { name: 'Завершить', exact: true })
+    if (await confirm.isVisible()) await confirm.click()
+    await expect(page.getByRole('region', { name: 'Тренировка завершена', exact: true })).toBeVisible()
+    await expect(page.getByText('Выполнено 1 из 1 подходов')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`client-completion-${theme}.png`) })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
