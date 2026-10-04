@@ -44,7 +44,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -67,6 +67,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     id: '10000000-0000-4000-8000-000000000050', clientId, createdBy: profileId, recordedOn: '2026-09-24',
     weightKg: 70 as number | null, chestCm: null, waistCm: null, hipCm: null, notes: null, customMetrics: [], version: 1,
   }] : []
+  let failFirstSetConfirm = options.failFirstSetConfirm ?? false
   let saveAttempts = 0
   let chatSendAttempts = 0
   let profileSaveAttempts = 0
@@ -303,6 +304,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       const id = url.pathname.split('/')[3]
       const command = route.request().postDataJSON() as { expectedVersion: number; draft?: { reps?: number; weightKg?: number } }
       const confirmed = url.pathname.endsWith('/confirm')
+      if (confirmed && failFirstSetConfirm) { failFirstSetConfirm = false; await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }); return }
       workouts = workouts.map((item) => ({ ...item, exercises: item.exercises.map((exercise) => ({ ...exercise,
         sets: exercise.sets.map((set) => set.id === id ? { ...set, fact: command.draft ?? set.fact,
           confirmedAt: confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 } : set),
@@ -2984,6 +2986,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(page.locator('.live-workout-page')).toBeVisible()
     await expect(page.locator('.live-bottom-bar')).toHaveCSS('background-color', theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 28)')
     await page.screenshot({ path: testInfo.outputPath(`client-live-${theme}.png`) })
+    await expect(page.locator('.live-set-check:not(.done)')).toHaveText('Готово')
     await page.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect(page.getByText('Готово 1 из 1', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
@@ -3221,4 +3224,32 @@ test('Client Lime voice parsing exposes progress and retains failed transcript',
   await expect(page.getByRole('region', { name: 'Не нашли упражнение' })).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('Упражнение с необычным названием десять раз')
+})
+
+for (const theme of ['light', 'dark']) test(`Client Lime confirmation failure retries without counting planned sets ${theme}`, async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page, { role: 'client', profileId: clientId, failFirstSetConfirm: true, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises: [{
+    id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'reps', position: 0,
+    blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+    restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+    sets: [0, 1].map((position) => ({ id: `10000000-0000-4000-8000-00000000008${position + 2}`, position, reps: 8, fact: {}, confirmedAt: null, version: 1 })),
+  }] }] })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await expect(page.getByText('Готово 0 из 2', { exact: true })).toBeVisible()
+  await expect(page.locator('.live-set-check:not(.done)').first()).toHaveText('Готово')
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.getByText('Не удалось подтвердить подход. Нажмите «Повтор».')).toBeVisible()
+  await expect(page.getByText('Готово 0 из 2', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.getByText('Готово 1 из 2', { exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('Готово 1 из 2', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await expect(page.getByText('Не подтверждено подходов: 1. Завершить тренировку?')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath(`client-live-partial-${theme}.png`) })
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+  await expect(page.getByText('Выполнено 1 из 2 подходов')).toBeVisible()
 })
