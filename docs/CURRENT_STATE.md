@@ -44,6 +44,17 @@ Migration121 хранит ровно один hash native login `budoha1`, пр�
 `37193370353`: применена migration121, availability50/50 без retry. Main CI
 `37193370317` success. Frontend-публикация ещё выполняется; не считать её завершённой.
 
+## Следующий персональный pilot — ссылки на функции в Assistant
+
+Пользователь разрешил реализацию, PR, слияние зелёного CI и production-выпуск
+только для native Yandex login `irainbuster98`. План и критерии:
+`docs/design/ASSISTANT_FEATURE_LINKS_PILOT_20261004.md`. Сервер отвечает на
+навигационные вопросы только reviewed internal link markers, frontend отклоняет
+внешние и неизвестные пути. Доступ требует одновременно environment switch и
+привязанный hash allowlist; после первого API rollout нужен повторный вход
+Yandex ID. До успешных CI, API/migration rollout и frontend activation задачу
+нельзя считать выпущенной.
+
 ## Проверки задачи
 
 - PR1–4: локальные проверки пройдены; после обновления main PR2 восстановлены

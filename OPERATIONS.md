@@ -1089,6 +1089,22 @@ opaque credential: read-only `x-fit-pilot-session` для изолированн
 отклоняются. Actor-context задаётся PostgreSQL-транзакцией; отдельный Supabase
 JWT, OAuth Client secret или новый YandexGPT secret endpoint-у не нужны.
 
+### Персональные ссылки на функции в Assistant
+
+Детерминированные ссылки включаются только при `enabled=true` у привязанной
+строки `app_private.assistant_feature_links_pilot_allowlist`. Frontend требует
+серверный experiment `assistantFeatureLinks=true`; browser allowlist нет.
+Таблица содержит один разрешённый SHA-256 native Yandex login; email и UUID не
+публикуются. Привязку выполняет
+`app_private.bind_assistant_feature_links_for_yandex_login` после проверенного
+Yandex OAuth callback. После первого выпуска пользователь должен выйти и снова
+войти через Yandex ID.
+
+Rollback: owner-транзакцией установить `enabled=false` у единственной строки и
+прочитать значение обратно. Повторный OAuth callback не возвращает выключенную
+строку в `true`. Удалять историю сообщений при откате не требуется: frontend
+рендерит только reviewed internal routes, а новых markers API не создаёт.
+
 ## Google OAuth
 
 Создайте отдельный Google Web OAuth client для V2 и добавьте redirect URI:

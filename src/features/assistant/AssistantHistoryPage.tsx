@@ -29,6 +29,7 @@ import { isAssistantProgramSurfaceEnabled } from './assistant-program-availabili
 import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { RunMetricsFields, WorkoutDurationField } from '../workouts'
 import { allowsOptionalDistance } from '../../shared/exercise-measurements'
+import { extractAssistantNavigationLinks } from './assistant-navigation-links'
 
 type FailedTurn = { turnId: string; message: string }
 
@@ -163,6 +164,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
   const clientProgramBrief = actor?.role === 'client' && latestActiveAction?.action.payload.programPilot === true
     && assistantActionView({ tool: latestActiveAction.action.tool, payload: latestActiveAction.action.payload }) === 'program-brief'
   const programEnabled = isAssistantProgramSurfaceEnabled(backend.cacheKey, actor?.userId)
+  const featureLinksEnabled = actor?.experiments?.assistantFeatureLinks === true
 
   useLayoutEffect(() => {
     if (!conversationId || loadingMessages) return
@@ -407,7 +409,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
         if (message.action?.payload.programPilot === true && message.action.lifecycleStatus === 'applied') return <article key={message.id} className="assistant-message assistant-message-result" data-message-kind="action-result"><p>Программа добавлена в расписание: {Array.isArray(message.action.payload.canonicalWorkouts) ? message.action.payload.canonicalWorkouts.length : ''} тренировок.</p><Link to={`/clients/${String(message.action.payload.clientId)}/workouts`}>Открыть тренировки</Link></article>
         const showContent = !message.action || (message.action.payload.programPilot === true && message.action.status === 'needs_input') || message.content.trim() !== message.action.description.trim() || (message.action.tool === 'summarize_progress' && message.action.lifecycleStatus === 'applied')
         if (!showContent) return null
-        return <article key={message.id} className="assistant-message assistant-message-assistant" data-message-kind="assistant"><AssistantMessageContent content={message.content} /></article>
+        return <article key={message.id} className="assistant-message assistant-message-assistant" data-message-kind="assistant"><AssistantMessageContent content={message.content} navigationEnabled={featureLinksEnabled} /></article>
       })}
       {customExercises.isError && <div className="assistant-message-error" data-message-kind="error" role="alert"><span>Не удалось загрузить каталог упражнений.</span><button type="button" onClick={() => void customExercises.refetch()}>Повторить</button></div>}
       {error && <div className="assistant-message-error" data-message-kind="error" role="alert"><span>{error}</span>{failedTurn
@@ -451,12 +453,20 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
   </main>
 }
 
-function AssistantMessageContent({ content }: { content: string }) {
-  const displayContent = compactAssistantContent(content)
+function AssistantMessageContent({ content, navigationEnabled }: { content: string; navigationEnabled: boolean }) {
+  const navigation = navigationEnabled
+    ? extractAssistantNavigationLinks(content)
+    : { content, links: [] }
+  const displayContent = compactAssistantContent(navigation.content)
   const lines = displayContent.split('\n').map((line) => line.trim()).filter(Boolean)
   const bullets = lines.filter((line) => line.startsWith('• '))
-  if (bullets.length) return <div className="assistant-message-copy"><p>{lines.find((line) => !line.startsWith('• '))}</p><ul>{bullets.map((line) => <li key={line}>{line.slice(2)}</li>)}</ul></div>
-  return <p>{displayContent}</p>
+  const intro = lines.find((line) => !line.startsWith('• '))
+  return <div className="assistant-message-copy">
+    {bullets.length
+      ? <>{intro && <p>{intro}</p>}<ul>{bullets.map((line) => <li key={line}>{line.slice(2)}</li>)}</ul></>
+      : displayContent && <p>{displayContent}</p>}
+    {navigation.links.length > 0 && <div className="assistant-navigation-links">{navigation.links.map((link) => <Link key={link.path} className="link" to={link.path}>{link.label}</Link>)}</div>}
+  </div>
 }
 
 type SummaryPayload = { step: string; clientId?: string; clientName?: string; transcript?: string; candidates?: { id: string; fullName: string }[]; options?: string[]; periodStart?: string; periodEnd?: string; periodLabel?: string; missing?: string[]; goal?: string | null; brief?: string }

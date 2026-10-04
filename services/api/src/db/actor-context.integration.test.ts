@@ -941,6 +941,54 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('binds assistant feature links to only the reviewed Yandex login and supports an immediate kill switch', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const reviewedLogin = 'cb34df8e58e7ee2b8e26a5adf3244394f3a599616f5d7a607fd4a38b0ae754e3'
+      const profileId = randomUUID()
+      const otherProfileId = randomUUID()
+      const subject = randomBytes(32).toString('hex')
+      const otherSubject = randomBytes(32).toString('hex')
+      try {
+        await connection.query('begin')
+        await connection.query(
+          `insert into public.profiles (id, account_role)
+           values ($1, 'client'), ($2, 'client')`,
+          [profileId, otherProfileId],
+        )
+        await connection.query(
+          `insert into app_private.auth_identities
+             (provider, provider_subject_sha256, profile_id)
+           values ('yandex', $1, $2), ('yandex', $3, $4)`,
+          [subject, profileId, otherSubject, otherProfileId],
+        )
+        const bind = async (subjectHash: string, loginHash: string) => (await connection.query<{ bound: boolean }>(
+          'select app_private.bind_assistant_feature_links_for_yandex_login($1, $2) bound',
+          [subjectHash, loginHash],
+        )).rows[0]?.bound
+
+        expect(await bind(subject, 'a'.repeat(64))).toBe(false)
+        expect(await bind(subject, reviewedLogin)).toBe(true)
+        expect(await bind(otherSubject, reviewedLogin)).toBe(false)
+
+        await connection.query(`select set_config('request.jwt.claim.sub', $1, true)`, [profileId])
+        await connection.query('set local role fit_api')
+        expect((await connection.query<{ enabled: boolean }>(
+          'select app_private.assistant_feature_links_enabled() enabled',
+        )).rows[0]?.enabled).toBe(true)
+        await connection.query('reset role')
+
+        await connection.query('update app_private.assistant_feature_links_pilot_allowlist set enabled = false')
+        await connection.query('set local role fit_api')
+        expect((await connection.query<{ enabled: boolean }>(
+          'select app_private.assistant_feature_links_enabled() enabled',
+        )).rows[0]?.enabled).toBe(false)
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
     it('seeds exactly two isolated calendars once, enforces actor RLS and protects edited fixtures', async () => {
       if (!ownerPool || !enrollmentPool || !runtimePool) throw new Error('Pools not ready')
       const pilotIds = [randomUUID(), randomUUID()]
