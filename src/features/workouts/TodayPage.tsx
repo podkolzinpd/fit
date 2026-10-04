@@ -150,6 +150,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [items, setItems] = useState<ParsedWorkoutExercise[]>([])
+  const planExercises = useMemo(() => items.map(draftExercise), [items])
   const [lastAddedReviewRound, setLastAddedReviewRound] = useState<{ blockId: string; position: number } | null>(null)
   const [reordering, setReordering] = useState(false)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
@@ -203,6 +204,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [firstClientCreating, setFirstClientCreating] = useState(false)
   const [firstClientError, setFirstClientError] = useState<Error | null>(null)
   const planId = limePlanning ? new URLSearchParams(location.search).get('plan') ?? entryState?.planRequestId : undefined
+  const planOnly = limePlanning && Boolean(planId)
   const draftKey = todayDraftKey(actor!.userId, planId)
   const todayPath = clientMode ? '/me' : '/today'
   const planQuery = planId ? `&plan=${encodeURIComponent(planId)}` : ''
@@ -262,7 +264,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setItems(draft.items)
       setClientId(draft.clientId)
       if (limePlanning) setPlanMetadata({ title: draft.title, endTime: draft.endTime, requestId: draft.requestId ?? crypto.randomUUID(), sourceFormDraftKey: draft.sourceFormDraftKey })
-      setRecordMode(draft.recordMode ?? 'planned')
+      setRecordMode(planOnly ? 'planned' : draft.recordMode ?? 'planned')
       setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
       setActualDurationMinutes(draft.actualDurationMinutes ?? '')
@@ -298,16 +300,17 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       removeTodayDraft(draftKey)
       return
     }
-    writeTodayDraft(draftKey, { ...(limePlanning ? planMetadata : {}), screen, text, lastLlmText: lastLlmText ?? undefined, choices, items, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat })
+    const persistedItems = planOnly ? items.map((item, index) => ({ ...item, structure: { ...item.structure, blockId: planExercises[index]?.blockId ?? item.structure?.blockId } })) : items
+    writeTodayDraft(draftKey, { ...(limePlanning ? planMetadata : {}), screen, text, lastLlmText: lastLlmText ?? undefined, choices, items: persistedItems, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat })
     if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))) {
       const source = readWorkoutFormDraft(planMetadata.sourceFormDraftKey)
       // A different quick plan may now occupy this date's slot. Never overwrite it.
       if (source && source.requestId === planMetadata.requestId) writeWorkoutFormDraft(planMetadata.sourceFormDraftKey, {
         ...source, title: planMetadata.title, composerText: text, clientId, workoutDate, startTime,
-        endTime: planMetadata.endTime ?? '', trainingFormat, exercises: items.map(draftExercise),
+        endTime: planMetadata.endTime ?? '', trainingFormat, exercises: planExercises,
       })
     }
-  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
+  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, planExercises, planOnly, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
   const resolved = recognized
@@ -343,7 +346,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: items.map(draftExercise) }
+      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: planOnly ? planExercises : items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -362,7 +365,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       if (!clientMode) await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      navigate(`/workouts/${id}`, { replace: true, state: { returnTo, firstPlanClient: firstPlanClientState } })
+      if (planOnly && mode === 'planned') navigate(returnTo, { replace: true, state: { savedPlanId: id } })
+      else navigate(`/workouts/${id}`, { replace: true, state: { returnTo, firstPlanClient: firstPlanClientState } })
     }, onError: () => trackGoal('today_workout_save_error'),
   })
   const snoozeAttention = useMutation({
@@ -848,7 +852,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!limePlanning && voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : 'Выберите вариант и дату'} /></div>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : planOnly ? 'Сохраните план' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : planOnly ? 'Проверьте клиента, дату и формат' : 'Выберите вариант и дату'} /></div>
       {screen === 'review' && <>
       {reviewBlocks.length > 1 && <div className="today-review-order-toolbar">{reordering
         ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div>
@@ -932,8 +936,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { trainingFormatTouched.current = false; setTrainingFormat(undefined); setClientId(id) }} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
       {(prefillError || save.error) && <p className="error">{prefillError ?? save.error?.message}</p>}
       <section className="today-save-actions" aria-label="Тип записи">
-        <p className="today-save-question">Как сохранить?</p>
-        <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => { setRecordMode('planned'); setMissingCardioTime(null) }}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
+        {planOnly ? <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(workoutDate)} · {startTime || 'Без времени'} · {trainingFormat === 'with_trainer' ? 'С тренером' : 'Самостоятельно'}</p> : <>
+          <p className="today-save-question">Как сохранить?</p>
+          <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => { setRecordMode('planned'); setMissingCardioTime(null) }}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
+        </>}
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label><label className="today-date-field"><span>{recordMode === 'planned' ? 'Время' : 'Время начала'}</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
         {!clientMode && <div className="today-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
         {recordMode === 'completed' && <label className="today-date-field"><span>Длительность, мин · необязательно</span><input aria-label="Длительность тренировки, мин" inputMode="decimal" value={actualDurationMinutes} placeholder="Например, 50" onChange={(event) => setActualDurationMinutes(event.target.value)} /><small>Сколько длилась сама тренировка, а не её запись в приложении.</small></label>}
@@ -949,8 +955,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
               const missing = recordMode === 'completed'
                 ? firstCardioDraftMissingEnteredDuration({ exercises: items.map(draftExercise) }) : null
               if (missing) setMissingCardioTime(missing)
-              else save.mutate(recordMode)
-            }}>{recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>}
+              else save.mutate(planOnly ? 'planned' : recordMode)
+            }}>{planOnly ? 'Сохранить план' : recordMode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку'}</WorkoutCta>}
       </section></section>}
     </section>}
     {supplementalLoadError && <InlineRequestError error={supplementalLoadError} />}

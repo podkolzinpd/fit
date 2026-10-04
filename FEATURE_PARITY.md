@@ -1,5 +1,7 @@
 # Feature parity с trainer-app
 
+YAFIT-593 / PR2: единое завершение календарного планирования voice/text/manual, клиент/дата/формат в сводке, возврат с savedPlanId без потери calendar URL; retry/reload сохраняет requestId и blockId. Запись выполненной и немедленный старт вне этой ветки сохранены.
+
 YAFIT-593 / PR1: изоляция календарного plan/voice draft по requestId, синхронизация упражнений с исходной формой с проверкой ID, сохранение идентичности между review/save/reload. Legacy draft и непилотный поток не меняются. Полный план пяти PR: docs/design/FIT_LIME_VIDEO_FIXES_20261004.md.
 
 YAFIT-591 / PR2: Lime-календарь запускает Live сразу после выбора клиента,

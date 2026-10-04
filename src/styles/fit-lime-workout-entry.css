@@ -189,3 +189,5 @@
   .fit-lime-shell.workout-create-edit-identity .today-text-fallback { padding: 18px }
 }
 .phone-frame.fit-lime-shell.workout-create-edit-identity :is(.today-primary-cta, .today-review-next, .today-save-actions .workout-cta, .today-voice-hero-compact .voice-input-button) { border-radius: 999px; font-weight: 500; }
+.fit-lime-shell .today-plan-summary { margin: 0; color: var(--lime-text-secondary); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere }
+.fit-lime-shell.workout-create-edit-identity .today-voice-text-inline { position: relative; z-index: 3; min-width: 48px; min-height: 48px }
