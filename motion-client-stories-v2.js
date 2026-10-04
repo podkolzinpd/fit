@@ -230,6 +230,7 @@
   }
   function apply(n=step, motion=true, prev=step) {
     step=n;
+    window.FIT_FINANCE?.render(all[index],!staticMode,animate);
     clientStories.forEach(story=>story.pause());
     qa('video',proof).forEach(v=>{v.pause();v.classList.remove('is-playing');});
     toolbar.hidden=index>=motionCount;
