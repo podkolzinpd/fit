@@ -56,13 +56,13 @@
   const cover=q('img[src="cover-people.png"]',scope[0]);
   cover.classList.add('m-cover-base');
   const coverTitle=cover.cloneNode();coverTitle.className='m-cover-layer m-cover-title';coverTitle.alt='';coverTitle.setAttribute('aria-hidden','true');scope[0].append(coverTitle);
-  // Idea: the existing blocks, now with editorial contrast and a single reading order.
-  scope[1].classList.add('m-light');
+  // Idea: keep the two benefits; feature details follow in the product scenes.
+  // Both opening slides inherit the same dark Fit palette as the rest of the deck.
+  qa('.content section ul',scope[1]).forEach(el=>el.remove());
   qa('.content section',scope[1]).forEach((el,i)=>phase(el,i));
   phase(q('.content>div>div:last-child',scope[1]),2);
   // Market: reveal original SVG elements in place, never rescale one group alone.
-  const market=scope[2];market.classList.add('m-light');
-  qa('svg text',market).forEach(el=>{const c=el.getAttribute('fill');el.setAttribute('fill',c==='#d6f500'?'#3c491a':c==='#b7bcbe'||c==='#a7acae'?'#596166':'#202527');});
+  const market=scope[2];
   const rects=qa('svg rect[x="0"]',market), paths=qa('svg path',market), aud=qa('svg text[x="222"]',market);
   rects.forEach((el,i)=>phase(el,i));paths.forEach((el,i)=>phase(el,i));aud.forEach((el,i)=>phase(el,Math.floor(i/2)));
   phase(q('svg text[y="532"]',market),3);
