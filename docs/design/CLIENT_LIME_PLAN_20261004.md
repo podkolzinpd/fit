@@ -111,3 +111,13 @@ budoha1 с auth UUID, включение и production smoke остаются н
 Порядок выпуска/отката: CLIENT_LIME_RELEASE_20261004.md.
 
 Контраст токенов: light supporting/white 6.95:1, light accent/background 6.69:1, dark supporting/surface 8.80:1, black/lime primary 15.44:1. Это расчёт выбранных пар, не полный accessibility-аудит.
+
+## Уточнение механизма включения — 2026-10-04
+
+Владелец указал на существующий тренерский пилот без ручного UUID. В PR5
+используется тот же проверенный OAuth-контур, но отдельные client allowlist,
+роль и `experiments.clientLime`. Native login `budoha1` сопоставляется с internal
+profile ID на сервере. Исходный scope (одна учётка) и порядок пяти PR сохранены.
+UUID из браузера/ручной ввод не нужен; старый build-time UUID allowlist в PR5
+перестаёт использоваться. Новое назначение появляется после повторного Yandex
+входа. 70 PostgreSQL integration, 208 API и 117 UI gate checks прошли.

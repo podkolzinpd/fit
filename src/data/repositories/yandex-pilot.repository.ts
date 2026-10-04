@@ -16,6 +16,7 @@ const profilePayloadSchema = z.object({
   experiments: z.object({
     trainerScheduleV2: z.boolean(),
     fitLime: z.boolean().optional(),
+    clientLime: z.boolean().optional(),
   }).optional(),
   preferences: z.object({
     scheduleDensity: z.enum(['comfortable', 'compact']),

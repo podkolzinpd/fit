@@ -901,6 +901,46 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('binds Client Lime only to the verified native login and keeps rollback and trainer isolation', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const login = 'c04908d54f928f24a1d3d2d53b666a78546a4e0ab6306a250b48863fc463a488'
+      const clientProfile = randomUUID()
+      const otherProfile = randomUUID()
+      const subject = randomBytes(32).toString('hex')
+      const otherSubject = randomBytes(32).toString('hex')
+      try {
+        await connection.query('begin')
+        await connection.query(`insert into public.profiles (id, account_role) values ($1, 'client'), ($2, 'client')`, [clientProfile, otherProfile])
+        await connection.query(`insert into public.clients (trainer_id, auth_user_id, full_name) values ($1, $2, 'Client Lime fixture'), ($1, $3, 'Other fixture')`, [ACTOR_ID, clientProfile, otherProfile])
+        await connection.query(`insert into app_private.auth_identities (provider, provider_subject_sha256, profile_id) values ('yandex', $1, $2), ('yandex', $3, $4)`, [subject, clientProfile, otherSubject, otherProfile])
+        const bind = async (subjectHash: string, loginHash: string) => (await connection.query<{ bound: boolean }>(
+          'select app_private.bind_client_lime_for_yandex_login($1, $2) bound', [subjectHash, loginHash],
+        )).rows[0]?.bound
+        expect(await bind(subject, 'a'.repeat(64))).toBe(false)
+        expect(await bind(PILOT_SUBJECT_HASH, login)).toBe(false) // trainer role
+        expect(await bind(subject, login)).toBe(true)
+        expect(await bind(otherSubject, login)).toBe(false) // no reassignment
+        await connection.query(`select set_config('request.jwt.claim.sub', $1, true)`, [clientProfile])
+        await connection.query('set local role fit_api')
+        const flags = await connection.query<{ client: boolean; trainer: boolean }>(
+          'select app_private.client_lime_enabled() client, app_private.fit_lime_enabled() trainer',
+        )
+        expect(flags.rows[0]).toEqual({ client: true, trainer: false })
+        await connection.query('reset role')
+        await connection.query(`select set_config('request.jwt.claim.sub', $1, true)`, [otherProfile])
+        expect((await connection.query<{ enabled: boolean }>('select app_private.client_lime_enabled() enabled')).rows[0]?.enabled).toBe(false)
+        await connection.query('update app_private.client_lime_pilot_allowlist set enabled = false')
+        expect(await bind(subject, login)).toBe(true)
+        await connection.query(`select set_config('request.jwt.claim.sub', $1, true)`, [clientProfile])
+        expect((await connection.query<{ enabled: boolean }>('select app_private.client_lime_enabled() enabled')).rows[0]?.enabled).toBe(false)
+        expect((await connection.query<{ count: number }>('select count(*)::int count from app_private.client_lime_pilot_allowlist')).rows[0]?.count).toBe(1)
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
     it('seeds exactly two isolated calendars once, enforces actor RLS and protects edited fixtures', async () => {
       if (!ownerPool || !enrollmentPool || !runtimePool) throw new Error('Pools not ready')
       const pilotIds = [randomUUID(), randomUUID()]

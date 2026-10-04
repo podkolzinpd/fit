@@ -10,13 +10,14 @@ const authState = vi.hoisted(() => ({
   theme: 'light' as 'light' | 'dark',
   trainerScheduleV2: false,
   fitLime: false,
+  clientLime: false,
 }))
 
 vi.mock('./auth-context', () => ({
   useAuth: () => ({ actor: {
     role: authState.role,
     userId: authState.userId,
-    experiments: { trainerScheduleV2: authState.trainerScheduleV2, fitLime: authState.fitLime },
+    experiments: { trainerScheduleV2: authState.trainerScheduleV2, fitLime: authState.fitLime, clientLime: authState.clientLime },
   } }),
 }))
 
@@ -66,6 +67,7 @@ afterEach(() => {
   authState.theme = 'light'
   authState.trainerScheduleV2 = false
   authState.fitLime = false
+  authState.clientLime = false
   vi.unstubAllEnvs()
   document.documentElement.className = ''
   document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.remove()
@@ -187,6 +189,7 @@ describe('AppLayout: единственная UI Identity', () => {
     layout.unmount()
     expect(document.documentElement).not.toHaveClass('fit-lime-document')
     authState.fitLime = false
+  authState.clientLime = false
     renderLayout('/today?date=2026-09-25')
     expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-lime-shell', 'fit-lime')
     expect(document.documentElement).toHaveClass('theme-light')
@@ -265,6 +268,7 @@ describe('AppLayout navigation', () => {
     expect(clients).toHaveAttribute('aria-current', 'page')
     pilot.unmount()
     authState.fitLime = false
+  authState.clientLime = false
     renderLayout('/progress/client-1')
     expect(screen.getByRole('navigation', { name: 'Основная навигация' }).querySelector('a[href="/clients"]')).not.toHaveClass('active')
   })
@@ -299,6 +303,7 @@ describe('AppLayout navigation', () => {
     expect(screen.getByRole('link', { name: 'День' })).toHaveAttribute('aria-current', 'page')
     lime.unmount()
     authState.fitLime = false
+  authState.clientLime = false
     renderLayout('/today')
     expect(screen.getByRole('link', { name: 'Сегодня' })).toBeVisible()
     expect(screen.queryByRole('link', { name: 'День' })).not.toBeInTheDocument()
@@ -414,6 +419,7 @@ describe('AppLayout: объявление победителю конкурса'
     live.unmount()
 
     authState.userId = 'user-2'
+    authState.clientLime = false
     renderLayout('/me')
     expect(screen.queryByRole('dialog')).toBeNull()
   })
@@ -433,7 +439,7 @@ describe('AppLayout: объявление победителю конкурса'
 describe('single-account client Lime shell', () => {
   it('honors the selected light palette and removes the scope for another account', () => {
     vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
-    vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', 'user-1')
+    authState.clientLime = true
     localStorage.setItem('fit.clientLime.theme.user-1', 'light')
     const first = renderLayout('/me/settings')
     expect(document.querySelector('.phone-frame')).toHaveClass('fit-client-lime', 'fit-lime-shell', 'theme-light')
@@ -441,6 +447,7 @@ describe('single-account client Lime shell', () => {
     first.unmount()
     expect(document.documentElement).not.toHaveClass('fit-client-lime-document')
     authState.userId = 'user-2'
+    authState.clientLime = false
     renderLayout('/me/settings')
     expect(document.querySelector('.phone-frame')).not.toHaveClass('fit-client-lime', 'fit-lime-shell')
     localStorage.removeItem('fit.clientLime.theme.user-1')

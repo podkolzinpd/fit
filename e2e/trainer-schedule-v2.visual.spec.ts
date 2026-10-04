@@ -121,7 +121,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
           timezone: 'Europe/Moscow',
           accountRole: options.role ?? 'trainer',
           ...(options.role === 'client' ? { client: { id: clientId, trainerId, fullName: 'Алексей Смирнов' } } : {}),
-          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true },
+          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true, clientLime: options.role === 'client' && options.profileId === clientId },
           preferences: { scheduleDensity },
         },
       }

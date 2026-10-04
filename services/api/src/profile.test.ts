@@ -40,4 +40,12 @@ describe('readOwnProfile Fit Lime flag', () => {
       profile: { experiments: { trainerScheduleV2: true, fitLime: false } },
     })
   })
+  it('returns only the independent client assignment and defaults missing decisions off', async () => {
+    const query = vi.fn().mockResolvedValue([{ ...trainerRow, account_role: 'client', fit_lime: false, client_lime: true }])
+    const client: DatabaseClient = { query: query as DatabaseClient['query'] }
+    await expect(readOwnProfile(client)).resolves.toMatchObject({ profile: { experiments: { clientLime: true, fitLime: false } } })
+    query.mockResolvedValue([{ ...trainerRow, client_lime: undefined }])
+    await expect(readOwnProfile(client)).resolves.toMatchObject({ profile: { experiments: { clientLime: false } } })
+  })
+
 })
