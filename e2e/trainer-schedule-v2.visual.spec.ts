@@ -42,7 +42,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer' }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null }
 
 async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -2497,6 +2497,25 @@ test('direct pilot workout link returns to its dated calendar instead of clients
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/today\?date=2026-09-29$/)
 })
+
+for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
+  test(`Lime actual date and original plan are distinct for ${profileId}`, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout, trainerId: profileId, createdBy: profileId, workoutDate: '2026-09-26' }] })
+    await page.goto(`/workouts/${workoutId}`)
+    await expect(page.getByText('При запуске сейчас тренировка начнётся сегодня,', { exact: false })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
+    await mockPilot(page, { profileId, fitLime: true, workouts: [{ ...workout,
+      status: 'done', workoutDate: '2026-09-24', startTime: '12:00:00', endTime: null,
+      completedAt: '2026-09-25T00:10:00+03:00', plannedDate: '2026-09-26',
+      plannedStartTime: '10:00:00', plannedEndTime: '11:00:00',
+    }] })
+    await page.reload()
+    await expect(page.locator('.workout-header-meta')).toContainText('24 сентября 2026')
+    await expect(page.getByText('Исходный план: 26 сентября 2026 г. · 10:00–11:00')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('lime-actual-and-planned-date.png'), fullPage: true })
+  })
+}
 
 test('Lime complete lifecycle preserves one plan through start resume and finish', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))

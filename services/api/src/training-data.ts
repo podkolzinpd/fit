@@ -50,6 +50,9 @@ interface WorkoutRow extends QueryResultRow {
   started_by: string | null
   completed_by: string | null
   workout_date: string
+  planned_date: string | null
+  planned_start_time: string | null
+  planned_end_time: string | null
   start_time: string | null
   end_time: string | null
   status: WorkoutStatus
@@ -214,6 +217,9 @@ export interface PilotWorkout {
   startedBy: string | null
   completedBy: string | null
   workoutDate: string
+  plannedDate?: string
+  plannedStartTime?: string | null
+  plannedEndTime?: string | null
   startTime: string | null
   endTime: string | null
   status: WorkoutStatus
@@ -311,6 +317,9 @@ export async function readAccessibleTrainingData(
         workout.started_by,
         workout.completed_by,
         workout.workout_date::text as workout_date,
+        workout.planned_date::text as planned_date,
+        workout.planned_start_time,
+        workout.planned_end_time,
         workout.start_time,
         workout.end_time,
         workout.status,
@@ -485,6 +494,7 @@ export async function readAccessibleTrainingData(
         startedBy: row.started_by,
         completedBy: row.completed_by,
         workoutDate: row.workout_date,
+        ...(row.planned_date ? { plannedDate: row.planned_date, plannedStartTime: row.planned_start_time, plannedEndTime: row.planned_end_time } : {}),
         startTime: row.start_time,
         endTime: row.end_time,
         status: row.status,

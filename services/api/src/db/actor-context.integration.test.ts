@@ -3630,6 +3630,87 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('keeps original pilot plans while anchoring new executions and retries to actual start dates', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const db = runtimePool
+      const pilotHash = '2'.repeat(64)
+      const exercises: PlannedWorkoutDraft['exercises'] = [{
+        position: 0, source: 'custom', ref: `custom:${ROOT_CUSTOM_EXERCISE_ID}`, customExerciseId: ROOT_CUSTOM_EXERCISE_ID,
+        name: 'Тяга саней', muscleGroup: 'legs', inputKind: 'strength', blockId: randomUUID(),
+        blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0,
+        restBetweenRoundsSec: 0, restBetweenSetsSec: 0, trainerComment: null,
+        sets: [{ position: 0, weightKg: 20, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
+      }]
+      await ownerPool.query('insert into app_private.fit_lime_pilot_allowlist (login_sha256, profile_id, enabled) values ($1,$2,true)', [pilotHash, ACTOR_ID])
+      const ids: string[] = []
+      try {
+        const dates = await ownerPool.query<{ today: string; past: string; future: string }>(
+          "select app_private.client_today($1)::text as today, (app_private.client_today($1)-2)::text as past, (app_private.client_today($1)+2)::text as future", [CLIENT_ID])
+        const datesRow = dates.rows[0]!
+        for (const planDate of [datesRow.past, datesRow.today, datesRow.future]) {
+          const saved = await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, {
+            id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'Проверка даты',
+            workoutDate: planDate, startTime: '12:00', endTime: '13:00', notes: null, exercises,
+          }, null))
+          ids.push(saved.id)
+          const operation = randomUUID()
+          await expect(withActorTransaction(db, OUTSIDE_TRAINER_ID, (client) => startLiveWorkout(client, saved.id, saved.version, randomUUID()))).rejects.toThrow()
+          const started = await withActorTransaction(db, ACTOR_ID, (client) => startLiveWorkout(client, saved.id, saved.version, operation))
+          await expect(withActorTransaction(db, ACTOR_ID, (client) => startLiveWorkout(client, saved.id, saved.version, operation))).resolves.toEqual({ ...started, replayed: true })
+          await withActorTransaction(db, ACTOR_ID, (client) => finishLiveWorkout(client, saved.id, started.version, randomUUID()))
+          const read = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+          expect(read.workouts.find((item) => item.id === saved.id)).toMatchObject({
+            status: 'done', workoutDate: datesRow.today, plannedDate: planDate,
+            plannedStartTime: '12:00:00', plannedEndTime: '13:00:00', endTime: null,
+          })
+          const regularity = await withActorTransaction(db, ACTOR_ID, (client) =>
+            client.query<{ result: Array<{ periodStart: string; periodEnd: string; completedCount: number }> }>('select public.get_workout_regularity($1) result', [CLIENT_ID]))
+          for (const period of regularity[0]!.result) {
+            expect(period.completedCount).toBe(read.workouts.filter((item) => item.clientId === CLIENT_ID
+              && item.status === 'done' && item.workoutDate >= period.periodStart && item.workoutDate <= period.periodEnd).length)
+          }
+        }
+        // Same date rule either side of Moscow midnight; completion cannot
+        // overwrite the start-day anchor.
+        const midnight = await ownerPool.query<{ before: string; after: string }>(
+          "select app_private.workout_client_local_time($1,'2026-10-03 20:59:59Z')::date::text as before, app_private.workout_client_local_time($1,'2026-10-03 21:00:01Z')::date::text as after", [CLIENT_ID])
+        expect(midnight.rows[0]).toEqual({ before: '2026-10-03', after: '2026-10-04' })
+        const late = await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, {
+          id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'Через полночь',
+          workoutDate: datesRow.future, startTime: '12:00', endTime: '13:00', notes: null, exercises,
+        }, null))
+        ids.push(late.id)
+        // Owner-only synthetic clock fixture, never a production clock override.
+        await ownerPool.query('begin')
+        try {
+          await ownerPool.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+          await ownerPool.query("update public.workouts set status='in_progress', started_at='2026-10-03 20:59:59Z', started_by=$2, version=version+1 where id=$1", [late.id, ACTOR_ID])
+          await ownerPool.query("update public.workouts set status='done', completed_at='2026-10-03 21:10:00Z', completed_by=$2, version=version+1 where id=$1", [late.id, ACTOR_ID])
+          await ownerPool.query('commit')
+        } catch (cause) { await ownerPool.query('rollback'); throw cause }
+        const lateRead = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        expect(lateRead.workouts.find((item) => item.id === late.id)).toMatchObject({
+          workoutDate: '2026-10-03', startTime: '23:59:59', plannedDate: datesRow.future,
+          completedAt: '2026-10-03T21:10:00.000Z', status: 'done',
+        })
+        const control = await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, {
+          id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'Контроль без флага',
+          workoutDate: datesRow.future, startTime: '12:00', endTime: '13:00', notes: null, exercises,
+        }, null))
+        ids.push(control.id)
+        await ownerPool.query('update app_private.fit_lime_pilot_allowlist set enabled=false where login_sha256=$1', [pilotHash])
+        const started = await withActorTransaction(db, ACTOR_ID, (client) => startLiveWorkout(client, control.id, control.version, randomUUID()))
+        await withActorTransaction(db, ACTOR_ID, (client) => finishLiveWorkout(client, control.id, started.version, randomUUID()))
+        const legacy = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        const workout = legacy.workouts.find((item) => item.id === control.id)
+        expect(workout).toMatchObject({ workoutDate: datesRow.future, startTime: '12:00:00', endTime: '13:00:00' })
+        expect(workout).not.toHaveProperty('plannedDate')
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [ids])
+        await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])
+      }
+    })
+
     it('keeps Lime plan titles, empty creation and retry receipts actor-scoped', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const db = runtimePool

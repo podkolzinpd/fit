@@ -583,6 +583,7 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     startedBy: value.startedBy,
     completedBy: value.completedBy,
     workoutDate: localDate(value.workoutDate),
+    ...(value.plannedDate ? { plannedDate: value.plannedDate, plannedStartTime: value.plannedStartTime, plannedEndTime: value.plannedEndTime } : {}),
     startTime: value.startTime,
     endTime: value.endTime,
     startedAt: value.startedAt,
