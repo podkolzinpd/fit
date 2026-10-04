@@ -3162,3 +3162,57 @@ for (const width of [390, 430]) test(`Client Lime reviewed instances persist thr
   await page.goto('/me?draft=reviewed&view=review')
   await expect(page.locator('.today-exercise')).toHaveCount(1)
 })
+
+async function mockClientStreamingVoice(page: import('@playwright/test').Page, transcript = 'Жим лёжа три подхода по десять 80 килограммов') {
+  await page.addInitScript((recognizedText) => {
+    const track = { stop() {} }
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: () => Promise.resolve({ getTracks: () => [track] }) } })
+    class FakeAudioContext {
+      sampleRate = 48_000
+      destination = {}
+      createMediaStreamSource() { return { connect() {}, disconnect() {} } }
+      createScriptProcessor() { return { connect() {}, disconnect() {}, onaudioprocess: null } }
+      async close() {}
+    }
+    class FakeWebSocket {
+      static OPEN = 1
+      readyState = 1
+      binaryType = 'arraybuffer'
+      onopen: (() => void) | null = null
+      onerror: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      constructor(url: string) { void url; window.setTimeout(() => this.onopen?.(), 0) }
+      send(data: string | ArrayBuffer) {
+        if (typeof data !== 'string') return
+        const message = JSON.parse(data) as { type?: string }
+        if (message.type === 'config') window.setTimeout(() => this.onmessage?.({ data: JSON.stringify({ type: 'partial', text: recognizedText.slice(0, 22) }) }), 20)
+        if (message.type === 'stop') window.setTimeout(() => { this.onmessage?.({ data: JSON.stringify({ type: 'final', text: recognizedText }) }); this.onmessage?.({ data: JSON.stringify({ type: 'complete' }) }) }, 20)
+      }
+      close() { this.readyState = 3 }
+    }
+    Object.defineProperty(window, 'AudioContext', { configurable: true, value: FakeAudioContext })
+    Object.defineProperty(window, 'WebSocket', { configurable: true, value: FakeWebSocket })
+  }, transcript)
+}
+
+test('Client Lime voice parsing exposes progress and retains failed transcript', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  await page.goto('/me')
+  await mockClientStreamingVoice(page, 'Упражнение с необычным названием десять раз')
+  let release: (() => void) | undefined
+  const pending = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
+    await pending
+    await route.fulfill({ status: 503, headers: { 'access-control-allow-origin': '*' }, contentType: 'application/json', body: '{"error":"unavailable"}' })
+  })
+  await page.reload()
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
+  await page.getByRole('button', { name: 'Готово', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Разбираю диктовку' })).toBeVisible()
+  release?.()
+  await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('Упражнение с необычным названием десять раз')
+  await expect(page.getByRole('region', { name: 'Не нашли упражнение' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('Упражнение с необычным названием десять раз')
+})

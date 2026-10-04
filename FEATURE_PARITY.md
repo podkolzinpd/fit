@@ -485,3 +485,5 @@ PR4: Lime hour collision до/после часа, соседние заняти
   per-draft storage and legacy recovery; other client/trainer behavior unchanged.
 
 - Client Lime review: неизменный ввод сохраняет точный список; изменённый ввод требует явной замены; undo возвращает конкретный экземпляр повторяющегося упражнения.
+
+- Client Lime voice: промежуточный текст хранится в черновике; ожидание разбора и отказ видимы; текущий draft invalidates stale requests. Физическая диктовка требует отдельной приёмки.

@@ -124,7 +124,7 @@
 | --- | --- | --- |
 | PR 1 | Реализован локально, подготовка PR | Unit 9; WebKit 18; frontend 2353; API 1049; lint/typecheck/build/hosting passed. CI/production ожидаются. |
 | PR 2 | Локально проверен | Полный check, WebKit 2/2. Baseline текста сохраняется с точным массивом; изменённый текст требует явной замены. |
-| PR 3 | Ожидает | — |
+| PR 3 | Локальные check и WebKit passed; #1407 merged | #1407 покрывает relay flush/cumulative finals; здесь client interim draft, явное ожидание разбора и invalidation при уходе. |
 | PR 4 | Ожидает | — |
 | PR 5 | Ожидает | — |
 | PR 6 | Ожидает | — |
