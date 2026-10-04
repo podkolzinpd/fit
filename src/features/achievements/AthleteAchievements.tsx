@@ -10,6 +10,7 @@ import { formatLocalDate, todayInTimeZone } from '../../shared/local-date'
 import { CloseIcon } from '../../shared/icons'
 import { Page } from '../../shared/ui'
 import { achievementArt } from './achievement-art'
+import { showAchievementProgress } from './achievement-presentation'
 
 const DISMISSED_KEY = 'fit.athlete-achievements-dismissed.'
 
@@ -176,6 +177,12 @@ export function AthleteAchievementsPage() {
         <h2>{group.title}</h2>
         <div className="athlete-achievements-grid">{achievements.filter((item) => group.kinds.includes(item.kind)).sort((a, b) => group.kinds.indexOf(a.kind) - group.kinds.indexOf(b.kind) || a.threshold - b.threshold).map((item, index) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? (item.earnedCount ? `Получений: ${item.earnedCount}` : 'Получена') : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${achievementProgressLabel(item)}`}. Открыть подробности`}>
           <Badge item={item} priority={group.title === 'Тренировки' && index < 6} />
+          <span className={`athlete-achievement-progress-slot${showAchievementProgress(item) ? '' : ' is-empty'}`} aria-hidden={!showAchievementProgress(item)}>
+            {showAchievementProgress(item) && <>
+              <span className="athlete-achievement-progress-track"><span style={{ width: `${Math.min(100, item.progress / item.threshold * 100)}%` }} /></span>
+              <span className="athlete-achievement-progress-label">{achievementProgressLabel(item)}</span>
+            </>}
+          </span>
           <span className="athlete-achievement-card-title">{item.title}</span>
           {item.earnedCount && <span className="athlete-achievement-repeat">×{item.earnedCount}</span>}
         </button>)}</div>
