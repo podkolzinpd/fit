@@ -33,13 +33,13 @@ CI обновлённой ветки остаётся гейтом выпуск�
 - PR1 #1408 слит в main 290ae405 после зелёного CI: отдельные черновики, явное продолжение/удаление, чистый новый ввод.
   Unit 9/9, клиентский WebKit 18/18 (390/430), frontend 2353 теста, API 1049 тестов,
   lint/typecheck/build и hosting checks прошли. Hosting повторён с разрешением
-  локального порта после sandbox EPERM. CI и production ещё ожидаются.
+  локального порта после sandbox EPERM. CI37223636288 success; production ещё ожидается.
 - PR2 реализован локально: сохранение проверенного списка и undo одинаковых упражнений. Полный npm run check и WebKit 390/430 прошли. CI/rollout ожидаются.
 - PR3 локально: сохранение промежуточного текста и видимое ожидание разбора.
 - PR4 локально: клиентские controls; full check и WebKit 21/21 + polish 4/4 прошли.
 - PR5 локально: focused compose/review/save и компактная проверка; check прошёл, WebKit/voice regression зелёные.
 - PR6 локально: явное подтверждение подходов, ошибка/повтор и число незавершённых; full check, 19 unit, WebKit lifecycle 4/4 + retry 2/2 прошли.
-- PR7 реализован локально: честный zero/partial/full итог и компактная карточка; check, unit25, сквозной voice-to-result2 и zero2 прошли; полная WebKit регрессия идёт. не считать выполненными по наличию плана.
+- PR7 реализован локально: честный zero/partial/full итог и компактная карточка; check, unit25, сквозной voice-to-result2 и zero2 прошли; общая WebKit регрессия 190/190 и клиентский Chromium 27/27 прошли. Production rollout ещё не завершён.
 - Используется существующая Lime identity (YS Geo/REM, tokens), разрешённая
   пользователем; исторический monochrome контракт не отменяет принятый Lime.
 - Production browser ограничен политикой среды, обход не выполняется.

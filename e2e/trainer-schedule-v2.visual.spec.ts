@@ -3303,6 +3303,7 @@ for (const theme of ['light', 'dark']) test(`Client Lime zero completion is neut
   await expect(page.getByText('Выполнено 0 из 1 подходов')).toBeVisible()
   await expect(page.locator('.workout-completion-report-art img')).toHaveCount(0)
   await expect(page.locator('.workout-completion-muscles-line')).toHaveCount(0)
+  await expect(page.getByText('Новая ачивка', { exact: true })).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath(`client-zero-${theme}.png`), fullPage: true })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

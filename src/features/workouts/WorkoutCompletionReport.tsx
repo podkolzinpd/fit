@@ -219,7 +219,7 @@ export function WorkoutCompletionReport({
       {caloriesKcal && calorieBasis && <p className="muted">{clientLime ? 'Приблизительная оценка расхода энергии.' : `Основа оценки: ${calorieBasis.toLowerCase()}.`}</p>}
       {!caloriesKcal && calorieNotice && <p className="muted" role="status">{clientLime ? 'Для оценки калорий пока недостаточно данных.' : calorieNotice}</p>}
 
-      {(highlightLoading || highlightError || personalAchievement || positiveVolumeProgress) && <section className="workout-completion-highlight" aria-busy={highlightLoading}>
+      {!(clientLime && noConfirmedSets) && (highlightLoading || highlightError || personalAchievement || positiveVolumeProgress) && <section className="workout-completion-highlight" aria-busy={highlightLoading}>
         {highlightLoading ? <p className="workout-completion-highlight-loading" role="status">Проверяем достижения…</p>
           : highlightError ? <div className="workout-completion-highlight-error" role="alert"><p>Не удалось проверить достижения.</p>{onRetryResult && <button type="button" className="secondary" onClick={onRetryResult}>Повторить</button>}</div>
             : <><p className="eyebrow">{highlightLabel.toUpperCase()}</p><div className="workout-completion-highlight-record">
@@ -238,7 +238,7 @@ export function WorkoutCompletionReport({
     </div>
 
     {clientLime && <div className="workout-completion-actions">{actions}</div>}
-    <NewlyEarnedAchievements items={newAchievements} />
+    {!(clientLime && noConfirmedSets) && <NewlyEarnedAchievements items={newAchievements} />}
     {hasTrainer && <p className="workout-completion-trainer-status"><CheckIcon /> Результат доступен тренеру</p>}
     {feedback}
     {details}

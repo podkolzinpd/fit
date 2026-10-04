@@ -122,10 +122,12 @@
 
 | Этап | Статус | Доказательства |
 | --- | --- | --- |
-| PR 1 | #1408 merged → 290ae405 | Unit 9; WebKit 18; frontend 2353; API 1049; lint/typecheck/build/hosting passed. CI/production ожидаются. |
+| PR 1 | #1408 merged → 290ae405 | Unit 9; WebKit 18; frontend 2353; API 1049; lint/typecheck/build/hosting passed. CI37223636288 success; production ожидается. |
 | PR 2 | Локально проверен | Полный check, WebKit 2/2. Baseline текста сохраняется с точным массивом; изменённый текст требует явной замены. |
 | PR 3 | Локальные check и WebKit passed; #1407 merged | #1407 покрывает relay flush/cumulative finals; здесь client interim draft, явное ожидание разбора и invalidation при уходе. |
 | PR 4 | Локально проверен | Full check, WebKit 21/21 + polish 4/4; скриншоты проверены. Профиль/периоды/ввод/диалоги: исправлены более специфичные legacy selectors. |
 | PR 5 | Локально проверен | Full check; 20/21 + исправленный voice fixture 3/3; visual review 390/430. Draft route включает focused shell; review уплотнён. |
 | PR 6 | Локально проверен | Full check; unit19; lifecycle4; retry2; скриншоты обеих тем. Существующий write contract; явный CTA, pending/error, точный incomplete count. |
-| PR 7 | Локально проверен; общая регрессия идёт | Full check; unit25; voice-to-result2; zero2. Нейтральный zero/partial, compact result, сквозные сценарии. |
+| PR 7 | Локально проверен; общая регрессия пройдена | Full check; unit25; voice-to-result2; zero2. Нейтральный zero/partial, compact result, сквозные сценарии. Общая WebKit 190/190, клиентский Chromium 27/27. Нулевой итог не показывает новые достижения. |
+
+- Production relay `wss://89-169-132-80.sslip.io/stt`: штатный smoke прошёл, включая `done` после stop. Старый адрес 84-201-157-124 из recovery workflow не используется клиентом; его timeout не означает сбой текущего relay.
