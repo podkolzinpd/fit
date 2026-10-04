@@ -126,6 +126,6 @@
 | PR 2 | Локально проверен | Полный check, WebKit 2/2. Baseline текста сохраняется с точным массивом; изменённый текст требует явной замены. |
 | PR 3 | Локальные check и WebKit passed; #1407 merged | #1407 покрывает relay flush/cumulative finals; здесь client interim draft, явное ожидание разбора и invalidation при уходе. |
 | PR 4 | Локально проверен | Full check, WebKit 21/21 + polish 4/4; скриншоты проверены. Профиль/периоды/ввод/диалоги: исправлены более специфичные legacy selectors. |
-| PR 5 | Ожидает | — |
+| PR 5 | Локально проверен | Full check; 20/21 + исправленный voice fixture 3/3; visual review 390/430. Draft route включает focused shell; review уплотнён. |
 | PR 6 | Ожидает | — |
 | PR 7 | Ожидает | — |

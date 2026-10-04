@@ -29,3 +29,24 @@
 .phone-frame.fit-client-lime.live-identity .live-add-set { width: fit-content; min-height: 44px; padding-inline: 12px; }
 
 .phone-frame.fit-client-lime:not(.theme-light).client-home-identity :is(.voice-action-button, .today-voice-text-inline) svg[data-original-icon] { filter: none; }
+
+/* Compose, review and save share one focused client route. */
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-start-page { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-text-fallback { padding: 0; background: transparent; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-text-fallback-head { padding-block: 12px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-list { padding: 0 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise.planned-exercise { padding-block: 12px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise > p { margin-block: 4px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-assignment { padding: 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-review-head { gap: 8px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-header-contract { padding-bottom: 12px; }
+.phone-frame.fit-client-lime.client-workout-compose .client-home-overview > :not(:has(.compose-workout-entry)):not(.client-home-self-training),
+.phone-frame.fit-client-lime.client-workout-compose .client-home-overview :is(.quick-start-workout, .today-resume, .athlete-achievements-home) { display: none; }
+.phone-frame.fit-client-lime.client-workout-compose .today-voice-hero-compact { margin-top: 0; }
+.phone-frame.fit-client-lime.keyboard-open .today-review-next { position: static; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-editor { margin-top: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-list { margin-block: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-start-page { gap: 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-title { margin-bottom: 4px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise.planned-exercise { gap: 4px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-editor { padding-top: 0; }

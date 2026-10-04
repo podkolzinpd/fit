@@ -3116,6 +3116,8 @@ for (const width of [390, 430]) test(`Client Lime isolated drafts survive new in
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('')
   await page.getByLabel('Тренировка', { exact: true }).fill('Новый ввод: приседания 10')
+  await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
+  await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
   const firstUrl = page.url()
   await page.reload()
   await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('Новый ввод: приседания 10')
@@ -3134,7 +3136,7 @@ for (const width of [390, 430]) test(`Client Lime isolated drafts survive new in
   await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('Новый ввод: приседания 10')
 })
 
-for (const width of [390, 430]) test(`Client Lime reviewed instances persist through reparse ${width}`, async ({ page }) => {
+for (const width of [390, 430]) test(`Client Lime reviewed instances persist through reparse ${width}`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 844 })
   await mockPilot(page, { role: 'client', profileId: clientId })
   await page.goto('/me')
@@ -3163,6 +3165,8 @@ for (const width of [390, 430]) test(`Client Lime reviewed instances persist thr
   await page.getByRole('button', { name: 'Отмена', exact: true }).click()
   await page.goto('/me?draft=reviewed&view=review')
   await expect(page.locator('.today-exercise')).toHaveCount(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath(`client-review-${width}.png`), fullPage: true })
 })
 
 async function mockClientStreamingVoice(page: import('@playwright/test').Page, transcript = 'Жим лёжа три подхода по десять 80 килограммов') {
