@@ -56,8 +56,8 @@ const uri=(file)=>'file://'+path.join(root,file);
  await page.evaluate(()=>FIT_MOTION.seek(4,2));await page.evaluate(()=>FIT_MOTION.seek(3,0));await page.evaluate(()=>FIT_MOTION.seek(4,0));assert.equal((await page.evaluate(()=>FIT_MOTION.state())).step,0);
  // Stationary context: only the main trainer proof changes between steps.
  const positions=[];
- for(let n=0;n<3;n++){await page.evaluate(n=>FIT_MOTION.seek(4,n),n);positions.push(await page.locator('.m-trainer-gallery>.m-context-current').count());}
- assert.deepEqual(positions,[1,1,1]);
+ for(let n=0;n<4;n++){await page.evaluate(n=>FIT_MOTION.seek(4,n),n);positions.push(await page.locator('.m-trainer-gallery>.m-context-current').count());}
+ assert.deepEqual(positions,[1,1,1,1]);
  await page.evaluate(()=>FIT_MOTION.seek(4,0));const rail=await page.locator('.m-trainer-gallery>figure').evaluateAll(es=>es.map(e=>e.style.transform));
  await page.keyboard.press('ArrowRight');await page.evaluate(()=>FIT_MOTION.ready());
  assert.deepEqual(await page.locator('.m-trainer-gallery>figure').evaluateAll(es=>es.map(e=>e.style.transform)),rail);

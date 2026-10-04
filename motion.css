@@ -63,15 +63,25 @@
 .m-trainer-lime .m-route span { background:var(--trainer-lime); }
 .m-trainer-lime .design-number,.m-trainer-lime figcaption span { color:var(--trainer-lime)!important; }
 .m-trainer-lime .m-proof-window img { background:#19191b!important; }
-.m-trainer-lime .m-proof-clients .m-proof-window img { height:558px!important;object-fit:cover!important;object-position:top; }
-.m-trainer-lime .m-proof-create .m-proof-window { background:#242426!important; }
-.m-trainer-lime .m-proof-progress-map .m-proof-window { display:flex;justify-content:center;background:#19191b!important; }
-.m-trainer-lime .m-proof-progress-map .m-proof-window img { height:585px!important;width:auto!important;object-fit:contain; }
 .m-trainer-lime .m-screen-window img { filter:none!important;background:#19191b!important; }
-.m-trainer-lime .m-trainer-gallery>figure:nth-child(2) .m-screen-window { background:#242426!important; }
-.m-trainer-lime:not(.m-trainer-overview) .m-trainer-gallery>figure:nth-child(3) .m-screen-window img { height:154px!important;width:auto!important;margin:auto; }
 .m-trainer-lime.m-trainer-overview .m-screen-window { display:flex;align-items:flex-start;justify-content:center; }
 .m-trainer-lime.m-trainer-overview .m-trainer-gallery>figure .m-screen-window img { height:499px!important;width:230px!important;object-fit:contain;object-position:center; }
+/* Four thesis-matched concept screens, using the current Fit application palette. */
+.m-trainer-four .m-trainer-gallery>figure { margin:0!important; }
+.m-trainer-four .m-screen-window img { display:block; }
+.m-trainer-four .m-proof-panel figcaption { font-weight:600; }
+.m-trainer-four .m-proof-window,.m-trainer-four .m-proof-window img { width:410px!important;height:585px!important;background:#101012!important; }
+.m-trainer-four .m-proof-window img { object-fit:contain!important; }
+.m-trainer-four:not(.m-trainer-overview) .m-trainer-gallery>figure { height:135px!important; }
+.m-trainer-four:not(.m-trainer-overview) .m-screen-window { width:86px;height:123px; }
+.m-trainer-four:not(.m-trainer-overview) .m-trainer-gallery>figure .m-screen-window img { width:86px!important;height:123px!important;object-fit:contain!important; }
+.m-trainer-four:not(.m-trainer-overview) .m-trainer-gallery>figure figcaption { left:102px;top:30px;width:155px;font-weight:600; }
+.m-trainer-four figcaption span { font-size:16px;margin-right:5px; }
+.m-trainer-four.m-trainer-overview .m-trainer-gallery>figure { width:356px!important;height:320px; }
+.m-trainer-four.m-trainer-overview .m-trainer-gallery>figure .m-screen-window { width:210px;height:300px; }
+.m-trainer-four.m-trainer-overview .m-trainer-gallery>figure .m-screen-window img { width:210px!important;height:300px!important;object-fit:contain!important; }
+.m-trainer-four.m-trainer-overview .m-trainer-gallery>figure figcaption { position:absolute;left:225px;top:110px;width:130px;font-size:18px!important;font-weight:600; }
+.m-trainer-four.m-trainer-overview .m-trainer-gallery>figure figcaption span { display:block;margin-bottom:8px; }
 .motion-slide .m-client-stage { position:absolute;inset:0;background:#f5f4ef;color:#202527;z-index:20;opacity:0;visibility:hidden;transition:opacity .4s; }
 .motion-slide.m-client-active .m-client-stage { opacity:1;visibility:visible; }
 .motion-slide .m-scene { position:absolute;inset:0;visibility:hidden;opacity:0;transition:opacity .45s; }
