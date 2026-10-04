@@ -1,3 +1,4 @@
+import { isClientLimeEnabled } from '../../app/client-lime'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
@@ -2470,6 +2471,7 @@ export function LiveWorkoutPage() {
   const { source: dataSource, pushNotifications: pushNotificationsRepository, workouts: workoutsRepository } = useDataBackend()
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
+  const clientLime = isClientLimeEnabled(actor)
   const { keyboardOpen } = useAppViewport()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
@@ -3313,7 +3315,9 @@ export function LiveWorkoutPage() {
     const isEditing = editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
-    const saveStatus = savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
+    const confirmationPending = clientLime && confirm.isPending && confirm.variables?.set.id === set.id
+    const confirmationFailed = clientLime && confirm.isError && confirm.variables?.set.id === set.id
+    const saveStatus = confirmationPending ? 'saving' : confirmationFailed ? 'error' : savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
     const setNumber = label?.match(/\d+/)?.[0]
     const restSeconds = query.data ? restSecondsAfterSet(query.data, exercise, set) : 0
     const confirmLabel = set.confirmedAt
@@ -3343,7 +3347,7 @@ export function LiveWorkoutPage() {
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
-      <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : 'current'} className="live-set-grid">
+      <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : clientLime && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
         <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} />
         <div className="live-set-confirm">
@@ -3352,7 +3356,7 @@ export function LiveWorkoutPage() {
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}><span aria-hidden="true">✓</span></button>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
-            : <button type="button" className="live-set-check" aria-label={confirmLabel} disabled={confirm.isPending}
+            : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => {
                   prepareGong()
@@ -3367,12 +3371,12 @@ export function LiveWorkoutPage() {
                     } else confirm.mutate({ set, draft })
                   }
                   skipBlurForSet.current = null
-                }}><span aria-hidden="true">✓</span></button>}
+                }}><span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span></button>}
         </div>
       </WorkoutSetRow>
-      <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={saveStatus === 'error' ? save.error?.message : undefined} /></div>
+      <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>
       {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
-      {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
+      {(showPlan || (clientLime && !set.confirmedAt)) && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
   }
   const selectedLiveExercise = query.data?.exercises.find((exercise) => exercise.id === activeExerciseId && exercise.sets.some((set) => !set.confirmedAt))
@@ -3564,7 +3568,7 @@ export function LiveWorkoutPage() {
         </div>
       }) })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>}
-      {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
       {error && <p className="error">{error.message}</p>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
@@ -3586,7 +3590,7 @@ export function LiveWorkoutPage() {
           ? <div className="finish-confirm">
               <p>{cardioSetMissingTime
                 ? `У «${cardioSetMissingTime.exerciseName}» указана дистанция, но нет фактического времени. Добавьте время для оценки активных калорий FIT или завершите без неё.`
-                : hasIncompleteLiveSets ? 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
+                : hasIncompleteLiveSets ? clientLime ? `Не подтверждено подходов: ${query.data.exercises.flatMap((exercise) => exercise.sets).filter((set) => !set.confirmedAt).length}. Завершить тренировку?` : 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
               <div className="actions workout-action-row">
                 {cardioSetMissingTime
                   ? <WorkoutCta type="button" onClick={focusCardioDuration}>Внести время</WorkoutCta>

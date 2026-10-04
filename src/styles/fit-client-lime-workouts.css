@@ -50,3 +50,12 @@
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-title { margin-bottom: 4px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise.planned-exercise { gap: 4px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-editor { padding-top: 0; }
+
+/* A check means an acknowledged result, never a planned set. */
+.phone-frame.fit-client-lime.live-identity :is(.live-set-grid, .live-set-table-head) { grid-template-columns: 28px minmax(0,1fr) minmax(0,1fr) 64px; }
+.phone-frame.fit-client-lime.live-identity :is(.live-set.rpe-visible .live-set-grid, .live-set-table-head.rpe-visible) { grid-template-columns: 24px minmax(0,1fr) minmax(0,1fr) 40px 64px; }
+.phone-frame.fit-client-lime.live-identity .live-set-expanded .live-set-check:not(.done) { font-size: 12px; background: var(--lime-surface-high); color: var(--lime-text); }
+.phone-frame.fit-client-lime.live-identity .live-set.current .live-set-check:not(.done):not(:disabled) { background: var(--lime-accent); color: var(--lime-text-on-accent); }
+.phone-frame.fit-client-lime.live-identity .live-set-check[aria-busy='true'] { background: var(--lime-surface-raised); color: var(--lime-text-secondary); }
+
+.phone-frame.fit-client-lime.live-identity .live-add-exercise { min-height: 48px; border-radius: 999px; }
