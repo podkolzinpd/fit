@@ -9911,7 +9911,7 @@ coverLogo.remove();
 coverSlogan.remove();
 const peopleCover = document.createElement('img');
 peopleCover.src = 'cover-people.png';
-peopleCover.alt = 'Фит. Твой спорт. Твоя команда. Спортсменка и тренер вместе смотрят программу на планшете.';
+peopleCover.alt = 'Фит — Твой спорт / Твоя команда. Спортсменка и тренер вместе смотрят программу на планшете.';
 peopleCover.style.cssText = 'position:absolute;inset:0;width:1600px;height:900px;object-fit:cover;z-index:10';
 cover.appendChild(peopleCover);
 cover.querySelector('.foot').style.display = 'none';
@@ -10069,4 +10069,10 @@ show(current, false)
 <link rel="stylesheet" href="closing-goals.css?v=20261004-1">
 <script src="closing-goals.js?v=20261004-1"></script>
 <script src="motion-client-stories-v2.js?v=44b62a4-check"></script>
+<script>
+// Update both cover layers together without changing the existing title reveal.
+document.querySelectorAll('.m-cover-base,.m-cover-title').forEach(img => {
+  img.src = 'cover-people-no-periods.png';
+});
+</script>
 </body></html>
