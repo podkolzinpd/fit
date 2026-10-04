@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useDataBackend } from '../../app/data-backend-context'
 import type {
   TrainerFinancePackage,
@@ -44,7 +45,8 @@ function optional(form: FormData, name: string) {
   return value || null
 }
 
-export function PackageForm({ current, template, today, saving, error, onCancel, onSubmit }: {
+export function PackageForm({ current, template, today, saving, error, onCancel, onSubmit, lime = false }: {
+  lime?: boolean
   current?: TrainerFinancePackage
   template?: TrainerFinancePackage
   today: string
@@ -54,6 +56,8 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
   onSubmit: (draft: TrainerFinancePackageDraft) => void
 }) {
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const errorId = useId()
   const source = current ?? template
   const renewalStart = template?.endsOn && template.endsOn >= today ? addDays(localDate(template.endsOn), 1) : today
   const renewalEnd = template?.endsOn && template.endsOn >= template.startsOn
@@ -64,6 +68,38 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setValidationError(null)
+    if (lime) {
+      const form = event.currentTarget
+      const values = new FormData(form)
+      const errors: Record<string, string> = {}
+      if (!String(values.get('title') ?? '').trim()) errors.title = 'Укажите название услуги'
+      if (kind === 'session_pack' && !current && Number(values.get('openingUsedSessions')) > Number(values.get('sessionsTotal'))) {
+        errors.openingUsedSessions = 'Проведённых занятий не может быть больше общего количества'
+      }
+      if (!current && Number(values.get('openingPaid')) > Number(values.get('price'))) errors.openingPaid = 'Оплата не может быть больше стоимости'
+      const messages: Record<string, string> = {
+        title: 'Укажите название до 120 символов', sessionsTotal: 'Укажите целое количество занятий от 1 до 10 000',
+        openingUsedSessions: 'Укажите целое количество проведённых занятий от 0 до общего количества',
+        price: 'Укажите стоимость в рублях: от 0, не больше двух знаков после запятой',
+        openingPaid: 'Укажите оплату в рублях: от 0, не больше двух знаков после запятой',
+        startsOn: 'Укажите дату начала', endsOn: 'Укажите дату окончания не раньше начала',
+        paymentDueOn: 'Проверьте дату оплаты', comment: 'Сократите комментарий до 2000 символов',
+      }
+      const controls = Array.from(form.elements).filter((element): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
+        element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)
+      for (const control of controls) {
+        if (!control.validity.valid && !errors[control.name]) errors[control.name] = messages[control.name] ?? 'Проверьте значение'
+      }
+      setFieldErrors(errors)
+      const first = controls.find((control) => errors[control.name])
+      if (first) {
+        const disclosure = first.closest('details')
+        if (disclosure) disclosure.open = true
+        first.focus()
+        first.scrollIntoView?.({ block: 'nearest' })
+        return
+      }
+    }
     try {
       const form = new FormData(event.currentTarget)
       const sessionsTotal = kind === 'session_pack' ? integer(form.get('sessionsTotal'), 'Всего занятий') : 0
@@ -84,27 +120,39 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
       setValidationError(cause instanceof Error ? cause.message : 'Проверьте данные')
     }
   }
-  return <form className="finance-form card" aria-busy={saving} onSubmit={submit}>
+  const validation = (name: string) => lime ? { 'aria-invalid': Boolean(fieldErrors[name]), 'aria-describedby': fieldErrors[name] ? `${errorId}-${name}` : undefined } : {}
+  const field = (name: string, label: string, input: ReactNode) => lime
+    ? <div key={name} className="lime-finance-field"><Field label={label}>{input}</Field>{fieldErrors[name] && <small className="error" role="alert" id={`${errorId}-${name}`}>{fieldErrors[name]}</small>}</div>
+    : <Field key={name} label={label}>{input}</Field>
+  const sessions = kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={source?.sessionsTotal || 10} />)
+  const used = kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue="0" />)
+  const price = field('price', 'Стоимость, ₽', <input {...validation('price')} name="price" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue={source ? source.priceCents / 100 : ''} />)
+  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue="0" />)
+  const dates = <>
+    {field('startsOn', 'Начало', <input {...validation('startsOn')} name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />)}
+    {field('endsOn', 'Окончание', <input {...validation('endsOn')} name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={current?.endsOn ?? renewalEnd} />)}
+    {field('paymentDueOn', 'Оплатить до', <input {...validation('paymentDueOn')} name="paymentDueOn" type="date" defaultValue={current?.paymentDueOn ?? ''} />)}
+  </>
+  return <form className={`finance-form card${lime ? ' lime-finance-form' : ''}`} noValidate={lime} aria-busy={saving} onSubmit={submit}>
     <div className="finance-form-heading"><div><p className="eyebrow">ФИНАНСЫ</p><h2>{current ? 'Редактирование' : template ? 'Продление' : 'Новая услуга'}</h2></div></div>
     <Field label="Тип"><select name="kind" value={kind} disabled={Boolean(current)} onChange={(event) => {
       const next = event.target.value as TrainerFinancePackage['kind']
       setKind(next)
       if (title === 'Персональные тренировки' || title === 'Онлайн-сопровождение') setTitle(next === 'session_pack' ? 'Персональные тренировки' : 'Онлайн-сопровождение')
     }}><option value="session_pack">Пакет занятий</option><option value="online_coaching">Онлайн-сопровождение</option></select></Field>
-    <Field label="Название"><input name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} /></Field>
-    <div className="finance-form-grid">
-      {kind === 'session_pack' && <Field label="Всего занятий"><input name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={source?.sessionsTotal || 10} /></Field>}
-      {kind === 'session_pack' && !current && <Field label="Уже проведено"><input name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue="0" /></Field>}
-      <Field label="Стоимость, ₽"><input name="price" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue={source ? source.priceCents / 100 : ''} /></Field>
-      {!current && <Field label="Уже оплачено, ₽"><input name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue="0" /></Field>}
-      <Field label="Начало"><input name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} /></Field>
-      <Field label="Окончание"><input name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={current?.endsOn ?? renewalEnd} /></Field>
-      <Field label="Оплатить до"><input name="paymentDueOn" type="date" defaultValue={current?.paymentDueOn ?? ''} /></Field>
-    </div>
-    <Field label="Комментарий"><textarea name="comment" rows={2} maxLength={2000} defaultValue={source?.comment ?? ''} /></Field>
+    {field('title', 'Название', <input {...validation('title')} name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />)}
+    {lime ? <>
+      {kind === 'session_pack' && <fieldset><legend>Занятия</legend>{sessions}</fieldset>}
+      <fieldset><legend>Стоимость и оплата</legend>{price}</fieldset>
+      <fieldset><legend>Сроки</legend><div className="finance-form-grid">{dates}</div></fieldset>
+      {!current && <details className="finance-opening-balances"><summary>Перенести текущие остатки</summary><p>Заполните, только если часть занятий уже проведена или оплачена. Иначе оставьте нули.</p><div className="finance-form-grid">{used}{paid}</div></details>}
+    </> : <div className="finance-form-grid">{sessions}{used}{price}{paid}{dates}</div>}
+    {field('comment', 'Комментарий', <textarea {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={source?.comment ?? ''} />)}
     {validationError && <p className="error" role="alert">{validationError}</p>}
     {error && <InlineRequestError error={error} />}
-    <div className="actions"><button type="button" className="secondary" disabled={saving} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    {/* Keep the focused input until click: keyboard recovery on pointerdown
+        otherwise moves this row before pointerup and loses the submission. */}
+    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={lime ? (event) => event.preventDefault() : undefined} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={lime ? (event) => event.preventDefault() : undefined}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form>
 }
 
@@ -268,7 +316,7 @@ export function TrainerFinancePage() {
     : `/clients/${clientId}`
   return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
-      {packageEditor && <PackageForm current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate(draft)} />}
+      {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate(draft)} />}
       {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}
       {!packageEditor && !paymentEditor && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>

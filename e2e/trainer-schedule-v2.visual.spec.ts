@@ -428,6 +428,57 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
+  test(`Lime finance inline errors keep data and allow retry for ${profileId}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: profileId === trainerId ? 320 : 430, height: 844 })
+    await mockPilot(page, { profileId, fitLime: true })
+    const commands: unknown[] = []
+    await page.route(`http://127.0.0.1:4100/v1/clients/${clientId}/finance/packages`, async (route) => {
+      const draft = route.request().postDataJSON() as Record<string, unknown>
+      commands.push(draft)
+      if (commands.length === 1) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{}' })
+      } else {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ package: {
+          ...draft, id: newWorkoutId, clientId, trainerId: profileId, sessionsUsed: 2, sessionsRemaining: 8,
+          paidCents: 0, dueCents: 3000000, packageStatus: 'active', paymentStatus: 'unpaid',
+          closedAt: null, version: 1, createdAt: '2026-10-04T00:00:00Z', updatedAt: '2026-10-04T00:00:00Z',
+        } }) })
+      }
+    })
+    await page.goto(`/clients/${clientId}/finance`)
+    await page.getByRole('button', { name: 'Новая', exact: true }).click()
+    await expect(page.getByRole('group', { name: 'Стоимость и оплата' })).toBeVisible()
+    await expect(page.getByLabel('Уже проведено, занятий', { exact: true })).not.toBeVisible()
+    await page.getByLabel('Стоимость, ₽', { exact: true }).fill('30000')
+    await page.getByText('Перенести текущие остатки', { exact: true }).click()
+    const used = page.getByLabel('Уже проведено, занятий', { exact: true })
+    await used.fill('30000')
+    await page.getByText('Перенести текущие остатки', { exact: true }).click()
+    const save = page.getByRole('button', { name: 'Сохранить', exact: true })
+    await save.click()
+    await expect(used).toBeFocused()
+    await expect(used).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByRole('alert')).toContainText('Проведённых занятий не может быть больше общего количества')
+    expect(commands).toHaveLength(0)
+    await page.screenshot({ path: testInfo.outputPath('lime-finance-inline-error.png'), fullPage: true })
+    await used.fill('2')
+    await page.setViewportSize({ width: profileId === trainerId ? 320 : 430, height: 400 })
+    await save.scrollIntoViewIfNeeded()
+    await save.click()
+    await expect.poll(() => commands.length).toBe(1)
+    await expect(save).toBeEnabled()
+    await expect(page.getByLabel('Стоимость, ₽', { exact: true })).toHaveValue('30000')
+    await expect(used).toHaveValue('2')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('lime-finance-retry.png'), fullPage: true })
+    await save.click()
+    await expect(page.locator('.lime-finance-form')).toHaveCount(0)
+    expect(commands).toHaveLength(2)
+    expect(commands[1]).toEqual(commands[0])
+  })
+}
+
 for (const fitLime of [true, false]) {
   test(`calorie basis stays readable and pilot scoped: ${fitLime}`, async ({ page }) => {
     await mockPilot(page, { fitLime, workouts: [{ ...workout, status: 'done', activeCaloriesKcal: 220, calorieEstimateBasis: 'Оценка по времени и фактической нагрузке' }] })

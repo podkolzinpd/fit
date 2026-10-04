@@ -1,5 +1,7 @@
 # Feature parity с trainer-app
 
+YAFIT-593 / PR5: scoped finance form с группами, единицами и закрытыми по умолчанию остатками; field-level ошибки/aria, раскрытие и фокус первого неверного поля. При pointer-нажатии фокус не снимается до click, чтобы keyboard recovery не сдвигал submit.15 finance unit и4/4 browser для обоих пилотов прошли, включая retry. Legacy-форма и финансовый контракт сохранены.
+
 YAFIT-593 / PR4: пояснения калорий вне сетки метрик, scoped типографика редакторов, переносы на320px, доступные44px поля и действия. Непилотная карточка сохраняет прежнюю структуру, расчёты не менялись.16/16 новых browser-проверок WebKit/Chromium прошли (320/390/430/1440, enlarged text/reduced viewport).
 
 YAFIT-593 / PR3: аддитивная Yandex migration120 сохраняет planned_date/planned_start_time/planned_end_time только при новом pilot planned→in_progress. Канонические workout_date/start_time соответствуют началу; completed_at остаётся фактическим завершением. Idempotency/ownership исходной start-команды не меняются. Непилотные записи и старая история не переписываются.
