@@ -49,6 +49,8 @@ describe('athlete achievement surfaces', () => {
   })
 
   it('reopens once for a genuinely new award, not for an old history recalculation', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-30T12:00:00Z'))
     const view = render(<MemoryRouter><AthleteAchievementHome workouts={[completed]} loading={false} error={null} onRetry={() => undefined} /></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Скрыть карточку ачивок' }))
     const oldHistory = Array.from({ length: 9 }, (_, index) => ({ ...completed, id: `old-${index}`, completedAt: `2026-09-${20 + index}T12:00:00Z` }))

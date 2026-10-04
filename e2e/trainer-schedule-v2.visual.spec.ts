@@ -11,6 +11,28 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Achievement artwork has only earned and gray states ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: Array.from({ length: 18 }, (_, index) => ({
+      ...workout, id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      status: 'done', completedAt: '2026-09-24T10:00:00Z',
+    })) })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me/achievements')
+    const earned = page.locator('.badge-id-workouts-10 .athlete-achievement-static-art')
+    const partial = page.locator('.badge-id-workouts-25 .athlete-achievement-static-art')
+    const distant = page.locator('.badge-id-workouts-50 .athlete-achievement-static-art')
+    await expect(earned).toHaveCSS('filter', 'none')
+    await expect(partial).toHaveCSS('filter', 'grayscale(1) brightness(0.7)')
+    await expect(distant).toHaveCSS('filter', 'grayscale(1) brightness(0.7)')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('achievement-states.png') })
+    await page.getByRole('button', { name: /^Полсотни\./ }).click()
+    await expect(page.getByRole('dialog')).toContainText('Прогресс: 18 из 50')
+  })
+}
+
 const workout = {
   id: workoutId,
   trainerId,

@@ -27,6 +27,15 @@ function earnedCount(count: number) {
 }
 
 describe('athlete achievements', () => {
+  it('advances nearest workout tier at the exact threshold without changing old award dates', () => {
+    const history = Array.from({ length: 25 }, (_, index) => workout(index))
+    const before = computeAthleteAchievements(history.slice(0, 24), today)
+    const after = computeAthleteAchievements(history, today)
+    expect(before.filter((item) => item.kind === 'workouts' && item.nearest).map((item) => item.id)).toEqual(['workouts-25'])
+    expect(after.filter((item) => item.kind === 'workouts' && item.nearest).map((item) => item.id)).toEqual(['workouts-50'])
+    expect(after.find((item) => item.id === 'workouts-25')).toMatchObject({ earnedOn: history[24]!.workoutDate, progress: 25 })
+    expect(after.find((item) => item.id === 'workouts-10')).toEqual(before.find((item) => item.id === 'workouts-10'))
+  })
   it('keeps the 33 existing rewards and adds 50 with unique names', () => {
     const items = computeAthleteAchievements([], today)
     expect(items).toHaveLength(83)

@@ -50,7 +50,7 @@ function readDismissed(userId: string): HomePreference {
 
 function Badge({ item, compact = false }: { item: AthleteAchievement; compact?: boolean; priority?: boolean }) {
   const earned = Boolean(item.earnedOn)
-  const ratio = earned ? 1 : item.nearest ? item.progress / item.threshold : 0
+  const ratio = earned ? 1 : 0
   const status = earned ? 'получена' : item.kind === 'comeback' ? 'пока не получена' : achievementProgressLabel(item)
   const art = achievementArt[item.id]
   const calendar = item.kind === 'weeks' || item.kind === 'weeks-total'
