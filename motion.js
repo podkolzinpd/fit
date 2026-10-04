@@ -19,14 +19,14 @@
   const animations = new Set();
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
-  const timeline = [[1],[0,1,2],[3,7],[0,1],[1,2,3],[0,1,2,3,4,5,6,7],[2,4],[0,4],[0,4],[0,1,2]];
+  const timeline = [[1],[0,1,2],[3,7],[0,1],[1,2,3,4],[0,1,2,3,4,5,6,7],[2,4],[0,4],[0,4],[0,1,2]];
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
     ['Для клиента','Для тренера','Масштаб рынка','Вся идея'],
     ['Жители России','15–59 лет','Занимаются спортом','Аудитория Fit','Товары и одежда','Фитнес-услуги','Секции и питание','Устройства и онлайн','Весь рынок'],
     ['Разные приложения','Собираем вокруг Fit','Концепция развития'],
-    ['Весь маршрут','Выбрать клиента','Создать тренировку','Оценить прогресс','Все возможности'],
+    ['Весь маршрут','Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск тренера'],
     ['Все возможности','Голосом или текстом','Слова → упражнения','План','Выполнение','Завершение','Было → стало','Карта тела','Все возможности'],
     ['14 сентября','20 сентября','2 октября','Записи тренировок','Итог и методика'],
     ['Тренеры и клиенты','Яндекс Плюс','Спортивные события','Обучение тренеров','Экосистема Яндекса','Все каналы'],
@@ -69,11 +69,13 @@
   const categories=[...children[3].children];
   // Trainer: fixed context rail; only the selected working fragment is revealed.
   const trainer=scope[4], gallery=q('.content>div:last-child',trainer), trainerCopy=q('.content>div:first-child',trainer);
-  trainer.classList.add('m-trainer-lime');
+  trainer.classList.add('m-trainer-lime','m-trainer-four');
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
+  const trainerScreens=['client','ai','finance','marketplace'];
+  const trainerCaptions=['Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск тренера'];
+  gallery.replaceChildren();
+  trainerScreens.forEach((name,i)=>{const f=document.createElement('figure');f.innerHTML=`<div class="m-screen-window"><img src="assets/trainer-scenarios/${name}.png" alt="Иллюстрация сценария Fit: ${trainerCaptions[i]}. Демонстрационные данные."></div><figcaption><span>0${i+1}</span> ${trainerCaptions[i]}</figcaption>`;gallery.append(f);});
   const figures=qa('figure',gallery);
-  const trainerScreens=['clients','create','progress-map'];
-  figures.forEach((f,i)=>{f.style.setProperty('--overview-x',`${254*i}px`);const img=q('img',f);img.src=`assets/trainer-lime/${trainerScreens[i]}.png`;img.alt=['Fit Lime: список клиентов, демонстрационные профили','Fit Lime: планирование тренировки для Алексея Смирнова','Fit Lime: карта прогресса, демонстрационные результаты'][i];const win=document.createElement('div');win.className='m-screen-window';img.before(win);win.append(img);});
   const proof=document.createElement('div');proof.className='m-trainer-proof';
   figures.forEach((f,i)=>{
     const panel=document.createElement('figure');panel.className='m-proof-panel';
@@ -83,7 +85,7 @@
     proof.append(panel);
   });gallery.append(proof);
   const route=document.createElement('div');route.className='m-route';route.innerHTML='<span></span>';trainer.append(route);
-  note(trainer,'Реальные экраны с тестовыми данными. Платежи, связь и продвижение — в плане развития.');
+  note(trainer,'Иллюстрации сценариев · демонстрационные данные. Платежи, связь и продвижение — концепт развития.');
   // Client: preserve the original overview for entry, exit, static view and print.
   const client=scope[5], clientImgs=qa('figure img',client).map(x=>x.src);
   note(client,'Экраны разных тренировок. Сообщество — план развития.');
@@ -224,7 +226,7 @@
       const focus=staticMode||scene===0?-1:scene-1;
       trainer.classList.toggle('m-trainer-overview',focus<0);
       figures.forEach((f,i)=>{
-        f.style.transform=focus<0?`translate(${254*i}px,0)`:`translate(480px,${i*205}px)`;
+        f.style.transform=focus<0?`translate(${i%2*382}px,${Math.floor(i/2)*330}px)`:`translate(480px,${i*156}px)`;
         f.style.opacity=focus<0||i===focus?'1':'.62';
         f.classList.toggle('m-context-current',i===focus);
       });
@@ -232,8 +234,8 @@
         el.classList.toggle('is-visible',i===focus);el.setAttribute('aria-hidden',String(i!==focus));
         if(i===focus&&motion&&previousScene!==scene)animate(el,[{opacity:0},{opacity:1}],380);
       });
-      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===(focus===0?0:1)?'1':'.7');
-      q('span',route).style.width=(focus<0?100:(focus+1)/3*100)+'%';
+      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus?'1':'.7');
+      q('span',route).style.width=(focus<0?100:(focus+1)/4*100)+'%';
     }
     if(index===5)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
