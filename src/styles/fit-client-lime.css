@@ -94,7 +94,12 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
 .fit-client-lime :where(button:disabled, .button[aria-disabled='true'], .overflow-item:disabled) { opacity: 1; color: var(--lime-text-secondary); background: var(--lime-surface-raised); border-color: var(--lime-divider); }
 .fit-client-lime.theme-light .modal-dialog .actions .danger { color: var(--lime-surface); }
 .fit-client-lime .profile-settings .field { width: 100%; }
-.fit-client-lime .profile-settings select { width: 100%; }
+.fit-client-lime .profile-settings select { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--lime-divider); border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font-size: 16px; }
 .fit-client-lime .profile-settings > .field { padding: 16px; box-sizing: border-box; }
 .fit-client-lime .switch-control::after { background: var(--lime-text-secondary); }
 .fit-client-lime .switch-input:checked + .switch-control::after { background: var(--lime-text-on-accent); }
+
+/* Same native-select treatment as the approved Lime schedule on WebKit. */
+.fit-client-lime .profile-settings select { appearance: none; height: 48px; padding-right: 36px; }
+.fit-client-lime .profile-settings > .field:has(select) { position: relative; }
+.fit-client-lime .profile-settings > .field:has(select)::after { content: ''; position: absolute; right: 28px; bottom: 32px; width: 16px; height: 16px; background: var(--lime-text-secondary); mask: url('../../docs/design/figma-20261002/assets/arrow-right.svg') center / contain no-repeat; transform: rotate(90deg); pointer-events: none; }

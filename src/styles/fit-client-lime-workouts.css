@@ -27,3 +27,5 @@
 .phone-frame.fit-client-lime :is(.workout-completion-report, .workout-completion-share-card) { overflow-wrap: anywhere; }
 
 .phone-frame.fit-client-lime.live-identity .live-add-set { width: fit-content; min-height: 44px; padding-inline: 12px; }
+
+.phone-frame.fit-client-lime:not(.theme-light).client-home-identity :is(.voice-action-button, .today-voice-text-inline) svg[data-original-icon] { filter: none; }

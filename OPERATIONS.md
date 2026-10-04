@@ -1180,12 +1180,19 @@ chat does not run the new quiz/loader. There is no cross-backend fallback.
 
 ## Client Lime single-account pilot
 
-`VITE_CLIENT_LIME_ENABLED=true` and exactly one verified auth UUID in
-`VITE_CLIENT_LIME_PILOT_USER_IDS` are required. Missing, empty or multiple IDs
-fail closed. These independent GitHub repository variables feed the Yandex
-frontend workflow; changing them requires redeployment. Disable with
-`VITE_CLIENT_LIME_ENABLED=false` and redeploy. No data/authorization changes.
-Stages 1–4 remain off. The client role and approved route are checked in the
-shell; trainer Lime stays independent. Do not identify the account by a
-client-provided email. Production activation is permitted only after resolving
-the owner's requested identity to its existing profile UUID.
+`VITE_CLIENT_LIME_ENABLED=true` is the default-off Yandex frontend switch.
+The client role also requires `profile.experiments.clientLime === true` from
+Yandex API. Migration 121 creates an independent one-login allowlist and protected
+binding/read functions; the hash is the normalized native login `budoha1`, not
+an email or a client card ID. The existing verified OAuth exchange binds the
+linked client profile. Existing sessions need a new Yandex sign-in once after
+release. Trainer Lime and Schedule V2 assignments are untouched.
+
+The old `VITE_CLIENT_LIME_PILOT_USER_IDS` variable is no longer consumed and cannot
+grant access. Missing server decisions fail closed. The database rejects extra
+login rows, reassignment to another profile, and non-client roles. Login does
+not undo a disabled assignment. Data ownership and RLS remain unchanged.
+
+Stages 1–4 remain off. Stage 5 deploys the API/migration first, verifies its
+release, then enables the frontend switch and redeploys the green main.
+Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.

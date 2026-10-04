@@ -84,6 +84,7 @@ jobs:
           VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
           VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
           VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
+          VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
           VITE_MAINTENANCE_MODE: 'false'
       - run: ./gradlew assembleDebug
         working-directory: android

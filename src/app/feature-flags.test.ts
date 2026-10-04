@@ -458,21 +458,21 @@ describe('contest winner announcement pilot flag', () => {
 describe('single-account client Lime pilot', () => {
   it.each(['', 'false', 'TRUE', '1'])('fails closed for flag %s', (value) => {
     vi.stubEnv('VITE_CLIENT_LIME_ENABLED', value)
-    vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', 'client-1')
-    expect(isClientLimePilotEnabled('client-1')).toBe(false)
+    expect(isClientLimePilotEnabled('client-1', true)).toBe(false)
   })
-  it.each(['', ' , ', 'client-1,client-2'])('rejects empty or expanded scope %s', (ids) => {
+  it.each(['', ' , ', 'client-1,client-2'])('does not grant access from a browser UUID list %s', (ids) => {
     vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
     vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', ids)
     expect(isClientLimePilotEnabled('client-1')).toBe(false)
   })
-  it('enables only the exact single ID and supports disabling', () => {
+  it('requires server assignment and supports disabling', () => {
     vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
     vi.stubEnv('VITE_CLIENT_LIME_PILOT_USER_IDS', ' , client-1, ')
-    expect(isClientLimePilotEnabled('client-1')).toBe(true)
+    expect(isClientLimePilotEnabled('client-1', true)).toBe(true)
     expect(isClientLimePilotEnabled('client-2')).toBe(false)
-    expect(isClientLimePilotEnabled('')).toBe(false)
+    expect(isClientLimePilotEnabled('', true)).toBe(false)
+    expect(isClientLimePilotEnabled('client-1', false)).toBe(false)
     vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'false')
-    expect(isClientLimePilotEnabled('client-1')).toBe(false)
+    expect(isClientLimePilotEnabled('client-1', true)).toBe(false)
   })
 })

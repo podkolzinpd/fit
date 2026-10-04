@@ -23,7 +23,8 @@ export class DatabaseFitLimeAutoActivator implements FitLimeAutoActivator {
     const connection = await this.pool.connect()
     try {
       const rows = await connection.query<BindingRow>(
-        `select app_private.bind_fit_lime_for_yandex_login($1, $2) as bound`,
+        `select app_private.bind_fit_lime_for_yandex_login($1, $2) as bound,
+          app_private.bind_client_lime_for_yandex_login($1, $2) as client_bound`,
         [subjectHash, loginHash],
       )
       return { bound: rows[0]?.bound === true }

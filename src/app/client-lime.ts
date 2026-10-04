@@ -2,7 +2,7 @@ import type { SessionActor } from '../shared/domain'
 import { isClientLimePilotEnabled } from './feature-flags'
 
 export function isClientLimeEnabled(actor: SessionActor | null | undefined): boolean {
-  return actor?.role === 'client' && isClientLimePilotEnabled(actor.userId)
+  return actor?.role === 'client' && isClientLimePilotEnabled(actor.userId, actor.experiments?.clientLime === true)
 }
 export function isClientLimeShellRoute(actor: SessionActor | null | undefined, pathname: string): boolean {
   if (!isClientLimeEnabled(actor)) return false

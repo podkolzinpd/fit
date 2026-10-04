@@ -214,11 +214,9 @@ export function isAssistantProgramEnabled(userId: string): boolean {
   return import.meta.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true' && userId.trim().length > 0
 }
 
-// Independent single-account visual pilot. Never infer access from e-mail,
-// another experiment, or a remembered theme. Empty/multiple IDs fail closed.
-export function isClientLimePilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_CLIENT_LIME_ENABLED !== 'true') return false
-  const ids = String(import.meta.env.VITE_CLIENT_LIME_PILOT_USER_IDS ?? '')
-    .split(',').map((value) => value.trim()).filter(Boolean)
-  return ids.length === 1 && ids[0] === userId
+// The server binds the one verified Yandex login to its internal profile ID.
+// A browser e-mail, UUID list, trainer flag or saved theme cannot grant access.
+export function isClientLimePilotEnabled(userId: string, serverAssigned = false): boolean {
+  return import.meta.env.VITE_CLIENT_LIME_ENABLED === 'true'
+    && userId.trim().length > 0 && serverAssigned === true
 }

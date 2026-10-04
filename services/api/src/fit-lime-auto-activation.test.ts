@@ -37,6 +37,7 @@ describe('DatabaseFitLimeAutoActivator', () => {
 
     expect(pool.connection.calls).toHaveLength(1)
     expect(pool.connection.calls[0]?.text).toContain('bind_fit_lime_for_yandex_login')
+    expect(pool.connection.calls[0]?.text).toContain('bind_client_lime_for_yandex_login')
     expect(pool.connection.calls[0]?.values).toEqual([subjectHash, loginHash])
     expect(pool.connection.released).toBe(true)
   })
