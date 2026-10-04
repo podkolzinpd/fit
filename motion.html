@@ -9828,7 +9828,6 @@ body {
           <strong>+38 тренеров, +172 самостоятельных клиента и +63 профиля через тренера.</strong>
         </div>
         <div class="meeting-growth-method">
-          <span>Как считаем</span>
           <p>DataLens · срез на 04.10.2026. Прирост — к 14.09. Считаем профили и записи, не активных пользователей.</p>
         </div>
       </div>
@@ -10040,8 +10039,8 @@ show(current, false)
  team.innerHTML=`<div class="eyebrow"><span class="design-number">13</span> · КОМАНДА</div>
  <h2>Команда проекта</h2>
  <div class="team-people">
- <div class="team-person"><div class="team-photo"><img src="assets/team/antonknyazev.jpg" alt="Антон Князев"></div><h3>Антон Князев</h3><div class="team-role">CEO</div><div class="team-duty">Руководство проектом</div></div>
- <div class="team-person"><div class="team-photo"><img src="assets/team/mishmetyev.jpg" alt="Михаил Ишметев"></div><h3>Михаил Ишметев</h3><div class="team-role">CFO</div><div class="team-duty">Финансы</div></div>
+ <div class="team-person"><div class="team-photo"><img src="assets/team/antonknyazev.jpg" alt="Антон Князев"></div><h3>Антон Князев</h3><div class="team-role">CEO / CPO</div><div class="team-duty">Руководство проектом</div></div>
+ <div class="team-person"><div class="team-photo"><img src="assets/team/mishmetyev.jpg" alt="Михаил Ишметьев"></div><h3>Михаил Ишметьев</h3><div class="team-role">CFO</div><div class="team-duty">Финансы</div></div>
  <div class="team-person"><div class="team-photo"><img src="assets/team/podkolzinpd.jpg" alt="Павел Подколзин"></div><h3>Павел Подколзин</h3><div class="team-role">CTO</div><div class="team-duty">Техническое направление</div></div>
  <div class="team-person"><div class="team-photo"><img src="assets/team/a-goltsov.jpg" alt="Саша Гольцов"></div><h3>Саша Гольцов</h3><div class="team-role">AI Lead</div><div class="team-duty">Искусственный интеллект</div></div>
  </div>
@@ -10050,7 +10049,7 @@ show(current, false)
  <div><h3>Сообщество и тренеры</h3><p><span class="team-name">Ваня Загурский</span><br>Уже в команде · 0,5 ставки на старте</p></div>
  <div><h3>Усиление на старте</h3><div class="team-hiring"><p>Backend — 2 ставки<br>Mobile — 1 ставка</p><p>UI/UX-дизайнер — 1 ставка<br>QA — 0,5 ставки<br>IT / продуктовый юрист — 1 ставка</p></div><div class="team-later">С 3-го месяца — DevOps на 0,5 ставки.</div></div>
  </div>
- <aside class="speaker-notes">Четыре основных участника проекта: Антон Князев, Михаил Ишметев, Павел Подколзин, Саша Гольцов. Порядок и написание имён подтверждены пользователем. Ваня Загурский — сообщество и работа с тренерами. Ставки взяты из Team details, помесячный план строк 53–73, модели Fit_рынок_РФ [twgZ0h].xlsx. Старт: 9 FTE; с третьего месяца 9,5. CFO в бюджете с месяца 4 на 0,5, с месяца 7 на 1. Усиление не означает подтверждённые вакансии по всем позициям. Композиционный ориентир apple/08: четыре равных объекта на общей оси, второстепенная информация ниже; сохранена текущая Fit Design айдентика.</aside>`;
+ <aside class="speaker-notes">Четыре основных участника проекта: Антон Князев — CEO / CPO, Михаил Ишметьев, Павел Подколзин, Саша Гольцов. Порядок и написание имён подтверждены пользователем. Ваня Загурский — сообщество и работа с тренерами. Ставки взяты из Team details, помесячный план строк 53–73, модели Fit_рынок_РФ [twgZ0h].xlsx. Старт: 9 FTE; с третьего месяца 9,5. CFO в бюджете с месяца 4 на 0,5, с месяца 7 на 1. Усиление не означает подтверждённые вакансии по всем позициям. Композиционный ориентир apple/08: четыре равных объекта на общей оси, второстепенная информация ниже; сохранена текущая Fit Design айдентика.</aside>`;
 }
 </script>
 <script>
@@ -10060,15 +10059,15 @@ show(current, false)
   trainer.querySelector('h2').innerHTML = 'Меньше рутины<br>Больше клиентов';
   const blocks = trainer.querySelectorAll('.content>div:first-child>div');
   blocks[2].querySelector('p').innerHTML = 'Запись, пакеты и разбор споров,<br>финансовый кабинет, чеки и налоги.';
-  blocks[3].querySelector('h3').textContent = 'Клиенты находят вас';
-  blocks[3].querySelector('p').textContent = 'Так ваш профиль видят клиенты';
+  blocks[3].querySelector('h3').textContent = 'Площадка для поиска клиентов';
+  blocks[3].querySelector('p').textContent = 'Клиенты находят вас в каталоге тренеров';
 }
 </script>
 <link rel="stylesheet" href="finance-story.css?v=20261004-1">
-<script src="finance-story.js?v=20261004-1"></script>
+<script src="finance-story-copy-polish.js"></script>
 <link rel="stylesheet" href="closing-goals.css?v=20261004-1">
 <script src="closing-goals.js?v=20261004-1"></script>
-<script src="motion-client-stories-v2.js?v=44b62a4-check"></script>
+<script src="motion-client-stories-v2-copy-polish.js"></script>
 <script>
 // Update both cover layers together without changing the existing title reveal.
 document.querySelectorAll('.m-cover-base,.m-cover-title').forEach(img => {
