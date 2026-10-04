@@ -17,7 +17,8 @@ CI обновлённой ветки остаётся гейтом выпуск�
 
 ## Проверенная точка — 2026-10-04
 
-- Main: `df88c702`; клиентский Lime выпущен, frontend run37211395236 success.
+- Последний подтверждённый production frontend: `59887b5c`, run37211395236 success.
+  Клиентский Lime уже доступен; состояние нового выпуска описано ниже.
 - Пилот только budoha1, независимое серверное назначение clientLime + frontend
   CLIENT_LIME_ENABLED=true. Темы: светлая, тёмная, системная.
 - #1395 исправил границы streaming transcript; #1398/#1401 улучшили штатную
@@ -30,16 +31,18 @@ CI обновлённой ветки остаётся гейтом выпуск�
 Порядок: 1 черновики → 2 сохранение правок → 3 голос → 4 общие controls →
 5 создание → 6 Live → 7 итог и сквозная приёмка. Пилот не расширяется.
 
-- PR1 #1408 слит в main 290ae405 после зелёного CI: отдельные черновики, явное продолжение/удаление, чистый новый ввод.
-  Unit 9/9, клиентский WebKit 18/18 (390/430), frontend 2353 теста, API 1049 тестов,
-  lint/typecheck/build и hosting checks прошли. Hosting повторён с разрешением
-  локального порта после sandbox EPERM. CI37223636288 success; production ещё ожидается.
-- PR2 реализован локально: сохранение проверенного списка и undo одинаковых упражнений. Полный npm run check и WebKit 390/430 прошли. CI/rollout ожидаются.
-- PR3 локально: сохранение промежуточного текста и видимое ожидание разбора.
-- PR4 локально: клиентские controls; full check и WebKit 21/21 + polish 4/4 прошли.
-- PR5 локально: focused compose/review/save и компактная проверка; check прошёл, WebKit/voice regression зелёные.
-- PR6 локально: явное подтверждение подходов, ошибка/повтор и число незавершённых; full check, 19 unit, WebKit lifecycle 4/4 + retry 2/2 прошли.
-- PR7 реализован локально: честный zero/partial/full итог и компактная карточка; check, unit25, сквозной voice-to-result2 и zero2 прошли; общая WebKit регрессия 190/190 и клиентский Chromium 27/27 прошли. Production rollout ещё не завершён.
+- PR1 #1408, PR2 #1410, PR3 #1411, PR4 #1412, PR5 #1413 и PR6 #1415 слиты после зелёных checks.
+  Последний main этого среза: 0707f015. Старый production frontend: run37211395236,
+  commit59887b5c; новые промежуточные deployments остановлены проверкой актуальности main.
+- PR6 #1415: явное подтверждение подходов, pending/error/retry, точное число
+  незавершённых; проверки прошли на 695c5a0e, merged → 0707f015.
+- PR7 #1417: честный zero/partial/full итог, компактная карточка и фактический
+  результат для отправки. Локально WebKit190/190, client Chromium27/27,
+  последняя zero-регрессия4/4, completion/share25/25. Финальный full check:
+  frontend2366, API1063 passed (71 DB tests skipped), lint/typecheck/build/hosting passed.
+- Текущий SpeechKit relay 89-169-132-80.sslip.io прошёл smoke с `done` после stop.
+  Timeout старого адреса из recovery workflow не относится к текущему клиенту.
+- Финальный main CI, production deployment и мобильные сборки ещё ожидаются.
 - Используется существующая Lime identity (YS Geo/REM, tokens), разрешённая
   пользователем; исторический monochrome контракт не отменяет принятый Lime.
 - Production browser ограничен политикой среды, обход не выполняется.
