@@ -260,12 +260,12 @@ export function WorkoutCompletionReport({
         <p className="workout-share-sheet-intro">Выберите акцент — факты останутся короткими и без личной обратной связи.</p>
         <div className="workout-share-options" role="radiogroup" aria-label="Сюжет карточки">
           <button type="button" role="radio" aria-checked={shareVariant === 'summary'} className={shareVariant === 'summary' ? 'is-selected' : ''} onClick={() => setShareVariant('summary')}>
-            <span><strong>Итог</strong><small>Факты, достижение и нагрузка</small></span><b aria-hidden="true">01</b>
+            <span><strong>Итог</strong><small>{restrained ? 'Факты завершённой тренировки' : 'Факты, достижение и нагрузка'}</small></span><b aria-hidden="true">01</b>
           </button>
-          <button type="button" role="radio" aria-checked={shareVariant === 'achievement'} className={shareVariant === 'achievement' ? 'is-selected' : ''} onClick={() => setShareVariant('achievement')}>
-            <span><strong>Достижение</strong><small>{personalAchievement ? `${highlightLabel} крупным планом` : positiveVolumeProgress ? 'Рост объёма крупным планом' : 'Выполненный план крупным планом'}</small></span><b aria-hidden="true">02</b>
+          <button type="button" role="radio" disabled={clientLime && noConfirmedSets} aria-checked={shareVariant === 'achievement'} className={shareVariant === 'achievement' ? 'is-selected' : ''} onClick={() => setShareVariant('achievement')}>
+            <span><strong>Достижение</strong><small>{personalAchievement ? `${highlightLabel} крупным планом` : positiveVolumeProgress ? 'Рост объёма крупным планом' : restrained ? 'Подтверждённые подходы крупным планом' : 'Выполненный план крупным планом'}</small></span><b aria-hidden="true">02</b>
           </button>
-          <button type="button" role="radio" aria-checked={shareVariant === 'progress'} disabled={!volumeComparison || comparisonLoading} className={shareVariant === 'progress' ? 'is-selected' : ''} onClick={() => setShareVariant('progress')}>
+          <button type="button" role="radio" aria-checked={shareVariant === 'progress'} disabled={(clientLime && noConfirmedSets) || !volumeComparison || comparisonLoading} className={shareVariant === 'progress' ? 'is-selected' : ''} onClick={() => setShareVariant('progress')}>
             <span><strong>Прогресс</strong><small>{comparisonLoading ? 'Ищем похожую тренировку…' : volumeComparison ? `${volumeComparison.changePercent > 0 ? '+' : volumeComparison.changePercent < 0 ? '−' : ''}${Math.abs(volumeComparison.changePercent)}% объёма к прошлой похожей` : 'Появится после похожей тренировки'}</small></span><b aria-hidden="true">03</b>
           </button>
         </div>

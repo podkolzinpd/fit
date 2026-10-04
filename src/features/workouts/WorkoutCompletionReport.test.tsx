@@ -169,12 +169,17 @@ describe('workout completion calculations', () => {
 
 
 describe('Client Lime completion facts', () => {
-  it('keeps zero confirmed sets neutral and omits celebration art', () => {
+  it('keeps zero confirmed sets neutral and omits celebration art', async () => {
+    const user = userEvent.setup()
     const { container } = render(<MemoryRouter><WorkoutCompletionReport {...baseProps} clientLime completedSets={0} completedExercises={0} tonnage={null} /></MemoryRouter>)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Тренировка завершена')
     expect(screen.getByText('Подходы не отмечены. Выполненный объём не записан.')).toBeVisible()
     expect(screen.getByText('Выполнено 0 из 3 подходов')).toBeVisible()
     expect(container.querySelector('.workout-completion-report-art img')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Поделиться' }))
+    expect(screen.getByRole('radio', { name: /Достижение/ })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: /Прогресс/ })).toBeDisabled()
+    expect(screen.queryByText('Выполненный план крупным планом')).not.toBeInTheDocument()
   })
   it('distinguishes partial confirmation from complete execution', () => {
     const { rerender } = render(<MemoryRouter><WorkoutCompletionReport {...baseProps} clientLime completedSets={1} /></MemoryRouter>)
