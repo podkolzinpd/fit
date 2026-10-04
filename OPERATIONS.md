@@ -1177,3 +1177,15 @@ preserve unaffected workouts and IDs and revalidate the result before save.
 Native Yandex Assistant generation is not enabled in this first pilot. Its
 program-save RPC has the same 4/8/12 canonical-payload checks, but the native
 chat does not run the new quiz/loader. There is no cross-backend fallback.
+
+## Client Lime single-account pilot
+
+`VITE_CLIENT_LIME_ENABLED=true` and exactly one verified auth UUID in
+`VITE_CLIENT_LIME_PILOT_USER_IDS` are required. Missing, empty or multiple IDs
+fail closed. These independent GitHub repository variables feed the Yandex
+frontend workflow; changing them requires redeployment. Disable with
+`VITE_CLIENT_LIME_ENABLED=false` and redeploy. No data/authorization changes.
+Stages 1–4 remain off. The client role and approved route are checked in the
+shell; trainer Lime stays independent. Do not identify the account by a
+client-provided email. Production activation is permitted only after resolving
+the owner's requested identity to its existing profile UUID.

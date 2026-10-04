@@ -1,0 +1,53 @@
+/* Client extension of the approved Fit Lime identity. AppLayout alone assigns
+   this scope after the independent single-account gate. Trainer is unchanged. */
+html.fit-client-lime-document,
+.phone-frame.fit-lime.fit-client-lime {
+  --lime-text-secondary: #b8b8bd;
+  --lime-text-tertiary: #b8b8bd;
+  --lime-accent-ink: var(--lime-accent);
+  --lime-nav: #1a1a1c;
+  --lime-nav-active: #2f2f33;
+  --lime-divider: #3b3b40;
+  --lime-overlay: rgba(0, 0, 0, .76);
+}
+html.fit-client-lime-document.theme-light,
+.phone-frame.fit-lime.fit-client-lime.theme-light {
+  --lime-bg: #f6f7f2;
+  --lime-surface: #ffffff;
+  --lime-surface-raised: #eef0e8;
+  --lime-surface-high: #d8ddce;
+  --lime-text: #20231c;
+  --lime-text-secondary: #555c4c;
+  --lime-text-tertiary: #555c4c;
+  --lime-divider: #d8ddce;
+  --lime-accent-muted: #e8f4d3;
+  --lime-accent-ink: #3d610c;
+  --lime-nav: #ffffff;
+  --lime-nav-active: #e8f4d3;
+  --lime-overlay: rgba(20, 25, 15, .48);
+  color-scheme: light;
+}
+html.fit-client-lime-document,
+.phone-frame.fit-lime.fit-client-lime {
+  --accent-label: var(--lime-accent-ink);
+  --accent-strong: var(--lime-accent-ink);
+  --accent-focus: var(--lime-accent-ink);
+  --accent-border: var(--lime-accent-ink);
+  --accent-surface-border: var(--lime-accent-ink);
+  --overlay: var(--lime-overlay);
+  --bar-bg: var(--lime-nav);
+  --voice-surface: var(--lime-surface);
+  --voice-surface-border: var(--lime-divider);
+  --voice-inset: var(--lime-surface-raised);
+  --voice-primary: var(--lime-accent);
+  --voice-title: var(--lime-text);
+  --voice-copy: var(--lime-text-secondary);
+  --voice-context-border: var(--lime-divider);
+  --voice-context-divider: var(--lime-divider);
+  --voice-context-arrow: var(--lime-text-secondary);
+}
+html.fit-client-lime-document,
+html.fit-client-lime-document body,
+html.fit-client-lime-document #root { background: var(--lime-bg); color-scheme: inherit; }
+html.fit-client-lime-document { color-scheme: dark; }
+html.fit-client-lime-document.theme-light { color-scheme: light; }
