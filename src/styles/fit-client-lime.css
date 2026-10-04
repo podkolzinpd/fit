@@ -51,3 +51,50 @@ html.fit-client-lime-document body,
 html.fit-client-lime-document #root { background: var(--lime-bg); color-scheme: inherit; }
 html.fit-client-lime-document { color-scheme: dark; }
 html.fit-client-lime-document.theme-light { color-scheme: light; }
+
+/* The five client destinations keep their existing labels and destinations. */
+.phone-frame.fit-client-lime .client-tab-bar {
+  position: fixed;
+  left: 50%;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  width: min(calc(100% - 24px), 406px);
+  min-height: 68px;
+  padding: 4px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--lime-divider);
+  border-radius: 34px;
+  background: var(--lime-nav);
+  transform: translateX(-50%);
+}
+.phone-frame.fit-client-lime .client-tab-bar a {
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 2px;
+  border-radius: 28px;
+  color: var(--lime-text-secondary);
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 400;
+  gap: 4px;
+}
+.phone-frame.fit-client-lime .client-tab-bar a.active {
+  color: var(--lime-accent-ink);
+  background: var(--lime-nav-active);
+}
+.phone-frame.fit-client-lime .client-tab-bar a svg { width: 24px; height: 24px; transform: none; }
+.fit-client-lime.theme-light svg[data-original-icon] { filter: brightness(0); }
+.fit-client-lime :where(.primary, .button.primary) svg[data-original-icon] { filter: brightness(0); }
+.fit-client-lime :where(button, a, input, select, textarea):focus-visible { outline-color: var(--lime-accent-ink); }
+.fit-client-lime .status-current { color: var(--lime-accent-ink); border-color: var(--lime-accent-ink); }
+.fit-client-lime .state-panel-mark { color: var(--lime-accent-ink); }
+.fit-client-lime .overflow-item:hover { background: var(--lime-surface-high); }
+.fit-client-lime :where(button:disabled, .button[aria-disabled='true'], .overflow-item:disabled) { opacity: 1; color: var(--lime-text-secondary); background: var(--lime-surface-raised); border-color: var(--lime-divider); }
+.fit-client-lime.theme-light .modal-dialog .actions .danger { color: var(--lime-surface); }
+.fit-client-lime .profile-settings .field { width: 100%; }
+.fit-client-lime .profile-settings select { width: 100%; }
+.fit-client-lime .profile-settings > .field { padding: 16px; box-sizing: border-box; }
+.fit-client-lime .switch-control::after { background: var(--lime-text-secondary); }
+.fit-client-lime .switch-input:checked + .switch-control::after { background: var(--lime-text-on-accent); }

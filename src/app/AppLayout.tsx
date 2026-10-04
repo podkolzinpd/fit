@@ -8,6 +8,8 @@ import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './featu
 import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 import { isFitLimeEnabled, isFitLimeShellRoute } from './fit-lime'
+import { isClientLimeShellRoute } from './client-lime'
+import { useClientLimeTheme } from './client-lime-theme'
 import { ContestWinnerDialog } from '../features/contest'
 import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 
@@ -15,14 +17,17 @@ export { appViewportMetrics } from './app-viewport'
 
 export function AppLayout() {
   const { actor } = useAuth()
-  const theme = useAppTheme()
+  const baseTheme = useAppTheme()
+  const clientTheme = useClientLimeTheme(actor?.userId ?? '')
   const contentRef = useRef<HTMLDivElement>(null)
   const { pathname, search } = useLocation()
   const redesignedStart = isTodayStartRedesignEnabled()
   const { keyboardOpen } = useAppViewport()
   const trainerScheduleV2 = isTrainerScheduleV2Enabled(actor)
   const trainerScheduleV2Route = trainerScheduleV2 && isTrainerScheduleV2CalendarRoute(pathname, search)
-  const fitLimeShell = isFitLimeShellRoute(actor, pathname, search)
+  const clientLimeShell = isClientLimeShellRoute(actor, pathname)
+  const fitLimeShell = isFitLimeShellRoute(actor, pathname, search) || clientLimeShell
+  const theme = clientLimeShell ? clientTheme.theme : baseTheme
   const pilotCompose = fitLimeShell && pathname === '/today' && new URLSearchParams(search).get('view') === 'compose'
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
@@ -67,25 +72,27 @@ export function AppLayout() {
     applyThemeVariant(themeVariant)
     const root = document.documentElement
     root.classList.add('ui-identity')
-    root.classList.toggle('theme-light', themeVariant === 'light' && !fitLimeShell)
+    root.classList.toggle('theme-light', themeVariant === 'light' && (!fitLimeShell || clientLimeShell))
     root.classList.toggle('fit-lime-document', fitLimeShell)
+    root.classList.toggle('fit-client-lime-document', clientLimeShell)
     applyMonochromeThemeColor(theme)
     root.classList.toggle('schedule-v2-document', trainerScheduleV2Route)
     const appleStatusBar = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]')
     const previousAppleStatusBar = appleStatusBar?.content ?? 'default'
     if (trainerScheduleV2Route || fitLimeShell) {
-      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', fitLimeShell ? '#000000' : '#080908')
-      appleStatusBar?.setAttribute('content', 'black-translucent')
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', clientLimeShell && themeVariant === 'light' ? '#f6f7f2' : fitLimeShell ? '#000000' : '#080908')
+      appleStatusBar?.setAttribute('content', clientLimeShell && themeVariant === 'light' ? 'default' : 'black-translucent')
     } else {
       appleStatusBar?.setAttribute('content', 'default')
     }
     return () => {
       root.classList.remove('schedule-v2-document')
       root.classList.remove('fit-lime-document')
+      root.classList.remove('fit-client-lime-document')
       appleStatusBar?.setAttribute('content', previousAppleStatusBar)
-      applyAppTheme(theme)
+      applyAppTheme(baseTheme)
     }
-  }, [theme, themeVariant, trainerScheduleV2Route, fitLimeShell])
+  }, [theme, baseTheme, themeVariant, trainerScheduleV2Route, fitLimeShell, clientLimeShell])
 
   useEffect(() => {
     // Route content can grow again while its draft is restored. Reset on the
@@ -108,7 +115,7 @@ export function AppLayout() {
 
   const frameClass = [
     'phone-frame',
-    fitLimeShell ? '' : themeVariantClass(themeVariant),
+    fitLimeShell && !clientLimeShell ? '' : themeVariantClass(themeVariant),
     redesignedStart && pathname === '/today' ? 'today-start-shell' : '',
     liveSession ? 'live-session-shell' : '',
     workoutForm || templateEditor ? 'workout-form-shell' : '',
@@ -133,6 +140,7 @@ export function AppLayout() {
     monochromeTrainerSchedule && !trainerScheduleV2Route ? 'trainer-schedule-identity' : '',
     trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
     fitLimeShell ? 'fit-lime-shell fit-lime' : '',
+    clientLimeShell ? 'fit-client-lime' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',
     monochromeTrainerProfile ? 'trainer-profile-identity' : '',
@@ -151,7 +159,7 @@ export function AppLayout() {
   >
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
-  if (actor?.role === 'client') return <div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     {monochromeClientFinance
       ? <Link to="/me" className="active" aria-current="page"><HomeIcon />Кабинет</Link>
       : <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>}
@@ -166,7 +174,7 @@ export function AppLayout() {
     </Coachmark>}
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
-  </nav>}</div>
+  </nav>}</div></FitLimeIconsContext>
   return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
