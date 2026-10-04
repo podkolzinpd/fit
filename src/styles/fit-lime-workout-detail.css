@@ -95,3 +95,16 @@
   .fit-lime-shell.workout-detail-history-identity .workout-detail-page { padding-inline: 16px }
 }
 .phone-frame.fit-lime-shell.workout-detail-history-identity .workout-cta { border-radius: 999px; font-weight: 500; }
+
+/* Keep explanatory prose outside the compact metric cells. */
+.fit-lime-shell.workout-detail-history-identity .workout-calorie-explanation {
+  margin: -4px 0 16px; padding: 0 4px; color: var(--lime-text-secondary);
+  font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-calorie-explanation > span {
+  display: block; margin-bottom: 4px; color: var(--lime-text); font-weight: 500;
+}
+.fit-lime-shell.workout-detail-history-identity .workout-fact-summary > p { min-width: 0; padding: 12px 8px; }
+.fit-lime-shell.workout-detail-history-identity .workout-fact-summary > p > span { font-size: .875rem; line-height: 1.35; }
+.fit-lime-shell.workout-detail-history-identity .workout-fact-summary > p > strong { font-size: 1.25rem; line-height: 1.4; overflow-wrap: anywhere; }
+.fit-lime-shell.workout-detail-history-identity :is(.workout-header-meta, .workout-plan-title) { font-size: .875rem; line-height: 1.5; color: var(--lime-text-secondary); overflow-wrap: anywhere; }

@@ -42,7 +42,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
 async function mockPilot(page: Page, options: { profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -428,6 +428,16 @@ async function mockPilot(page: Page, options: { profileId?: string; pilot?: bool
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+for (const fitLime of [true, false]) {
+  test(`calorie basis stays readable and pilot scoped: ${fitLime}`, async ({ page }) => {
+    await mockPilot(page, { fitLime, workouts: [{ ...workout, status: 'done', activeCaloriesKcal: 220, calorieEstimateBasis: 'Оценка по времени и фактической нагрузке' }] })
+    await page.goto(`/workouts/${workoutId}`)
+    await expect(page.getByRole('region', { name: 'Сводка тренировки' })).toContainText('220 ккал')
+    await expect(page.locator('.workout-calorie-explanation')).toHaveCount(fitLime ? 1 : 0)
+    if (!fitLime) await expect(page.getByRole('region', { name: 'Сводка тренировки' })).toContainText('Оценка по времени и фактической нагрузке')
+  })
+}
+
 for (const width of [320, 390, 430, 1440]) {
   test(`Lime filled calendar audit with the production seed recipe at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
@@ -475,6 +485,48 @@ for (const width of [320, 390, 430, 1440]) {
     await page.locator('.schedule-v2-fab').click()
     await expect(page.getByRole('button', { name: 'Запланировать', exact: true })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('filled-calendar-entry.png') })
+  })
+}
+
+for (const width of [320, 390, 430, 1440]) {
+  test(`Lime compact result keeps calorie explanation outside metrics at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    const notice = 'Недостаточно фактических данных для оценки. Укажите время выполнения кардио, чтобы рассчитать активные калории.'
+    await mockPilot(page, { fitLime: true, workouts: [{ ...workout, status: 'done', calorieEstimateNotice: notice }] })
+    await page.goto(`/workouts/${workoutId}`)
+    const metrics = page.getByRole('region', { name: 'Сводка тренировки' })
+    await expect(metrics).not.toContainText(notice)
+    await expect(page.locator('.workout-calorie-explanation')).toContainText(notice)
+    expect((await metrics.boundingBox())!.height).toBeLessThan(180)
+    await expect(page.getByRole('region', { name: 'Отзыв тренера' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Изменить результат' })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('lime-compact-result.png'), fullPage: true })
+  })
+
+  test(`Lime save editor supports enlarged text and reduced viewport at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { fitLime: true })
+    await page.addInitScript(({ actor, client, plan }) => {
+      localStorage.setItem(`fit.today-draft.${actor}.plan.${plan}`, JSON.stringify({
+        requestId: plan, screen: 'save', text: 'Приседания 3 по 10', choices: {},
+        items: [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'reps' }, sets: [{ position: 0, reps: 10 }], hasValues: true }],
+        clientId: client, workoutDate: '2026-09-24', recordMode: 'planned', trainingFormat: 'with_trainer',
+      }))
+    }, { actor: trainerId, client: clientId, plan: newWorkoutId })
+    await page.goto(`/today?view=save&plan=${newWorkoutId}`)
+    await expect(page.getByRole('heading', { name: 'Сохраните план' })).toBeVisible()
+    await page.evaluate(() => { document.documentElement.style.fontSize = '32px' })
+    await page.setViewportSize({ width, height: 400 })
+    const field = page.getByLabel('Время тренировки', { exact: true })
+    await field.fill('15:30')
+    await expect(field).toHaveValue('15:30')
+    await expect(field).toHaveCSS('font-family', /YS Geo/)
+    const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+    await save.scrollIntoViewIfNeeded()
+    await expect(save).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('lime-editor-enlarged.png'), fullPage: true })
   })
 }
 

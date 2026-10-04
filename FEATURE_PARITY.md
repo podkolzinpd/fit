@@ -1,5 +1,7 @@
 # Feature parity с trainer-app
 
+YAFIT-593 / PR4: пояснения калорий вне сетки метрик, scoped типографика редакторов, переносы на320px, доступные44px поля и действия. Непилотная карточка сохраняет прежнюю структуру, расчёты не менялись.16/16 новых browser-проверок WebKit/Chromium прошли (320/390/430/1440, enlarged text/reduced viewport).
+
 YAFIT-593 / PR3: аддитивная Yandex migration120 сохраняет planned_date/planned_start_time/planned_end_time только при новом pilot planned→in_progress. Канонические workout_date/start_time соответствуют началу; completed_at остаётся фактическим завершением. Idempotency/ownership исходной start-команды не меняются. Непилотные записи и старая история не переписываются.
 
 YAFIT-593 / PR2: единое завершение календарного планирования voice/text/manual, клиент/дата/формат в сводке, возврат с savedPlanId без потери calendar URL; retry/reload сохраняет requestId и blockId. Запись выполненной и немедленный старт вне этой ветки сохранены.
