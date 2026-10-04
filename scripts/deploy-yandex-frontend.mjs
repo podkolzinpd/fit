@@ -122,7 +122,9 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
       throw new DeploymentCheckError(`Unexpected frontend cache policy: ${path}`)
     }
   }
-  for (const path of ['/', '/auth', '/auth/yandex/callback', '/today']) await check(path, index)
+  // A freshly activated Yandex API Gateway can accept the control-plane update
+  // before its Object Storage routes are warm. Prime the lightweight dummy
+  // route first, matching the production warmup probe, then verify HTML/assets.
   const health = await fetchRoute(frontendHealthPath, `${origin}${frontendHealthPath}`, {
     redirect: 'manual', signal: AbortSignal.timeout(20_000),
   })
@@ -131,6 +133,7 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
       || await health.text() !== frontendHealthBody) {
     throw new DeploymentCheckError('Frontend gateway health route mismatch')
   }
+  for (const path of ['/', '/auth', '/auth/yandex/callback', '/today']) await check(path, index)
   await releaseBatch(bundle.files, async (file) => {
     const object = plan.objects.find((entry) => entry.key === file.key)
     if (object.delivery === 'public-object-redirect') {

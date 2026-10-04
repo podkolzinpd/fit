@@ -272,9 +272,14 @@ function responses(bundle, broken = '') {
 
 test('smoke checks routes, all asset hashes, caches, WASM redirect/CORS and missing asset behavior', async (t) => {
   const bundle = await fixture(t, 'new', true)
-  await smoke(bundle, target.frontendOrigin, responses(bundle))
-  await assert.rejects(smoke(bundle, target.frontendOrigin, responses(bundle, 'assets/new-12345678.js')), /smoke failed/)
   const working = responses(bundle)
+  const requestedPaths = []
+  await smoke(bundle, target.frontendOrigin, async (url, options) => {
+    requestedPaths.push(new URL(url).pathname)
+    return working(url, options)
+  })
+  assert.equal(requestedPaths[0], frontendHealthPath)
+  await assert.rejects(smoke(bundle, target.frontendOrigin, responses(bundle, 'assets/new-12345678.js')), /smoke failed/)
   await assert.rejects(smoke(bundle, target.frontendOrigin, (url, options) =>
     new URL(url).pathname === frontendHealthPath
       ? Promise.resolve(new Response('<title>Fit</title>', { headers: { 'content-type': 'text/html' } }))
