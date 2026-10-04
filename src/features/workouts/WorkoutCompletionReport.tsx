@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import type { Gender } from '../../shared/domain'
 import { celebrationCopy, completionIcons, completionSubtitle, selectCompletionCelebration } from './workout-completion-celebration'
 import { tonnageLabel } from '../../data/repositories/workouts.repository'
-import { CheckIcon, CloseIcon, RecordIcon, ShareIcon } from '../../shared/icons'
+import { CheckIcon, CloseIcon, RecordIcon, ScheduleIcon, ShareIcon } from '../../shared/icons'
 import { formatLocalDate, localDate } from '../../shared/local-date'
 import { resultNumber, type WorkoutResult } from '../../shared/workout-results'
 import { workoutResultDeltaLabel, type WorkoutVolumeComparison } from './workout-completion-insights'
@@ -72,6 +72,7 @@ export function WorkoutCompletionReport({
   hasTrainer,
   feedback,
   newAchievements = [],
+  clientLime = false,
 }: {
   workoutId: string
   userId: string
@@ -98,22 +99,27 @@ export function WorkoutCompletionReport({
   comparisonLoading?: boolean
   hasTrainer: boolean
   feedback?: ReactNode
+  clientLime?: boolean
   newAchievements?: readonly AthleteAchievement[]
 }) {
   const [selection] = useState(() => selectCompletionCelebration(userId, workoutId))
-  const celebration = celebrationCopy(selection, gender)
+  const defaultCelebration = celebrationCopy(selection, gender)
   const [imageFailed, setImageFailed] = useState(false)
   const [shareState, setShareState] = useState<'idle' | 'sharing' | 'shared' | 'copied' | 'error'>('idle')
   const [shareOpen, setShareOpen] = useState(false)
   const [shareVariant, setShareVariant] = useState<WorkoutShareVariant>('summary')
   const percent = workoutCompletionPercent(completedSets, totalSets)
   const partial = percent !== null && percent < 100
+  const noConfirmedSets = completedSets === 0
+  const restrained = clientLime && (noConfirmedSets || partial)
+  const celebration = restrained ? { ...defaultCelebration, title: 'Тренировка завершена' } : defaultCelebration
+  const subtitle = clientLime ? noConfirmedSets ? 'Подходы не отмечены. Выполненный объём не записан.' : partial ? 'Отмеченные подходы сохранены. Часть плана не подтверждена.' : 'Все подходы плана подтверждены и сохранены.' : completionSubtitle
   const title = workoutCompletionTitle()
   const countLine = workoutCompletionCountLine(completedSets, totalSets, completedExercises, totalExercises)
   const metrics: WorkoutShareMetric[] = [
     ...(duration ? [{ label: 'Время', value: duration }] : []),
-    ...(tonnage ? [{ label: 'Тоннаж', value: tonnage }] : []),
-    ...(caloriesKcal ? [{ label: 'Активные калории FIT', value: `≈ ${caloriesKcal} ккал` }] : []),
+    ...(tonnage && !(clientLime && noConfirmedSets) ? [{ label: 'Тоннаж', value: tonnage }] : []),
+    ...(caloriesKcal && !(clientLime && noConfirmedSets) ? [{ label: 'Активные калории FIT', value: `≈ ${caloriesKcal} ккал` }] : []),
     ...(percent !== null ? [{ label: 'План', value: `${percent}%` }] : []),
   ]
   const visibleMetrics = metrics.filter((metric) => metric.label !== 'План')
@@ -154,7 +160,7 @@ export function WorkoutCompletionReport({
       : null
   const shareSummary: WorkoutShareSummary = {
     title,
-    celebration,
+    celebration: restrained ? undefined : celebration,
     date,
     countLine,
     metrics,
@@ -190,16 +196,16 @@ export function WorkoutCompletionReport({
 
   const hiddenIncompleteCount = Math.max(0, incompleteExercises.length - 2)
 
-  return <section className="workout-completion-report" aria-label="Тренировка завершена">
+  return <section className={`workout-completion-report${clientLime && noConfirmedSets ? ' is-empty' : clientLime && partial ? ' is-partial' : ''}`} aria-label="Тренировка завершена">
     <div className="workout-completion-share-card">
       <header className="workout-completion-report-hero">
         <span className="workout-completion-report-art" aria-hidden="true">
-          {imageFailed ? <CheckIcon /> : <img src={completionIcons[celebration.icon]} alt="" width={96} height={96} loading="eager" fetchPriority="high" decoding="async" onError={() => setImageFailed(true)} />}
+          {restrained ? <ScheduleIcon /> : imageFailed ? <CheckIcon /> : <img src={completionIcons[celebration.icon]} alt="" width={96} height={96} loading="eager" fetchPriority="high" decoding="async" onError={() => setImageFailed(true)} />}
         </span>
         <div>
           <h1 id="workout-completion-title">{celebration.title}</h1>
-          <p className="workout-completion-report-subtitle">{completionSubtitle}</p>
-          <p className="workout-completion-report-date">{title} · {date}</p>
+          <p className="workout-completion-report-subtitle">{subtitle}</p>
+          <p className="workout-completion-report-date">{clientLime ? date : `${title} · ${date}`}</p>
         </div>
       </header>
 
@@ -210,10 +216,10 @@ export function WorkoutCompletionReport({
       {visibleMetrics.length > 0 && <dl className="workout-completion-report-facts" aria-label="Краткий итог тренировки">
         {visibleMetrics.map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
       </dl>}
-      {caloriesKcal && calorieBasis && <p className="muted">Основа оценки: {calorieBasis.toLowerCase()}.</p>}
-      {!caloriesKcal && calorieNotice && <p className="muted" role="status">{calorieNotice}</p>}
+      {caloriesKcal && calorieBasis && <p className="muted">{clientLime ? 'Приблизительная оценка расхода энергии.' : `Основа оценки: ${calorieBasis.toLowerCase()}.`}</p>}
+      {!caloriesKcal && calorieNotice && <p className="muted" role="status">{clientLime ? 'Для оценки калорий пока недостаточно данных.' : calorieNotice}</p>}
 
-      {(highlightLoading || highlightError || personalAchievement || positiveVolumeProgress) && <section className="workout-completion-highlight" aria-busy={highlightLoading}>
+      {!(clientLime && noConfirmedSets) && (highlightLoading || highlightError || personalAchievement || positiveVolumeProgress) && <section className="workout-completion-highlight" aria-busy={highlightLoading}>
         {highlightLoading ? <p className="workout-completion-highlight-loading" role="status">Проверяем достижения…</p>
           : highlightError ? <div className="workout-completion-highlight-error" role="alert"><p>Не удалось проверить достижения.</p>{onRetryResult && <button type="button" className="secondary" onClick={onRetryResult}>Повторить</button>}</div>
             : <><p className="eyebrow">{highlightLabel.toUpperCase()}</p><div className="workout-completion-highlight-record">
@@ -231,12 +237,13 @@ export function WorkoutCompletionReport({
 
     </div>
 
-    <NewlyEarnedAchievements items={newAchievements} />
+    {clientLime && <div className="workout-completion-actions">{actions}</div>}
+    {!(clientLime && noConfirmedSets) && <NewlyEarnedAchievements items={newAchievements} />}
     {hasTrainer && <p className="workout-completion-trainer-status"><CheckIcon /> Результат доступен тренеру</p>}
     {feedback}
     {details}
     <div className="workout-completion-share-actions workout-completion-actions">
-      {actions}
+      {!clientLime && actions}
       <button type="button" className="button secondary wide workout-completion-share" disabled={highlightLoading || highlightError} onClick={openShareOptions}>
         <ShareIcon /> Поделиться
       </button>
@@ -253,12 +260,12 @@ export function WorkoutCompletionReport({
         <p className="workout-share-sheet-intro">Выберите акцент — факты останутся короткими и без личной обратной связи.</p>
         <div className="workout-share-options" role="radiogroup" aria-label="Сюжет карточки">
           <button type="button" role="radio" aria-checked={shareVariant === 'summary'} className={shareVariant === 'summary' ? 'is-selected' : ''} onClick={() => setShareVariant('summary')}>
-            <span><strong>Итог</strong><small>Факты, достижение и нагрузка</small></span><b aria-hidden="true">01</b>
+            <span><strong>Итог</strong><small>{restrained ? 'Факты завершённой тренировки' : 'Факты, достижение и нагрузка'}</small></span><b aria-hidden="true">01</b>
           </button>
-          <button type="button" role="radio" aria-checked={shareVariant === 'achievement'} className={shareVariant === 'achievement' ? 'is-selected' : ''} onClick={() => setShareVariant('achievement')}>
-            <span><strong>Достижение</strong><small>{personalAchievement ? `${highlightLabel} крупным планом` : positiveVolumeProgress ? 'Рост объёма крупным планом' : 'Выполненный план крупным планом'}</small></span><b aria-hidden="true">02</b>
+          <button type="button" role="radio" disabled={clientLime && noConfirmedSets} aria-checked={shareVariant === 'achievement'} className={shareVariant === 'achievement' ? 'is-selected' : ''} onClick={() => setShareVariant('achievement')}>
+            <span><strong>Достижение</strong><small>{personalAchievement ? `${highlightLabel} крупным планом` : positiveVolumeProgress ? 'Рост объёма крупным планом' : restrained ? 'Подтверждённые подходы крупным планом' : 'Выполненный план крупным планом'}</small></span><b aria-hidden="true">02</b>
           </button>
-          <button type="button" role="radio" aria-checked={shareVariant === 'progress'} disabled={!volumeComparison || comparisonLoading} className={shareVariant === 'progress' ? 'is-selected' : ''} onClick={() => setShareVariant('progress')}>
+          <button type="button" role="radio" aria-checked={shareVariant === 'progress'} disabled={(clientLime && noConfirmedSets) || !volumeComparison || comparisonLoading} className={shareVariant === 'progress' ? 'is-selected' : ''} onClick={() => setShareVariant('progress')}>
             <span><strong>Прогресс</strong><small>{comparisonLoading ? 'Ищем похожую тренировку…' : volumeComparison ? `${volumeComparison.changePercent > 0 ? '+' : volumeComparison.changePercent < 0 ? '−' : ''}${Math.abs(volumeComparison.changePercent)}% объёма к прошлой похожей` : 'Появится после похожей тренировки'}</small></span><b aria-hidden="true">03</b>
           </button>
         </div>

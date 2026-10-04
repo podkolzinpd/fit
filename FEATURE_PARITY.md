@@ -493,3 +493,5 @@ PR4: Lime hour collision до/после часа, соседние заняти
 - Client Lime compose/review/save: единый focused route, компактные карточки и сохранённый выход к кабинету.
 
 - Client Lime Live: planned/current/completed отображаются раздельно; до успешного confirm нет галочки/роста счётчика; retry и точный incomplete count.
+
+- Client Lime completion: отдельные zero/partial/full тексты; нейтральный нулевой итог; краткие сведения о калориях; сквозная voice → review/edit/reload → plan → Live → completion приёмка.

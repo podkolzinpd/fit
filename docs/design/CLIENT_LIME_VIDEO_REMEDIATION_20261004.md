@@ -122,10 +122,14 @@
 
 | Этап | Статус | Доказательства |
 | --- | --- | --- |
-| PR 1 | Реализован локально, подготовка PR | Unit 9; WebKit 18; frontend 2353; API 1049; lint/typecheck/build/hosting passed. CI/production ожидаются. |
-| PR 2 | Локально проверен | Полный check, WebKit 2/2. Baseline текста сохраняется с точным массивом; изменённый текст требует явной замены. |
-| PR 3 | Локальные check и WebKit passed; #1407 merged | #1407 покрывает relay flush/cumulative finals; здесь client interim draft, явное ожидание разбора и invalidation при уходе. |
-| PR 4 | Локально проверен | Full check, WebKit 21/21 + polish 4/4; скриншоты проверены. Профиль/периоды/ввод/диалоги: исправлены более специфичные legacy selectors. |
-| PR 5 | Локально проверен | Full check; 20/21 + исправленный voice fixture 3/3; visual review 390/430. Draft route включает focused shell; review уплотнён. |
-| PR 6 | Локально проверен | Full check; unit19; lifecycle4; retry2; скриншоты обеих тем. Существующий write contract; явный CTA, pending/error, точный incomplete count. |
-| PR 7 | Ожидает | — |
+| PR 1 | #1408 merged → 290ae405 | CI37223636288 success; per-workout drafts, restore/new/delete. |
+| PR 2 | #1410 merged → 9af25c38 | CI37225323783 success; точный reviewed array и undo одинаковых экземпляров. |
+| PR 3 | #1411 merged → b1187422 | Все checks success на 71d5e9f5; текст голоса, loading и invalidation. |
+| PR 4 | #1412 merged → 75f23ea6 | CI37228961272 success; controls и две темы, visual regression. |
+| PR 5 | #1413 merged → a9f543b4 | Все checks success на d2f313d7; focused compose/review/save. |
+| PR 6 | #1415 merged → 0707f015 | Все checks success на 695c5a0e; unit19; lifecycle4; retry2; pending/error и точный incomplete count. |
+| PR 7 | #1417, локальная проверка пройдена | Финальный full check: frontend2366, API1063 passed (71 DB tests skipped), lint/typecheck/build/hosting passed; completion/share25; общая WebKit190, client Chromium27. После поправки zero: WebKit/Chromium4, sharing25 и typecheck. |
+
+Финальный production rollout ещё не завершён. Промежуточные CI main после PR3–6 отменены, чтобы не дублировать уже зелёный PR CI и освободить runners; финальный main обязан пройти полный CI и штатный deployment. Дополнительная финальная приёмка zero скрывает новые достижения и не предлагает «Достижение/Прогресс» для отправки пустого результата.
+
+- Production relay `wss://89-169-132-80.sslip.io/stt`: штатный smoke прошёл, включая `done` после stop. Старый адрес 84-201-157-124 из recovery workflow не используется клиентом; его timeout не означает сбой текущего relay.
