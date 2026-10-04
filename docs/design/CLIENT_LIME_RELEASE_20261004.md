@@ -72,3 +72,6 @@ Production клиентского пилота ещё не опубликова�
 ExercisePicker и flag suite — 111/111. Все оставшиеся шаги check, сборка и
 startup verification завершились успешно. PR1 #1384 слит в de601c46 после CI;
 PR2 #1385 опубликован. Переключатель остаётся выключенным до финального выпуска.
+
+Android auth-smoke сборка читает тот же CLIENT_LIME_ENABLED; локальная debug
+сборка остаётся default-off. После включения требуется новый native bundle.
