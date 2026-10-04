@@ -62,7 +62,8 @@
 .m-trainer-lime .m-context-current .m-screen-window { outline:2px solid var(--trainer-lime); }
 .m-trainer-lime .m-route span { background:var(--trainer-lime); }
 .m-trainer-lime .design-number,.m-trainer-lime figcaption span { color:var(--trainer-lime)!important; }
-.m-trainer-lime .m-proof-clients .m-proof-window img { height:558px!important;object-fit:cover;object-position:top; }
+.m-trainer-lime .m-proof-window img { background:#19191b!important; }
+.m-trainer-lime .m-proof-clients .m-proof-window img { height:558px!important;object-fit:cover!important;object-position:top; }
 .m-trainer-lime .m-proof-create .m-proof-window { background:#242426!important; }
 .m-trainer-lime .m-proof-progress-map .m-proof-window { display:flex;justify-content:center;background:#19191b!important; }
 .m-trainer-lime .m-proof-progress-map .m-proof-window img { height:585px!important;width:auto!important;object-fit:contain; }
