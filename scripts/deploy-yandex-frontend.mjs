@@ -117,14 +117,14 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
   const index = bundle.files.find((f) => f.key === 'index.html')
   const fetchRoute = async (label, url, options) => {
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      try { return await request(url, options) } catch {
+      try { return await request(url, { ...options, signal: AbortSignal.timeout(20_000) }) } catch {
         if (attempt === 3) throw new DeploymentCheckError(`Frontend request failed: ${label}`)
         await sleep(5000)
       }
     }
   }
   const check = async (path, file) => {
-    const response = await fetchRoute(path, `${origin}${path}`, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
+    const response = await fetchRoute(path, `${origin}${path}`, { redirect: 'manual' })
     if (response.status !== 200 || hash(Buffer.from(await response.arrayBuffer())) !== file.sha256
         || response.headers.get('content-type') !== file.contentType) throw new DeploymentCheckError(`Frontend smoke failed: ${path}`)
     const cache = response.headers.get('cache-control') ?? ''
@@ -136,7 +136,7 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
   // before its Object Storage routes are warm. Prime the lightweight dummy
   // route first, matching the production warmup probe, then verify HTML/assets.
   const health = await fetchRoute(frontendHealthPath, `${origin}${frontendHealthPath}`, {
-    redirect: 'manual', signal: AbortSignal.timeout(20_000),
+    redirect: 'manual',
   })
   if (health.status !== 200 || (health.headers.get('content-type') ?? '').split(';')[0] !== 'text/plain'
       || !(health.headers.get('cache-control') ?? '').includes('no-store')
@@ -147,17 +147,17 @@ export async function smoke(bundle, origin, request = fetch, plan = gatewayPlan(
   await releaseBatch(bundle.files, async (file) => {
     const object = plan.objects.find((entry) => entry.key === file.key)
     if (object.delivery === 'public-object-redirect') {
-      const response = await fetchRoute(`/${file.key}`, `${origin}/${file.key}`, { redirect: 'manual', signal: AbortSignal.timeout(20_000) })
+      const response = await fetchRoute(`/${file.key}`, `${origin}/${file.key}`, { redirect: 'manual' })
       const url = `https://storage.yandexcloud.net/${target.bucket}/${object.object}`
       if (response.status !== 307 || response.headers.get('location') !== url) throw new DeploymentCheckError('WASM redirect mismatch')
       for (const allowedOrigin of [target.frontendOrigin, target.customOrigin]) {
-        const asset = await fetchRoute(`storage:${file.key}`, url, { headers: { Origin: allowedOrigin }, signal: AbortSignal.timeout(20_000) })
+        const asset = await fetchRoute(`storage:${file.key}`, url, { headers: { Origin: allowedOrigin } })
         if (asset.status !== 200 || asset.headers.get('access-control-allow-origin') !== allowedOrigin
             || hash(Buffer.from(await asset.arrayBuffer())) !== file.sha256) throw new DeploymentCheckError('WASM bytes or CORS mismatch')
       }
     } else await check(`/${file.key}`, file)
   })
-  const missing = await fetchRoute('/assets/fit-deploy-missing.css', `${origin}/assets/fit-deploy-missing.css`, { signal: AbortSignal.timeout(20_000) })
+  const missing = await fetchRoute('/assets/fit-deploy-missing.css', `${origin}/assets/fit-deploy-missing.css`, {})
   if (missing.status !== 404) throw new DeploymentCheckError('Missing assets must return 404')
   await check('/assets/fit-deploy-missing.js', bundle.files.find((f) => f.key === 'asset-recovery.js'))
 }

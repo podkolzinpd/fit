@@ -319,6 +319,44 @@ test('extended gateway propagation retry succeeds on the eighth bounded attempt'
   }), /still unavailable/)
 })
 
+test('smoke retries a timed-out health request with a fresh non-aborted signal', async (t) => {
+  const bundle = await fixture(t, 'new')
+  const working = responses(bundle)
+  const controllers = new WeakMap()
+  t.mock.method(AbortSignal, 'timeout', (ms) => {
+    assert.equal(ms, 20_000)
+    const controller = new AbortController()
+    controllers.set(controller.signal, controller)
+    return controller.signal
+  })
+  const signals = []
+  await smoke(bundle, target.customOrigin, async (url, options) => {
+    if (new URL(url).pathname === frontendHealthPath) {
+      signals.push(options.signal)
+      if (signals.length === 1) controllers.get(options.signal).abort(new DOMException('timeout', 'TimeoutError'))
+      options.signal.throwIfAborted()
+    }
+    return working(url, options)
+  }, gatewayPlan(bundle, [], target), async () => {})
+  assert.equal(signals.length, 2)
+  assert.notEqual(signals[0], signals[1])
+  assert.equal(signals[0].aborted, true)
+  assert.equal(signals[1].aborted, false)
+})
+
+test('smoke still rejects persistent timeouts after four fresh attempts', async (t) => {
+  const bundle = await fixture(t, 'new')
+  const signals = []
+  const sleeps = []
+  await assert.rejects(smoke(bundle, target.customOrigin, async (_url, options) => {
+    signals.push(options.signal)
+    throw new DOMException('timeout', 'TimeoutError')
+  }, gatewayPlan(bundle, [], target), async (ms) => { sleeps.push(ms) }), /Frontend request failed: \/healthz/)
+  assert.equal(signals.length, 4)
+  assert.equal(new Set(signals).size, 4)
+  assert.deepEqual(sleeps, [5000, 5000, 5000])
+})
+
 test('cloud adapter only updates spec and has no ACL mutation operation', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'fit-adapter-test-'))
   t.after(() => rm(directory, { force: true, recursive: true }))
