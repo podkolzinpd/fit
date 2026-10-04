@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
+import { clientTodayDraftKey, readClientTodayDrafts, writeClientTodayDraft, readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
 
 describe('today draft', () => {
   beforeEach(() => {
@@ -9,6 +9,19 @@ describe('today draft', () => {
       setItem: (key: string, value: string) => values.set(key, value),
       removeItem: (key: string) => values.delete(key),
     })
+  })
+
+  it('keeps multiple client drafts and the legacy transcript independently resumable', () => {
+    const draft = { screen: 'compose' as const, text: 'Планка 2 минуты', choices: {}, items: [], clientId: 'client-a' }
+    writeTodayDraft(todayDraftKey('client-a'), { ...draft, text: 'Старый ввод' })
+    writeClientTodayDraft('client-a', 'first', draft)
+    writeClientTodayDraft('client-a', 'second', { ...draft, text: 'Приседания 10' })
+    expect(readClientTodayDrafts('client-a').map(({ id }) => id)).toEqual(['second', 'first', 'legacy'])
+    expect(readClientTodayDrafts('client-b')).toEqual([])
+    removeTodayDraft(clientTodayDraftKey('client-a', 'first'))
+    expect(readClientTodayDrafts('client-a').map(({ id }) => id)).toEqual(['second', 'legacy'])
+    removeTodayDraft(clientTodayDraftKey('client-a', 'legacy'))
+    expect(readClientTodayDrafts('client-a').map(({ id }) => id)).toEqual(['second'])
   })
 
   it('хранит черновики разных тренеров раздельно', () => {
