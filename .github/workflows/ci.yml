@@ -458,7 +458,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [mobile-chromium, lime-acceptance-webkit]
+        include:
+          - project: mobile-chromium
+            browser: chromium
+          - project: lime-acceptance-webkit
+            browser: webkit
     env:
       FIT_SCHEDULE_V2_VISUAL: '1'
       VITE_CLIENT_LIME_ENABLED: 'true'
@@ -480,8 +484,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
-      - run: npx playwright test e2e/trainer-schedule-v2.visual.spec.ts --project=${{ matrix.project }} --workers=1
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # Each test owns its BrowserContext and page-scoped API mocks; there is
+      # no shared database. Two workers shorten the suite on the same runner.
+      - run: npx playwright test e2e/trainer-schedule-v2.visual.spec.ts --project=${{ matrix.project }} --workers=2
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

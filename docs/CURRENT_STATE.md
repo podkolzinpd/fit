@@ -1,5 +1,20 @@
 # Fit — текущее состояние проекта
 
+## Ускорение CI — 2026-10-04
+
+В отдельной ветке Fit Lime использует два worker в прежних двух jobs;
+каждый устанавливает только свой Chromium/WebKit. На baseline `e1578092`
+282/282 browser cases и полный `npm run check` прошли. Сравнение одинаковых
+141 WebKit cases без retries: один worker 234,7 s, два 129,3 s (−45%);
+оба без ошибок/skips/flaky. Это локальный замер, не гарантия времени GitHub
+runners. После обновления от main `59887b5c` 358/358 Chromium/WebKit cases
+прошли с двумя worker. Полный `npm run check` с `VITEST_MAX_WORKERS=2`
+зелёный: 2352 frontend / 1049 API, 70 DB cases штатно skipped.
+CI обновлённой ветки остаётся гейтом выпуска.
+Первый Linux CI выявил общий 30 s timeout обхода 19 узких экранов;
+те же проверки разделены по маршрутам без увеличения timeout/retries.
+Целевой повтор 48/48 Chromium/WebKit зелёный; полный `check` повторён успешно.
+
 ## Проверенная точка — 2026-10-04
 
 - Main: `df88c702`; клиентский Lime выпущен, frontend run37211395236 success.
