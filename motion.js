@@ -69,19 +69,17 @@
   const categories=[...children[3].children];
   // Trainer: fixed context rail; only the selected working fragment is revealed.
   const trainer=scope[4], gallery=q('.content>div:last-child',trainer), trainerCopy=q('.content>div:first-child',trainer);
+  trainer.classList.add('m-trainer-lime');
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
   const figures=qa('figure',gallery);
-  figures.forEach((f,i)=>{f.style.setProperty('--overview-x',`${254*i}px`);const img=q('img',f);const win=document.createElement('div');win.className='m-screen-window';img.before(win);win.append(img);});
+  const trainerScreens=['clients','create','progress-map'];
+  figures.forEach((f,i)=>{f.style.setProperty('--overview-x',`${254*i}px`);const img=q('img',f);img.src=`assets/trainer-lime/${trainerScreens[i]}.png`;img.alt=['Fit Lime: список клиентов, демонстрационные профили','Fit Lime: планирование тренировки для Алексея Смирнова','Fit Lime: карта прогресса, демонстрационные результаты'][i];const win=document.createElement('div');win.className='m-screen-window';img.before(win);win.append(img);});
   const proof=document.createElement('div');proof.className='m-trainer-proof';
   figures.forEach((f,i)=>{
     const panel=document.createElement('figure');panel.className='m-proof-panel';
     const win=document.createElement('div');win.className='m-proof-window';win.append(q('img',f).cloneNode());panel.append(win);
-    if(i===2){
-      panel.classList.add('m-proof-progress');
-      const lower=document.createElement('div');lower.className='m-proof-window m-proof-map';lower.append(q('img',f).cloneNode());panel.append(lower);
-    }
+    panel.classList.add(`m-proof-${trainerScreens[i]}`);
     panel.append(q('figcaption',f).cloneNode(true));
-    if(i===2){const caption=document.createElement('p');caption.className='m-proof-caption';caption.textContent='Два фрагмента одного экрана';panel.append(caption);}
     proof.append(panel);
   });gallery.append(proof);
   const route=document.createElement('div');route.className='m-route';route.innerHTML='<span></span>';trainer.append(route);
