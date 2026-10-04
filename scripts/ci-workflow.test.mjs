@@ -45,8 +45,11 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
 test('requires Fit Lime route checks in both engines without production secrets', () => {
   const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
   assert.match(job, /FIT_SCHEDULE_V2_VISUAL: '1'/)
-  assert.match(job, /project: \[mobile-chromium, lime-acceptance-webkit\]/)
+  assert.match(job, /project: mobile-chromium\n\s+browser: chromium/)
+  assert.match(job, /project: lime-acceptance-webkit\n\s+browser: webkit/)
+  assert.match(job, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/)
   assert.match(job, /playwright test e2e\/trainer-schedule-v2\.visual\.spec\.ts/)
+  assert.match(job, /--project=\$\{\{ matrix\.project \}\} --workers=2/)
   assert.doesNotMatch(job, /secrets\.|supabase start|environment:/)
   assert.match(workflow, /FIT_LIME_RESULT: \$\{\{ needs\.e2e-fit-lime\.result \}\}/)
   assert.match(workflow, /"\$FIT_LIME_RESULT" != "success"/)
