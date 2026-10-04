@@ -281,6 +281,22 @@ test('smoke checks routes, all asset hashes, caches, WASM redirect/CORS and miss
       : working(url, options)), /health route mismatch/)
 })
 
+test('smoke retries a transient request failure without replaying completed routes', async (t) => {
+  const bundle = await fixture(t, 'new', true)
+  const working = responses(bundle)
+  const calls = new Map()
+  const sleeps = []
+  await smoke(bundle, target.customOrigin, async (url, options) => {
+    const path = new URL(url).pathname
+    calls.set(path, (calls.get(path) ?? 0) + 1)
+    if (path === '/auth' && calls.get(path) < 3) throw new Error('temporary gateway timeout')
+    return working(url, options)
+  }, gatewayPlan(bundle, [], target), async (ms) => { sleeps.push(ms) })
+  assert.equal(calls.get('/'), 1)
+  assert.equal(calls.get('/auth'), 3)
+  assert.deepEqual(sleeps, [5000, 5000])
+})
+
 test('cloud adapter only updates spec and has no ACL mutation operation', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'fit-adapter-test-'))
   t.after(() => rm(directory, { force: true, recursive: true }))
