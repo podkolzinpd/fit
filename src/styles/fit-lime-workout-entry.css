@@ -191,3 +191,24 @@
 .phone-frame.fit-lime-shell.workout-create-edit-identity :is(.today-primary-cta, .today-review-next, .today-save-actions .workout-cta, .today-voice-hero-compact .voice-input-button) { border-radius: 999px; font-weight: 500; }
 .fit-lime-shell .today-plan-summary { margin: 0; color: var(--lime-text-secondary); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere }
 .fit-lime-shell.workout-create-edit-identity .today-voice-text-inline { position: relative; z-index: 3; min-width: 48px; min-height: 48px }
+
+/* One readable type scale across dictate, review and save, including zoom. */
+.phone-frame.fit-lime-shell.workout-create-edit-identity .workout-header-contract h2 { font-size: 1.5rem; line-height: 1.15; overflow-wrap: anywhere; }
+.fit-lime-shell.workout-create-edit-identity :is(.workout-header-meta, .today-date-field > span, .today-plan-summary, .client-picker-label, .field > span) {
+  font-size: .875rem; line-height: 1.5; color: var(--lime-text-secondary);
+}
+.fit-lime-shell.workout-create-edit-identity :is(.today-date-field input, .workout-form .field input, .workout-form .field select, .workout-form .field textarea, .today-text-fallback textarea) {
+  font-size: 1rem; line-height: 1.4; min-width: 0; max-width: 100%;
+  min-height: 44px; border-width: 1px; border-style: solid; box-sizing: border-box;
+}
+.fit-lime-shell.workout-create-edit-identity :is(.today-record-mode, .workout-record-mode) { display: flex; flex-wrap: wrap; gap: 4px; }
+.fit-lime-shell.workout-create-edit-identity :is(.today-record-mode, .workout-record-mode) button {
+  flex: 1 1 120px; min-height: 44px; font-size: .875rem; line-height: 1.4; white-space: normal;
+}
+.fit-lime-shell.workout-create-edit-identity .today-save-actions { gap: 16px; }
+.fit-lime-shell.workout-create-edit-identity :is(.today-date-field, .today-save-actions .split) { min-width: 0; }
+.fit-lime-shell.workout-create-edit-identity .today-save-actions .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.app-keyboard-open .fit-lime-shell.workout-create-edit-identity :is(.workout-form .workout-action-row, .today-review-next) { position: static; }
+@media (max-width: 360px) {
+  .fit-lime-shell.workout-create-edit-identity .today-save-actions .split { grid-template-columns: minmax(0, 1fr); }
+}
