@@ -336,6 +336,23 @@ describe('parseQuickWorkoutEntry', () => {
     expect(result.parsed[2]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, durationSec: 45 })))
   })
 
+  it('разделяет однословные упражнения с параметрами без слова-связки', () => {
+    const result = parseQuickWorkoutEntry(
+      'Присед со штангой три по десять сто килограмм гиперэкстензия три по десять планка две минуты выпады с гантелями три по десять двадцать килограмм',
+      SYSTEM_EXERCISE_CATALOG,
+    )
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual([
+      'barbell-squat',
+      'hyperextension',
+      'plank',
+      'fedb-dumbbell-lunges',
+    ])
+    expect(result.parsed[1]?.sets).toHaveLength(3)
+    expect(result.parsed[2]?.sets).toEqual([{ position: 0, durationSec: 120 }])
+  })
+
   it.each([
     ['Приседания с гирей двадцать килограмм три по десять', 20, 10, 3],
     ['Приседания с гирей вес двадцать килограмм, три подхода по десять', 20, 10, 3],

@@ -271,6 +271,60 @@ describe('VoiceInputButton', () => {
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('жим лёжа 3 по 10 присед 3 по 12'))
   })
 
+  it('replaces overlapping SpeechKit finals and preserves utterance boundaries', async () => {
+    const user = userEvent.setup()
+    let onFinal!: (text: string, result?: { endOfUtterance?: boolean }) => void
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton
+      variant="hero"
+      idleLabel="Надиктовать тренировку"
+      onTranscript={onTranscript}
+      source="today"
+      streamingFactory={() => ({
+        start: vi.fn((_partial: (text: string) => void, final: typeof onFinal) => { onFinal = final; return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Надиктовать тренировку' }))
+    onFinal('жим лёжа 3 по 10 100 килограмм')
+    onFinal('жим лёжа 3 по 10 100 килограмм жим гантелей сидя 3 по 10 20 килограмм', { endOfUtterance: true })
+    onFinal('планка две минуты выпады с гантелями 3 по 10 20 килограмм', { endOfUtterance: true })
+    onFinal('заминка', { endOfUtterance: true })
+    await user.click(screen.getByRole('button', { name: /Завершить запись/ }))
+
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith([
+      'жим лёжа 3 по 10 100 килограмм жим гантелей сидя 3 по 10 20 килограмм',
+      'планка две минуты выпады с гантелями 3 по 10 20 килограмм',
+      'заминка',
+    ].join('\n')))
+  })
+
+  it('does not deduplicate an intentionally repeated new utterance', async () => {
+    const user = userEvent.setup()
+    let onFinal!: (text: string, result?: { endOfUtterance?: boolean }) => void
+    const onTranscript = vi.fn()
+    render(<VoiceInputButton
+      variant="icon"
+      idleLabel="Голосовой ввод"
+      onTranscript={onTranscript}
+      source="assistant"
+      streamingFactory={() => ({
+        start: vi.fn((_partial: (text: string) => void, final: typeof onFinal) => { onFinal = final; return Promise.resolve() }),
+        stop: vi.fn().mockResolvedValue(undefined),
+        rotate: vi.fn(),
+      })}
+    />)
+
+    await user.click(screen.getByRole('button', { name: 'Голосовой ввод' }))
+    onFinal('планка одна минута', { endOfUtterance: true })
+    onFinal('планка одна минута', { endOfUtterance: true })
+    await user.click(screen.getByRole('button', { name: /Завершить голосовой ввод/ }))
+
+    await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('планка одна минута\nпланка одна минута'))
+  })
+
   it('ignores stale streaming callbacks after cancellation', async () => {
     const user = userEvent.setup()
     let onPartial!: (text: string) => void

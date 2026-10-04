@@ -3,8 +3,12 @@ import { yandexAppSessionTransport } from '../../data/yandex-app-session-transpo
 const DEFAULT_RELAY_URL = 'wss://89-169-132-80.sslip.io/stt'
 const SOCKET_CONNECT_TIMEOUT_MS = 5_000
 
+export interface StreamingSpeechResult {
+  endOfUtterance?: boolean
+}
+
 export interface StreamingSpeechSession {
-  start(onPartial: (text: string) => void, onFinal: (text: string) => void): Promise<void>
+  start(onPartial: (text: string, result?: StreamingSpeechResult) => void, onFinal: (text: string, result?: StreamingSpeechResult) => void): Promise<void>
   rotate(): Promise<void>
   stop(): Promise<void>
 }
@@ -16,10 +20,10 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
   private processor: ScriptProcessorNode | null = null
   private stream: MediaStream | null = null
   private stopped = false
-  private onPartial: ((text: string) => void) | null = null
-  private onFinal: ((text: string) => void) | null = null
+  private onPartial: ((text: string, result?: StreamingSpeechResult) => void) | null = null
+  private onFinal: ((text: string, result?: StreamingSpeechResult) => void) | null = null
 
-  async start(onPartial: (text: string) => void, onFinal: (text: string) => void): Promise<void> {
+  async start(onPartial: (text: string, result?: StreamingSpeechResult) => void, onFinal: (text: string, result?: StreamingSpeechResult) => void): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia || typeof WebSocket === 'undefined') throw new Error('Потоковое распознавание недоступно в этом браузере.')
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
     if (this.stopped) {
@@ -74,9 +78,10 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
       socket.onclose = () => finish('error')
     })
     this.socket.onmessage = (event) => {
-      const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string }
-      if (message.type === 'partial' && message.text) this.onPartial?.(message.text)
-      if (message.type === 'final' && message.text) this.onFinal?.(message.text)
+      const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string; endOfUtterance?: boolean }
+      const result = { endOfUtterance: message.endOfUtterance }
+      if (message.type === 'partial' && message.text) this.onPartial?.(message.text, result)
+      if (message.type === 'final' && message.text) this.onFinal?.(message.text, result)
       if (message.type === 'error') this.onPartial?.(message.message || 'Ошибка распознавания')
     }
   }
