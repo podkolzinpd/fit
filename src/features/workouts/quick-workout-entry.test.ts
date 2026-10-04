@@ -12,6 +12,30 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('parseQuickWorkoutEntry', () => {
+  it('восстанавливает точную тренировку из накопительных финалов записи экрана', () => {
+    const result = parseQuickWorkoutEntry([
+      'Жим лежат 3 по 10 100 килограмм',
+      'Жим лежат 3 по 10 100 килограмм жим гантелей сидя 3 по 10 20 килограмм',
+      'Жим гантелей сидя 3 по 10 20 килограмм',
+      'Присед со штангой 3 по 10 100 килограмм',
+      'Выпады с гантелями 3 по 10 20 килограмм',
+    ].join('\n'), SYSTEM_EXERCISE_CATALOG)
+
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.name)).toEqual([
+      'Жим штанги лёжа',
+      'Жим гантелей сидя',
+      'Присед со штангой',
+      'Выпады с гантелями',
+    ])
+    expect(result.parsed.map((item) => item.sets.map(({ weightKg, reps }) => ({ weightKg, reps })))).toEqual([
+      Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })),
+      Array.from({ length: 3 }, () => ({ weightKg: 20, reps: 10 })),
+      Array.from({ length: 3 }, () => ({ weightKg: 100, reps: 10 })),
+      Array.from({ length: 3 }, () => ({ weightKg: 20, reps: 10 })),
+    ])
+  })
+
   it('не съедает пробел, который тренер только что набрал в поле ввода', () => {
     expect(formatWorkoutText('Жим лёжа ', SYSTEM_EXERCISE_CATALOG)).toBe('Жим лёжа ')
   })

@@ -2,6 +2,7 @@ import { yandexAppSessionTransport } from '../../data/yandex-app-session-transpo
 
 const DEFAULT_RELAY_URL = 'wss://89-169-132-80.sslip.io/stt'
 const SOCKET_CONNECT_TIMEOUT_MS = 5_000
+const SOCKET_FLUSH_TIMEOUT_MS = 5_000
 
 export interface StreamingSpeechResult {
   endOfUtterance?: boolean
@@ -22,6 +23,8 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
   private stopped = false
   private onPartial: ((text: string, result?: StreamingSpeechResult) => void) | null = null
   private onFinal: ((text: string, result?: StreamingSpeechResult) => void) | null = null
+  private flushingSocket: WebSocket | null = null
+  private resolveFlush: (() => void) | null = null
 
   async start(onPartial: (text: string, result?: StreamingSpeechResult) => void, onFinal: (text: string, result?: StreamingSpeechResult) => void): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia || typeof WebSocket === 'undefined') throw new Error('Потоковое распознавание недоступно в этом браузере.')
@@ -77,20 +80,39 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
       socket.onerror = () => finish('error')
       socket.onclose = () => finish('error')
     })
-    this.socket.onmessage = (event) => {
+    const connectedSocket = this.socket
+    connectedSocket.onmessage = (event) => {
       const message = JSON.parse(String(event.data)) as { type: string; text?: string; message?: string; endOfUtterance?: boolean }
       const result = { endOfUtterance: message.endOfUtterance }
       if (message.type === 'partial' && message.text) this.onPartial?.(message.text, result)
       if (message.type === 'final' && message.text) this.onFinal?.(message.text, result)
       if (message.type === 'error') this.onPartial?.(message.message || 'Ошибка распознавания')
+      if (message.type === 'done' && this.flushingSocket === connectedSocket) this.resolveFlush?.()
     }
+  }
+
+  private async flush(socket: WebSocket): Promise<void> {
+    if (socket.readyState !== WebSocket.OPEN) return
+    await new Promise<void>((resolve) => {
+      let timeout: number | null = null
+      const finish = () => {
+        if (this.flushingSocket !== socket) return
+        this.flushingSocket = null
+        this.resolveFlush = null
+        if (timeout !== null) window.clearTimeout(timeout)
+        resolve()
+      }
+      this.flushingSocket = socket
+      this.resolveFlush = finish
+      timeout = window.setTimeout(finish, SOCKET_FLUSH_TIMEOUT_MS)
+      socket.send(JSON.stringify({ type: 'stop' }))
+    })
   }
 
   async rotate(): Promise<void> {
     if (this.stopped || !this.socket) return
     const oldSocket = this.socket
-    if (oldSocket.readyState === WebSocket.OPEN) oldSocket.send(JSON.stringify({ type: 'stop' }))
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 500))
+    await this.flush(oldSocket)
     oldSocket.close()
     const configuredUrl = (import.meta.env as unknown as { VITE_SPEECHKIT_RELAY_URL?: string }).VITE_SPEECHKIT_RELAY_URL
     await this.connectSocket(configuredUrl || DEFAULT_RELAY_URL)
@@ -100,12 +122,7 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
     this.stopped = true
     this.processor?.disconnect(); this.source?.disconnect()
     this.stream?.getTracks().forEach((track) => track.stop())
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({ type: 'stop' }))
-      // SpeechKit may emit several final chunks around a pause. Give the
-      // server time to flush all of them before closing the WebSocket.
-      await new Promise<void>((resolve) => { window.setTimeout(resolve, 1_500) })
-    }
+    if (this.socket) await this.flush(this.socket)
     this.socket?.close(); await this.context?.close()
     this.processor = null; this.source = null; this.stream = null; this.socket = null; this.context = null
   }
