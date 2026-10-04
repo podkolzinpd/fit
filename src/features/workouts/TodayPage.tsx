@@ -126,6 +126,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const clientDraftId = requestedClientDraft && /^[\w-]{1,80}$/.test(requestedClientDraft) ? requestedClientDraft : clientSessionId
   const [draftListVersion, setDraftListVersion] = useState(0)
   const [restoredClientDraft, setRestoredClientDraft] = useState(false)
+  const [reviewedText, setReviewedText] = useState<string | null>(null)
   const limePlanning = !clientMode && isFitLimeEnabled(actor)
   const entryState = location.state as { newClientDraft?: boolean; returnTo?: unknown; planClientId?: string; planStartTime?: string; planEndTime?: string; planTrainingFormat?: WorkoutTrainingFormat; planTitle?: string; planRequestId?: string; sourceFormDraftKey?: string } | null
   const returnTo = limePlanning ? safeWorkoutReturnTo(entryState?.returnTo) ?? '/today' : clientMode ? '/me' : '/today'
@@ -271,6 +272,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       if (clientLime) setRestoredClientDraft(true)
       setRestoredDraftScreen(screen === 'compose' && (!limePlanning || draft.text.trim() || draft.items.length) ? draft.screen : null)
       setText(draft.text)
+      setReviewedText(draft.reviewedText ?? (clientLime && draft.screen !== 'compose' ? draft.text : null))
       setLastLlmText(draft.lastLlmText ?? null)
       setChoices(draft.choices)
       setItems(draft.items)
@@ -313,7 +315,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       return
     }
     const persistedItems = planOnly ? items.map((item, index) => ({ ...item, structure: { ...item.structure, blockId: planExercises[index]?.blockId ?? item.structure?.blockId } })) : items
-    const persistedDraft = { ...(limePlanning ? planMetadata : {}), screen, text, lastLlmText: lastLlmText ?? undefined, choices, items: persistedItems, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat }
+    const persistedDraft = { ...(limePlanning ? planMetadata : {}), screen, text, reviewedText: reviewedText ?? undefined, lastLlmText: lastLlmText ?? undefined, choices, items: persistedItems, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat }
     if (clientLime) writeClientTodayDraft(actor!.userId, clientDraftId, persistedDraft)
     else writeTodayDraft(draftKey, persistedDraft)
     if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))) {
@@ -324,7 +326,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         endTime: planMetadata.endTime ?? '', trainingFormat, exercises: planExercises,
       })
     }
-  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, planExercises, planOnly, recordMode, removedRefs, screen, startTime, text, trainingFormat, workoutDate])
+  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, planExercises, planOnly, recordMode, removedRefs, reviewedText, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
   const resolved = recognized
@@ -408,11 +410,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }
 
   async function review() {
+    if (clientLime && reviewedText === text) { setScreen('review'); return }
+    if (clientLime && reviewedText !== null && !await askConfirm({
+      message: 'Текст изменился. Заменить проверенный список новым разбором? Правки упражнений и подходов будут заменены.',
+      confirmLabel: 'Разобрать заново',
+    })) return
     const request = ++reviewRequest.current
     trackGoal('workout_parse_submitted')
     setParseError(null)
     const applyReview = (parsedItems: ParsedWorkoutExercise[], unmatched: UnmatchedView[]) => {
-      const manualOnly = items.filter((item) => manualRefs.includes(item.exercise.ref))
+      const manualOnly = clientLime ? [] : items.filter((item) => manualRefs.includes(item.exercise.ref))
       const chosen = unmatched.flatMap((item) => choices[item.line] && !parsedItems.some((parsed) => parsed.line === item.line)
         ? [resolveWorkoutParseChoice(item, choices[item.line]!)]
         : [])
@@ -426,6 +433,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         return false
       }
       setItems([...manualOnly, ...orderParsedWorkoutItems([...parsedItems, ...chosen])])
+      if (clientLime) { setReviewedText(text); setRemovedItem(null); setManualRefs([]); setRemovedRefs([]) }
       setScreen('review')
       trackGoal('workout_parse_completed')
       trackGoal('workout_review_opened')
@@ -489,6 +497,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         setVoiceRefinement({ state: 'success', message: 'Диктовка разобрана и отформатирована.' })
         if (openReview && parsedItems.length) {
           setItems(parsedItems)
+          if (clientLime) setReviewedText(normalizedText)
           setScreen('review')
           trackGoal('workout_review_opened')
         }
@@ -561,6 +570,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   async function pickExercises(exercises: ExerciseSnapshot[], runningFormat?: RunningFormat) {
     if (pickerFromCompose) {
+      if (clientLime) setReviewedText(text)
       setScreen('review')
       setPickerFromCompose(false)
     }
@@ -690,7 +700,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     trackGoal('today_review_exercise_remove_undone')
     const { item, index } = removedItem
     setItems((current) => {
-      if (current.some((currentItem) => currentItem.exercise.ref === item.exercise.ref)) return current
+      if (!clientLime && current.some((currentItem) => currentItem.exercise.ref === item.exercise.ref)) return current
       const next = [...current]
       next.splice(Math.min(index, next.length), 0, item)
       return next
@@ -736,6 +746,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     setParseError(null)
     setVoiceRefinement(null)
     setRestoredClientDraft(false)
+    setReviewedText(null)
     setLlmUnmatched([])
     setRemovedItem(null)
     setRpeOverrides(new Map())
@@ -892,7 +903,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         />
       </div>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>{limePlanning ? 'Есть черновик плана' : 'Есть незавершённая тренировка'}</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>{clientLime && restoredClientDraft ? 'Черновик тренировки' : 'Новая тренировка'}</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); if (!limePlanning) setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>{clientLime && restoredClientDraft ? 'Черновик тренировки' : 'Новая тренировка'}</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); if (!limePlanning && !clientLime) setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && voiceRefinement.state !== 'loading' && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
