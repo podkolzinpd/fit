@@ -1,0 +1,62 @@
+/* Deliberately scoped: no app styles or other presentation scenes are changed. */
+#deck>.ff-slide { background:#111718!important;padding:60px 76px!important; }
+#deck>.ff-slide::before,#deck>.ff-slide::after { display:none!important; }
+#deck>.ff-slide>.eyebrow { margin:0!important;position:absolute!important;top:62px!important;left:76px!important; }
+#deck>.ff-slide>h2 { position:absolute!important;top:110px!important;left:76px!important;margin:0!important;font-size:54px!important;line-height:1.12!important; }
+#deck>.ff-slide>h2::after { display:none!important; }
+.ff-slide .ff-period { position:absolute;right:76px;top:129px;color:#adb5b7;font-size:20px; }
+.ff-slide .ff-hero { position:absolute;left:76px;right:76px;top:208px;height:103px;display:flex;gap:45px;align-items:flex-end; }
+.ff-slide .ff-kicker { display:block;color:#adb5b7;font-size:15px;letter-spacing:1.2px;margin:0 0 9px;font-weight:600; }
+.ff-slide .ff-hero strong { display:block;font-size:64px;line-height:1;letter-spacing:-2.2px;font-weight:750;color:#f5f4ef; }
+.ff-slide .ff-hero strong small { font-size:34px;letter-spacing:-.6px;font-weight:600; }
+.ff-slide .ff-hero-main strong { color:#d6f500; }
+.ff-slide .ff-hero-arrow { font-size:45px;line-height:1.25;color:#727b7d; }
+.ff-slide .ff-hero-secondary { margin-left:5px; }
+.ff-slide .ff-cost-context { margin-left:70px; }
+.ff-slide .ff-margin { margin-left:70px; }
+.ff-slide .ff-equation { font-size:29px;margin-left:auto;line-height:1.4;padding-bottom:3px; }
+.ff-slide .ff-equation small { font-size:23px; }
+.ff-slide .ff-equation span { display:block;font-size:20px;color:#adb5b7; }
+.ff-slide .ff-chart-caption { position:absolute;left:76px;top:342px;font-size:19px;color:#adb5b7; }
+.ff-slide .ff-legend { position:absolute;left:76px;right:76px;top:377px;display:flex;gap:27px;color:#bdc3c4;font-size:20px; }
+.ff-slide .ff-legend span { display:inline-flex;align-items:center;gap:9px;white-space:nowrap; }
+.ff-slide .ff-legend i { display:inline-block;width:11px;height:11px;flex:none; }
+.ff-slide .ff-outline-key { border:1px solid #c6ccca;background:transparent; }
+.ff-slide .ff-chart { position:absolute;left:76px;top:405px;width:1448px;height:355px;overflow:visible; }
+.ff-slide .ff-grid line { stroke:#adb5b7;stroke-opacity:.1;stroke-width:1; }
+.ff-slide .ff-grid text { fill:#8f989b;font-size:15px; }
+.ff-slide .ff-revenue-outline { fill:none;stroke:#c6ccca;stroke-width:1.5;opacity:1; }
+.ff-slide .ff-revenue-fill { opacity:0; }
+.ff-slide .ff-cost-fill { opacity:1;transform-box:view-box;transform-origin:0 290px; }
+.ff-slide .ff-gap { opacity:0; }
+.ff-slide .ff-gap rect { fill:#d6f500; }
+.ff-slide .ff-gap path { fill:none;stroke:#d6f500;stroke-width:2; }
+.ff-slide .ff-negative rect { fill:#596267; }
+.ff-slide .ff-negative path { stroke:#969e9f; }
+.ff-slide .ff-value { fill:#f5f4ef;font-size:25px;font-weight:700; }
+.ff-slide .ff-last,.ff-slide .ff-positive-value { fill:#d6f500; }
+.ff-slide .ff-cost-inset { fill:#111718; }
+.ff-slide .ff-year-name { fill:#f5f4ef;font-size:23px;font-weight:600; }
+.ff-slide[data-finance-mode="revenue"] .ff-revenue-outline { opacity:0; }
+.ff-slide[data-finance-mode="revenue"] .ff-revenue-fill { opacity:1; }
+.ff-slide[data-finance-mode="revenue"] .ff-cost-fill { opacity:0; }
+.ff-slide[data-finance-mode="result"] .ff-gap { opacity:1; }
+.ff-slide[data-finance-mode="result"] .ff-cost-fill { filter:brightness(.72); }
+.ff-slide .ff-bottom { position:absolute;left:76px;right:76px;top:767px;border-top:1px solid #485153;padding-top:14px; }
+.ff-slide .ff-turnover-label { position:absolute;left:0;top:17px;width:115px;color:#adb5b7;font-size:16px;line-height:1.3; }
+.ff-slide .ff-turnover-values { display:grid;grid-template-columns:repeat(5,270px);margin-left:50px; }
+.ff-slide .ff-turnover-values strong { text-align:center;font-size:22px; }
+.ff-slide .ff-turnover-definition { margin:12px 0 0!important;text-align:center;font-size:20px!important;line-height:1.2!important;color:#adb5b7; }
+.ff-slide .ff-bottom-costs { top:761px;padding-top:12px; }
+.ff-slide .ff-cost-breakdown { display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:28px; }
+.ff-slide .ff-cost-breakdown>div { display:grid;grid-template-columns:auto 1fr;column-gap:16px;align-items:baseline; }
+.ff-slide .ff-cost-breakdown strong { font-size:29px;grid-row:span 2; }
+.ff-slide .ff-cost-breakdown small { font-size:17px;font-weight:500; }
+.ff-slide .ff-cost-breakdown b { font-size:20px; }
+.ff-slide .ff-cost-breakdown p { color:#adb5b7;font-size:20px!important;line-height:1.2!important;margin:4px 0 0!important; }
+.ff-slide .ff-milestones { display:grid;grid-template-columns:1fr 1.25fr;gap:55px; }
+.ff-slide .ff-milestones>div { display:flex;gap:20px;align-items:baseline; }
+.ff-slide .ff-milestones strong { font-size:23px;white-space:nowrap; }
+.ff-slide .ff-milestones span { color:#adb5b7;font-size:20px;line-height:1.35; }
+.ff-slide .ff-model-note { position:absolute;left:76px;bottom:25px;color:#7f898c;font-size:13px; }
+@media print { .ff-slide .ff-chart { overflow:visible!important; } }
