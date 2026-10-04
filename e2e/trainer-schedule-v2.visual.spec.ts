@@ -50,6 +50,79 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   })
 }
 
+test('Achievement collection recovers after an error and its last row clears navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [], failTrainingData: true })
+  await page.goto('/me/achievements')
+  await expect(page.getByText('Не удалось загрузить историю тренировок.')).toBeVisible()
+  backend.setTrainingDataFailure(false)
+  await page.getByRole('button', { name: 'Повторить' }).click()
+  await expect(page.getByText('Получено 0 из 83')).toBeVisible()
+  await expect(page.locator('.athlete-achievement-progress-track')).toHaveCount(0)
+  await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })
+  const last = await page.locator('.athlete-achievement-card').last().boundingBox()
+  const nav = await page.locator('.client-tab-bar').boundingBox()
+  expect(last && nav && last.y + last.height < nav.y).toBe(true)
+  await page.reload()
+  await expect(page.getByText('Получено 0 из 83')).toBeVisible()
+})
+
+test('Achievement collection restores earned badges after signing in again', async ({ page }) => {
+  const history = [{ ...workout, status: 'done', completedAt: '2026-09-23T12:00:00Z' }]
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: history })
+  await page.goto('/me/achievements')
+  const first = page.getByRole('button', { name: /^Первый шаг\./ })
+  await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
+  await page.goto('/me/settings')
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  await expect(page).toHaveURL(/\/auth/)
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: history })
+  await page.goto('/me/achievements')
+  await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
+})
+
+test('Completing the next workout earns a bright badge and moves progress to the following tier', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+  const previous = Array.from({ length: 24 }, (_, index) => ({
+    ...workout, id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    status: 'done', completedAt: '2026-09-23T12:00:00Z',
+  }))
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [...previous, {
+    ...workout, createdBy: clientId, trainingFormat: 'self', exercises: [{
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'reps', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, reps: 8, fact: {}, confirmedAt: null, version: 1 }],
+    }],
+  }] })
+  await page.goto('/me/achievements')
+  const twentyFive = page.getByRole('button', { name: /^Четверть сотни\./ })
+  const fifty = page.getByRole('button', { name: /^Полсотни\./ })
+  await expect(twentyFive.locator('.athlete-achievement-progress-label')).toHaveText('24 из 25')
+  await expect(fifty.locator('.athlete-achievement-progress-track')).toHaveCount(0)
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  const confirm = page.getByRole('button', { name: 'Завершить', exact: true })
+  if (await confirm.isVisible()) await confirm.click()
+  await expect(page.getByRole('region', { name: 'Тренировка завершена', exact: true })).toBeVisible()
+  await page.goto('/me/achievements')
+  await expect(twentyFive.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
+  await expect(twentyFive.locator('.athlete-achievement-progress-track')).toHaveCount(0)
+  await expect(fifty.locator('.athlete-achievement-progress-label')).toHaveText('25 из 50')
+  await expect(fifty.locator('.athlete-achievement-static-art')).toHaveCSS('filter', 'grayscale(1) brightness(0.7)')
+  await page.screenshot({ path: testInfo.outputPath('achievement-after-25-workouts.png') })
+  await page.goto('/me')
+  await expect(page.locator('.athlete-achievements-home')).toContainText('Четверть сотни')
+  await expect(page.locator('.athlete-achievements-home .athlete-achievement-badge')).toHaveClass(/is-earned/)
+  await page.goto('/me/progress')
+  await expect(page.locator('.athlete-achievements-preview .athlete-achievement-badge.is-earned')).toHaveCount(3)
+  await expect(page.locator('.athlete-achievements-preview .athlete-achievement-progress-track')).toHaveCount(0)
+})
+
 const workout = {
   id: workoutId,
   trainerId,
