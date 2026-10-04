@@ -27,6 +27,16 @@ const objectKey = (key) => /^releases\/[a-f0-9]{40}-[a-f0-9]{64}\/[a-zA-Z0-9_./-
 class DeploymentCheckError extends Error {}
 const failureReason = (error) => error instanceof DeploymentCheckError ? error.message : 'External operation failed (details withheld)'
 
+export async function retryTransient(action, { attempts = 4, sleep = delay, delayMs = 5000 } = {}) {
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 12) throw new Error('Invalid retry budget')
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try { return await action() } catch (error) {
+      if (attempt === attempts - 1) throw error
+      await sleep(delayMs)
+    }
+  }
+}
+
 export function validateSpecification(spec) {
   if (spec?.openapi !== '3.0.0' || !spec.paths?.['/'] || !spec.paths?.['/assets/{file+}']) {
     throw new Error('Unknown gateway contract; activation refused')
@@ -222,14 +232,7 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
     try { return await run('yc', args, { timeout: 240_000, maxBuffer: 8_000_000 }) }
     catch (cause) { throw new DeploymentCheckError(`Yandex command failed: ${args.slice(0, 3).join(' ')}; inspect gateway status before retry`, { cause }) }
   }
-  const retry = async (action) => {
-    for (let attempt = 0; ; attempt += 1) {
-      try { return await action() } catch (error) {
-        if (attempt === 3) throw error
-        await delay(5000)
-      }
-    }
-  }
+  const retry = (action, attempts = 4) => retryTransient(action, { attempts })
   return {
     specification: async () => JSON.parse((await json(`${api}:spec?format=JSON`, token)).openapiSpec),
     assertReady: async () => {
@@ -300,7 +303,11 @@ export function createCloud({ directory, token, githubToken, run = promisify(exe
     },
     // The custom domain is the user-visible production entry point. The provider
     // hostname is still covered by the gateway readback and both-origin CORS checks.
-    smoke: (bundle, plan) => retry(() => smoke(bundle, target.customOrigin, request, plan)),
+    // Custom-domain propagation has repeatedly exceeded the old ~6 minute
+    // smoke budget even though the control plane was ACTIVE. Keep retrying the
+    // read-only smoke for up to ~13 minutes; activation itself is still issued
+    // exactly once and the workflow's 30 minute timeout preserves rollback room.
+    smoke: (bundle, plan) => retry(() => smoke(bundle, target.customOrigin, request, plan), 8),
     verifyRollback: (expected) => retry(async () => {
       const response = await request(`${target.customOrigin}/auth`, { signal: AbortSignal.timeout(20_000) })
       if (response.status !== 200 || hash(Buffer.from(await response.arrayBuffer())) !== hash(expected)) {

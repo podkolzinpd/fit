@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process'
 import { packageRelease, supportedRouting } from './frontend-release.mjs'
 import { frontendHealthBody, frontendHealthPath, gatewayPlan } from './frontend-gateway-plan.mjs'
 import { gatewaySpecificationsEqual } from './frontend-gateway-specification.mjs'
-import { deployFrontend, retainAssets, target, validateSpecification, smoke, createCloud, verifyStorageAccess } from './deploy-yandex-frontend.mjs'
+import { deployFrontend, retainAssets, target, validateSpecification, smoke, createCloud, retryTransient, verifyStorageAccess } from './deploy-yandex-frontend.mjs'
 
 async function fixture(t, name = 'old', wasm = false) {
   const directory = await mkdtemp(join(tmpdir(), 'fit-deploy-test-'))
@@ -300,6 +300,23 @@ test('smoke retries a transient request failure without replaying completed rout
   assert.equal(calls.get('/'), 1)
   assert.equal(calls.get('/auth'), 3)
   assert.deepEqual(sleeps, [5000, 5000])
+})
+
+test('extended gateway propagation retry succeeds on the eighth bounded attempt', async () => {
+  let calls = 0
+  const sleeps = []
+  const result = await retryTransient(async () => {
+    calls += 1
+    if (calls < 8) throw new Error('gateway still propagating')
+    return 'ready'
+  }, { attempts: 8, delayMs: 5000, sleep: async (ms) => { sleeps.push(ms) } })
+
+  assert.equal(result, 'ready')
+  assert.equal(calls, 8)
+  assert.deepEqual(sleeps, Array(7).fill(5000))
+  await assert.rejects(retryTransient(async () => { throw new Error('still unavailable') }, {
+    attempts: 2, sleep: async () => {},
+  }), /still unavailable/)
 })
 
 test('cloud adapter only updates spec and has no ACL mutation operation', async (t) => {
