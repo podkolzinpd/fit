@@ -9882,6 +9882,8 @@ DataLens: https://datalens.ru/wnvsw21o9r7af-svodnye-metriki-prilozheniya?tab=Y3.
   
 
 
+<link rel="stylesheet" href="client-ai-story.css?v=1">
+<script src="client-ai-story.js?v=1"></script>
 <script>
 document.querySelector('.idea-polished .foot').style.display = 'none';
 const cover = document.querySelector('#deck > .slide');
@@ -9913,10 +9915,11 @@ if (slides.length <= 1) document.querySelectorAll('.nav').forEach(button => { bu
 // One retained version per slide: keep revision suffixes, renumber after the approved reorder.
 slides.forEach((slide, index) => {
   const revision = slide.dataset.version?.split('.')[1] || '1'
-  slide.dataset.slideFamily = String(index + 1)
-  slide.dataset.version = `${index + 1}.${revision}`
+  const logical = index - (index >= 6 ? 1 : 0)
+  slide.dataset.slideFamily = String(logical + 1)
+  slide.dataset.version = `${logical + 1}.${revision}`
   const eyebrow = slide.querySelector(':scope > .eyebrow')
-  if (index > 0 && eyebrow) eyebrow.textContent = eyebrow.textContent.replace(/^\d+\s*·/, `${String(index).padStart(2, '0')} ·`)
+  if (index > 0 && eyebrow) eyebrow.textContent = eyebrow.textContent.replace(/^\d+\s*·/, `${String(logical).padStart(2, '0')} ·`)
 })
 const counter = document.getElementById('counter')
 const sectionName = document.getElementById('sectionName')
@@ -10054,5 +10057,5 @@ show(current, false)
   blocks[3].querySelector('p').innerHTML = 'Страница тренера, публикации,<br>челленджи и приглашения за бонус.';
 }
 </script>
-<script src="motion.js?v=6"></script>
+<script src="motion.js?v=client-ai-1"></script>
 </body></html>

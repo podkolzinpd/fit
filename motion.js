@@ -6,7 +6,10 @@
 (() => {
   'use strict';
   const all = [...document.querySelectorAll('#deck > .slide')];
-  const scope = all.slice(0, 10);
+  const originals = all.filter(s=>!s.classList.contains('client-ai-story'));
+  const scope = originals.slice(0, 10);
+  const clientAI = window.FIT_CLIENT_AI;
+  const motionCount = clientAI ? 11 : 10;
   const originalShow = window.show;
   if (scope.length !== 10 || !originalShow) return;
   const q = (s, r = document) => r.querySelector(s);
@@ -20,6 +23,7 @@
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
   const timeline = [[1],[0,1,2],[3,7],[0,1],[1,2,3,4],[0,1,2,3,4,5,6,7],[2,4],[0,4],[0,4],[0,1,2]];
+  if(clientAI)timeline.splice(6,0,[0,1,2]);
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
@@ -33,6 +37,7 @@
     ['Мессенджер · Телемост','Pay · Сплит','Бенефит для компаний','Директ · Практикум','Лавка · Еда · Маркет','Все сценарии'],
     ['Подписка','Комиссия','Реклама','Вся модель']
   ];
+  if(clientAI)sceneLabels.splice(6,0,['Твоя цель','Готовая программа','Можно тренироваться']);
   const labels = timeline.map((stops,i)=>stops.map(n=>sceneLabels[i][n]));
   scope.forEach((s,i) => { s.classList.add('motion-slide'); s.dataset.motionSlide = i; });
   function phase(el, n) { if(el) { el.classList.add('m-reveal'); el.dataset.phase=n; } }
@@ -181,11 +186,12 @@
   q('.fm1-how',commission).innerHTML='Оплата тренировки или программы через Fit.<br>Деньги тренеру — после подтверждения.<br>При споре Fit разбирает ситуацию.<br>За это удерживает комиссию.';
   // Only the agreed photographic framing changes on the team slide. Source
   // photographs, roles, dates and staffing values are not altered.
-  all[13].classList.add('motion-team-framing');
+  originals[13].classList.add('motion-team-framing');
   qa('.fm1-blk',scope[9]).forEach((el,i)=>phase(el,i));
   const toolbar=document.createElement('nav');toolbar.className='m-toolbar';toolbar.setAttribute('aria-label','Управление motion-презентацией');
   toolbar.innerHTML=`<button data-action="prev" aria-label="Предыдущий шаг">←</button><span class="m-step-counter" aria-live="polite"></span><button data-action="next" aria-label="Следующий шаг">→</button><select aria-label="Перейти к слайду">${all.map((s,i)=>`<option value="${i}">${i?String(i).padStart(2,'0')+' · '+q('h2',s).textContent:'Обложка'}</option>`).join('')}</select><button data-action="play">▶ Автопоказ</button><button data-action="static">Без анимации</button><button data-action="full" aria-label="Полный экран">⛶</button>`;
   document.body.append(toolbar);
+  qa('option',toolbar).forEach((option,i)=>{option.textContent=(i?all[i].dataset.version+' · ':'')+q('h2',all[i]).textContent;});
   if(params.has('record'))document.body.classList.add('m-recording');
   function renderClient(n, prev, motion) {
     const active=n>0&&n<8;
@@ -221,11 +227,13 @@
   }
   function apply(n=step, motion=true, prev=step) {
     step=n;
+    clientAI?.pause();
     qa('video',proof).forEach(v=>{v.pause();v.classList.remove('is-playing');});
-    toolbar.hidden=index>=10;
-    if(index>=10)return updateToolbar();
-    const s=scope[index];s.dataset.motionStep=n;
+    toolbar.hidden=index>=motionCount;
+    if(index>=motionCount)return updateToolbar();
+    const s=all[index];s.dataset.motionStep=n;
     const scene=timeline[index][n],previousScene=timeline[index][prev];
+    if(s===clientAI?.slide){clientAI.render(scene,motion&&!staticMode,animate,staticMode);return updateToolbar();}
     s.classList.toggle('m-static',staticMode);
     qa('.m-reveal',s).forEach(el=>{const p=+el.dataset.phase;el.classList.toggle('m-pending',!staticMode&&p>scene);el.classList.toggle('m-current',!staticMode&&p===scene);});
     if(index===0){coverTitle.style.opacity='1';}
@@ -253,12 +261,12 @@
     if(index===5)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
   }
-  function updateToolbar(){q('.m-step-counter',toolbar).textContent=index<10?`${step+1} / ${max[index]+1}`:'—';q('select',toolbar).value=index;toolbar.title=index<10?labels[index][step]:'';q('[data-action="static"]',toolbar).textContent=staticMode?'Включить анимацию':'Без анимации';q('[data-action="play"]',toolbar).textContent=playing?'Ⅱ Пауза':'▶ Автопоказ';}
+  function updateToolbar(){q('.m-step-counter',toolbar).textContent=index<motionCount?`${step+1} / ${max[index]+1}`:'—';q('select',toolbar).value=index;toolbar.title=index<motionCount?labels[index][step]:'';q('[data-action="static"]',toolbar).textContent=staticMode?'Включить анимацию':'Без анимации';q('[data-action="play"]',toolbar).textContent=playing?'Ⅱ Пауза':'▶ Автопоказ';}
   function stop(){playing=false;clearTimeout(timer);timer=null;settle();updateToolbar();}
   function revealCover(){if(index===0&&!staticMode)animate(coverTitle,[{clipPath:'inset(20% 100% 33% 0)',opacity:.5},{clipPath:'inset(20% 45% 33% 0)',opacity:1}],850);}
-  function go(i,n=0){settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index);apply(staticMode&&index<10?max[index]:n,false);revealCover();}
-  function next(manual=true){if(manual)stop();settle();if(index<10&&!staticMode&&step<max[index])apply(step+1,true,step);else if(index<all.length-1)go(index+1);else stop();}
-  function prev(){stop();settle();if(index<10&&!staticMode&&step>0)apply(step-1,true,step);else if(index>0)go(index-1,index-1<10?max[index-1]:0);}
+  function go(i,n=0){settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index);apply(staticMode&&index<motionCount?max[index]:n,false);revealCover();}
+  function next(manual=true){if(manual)stop();settle();if(index<motionCount&&!staticMode&&step<max[index])apply(step+1,true,step);else if(index<all.length-1)go(index+1);else stop();}
+  function prev(){stop();settle();if(index<motionCount&&!staticMode&&step>0)apply(step-1,true,step);else if(index>0)go(index-1,index-1<motionCount?max[index-1]:0);}
   function run(){playing=true;animations.forEach(a=>a.play());updateToolbar();clearTimeout(timer);timer=setTimeout(()=>{if(!playing)return;next(false);if(playing)run();},4200);}
   function full(){document.fullscreenElement?document.exitFullscreen?.():document.documentElement.requestFullscreen?.().catch(()=>{});}
   function toggleStatic(){stop();settle();staticMode=!staticMode;scope.forEach(s=>s.classList.toggle('m-static',staticMode));apply(staticMode?max[index]||0:0,false);}
@@ -277,16 +285,16 @@
     if(actions[key]){e.preventDefault();e.stopImmediatePropagation();actions[key]();}
   },true);
   // The original hash listener resolves this function dynamically.
-  window.show=(i,hash=true)=>{stop();settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index,hash);apply(staticMode&&index<10?max[index]:0,false);revealCover();};
+  window.show=(i,hash=true)=>{stop();settle();index=Math.max(0,Math.min(all.length-1,i));originalShow(index,hash);apply(staticMode&&index<motionCount?max[index]:0,false);revealCover();};
   let beforePrint=null;
-  window.addEventListener('beforeprint',()=>{stop();beforePrint={index,step,staticMode};staticMode=true;scope.forEach((s,i)=>{index=i;apply(max[i],false);});index=beforePrint.index;});
+  window.addEventListener('beforeprint',()=>{stop();beforePrint={index,step,staticMode};staticMode=true;all.slice(0,motionCount).forEach((s,i)=>{index=i;apply(max[i],false);});index=beforePrint.index;});
   window.addEventListener('afterprint',()=>{if(beforePrint){({index,step,staticMode}=beforePrint);apply(step,false);beforePrint=null;}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();qa('video',proof).forEach(v=>v.pause());}else if(index===4&&!staticMode&&step===1){q('video',proof).play().catch(()=>{});}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();clientAI?.pause();qa('video',proof).forEach(v=>v.pause());}else if(index===4&&!staticMode&&step===1){q('video',proof).play().catch(()=>{});}else if(all[index]===clientAI?.slide){clientAI.render(step,false,animate,staticMode);}});
   window.FIT_MOTION={version:3,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',iterationBaseline:'d8bf8f0a7a8228490c80b66ba8567d2b9b851f14',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
     state:()=>({index,step,staticMode,playing,animations:animations.size}),
     seek:(i,n=0)=>{stop();go(i,n);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
   if(params.has('step'))step=Math.max(0,Math.min(max[index]||0,Number(params.get('step'))||0));
-  apply(staticMode&&index<10?max[index]:step,false);
+  apply(staticMode&&index<motionCount?max[index]:step,false);
   revealCover();
 })();
