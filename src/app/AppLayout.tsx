@@ -28,14 +28,15 @@ export function AppLayout() {
   const clientLimeShell = isClientLimeShellRoute(actor, pathname)
   const fitLimeShell = isFitLimeShellRoute(actor, pathname, search) || clientLimeShell
   const theme = clientLimeShell ? clientTheme.theme : baseTheme
-  const pilotCompose = fitLimeShell && pathname === '/today' && new URLSearchParams(search).get('view') === 'compose'
+  const clientCompose = clientLimeShell && pathname === '/me' && new URLSearchParams(search).has('draft') && !['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
+  const pilotCompose = clientCompose || (fitLimeShell && pathname === '/today' && new URLSearchParams(search).get('view') === 'compose')
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
   const templateEditor = pathname === '/schedule/templates/new/editor' || /\/schedule\/templates\/[^/]+\/edit$/.test(pathname)
   const workoutDetail = pathname !== '/workouts/new' && /\/workouts\/[^/]+$/.test(pathname)
   const exerciseHistory = /\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
-  const monochromeClientHome = pathname === '/me' && !todayStep
+  const monochromeClientHome = pathname === '/me' && !todayStep && !clientCompose
   const monochromeLive = liveSession
   const monochromeProgress = pathname === '/me/progress'
   const monochromeClientGoal = pathname === '/me/goal'
@@ -141,6 +142,7 @@ export function AppLayout() {
     trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
     fitLimeShell ? 'fit-lime-shell fit-lime' : '',
     clientLimeShell ? 'fit-client-lime' : '',
+    clientCompose ? 'client-workout-compose' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',
     monochromeTrainerProfile ? 'trainer-profile-identity' : '',
