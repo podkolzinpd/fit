@@ -699,6 +699,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const location = useLocation()
   const navigate = useNavigate()
   const returnTo = `${location.pathname}${location.search}`
+  const savedPlanId = (location.state as { savedPlanId?: unknown } | null)?.savedPlanId
   const changeScheduleFilter = (key: 'mode' | 'client' | 'status', value: string) => {
     const next = new URLSearchParams(location.search)
     if (value && value !== 'all' && value !== 'calendar') next.set(key, value)
@@ -867,6 +868,11 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
     {fitLimeToday && selected !== today && <button className="schedule-v2-return-today" type="button" onClick={() => openDay(today)}>Сегодня</button>}
+    {(fitLimeToday || fitLimeSchedule) && typeof savedPlanId === 'string' && /^[0-9a-f-]{36}$/i.test(savedPlanId) && <section className="fit-lime-plan-saved" role="status">
+      <span>План сохранён</span>
+      <Link to={`/workouts/${savedPlanId}`} state={{ returnTo }}>Открыть</Link>
+      <button type="button" className="link" aria-label="Скрыть подтверждение" onClick={() => navigate(returnTo, { replace: true, state: null })}>Закрыть</button>
+    </section>}
     {fitLimeToday && <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Начатые тренировки и черновик доступны в незавершённых действиях."><span className="sr-only">Рабочий день</span></Coachmark>}
     {fitLimeToday && daySummary}
     {homeActions}
@@ -1325,7 +1331,7 @@ export function WorkoutFormPage() {
     ])
     if (pilotCalendarReturnTo) {
       await refreshCalendar
-      navigate(pilotCalendarReturnTo, { replace: true })
+      navigate(pilotCalendarReturnTo, { replace: true, state: limePlan ? { savedPlanId: id } : undefined })
       return
     }
     if (workoutId === id && navigationState?.fromWorkoutDetailId === id && hasWorkoutBackEntry()) {
@@ -1513,7 +1519,7 @@ export function WorkoutFormPage() {
           : clientContextLocked
             ? <input type="hidden" name="clientId" value={clientId} />
             : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); trainingFormatTouched.current = false; setTrainingFormat(undefined); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
-        {!workoutId && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
+        {!workoutId && !(limePlan && params.get('entry') === 'quick') && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
         <div className="workout-form-section-head"><p className="eyebrow">КОГДА</p></div>
         <div className="split workout-time-row"><Field label="Дата"><input name="date" type="date" value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Начало"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
         {!clientMode && <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
@@ -1546,6 +1552,7 @@ export function WorkoutFormPage() {
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error">{mutation.error.message}</p>}
+      {limePlan && params.get('entry') === 'quick' && <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(entryDate)} · {startTime ? `${startTime}${endTime ? `–${endTime}` : ''}` : 'Без времени'} · {workoutTrainingFormatLabel(trainingFormat ?? 'self')}</p>}
       <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}

@@ -106,12 +106,13 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       ...draft, title: title.trim() || null, stageId: draft.stageId || null,
       startTime: time.start || undefined, endTime: time.end || undefined,
     }),
-    onSuccess: async () => {
+    onSuccess: async (id) => {
       savedSuccessfully.current = true
       removeWorkoutFormDraft(key)
       await invalidateWorkoutResults(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['today-workouts'] })
       dialog.current?.close()
+      navigate(returnTo, { replace: true, state: { savedPlanId: id } })
     },
     onSettled: () => { submitting.current = false },
   })

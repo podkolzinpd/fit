@@ -636,6 +636,53 @@ test('Lime retained plan offers old date and preserves it when starting a new pl
   await expect(plan.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
+for (const method of ['text', 'voice', 'manual'] as const) {
+  test(`Lime plan saves and returns to its filtered calendar via ${method}`, async ({ page }, testInfo) => {
+    const backend = await mockPilot(page, { fitLime: true, withCustomExercise: true, failFirstSave: true })
+    const commands: unknown[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') commands.push(request.postDataJSON() as unknown)
+    })
+    const calendar = `/today?date=2026-09-24&week=2026-09-21&client=${clientId}&status=planned`
+    await page.goto(calendar)
+    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Сохранённый план')
+    await page.getByRole('button', { name: 'Клиент: Выберите клиента' }).click()
+    await page.getByRole('dialog', { name: 'Выбор клиента' }).getByRole('button', { name: /Алексей Смирнов/ }).click()
+    if (method === 'manual') {
+      await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
+      await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+    } else {
+      await page.getByRole('button', { name: method === 'voice' ? 'Надиктовать тренировку' : 'Ввести текстом', exact: true }).click()
+      if (method === 'voice') await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
+      await page.getByRole('textbox', { name: 'Тренировка', exact: true }).fill('Мой присед 3 по 10 по 20 кг')
+      await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+      await page.getByRole('button', { name: 'Далее', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Сохраните план' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Записать выполненную' })).toHaveCount(0)
+      await expect(page.locator('.today-plan-summary')).toContainText('Алексей Смирнов')
+      await expect(page.locator('.today-plan-summary')).toContainText('Без времени')
+    }
+    const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+    await page.screenshot({ path: testInfo.outputPath(`lime-plan-${method}-before-save.png`), fullPage: true })
+    await save.click()
+    await expect.poll(() => backend.getSaveAttempts()).toBe(1)
+    await expect(save).toBeEnabled()
+    await page.reload()
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect(page).toHaveURL(new RegExp(calendar.replaceAll('?', '\\?')))
+    await expect(page.getByRole('status').filter({ hasText: 'План сохранён' })).toBeVisible()
+    expect(commands).toHaveLength(2)
+    expect(commands[1]).toEqual(commands[0])
+    await page.screenshot({ path: testInfo.outputPath(`lime-plan-${method}-saved.png`), fullPage: true })
+    await page.getByRole('link', { name: 'Открыть', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
+  })
+}
+
 test('Lime keeps unparsed plan text when returning before choosing a client', async ({ page }) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/today?date=2026-09-24')
@@ -886,7 +933,7 @@ for (const width of [390, 430]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
   })
 }
-test('Figma workout second pilot keeps quick-plan guidance and completed draft', async ({ page }) => {
+test('Figma workout second pilot keeps quick-plan guidance and separate completed entry', async ({ page }) => {
   const profileId = '10000000-0000-4000-8000-000000000010'
   await mockPilot(page, { profileId, fitLime: true })
   await page.goto('/today?date=2026-09-24')
@@ -902,13 +949,16 @@ test('Figma workout second pilot keeps quick-plan guidance and completed draft',
   await guidance.getByRole('button', { name: 'Понятно' }).click()
   await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая')
   await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
-  await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Записать тренировку', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeVisible()
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
   await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
   await page.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
-  await expect(page).toHaveURL(/workouts\/new\?date=2026-09-24&entry=quick$/)
+  await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая')
+  await page.goto('/workouts/new?date=2026-09-24')
+  await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
+  await page.reload()
   await expect(page.getByRole('button', { name: 'Завершённая', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { name: 'Записать тренировку', exact: true })).toBeDisabled()
 })
