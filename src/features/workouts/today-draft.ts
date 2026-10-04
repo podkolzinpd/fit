@@ -8,6 +8,7 @@ export interface TodayDraft {
   endTime?: string
   screen: 'compose' | 'review' | 'save'
   text: string
+  reviewedText?: string
   lastLlmText?: string
   choices: Record<string, ExerciseSnapshot>
   items: ParsedWorkoutExercise[]
@@ -31,6 +32,7 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.endTime === undefined || typeof draft.endTime === 'string')
     && typeof draft.text === 'string'
     && (draft.lastLlmText === undefined || typeof draft.lastLlmText === 'string')
+    && (draft.reviewedText === undefined || typeof draft.reviewedText === 'string')
     && typeof draft.clientId === 'string'
     && Array.isArray(draft.items)
     && Boolean(draft.choices && typeof draft.choices === 'object')

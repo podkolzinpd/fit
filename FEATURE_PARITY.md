@@ -483,3 +483,5 @@ PR4: Lime hour collision до/после часа, соседние заняти
 
 - Client Lime draft isolation (2026-10-04): explicit new/resume/delete, separate
   per-draft storage and legacy recovery; other client/trainer behavior unchanged.
+
+- Client Lime review: неизменный ввод сохраняет точный список; изменённый ввод требует явной замены; undo возвращает конкретный экземпляр повторяющегося упражнения.
