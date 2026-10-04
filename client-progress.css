@@ -1,0 +1,25 @@
+/* One result, one derived achievement, one subordinate existing body map. */
+#deck>.cs-progress>h2{width:860px;top:155px;font-size:60px!important}
+.cs-progress .cp-result{position:absolute;left:76px;top:325px;width:790px}
+.cs-progress .cp-label{font-size:16px;letter-spacing:2px;color:#a0a7aa}
+.cs-progress .cp-values{display:flex;align-items:center;gap:34px;margin-top:24px}
+.cs-progress .cp-values small{display:block;font-size:24px;color:#a0a7aa;margin-bottom:5px}
+.cs-progress .cp-values strong{font-size:132px;line-height:1.1;letter-spacing:-7px;font-weight:600}
+.cs-progress .cp-values>span{font-size:65px;color:#6a7478;margin-top:34px}
+.cs-progress .cp-values>div:last-child strong{color:#b6ef4d}
+.cs-progress .cp-values em{font-size:40px;letter-spacing:-1px;font-style:normal;font-weight:500}
+.cs-progress .cp-result h3{font-size:32px!important;margin:22px 0 32px!important;font-weight:500!important}
+.cs-progress .cp-achievement{display:flex;align-items:center;gap:25px;border-top:1px solid #343b3d;width:625px;padding-top:24px}
+.cs-progress .cp-achievement strong{font-size:43px;color:#b6ef4d;white-space:nowrap}
+.cs-progress .cp-achievement p{font-size:23px;line-height:1.4;color:#b7bcbe;margin:0}
+.cs-progress .cs-steps{bottom:42px;display:flex;width:790px}.cs-progress .cs-steps button{font-size:20px}
+.cs-progress .cp-detail{visibility:hidden;opacity:0;left:1030px;width:420px;top:83px;height:748px}
+.cs-progress[data-cs-step="1"] .cp-detail{visibility:visible;opacity:1}
+.cs-progress .cp-exercise{padding:15px 17px;background:#1a1a1c;border-radius:23px}
+.cs-progress .cp-exercise h3{font-size:23px!important;margin:9px 0 12px!important}
+.cs-progress .cp-exercise p{font-size:16px;color:#a0a0a7;margin:0}.cs-progress .cp-exercise b{display:block;color:#b6ef4d;font-size:24px;font-weight:500;margin-top:6px}
+.cs-progress .cp-link{height:25px;border-left:1px solid #729b27;margin-left:27px;transform-origin:top}
+.cs-progress .cp-body{background:#1a1a1c;border-radius:23px;padding:15px 17px}
+.cs-progress .cp-map-crop{position:relative;width:335px;height:308px;overflow:hidden;margin-top:9px}
+.cs-progress .cp-map-crop img{position:absolute;width:315px;max-width:none;top:-89px;left:8px;height:auto}
+.cs-progress .cp-body h4{font-size:18px!important;line-height:1.3!important}

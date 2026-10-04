@@ -7,9 +7,12 @@
   'use strict';
   const all = [...document.querySelectorAll('#deck > .slide')];
   const originals = all.filter(s=>!s.classList.contains('client-ai-story'));
+  // Keep the archival overview available to the original setup, outside navigation.
+  const reservedClient=document.querySelector('#client-overview-reserve')?.content.querySelector('.slide');
+  if(reservedClient)originals.splice(5,0,reservedClient);
   const scope = originals.slice(0, 10);
   const clientStories = [window.FIT_CLIENT_AI_PHONE || window.FIT_CLIENT_AI,...(window.FIT_CLIENT_STORIES||[])].filter(Boolean);
-  const motionCount = 10 + clientStories.length;
+  const motionCount = 9 + clientStories.length;
   const originalShow = window.show;
   if (scope.length !== 10 || !originalShow) return;
   const q = (s, r = document) => r.querySelector(s);
@@ -23,21 +26,21 @@
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
   const timeline = [[1],[0,1,2],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
-  timeline.splice(6,0,...clientStories.map(story=>story.stops||[0,1,2]));
+  timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
     ['Для клиента','Для тренера','Масштаб рынка','Вся идея'],
     ['Жители России','15–59 лет','Занимаются спортом','Аудитория Fit','Товары и одежда','Фитнес-услуги','Секции и питание','Устройства и онлайн','Весь рынок'],
     ['Разные приложения','Собираем вокруг Fit','Концепция развития'],
-    ['Весь маршрут','Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск тренера'],
+    ['Весь маршрут','Клиент и связь','Программа с ИИ','Расписание и финансы','Клиенты находят вас'],
     ['Все возможности','Голосом или текстом','Слова → упражнения','План','Выполнение','Завершение','Было → стало','Карта тела','Все возможности'],
     ['14 сентября','20 сентября','4 октября','Записи тренировок','Итог и методика'],
     ['Тренеры и клиенты','Яндекс Плюс','Спортивные события','Обучение тренеров','Экосистема Яндекса','Все каналы'],
     ['Мессенджер · Телемост','Pay · Сплит','Бенефит для компаний','Директ · Практикум','Лавка · Еда · Маркет','Все сценарии'],
     ['Подписка','Комиссия','Реклама','Вся модель']
   ];
-  sceneLabels.splice(6,0,...clientStories.map(story=>story.labels||['Твоя цель','Готовая программа','Можно тренироваться']));
+  sceneLabels.splice(5,1,...clientStories.map(story=>story.labels||['Твоя цель','Готовая программа','Можно тренироваться']));
   const labels = timeline.map((stops,i)=>stops.map(n=>sceneLabels[i][n]));
   scope.forEach((s,i) => { s.classList.add('motion-slide'); s.dataset.motionSlide = i; });
   function phase(el, n) { if(el) { el.classList.add('m-reveal'); el.dataset.phase=n; } }
@@ -77,7 +80,7 @@
   trainer.classList.add('m-trainer-lime','m-trainer-four','m-trainer-approved');
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
   const trainerScreens=['client','ai','finance','marketplace'];
-  const trainerCaptions=['Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск тренера'];
+  const trainerCaptions=['Клиент и связь','Программа с ИИ','Расписание и финансы','Клиенты находят вас'];
   gallery.replaceChildren();
   trainerScreens.forEach((name,i)=>{const f=document.createElement('figure');f.innerHTML=`<div class="m-screen-window"><img src="assets/trainer-approved/${name}.png" alt="Иллюстрация сценария Fit: ${trainerCaptions[i]}. Демонстрационные данные."></div><figcaption><span>0${i+1}</span> ${trainerCaptions[i]}</figcaption>`;gallery.append(f);});
   const figures=qa('figure',gallery);
@@ -259,7 +262,7 @@
       q('span',route).style.width=(focus<0?100:(focus+1)/4*100)+'%';
       if(focus===1&&!document.hidden){const video=q('video',proof);video.play().catch(()=>video.classList.remove('is-playing'));}
     }
-    if(index===5)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
+    if(s===client)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
   }
   function updateToolbar(){q('.m-step-counter',toolbar).textContent=index<motionCount?`${step+1} / ${max[index]+1}`:'—';q('select',toolbar).value=index;toolbar.title=index<motionCount?labels[index][step]:'';q('[data-action="static"]',toolbar).textContent=staticMode?'Включить анимацию':'Без анимации';q('[data-action="play"]',toolbar).textContent=playing?'Ⅱ Пауза':'▶ Автопоказ';}
@@ -293,7 +296,8 @@
   document.addEventListener('visibilitychange',()=>{if(document.hidden){stop();clientStories.forEach(story=>story.pause());qa('video',proof).forEach(v=>v.pause());}else if(index===4&&!staticMode&&step===1){q('video',proof).play().catch(()=>{});}else{clientStories.find(story=>story.slide===all[index])?.render(step,false,animate,staticMode);}});
   window.FIT_MOTION={version:3,baseline:'ae7eb6a535cbe385e091745cacd0e08b39249382',iterationBaseline:'d8bf8f0a7a8228490c80b66ba8567d2b9b851f14',max,labels,next,prev,go,play:run,pause:stop,static:toggleStatic,
     state:()=>({index,step,staticMode,playing,animations:animations.size}),
-    seek:(i,n=0)=>{stop();go(i,n);},settle,
+    seek:(i,n=0)=>{stop();go(i,n);},
+    transitionTo:(i,n=0)=>{stop();if(i!==index)return go(i,n);n=Math.max(0,Math.min(max[index]||0,n));apply(n,n!==step,step);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
   if(params.has('step'))step=Math.max(0,Math.min(max[index]||0,Number(params.get('step'))||0));
   apply(staticMode&&index<motionCount?max[index]:step,false);
