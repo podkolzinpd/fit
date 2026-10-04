@@ -59,6 +59,7 @@ import { parseAllowedOrigins } from './cors-origins.js'
 import { DatabaseTrainerScheduleV2Claimer } from './trainer-schedule-v2-claim.js'
 import { DatabaseTrainerScheduleV2AutoActivator } from './trainer-schedule-v2-auto-activation.js'
 import { DatabaseFitLimeAutoActivator } from './fit-lime-auto-activation.js'
+import { DatabaseAssistantFeatureLinksAutoActivator } from './assistant-feature-links-auto-activation.js'
 import { DatabasePilotTrainerFinance } from './trainer-finance.js'
 
 function parsePort(value: string | undefined): number {
@@ -113,6 +114,9 @@ const trainerScheduleV2AutoActivator = databasePool === undefined
 const fitLimeAutoActivator = databasePool === undefined
   ? undefined
   : new DatabaseFitLimeAutoActivator(databasePool)
+const assistantFeatureLinksAutoActivator = databasePool === undefined
+  ? undefined
+  : new DatabaseAssistantFeatureLinksAutoActivator(databasePool)
 const yandexAccountLinker =
   databasePool === undefined
     ? undefined
@@ -302,6 +306,9 @@ const app = buildApp(
       ? {}
       : { trainerScheduleV2AutoActivator }),
     ...(fitLimeAutoActivator === undefined ? {} : { fitLimeAutoActivator }),
+    ...(assistantFeatureLinksAutoActivator === undefined
+      ? {}
+      : { assistantFeatureLinksAutoActivator }),
     ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
     ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(yandexNativeRegistrar === undefined ? {} : { yandexNativeRegistrar }),

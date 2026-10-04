@@ -14,6 +14,7 @@ const trainerRow = {
   client_full_name: null,
   trainer_schedule_v2: true,
   fit_lime: true,
+  assistant_feature_links: true,
   schedule_density: 'compact',
 }
 
@@ -24,12 +25,13 @@ describe('readOwnProfile Fit Lime flag', () => {
 
     await expect(readOwnProfile(client, 'read_write')).resolves.toMatchObject({
       accessMode: 'read_write',
-      profile: { experiments: { trainerScheduleV2: true, fitLime: true } },
+      profile: { experiments: { trainerScheduleV2: true, fitLime: true, assistantFeatureLinks: true } },
     })
     await expect(readOwnProfile(client, 'read_write')).resolves.toMatchObject({
       profile: { preferences: { scheduleDensity: 'compact' } },
     })
     expect(query.mock.calls[0]?.[0]).toContain('app_private.fit_lime_enabled()')
+    expect(query.mock.calls[0]?.[0]).toContain('app_private.assistant_feature_links_enabled()')
   })
 
   it('does not infer Lime from Schedule V2 when the server disables it', async () => {

@@ -66,3 +66,27 @@ export function writeTodayDraft(key: string, draft: TodayDraft): void {
 export function removeTodayDraft(key: string): void {
   try { localStorage.removeItem(key) } catch { /* localStorage недоступен */ }
 }
+
+/** Client drafts have their own identities; the old singleton remains explicitly resumable. */
+export function clientTodayDraftKey(userId: string, id: string): string {
+  return id === 'legacy' ? todayDraftKey(userId) : todayDraftKey(userId, `client-${id}`)
+}
+
+export function readClientTodayDrafts(userId: string): { id: string; draft: TodayDraft }[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(`fit.client-today-drafts.${userId}`) ?? '[]')
+    const ids = Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string' && /^[\w-]{1,80}$/.test(id)) : []
+    return [...new Set([...ids, 'legacy'])].flatMap((id) => {
+      const draft = readTodayDraft(clientTodayDraftKey(userId, id))
+      return draft && (draft.text.trim() || draft.items.length) ? [{ id, draft }] : []
+    })
+  } catch { return [] }
+}
+
+export function writeClientTodayDraft(userId: string, id: string, draft: TodayDraft): void {
+  writeTodayDraft(clientTodayDraftKey(userId, id), draft)
+  try {
+    const ids = readClientTodayDrafts(userId).map((entry) => entry.id).filter((entry) => entry !== id && entry !== 'legacy')
+    localStorage.setItem(`fit.client-today-drafts.${userId}`, JSON.stringify([id, ...ids]))
+  } catch { /* Unavailable storage must not interrupt the current draft. */ }
+}

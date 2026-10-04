@@ -3330,6 +3330,34 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 
+  it('binds assistant feature links only from the verified Yandex login before issuing the session', async () => {
+    const loginHash = 'd'.repeat(64)
+    const bind = vi.fn().mockResolvedValue({ bound: true })
+    const issue = vi.fn().mockImplementation(() => {
+      expect(bind).toHaveBeenCalledWith(SUBJECT_HASH, loginHash)
+      return Promise.resolve(APP_SESSION_RESPONSE)
+    })
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: {
+        verifyAccessToken: vi.fn().mockResolvedValue({ subjectHash: SUBJECT_HASH, loginHash }),
+      },
+      assistantFeatureLinksAutoActivator: { bind },
+      yandexAppSessionIssuer: { issue },
+      logger: false,
+    })
+    apps.push(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
   it('keeps linked but disabled users outside the read-write Yandex rollout', async () => {
     const appSession = buildYandexAppSessionIssuer(
       new YandexAppSessionDeniedError(),

@@ -22,6 +22,7 @@ import { isProgramEnabled } from './assistant-orchestrator/program/model.js'
 import { loadDatabaseProgramContext } from './assistant-orchestrator/program/source.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './assistant-orchestrator/program/turn.js'
 import { latestActiveAssistantTool, routedAssistantTurn } from './assistant-orchestrator/router.js'
+import { assistantNavigationTurn } from './assistant-orchestrator/navigation.js'
 import {
   type AssistantTurnRequest,
 } from './assistant-state-request.js'
@@ -59,6 +60,7 @@ interface ActorRoleRow extends QueryResultRow {
   id: string
   account_role: 'trainer' | 'client'
   timezone: string
+  assistant_feature_links: boolean
 }
 
 interface ActionLifecycleRow extends QueryResultRow {
@@ -170,7 +172,8 @@ async function readClients(client: DatabaseClient) {
 
 async function readActor(client: DatabaseClient): Promise<ActorRoleRow> {
   const rows = await client.query<ActorRoleRow>(`
-    select id, account_role, timezone
+    select id, account_role, timezone,
+      app_private.assistant_feature_links_enabled() assistant_feature_links
     from public.profiles
     where id = auth.uid()
   `)
@@ -284,7 +287,12 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
     })
     const programEnabled = isProgramEnabled(actor.id)
     let response: AssistantTurnResponse
-    if (isAssistantCapabilityQuestion(command.message)) {
+    const navigation = actor.assistant_feature_links
+      ? assistantNavigationTurn(command.message, actor.account_role, clients)
+      : undefined
+    if (navigation !== undefined) {
+      response = navigation
+    } else if (isAssistantCapabilityQuestion(command.message)) {
       response = {
         reply: assistantCapabilitiesReply() + (programEnabled
           ? '\nТакже могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.'

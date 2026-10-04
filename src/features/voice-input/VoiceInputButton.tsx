@@ -381,17 +381,66 @@ function mergeStreamingTranscript(committed: string, next: string, startsNewUtte
   if (!normalized) return committed
   const existing = committed.trim()
   if (!existing) return normalized
-  if (startsNewUtterance) return `${existing}\n${normalized}`
 
   const existingWords = existing.split(/\s+/u)
   const nextWords = normalized.split(/\s+/u)
-  const comparable = (word: string) => word.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е')
+  const comparable = (word: string) => word.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/[^\p{L}\p{N}]+/gu, '')
   const sameWords = (left: string[], right: string[]) => left.length === right.length
     && left.every((word, index) => comparable(word) === comparable(right[index] ?? ''))
+  const editDistance = (left: string, right: string) => {
+    const previous = Array.from({ length: right.length + 1 }, (_, index) => index)
+    for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+      let diagonal = previous[0]!
+      previous[0] = leftIndex
+      for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+        const above = previous[rightIndex]!
+        previous[rightIndex] = Math.min(
+          above + 1,
+          previous[rightIndex - 1]! + 1,
+          diagonal + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+        )
+        diagonal = above
+      }
+    }
+    return previous[right.length]!
+  }
+  const looksLikeRevision = (previous: string[], candidate: string[]) => {
+    if (previous.length < 4 || candidate.length < previous.length) return false
+    const prefix = candidate.slice(0, previous.length)
+    let matching = 0
+    for (let index = 0; index < previous.length; index += 1) {
+      const left = comparable(previous[index] ?? '')
+      const right = comparable(prefix[index] ?? '')
+      if (/^\d+(?:[.,]\d+)?$/u.test(left) || /^\d+(?:[.,]\d+)?$/u.test(right)) {
+        if (left !== right) return false
+      }
+      if (left === right) {
+        matching += 1
+        continue
+      }
+      const allowedDistance = Math.max(1, Math.floor(Math.min(left.length, right.length) * 0.25))
+      if (editDistance(left, right) > allowedDistance) return false
+    }
+    return comparable(previous[0] ?? '') === comparable(prefix[0] ?? '')
+      && matching / previous.length >= 0.8
+  }
 
-  if (sameWords(existingWords, nextWords)) return existing
+  if (sameWords(existingWords, nextWords)) return startsNewUtterance ? `${existing}\n${normalized}` : existing
   if (nextWords.length > existingWords.length && sameWords(existingWords, nextWords.slice(0, existingWords.length))) return normalized
   if (existingWords.length > nextWords.length && sameWords(existingWords.slice(-nextWords.length), nextWords)) return existing
+
+  // SpeechKit may mark the previous chunk as end-of-utterance and still send
+  // the next final as a corrected cumulative hypothesis. Replace that last
+  // hypothesis instead of turning it into a duplicate exercise line.
+  const utterances = existing.split('\n')
+  const previousUtterance = utterances.at(-1)?.trim() ?? ''
+  const previousWords = previousUtterance.split(/\s+/u).filter(Boolean)
+  if (looksLikeRevision(previousWords, nextWords)) {
+    utterances[utterances.length - 1] = normalized
+    return utterances.join('\n')
+  }
+
+  if (startsNewUtterance) return `${existing}\n${normalized}`
 
   for (let overlap = Math.min(existingWords.length, nextWords.length) - 1; overlap >= 2; overlap -= 1) {
     if (!sameWords(existingWords.slice(-overlap), nextWords.slice(0, overlap))) continue

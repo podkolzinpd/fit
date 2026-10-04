@@ -14,6 +14,7 @@ interface ProfileRow extends QueryResultRow {
   trainer_schedule_v2: boolean
   client_lime: boolean
   fit_lime: boolean
+  assistant_feature_links: boolean
   schedule_density: 'comfortable' | 'compact'
 }
 
@@ -34,6 +35,7 @@ export interface ProfileResponse {
       trainerScheduleV2: boolean
       clientLime?: boolean
       fitLime: boolean
+      assistantFeatureLinks?: boolean
     }
     preferences?: {
       scheduleDensity: 'comfortable' | 'compact'
@@ -52,7 +54,8 @@ export async function readOwnProfile(
       client.full_name client_full_name,
       app_private.trainer_schedule_v2_enabled() trainer_schedule_v2,
       app_private.fit_lime_enabled() fit_lime,
-      app_private.client_lime_enabled() client_lime
+      app_private.client_lime_enabled() client_lime,
+      app_private.assistant_feature_links_enabled() assistant_feature_links
     from public.profiles profile
     left join public.clients client
       on client.auth_user_id = profile.id
@@ -74,6 +77,7 @@ export async function readOwnProfile(
         trainerScheduleV2: row.trainer_schedule_v2 === true,
         fitLime: row.fit_lime === true,
         clientLime: row.client_lime === true,
+        assistantFeatureLinks: row.assistant_feature_links === true,
       },
       preferences: {
         scheduleDensity: row.schedule_density,

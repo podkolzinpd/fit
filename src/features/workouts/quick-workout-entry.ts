@@ -67,6 +67,8 @@ function normalize(value: string): string {
 // равно берётся только из актуального каталога Supabase ниже.
 const sportSpeechAliases: Record<string, string> = {
   'жим леха': 'жим лежа',
+  'жим лежат': 'жим лежа',
+  'жим лежать': 'жим лежа',
   'жим лежа': 'жим лежа',
   'присед со штангой': 'приседания со штангой',
   'тяга верхнего блока': 'верхний блок',
@@ -305,12 +307,37 @@ function matchingExerciseResolution(name: string, catalog: readonly ExerciseSnap
 export function splitWorkoutText(text: string, catalog: readonly ExerciseSnapshot[]): string[] {
   // Whisper обычно сохраняет слова-связки, а не переносы. Разделяем только
   // явные «затем/потом» и найденные по каталогу начала упражнений.
-  return formatWorkoutText(expandPairedExerciseShorthand(normalizeWorkoutSpeech(text)), catalog)
+  return formatWorkoutText(expandPairedExerciseShorthand(normalizeWorkoutSpeech(collapseCumulativeTranscriptLines(text))), catalog)
     .split(/[\n;]+/)
     .flatMap((line) => line.split(/\s+(?:затем|потом|далее|дальше|после\s+этого)\s*,?\s*/iu))
     .flatMap((line) => line.split(/\s*\+\s*/u))
     .map((line) => line.trim().replace(/^\d+\s*[.)]\s*/u, ''))
     .filter((line) => Boolean(line) && !/^(?:ягодицы|ноги|спина|плечи|грудь|руки|кор|пресс|кардио)(?:\s*[/+]\s*(?:ягодицы|ноги|спина|плечи|грудь|руки|кор|пресс|кардио))*\s*:?$/iu.test(line))
+}
+
+/**
+ * Потоковый SpeechKit иногда сохраняет короткий final рядом с его же
+ * расширенной версией: `A` / `A B`, а затем отдельно повторяет хвост `B`.
+ * Удаляем только строгие соседние prefix/suffix-включения; одинаковые строки
+ * остаются отдельными, чтобы не потерять намеренно повторённое упражнение.
+ */
+function collapseCumulativeTranscriptLines(text: string): string {
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
+  const words = (line: string) => normalize(line).split(/\s+/u).filter(Boolean)
+  const isStrictEdge = (shortLine: string, longLine: string, edge: 'prefix' | 'suffix') => {
+    const short = words(shortLine)
+    const long = words(longLine)
+    if (short.length < 4 || long.length < short.length + 2) return false
+    const candidate = edge === 'prefix' ? long.slice(0, short.length) : long.slice(-short.length)
+    return short.every((word, index) => word === candidate[index])
+  }
+  return lines.filter((line, index) => {
+    const previous = lines[index - 1]
+    const next = lines[index + 1]
+    if (next && isStrictEdge(line, next, 'prefix')) return false
+    if (previous && isStrictEdge(line, previous, 'suffix')) return false
+    return true
+  }).join('\n')
 }
 
 /** Кандидаты из каталога для одного фрагмента диктовки, в порядке релевантности. */

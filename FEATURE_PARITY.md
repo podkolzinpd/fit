@@ -480,3 +480,6 @@ quiz/generator/validator contract; Yandex читает actor-scoped факты �
 PR4: Lime hour collision до/после часа, соседние занятия full-width, narrow lane names, сохранение scroll текущей сессии. Минимум44px важнее буквального временного размера короткой карточки; реальные визуальные пересечения защищены отдельными lanes. Lifecycle create/start/resume/finish проверяется браузером, API не изменяется.
 
 Единые pilot-only окна календаря: bounded375/viewport, внутренние списки,16px поля/14px действия, YS Geo, длинные имена и фокус ClientPicker без авто-клавиатуры. 30 адресных browser cases зелёные; расширенный прогон и полный check обязательны перед выпуском.
+
+- Client Lime draft isolation (2026-10-04): explicit new/resume/delete, separate
+  per-draft storage and legacy recovery; other client/trainer behavior unchanged.

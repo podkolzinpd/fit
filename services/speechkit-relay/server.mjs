@@ -23,11 +23,15 @@ wss.on('connection', async (socket) => {
   let partials = 0
   let finals = 0
   const pendingMessages = []
+  let stopping = false
+  const send = (message) => {
+    if (socket.readyState === 1) socket.send(JSON.stringify(message))
+  }
   let handleMessage = (raw, binary) => { pendingMessages.push([raw, binary]) }
   socket.on('message', (raw, binary) => handleMessage(raw, binary))
   console.log(JSON.stringify({ event: 'ws_open', sessionId }))
   let auth
-  try { auth = await getIamToken() } catch (error) { socket.send(JSON.stringify({ type: 'error', message: error.message })); socket.close(1011); return }
+  try { auth = await getIamToken() } catch (error) { send({ type: 'error', message: error.message }); socket.close(1011); return }
   const client = new stt.SttService('stt.api.cloud.yandex.net:443', grpc.credentials.createSsl())
   const metadata = new grpc.Metadata()
   metadata.set('authorization', `${auth.prefix} ${auth.value}`)
@@ -40,25 +44,29 @@ wss.on('connection', async (socket) => {
       if (text) {
         if (chunk.final) finals += 1
         else partials += 1
-        socket.send(JSON.stringify({
+        send({
           type: chunk.final ? 'final' : 'partial',
           text,
           endOfUtterance: Boolean(chunk.end_of_utterance),
-        }))
+        })
       }
     }
   })
-  stream.on('error', (error) => { console.error(JSON.stringify({ event: 'speechkit_error', sessionId, message: error.message, bytes, partials, finals })); socket.send(JSON.stringify({ type:'error', message:error.message })) })
+  stream.on('end', () => send({ type: 'done' }))
+  stream.on('error', (error) => { console.error(JSON.stringify({ event: 'speechkit_error', sessionId, message: error.message, bytes, partials, finals })); send({ type:'error', message:error.message }) })
   handleMessage = (raw, binary) => {
-    if (binary) { bytes += raw.byteLength; stream.write({ audio_content: raw }) }
+    if (binary) {
+      if (stopping) return
+      bytes += raw.byteLength; stream.write({ audio_content: raw })
+    }
     else {
       const message = JSON.parse(String(raw))
       if (message.type === 'config') stream.write({ config: { specification: { language_code: 'ru-RU', model: 'general', audio_encoding: 'LINEAR16_PCM', sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true, single_utterance: false, raw_results: false }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID || '' } })
-      if (message.type === 'stop') { console.log(JSON.stringify({ event: 'ws_stop', sessionId, bytes, partials, finals })); stream.end() }
+      if (message.type === 'stop' && !stopping) { stopping = true; console.log(JSON.stringify({ event: 'ws_stop', sessionId, bytes, partials, finals })); stream.end() }
     }
   }
   for (const [raw, binary] of pendingMessages) handleMessage(raw, binary)
   pendingMessages.length = 0
-  socket.on('close', () => { console.log(JSON.stringify({ event: 'ws_close', sessionId, bytes, partials, finals })); stream.end() })
+  socket.on('close', () => { console.log(JSON.stringify({ event: 'ws_close', sessionId, bytes, partials, finals })); if (!stopping) stream.end() })
 })
 server.listen(PORT, () => console.log(`speechkit relay listening on ${PORT}`))
