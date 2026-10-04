@@ -1850,6 +1850,7 @@ export function WorkoutDetailPage() {
         <Link className="button secondary wide" to="/today">Перейти на главную</Link>
       </section>}
       {clientCompletionReport && <WorkoutCompletionReport
+        clientLime={isClientLimeEnabled(actor)}
         key={workout.id}
         workoutId={workout.id}
         userId={actor!.userId}
@@ -1865,7 +1866,7 @@ export function WorkoutDetailPage() {
         caloriesKcal={workout.activeCaloriesKcal}
         calorieBasis={workout.calorieEstimateBasis}
         calorieNotice={workout.calorieEstimateNotice}
-        muscleGroups={groups}
+        muscleGroups={isClientLimeEnabled(actor) ? performedMuscleGroupLabels(workout) : groups}
         personalResult={completionPersonalResult}
         resultLoading={completionHistory.isLoading}
         resultError={completionHistory.error}

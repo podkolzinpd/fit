@@ -59,3 +59,16 @@
 .phone-frame.fit-client-lime.live-identity .live-set-check[aria-busy='true'] { background: var(--lime-surface-raised); color: var(--lime-text-secondary); }
 
 .phone-frame.fit-client-lime.live-identity .live-add-exercise { min-height: 48px; border-radius: 999px; }
+
+.phone-frame.fit-client-lime .workout-completion-report-hero { display: flex; align-items: center; gap: 12px; text-align: left; }
+.phone-frame.fit-client-lime .workout-completion-report-art { flex: 0 0 56px; width: 56px; height: 56px; margin: 0; }
+.phone-frame.fit-client-lime .workout-completion-report-art :is(img, svg) { width: 56px; height: 56px; }
+.phone-frame.fit-client-lime .workout-completion-share-card { padding: 20px; }
+.phone-frame.fit-client-lime .workout-completion-report-subtitle { margin-block: 6px; }
+.phone-frame.fit-client-lime .workout-completion-report.is-empty .workout-completion-report-art,
+.phone-frame.fit-client-lime .workout-completion-report.is-partial .workout-completion-report-art { color: var(--lime-text-secondary); }
+.phone-frame.fit-client-lime .workout-feedback { padding: 16px; gap: 12px; border-radius: var(--lime-radius-card); }
+.phone-frame.fit-client-lime .workout-feedback-fieldset { margin: 0; padding: 0; gap: 8px; }
+.phone-frame.fit-client-lime .workout-feedback-options { gap: 6px; }
+.phone-frame.fit-client-lime .workout-feedback-option { min-height: 44px; border-radius: 999px; font-size: 14px; }
+.phone-frame.fit-client-lime .workout-completion-actions { gap: 12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }

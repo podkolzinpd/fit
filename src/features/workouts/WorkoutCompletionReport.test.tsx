@@ -166,3 +166,20 @@ describe('workout completion calculations', () => {
     expect(workoutCompletionCountLine(1, 4, 0, 2)).toBe('0/2 упражнения · 1/4 подхода')
   })
 })
+
+
+describe('Client Lime completion facts', () => {
+  it('keeps zero confirmed sets neutral and omits celebration art', () => {
+    const { container } = render(<MemoryRouter><WorkoutCompletionReport {...baseProps} clientLime completedSets={0} completedExercises={0} tonnage={null} /></MemoryRouter>)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Тренировка завершена')
+    expect(screen.getByText('Подходы не отмечены. Выполненный объём не записан.')).toBeVisible()
+    expect(screen.getByText('Выполнено 0 из 3 подходов')).toBeVisible()
+    expect(container.querySelector('.workout-completion-report-art img')).toBeNull()
+  })
+  it('distinguishes partial confirmation from complete execution', () => {
+    const { rerender } = render(<MemoryRouter><WorkoutCompletionReport {...baseProps} clientLime completedSets={1} /></MemoryRouter>)
+    expect(screen.getByText('Отмеченные подходы сохранены. Часть плана не подтверждена.')).toBeVisible()
+    rerender(<MemoryRouter><WorkoutCompletionReport {...baseProps} clientLime /></MemoryRouter>)
+    expect(screen.getByText('Все подходы плана подтверждены и сохранены.')).toBeVisible()
+  })
+})
