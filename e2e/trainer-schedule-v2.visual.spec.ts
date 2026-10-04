@@ -67,6 +67,20 @@ test('Achievement collection recovers after an error and its last row clears nav
   await expect(page.getByText('Получено 0 из 83')).toBeVisible()
 })
 
+test('Achievement collection restores earned badges after signing in again', async ({ page }) => {
+  const history = [{ ...workout, status: 'done', completedAt: '2026-09-23T12:00:00Z' }]
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: history })
+  await page.goto('/me/achievements')
+  const first = page.getByRole('button', { name: /^Первый шаг\./ })
+  await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
+  await page.goto('/me/settings')
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  await expect(page).toHaveURL(/\/auth/)
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: history })
+  await page.goto('/me/achievements')
+  await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
+})
+
 test('Completing the next workout earns a bright badge and moves progress to the following tier', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
