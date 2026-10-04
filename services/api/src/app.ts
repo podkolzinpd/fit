@@ -169,6 +169,7 @@ import {
 } from './trainer-schedule-v2-claim.js'
 import type { TrainerScheduleV2AutoActivator } from './trainer-schedule-v2-auto-activation.js'
 import type { FitLimeAutoActivator } from './fit-lime-auto-activation.js'
+import type { AssistantFeatureLinksAutoActivator } from './assistant-feature-links-auto-activation.js'
 import { TrainerFinanceError, type PilotTrainerFinance } from './trainer-finance.js'
 import {
   readTrainerFinanceManualSessionDraft,
@@ -242,6 +243,7 @@ interface BuildAppOptions {
   trainerScheduleV2Claimer?: TrainerScheduleV2Claimer
   trainerScheduleV2AutoActivator?: TrainerScheduleV2AutoActivator
   fitLimeAutoActivator?: FitLimeAutoActivator
+  assistantFeatureLinksAutoActivator?: AssistantFeatureLinksAutoActivator
   pilotTrainerFinance?: PilotTrainerFinance
   logger?: boolean
   releaseId?: string
@@ -1411,6 +1413,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       if (options.fitLimeAutoActivator !== undefined && identity.loginHash !== undefined) {
         await options.fitLimeAutoActivator.bind(identity.subjectHash, identity.loginHash)
+      }
+      if (options.assistantFeatureLinksAutoActivator !== undefined && identity.loginHash !== undefined) {
+        await options.assistantFeatureLinksAutoActivator.bind(identity.subjectHash, identity.loginHash)
       }
       const session = await options.yandexAppSessionIssuer.issue(identity.subjectHash)
       if (session === undefined) {

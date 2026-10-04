@@ -99,6 +99,7 @@ interface SessionActorBase {
     trainerScheduleV2: boolean
     clientLime?: boolean
     fitLime?: boolean
+    assistantFeatureLinks?: boolean
   }
   preferences?: {
     scheduleDensity: ScheduleDensity

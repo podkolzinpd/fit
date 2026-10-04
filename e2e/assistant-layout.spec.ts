@@ -84,6 +84,28 @@ test('assistant aligns user and assistant messages by role', async ({ page }) =>
   }
 })
 
+test('assistant feature links keep a full touch target without overflowing the message', async ({ page }) => {
+  for (const width of [390, 430, 1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await page.setContent(assistantMarkup())
+    await page.getByTestId('last-message').evaluate((element) => {
+      element.innerHTML = `<div class="assistant-message-copy">
+        <p>Нужный раздел здесь:</p>
+        <div class="assistant-navigation-links"><a class="link" href="/me/progress?view=pro">ПРО-сводка прогресса</a></div>
+      </div>`
+    })
+
+    const message = await page.getByTestId('last-message').boundingBox()
+    const link = page.getByRole('link', { name: 'ПРО-сводка прогресса' })
+    const linkBox = await link.boundingBox()
+    expect(await link.getAttribute('href')).toBe('/me/progress?view=pro')
+    expect(message).not.toBeNull()
+    expect(linkBox).not.toBeNull()
+    expect(linkBox!.height).toBeGreaterThanOrEqual(44)
+    expect(linkBox!.width).toBeLessThanOrEqual(message!.width)
+  }
+})
+
 test('assistant keeps one turn close and separates the next turn', async ({ page }) => {
   for (const width of [390, 430]) {
     for (const theme of ['theme-light', 'theme-dark']) {
