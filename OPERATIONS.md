@@ -658,6 +658,17 @@ latter receives only function-scoped `functions.functionInvoker` on
 `fit-frontend-hourly-probe`. The runtime has no service account, secrets, VPC,
 provisioned instance, or access to app data. The function is private.
 
+IAM preflight on 2026-10-05 confirmed that the stage deployer has folder-level
+`functions.editor`, not `functions.admin`. Editor can create/invoke functions
+and manage timers, but cannot assign function access bindings. Before the first
+approved enable, an existing Cloud administrator must bootstrap the private
+`fit-frontend-hourly-probe` function and grant the deployer `functions.admin`
+**only on that function**, plus the existing timer identity its scoped invoker
+binding. Do not grant folder-wide Functions admin. The deployment then maintains
+only that function policy. These one-time bindings are pending along with cost
+approval; local/mocked tests do not prove IAM authorization. Role requirements:
+[Functions access control](https://yandex.cloud/ru/docs/functions/security/).
+
 The workflow packages only the dependency-free probe modules, creates a
 Node.js 22 candidate (128 MB, 60-second limit, concurrency 1), and invokes it
 once before promoting `hourly-probe`. The hourly timer (`17 * * * ? *`, UTC)
