@@ -615,6 +615,56 @@ export function YandexAppSessionPage() {
   </AuthIdentityScreen>
 }
 
+export function YandexAssistantFeaturesRefreshPage() {
+  const { actor, loading } = useAuth()
+  const actorId = actor?.userId ?? null
+  const config = useMemo(() => getYandexAppSessionEntryConfig(), [])
+  const [authorizationUrl, setAuthorizationUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (loading || actor === null || config === null) return
+    let cancelled = false
+    void createYandexAuthorizationUrl(
+      config.clientId,
+      yandexAuthorizationRedirectUri(),
+      sessionStorage,
+      'app',
+    ).then((url) => {
+      if (!cancelled) setAuthorizationUrl(url)
+    }).catch(() => {
+      if (!cancelled) setError('Не удалось подготовить обновление Yandex ID.')
+    })
+    return () => { cancelled = true }
+  }, [actorId, config, loading])
+
+  if (config === null) return <Navigate to="/assistant" replace />
+  if (loading) return <StartupSplash />
+  if (actor === null) return <Navigate to="/auth" state={{ from: '/auth/yandex/refresh-assistant' }} replace />
+
+  return <AuthIdentityScreen>
+    <header className="auth-entry-head">
+      <FitLogo />
+      <p className="eyebrow">YANDEX ID</p>
+      <h1>Обновить возможности ассистента</h1>
+      <p className="muted">Подтвердите текущий Yandex ID. Вы останетесь в FIT, а после проверки вернётесь в ассистента.</p>
+    </header>
+    {error
+      ? <StatePanel
+          tone="error"
+          title="Обновление не подготовлено"
+          description={error}
+          action={<Link to="/assistant">Вернуться в ассистента</Link>}
+        />
+      : <div className="stack auth-form">
+          {authorizationUrl === null
+            ? <button className="primary" type="button" disabled aria-busy>Подготавливаем…</button>
+            : <a className="primary auth-yandex" href={authorizationUrl}>Продолжить с Yandex ID</a>}
+          <Link className="secondary" to="/assistant">Не сейчас</Link>
+        </div>}
+  </AuthIdentityScreen>
+}
+
 function YandexReadOnlyPilotCallbackPage() {
   const config = getYandexIdPilotConfig()
   const apiBaseUrl = config?.apiBaseUrl ?? null

@@ -3178,6 +3178,29 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime workout list and calendar actions ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [
+      { ...workout, createdBy: clientId, trainingFormat: 'self' },
+      { ...workout, id: newWorkoutId, createdBy: clientId, trainingFormat: 'self', status: 'done',
+        completedAt: '2026-09-23T12:00:00Z', workoutDate: '2026-09-23' },
+    ] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    await page.goto('/me/workouts')
+    const workoutsPage = page.locator('.fit-client-lime.client-workouts-identity')
+    await expect(workoutsPage.locator('.client-workouts-page > .page-header .button')).toHaveCSS('border-radius', '999px')
+    const toggle = workoutsPage.getByRole('group', { name: 'Вид истории тренировок' })
+    await expect(toggle.getByRole('button', { name: 'Список' })).toHaveCSS('border-radius', '999px')
+    await toggle.getByRole('button', { name: 'Календарь' }).click()
+    await expect(workoutsPage.locator('.client-history-calendar')).toBeVisible()
+    await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-workout-calendar-${theme}-${width}.png`) })
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime live secondary actions ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
@@ -3298,12 +3321,60 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await page.goto(route)
       await expect(page.locator('.fit-client-lime')).toBeVisible()
       await expect(page.locator('h1').first()).toBeVisible()
-      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
+      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_ENABLED === 'true' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
         await expect(page).toHaveURL(/\/assistant$/)
         await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
+        const actions = page.locator('.assistant-first-entry-actions')
+        const starter = actions.getByRole('button')
+        await expect(actions.getByRole('button', { name: 'Записать тренировку' })).toBeVisible()
+        await expect(actions.getByRole('button', { name: 'Показать прогресс' })).toBeVisible()
+        await expect(actions.getByRole('button', { name: 'Что ты умеешь?' })).toBeVisible()
+        await expect.poll(async () => {
+          const colors = await starter.evaluateAll((buttons) => buttons.slice(0, 2).map((button) => getComputedStyle(button).backgroundColor))
+          return colors.length === 2 && colors[0] !== colors[1]
+        }).toBe(true)
+        await expect(page.locator('.assistant-composer .assistant-icon-button').first()).toHaveCSS('border-top-left-radius', '999px')
       }
       await expect(page.getByText('Загружаем…', { exact: true })).toHaveCount(0)
       await expect(page.locator('.state-panel-error')).toHaveCount(0)
+      if (route === '/me/progress') {
+        const period = page.locator('.progress-story-period .ai-progress-periods.period-count-1')
+        await expect(period).toBeVisible()
+        const widths = await period.evaluate((element) => ({
+          period: element.getBoundingClientRect().width,
+          card: element.closest('.progress-story-period')!.getBoundingClientRect().width,
+        }))
+        expect(widths.period).toBeLessThan(widths.card / 2)
+        const emphasis = await page.evaluate(() => ({
+          period: getComputedStyle(document.querySelector('.progress-story-period .ai-progress-periods.period-count-1 button.active')!).backgroundColor,
+          overview: getComputedStyle(document.querySelector('.progress-view-tabs button.active')!).backgroundColor,
+        }))
+        expect(emphasis.period).not.toBe(emphasis.overview)
+      }
+      if (route === '/me/profile') {
+        const actions = page.locator('.client-trainer-connection-card .client-trainer-actions')
+        const geometry = await actions.evaluate((element) => {
+          const message = element.querySelector('.chat-start-wrap button')!.getBoundingClientRect()
+          const menu = element.querySelector('.overflow-trigger')!.getBoundingClientRect()
+          const card = element.closest('.client-trainer-connection-card')!.getBoundingClientRect()
+          return { separate: message.right < menu.left, contained: menu.right <= card.right }
+        })
+        expect(geometry.separate && geometry.contained).toBe(true)
+        await expect(page.locator('.client-profile-edit')).toHaveCSS('border-top-left-radius', '0px')
+      }
+      if (route === '/me/settings') {
+        const options = page.locator('.body-map-appearance-options.count-1')
+        await expect(options).toBeVisible()
+        const widths = await options.evaluate((element) => ({
+          option: element.getBoundingClientRect().width,
+          card: element.closest('.body-map-appearance-setting')!.getBoundingClientRect().width,
+        }))
+        expect(widths.option).toBeLessThan(widths.card / 2)
+      }
+      if (route === '/me/edit') {
+        await expect(page.locator('.client-profile-form select')).toHaveCSS('appearance', 'none')
+        await expect(page.locator('.client-profile-form input[type="number"]').first()).toHaveCSS('appearance', 'textfield')
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
     }
