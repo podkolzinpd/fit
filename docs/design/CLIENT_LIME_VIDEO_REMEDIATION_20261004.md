@@ -128,9 +128,9 @@
 | PR 4 | #1412 merged → 75f23ea6 | CI37228961272 success; controls и две темы, visual regression. |
 | PR 5 | #1413 merged → a9f543b4 | Все checks success на d2f313d7; focused compose/review/save. |
 | PR 6 | #1415 merged → 0707f015 | Все checks success на 695c5a0e; unit19; lifecycle4; retry2; pending/error и точный incomplete count. |
-| PR 7 | #1417, локальная проверка пройдена | Финальный full check: frontend2366, API1063 passed (71 DB tests skipped), lint/typecheck/build/hosting passed; completion/share25; общая WebKit190, client Chromium27. После поправки zero: WebKit/Chromium4, sharing25 и typecheck. |
+| PR 7 | #1417 merged → 0ca85201 | Финальный full check: frontend2366, API1063 passed (71 DB tests skipped), lint/typecheck/build/hosting passed; completion/share25; общая WebKit190, client Chromium27. После поправки zero: WebKit/Chromium4, sharing25 и typecheck. |
 
-Финальный production rollout ещё не завершён. Промежуточные CI main после PR3–6 отменены, чтобы не дублировать уже зелёный PR CI и освободить runners; финальный main обязан пройти полный CI и штатный deployment. Дополнительная финальная приёмка zero скрывает новые достижения и не предлагает «Достижение/Прогресс» для отправки пустого результата.
+Финальный production rollout завершён через #1426: CI37237418210 и deployment37238448692 успешны; readback37238977765 подтвердил ACTIVE на 8fc46a31, warm37238988653 — HTTP 200 для `/healthz` и HTML. Промежуточные CI main после PR3–6 отменялись, чтобы не дублировать уже зелёный PR CI и освободить runners. Дополнительная финальная приёмка zero скрывает новые достижения и не предлагает «Достижение/Прогресс» для отправки пустого результата.
 
 - Production relay `wss://89-169-132-80.sslip.io/stt`: штатный smoke прошёл, включая `done` после stop. Старый адрес 84-201-157-124 из recovery workflow не используется клиентом; его timeout не означает сбой текущего relay.
 
@@ -144,4 +144,5 @@
 четырёх попыток собственный 20s сигнал, сохраняя проверки и автоматический откат.
 Тест сначала упал с тем же Frontend request failed: /healthz, затем прошёл после
 исправления. Это не доказательство причины первоначального сетевого таймаута;
-новый production rollout остаётся обязательным критерием завершения.
+новый production rollout завершился успешно (run37238448692). Последующие релизы
+включают эти исправления; readback37260193474 подтвердил ACTIVE на 6810452f.
