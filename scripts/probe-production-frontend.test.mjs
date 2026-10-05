@@ -1,10 +1,35 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { extractCriticalAssets, probeProductionFrontend } from './probe-production-frontend.mjs'
+import { EventEmitter } from 'node:events'
+import { extractCriticalAssets, measureFrontendRequest, probeProductionFrontend } from './probe-production-frontend.mjs'
 
 const timings = { tcpMs: 24, tlsMs: 60, ttfbMs: 210, totalMs: 230 }
 const html = '<title>Fit</title><script type="module" src="/assets/app-123.js"></script>'
   + '<link rel="stylesheet" href="/assets/app-123.css">'
+
+test('absolute deadline terminates a trickling response independently of socket inactivity', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let response
+  const result = measureFrontendRequest('203.0.113.1', '/auth', { timeoutMs: 100,
+    requestImpl: (options, callback) => {
+      assert.equal(options.servername, 'fit-training.ru')
+      assert.equal(options.agent, false)
+      const req = new EventEmitter()
+      req.destroy = (error) => req.emit('error', error)
+      req.end = () => {
+        response = new EventEmitter()
+        response.statusCode = 200
+        response.headers = { 'content-type': 'text/html' }
+        callback(response)
+      }
+      return req
+    } })
+  for (let i = 0; i < 5; i += 1) {
+    response.emit('data', Buffer.from('chunk'))
+    t.mock.timers.tick(20)
+  }
+  assert.equal((await result).error, 'ETIMEDOUT')
+})
 
 test('extracts only static critical assets, never query parameters', () => {
   assert.deepEqual(extractCriticalAssets(html + '<script src="/assets/other.js?token=secret"></script>'), [

@@ -646,6 +646,69 @@ including whether a slow dummy is followed by fast HTML. That pattern supports
 but does not prove cold start; a fast dummy with slow HTML points beyond the
 static Gateway route.
 
+#### Bounded hourly Cloud Function experiment
+
+Support follow-up on 2026-10-05 recommends testing an hourly Cloud Functions
+timer rather than assuming the GitHub five-minute schedule is reliable.
+`deploy-yandex-frontend-probe.yml` is **manual-only**, defaulting to `inspect`.
+Code merge does not create resources. After owner cost approval, dispatch from
+`main` with `action=enable` and `cost_approved=true`. It reuses the existing
+stage deployment OIDC identity and `fit-stage-api-warmer` timer identity; the
+latter receives only function-scoped `functions.functionInvoker` on
+`fit-frontend-hourly-probe`. The runtime has no service account, secrets, VPC,
+provisioned instance, or access to app data. The function is private.
+
+IAM preflight on 2026-10-05 confirmed that the stage deployer has folder-level
+`functions.editor`, not `functions.admin`. Editor can create/invoke functions
+and manage timers, but cannot assign function access bindings. Before the first
+approved enable, an existing Cloud administrator must bootstrap the private
+`fit-frontend-hourly-probe` function and grant the deployer `functions.admin`
+**only on that function**, plus the existing timer identity its scoped invoker
+binding. Do not grant folder-wide Functions admin. The deployment then maintains
+only that function policy. These one-time bindings are pending along with cost
+approval; local/mocked tests do not prove IAM authorization. Role requirements:
+[Functions access control](https://yandex.cloud/ru/docs/functions/security/).
+
+The workflow packages only the dependency-free probe modules, creates a
+Node.js 22 candidate (128 MB, 60-second limit, concurrency 1), and invokes it
+once before promoting `hourly-probe`. The hourly timer (`17 * * * ? *`, UTC)
+never follows `$latest`; a malformed candidate leaves the live tag/timer
+unchanged. An actual measured HTTP failure is valid experiment data, not a
+failed handler. Unavailable inventories or unexpected existing timer settings
+fail closed instead of creating duplicate resources. Re-enabling explicitly
+starts a new 24-hour window.
+
+Each invocation makes at most two sequential GETs on one resolved Gateway IP:
+`/healthz` then `/auth`, with separate absolute 20-second deadlines and bounded
+DNS resolution. One JSON log records UTC, IP, status, sanitized error code and
+DNS/TCP/TLS/TTFB/total timings. Response bodies and invocation events are never
+logged. Network failures do not trigger handler retries; the timer allows one
+platform retry. No chat notifications are emitted. After 24 hours the function
+returns `expired` without DNS/HTTP work. The timer itself still invokes this
+small no-op until `action=disable` pauses it; pause after collecting the window.
+Do not enable the GitHub warmup concurrently: disable
+`YC_FRONTEND_GATEWAY_WARMUP_ENABLED` when starting the approved Cloud experiment
+and record the UTC boundary. Keep the independent six-hour frontend probe.
+
+Estimate using official Russian rates on 2026-10-05: 744 hourly calls per
+31 days, 128 MB × 60 seconds, two Gateway requests per call. Without remaining
+free allowance: about 10.27 RUB/month for computation/invocations/Gateway
+requests, or about 21 RUB with one retry on every call; outbound traffic and
+short logs are additional. Free allowances may cover these quantities but are
+shared with other workloads, so do not promise a zero bill. The 24-hour window
+is about 0.66 RUB under the doubled conservative assumptions, plus one smoke,
+traffic/logging and expired no-op calls until paused. No VM is required.
+Sources: [Cloud Functions pricing](https://yandex.cloud/ru/docs/functions/pricing)
+and [API Gateway pricing](https://yandex.cloud/ru/docs/api-gateway/pricing).
+
+Compare actual trigger cadence and paired p50/p95/max/timeout counts with
+manual runs `37192113317` and `37210424060` and the independent external probe.
+The Cloud network is another vantage point, not proof of user-network
+availability or a guaranteed cold-start fix. Send support UTC examples and
+both route timings if HTML remains slow. Inspect/disable work without another
+cost-approval input; no resources are deleted and the frontend/API/DB are not
+reconfigured.
+
 В Yandex Monitoring для frontend API Gateway настроены `FIT frontend gateway:
 slow responses` (p99 latency, warning >5 c, alarm >10 c) и `FIT frontend
 gateway: HTTP 5xx` (ошибки 5xx). Slow-response alert остаётся на графике без

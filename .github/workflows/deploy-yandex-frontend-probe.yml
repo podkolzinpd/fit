@@ -1,0 +1,56 @@
+name: Manage hourly Yandex frontend probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [inspect, enable, disable]
+        default: inspect
+        description: Enable a 24-hour experiment, inspect, or pause it
+      cost_approved:
+        type: boolean
+        default: false
+        description: Owner approved compute/requests estimate (about 21 RUB/month plus traffic/logs)
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-frontend-hourly-probe
+  cancel-in-progress: false
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  PROBE_ACTION: ${{ inputs.action }}
+  PROBE_COST_APPROVED: ${{ inputs.cost_approved }}
+  PROBE_SOURCE_PATH: .frontend-probe-package
+
+jobs:
+  manage:
+    if: github.ref == 'refs/heads/main' && (inputs.action != 'enable' || inputs.cost_approved == true)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify and package the credential-free function
+        run: |
+          node --test scripts/frontend-gateway-probe-function.test.mjs scripts/deploy-frontend-gateway-probe.test.mjs
+          mkdir -p .frontend-probe-package
+          cp infra/frontend-probe/package.json .frontend-probe-package/
+          cp scripts/frontend-gateway-probe-entry.mjs .frontend-probe-package/index.js
+          cp scripts/frontend-gateway-probe-function.mjs scripts/frontend-gateway-health.mjs scripts/probe-frontend-gateway-warmup.mjs scripts/probe-production-frontend.mjs .frontend-probe-package/
+      - name: Install Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - run: scripts/yandex-github-oidc.sh
+      - name: Manage the bounded experiment
+        run: node scripts/deploy-frontend-gateway-probe.mjs

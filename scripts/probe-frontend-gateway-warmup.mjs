@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { frontendHealthBody, frontendHealthPath } from './frontend-gateway-plan.mjs'
+import { frontendHealthBody, frontendHealthPath } from './frontend-gateway-health.mjs'
 import { measureFrontendRequest, resolveFrontendAddresses } from './probe-production-frontend.mjs'
 
 const slowThresholdMs = 5_000
@@ -8,11 +8,13 @@ const slowThresholdMs = 5_000
 export async function probeFrontendGatewayWarmup({
   resolveAddresses = resolveFrontendAddresses,
   measure = measureFrontendRequest,
+  maxAddresses = Infinity,
+  network = 'github-runner',
 } = {}) {
   const checkedAt = new Date().toISOString()
   const dns = await resolveAddresses({ name: 'system' })
   const requests = []
-  for (const ip of dns.ips) {
+  for (const ip of dns.ips.slice(0, maxAddresses)) {
     // Pair the requests on the same gateway IP: a slow dummy followed by fast
     // HTML is evidence for startup latency, not proof of the root cause.
     for (const path of [frontendHealthPath, '/auth']) {
@@ -30,9 +32,9 @@ export async function probeFrontendGatewayWarmup({
   }
   const status = dns.ips.length === 0 || requests.some((request) => !request.passed)
     ? 'failed' : requests.some((request) => request.slow) ? 'slow' : 'passed'
-  return { schemaVersion: 1, checkedAt, host: 'fit-training.ru', slowThresholdMs,
+  return { schemaVersion: 1, checkedAt, host: 'fit-training.ru', network, slowThresholdMs,
     status, dns: { dnsMs: dns.dnsMs, ips: dns.ips, error: dns.error ?? null }, requests,
-    note: 'One GitHub runner network; schedule can be delayed. /healthz does not verify Object Storage.' }
+    note: 'One probe network, not all user networks. /healthz does not verify Object Storage.' }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
