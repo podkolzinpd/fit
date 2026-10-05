@@ -1,5 +1,5 @@
 import { hashPilotSessionToken } from './auth/pilot-session-token.js'
-import type { DatabaseClient, DatabasePool } from './db/types.js'
+import type { DatabaseClient, DatabasePool, DatabaseTransactionMode } from './db/types.js'
 import {
   PilotSessionInvalidError,
   withYandexPilotSessionTransaction,
@@ -42,6 +42,7 @@ export function withYandexActorSession<Result>(
   pool: DatabasePool,
   input: YandexActorSessionInput,
   work: (client: DatabaseClient) => Promise<Result>,
+  mode: DatabaseTransactionMode = 'default',
 ): Promise<Result> {
   const session = typeof input === 'string'
     ? { accessMode: 'read_only' as const, token: input }
@@ -53,6 +54,6 @@ export function withYandexActorSession<Result>(
       : new PilotSessionInvalidError()
   }
   return session.accessMode === 'read_write'
-    ? withYandexAppSessionTransaction(pool, tokenHash, work)
-    : withYandexPilotSessionTransaction(pool, tokenHash, work)
+    ? withYandexAppSessionTransaction(pool, tokenHash, work, mode)
+    : withYandexPilotSessionTransaction(pool, tokenHash, work, mode)
 }

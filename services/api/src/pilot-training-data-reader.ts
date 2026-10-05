@@ -27,6 +27,8 @@ export class DatabasePilotTrainingDataReader implements PilotTrainingDataReader 
       this.pool,
       session,
       (client) => readAccessibleTrainingData(client, page),
+      // Root versions, exercises and sets must come from the same MVCC snapshot.
+      'read-only-snapshot',
     )
   }
 }

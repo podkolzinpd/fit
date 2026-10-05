@@ -2904,6 +2904,111 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it.each([
+      ['read_only', 'from public.workouts workout'],
+      ['read_write', 'from public.workouts workout'],
+      ['read_only', 'from public.workout_exercises'],
+      ['read_write', 'from public.workout_exercises'],
+    ] as const)('keeps one training snapshot for %s after %s', async (accessMode, boundary) => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const db = runtimePool
+      const url = new URL(requireLocalTestDatabaseUrl())
+      url.username = 'fit_api'
+      url.password = RUNTIME_PASSWORD
+      const snapshotPool = new PgDatabasePool({ connectionString: url.toString(), max: 1 })
+      const draft: PlannedWorkoutDraft = {
+        id: null, clientId: CLIENT_ID, workoutDate: '2026-10-05',
+        startTime: '10:00', endTime: '11:00', notes: 'Snapshot before',
+        exercises: [{
+          position: 0, source: 'system', ref: 'running', customExerciseId: null,
+          name: 'Snapshot before', muscleGroup: 'cardio', inputKind: 'distance',
+          blockId: randomUUID(), blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
+          trainerComment: null,
+          sets: [{ position: 0, weightKg: null, reps: null, durationMin: 30,
+            durationSec: 1800, distanceKm: 5, rpe: 7 }],
+        }],
+      }
+      const created = await withActorTransaction(db, ACTOR_ID,
+        (client) => savePlannedWorkout(client, draft, null))
+      let tokenHash: string | undefined
+      let saved = false
+      try {
+        await ownerPool.query(
+          'update app_private.profile_rollout_assignments set access_mode = $2 where profile_id = $1',
+          [ACTOR_ID, accessMode],
+        )
+        const issued = accessMode === 'read_write'
+          ? await new DatabaseYandexAppSessionIssuer(db).issue(PILOT_SUBJECT_HASH)
+          : await new DatabasePilotSessionIssuer(db).issue(PILOT_SUBJECT_HASH)
+        if (issued === undefined) throw new Error('Fixture session was not issued')
+        tokenHash = hashPilotSessionToken(issued.session.token)
+        const pool: DatabasePool = {
+          async connect() {
+            const connection = await snapshotPool.connect()
+            return {
+              async query<Row extends QueryResultRow = QueryResultRow>(text: string, values?: readonly unknown[]) {
+                const rows = await connection.query<Row>(text, values)
+                if (!saved && text.includes(boundary)) {
+                  saved = true
+                  const exercise = draft.exercises[0]
+                  const set = exercise?.sets[0]
+                  if (exercise === undefined || set === undefined) throw new Error('Missing fixture exercise')
+                  // Commit an actual aggregate replacement between the reader's SELECTs.
+                  await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, {
+                    ...draft, id: created.id, notes: 'Snapshot after',
+                    exercises: [{ ...exercise, name: 'Snapshot after', sets: [{ ...set, distanceKm: 8 }] }],
+                  }, created.version))
+                }
+                return rows
+              },
+              release() { connection.release() },
+            }
+          },
+          end: () => snapshotPool.end(),
+        }
+        const session: YandexActorSession = { accessMode, token: issued.session.token }
+        const reader = new DatabasePilotTrainingDataReader(pool)
+        const during = await reader.readTrainingData(session)
+        expect(saved).toBe(true)
+        expect(during.workouts.find((item) => item.id === created.id)).toMatchObject({
+          version: 1, notes: 'Snapshot before',
+          exercises: [{ name: 'Snapshot before', sets: [{ plan: { distanceKm: 5 } }] }],
+        })
+        expect(during.workouts.some((item) => item.id === MEMBER_WORKOUT_ID)).toBe(false)
+        const after = await reader.readTrainingData(session)
+        expect(after.workouts.find((item) => item.id === created.id)).toMatchObject({
+          version: 2, notes: 'Snapshot after',
+          exercises: [{ name: 'Snapshot after', sets: [{ plan: { distanceKm: 8 } }] }],
+        })
+        expect(await readActor(snapshotPool)).toBeNull()
+        const connection = await snapshotPool.connect()
+        try {
+          const settings = await connection.query<{
+            isolation: string
+            read_only: string
+          }>(`select current_setting('transaction_isolation') as isolation,
+            current_setting('transaction_read_only') as read_only`)
+          expect(settings).toEqual([{ isolation: 'read committed', read_only: 'off' }])
+        } finally {
+          connection.release()
+        }
+      } finally {
+        await snapshotPool.end()
+        await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+        if (tokenHash !== undefined) {
+          await ownerPool.query('delete from app_private.yandex_app_sessions where token_sha256 = $1', [tokenHash])
+          await ownerPool.query('delete from app_private.yandex_pilot_sessions where token_sha256 = $1', [tokenHash])
+        }
+        await ownerPool.query(
+          "update app_private.profile_rollout_assignments set access_mode = 'read_only' where profile_id = $1",
+          [ACTOR_ID],
+        )
+      }
+    })
+
     it('keeps exercise catalogs and workout aggregates inside author-scoped access', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
 
