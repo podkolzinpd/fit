@@ -3045,6 +3045,47 @@ test('Client Lime baseline keeps another client outside the redesign', async ({ 
   await page.screenshot({ path: testInfo.outputPath('client-before.png'), fullPage: true })
 })
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime planned exercises have one list surface ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    const exercises: WorkoutExercise[] = [0, 1, 2].map((position) => ({
+      id: `10000000-0000-4000-8000-${String(80 + position).padStart(12, '0')}`,
+      source: 'system', ref: 'squat',
+      name: position === 0 ? 'Разводка гантелей на наклонной скамье с длинным названием упражнения' : `Упражнение ${position + 1}`,
+      muscleGroup: 'chest', inputKind: 'strength', position,
+      blockId: position === 0 ? '10000000-0000-4000-8000-000000000090' : '10000000-0000-4000-8000-000000000091',
+      blockType: position === 0 ? 'single' : 'group', blockPreset: 'set', blockRounds: 3,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: `10000000-0000-4000-8000-${String(92 + position).padStart(12, '0')}`, position: 0, weightKg: 12, reps: 10, fact: {}, confirmedAt: null, version: 1 }],
+    }))
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    const list = page.locator('.workout-detail-page > .planned-exercise-list')
+    await expect(list.locator('.planned-detail-exercise')).toHaveCount(3)
+    const geometry = await list.evaluate((element) => {
+      const rows = Array.from(element.querySelectorAll('.planned-detail-exercise'))
+      const rowStyles = rows.map((row) => getComputedStyle(row))
+      const heading = rows[0]?.querySelector('.workout-detail-exercise-heading')
+      return {
+        listBorder: getComputedStyle(element).borderTopWidth,
+        rowBorders: rowStyles.map((style) => style.borderTopWidth),
+        rowRadii: rowStyles.map((style) => style.borderTopLeftRadius),
+        innerBorders: rows.map((row) => getComputedStyle(row.querySelector('.workout-detail-exercise-row')!).borderTopWidth),
+        headingFits: !!heading && heading.scrollWidth <= heading.clientWidth,
+        noOverlap: rows.every((row, index) => index === 0 || rows[index - 1]!.getBoundingClientRect().bottom <= row.getBoundingClientRect().top),
+      }
+    })
+    expect(geometry.listBorder).toBe('1px')
+    expect(geometry.rowBorders).toEqual(['0px', '0px', '1px'])
+    expect(geometry.rowRadii).toEqual(['0px', '0px', '0px'])
+    expect(geometry.innerBorders).toEqual(['0px', '0px', '0px'])
+    expect(geometry.headingFits).toBe(true)
+    expect(geometry.noOverlap).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-plan-list-${theme}-${width}.png`) })
+  })
+}
+
 for (const width of [390, 430]) {
   test(`Client Lime shell themes and account isolation ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
