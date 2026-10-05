@@ -3211,6 +3211,50 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime live circuit keeps controls and sets together ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    const exercises: WorkoutExercise[] = [0, 1].map((position) => ({
+      id: `10000000-0000-4000-8000-${String(80 + position).padStart(12, '0')}`,
+      source: 'system', ref: position === 0 ? 'fedb-front-dumbbell-raise' : 'squat',
+      name: position === 0 ? 'Подъём гантелей вперёд' : 'Приседания',
+      muscleGroup: 'shoulders', inputKind: 'strength', position,
+      blockId: '10000000-0000-4000-8000-000000000090', blockType: 'group', blockPreset: 'set', blockRounds: 3,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [0, 1, 2].map((setPosition) => ({
+        id: `10000000-0000-4000-8000-${String(92 + position * 3 + setPosition).padStart(12, '0')}`,
+        position: setPosition, weightKg: 12, reps: 10, fact: {}, confirmedAt: null, version: 1,
+      })),
+    }))
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+    const circuit = page.locator('.fit-client-lime.live-identity .exercise-block.live').first()
+    await expect(circuit.locator('.circuit-round.current')).toBeVisible()
+    await expect(circuit.locator('.circuit-round.collapsed')).toHaveCount(2)
+    await expect(circuit.locator('.live-round-actions')).toBeVisible()
+    await expect(circuit.locator('.circuit-head-actions-only')).toBeVisible()
+    const controls = await circuit.evaluate((element) => {
+      const head = element.querySelector('.circuit-head-actions-only')!.getBoundingClientRect()
+      const actions = element.querySelector('.live-round-actions')!.getBoundingClientRect()
+      const round = element.querySelector('.circuit-round.current')!.getBoundingClientRect()
+      return { aligned: Math.abs(head.top - actions.top) <= 2, close: round.top - Math.max(head.bottom, actions.bottom) <= 24 }
+    })
+    expect(controls.aligned).toBe(true)
+    expect(controls.close).toBe(true)
+    const technique = circuit.locator('.circuit-round.current .live-technique .exercise-image-technique')
+    if (await technique.count()) {
+      await expect(technique).toHaveCSS('max-height', '100px')
+      await expect(circuit.locator('.circuit-round.current section').first().locator('.exercise-thumbnail')).toHaveCount(0)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-live-circuit-${theme}-${width}.png`) })
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime sections ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))

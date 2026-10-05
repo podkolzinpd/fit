@@ -80,6 +80,46 @@
   background: var(--lime-surface);
   color: var(--lime-text);
 }
+.phone-frame.fit-client-lime.live-identity .exercise-block.live:has(> .circuit-head-actions-only) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 16px;
+}
+.phone-frame.fit-client-lime.live-identity .exercise-block.live > .circuit-head-actions-only {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 44px;
+}
+.phone-frame.fit-client-lime.live-identity .exercise-block.live > .circuit-head-actions-only:not(:has(button)) {
+  display: none;
+}
+.phone-frame.fit-client-lime.live-identity .exercise-block.live > .live-round-actions {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+}
+.phone-frame.fit-client-lime.live-identity .exercise-block.live > .live-round-actions .live-add-set {
+  margin: 0;
+}
+.phone-frame.fit-client-lime.live-identity .exercise-block.live > .circuit-round {
+  grid-column: 1 / -1;
+}
+.phone-frame.fit-client-lime.live-identity .circuit-round .live-technique {
+  gap: 4px;
+  margin: 6px 0 8px;
+  padding: 6px;
+  border-color: var(--lime-divider);
+  border-radius: 18px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.live-identity .circuit-round .live-technique .exercise-image-technique {
+  max-height: 100px;
+  border-radius: 12px;
+}
+.phone-frame.fit-client-lime.live-identity .circuit-round .live-technique-actions {
+  min-height: 44px;
+}
 
 .phone-frame.fit-client-lime:not(.theme-light).client-home-identity :is(.voice-action-button, .today-voice-text-inline) svg[data-original-icon] { filter: none; }
 

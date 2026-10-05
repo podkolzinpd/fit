@@ -3556,7 +3556,7 @@ export function LiveWorkoutPage() {
               const showNote = isCurrent || (blockDone && roundIndex === 0)
               return <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
-                leading={roundIndex === 0 ? liveHeaderThumbnail(exercise) : undefined}
+                leading={roundIndex === 0 ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
                 onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0
                   ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])
                   : undefined} />
