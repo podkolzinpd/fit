@@ -104,6 +104,7 @@ function AchievementDetail({ item, onClose, returnFocusTo }: { item: AthleteAchi
       <div className="athlete-achievement-detail-heading"><h2 id={titleId}>{item.title}</h2><button ref={closeRef} type="button" aria-label="Закрыть подробности ачивки" onClick={onClose}><CloseIcon /></button></div>
       <Badge item={item} priority />
       <p>{item.description}</p>
+      {item.kind === 'month-days' && <p>Можно получать каждый месяц.</p>}
       {item.kind === 'month-days' && <p>В этом месяце: {achievementProgressLabel({ ...item, progress: item.currentPeriodProgress ?? 0 })}<br />Получений: {item.earnedCount ?? 0}{item.lastEarnedOn ? ` · Последнее: ${formatLocalDate(item.lastEarnedOn)}` : ''}</p>}
       <strong>{item.earnedOn ? `Получена ${formatLocalDate(item.earnedOn)}` : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${achievementProgressLabel(item)}`}</strong>
     </section>
@@ -175,6 +176,7 @@ export function AthleteAchievementsPage() {
       <p className="athlete-achievements-count">Получено {earned} из {achievements.length}</p>
       {achievementGroups.map((group) => <section className="athlete-achievements-group" key={group.title} aria-label={group.title}>
         <h2>{group.title}</h2>
+        {group.title === 'Регулярность' && <p className="athlete-achievements-group-note">Тренировки засчитываются в разные дни.</p>}
         <div className="athlete-achievements-grid">{achievements.filter((item) => group.kinds.includes(item.kind)).sort((a, b) => group.kinds.indexOf(a.kind) - group.kinds.indexOf(b.kind) || a.threshold - b.threshold).map((item, index) => <button className="athlete-achievement-card" type="button" key={item.id} onClick={(event) => { selectedButton.current = event.currentTarget; setSelected(item) }} aria-label={`${item.title}. ${item.earnedOn ? (item.earnedCount ? `Получений: ${item.earnedCount}` : 'Получена') : item.kind === 'comeback' ? 'Пока не получена' : `Прогресс: ${achievementProgressLabel(item)}`}. Открыть подробности`}>
           <Badge item={item} priority={group.title === 'Тренировки' && index < 6} />
           <span className={`athlete-achievement-progress-slot${showAchievementProgress(item) ? '' : ' is-empty'}`} aria-hidden={!showAchievementProgress(item)}>

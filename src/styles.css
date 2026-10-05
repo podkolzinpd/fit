@@ -7185,6 +7185,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .athlete-achievements-count { margin:0 0 20px; color:var(--muted); }
 .athlete-achievements-group { margin-bottom:20px; }
 .athlete-achievements-group h2 { margin:0 0 12px; font-size:18px; font-weight:600; }
+.athlete-achievements-group-note { margin:-4px 0 12px; color:var(--muted); font-size:13px; line-height:1.4; }
 .athlete-achievements-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px 8px; }
 .athlete-achievement-card { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:4px; min-width:0; padding:4px 0; border:0; border-radius:14px; background:transparent; color:var(--fg); box-shadow:none; text-align:center; cursor:pointer; }
 .athlete-achievement-card .athlete-achievement-badge { width:min(80px,100%); height:auto; aspect-ratio:1; border-radius:22px; }
