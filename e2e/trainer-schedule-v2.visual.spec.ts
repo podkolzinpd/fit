@@ -3321,12 +3321,60 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await page.goto(route)
       await expect(page.locator('.fit-client-lime')).toBeVisible()
       await expect(page.locator('h1').first()).toBeVisible()
-      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
+      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_ENABLED === 'true' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
         await expect(page).toHaveURL(/\/assistant$/)
         await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
+        const actions = page.locator('.assistant-first-entry-actions')
+        const starter = actions.getByRole('button')
+        await expect(actions.getByRole('button', { name: 'Записать тренировку' })).toBeVisible()
+        await expect(actions.getByRole('button', { name: 'Показать прогресс' })).toBeVisible()
+        await expect(actions.getByRole('button', { name: 'Что ты умеешь?' })).toBeVisible()
+        await expect.poll(async () => {
+          const colors = await starter.evaluateAll((buttons) => buttons.slice(0, 2).map((button) => getComputedStyle(button).backgroundColor))
+          return colors.length === 2 && colors[0] !== colors[1]
+        }).toBe(true)
+        await expect(page.locator('.assistant-composer .assistant-icon-button').first()).toHaveCSS('border-top-left-radius', '999px')
       }
       await expect(page.getByText('Загружаем…', { exact: true })).toHaveCount(0)
       await expect(page.locator('.state-panel-error')).toHaveCount(0)
+      if (route === '/me/progress') {
+        const period = page.locator('.progress-story-period .ai-progress-periods.period-count-1')
+        await expect(period).toBeVisible()
+        const widths = await period.evaluate((element) => ({
+          period: element.getBoundingClientRect().width,
+          card: element.closest('.progress-story-period')!.getBoundingClientRect().width,
+        }))
+        expect(widths.period).toBeLessThan(widths.card / 2)
+        const emphasis = await page.evaluate(() => ({
+          period: getComputedStyle(document.querySelector('.progress-story-period .ai-progress-periods.period-count-1 button.active')!).backgroundColor,
+          overview: getComputedStyle(document.querySelector('.progress-view-tabs button.active')!).backgroundColor,
+        }))
+        expect(emphasis.period).not.toBe(emphasis.overview)
+      }
+      if (route === '/me/profile') {
+        const actions = page.locator('.client-trainer-connection-card .client-trainer-actions')
+        const geometry = await actions.evaluate((element) => {
+          const message = element.querySelector('.chat-start-wrap button')!.getBoundingClientRect()
+          const menu = element.querySelector('.overflow-trigger')!.getBoundingClientRect()
+          const card = element.closest('.client-trainer-connection-card')!.getBoundingClientRect()
+          return { separate: message.right < menu.left, contained: menu.right <= card.right }
+        })
+        expect(geometry.separate && geometry.contained).toBe(true)
+        await expect(page.locator('.client-profile-edit')).toHaveCSS('border-top-left-radius', '0px')
+      }
+      if (route === '/me/settings') {
+        const options = page.locator('.body-map-appearance-options.count-1')
+        await expect(options).toBeVisible()
+        const widths = await options.evaluate((element) => ({
+          option: element.getBoundingClientRect().width,
+          card: element.closest('.body-map-appearance-setting')!.getBoundingClientRect().width,
+        }))
+        expect(widths.option).toBeLessThan(widths.card / 2)
+      }
+      if (route === '/me/edit') {
+        await expect(page.locator('.client-profile-form select')).toHaveCSS('appearance', 'none')
+        await expect(page.locator('.client-profile-form input[type="number"]').first()).toHaveCSS('appearance', 'textfield')
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
     }
