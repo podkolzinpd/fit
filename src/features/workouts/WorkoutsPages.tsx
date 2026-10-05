@@ -1607,6 +1607,7 @@ export function WorkoutDetailPage() {
   const clientMode = actor?.role === 'client'
   const justCompleted = query.data?.status === 'done' && navigationState?.justCompleted === true
   const clientCompletionReport = Boolean(justCompleted && clientMode)
+  const limeHistory = isFitLimeEnabled(actor) || isClientLimeEnabled(actor)
   const completionClient = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientCompletionReport })
   const backTo = workoutListFallback(actor?.role === 'client', query.data?.clientId)
   const goBack = useWorkoutBack(backTo)
@@ -1911,13 +1912,13 @@ export function WorkoutDetailPage() {
       {done && !clientCompletionReport && <><section className={`workout-fact-summary${workout.activeCaloriesKcal ? ' has-calories' : ''}`} aria-label="Сводка тренировки">
         <p><span>Время</span><strong>{duration && duration !== '0 мин' ? duration : '—'}</strong></p>
         <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
-        {workout.activeCaloriesKcal && <p><span>{isFitLimeEnabled(actor) ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
-        {!isFitLimeEnabled(actor) && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
-        {!isFitLimeEnabled(actor) && !workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
+        {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
+        {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
+        {!limeHistory && !workout.activeCaloriesKcal && workout.calorieEstimateNotice && <p><span>Активные калории FIT</span><strong>{workout.calorieEstimateNotice}</strong></p>}
         <p><span>Подходы</span><strong>{completedSets}</strong></p>
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
         {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
-      </section>{isFitLimeEnabled(actor) && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>}
+      </section>{limeHistory && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>}
       {done && !clientCompletionReport && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}

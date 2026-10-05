@@ -143,6 +143,25 @@
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-title { margin-bottom: 4px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise.planned-exercise { gap: 4px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-editor { padding-top: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-composer-card .voice-input {
+  min-height: 48px;
+  padding: 4px 0 0;
+  border: 0;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-composer-card .voice-input-button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-composer-card .voice-input-button.recording {
+  border-color: var(--lime-pink);
+  background: var(--lime-pink);
+  color: var(--lime-text-on-accent);
+}
 
 /* A check means an acknowledged result, never a planned set. */
 .phone-frame.fit-client-lime.live-identity :is(.live-set-grid, .live-set-table-head) { grid-template-columns: 28px minmax(0,1fr) minmax(0,1fr) 64px; }
@@ -165,6 +184,39 @@
 .phone-frame.fit-client-lime .workout-feedback-options { gap: 6px; }
 .phone-frame.fit-client-lime .workout-feedback-option { min-height: 44px; border-radius: 999px; font-size: 14px; }
 .phone-frame.fit-client-lime .workout-completion-actions { gap: 12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-fact-summary {
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-fact-summary > p {
+  min-width: 0;
+  padding: 12px 8px;
+  border-color: var(--lime-divider);
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-fact-summary > p > span {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-fact-summary > p > strong {
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  line-height: 1.35;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-calorie-explanation {
+  margin: -4px 0 16px;
+  padding: 0 4px;
+  color: var(--lime-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-calorie-explanation > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--lime-text);
+  font-weight: 500;
+}
 
 /* A workout list is one surface. Exercise rows and block contents are not cards. */
 .phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) {
