@@ -60,6 +60,7 @@ import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.j
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { DatabasePilotProgressData } from '../progress-data.js'
 import { readAccessibleTrainingData } from '../training-data.js'
+import { readClientWorkoutStats } from '../client-workout-stats.js'
 import type { MediaObjectStorage } from '../object-storage-media.js'
 import { DatabasePilotTrainerProfiles, type TrainerProfileDraft } from '../trainer-profile.js'
 import type { YandexActorSession } from '../yandex-actor-session.js'
@@ -3008,6 +3009,65 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           "update app_private.profile_rollout_assignments set access_mode = 'read_only' where profile_id = $1",
           [ACTOR_ID],
         )
+      }
+    })
+
+    it('aggregates client stats over more than 100 roots without reading exercises or sets', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const fixtureClientId = 'c8000000-0000-4000-8000-000000000001'
+      const db = runtimePool
+      await ownerPool.query(`insert into public.clients (id, trainer_id, full_name)
+        values ($1, $2, 'Stats fixture')`, [fixtureClientId, ACTOR_ID])
+      await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id) values ($1, $2)`, [fixtureClientId, ACTOR_ID])
+      const read = (today: string) => withActorTransaction(db, ACTOR_ID,
+        (client) => readClientWorkoutStats(client, fixtureClientId, today))
+      try {
+        expect(await read('2026-10-06')).toEqual({ doneCount: 0, completionPercent: null, lastWorkoutDate: null, daysInWork: null, needsAttention: false })
+        await ownerPool.query(`insert into public.workouts (trainer_id, client_id, created_by, workout_date, status)
+          values ($1,$2,$1,'2026-10-07','planned')`, [ACTOR_ID, fixtureClientId])
+        expect(await read('2026-10-06')).toEqual({ doneCount: 0, completionPercent: null, lastWorkoutDate: null, daysInWork: 0, needsAttention: false })
+        await ownerPool.query(`insert into public.workouts (trainer_id, client_id, created_by, workout_date, status, completed_at)
+          select $1, $2, $1, date '2026-09-01', 'done', '2026-09-01T10:00:00Z'::timestamptz
+          from generate_series(1, 120)`, [ACTOR_ID, fixtureClientId])
+        await ownerPool.query(`insert into public.workouts (trainer_id, client_id, created_by, workout_date, status, deleted_at, started_at, completed_at)
+          values ($1,$2,$1,'2026-09-02','planned',null,null,null),
+            ($1,$2,$1,'2026-10-06','planned',null,null,null), ($1,$2,$1,'2026-10-07','planned',null,null,null),
+            ($1,$2,$1,'2026-10-07','cancelled',null,null,null),
+            ($1,$2,$1,'2026-09-03','in_progress',null,'2026-09-03T10:00:00Z',null),
+            ($1,$2,$1,'2020-01-01','done',now(),null,'2020-01-01T10:00:00Z')`, [ACTOR_ID, fixtureClientId])
+        const statements: string[] = []
+        const stats = await withActorTransaction(db, ACTOR_ID, (client) => readClientWorkoutStats({
+          query(text, values) {
+            statements.push(text)
+            return client.query(text, values)
+          },
+        }, fixtureClientId, '2026-10-06'))
+        expect(stats).toEqual({ doneCount: 120, completionPercent: 98, lastWorkoutDate: '2026-09-01', daysInWork: 35, needsAttention: true })
+        expect(statements).toHaveLength(1)
+        expect(statements[0]).not.toMatch(/workout_exercises|workout_sets/)
+        expect(await read('2026-09-14')).toMatchObject({ needsAttention: false })
+        expect(await read('2026-09-15')).toMatchObject({ needsAttention: true })
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID,
+          (client) => readClientWorkoutStats(client, fixtureClientId, '2026-10-06'))).rejects.toMatchObject({ failure: 'not_found' })
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id = $1', [fixtureClientId])
+        await ownerPool.query('delete from public.client_trainers where client_id = $1', [fixtureClientId])
+        await ownerPool.query('delete from public.clients where id = $1', [fixtureClientId])
+      }
+    })
+
+    it('keeps client stats scoped to workout author and client RLS', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+      const db = runtimePool
+      for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID]) {
+        const summaries = await withActorTransaction(db, actorId, (client) => client.query<{ workout_date: string; status: string } & QueryResultRow>(`
+          select workout_date::text, status from public.workouts where client_id = $1 and deleted_at is null`, [CLIENT_ID]))
+        const expectedDone = summaries.filter((item) => item.status === 'done')
+        const expectedMissed = summaries.filter((item) => item.status === 'cancelled' || (item.status === 'planned' && item.workout_date < '2026-10-06'))
+        const stats = await withActorTransaction(db, actorId, (client) => readClientWorkoutStats(client, CLIENT_ID, '2026-10-06'))
+        expect(stats.doneCount).toBe(expectedDone.length)
+        expect(stats.completionPercent).toBe(expectedDone.length + expectedMissed.length === 0 ? null
+          : Math.round(expectedDone.length / (expectedDone.length + expectedMissed.length) * 100))
       }
     })
 

@@ -97,6 +97,7 @@ import {
   CURRENT_TERMS_VERSION,
 } from './legal-document-versions.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import type { ClientWorkoutStatsReader } from './client-workout-stats.js'
 import { TrainerWorkspaceUnavailableError, type PilotTrainerWorkspace } from './pilot-trainer-workspace.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
@@ -216,6 +217,7 @@ interface BuildAppOptions {
   pilotProfileReader?: PilotProfileReader
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
+  clientWorkoutStatsReader?: ClientWorkoutStatsReader
   pilotTrainerWorkspace?: PilotTrainerWorkspace
   pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
@@ -1904,6 +1906,29 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       return sendSafeDatabaseFailure(reply, error, 'Pilot training data query failed')
     }
+  })
+
+  app.get('/v1/clients/:clientId/workout-stats', {
+    childLoggerFactory(logger, bindings, options) {
+      return logger.child(bindings, { ...options, serializers: { ...options.serializers,
+        req: () => ({ method: 'GET', url: '/v1/clients/:clientId/workout-stats' }),
+      } })
+    },
+  }, async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const { clientId } = request.params as { clientId?: unknown }
+    const { today } = request.query as { today?: unknown }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId) || !validDate(today)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const reader = options.clientWorkoutStatsReader
+    if (reader === undefined) return reply
+      .header('x-fit-error-category', 'configuration')
+      .header('x-fit-error-code', 'CLIENT_WORKOUT_STATS_UNAVAILABLE')
+      .code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => reader.read(session, clientId, today),
+      (stats) => reply.header('cache-control', 'no-store').send({ stats }))
   })
 
   app.get('/v1/clients/:clientId/progress', async (request, reply) => {

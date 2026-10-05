@@ -1,18 +1,19 @@
 # Fit — текущее состояние проекта
 
-## Аудит БД третий шаг — 2026-10-05
+## Аудит БД четвёртый шаг — 2026-10-06
 
 Первый шаг #1434: `a9b9c8e6`, CI37306986244/API37307751042 success; фото защищены.
 Второй шаг #1449 слит на `04eae004`: snapshot; CI37340759203/API37340759274 success.
 План WORKOUT_SNAPSHOT в docs/design; frontend37341195922 failure: `fetch failed`.
-Третий шаг от `04eae004`, ветка `codex/db-history-pagination`: фильтры клиента,
-дат и ID применяются в API до LIMIT, metadata не выбирает историю. listPage
-читает одну страницу; полный list для расчётов не усечён. Схема/grants/UI/auth
-и Supabase не меняются; frontend deployment уже ждёт matching API rollout.
-Полный check зелёный: API1084, PostgreSQL17 actor/RLS83, WebKit4; CI ещё гейт.
-Третий шаг ещё не выпущен и в production не проверен.
+Третий шаг #1450 слит `a009e373`: pagination; CI37350611007/API37350610759
+и frontend37352537161 success, smoke/readback verified; `/auth` HTTP200.
+Четвёртый шаг от `f4bcc188`, #1454/`codex/db-client-stats`: карточка читает
+пять показателей одним actor-scoped SQL-агрегатом без истории/children ради
+статистики. ИИ, Progress, ближайшие назначения, схема/grants/auth сохранены.
+Targeted repository46/API227/actor-RLS85/WebKit13/Chromium13 и полный check (2380+1094,build) зелёные; CI-гейт.
+Новый HTTP-лог — только шаблон операции без client ID/query/session; regression test.
 local:verify блокирован исторической Supabase-миграцией; baseline не сбрасывался.
-План: design/DATABASE_AUDIT_HISTORY_PAGINATION_20261005.md.
+План: design/DATABASE_AUDIT_CLIENT_STATS_20261006.md. Production ещё не менялся.
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 

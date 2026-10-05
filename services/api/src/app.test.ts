@@ -69,6 +69,7 @@ import {
 } from './legal-document-versions.js'
 import { TrainerScheduleV2ClaimError } from './trainer-schedule-v2-claim.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
+import type { ClientWorkoutStatsReader } from './client-workout-stats.js'
 import {
   TrainerWorkspaceUnavailableError,
   type PilotTrainerWorkspace,
@@ -94,6 +95,79 @@ const apps: ReturnType<typeof buildApp>[] = []
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('client workout stats API', () => {
+  const id = '10000000-0000-4000-8000-000000000002'
+  const token = 's'.repeat(43)
+  const url = `/v1/clients/${id}/workout-stats?today=2026-10-06`
+  const stats = { doneCount: 4, completionPercent: 80, lastWorkoutDate: '2026-10-01', daysInWork: 30, needsAttention: false }
+  function fixture() {
+    const read = vi.fn<ClientWorkoutStatsReader['read']>().mockResolvedValue(stats)
+    const app = buildApp({ clientWorkoutStatsReader: { read } })
+    apps.push(app)
+    return { app, read }
+  }
+
+  it.each(['x-fit-session', 'x-fit-pilot-session'])('uses the actor from %s and returns only stats', async (header) => {
+    const { app, read } = fixture()
+    const result = await app.inject({ method: 'GET', url, headers: { [header]: token } })
+    expect(result.statusCode).toBe(200)
+    expect(result.json()).toEqual({ stats })
+    expect(result.headers['cache-control']).toBe('no-store')
+    expect(read).toHaveBeenCalledWith(header === 'x-fit-session'
+      ? { accessMode: 'read_write', token } : token, id, '2026-10-06')
+  })
+
+  it.each(['', '?today=2026-02-30', '?today=not-a-date', '?today=2026-10-06&today=2026-10-07'])('rejects invalid calendar dates %s', async (query) => {
+    const { app, read } = fixture()
+    const result = await app.inject({ method: 'GET', url: `/v1/clients/${id}/workout-stats${query}`, headers: { 'x-fit-session': token } })
+    expect(result.statusCode).toBe(400)
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('logs the operation without client IDs, query values or session headers', async () => {
+    const { app } = fixture()
+    const serializedRequests: unknown[] = []
+    const createChild = app.log.child.bind(app.log)
+    const child = vi.spyOn(app.log, 'child').mockImplementation((bindings, options) => {
+      if (options?.serializers?.req !== undefined) serializedRequests.push(options.serializers.req({}))
+      return createChild(bindings, options)
+    })
+    try {
+      expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).statusCode).toBe(200)
+      expect(serializedRequests).toEqual([{ method: 'GET', url: '/v1/clients/:clientId/workout-stats' }])
+    } finally {
+      child.mockRestore()
+    }
+  })
+
+  it('rejects missing, ambiguous and expired actor sessions', async () => {
+    const { app, read } = fixture()
+    for (const headers of [{}, { 'x-fit-session': token, 'x-fit-pilot-session': token }]) {
+      expect((await app.inject({ method: 'GET', url, headers })).statusCode).toBe(401)
+    }
+    expect(read).not.toHaveBeenCalled()
+    read.mockRejectedValueOnce(new YandexAppSessionInvalidError())
+    expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).statusCode).toBe(401)
+  })
+
+  it('rejects invalid client IDs before reading data', async () => {
+    const { app, read } = fixture()
+    expect((await app.inject({ method: 'GET', url: '/v1/clients/not-an-id/workout-stats?today=2026-10-06', headers: { 'x-fit-session': token } })).statusCode).toBe(400)
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('does not disguise forbidden client or database failures as empty stats', async () => {
+    const { app, read } = fixture()
+    read.mockRejectedValueOnce(new PilotDomainCommandError('not_found'))
+    expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).statusCode).toBe(404)
+    read.mockRejectedValueOnce(new Error('database-unavailable-test'))
+    const failed = await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })
+    expect(failed.statusCode).toBe(503)
+    expect(failed.body).not.toContain('database-unavailable-test')
+    expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).json()).toEqual({ stats })
+  })
 })
 
 describe('legal and account lifecycle API', () => {
