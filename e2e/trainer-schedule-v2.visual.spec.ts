@@ -3395,6 +3395,26 @@ for (const theme of ['light', 'dark']) {
   })
 }
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime workout composer voice action matches form ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self' }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    for (const route of ['/workouts/new', `/workouts/${workoutId}/edit`]) {
+      await page.goto(route)
+      const composer = page.locator('.fit-client-lime.workout-create-edit-identity .workout-composer-card')
+      const voice = composer.locator('.voice-input-button')
+      await expect(voice).toBeVisible()
+      await expect(voice).toHaveCSS('border-radius', '999px')
+      await expect(voice).toHaveCSS('min-height', '44px')
+      await expect(composer.locator('.voice-input')).toHaveCSS('border-top-width', '0px')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`client-workout-composer-${route.includes('edit') ? 'edit' : 'new'}-${theme}-${width}.png`) })
+    }
+  })
+}
+
 
 for (const width of [390, 430]) test(`Client Lime isolated drafts survive new input and deletion ${width}`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 844 })
