@@ -9,6 +9,48 @@
 }
 .phone-frame.fit-client-lime :is(.client-progress-page, .client-profile-page, .client-finance-page) :is(h1, h2, h3, strong) { font-weight: 500; }
 .phone-frame.fit-client-lime :is(.client-progress-page, .client-finance-page) :is(input, select, textarea) { font-size: 16px; }
+.phone-frame.fit-client-lime.client-profile-shell-identity .client-profile-edit {
+  border-radius: 0;
+  border-top-color: var(--lime-divider);
+}
+.phone-frame.fit-client-lime.client-profile-shell-identity .client-trainer-actions { gap: 8px; }
+.phone-frame.fit-client-lime.client-profile-shell-identity .client-trainer-actions .chat-start-wrap .link {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.client-profile-shell-identity .client-trainer-actions .overflow-trigger {
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-profile-shell-identity .body-map-appearance-options.count-1 {
+  width: max-content;
+  max-width: 100%;
+}
+.phone-frame.fit-client-lime.client-profile-shell-identity .body-map-appearance-options.count-1 button {
+  min-width: 116px;
+  border-radius: 999px;
+}
+.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form select {
+  appearance: none;
+  border-radius: 16px;
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m3 6 5 5 5-5' stroke='%237D8475' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form input[type='number'] { appearance: textfield; }
+.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form input[type='number']::-webkit-inner-spin-button,
+.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 .phone-frame.fit-client-lime.progress-identity .progress-story-period .ai-progress-periods.period-count-1 {
   width: max-content;
   max-width: 100%;

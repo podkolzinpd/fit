@@ -3341,6 +3341,30 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
         }))
         expect(emphasis.period).not.toBe(emphasis.overview)
       }
+      if (route === '/me/profile') {
+        const actions = page.locator('.client-trainer-connection-card .client-trainer-actions')
+        const geometry = await actions.evaluate((element) => {
+          const message = element.querySelector('.chat-start-wrap button')!.getBoundingClientRect()
+          const menu = element.querySelector('.overflow-trigger')!.getBoundingClientRect()
+          const card = element.closest('.client-trainer-connection-card')!.getBoundingClientRect()
+          return { separate: message.right < menu.left, contained: menu.right <= card.right }
+        })
+        expect(geometry.separate && geometry.contained).toBe(true)
+        await expect(page.locator('.client-profile-edit')).toHaveCSS('border-top-left-radius', '0px')
+      }
+      if (route === '/me/settings') {
+        const options = page.locator('.body-map-appearance-options.count-1')
+        await expect(options).toBeVisible()
+        const widths = await options.evaluate((element) => ({
+          option: element.getBoundingClientRect().width,
+          card: element.closest('.body-map-appearance-setting')!.getBoundingClientRect().width,
+        }))
+        expect(widths.option).toBeLessThan(widths.card / 2)
+      }
+      if (route === '/me/edit') {
+        await expect(page.locator('.client-profile-form select')).toHaveCSS('appearance', 'none')
+        await expect(page.locator('.client-profile-form input[type="number"]').first()).toHaveCSS('appearance', 'textfield')
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
     }
