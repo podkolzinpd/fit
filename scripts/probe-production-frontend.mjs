@@ -24,9 +24,9 @@ export async function resolveFrontendAddresses(source) {
   const started = performance.now()
   try {
     let addresses
-    if (source.server) {
+    if (source.server || source.useResolver) {
       const resolver = new Resolver({ timeout: 2_000, tries: 1 })
-      resolver.setServers([source.server])
+      if (source.server) resolver.setServers([source.server])
       addresses = (await resolver.resolve4(host)).map((address) => ({ address }))
     } else {
       addresses = await lookup(host, { all: true, family: 4 })
@@ -44,7 +44,7 @@ export function extractCriticalAssets(html) {
     .map((match) => match[1]))].slice(0, 2)
 }
 
-export function measureFrontendRequest(ip, path, { method = 'GET', timeoutMs = 12_000 } = {}) {
+export function measureFrontendRequest(ip, path, { method = 'GET', timeoutMs = 12_000, requestImpl = request } = {}) {
   return new Promise((done) => {
     const started = performance.now()
     const timings = { tcpMs: null, tlsMs: null, ttfbMs: null, downloadMs: null, totalMs: null }
@@ -52,13 +52,15 @@ export function measureFrontendRequest(ip, path, { method = 'GET', timeoutMs = 1
     let secureAt = null
     let responseAt = null
     let settled = false
+    let deadline
     const finish = (result) => {
       if (settled) return
       settled = true
+      clearTimeout(deadline)
       timings.totalMs = Math.round(performance.now() - started)
       done({ ...result, timings })
     }
-    const req = request({ hostname: ip, port: 443, path, method, servername: host,
+    const req = requestImpl({ hostname: ip, port: 443, path, method, servername: host,
       headers: { Host: host, 'User-Agent': 'fit-frontend-network-probe/1.0' }, agent: false,
       timeout: timeoutMs, rejectUnauthorized: true }, (response) => {
       responseAt = performance.now()
@@ -93,6 +95,8 @@ export function measureFrontendRequest(ip, path, { method = 'GET', timeoutMs = 1
     })
     req.on('timeout', () => req.destroy(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })))
     req.on('error', (error) => finish({ status: null, error: safeError(error) }))
+    // An inactivity timeout alone can be kept alive by a trickling response.
+    deadline = setTimeout(() => req.destroy(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })), timeoutMs)
     req.end()
   })
 }

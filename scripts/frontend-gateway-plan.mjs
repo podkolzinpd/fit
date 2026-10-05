@@ -5,8 +5,8 @@ import { verifyRelease } from './frontend-release.mjs'
 import { gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 
-export const frontendHealthPath = '/healthz'
-export const frontendHealthBody = 'fit-gateway-ready'
+import { frontendHealthBody, frontendHealthPath } from './frontend-gateway-health.mjs'
+export { frontendHealthBody, frontendHealthPath }
 
 export function frontendHealthRoute() {
   const operation = {
