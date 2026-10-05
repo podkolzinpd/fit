@@ -26,7 +26,60 @@
 .phone-frame.fit-client-lime.theme-light.live-identity .finish-confirm .workout-cta[data-variant='primary'] { color: var(--lime-surface); }
 .phone-frame.fit-client-lime :is(.workout-completion-report, .workout-completion-share-card) { overflow-wrap: anywhere; }
 
-.phone-frame.fit-client-lime.live-identity .live-add-set { width: fit-content; min-height: 44px; padding-inline: 12px; }
+.phone-frame.fit-client-lime.live-identity .live-add-set {
+  width: fit-content;
+  min-height: 44px;
+  margin: 12px 0 4px;
+  padding: 8px 16px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.live-identity .live-add-set:disabled {
+  color: var(--lime-text-tertiary);
+  opacity: 1;
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-note summary {
+  width: fit-content;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--lime-text-secondary);
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-note[open] summary {
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-upcoming {
+  gap: 10px;
+  margin: 8px 0;
+  padding: 14px 16px;
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-upcoming .live-upcoming-row {
+  gap: 8px;
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-start {
+  min-height: 44px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.live-identity .live-bottom-bar .workout-cta {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.live-identity .live-bottom-bar .workout-cta[data-variant='secondary'] {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
 
 .phone-frame.fit-client-lime:not(.theme-light).client-home-identity :is(.voice-action-button, .today-voice-text-inline) svg[data-original-icon] { filter: none; }
 
