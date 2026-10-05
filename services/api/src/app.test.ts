@@ -4023,6 +4023,42 @@ describe('read-only pilot connections endpoint', () => {
 })
 
 describe('read-only pilot training data endpoint', () => {
+  it('forwards validated workout filters and scope for an app session', async () => {
+    const trainingData = buildTrainingDataReader()
+    const app = buildApp({ pilotTrainingDataReader: trainingData.pilotTrainingDataReader, logger: false })
+    apps.push(app)
+    const clientId = CLIENTS_RESPONSE.clients[0]!.id
+    const response = await app.inject({
+      method: 'GET',
+      url: `/v1/training-data?limit=20&offset=120&clientId=${clientId}&from=2026-01-01&to=2026-08-31&scope=workouts`,
+      headers: { 'x-fit-session': 's'.repeat(43) },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(trainingData.readTrainingData).toHaveBeenCalledExactlyOnceWith(
+      { accessMode: 'read_write', token: 's'.repeat(43) }, {
+        limit: 20, offset: 120, clientId, from: '2026-01-01', to: '2026-08-31', scope: 'workouts',
+      },
+    )
+  })
+
+  it.each([
+    'limit=0', 'limit=101', 'offset=-1', 'offset=1.5',
+    'clientId=invalid', 'workoutId=invalid', 'scope=invalid',
+    'from=2026-02-30', 'to=2026-13-01', 'from=2026-08-31&to=2026-01-01',
+    'clientId=one&clientId=two', 'from=2026-01-01&from=2026-01-02',
+  ])('rejects invalid training data filters: %s', async (query) => {
+    const trainingData = buildTrainingDataReader()
+    const app = buildApp({ pilotTrainingDataReader: trainingData.pilotTrainingDataReader, logger: false })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'GET', url: `/v1/training-data?${query}`,
+      headers: { 'x-fit-session': 's'.repeat(43) },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toEqual({ error: 'invalid_request' })
+    expect(trainingData.readTrainingData).not.toHaveBeenCalled()
+  })
+
   it('returns the exercise and workout aggregate resolved by the session', async () => {
     const trainingData = buildTrainingDataReader()
     const app = buildApp({

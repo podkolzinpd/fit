@@ -54,6 +54,7 @@ import type {
   TrainerFinanceManualSessionDraft,
 } from './trainer-finance.repository'
 import { RepositoryError } from './error'
+import { collectPages } from './collect-pages'
 import { roundMetric } from './progress.repository'
 import { recognizeInBody } from '../queries/inbody-recognition'
 import {
@@ -955,22 +956,33 @@ export function createYandexMainRepository(
   }
   const trainingData = async () => {
     if (trainingDataPromise) return trainingDataPromise
-    const nextPromise = (async () => {
-      const first = await yandexPilotRepository.listTrainingData(apiBaseUrl, sessionToken, 'read_write', { limit: 100, offset: 0 })
-      const workouts = [...first.workouts]
-      for (let offset = workouts.length; first.hasMoreWorkouts && offset < (first.totalWorkouts ?? Number.MAX_SAFE_INTEGER); offset = workouts.length) {
-        const page = await yandexPilotRepository.listTrainingData(apiBaseUrl, sessionToken, 'read_write', { limit: 100, offset })
-        workouts.push(...page.workouts)
-        if (!page.hasMoreWorkouts || page.workouts.length === 0) break
-      }
-      return { ...first, workouts, hasMoreWorkouts: false, totalWorkouts: workouts.length }
-    })().catch((error: unknown) => {
+    const nextPromise = yandexPilotRepository.listTrainingData(
+      apiBaseUrl, sessionToken, 'read_write', { limit: 1, offset: 0, scope: 'metadata' },
+    ).catch((error: unknown) => {
       if (trainingDataPromise === nextPromise) trainingDataPromise = null
       throw error
     })
     trainingDataPromise = nextPromise
     return nextPromise
   }
+  const listWorkoutPage = async (from?: string, to?: string, clientId?: string, offset = 0, pageSize = 50) => {
+    const page = await yandexPilotRepository.listTrainingData(apiBaseUrl, sessionToken, 'read_write', {
+      limit: Math.min(pageSize, 100), offset, scope: 'workouts',
+      ...(from === undefined ? {} : { from }),
+      ...(to === undefined ? {} : { to }),
+      ...(clientId === undefined ? {} : { clientId }),
+    })
+    if (page.totalWorkouts === undefined) throw new Error('Stage вернул неподдерживаемый формат тренировок.')
+    const items = page.workouts.map(workout)
+    return {
+      items,
+      ...(page.hasMoreWorkouts && items.length > 0 ? { nextOffset: offset + items.length } : {}),
+      totalCount: page.totalWorkouts,
+    }
+  }
+  const listWorkouts = (from?: string, to?: string, clientId?: string) => collectPages(
+    (offset) => listWorkoutPage(from, to, clientId, offset, 100),
+  )
   const clients = async (archived = false) => {
     const path = archived ? '/v1/clients?archived=true' : '/v1/clients'
     const promise = archived ? archivedClientsPromise : activeClientsPromise
@@ -1419,25 +1431,15 @@ export function createYandexMainRepository(
       supportsAtomicLiveRounds: true,
       supportsLiveSupersetSplit: true,
       async get(id) {
-        const result = (await trainingData()).workouts.find((item) => item.id === id)
+        const page = await yandexPilotRepository.listTrainingData(apiBaseUrl, sessionToken, 'read_write', {
+          limit: 1, offset: 0, workoutId: id, scope: 'workouts',
+        })
+        const result = page.workouts.find((item) => item.id === id)
         if (!result) throw new RepositoryError('PT404', 'Тренировка не найдена.')
         return workout(result)
       },
-      async listPage(from, to, clientId, offset = 0, pageSize = 50) {
-        const all = (await trainingData()).workouts.map(workout).filter((item) =>
-          (from === undefined || item.workoutDate >= from)
-          && (to === undefined || item.workoutDate <= to)
-          && (clientId === undefined || item.clientId === clientId))
-        return {
-          items: all.slice(offset, offset + pageSize),
-          ...(offset + pageSize < all.length ? { nextOffset: offset + pageSize } : {}),
-          totalCount: all.length,
-        }
-      },
-      async list(from, to, clientId) {
-        const page = await this.listPage(from, to, clientId, 0, Number.MAX_SAFE_INTEGER)
-        return page.items
-      },
+      listPage: listWorkoutPage,
+      list: listWorkouts,
       async listSummaries(clientId) {
         return (await this.list(undefined, undefined, clientId)).map((item): WorkoutSummary => ({ id: item.id, workoutDate: item.workoutDate, status: item.status }))
       },
@@ -1589,7 +1591,7 @@ export function createYandexMainRepository(
     },
     trainingSummaries: {
       async firstCompletedWorkoutDate(clientId) {
-        const first = (await trainingData()).workouts.filter((item) => item.clientId === clientId && item.status === 'done').at(-1)
+        const first = (await listWorkouts(undefined, undefined, clientId)).filter((item) => item.status === 'done').at(-1)
         return first ? localDate(first.workoutDate) : null
       },
       async listForTrainer(clientId) {

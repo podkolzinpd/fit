@@ -3,6 +3,27 @@ import { fetchWithYandexPlatformReadRetry } from './request-diagnostics'
 
 export type YandexApiAccessMode = 'read_only' | 'read_write'
 
+export interface YandexTrainingDataPage {
+  limit: number
+  offset: number
+  clientId?: string
+  from?: string
+  to?: string
+  workoutId?: string
+  scope?: 'workouts' | 'metadata'
+}
+
+function trainingDataQuery(page?: YandexTrainingDataPage): string {
+  if (page === undefined) return ''
+  const query = new URLSearchParams({ limit: String(page.limit), offset: String(page.offset) })
+  if (page.clientId !== undefined) query.set('clientId', page.clientId)
+  if (page.from !== undefined) query.set('from', page.from)
+  if (page.to !== undefined) query.set('to', page.to)
+  if (page.workoutId !== undefined) query.set('workoutId', page.workoutId)
+  if (page.scope !== undefined) query.set('scope', page.scope)
+  return `?${query.toString()}`
+}
+
 export const YANDEX_AUTH_REQUEST_TIMEOUT_MS = 12_000
 export const YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE = 'Проверка сессии Yandex ID заняла слишком много времени.'
 
@@ -204,10 +225,8 @@ export const yandexPilotQueries = {
     apiBaseUrl: string,
     sessionToken: string,
     accessMode: YandexApiAccessMode = 'read_only',
-    page?: { limit: number; offset: number },
-  ) => fetch(`${apiBaseUrl}/v1/training-data${page === undefined
-    ? ''
-    : `?limit=${page.limit}&offset=${page.offset}`}`, {
+    page?: YandexTrainingDataPage,
+  ) => fetch(`${apiBaseUrl}/v1/training-data${trainingDataQuery(page)}`, {
     cache: 'no-store',
     headers: sessionHeaders(sessionToken, accessMode),
   }),

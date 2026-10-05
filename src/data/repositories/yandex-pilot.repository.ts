@@ -3,7 +3,7 @@ import {
   YANDEX_AUTH_REQUEST_TIMEOUT_MESSAGE,
   yandexPilotQueries,
 } from '../queries/yandex-pilot.queries'
-import type { YandexApiAccessMode } from '../queries/yandex-pilot.queries'
+import type { YandexApiAccessMode, YandexTrainingDataPage } from '../queries/yandex-pilot.queries'
 import { diagnosticsForResponse } from '../queries/request-diagnostics'
 import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 
@@ -808,7 +808,7 @@ export const yandexPilotRepository = {
     apiBaseUrl: string,
     sessionToken: string,
     accessMode: YandexApiAccessMode = 'read_only',
-    page?: { limit: number; offset: number },
+    page?: YandexTrainingDataPage,
   ): Promise<YandexPilotTrainingData> {
     let response: Response
     try {
