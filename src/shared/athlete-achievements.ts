@@ -53,11 +53,11 @@ const definitions: readonly Pick<AthleteAchievement, 'id' | 'kind' | 'title' | '
   { id: 'workouts-25', kind: 'workouts', title: 'Четверть сотни', threshold: 25, description: 'Завершить 25 тренировок' },
   { id: 'workouts-50', kind: 'workouts', title: 'Полсотни', threshold: 50, description: 'Завершить 50 тренировок' },
   { id: 'workouts-100', kind: 'workouts', title: 'Сотня', threshold: 100, description: 'Завершить 100 тренировок' },
-  { id: 'weeks-4', kind: 'weeks', title: 'Четыре недели', threshold: 4, description: 'Завершить тренировку 4 недели подряд' },
-  { id: 'weeks-8', kind: 'weeks', title: 'Восемь недель', threshold: 8, description: 'Завершить тренировку 8 недель подряд' },
-  { id: 'weeks-12', kind: 'weeks', title: 'Двенадцать недель', threshold: 12, description: 'Завершить тренировку 12 недель подряд' },
-  { id: 'weeks-total-52', kind: 'weeks-total', title: '52 активные недели', threshold: 52, description: 'Завершить тренировки в 52 разные недели за всё время. Недели могут идти не подряд' },
-  { id: 'comeback-21', kind: 'comeback', title: 'Снова в деле', threshold: 21, description: 'Завершить тренировку после перерыва не менее 21 дня' },
+  { id: 'weeks-4', kind: 'weeks', title: 'Четыре недели', threshold: 4, description: '4 недели подряд по 1 тренировке' },
+  { id: 'weeks-8', kind: 'weeks', title: 'Восемь недель', threshold: 8, description: '8 недель подряд по 1 тренировке' },
+  { id: 'weeks-12', kind: 'weeks', title: 'Двенадцать недель', threshold: 12, description: '12 недель подряд по 1 тренировке' },
+  { id: 'weeks-total-52', kind: 'weeks-total', title: '52 активные недели', threshold: 52, description: 'По 1 тренировке в 52 разные недели. Не обязательно подряд' },
+  { id: 'comeback-21', kind: 'comeback', title: 'Снова в деле', threshold: 21, description: 'Тренировка после перерыва не менее 21 дня' },
   { id: 'records-1', kind: 'records', title: 'Первый рекорд', threshold: 1, description: 'Установить первый личный рекорд в завершённой тренировке' },
   { id: 'records-5', kind: 'records', title: 'Рекорды копятся', threshold: 5, description: 'Установить личные рекорды в 5 разных тренировках' },
   { id: 'plank-5m', kind: 'plank', title: 'Первая опора', threshold: 300, description: 'Накопить 5 минут в упражнении «Планка»' },
@@ -114,16 +114,16 @@ const definitions: readonly Pick<AthleteAchievement, 'id' | 'kind' | 'title' | '
   { id: 'plank-1h', kind: 'plank', title: 'Час опоры', threshold: 3600, description: 'Накопить 1 час в упражнении «Планка»' },
   { id: 'cardio-25h', kind: 'cardio', title: 'Сердце в ритме', threshold: 90000, description: 'Накопить 25 часов фактического времени кардиоупражнений' },
   { id: 'cardio-100h', kind: 'cardio', title: 'Сто часов движения', threshold: 360000, description: 'Накопить 100 часов фактического времени кардиоупражнений' },
-  { id: 'rhythm-4', kind: 'rhythm', title: 'Нашёл ритм', threshold: 4, description: 'Тренироваться минимум в 2 разные даты каждую неделю 4 недели подряд' },
-  { id: 'rhythm-8', kind: 'rhythm', title: 'Держу ритм', threshold: 8, description: 'Тренироваться минимум в 2 разные даты каждую неделю 8 недель подряд' },
-  { id: 'rhythm-12', kind: 'rhythm', title: 'Ритм на квартал', threshold: 12, description: 'Тренироваться минимум в 2 разные даты каждую неделю 12 недель подряд' },
-  { id: 'three-weekly-4', kind: 'three-weekly', title: 'Трижды в неделю', threshold: 4, description: 'Тренироваться минимум в 3 разные даты каждую неделю 4 недели подряд' },
-  { id: 'flexible-6', kind: 'flexible', title: 'В своём темпе', threshold: 6, description: 'Тренироваться минимум в 2 разные даты в 6 из 8 последовательных недель; перерывы допустимы' },
-  { id: 'month-days-8', kind: 'month-days', title: 'Месяц в движении', threshold: 8, description: 'Тренироваться в 8 разных датах календарного месяца. Можно получать каждый месяц' },
-  { id: 'month-days-12', kind: 'month-days', title: 'Сильный месяц', threshold: 12, description: 'Тренироваться в 12 разных датах календарного месяца. Можно получать каждый месяц' },
-  { id: 'active-months-3', kind: 'active-months', title: 'Три месяца в деле', threshold: 3, description: 'Тренироваться минимум в 4 разные даты в каждом из 3 последовательных календарных месяцев' },
-  { id: 'active-months-6', kind: 'active-months', title: 'Полгода в деле', threshold: 6, description: 'Тренироваться минимум в 4 разные даты в каждом из 6 последовательных календарных месяцев' },
-  { id: 'comeback-rhythm', kind: 'comeback-rhythm', title: 'Вернулся в ритм', threshold: 3, description: 'После возвращения с перерыва не менее 21 дня потренироваться ещё в 2 разные даты в следующие 14 дней' },
+  { id: 'rhythm-4', kind: 'rhythm', title: 'Нашёл ритм', threshold: 4, description: '4 недели подряд по 2 тренировки' },
+  { id: 'rhythm-8', kind: 'rhythm', title: 'Держу ритм', threshold: 8, description: '8 недель подряд по 2 тренировки' },
+  { id: 'rhythm-12', kind: 'rhythm', title: 'Ритм на квартал', threshold: 12, description: '12 недель подряд по 2 тренировки' },
+  { id: 'three-weekly-4', kind: 'three-weekly', title: 'Трижды в неделю', threshold: 4, description: '4 недели подряд по 3 тренировки' },
+  { id: 'flexible-6', kind: 'flexible', title: 'В своём темпе', threshold: 6, description: 'В любые 6 из 8 недель — по 2 тренировки' },
+  { id: 'month-days-8', kind: 'month-days', title: 'Месяц в движении', threshold: 8, description: '8 тренировок за календарный месяц' },
+  { id: 'month-days-12', kind: 'month-days', title: 'Сильный месяц', threshold: 12, description: '12 тренировок за календарный месяц' },
+  { id: 'active-months-3', kind: 'active-months', title: 'Три месяца в деле', threshold: 3, description: '3 месяца подряд по 4 тренировки в месяц' },
+  { id: 'active-months-6', kind: 'active-months', title: 'Полгода в деле', threshold: 6, description: '6 месяцев подряд по 4 тренировки в месяц' },
+  { id: 'comeback-rhythm', kind: 'comeback-rhythm', title: 'Вернулся в ритм', threshold: 3, description: 'После перерыва не менее 21 дня — ещё 2 тренировки в течение 14 дней' },
   { id: 'versatile', kind: 'versatile', title: 'Разносторонний спортсмен', threshold: 3, description: 'За 30 дней выполнить силовые упражнения, кардио и растяжку' },
   { id: 'strength-endurance', kind: 'strength-endurance', title: 'Сила и выносливость', threshold: 2, description: 'В течение одной календарной недели выполнить силовые упражнения и кардио' },
   { id: 'movement-balance', kind: 'movement-balance', title: 'Баланс движения', threshold: 3, description: 'В каждом из 3 последовательных календарных месяцев выполнить силовые упражнения, кардио и растяжку' },
@@ -143,7 +143,10 @@ export function achievementProgressLabel(item: AthleteAchievement): string {
     : item.kind === 'workout-tonnage' || item.kind === 'lifetime-tonnage' ? 1_000 : 1
   const unit = item.kind === 'plank' ? 'мин' : item.kind === 'cardio' ? 'ч'
     : item.kind === 'workout-tonnage' || item.kind === 'lifetime-tonnage' ? 'т'
-      : ['distance', 'run-single', 'run-total'].includes(item.kind) ? 'км' : ''
+      : ['distance', 'run-single', 'run-total'].includes(item.kind) ? 'км'
+        : ['weeks', 'weeks-total', 'rhythm', 'three-weekly', 'flexible'].includes(item.kind) ? 'недель'
+          : item.kind === 'month-days' || item.kind === 'comeback-rhythm' ? 'дней'
+            : item.kind === 'active-months' ? 'месяцев' : ''
   const format = (value: number) => (Math.floor(value / scale * 10) / 10).toLocaleString('ru-RU', { maximumFractionDigits: 1 })
   return `${format(item.progress)} из ${format(item.threshold)}${unit ? ` ${unit}` : ''}`
 }
