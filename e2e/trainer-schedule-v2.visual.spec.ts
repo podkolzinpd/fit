@@ -1225,25 +1225,34 @@ for (const width of [390, 430, 1440]) {
     await expect(page.getByRole('button', { name: 'Начать тренировку', exact: true })).toBeVisible()
   })
 
-  test(`Figma trainer routes include finance and templates at ${width}`, async ({ page }, testInfo) => {
-    await page.setViewportSize({ width, height: 900 })
-    await mockPilot(page, { fitLime: true })
-    for (const route of ['/finance', `/clients/${clientId}/finance`, '/schedule/templates', '/schedule/templates/new/editor', '/profile', '/clients', '/chat', '/assistant']) {
+  for (const { name, route, checkLegacy } of [
+    { name: 'finance', route: '/finance', checkLegacy: true },
+    { name: 'client finance', route: `/clients/${clientId}/finance`, checkLegacy: true },
+    { name: 'templates', route: '/schedule/templates', checkLegacy: true },
+    { name: 'template editor', route: '/schedule/templates/new/editor', checkLegacy: true },
+    { name: 'profile', route: '/profile', checkLegacy: false },
+    { name: 'clients', route: '/clients', checkLegacy: false },
+    { name: 'chat', route: '/chat', checkLegacy: false },
+    { name: 'assistant', route: '/assistant', checkLegacy: false },
+  ]) {
+    test(`Figma trainer routes include ${name} at ${width}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 })
+      await mockPilot(page, { fitLime: true })
       await page.goto(route)
       await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
       await page.evaluate(() => document.fonts.ready)
       await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
       await page.screenshot({ path: testInfo.outputPath(`routes-${route.replace(/[^a-z]+/g, '-')}.png`) })
-    }
-    await mockPilot(page, { fitLime: false })
-    for (const route of ['/finance', `/clients/${clientId}/finance`, '/schedule/templates', '/schedule/templates/new/editor']) {
-      await page.goto(route)
-      await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
-      await expect(page.locator('html')).not.toHaveClass(/fit-lime-document/)
-      await expect(page.locator('[data-original-icon]')).toHaveCount(0)
-    }
-  })
+      if (checkLegacy) {
+        await mockPilot(page, { fitLime: false })
+        await page.goto(route)
+        await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+        await expect(page.locator('html')).not.toHaveClass(/fit-lime-document/)
+        await expect(page.locator('[data-original-icon]')).toHaveCount(0)
+      }
+    })
+  }
   test(`Figma workout quick empty plan at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await mockPilot(page, { fitLime: true, workouts: [], failFirstSave: true })

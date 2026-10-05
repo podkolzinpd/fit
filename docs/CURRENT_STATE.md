@@ -22,6 +22,9 @@ IAM preflight: существующая deploy-учётка имеет functions
 functions.admin. До первого enable требуется bootstrap private-функции и
 functions.admin для deployer только на неё (не на всю папку), scoped invoker
 для существующего timer identity. Эти права ещё не назначены.
+CI37291154323 выявил общий 30-секундный timeout E2E на 12 переходах
+в одном тесте. Маршруты разделены без ослабления assertions/rollout-проверок
+и увеличения timeout; локально WebKit/Chromium 390/430/1440 — 48/48 без retries.
 
 ## Ачивки — YAFIT-594
 
