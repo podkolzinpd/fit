@@ -12,7 +12,9 @@
   if(reservedClient)originals.splice(5,0,reservedClient);
   const scope = originals.slice(0, 10);
   const clientStories = [window.FIT_CLIENT_AI_PHONE || window.FIT_CLIENT_AI,...(window.FIT_CLIENT_STORIES||[])].filter(Boolean);
-  const motionCount = 9 + clientStories.length;
+  // Финслайды 09–12 (finance-v124.js): шаги 09 заменяются, 10–12 добавляются в конец timeline.
+  const fin124 = window.FIT_FIN124;
+  const motionCount = 9 + clientStories.length + (fin124 ? fin124.stops.length - 1 : 0);
   const originalShow = window.show;
   if (scope.length !== 10 || !originalShow) return;
   const q = (s, r = document) => r.querySelector(s);
@@ -27,6 +29,7 @@
   // overview stops; numbers, source diagrams and the moving object stay intact.
   const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
   timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
+  if(fin124)timeline.splice(timeline.length-1,1,...fin124.stops.map(n=>[...Array(n).keys()]));
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
@@ -41,6 +44,7 @@
     ['Подписка','Комиссия','Реклама','Вся модель']
   ];
   sceneLabels.splice(5,1,...clientStories.map(story=>story.labels||['Твоя цель','Готовая программа','Можно тренироваться']));
+  if(fin124)sceneLabels.splice(sceneLabels.length-1,1,...fin124.labels);
   const labels = timeline.map((stops,i)=>stops.map(n=>sceneLabels[i][n]));
   scope.forEach((s,i) => { s.classList.add('motion-slide'); s.dataset.motionSlide = i; });
   function phase(el, n) { if(el) { el.classList.add('m-reveal'); el.dataset.phase=n; } }
@@ -245,6 +249,7 @@
     const scene=timeline[index][n],previousScene=timeline[index][prev];
     const clientStory=clientStories.find(story=>story.slide===s);
     if(clientStory){clientStory.render(scene,motion&&!staticMode,animate,staticMode);return updateToolbar();}
+    if(fin124?.has(s)){fin124.render(s,scene,motion&&!staticMode,staticMode);return updateToolbar();}
     s.classList.toggle('m-static',staticMode);
     qa('.m-reveal',s).forEach(el=>{const p=+el.dataset.phase;el.classList.toggle('m-pending',!staticMode&&p>scene);el.classList.toggle('m-current',!staticMode&&p===scene);});
     if(index===0){coverTitle.style.opacity='1';}

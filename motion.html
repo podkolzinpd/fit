@@ -9998,9 +9998,9 @@ show(current, false)
   const content = slide.querySelector('.content');
   const rows = [...content.children];
   rows[0].querySelector('p').innerHTML = [
-    'Личные договорённости с клубами и тренерами.<br>Тестирование с тренерами <strong>Spirit — сети из 47 клубов</strong>.',
+    'Тестирование с тренерами <strong>крупной сети клубов</strong>.',
     'Тренеры приглашают клиентов, клиенты — своих тренеров.',
-    'За приглашённого тренера — 25% от его Pro-подписки на 12 месяцев.',
+    'За приглашённого тренера — 2 000 ₽ после его первых 5 оплат.',
     'За приглашение друзей — бонусы.'
   ].map(text => `<span style="display:block;margin-bottom:8px">${text}</span>`).join('');
   rows[4].remove();
@@ -10040,16 +10040,16 @@ show(current, false)
  <h2>Команда проекта</h2>
  <div class="team-people">
  <div class="team-person"><div class="team-photo"><img src="assets/team/antonknyazev.jpg" alt="Антон Князев"></div><h3>Антон Князев</h3><div class="team-role">CEO / CPO</div><div class="team-duty">Руководство проектом</div></div>
- <div class="team-person"><div class="team-photo"><img src="assets/team/mishmetyev.jpg" alt="Михаил Ишметьев"></div><h3>Михаил Ишметьев</h3><div class="team-role">CFO</div><div class="team-duty">Финансы</div></div>
+ <div class="team-person"><div class="team-photo"><img src="assets/team/mishmetyev.jpg" alt="Михаил Ишметьев"></div><h3>Михаил Ишметьев</h3><div class="team-role">CFO &amp; Growth</div><div class="team-duty">Финансы, маркетинг, аналитика</div></div>
  <div class="team-person"><div class="team-photo"><img src="assets/team/podkolzinpd.jpg" alt="Павел Подколзин"></div><h3>Павел Подколзин</h3><div class="team-role">CTO</div><div class="team-duty">Техническое направление</div></div>
  <div class="team-person"><div class="team-photo"><img src="assets/team/a-goltsov.jpg" alt="Саша Гольцов"></div><h3>Саша Гольцов</h3><div class="team-role">AI Lead</div><div class="team-duty">Искусственный интеллект</div></div>
  </div>
- <div class="team-cfo-note">Михаил: в бюджете 0,5 ставки с 4-го месяца, полная ставка — с 7-го.</div>
+
  <div class="team-bottom">
  <div><h3>Сообщество и тренеры</h3><p><span class="team-name">Ваня Загурский</span><br>Уже в команде · 0,5 ставки на старте</p></div>
  <div><h3>Усиление на старте</h3><div class="team-hiring"><p>Backend — 2 ставки<br>Mobile — 1 ставка</p><p>UI/UX-дизайнер — 1 ставка<br>QA — 0,5 ставки<br>IT / продуктовый юрист — 1 ставка</p></div><div class="team-later">С 3-го месяца — DevOps на 0,5 ставки.</div></div>
  </div>
- <aside class="speaker-notes">Четыре основных участника проекта: Антон Князев — CEO / CPO, Михаил Ишметьев, Павел Подколзин, Саша Гольцов. Порядок и написание имён подтверждены пользователем. Ваня Загурский — сообщество и работа с тренерами. Ставки взяты из Team details, помесячный план строк 53–73, модели Fit_рынок_РФ [twgZ0h].xlsx. Старт: 9 FTE; с третьего месяца 9,5. CFO в бюджете с месяца 4 на 0,5, с месяца 7 на 1. Усиление не означает подтверждённые вакансии по всем позициям. Композиционный ориентир apple/08: четыре равных объекта на общей оси, второстепенная информация ниже; сохранена текущая Fit Design айдентика.</aside>`;
+ <aside class="speaker-notes">Четыре основных участника проекта: Антон Князев — CEO / CPO, Михаил Ишметьев — CFO & Growth (финансы, маркетинг, аналитика), Павел Подколзин, Саша Гольцов. Порядок и написание имён подтверждены пользователем. Ваня Загурский — сообщество и работа с тренерами. Ставки взяты из Team details, помесячный план строк 53–73, модели Fit_рынок_РФ [twgZ0h].xlsx. Старт: 9 FTE; с третьего месяца 9,5. CFO в бюджете с месяца 4 на 0,5, с месяца 7 на 1. Усиление не означает подтверждённые вакансии по всем позициям. Композиционный ориентир apple/08: четыре равных объекта на общей оси, второстепенная информация ниже; сохранена текущая Fit Design айдентика.</aside>`;
 }
 </script>
 <script>
@@ -10063,8 +10063,8 @@ show(current, false)
   blocks[3].querySelector('p').textContent = 'Клиенты находят вас в каталоге тренеров';
 }
 </script>
-<link rel="stylesheet" href="finance-story.css?v=20261004-1">
-<script src="finance-story-copy-polish.js"></script>
+<!-- финслайды 09–12 под решения 115–125: finance-v124.js (заменяет finance-story-copy-polish.js) -->
+<script src="finance-v124.js?v=1"></script>
 <link rel="stylesheet" href="closing-goals.css?v=20261004-1">
 <script src="closing-goals.js?v=20261004-1"></script>
 <link rel="stylesheet" href="trainer-clear-v1.css">
