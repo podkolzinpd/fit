@@ -86,6 +86,9 @@ interface TrainerProfileRow extends QueryResultRow {
   is_brand_trainer: boolean
 }
 
+const TRAINER_PROFILE_ROW_COLUMNS = `public_id, draft_data, published_data,
+  listed_in_catalog, published_at, updated_at, version, is_brand_trainer`
+
 interface PublicTrainerProfileRow extends QueryResultRow {
   public_id: string
   published_data: StoredTrainerProfileDraft
@@ -259,6 +262,32 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
     return withYandexActorSession(this.pool, session, work)
   }
 
+  private async lockOrCreateDraft(client: DatabaseClient, draft: TrainerProfileDraft): Promise<{
+    row: TrainerProfileRow
+    created: boolean
+  }> {
+    const readLocked = () => client.query<TrainerProfileRow>(`
+      select ${TRAINER_PROFILE_ROW_COLUMNS}
+      from public.trainer_professional_profiles where trainer_id = auth.uid() for update
+    `)
+    const current = (await readLocked())[0]
+    if (current) return { row: current, created: false }
+
+    // An absent row cannot be locked. DO NOTHING waits for a concurrent creator
+    // without overwriting its photo metadata; the next statement then locks and
+    // reads the committed row under READ COMMITTED.
+    const inserted = await client.query<TrainerProfileRow>(`
+      insert into public.trainer_professional_profiles (trainer_id, draft_data)
+      values (auth.uid(), $1::jsonb)
+      on conflict (trainer_id) do nothing
+      returning ${TRAINER_PROFILE_ROW_COLUMNS}
+    `, [JSON.stringify(storedDraft(draft, []))])
+    if (inserted[0]) return { row: inserted[0], created: true }
+    const winner = (await readLocked())[0]
+    if (!winner) throw new TrainerProfileError('not_found')
+    return { row: winner, created: false }
+  }
+
   private async exposeDraft(draft: StoredTrainerProfileDraft, includeFull: boolean): Promise<TrainerProfileDraft> {
     const records = storedPhotos(draft)
     if (records.length > 0 && this.media === undefined) throw new TrainerProfileError('media_unavailable')
@@ -301,19 +330,17 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
   async saveDraft(session: YandexActorSessionInput, draft: TrainerProfileDraft) {
     const row = await this.withSession(session, async (client) => {
       await ensureTrainer(client)
-      const current = await client.query<TrainerProfileRow>(
-        'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
-      )
-      const photos = storedPhotos(current[0]?.draft_data ?? null)
+      const current = await this.lockOrCreateDraft(client, draft)
+      if (current.created) return current.row
+      const photos = storedPhotos(current.row.draft_data)
       const nextDraft = storedDraft({ ...draft, avatarDataUrl: photos.length > 0 ? null : draft.avatarDataUrl }, photos)
       const rows = await client.query<TrainerProfileRow>(`
-        insert into public.trainer_professional_profiles (trainer_id, draft_data)
-        values (auth.uid(), $1::jsonb)
-        on conflict (trainer_id) do update set draft_data = excluded.draft_data,
-          version = public.trainer_professional_profiles.version + 1
-        returning *
+        update public.trainer_professional_profiles set draft_data = $1::jsonb,
+          version = version + 1 where trainer_id = auth.uid()
+        returning ${TRAINER_PROFILE_ROW_COLUMNS}
       `, [JSON.stringify(nextDraft)])
-      return rows[0]!
+      if (!rows[0]) throw new TrainerProfileError('not_found')
+      return rows[0]
     })
     return this.exposeRow(row)
   }
@@ -344,10 +371,8 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
       await this.media.write('trainer-profile-media', thumbnailPath, upload.thumbnail.bytes, upload.thumbnail.mimeType, false)
       row = await this.withSession(session, async (client) => {
         await ensureTrainer(client)
-        const current = await client.query<TrainerProfileRow>(
-          'select * from public.trainer_professional_profiles where trainer_id = auth.uid() for update',
-        )
-        const photos = storedPhotos(current[0]?.draft_data ?? null)
+        const current = await this.lockOrCreateDraft(client, draft)
+        const photos = storedPhotos(current.row.draft_data)
         if (photos.length >= 3) throw new TrainerProfileError('limit_reached')
         const photo: StoredTrainerProfilePhoto = {
           id,
@@ -366,13 +391,12 @@ export class DatabasePilotTrainerProfiles implements PilotTrainerProfiles {
           avatarDataUrl: replaceLegacy || photos.length > 0 ? null : draft.avatarDataUrl,
         }, [...photos, photo])
         const rows = await client.query<TrainerProfileRow>(`
-          insert into public.trainer_professional_profiles (trainer_id, draft_data)
-          values (auth.uid(), $1::jsonb)
-          on conflict (trainer_id) do update set draft_data = excluded.draft_data,
-            version = public.trainer_professional_profiles.version + 1
-          returning *
-        `, [JSON.stringify(nextDraft)])
-        return rows[0]!
+          update public.trainer_professional_profiles set draft_data = $1::jsonb,
+            version = version + $2 where trainer_id = auth.uid()
+          returning ${TRAINER_PROFILE_ROW_COLUMNS}
+        `, [JSON.stringify(nextDraft), current.created ? 0 : 1])
+        if (!rows[0]) throw new TrainerProfileError('not_found')
+        return rows[0]
       })
     } catch (error) {
       await this.removePhotos([{
