@@ -3178,6 +3178,29 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime workout list and calendar actions ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [
+      { ...workout, createdBy: clientId, trainingFormat: 'self' },
+      { ...workout, id: newWorkoutId, createdBy: clientId, trainingFormat: 'self', status: 'done',
+        completedAt: '2026-09-23T12:00:00Z', workoutDate: '2026-09-23' },
+    ] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    await page.goto('/me/workouts')
+    const workoutsPage = page.locator('.fit-client-lime.client-workouts-identity')
+    await expect(workoutsPage.locator('.client-workouts-page > .page-header .button')).toHaveCSS('border-radius', '999px')
+    const toggle = workoutsPage.getByRole('group', { name: 'Вид истории тренировок' })
+    await expect(toggle.getByRole('button', { name: 'Список' })).toHaveCSS('border-radius', '999px')
+    await toggle.getByRole('button', { name: 'Календарь' }).click()
+    await expect(workoutsPage.locator('.client-history-calendar')).toBeVisible()
+    await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-workout-calendar-${theme}-${width}.png`) })
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime live secondary actions ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
