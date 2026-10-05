@@ -6,7 +6,7 @@
 (() => {
   'use strict';
   const all = [...document.querySelectorAll('#deck > .slide')];
-  const originals = all.filter(s=>!s.classList.contains('client-ai-story'));
+  const originals = all.filter(s=>!s.classList.contains('client-ai-story')&&!s.classList.contains('fit-extra-slide'));
   // Keep the archival overview available to the original setup, outside navigation.
   const reservedClient=document.querySelector('#client-overview-reserve')?.content.querySelector('.slide');
   if(reservedClient)originals.splice(5,0,reservedClient);
@@ -14,7 +14,9 @@
   const clientStories = [window.FIT_CLIENT_AI_PHONE || window.FIT_CLIENT_AI,...(window.FIT_CLIENT_STORIES||[])].filter(Boolean);
   // Финслайды 09–12 (finance-v124.js): шаги 09 заменяются, 10–12 добавляются в конец timeline.
   const fin124 = window.FIT_FIN124;
-  const motionCount = 9 + clientStories.length + (fin124 ? fin124.stops.length - 1 : 0);
+  // Вставные слайды без анимации (.fit-extra-slide) — одна остановка, индексы соседних слайдов сохраняются.
+  const extraSlides = all.map((s,i)=>s.classList.contains('fit-extra-slide')?i:-1).filter(i=>i>=0);
+  const motionCount = 9 + clientStories.length + (fin124 ? fin124.stops.length - 1 : 0) + extraSlides.length;
   const originalShow = window.show;
   if (scope.length !== 10 || !originalShow) return;
   const q = (s, r = document) => r.querySelector(s);
@@ -30,6 +32,7 @@
   const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
   timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
   if(fin124)timeline.splice(timeline.length-1,1,...fin124.stops.map(n=>[...Array(n).keys()]));
+  extraSlides.forEach(i=>timeline.splice(i,0,[0]));
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
@@ -45,6 +48,7 @@
   ];
   sceneLabels.splice(5,1,...clientStories.map(story=>story.labels||['Твоя цель','Готовая программа','Можно тренироваться']));
   if(fin124)sceneLabels.splice(sceneLabels.length-1,1,...fin124.labels);
+  extraSlides.forEach(i=>sceneLabels.splice(i,0,[q('h2',all[i])?.textContent||'']));
   const labels = timeline.map((stops,i)=>stops.map(n=>sceneLabels[i][n]));
   scope.forEach((s,i) => { s.classList.add('motion-slide'); s.dataset.motionSlide = i; });
   function phase(el, n) { if(el) { el.classList.add('m-reveal'); el.dataset.phase=n; } }
