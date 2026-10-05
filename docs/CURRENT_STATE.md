@@ -15,14 +15,13 @@ Check frontend2371/API1070 и WebKit2/2 зелёные; CI ещё гейт, ша
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 
-#1433: private Node.js22/128МБ/60s, часовой timer, `/healthz`/`auth` на одном IP,
-без PII/чатов; manual inspect, enable требует согласования стоимости.
-Через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned
-tag защищают переключение. Ресурсов/активации нет, invoke/эффект не проверены.
-Оценка21₽/31день при60s и повторе вызовов, трафик/логи отдельно; OPERATIONS.md.
-Причина медленного HTML не доказана. Нужен private bootstrap, functions.admin
-только на функцию и scoped invoker; deployer пока functions.editor. Прав,
-UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063,
+#1433: private Node.js22/128МБ/60s, часовой timer `/healthz`/`auth` на одном IP; без PII/чатов.
+Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается,
+disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
+Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана.
+Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap,
+functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
+Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063,
 DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236,
 CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
