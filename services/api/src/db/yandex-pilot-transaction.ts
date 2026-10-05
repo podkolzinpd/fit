@@ -1,6 +1,6 @@
 import type { QueryResultRow } from 'pg'
 
-import type { DatabaseClient, DatabasePool } from './types.js'
+import type { DatabaseClient, DatabasePool, DatabaseTransactionMode } from './types.js'
 
 const SUBJECT_HASH_PATTERN = /^[0-9a-f]{64}$/
 const UUID_PATTERN =
@@ -31,12 +31,15 @@ async function withResolvedPilotActorTransaction<Result>(
   resolveActor: ActorResolver,
   deniedError: Error,
   work: (client: DatabaseClient) => Promise<Result>,
+  mode: DatabaseTransactionMode = 'default',
 ): Promise<Result> {
   const connection = await pool.connect()
   let transactionStarted = false
 
   try {
-    await connection.query('begin')
+    await connection.query(mode === 'read-only-snapshot'
+      ? 'begin isolation level repeatable read read only'
+      : 'begin')
     transactionStarted = true
 
     const actorId = await resolveActor(connection)
@@ -128,6 +131,7 @@ export async function withYandexPilotSessionTransaction<Result>(
   pool: DatabasePool,
   tokenHash: string,
   work: (client: DatabaseClient) => Promise<Result>,
+  mode: DatabaseTransactionMode = 'default',
 ): Promise<Result> {
   if (!SUBJECT_HASH_PATTERN.test(tokenHash)) {
     throw new PilotSessionInvalidError()
@@ -144,5 +148,6 @@ export async function withYandexPilotSessionTransaction<Result>(
     },
     new PilotSessionInvalidError(),
     work,
+    mode,
   )
 }

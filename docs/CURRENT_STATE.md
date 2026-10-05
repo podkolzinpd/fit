@@ -1,30 +1,28 @@
 # Fit — текущее состояние проекта
 
-## Аудит БД первый шаг — 2026-10-05
+## Аудит БД второй шаг — 2026-10-05
 
-PR #1434 сохраняет фото при конкурентных первых `saveDraft`/`uploadPhoto`;
-схема, права, API/UI и первая версия 1 не меняются. Старый код провалил три
-гонки; исправление прошло PostgreSQL17 actor/RLS76/76, check и WebKit2/2.
-local:verify блокирует историческая Supabase-миграция; baseline не сбрасывался.
-CI37292335746 зелёный; после sync с новым main нужен повторный CI, production
-не менялся. План: design/DATABASE_AUDIT_PROFILE_PHOTO_CONCURRENCY_20261005.md.
-Далее отдельно — согласованное чтение тренировки, затем пагинация истории.
+Первый шаг #1434 слит на `a9b9c8e6`; повторный CI37306986244 и API rollout
+37307751042 success. Фото защищены; план PROFILE_PHOTO_CONCURRENCY в docs/design.
+Второй шаг на main `3a0bcf3f`: training-data использует read-only REPEATABLE READ
+до session resolution. Корни/упражнения/подходы одного ответа согласованы;
+mutation, API/DTO, схема/grants/UI/Supabase не меняются. Четыре гонки воспроизведены
+на старом коде; исправление прошло clean PostgreSQL17 actor/RLS80/80 и unit7/7.
+Check frontend2371/API1070 и WebKit2/2 зелёные; CI ещё гейт, шаг не выпущен. local:verify остаётся
+блокирован исторической Supabase-миграцией, baseline не сбрасывался.
+План: design/DATABASE_AUDIT_WORKOUT_SNAPSHOT_20261005.md.
+Следующий отдельный шаг — серверная пагинация истории, не часть текущей задачи.
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 
-PR #1433: private Node.js22/128МБ/60s, часовой timer, `/healthz` и `/auth`
-на одном IP, без PII/чатов. Manual-only inspect; enable требует согласования
-стоимости; через24ч HTTP прекращается, disable приостанавливает timer.
-Candidate smoke/pinned tag защищают переключение. Ресурсов/активации нет,
-Cloud invoke/эффект не проверены. Оценка21₽/31день при60s и повторе каждого
-вызова; трафик/логи отдельно. OPERATIONS.md; причина медленного HTML не доказана.
-IAM: deployer имеет functions.editor, не functions.admin. Нужен bootstrap
-private-функции, functions.admin только на неё и scoped timer invoker; прав
-не меняли. UI/auth/API/БД не меняются; независимый внешний probe сохраняется.
-Локальный check: frontend2371/API1063 passed, DB71 skipped/hosting112.
-E2E timeout12 переходов устранён разделением без ослаблений: targeted48/48,
-WebKit236/236, CI37294091210 зелёный. После sync `6f7e3cea` check/E2E52/52
-зелёные; новый CI остаётся гейтом.
+#1433: private Node.js22/128МБ/60s, часовой timer `/healthz`/`auth` на одном IP; без PII/чатов.
+Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается,
+disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
+Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана.
+Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap,
+functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
+Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063,
+DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
 ## Активная задача — визуальное завершение клиентского Lime
 
@@ -86,15 +84,8 @@ deployment37242590195 и readback37260193474 success/ACTIVE.
 success, iOS собран/установлен/запущен в симуляторе. Store-релиза и проверки
 диктовки на физическом устройстве не было; relay smoke её не заменяет.
 
-## Завершённая задача — семь исправляющих PR по клиентскому видео
-
-Acceptance: `docs/design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md`.
-Все семь PR выпущены, проверки выше; история в Git/плане. Lime identity
-(YS Geo/REM) и пилот сохранены.
-Текущий SpeechKit relay прошёл smoke с `done` после stop; старый recovery
-адрес не относится к нему. Production browser ограничен политикой среды,
-обхода нет; внешний YAFIT не настроен, неподходящие credentials не используются.
-
+Acceptance: design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md; Lime identity/pilot сохранены. SpeechKit smoke `done` прошёл, старый recovery не относится к relay.
+Production browser ограничен без обхода; внешний YAFIT не настроен, чужие credentials не используются.
 ## Следующий персональный pilot — ссылки на функции в Assistant
 
 Пользователь разрешил реализацию, PR, слияние зелёного CI и production-выпуск

@@ -1,5 +1,7 @@
 import type { QueryResultRow } from 'pg'
 
+export type DatabaseTransactionMode = 'default' | 'read-only-snapshot'
+
 export interface DatabaseClient {
   query<Row extends QueryResultRow = QueryResultRow>(
     text: string,

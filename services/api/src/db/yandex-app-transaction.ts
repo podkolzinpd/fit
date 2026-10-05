@@ -1,6 +1,6 @@
 import type { QueryResultRow } from 'pg'
 
-import type { DatabaseClient, DatabasePool } from './types.js'
+import type { DatabaseClient, DatabasePool, DatabaseTransactionMode } from './types.js'
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/
 const UUID_PATTERN =
@@ -31,12 +31,15 @@ async function withResolvedYandexAppActorTransaction<Result>(
   resolveActor: ActorResolver,
   deniedError: Error,
   work: (client: DatabaseClient) => Promise<Result>,
+  mode: DatabaseTransactionMode = 'default',
 ): Promise<Result> {
   const connection = await pool.connect()
   let transactionStarted = false
 
   try {
-    await connection.query('begin')
+    await connection.query(mode === 'read-only-snapshot'
+      ? 'begin isolation level repeatable read read only'
+      : 'begin')
     transactionStarted = true
 
     const actorId = await resolveActor(connection)
@@ -105,6 +108,7 @@ export async function withYandexAppSessionTransaction<Result>(
   pool: DatabasePool,
   tokenHash: string,
   work: (client: DatabaseClient) => Promise<Result>,
+  mode: DatabaseTransactionMode = 'default',
 ): Promise<Result> {
   if (!SHA256_PATTERN.test(tokenHash)) {
     throw new YandexAppSessionInvalidError()
@@ -121,5 +125,6 @@ export async function withYandexAppSessionTransaction<Result>(
     },
     new YandexAppSessionInvalidError(),
     work,
+    mode,
   )
 }
