@@ -53,6 +53,14 @@ html.fit-client-lime-document { color-scheme: dark; }
 html.fit-client-lime-document.theme-light { color-scheme: light; }
 
 /* The five client destinations keep their existing labels and destinations. */
+.phone-frame.fit-client-lime .content:not(.content-immersive) {
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+.phone-frame.fit-client-lime.keyboard-open .content:not(.content-immersive) {
+  padding-bottom: 16px;
+  scroll-padding-bottom: 16px;
+}
 .phone-frame.fit-client-lime .client-tab-bar {
   position: fixed;
   left: 50%;
@@ -85,6 +93,22 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
   background: var(--lime-nav-active);
 }
 .phone-frame.fit-client-lime .client-tab-bar a svg { width: 24px; height: 24px; transform: none; }
+
+/* Keep the existing action semantics, but use one control geometry. */
+.phone-frame.fit-client-lime :is(.workout-cta, .button, button.primary, button.secondary) {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime :is(.page-back, .overflow-trigger) {
+  min-width: 44px;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
 .fit-client-lime.theme-light svg[data-original-icon] { filter: brightness(0); }
 .fit-client-lime :where(.primary, .button.primary) svg[data-original-icon] { filter: brightness(0); }
 .fit-client-lime :where(button, a, input, select, textarea):focus-visible { outline-color: var(--lime-accent-ink); }
