@@ -154,7 +154,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'completedAt'> & { startTime: string | null; endTime: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
 async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -3251,6 +3251,40 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-live-circuit-${theme}-${width}.png`) })
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime completed workout separates calorie explanation ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    const exercise: WorkoutExercise = {
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, weightKg: 20, reps: 12, fact: { weightKg: 25, reps: 12 }, confirmedAt: '2026-09-24T12:00:00Z', version: 1 }],
+    }
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self',
+      status: 'done', startedAt: '2026-09-24T11:00:00Z', completedAt: '2026-09-24T12:00:00Z',
+      activeCaloriesKcal: 210, calorieEstimateBasis: 'Приблизительно по данным тренировки', exercises: [exercise],
+    }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    await page.goto(`/workouts/${workoutId}`)
+    const history = page.locator('.fit-client-lime.workout-detail-history-identity')
+    const facts = history.locator('.workout-fact-summary')
+    const explanation = history.locator('.workout-calorie-explanation')
+    await expect(facts).toBeVisible()
+    await expect(facts).toContainText('≈ 210 ккал')
+    await expect(facts).not.toContainText('Приблизительно по данным тренировки')
+    await expect(explanation).toContainText('Приблизительно по данным тренировки')
+    const geometry = await page.evaluate(() => {
+      const facts = document.querySelector('.workout-fact-summary')!.getBoundingClientRect()
+      const explanation = document.querySelector('.workout-calorie-explanation')!.getBoundingClientRect()
+      return { separated: explanation.top >= facts.bottom - 5, explanationFits: explanation.right <= innerWidth }
+    })
+    expect(geometry.separated && geometry.explanationFits).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-workout-history-${theme}-${width}.png`) })
   })
 }
 
