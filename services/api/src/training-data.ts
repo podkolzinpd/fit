@@ -280,6 +280,11 @@ export interface PilotTrainingDataResponse {
 export interface TrainingDataPage {
   limit: number
   offset: number
+  clientId?: string
+  from?: string
+  to?: string
+  workoutId?: string
+  scope?: 'workouts' | 'metadata'
 }
 
 function safeInteger(value: string, field: string): number {
@@ -296,14 +301,22 @@ export async function readAccessibleTrainingData(
   client: DatabaseClient,
   page: TrainingDataPage = { limit: DEFAULT_WORKOUT_PAGE_SIZE, offset: 0 },
 ): Promise<PilotTrainingDataResponse> {
+  const workoutFilter = `workout.deleted_at is null
+    and ($1::uuid is null or workout.client_id = $1)
+    and ($2::date is null or workout.workout_date >= $2)
+    and ($3::date is null or workout.workout_date <= $3)
+    and ($4::uuid is null or workout.id = $4)`
+  const workoutParameters = [
+    page.clientId ?? null, page.from ?? null, page.to ?? null, page.workoutId ?? null,
+  ]
   const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
-    client.query<CustomExerciseRow>(`
+    page.scope === 'workouts' ? [] : client.query<CustomExerciseRow>(`
       select id, created_by, name, muscle_group, input_kind,
         primary_muscle_detail, equipment, description, archived_at, version
       from public.custom_exercises
       order by archived_at nulls first, lower(name), id
     `),
-    client.query<WorkoutRow>(`
+    page.scope === 'metadata' ? [] : client.query<WorkoutRow>(`
       select
         workout.id,
         workout.trainer_id,
@@ -352,18 +365,18 @@ export async function readAccessibleTrainingData(
       from public.workouts workout
       join public.clients client on client.id = workout.client_id
       left join public.goal_stages stage on stage.id = workout.stage_id
-      where workout.deleted_at is null
+      where ${workoutFilter}
       order by workout.workout_date desc, workout.start_time desc nulls last,
         workout.created_at desc, workout.id
-      limit $1 offset $2
-    `, [page.limit + 1, page.offset]),
-    client.query<AttentionRow>(`
+      limit $5 offset $6
+    `, [...workoutParameters, page.limit + 1, page.offset]),
+    page.scope === 'workouts' ? [] : client.query<AttentionRow>(`
       select workout_id, client_id, client_name, workout_date::text,
         client_question, client_question_asked_at, discomfort,
         client_comment, feedback_submitted_at, version
       from public.list_trainer_attention_workouts()
     `),
-    client.query<AttentionPreferenceRow>(`
+    page.scope === 'workouts' ? [] : client.query<AttentionPreferenceRow>(`
       select client_id, attention_snoozed_until
       from public.client_trainers
       where trainer_id = auth.uid()
@@ -371,9 +384,19 @@ export async function readAccessibleTrainingData(
     `),
   ])
   const workoutRows = workoutLookahead.slice(0, page.limit)
-  const totalWorkouts = workoutRows[0] === undefined
+  let totalWorkouts = workoutRows[0] === undefined
     ? 0
     : safeInteger(workoutRows[0].total_count, 'total workouts')
+  if (page.scope !== 'metadata' && workoutRows.length === 0 && page.offset > 0) {
+    // Window counts have no row to carry the total beyond the final page.
+    const counts = await client.query<{ total_count: string }>(`
+      select count(*)::text total_count
+      from public.workouts workout
+      join public.clients client on client.id = workout.client_id
+      where ${workoutFilter}
+    `, workoutParameters)
+    totalWorkouts = safeInteger(counts[0]?.total_count ?? '0', 'total workouts')
+  }
   const workoutIds = workoutRows.map((row) => row.id)
   const exerciseRows = workoutIds.length === 0
     ? []

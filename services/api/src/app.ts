@@ -1863,7 +1863,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.get('/v1/training-data', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
-    const query = request.query as { limit?: unknown; offset?: unknown }
+    const query = request.query as {
+      limit?: unknown; offset?: unknown; clientId?: unknown; workoutId?: unknown
+      from?: unknown; to?: unknown; scope?: unknown
+    }
     const limit = query.limit === undefined ? 100 : Number(query.limit)
     const offset = query.offset === undefined ? 0 : Number(query.offset)
     if (session === undefined) {
@@ -1873,14 +1876,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.code(503).send({ error: 'service_unavailable' })
     }
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100
-      || !Number.isSafeInteger(offset) || offset < 0) {
+      || !Number.isSafeInteger(offset) || offset < 0
+      || (query.clientId !== undefined && (typeof query.clientId !== 'string' || !uuidPattern.test(query.clientId)))
+      || (query.workoutId !== undefined && (typeof query.workoutId !== 'string' || !uuidPattern.test(query.workoutId)))
+      || (query.from !== undefined && !validDate(query.from))
+      || (query.to !== undefined && !validDate(query.to))
+      || (typeof query.from === 'string' && typeof query.to === 'string' && query.from > query.to)
+      || (query.scope !== undefined && query.scope !== 'workouts' && query.scope !== 'metadata')) {
       return reply.code(400).send({ error: 'invalid_request' })
     }
 
     try {
       return reply
         .header('cache-control', 'no-store')
-        .send(await options.pilotTrainingDataReader.readTrainingData(session, { limit, offset }))
+        .send(await options.pilotTrainingDataReader.readTrainingData(session, {
+          limit, offset,
+          ...(typeof query.clientId === 'string' ? { clientId: query.clientId } : {}),
+          ...(typeof query.workoutId === 'string' ? { workoutId: query.workoutId } : {}),
+          ...(typeof query.from === 'string' ? { from: query.from } : {}),
+          ...(typeof query.to === 'string' ? { to: query.to } : {}),
+          ...(query.scope === 'workouts' || query.scope === 'metadata' ? { scope: query.scope } : {}),
+        }))
     } catch (error) {
       if (error instanceof PilotSessionInvalidError
         || error instanceof YandexAppSessionInvalidError) {

@@ -245,6 +245,18 @@ describe('yandexPilotQueries', () => {
       },
     )
 
+    await yandexPilotQueries.listTrainingData('https://stage.example.test', 's'.repeat(43), 'read_write', {
+      limit: 20, offset: 120, clientId: '11111111-1111-4111-8111-111111111111',
+      from: '2026-01-01', to: '2026-08-31', scope: 'workouts',
+    })
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'https://stage.example.test/v1/training-data?limit=20&offset=120&clientId=11111111-1111-4111-8111-111111111111&from=2026-01-01&to=2026-08-31&scope=workouts',
+      {
+        cache: 'no-store',
+        headers: { 'x-fit-session': 's'.repeat(43), 'x-fit-request-id': REQUEST_ID },
+      },
+    )
+
     await yandexPilotQueries.generateTrainingSummary(
       'https://stage.example.test',
       's'.repeat(43),

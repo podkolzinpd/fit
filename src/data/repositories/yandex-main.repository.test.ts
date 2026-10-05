@@ -9,6 +9,7 @@ import type {
 import { localDate } from '../../shared/local-date'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
+import type { YandexTrainingDataPage } from '../queries/yandex-pilot.queries'
 import { createYandexMainRepository } from './yandex-main.repository'
 
 const pilot = vi.hoisted(() => ({ listTrainingData: vi.fn(), parseWorkout: vi.fn() }))
@@ -907,7 +908,7 @@ describe('Yandex main repository', () => {
     expect(await repository.goals.get(clientId)).toBeNull()
   })
 
-  it('loads every training-data page before serving the sticky repository', async () => {
+  it('collects all scoped pages only when the caller explicitly requests a full list', async () => {
     pilot.listTrainingData
       .mockResolvedValueOnce({
         customExercises: [], workouts: [workoutPayload(workoutId, 'done', '2026-08-20')],
@@ -922,8 +923,67 @@ describe('Yandex main repository', () => {
 
     await expect(repository.workouts.list()).resolves.toHaveLength(2)
     expect(pilot.listTrainingData).toHaveBeenNthCalledWith(
-      2, apiBaseUrl, sessionToken, 'read_write', { limit: 100, offset: 1 },
+      2, apiBaseUrl, sessionToken, 'read_write', { limit: 100, offset: 1, scope: 'workouts' },
     )
+  })
+
+  it('loads exactly the requested history page without fetching earlier or later pages', async () => {
+    pilot.listTrainingData.mockResolvedValue({
+      customExercises: [], workouts: [workoutPayload(workoutId, 'done', '2026-08-20')],
+      attention: [], attentionPreferences: [], hasMoreWorkouts: true, totalWorkouts: 241,
+    })
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+
+    await expect(repository.workouts.listPage('2026-01-01', '2026-08-31', clientId, 120, 20))
+      .resolves.toMatchObject({ items: [{ id: workoutId }], nextOffset: 121, totalCount: 241 })
+    expect(pilot.listTrainingData).toHaveBeenCalledExactlyOnceWith(
+      apiBaseUrl, sessionToken, 'read_write', {
+        limit: 20, offset: 120, scope: 'workouts', clientId, from: '2026-01-01', to: '2026-08-31',
+      },
+    )
+  })
+
+  it('reads an old workout directly by ID and preserves the not-found error', async () => {
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.workouts.get(workoutId)).resolves.toMatchObject({ id: workoutId })
+    expect(pilot.listTrainingData).toHaveBeenCalledExactlyOnceWith(
+      apiBaseUrl, sessionToken, 'read_write', { limit: 1, offset: 0, workoutId, scope: 'workouts' },
+    )
+    await expect(repository.workouts.get('555b5163-cd40-4c96-b0d1-ce1a250d25df'))
+      .rejects.toMatchObject({ code: 'PT404' })
+  })
+
+  it('shares metadata without loading workouts for catalogs and attention', async () => {
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await repository.exercises.list()
+    await repository.workouts.listTrainerAttention()
+    await repository.clients.listAttentionPreferences(actor.userId)
+    expect(pilot.listTrainingData).toHaveBeenCalledExactlyOnceWith(
+      apiBaseUrl, sessionToken, 'read_write', { limit: 1, offset: 0, scope: 'metadata' },
+    )
+  })
+
+  it('does not cache a failed page or hide its failure as empty history', async () => {
+    pilot.listTrainingData.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({
+      customExercises: [], workouts: [], attention: [], attentionPreferences: [],
+      hasMoreWorkouts: false, totalWorkouts: 0,
+    })
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.workouts.listPage(undefined, undefined, clientId)).rejects.toThrow('offline')
+    await expect(repository.workouts.listPage(undefined, undefined, clientId)).resolves.toEqual({
+      items: [], totalCount: 0,
+    })
+    expect(pilot.listTrainingData).toHaveBeenCalledTimes(2)
+  })
+
+  it('rejects a page without the required total instead of inventing an exact count', async () => {
+    pilot.listTrainingData.mockResolvedValue({
+      customExercises: [], workouts: [], attention: [], attentionPreferences: [], hasMoreWorkouts: false,
+    })
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.workouts.listPage()).rejects.toThrow('неподдерживаемый формат тренировок')
   })
 
   it('implements invitations, summaries, feedback, push and polling', async () => {
@@ -1005,7 +1065,7 @@ describe('Yandex main repository', () => {
 let summaryMode: 'internal' | 'published' = 'internal'
 
 function installTrainingData() {
-  pilot.listTrainingData.mockResolvedValue({
+  const data = {
     customExercises: [{
       id: customExerciseId, name: 'Тяга', muscleGroup: 'back', inputKind: 'strength',
       primaryMuscleDetail: 'Широчайшие', equipment: 'Сани',
@@ -1021,6 +1081,24 @@ function installTrainingData() {
     attentionPreferences: [{ clientId, snoozedUntil: null }],
     hasMoreWorkouts: false,
     totalWorkouts: 2,
+  }
+  pilot.listTrainingData.mockImplementation((
+    _apiBaseUrl: string, _sessionToken: string, _accessMode: unknown, page?: YandexTrainingDataPage,
+  ) => {
+    const filtered = data.workouts.filter((item) =>
+      (page?.clientId === undefined || item.clientId === page.clientId)
+      && (page?.workoutId === undefined || item.id === page.workoutId)
+      && (page?.from === undefined || item.workoutDate >= page.from)
+      && (page?.to === undefined || item.workoutDate <= page.to))
+    const offset = page?.offset ?? 0
+    const limit = page?.limit ?? 100
+    return Promise.resolve({
+      ...data,
+      ...(page?.scope === 'workouts' ? { customExercises: [], attention: [], attentionPreferences: [] } : {}),
+      workouts: page?.scope === 'metadata' ? [] : filtered.slice(offset, offset + limit),
+      hasMoreWorkouts: page?.scope !== 'metadata' && offset + limit < filtered.length,
+      totalWorkouts: page?.scope === 'metadata' ? 0 : filtered.length,
+    })
   })
 }
 

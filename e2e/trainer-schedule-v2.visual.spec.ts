@@ -286,7 +286,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
         return
       }
-      body = {
+      const trainingData = {
         accessMode: 'read_only',
         customExercises,
         workouts: options.questionWorkout ? [{
@@ -320,6 +320,22 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         attentionPreferences: snoozedUntil ? [{ clientId, snoozedUntil }] : [],
         hasMoreWorkouts: false,
         totalWorkouts: workouts.length,
+      }
+      const offset = Number(url.searchParams.get('offset') ?? 0)
+      const limit = Number(url.searchParams.get('limit') ?? 100)
+      const scope = url.searchParams.get('scope')
+      const filtered = trainingData.workouts.filter((item) =>
+        (!url.searchParams.has('clientId') || item.clientId === url.searchParams.get('clientId'))
+        && (!url.searchParams.has('workoutId') || item.id === url.searchParams.get('workoutId'))
+        && (!url.searchParams.has('from') || item.workoutDate >= url.searchParams.get('from')!)
+        && (!url.searchParams.has('to') || item.workoutDate <= url.searchParams.get('to')!))
+        .sort((left, right) => right.workoutDate.localeCompare(left.workoutDate) || left.id.localeCompare(right.id))
+      body = {
+        ...trainingData,
+        ...(scope === 'workouts' ? { customExercises: [], attention: [], attentionPreferences: [] } : {}),
+        workouts: scope === 'metadata' ? [] : filtered.slice(offset, offset + limit),
+        hasMoreWorkouts: scope !== 'metadata' && offset + limit < filtered.length,
+        totalWorkouts: scope === 'metadata' ? 0 : filtered.length,
       }
     } else if (url.pathname === '/v1/custom-exercises' && route.request().method() === 'POST') {
       customExerciseSaveAttempts += 1
@@ -556,6 +572,41 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
 }
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+
+for (const role of ['trainer', 'client'] as const) {
+  test(`Yandex history pagination loads only requested pages for ${role}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.clock.install({ time: new Date('2026-09-27T12:00:00Z') })
+    const rows = Array.from({ length: 25 }, (_, index) => ({
+      ...workout, id: `c6000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      workoutDate: `2026-08-${String(25 - index).padStart(2, '0')}`,
+      status: 'done', completedAt: '2026-08-25T12:00:00Z',
+    }))
+    await mockPilot(page, { role, workouts: rows })
+    const requests: URL[] = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (url.pathname === '/v1/training-data' && url.searchParams.get('limit') === '20') requests.push(url)
+    })
+    await page.goto(role === 'trainer' ? `/clients/${clientId}/workouts` : '/me/workouts')
+    await expect(page.locator('.workout-chronicle-card')).toHaveCount(20)
+    const hint = page.getByRole('button', { name: 'Понятно', exact: true })
+    if (await hint.isVisible()) await hint.click()
+    expect(requests.map((url) => url.searchParams.get('offset'))).toEqual(['0'])
+    expect(requests[0]?.searchParams.get('clientId')).toBe(clientId)
+    await page.screenshot({ path: testInfo.outputPath(`${role}-history-first-page.png`), fullPage: true })
+    await page.setViewportSize({ width: 430, height: 932 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.getByRole('button', { name: 'Показать ещё', exact: true }).click()
+    await expect(page.locator('.workout-chronicle-card')).toHaveCount(25)
+    expect(requests.map((url) => url.searchParams.get('offset'))).toEqual(['0', '20'])
+    await expect(page.getByRole('button', { name: 'Показать ещё', exact: true })).toHaveCount(0)
+    const oldWorkout = rows[24]!
+    await page.locator('.workout-chronicle-card').last().getByRole('link', { name: /Открыть тренировку за/ }).click()
+    await expect(page).toHaveURL(`/workouts/${oldWorkout.id}`)
+    await expect(page.locator('.workout-detail-page')).toBeVisible()
+  })
+}
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   test(`Lime finance inline errors keep data and allow retry for ${profileId}`, async ({ page }, testInfo) => {

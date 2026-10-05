@@ -3011,6 +3011,102 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('pages filtered workout history beyond 100 rows without loading metadata or deleted roots', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const ids = Array.from({ length: 103 }, (_, index) =>
+        `c5000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`)
+      const otherClientId = 'c7000000-0000-4000-8000-000000000001'
+      const otherWorkoutId = 'c7000000-0000-4000-8000-000000000002'
+      await ownerPool.query(`
+        insert into public.clients (id, trainer_id, full_name)
+        values ($1, $2, 'Pagination fixture')
+      `, [otherClientId, ACTOR_ID])
+      await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id) values ($1, $2)`,
+        [otherClientId, ACTOR_ID])
+      await ownerPool.query(`
+        insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, status)
+        values ($1, $2, $3, $2, date '2026-02-01', 'planned')
+      `, [otherWorkoutId, ACTOR_ID, otherClientId])
+      await ownerPool.query(`
+        insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, status, deleted_at)
+        select id, $2::uuid, $3::uuid, $2::uuid, date '2026-01-01' + (position::int - 1),
+          'planned', case when position = 103 then now() else null end
+        from unnest($1::uuid[]) with ordinality as fixture(id, position)
+      `, [ids, ACTOR_ID, CLIENT_ID])
+      try {
+        const db = runtimePool
+        const otherDetail = await withActorTransaction(db, ACTOR_ID,
+          (client) => readAccessibleTrainingData(client, { limit: 1, offset: 0, workoutId: otherWorkoutId }))
+        expect(otherDetail.workouts.map((item) => item.id)).toEqual([otherWorkoutId])
+        const readPage = (offset: number) => withActorTransaction(db, ACTOR_ID,
+          (client) => readAccessibleTrainingData(client, {
+            limit: 20, offset, clientId: CLIENT_ID, from: '2026-01-01', to: '2026-04-30', scope: 'workouts',
+          }))
+        const first = await readPage(0)
+        const second = await readPage(20)
+        const last = await readPage(100)
+        const beyond = await readPage(120)
+        expect(first.workouts.map((item) => item.id)).toEqual(ids.slice(82, 102).reverse())
+        expect(second.workouts.map((item) => item.id)).toEqual(ids.slice(62, 82).reverse())
+        expect(first).toMatchObject({
+          totalWorkouts: 102, hasMoreWorkouts: true, customExercises: [], attention: [], attentionPreferences: [],
+        })
+        expect(last.workouts.map((item) => item.id)).toEqual(ids.slice(0, 2).reverse())
+        expect(last).toMatchObject({ totalWorkouts: 102, hasMoreWorkouts: false })
+        expect(beyond).toMatchObject({ workouts: [], totalWorkouts: 102, hasMoreWorkouts: false })
+        const old = await withActorTransaction(db, ACTOR_ID, (client) => readAccessibleTrainingData(client, {
+          limit: 1, offset: 0, workoutId: ids[0]!, scope: 'workouts',
+        }))
+        expect(old.workouts.map((item) => item.id)).toEqual([ids[0]])
+        const sameDay = await withActorTransaction(db, ACTOR_ID, (client) => readAccessibleTrainingData(client, {
+          limit: 20, offset: 0, clientId: CLIENT_ID, from: '2026-01-01', to: '2026-01-01', scope: 'workouts',
+        }))
+        expect(sameDay.workouts.map((item) => item.id)).toEqual([ids[0]])
+        const deleted = await withActorTransaction(db, ACTOR_ID, (client) => readAccessibleTrainingData(client, {
+          limit: 1, offset: 0, workoutId: ids[102]!, scope: 'workouts',
+        }))
+        expect(deleted.workouts).toEqual([])
+      } finally {
+        await ownerPool.query('delete from public.workouts where id = any($1::uuid[])', [ids])
+        await ownerPool.query('delete from public.workouts where id = $1', [otherWorkoutId])
+        await ownerPool.query('delete from public.client_trainers where client_id = $1', [otherClientId])
+        await ownerPool.query('delete from public.clients where id = $1', [otherClientId])
+      }
+    })
+
+    it('preserves author and tenant RLS for filtered lists and direct workout IDs', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+      for (const actorId of [MEMBER_TRAINER_ID, OUTSIDE_TRAINER_ID]) {
+        const detail = await withActorTransaction(runtimePool, actorId,
+          (client) => readAccessibleTrainingData(client, {
+            limit: 1, offset: 0, clientId: CLIENT_ID, workoutId: ROOT_WORKOUT_ID, scope: 'workouts',
+          }))
+        expect(detail).toMatchObject({ workouts: [], totalWorkouts: 0, hasMoreWorkouts: false })
+      }
+      const clientDetail = await withActorTransaction(runtimePool, OTHER_ACTOR_ID,
+        (client) => readAccessibleTrainingData(client, {
+          limit: 1, offset: 0, workoutId: ROOT_WORKOUT_ID, scope: 'workouts',
+        }))
+      expect(clientDetail.workouts[0]).toMatchObject({
+        id: ROOT_WORKOUT_ID, exercises: [{ ref: 'running', sets: [{ plan: { distanceKm: 5 } }] }],
+      })
+    })
+
+    it('reads metadata without selecting workout roots or their children', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+      const statements: string[] = []
+      const metadata = await withActorTransaction(runtimePool, ACTOR_ID, (client) => readAccessibleTrainingData({
+        query: <Row extends QueryResultRow>(text: string, values?: readonly unknown[]) => {
+          statements.push(text)
+          return client.query<Row>(text, values)
+        },
+      }, { limit: 1, offset: 0, scope: 'metadata' }))
+      expect(metadata.workouts).toEqual([])
+      expect(metadata.customExercises).toMatchObject([{ id: ROOT_CUSTOM_EXERCISE_ID }])
+      expect(statements.some((text) => text.includes('from public.workouts workout')
+        || text.includes('from public.workout_exercises') || text.includes('from public.workout_sets'))).toBe(false)
+    })
+
     it('keeps exercise catalogs and workout aggregates inside author-scoped access', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
 
