@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
@@ -60,6 +60,9 @@ import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.j
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { DatabasePilotProgressData } from '../progress-data.js'
 import { readAccessibleTrainingData } from '../training-data.js'
+import type { MediaObjectStorage } from '../object-storage-media.js'
+import { DatabasePilotTrainerProfiles, type TrainerProfileDraft } from '../trainer-profile.js'
+import type { YandexActorSession } from '../yandex-actor-session.js'
 import {
   appendLiveExercise,
   appendLiveRound,
@@ -401,6 +404,34 @@ async function readActor(pool: DatabasePool): Promise<string | null> {
     return rows[0]?.actor_id ?? null
   } finally {
     connection.release()
+  }
+}
+
+// Both real PostgreSQL transactions must observe the missing row before either
+// can insert it. No sleeps or assumptions about the query scheduler are needed.
+function synchronizeFirstProfileReads(pool: DatabasePool, participants: number): DatabasePool {
+  let arrivals = 0
+  let releaseBarrier = () => {}
+  const barrier = new Promise<void>((resolve) => { releaseBarrier = resolve })
+  return {
+    connect: async () => {
+      const connection = await pool.connect()
+      return {
+        query: async <Row extends QueryResultRow = QueryResultRow>(text: string, values?: readonly unknown[]) => {
+          const rows = await connection.query<Row>(text, values)
+          if (text.includes('from public.trainer_professional_profiles')
+            && text.includes('for update') && arrivals < participants) {
+            expect(rows).toHaveLength(0)
+            arrivals += 1
+            if (arrivals === participants) releaseBarrier()
+            await barrier
+          }
+          return rows
+        },
+        release: () => connection.release(),
+      }
+    },
+    end: () => pool.end(),
   }
 }
 
@@ -836,6 +867,136 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    describe('trainer profile first-write concurrency', () => {
+      let photoPool: PgDatabasePool
+      let profileId: string
+      let session: YandexActorSession
+      const draft: TrainerProfileDraft = {
+        displayName: 'Synthetic trainer', bio: '', specialties: [], city: '',
+        metroStationIds: [], customLocations: [], trainingModes: [],
+        experienceStartYear: null, education: '', formats: '', price: '',
+        acceptingClients: false, avatarDataUrl: null, photos: [], certificates: [],
+      }
+      const image = {
+        bytes: new Uint8Array([0xff, 0xd8, 0xff]), mimeType: 'image/jpeg' as const,
+        width: 1, height: 1, sizeBytes: 3,
+      }
+      const upload = { image, thumbnail: image }
+
+      function storage() {
+        return {
+          read: vi.fn().mockResolvedValue(undefined),
+          stat: vi.fn().mockResolvedValue(undefined),
+          write: vi.fn().mockResolvedValue(undefined),
+          remove: vi.fn().mockResolvedValue(undefined),
+          sign: vi.fn((_namespace, path: string) => Promise.resolve(`https://storage.example/${path}`)),
+        } satisfies MediaObjectStorage
+      }
+
+      beforeAll(() => {
+        const url = new URL(requireLocalTestDatabaseUrl())
+        url.username = 'fit_api'
+        url.password = RUNTIME_PASSWORD
+        photoPool = new PgDatabasePool({ connectionString: url.toString(), max: 4 })
+      })
+
+      beforeEach(async () => {
+        const subjectHash = 'ac'.repeat(32)
+        const registration = await new DatabaseYandexNativeRegistrar(photoPool).register(subjectHash, {
+          accountRole: 'trainer', firstName: 'Synthetic trainer', timezone: 'Europe/Moscow',
+        })
+        profileId = registration.profileId
+        await ownerPool?.query('delete from public.trainer_professional_profiles where trainer_id = $1', [profileId])
+        const issued = await new DatabaseYandexAppSessionIssuer(photoPool).issue(subjectHash)
+        if (issued === undefined) throw new Error('Synthetic session was not issued')
+        session = { accessMode: 'read_write', token: issued.session.token }
+      })
+
+      afterEach(async () => {
+        await ownerPool?.query('delete from public.trainers where profile_id = $1', [profileId])
+        await ownerPool?.query('delete from public.profiles where id = $1', [profileId])
+      })
+
+      afterAll(async () => { await photoPool.end() })
+
+      it('preserves both simultaneous first uploads', async () => {
+        const media = storage()
+        const profiles = new DatabasePilotTrainerProfiles(synchronizeFirstProfileReads(photoPool, 2), media)
+        const responses = await Promise.all([
+          profiles.uploadPhoto(session, draft, upload, false),
+          profiles.uploadPhoto(session, draft, upload, false),
+        ])
+        const saved = await profiles.getOwn(session)
+        expect(saved?.draft.photos).toHaveLength(2)
+        expect(saved?.version).toBe(2)
+        expect(responses.map((response) => response.version).sort()).toEqual([1, 2])
+        expect(new Set(saved?.draft.photos.map((photo) => photo.id)).size).toBe(2)
+        expect(media.write).toHaveBeenCalledTimes(4)
+        expect(media.remove).not.toHaveBeenCalled()
+      })
+
+      it('preserves a first upload when a draft is saved concurrently', async () => {
+        const profiles = new DatabasePilotTrainerProfiles(synchronizeFirstProfileReads(photoPool, 2), storage())
+        await Promise.all([
+          profiles.uploadPhoto(session, draft, upload, false),
+          profiles.saveDraft(session, { ...draft, bio: 'Concurrent draft' }),
+        ])
+        expect((await profiles.getOwn(session))?.draft.photos).toHaveLength(1)
+      })
+
+      it('enforces the three-photo limit across simultaneous first uploads', async () => {
+        const media = storage()
+        const profiles = new DatabasePilotTrainerProfiles(synchronizeFirstProfileReads(photoPool, 4), media)
+        const results = await Promise.allSettled(Array.from({ length: 4 }, () => (
+          profiles.uploadPhoto(session, draft, upload, false)
+        )))
+        expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(3)
+        const rejected = results.filter((result) => result.status === 'rejected')
+        expect(rejected).toHaveLength(1)
+        expect(rejected[0]).toMatchObject({ reason: { failure: 'limit_reached' } })
+        expect((await profiles.getOwn(session))?.draft.photos).toHaveLength(3)
+        expect(media.remove).toHaveBeenCalledTimes(2)
+      })
+
+      it('rolls back a newly created profile and removes files when metadata update fails', async () => {
+        const failingPool: DatabasePool = {
+          connect: async () => {
+            const connection = await photoPool.connect()
+            return {
+              query: <Row extends QueryResultRow = QueryResultRow>(text: string, values?: readonly unknown[]) => {
+                if (text.includes('update public.trainer_professional_profiles')) {
+                  throw new Error('Synthetic metadata failure')
+                }
+                return connection.query<Row>(text, values)
+              },
+              release: () => connection.release(),
+            }
+          },
+          end: () => photoPool.end(),
+        }
+        const media = storage()
+        const profiles = new DatabasePilotTrainerProfiles(failingPool, media)
+        await expect(profiles.uploadPhoto(session, draft, upload, false)).rejects.toThrow('Synthetic metadata failure')
+        expect(await profiles.getOwn(session)).toBeNull()
+        expect(media.write).toHaveBeenCalledTimes(2)
+        expect(media.remove).toHaveBeenCalledTimes(2)
+      })
+
+      it('keeps the first draft version and ignores client-supplied photo references', async () => {
+        const profiles = new DatabasePilotTrainerProfiles(photoPool, storage())
+        const saved = await profiles.saveDraft(session, {
+          ...draft,
+          photos: [{
+            id: '11111111-1111-4111-8111-111111111111', url: null,
+            thumbnailUrl: 'https://untrusted.example/photo.jpg', mimeType: 'image/jpeg', width: 1, height: 1,
+          }],
+        })
+        expect(saved.version).toBe(1)
+        expect(saved.draft.photos).toEqual([])
+        expect(saved.published).toBeNull()
+      })
     })
 
     it('binds only the native Yandex login for the second Lime trainer', async () => {
