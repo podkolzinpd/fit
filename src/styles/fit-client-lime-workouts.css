@@ -143,6 +143,25 @@
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-title { margin-bottom: 4px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise.planned-exercise { gap: 4px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-editor { padding-top: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-composer-card .voice-input {
+  min-height: 48px;
+  padding: 4px 0 0;
+  border: 0;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-composer-card .voice-input-button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-composer-card .voice-input-button.recording {
+  border-color: var(--lime-pink);
+  background: var(--lime-pink);
+  color: var(--lime-text-on-accent);
+}
 
 /* A check means an acknowledged result, never a planned set. */
 .phone-frame.fit-client-lime.live-identity :is(.live-set-grid, .live-set-table-head) { grid-template-columns: 28px minmax(0,1fr) minmax(0,1fr) 64px; }
