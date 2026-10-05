@@ -20,6 +20,12 @@ describe('program pilot card', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Подтвердить и составить' }))
     expect(handlers.onSuggestion).toHaveBeenCalledWith('Условия верны, составь программу')
   })
+  it('offers concrete examples for the current quiz question', async () => {
+    const handlers = props()
+    render(<AssistantProgramPilotCard {...handlers} payload={{ step: 'brief', answerSuggestions: ['Новичок', 'Возвращаюсь после перерыва 2 месяца'] }} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Возвращаюсь после перерыва 2 месяца' }))
+    expect(handlers.onSuggestion).toHaveBeenCalledExactlyOnceWith('Возвращаюсь после перерыва 2 месяца')
+  })
   it('removes the passive client identity card while retaining cancellation', () => {
     const handlers = props()
     const view = render(<AssistantProgramPilotCard {...handlers} clientMode showGuidance={false} payload={{ step: 'brief', clientName: 'Кристина', briefStatus: 'needs_clarification', briefSummary: 'Цель: снижение веса' }} />)

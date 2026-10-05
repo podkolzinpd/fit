@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InputKind, LiveSetDraft, MuscleGroup, Workout, WorkoutExercise } from './domain'
 import { addDays, localDate } from './local-date'
-import { computeAthleteAchievements, latestAthleteAchievement, newlyEarnedAchievements } from './athlete-achievements'
+import { achievementProgressLabel, computeAthleteAchievements, latestAthleteAchievement, newlyEarnedAchievements } from './athlete-achievements'
 
 const today = localDate('2026-09-30')
 
@@ -206,6 +206,36 @@ describe('year-one achievement expansion', () => {
   const monday = localDate('2026-01-05')
   const item = (history: Workout[], id: string, at = today) => computeAthleteAchievements(history, at, 'Europe/Moscow').find((value) => value.id === id)!
   const sessions = (weeks: number, days = 2) => Array.from({ length: weeks * days }, (_, index) => workout(index, addDays(monday, Math.floor(index / days) * 7 + index % days)))
+
+  it.each([
+    ['weeks-4', '4 недели подряд по 1 тренировке'],
+    ['weeks-8', '8 недель подряд по 1 тренировке'],
+    ['weeks-12', '12 недель подряд по 1 тренировке'],
+    ['weeks-total-52', 'По 1 тренировке в 52 разные недели. Не обязательно подряд'],
+    ['comeback-21', 'Тренировка после перерыва не менее 21 дня'],
+    ['rhythm-4', '4 недели подряд по 2 тренировки'],
+    ['rhythm-8', '8 недель подряд по 2 тренировки'],
+    ['rhythm-12', '12 недель подряд по 2 тренировки'],
+    ['three-weekly-4', '4 недели подряд по 3 тренировки'],
+    ['flexible-6', 'В любые 6 из 8 недель — по 2 тренировки'],
+    ['month-days-8', '8 тренировок за календарный месяц'],
+    ['month-days-12', '12 тренировок за календарный месяц'],
+    ['active-months-3', '3 месяца подряд по 4 тренировки в месяц'],
+    ['active-months-6', '6 месяцев подряд по 4 тренировки в месяц'],
+    ['comeback-rhythm', 'После перерыва не менее 21 дня — ещё 2 тренировки в течение 14 дней'],
+  ])('keeps the approved plain-language condition for %s', (id, description) => {
+    expect(item([], id).description).toBe(description)
+  })
+
+  it.each([
+    ['rhythm-8', 5, '5 из 8 недель'],
+    ['flexible-6', 3, '3 из 6 недель'],
+    ['month-days-8', 1, '1 из 8 дней'],
+    ['active-months-3', 2, '2 из 3 месяцев'],
+    ['comeback-rhythm', 1, '1 из 3 дней'],
+  ])('names the unit in regularity progress for %s', (id, progress, expected) => {
+    expect(achievementProgressLabel({ ...item([], id), progress })).toBe(expected)
+  })
 
   it('separates weekly attendance from workout totals and counts one date once', () => {
     const history = sessions(4)

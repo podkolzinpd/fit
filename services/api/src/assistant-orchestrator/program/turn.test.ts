@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { extractProgramBrief, programPilotTurn } from './turn.js'
+import { extractProgramBrief, programPilotTurn, reusableProgramContinuation } from './turn.js'
 import { CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE } from './brief.js'
 import { fixture } from './fixtures.js'
 import { buildProgramHistoryContext } from './context.js'
@@ -16,6 +16,24 @@ function setup() {
   return { deps, latest, context }
 }
 describe('program chat state', () => {
+  it('reuses the previous course and asks only for the next block start date', async () => {
+    const { deps, latest } = setup()
+    const previous = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Черновик', payload: { ...latest.payload, clientName: client.fullName } }
+    const reusable = reusableProgramContinuation('Продолжаем тот же курс тренировок', [{ action: previous }])
+    expect(reusable?.payload.briefState).toMatchObject({ goal: 'general_fitness', frequency: 3, continuationPlan: 'Продолжаем тот же курс тренировок' })
+    expect(reusable?.payload.briefState).not.toHaveProperty('startDate')
+    const result = await programPilotTurn('Продолжаем тот же курс тренировок', [client], reusable, deps)
+    expect(result?.reply).toContain('сохранила цель, график, опыт, оборудование и ограничения')
+    expect(result?.action?.payload).toMatchObject({ askedFields: ['startDate'], answerSuggestions: ['Сегодня', 'Завтра', 'Со следующего понедельника'] })
+    expect(deps.extract).not.toHaveBeenCalled()
+    expect(deps.loadContext).not.toHaveBeenCalled()
+  })
+
+  it('does not reuse a previous program for an unrelated message', () => {
+    const { latest } = setup()
+    const previous = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Черновик', payload: { ...latest.payload, clientName: client.fullName } }
+    expect(reusableProgramContinuation('Что нового?', [{ action: previous }])).toBeNull()
+  })
   it('keeps one question and passes its context to the next extraction', async () => {
     const { deps, latest } = setup()
     const active = { payload: { ...latest.payload, hasHistory: true, briefState: { adult: true }, guidance: 'Продолжаем прежний подход или меняем программу? Что важно сохранить?', askedFields: ['continuationPlan'] } }

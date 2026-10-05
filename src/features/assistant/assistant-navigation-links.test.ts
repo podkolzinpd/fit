@@ -18,8 +18,12 @@ describe('assistant navigation links', () => {
   })
 
   it.each([
-    '/join', '/me/edit', '/me/settings', '/clients/new', '/clients/archive',
-  ])('allows a reviewed static destination: %s', (path) => {
+    '/join', '/me?entry=workout', '/me/edit', '/me/settings', '/clients/new', '/clients/archive',
+    '/today?view=compose', '/today?view=compose&entry=text',
+    '/schedule/templates/new/editor', '/schedule/templates/from-workout',
+    '/progress/123e4567-e89b-42d3-a456-426614174000?view=measurements',
+    '/clients/123e4567-e89b-42d3-a456-426614174000/edit',
+  ])('allows a reviewed destination: %s', (path) => {
     expect(isSafeAssistantNavigationPath(path)).toBe(true)
   })
 })
