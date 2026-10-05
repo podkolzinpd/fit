@@ -3324,8 +3324,11 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_ENABLED === 'true' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
         await expect(page).toHaveURL(/\/assistant$/)
         await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
-        const starter = page.locator('.assistant-first-entry-actions button')
-        await expect(starter).toHaveCount(3)
+        const actions = page.locator('.assistant-first-entry-actions')
+        const starter = actions.getByRole('button')
+        await expect(actions.getByRole('button', { name: 'Записать тренировку' })).toBeVisible()
+        await expect(actions.getByRole('button', { name: 'Показать прогресс' })).toBeVisible()
+        await expect(actions.getByRole('button', { name: 'Что ты умеешь?' })).toBeVisible()
         await expect.poll(async () => {
           const colors = await starter.evaluateAll((buttons) => buttons.slice(0, 2).map((button) => getComputedStyle(button).backgroundColor))
           return colors.length === 2 && colors[0] !== colors[1]
