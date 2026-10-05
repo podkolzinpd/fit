@@ -87,6 +87,39 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('reads client stats once without loading workout aggregates', async () => {
+    const stats = { doneCount: 123, completionPercent: 75, lastWorkoutDate: '2026-10-01', daysInWork: 300, needsAttention: false }
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ stats }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.workouts.clientStats(clientId, localDate('2026-10-06'))).toEqual(stats)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${apiBaseUrl}/v1/clients/${clientId}/workout-stats?today=2026-10-06`)
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ 'x-fit-session': sessionToken })
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
+  it('keeps empty client stats and calendar dates without inventing totals', async () => {
+    const stats = { doneCount: 0, completionPercent: null, lastWorkoutDate: null, daysInWork: null, needsAttention: false }
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ stats })))
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.workouts.clientStats(clientId, localDate('2026-10-06'))).toEqual(stats)
+  })
+
+  it('rejects invalid stats and permits a fresh read after failure without history fallback', async () => {
+    const stats = { doneCount: 1, completionPercent: 100, lastWorkoutDate: '2026-10-01', daysInWork: 5, needsAttention: false }
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ stats: { ...stats, lastWorkoutDate: '2026-02-30' } }))
+      .mockResolvedValueOnce(jsonResponse({ error: 'not_found' }, 404))
+      .mockResolvedValueOnce(jsonResponse({ stats }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.workouts.clientStats(clientId, localDate('2026-10-06'))).rejects.toMatchObject({ code: 'invalid_response' })
+    await expect(repository.workouts.clientStats(clientId, localDate('2026-10-06'))).rejects.toBeInstanceOf(Error)
+    expect(await repository.workouts.clientStats(clientId, localDate('2026-10-06'))).toEqual(stats)
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
   it('reads and changes trainer finance only through the Yandex API', async () => {
     const financePackage = {
       id: financePackageId, clientId, trainerId: actor.userId, kind: 'session_pack', title: '10 тренировок',

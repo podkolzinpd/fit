@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
+import { computeClientStats } from '../src/data/repositories/workout-rules'
+import { localDate } from '../src/shared/local-date'
 
 const trainerId = '10000000-0000-4000-8000-000000000001'
 const clientId = '10000000-0000-4000-8000-000000000002'
@@ -281,6 +283,19 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     } else if (url.pathname === '/v1/trainer-profile/catalog' && route.request().method() === 'POST') {
       professionalProfile = { ...professionalProfile, listedInCatalog: (route.request().postDataJSON() as { listed: boolean }).listed, version: professionalProfile.version + 1 }
       body = professionalProfile
+    } else if (url.pathname === `/v1/clients/${clientId}/workout-stats`) {
+      if (failTrainingData) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      body = { stats: computeClientStats(workouts.map((item) => {
+        const status = item.status
+        if (status !== 'planned' && status !== 'in_progress' && status !== 'done' && status !== 'cancelled') {
+          throw new Error('Invalid workout fixture status')
+        }
+        return { id: item.id, workoutDate: localDate(item.workoutDate), status }
+      }),
+      localDate(url.searchParams.get('today') ?? '2026-10-06')) }
     } else if (url.pathname === '/v1/training-data') {
       if (failTrainingData) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
@@ -2240,6 +2255,42 @@ test('Fit Lime client card isolates secondary data failures and retries', async 
   await page.getByRole('alert').filter({ hasText: 'Не удалось загрузить приглашения и права доступа' }).getByRole('button', { name: 'Повторить' }).click()
   await expect(page.getByRole('button', { name: 'Архивировать клиента' })).toBeVisible()
 })
+
+for (const width of [390, 1440]) {
+  test(`Client card aggregated stats preserve values and independent retry at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 })
+    await page.clock.setFixedTime(new Date('2026-10-06T10:00:00+03:00'))
+    await mockPilot(page, { fitLime: true, workouts: [] })
+    let failure = false
+    const statRequests: string[] = []
+    await page.route(`**/v1/clients/${clientId}/workout-stats?*`, async (route) => {
+      statRequests.push(route.request().url())
+      await route.fulfill({ status: failure ? 404 : 200, contentType: 'application/json',
+        body: failure ? '{"error":"not_found"}' : JSON.stringify({ stats: {
+          doneCount: 120, completionPercent: 98, lastWorkoutDate: '2026-09-01', daysInWork: 35, needsAttention: true,
+        } }) })
+    })
+    await page.goto(`/clients/${clientId}`)
+    const coachmark = page.getByRole('button', { name: 'Понятно', exact: true })
+    if (await coachmark.isVisible()) await coachmark.click()
+    await expect(page.locator('.client-detail-activity')).toContainText('120 тренировок')
+    await expect(page.locator('.client-detail-activity')).toContainText('98%')
+    await expect(page.getByText('Давно не тренировался', { exact: true })).toBeVisible()
+    expect(statRequests).toHaveLength(1)
+    expect(new URL(statRequests[0]!).searchParams.get('today')).toBe('2026-10-06')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('client-card-stats.png') })
+    failure = true
+    await page.reload()
+    const alert = page.getByRole('alert').filter({ hasText: 'Не удалось загрузить статистику тренировок' })
+    await expect(alert).toBeVisible()
+    await expect(page.getByRole('link', { name: /Запланировать тренировку/ })).toBeVisible()
+    failure = false
+    await alert.getByRole('button', { name: 'Повторить' }).click()
+    await expect(page.locator('.client-detail-activity')).toContainText('120 тренировок')
+    await expect(alert).toHaveCount(0)
+  })
+}
 
 test('trainer without Fit Lime keeps the existing client card', async ({ page }) => {
   await mockPilot(page)

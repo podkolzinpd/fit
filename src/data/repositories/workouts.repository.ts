@@ -1,5 +1,7 @@
 import type { BlockPreset, BlockType, ExerciseProgressCursor, ExerciseProgressPage, ExerciseSnapshot, InputKind, LiveSetDraft, MuscleGroup, TrainerAttentionWorkout, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise, WorkoutFeedbackDraft, WorkoutPersonalRecord, WorkoutPersonalRecordMetric, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutSetDraft, WorkoutStatus, WorkoutSummary, WorkoutTrainerResponseDraft, WorkoutWellbeing } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
+import type { LocalDate } from '../../shared/local-date'
+import { computeClientStats } from './workout-rules'
 import type { WorkoutListRow } from '../database.types'
 import { clientsRepository } from './clients.repository'
 import { collectPages, pageFromLookahead } from './collect-pages'
@@ -193,6 +195,9 @@ export const workoutsRepository = {
     return collectPages((offset) => listPage(from, to, clientId, offset))
   },
   listSummaries,
+  async clientStats(clientId: string, today: LocalDate) {
+    return computeClientStats(await listSummaries(clientId), today)
+  },
   findActive,
   quickStart(clientId?: string, operationId?: string, trainingFormat?: 'self' | 'with_trainer'): Promise<{ id: string; resumed: boolean }> {
     void clientId

@@ -1440,6 +1440,19 @@ export function createYandexMainRepository(
       },
       listPage: listWorkoutPage,
       list: listWorkouts,
+      async clientStats(clientId, today) {
+        const payload = await readJson(queries,
+          `/v1/clients/${clientId}/workout-stats?${new URLSearchParams({ today })}`,
+          z.object({ stats: z.object({
+            doneCount: z.number().int().nonnegative(),
+            completionPercent: z.number().int().min(0).max(100).nullable(),
+            lastWorkoutDate: z.iso.date().nullable(),
+            daysInWork: z.number().int().nonnegative().nullable(),
+            needsAttention: z.boolean(),
+          }) }))
+        return { ...payload.stats, lastWorkoutDate: payload.stats.lastWorkoutDate === null
+          ? null : localDate(payload.stats.lastWorkoutDate) }
+      },
       async listSummaries(clientId) {
         return (await this.list(undefined, undefined, clientId)).map((item): WorkoutSummary => ({ id: item.id, workoutDate: item.workoutDate, status: item.status }))
       },

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { bmiLabel, computeClientStats, splitClientWorkouts } from '../../data/repositories/workouts.repository'
+import { bmiLabel, splitClientWorkouts } from '../../data/repositories/workouts.repository'
 import { ClientFirstRunIntro, PresetWorkoutPicker, TodayPage, WorkoutExercisesSummary, storeFirstWorkoutIntent, workoutCountLabel, type FirstWorkoutIntent } from '../workouts'
 import type { Client, Gender } from '../../shared/domain'
 import { currentStage, daysToTarget, stageProgress } from '../../shared/goal-rules'
@@ -382,7 +382,7 @@ export function ClientDetailPage() {
   useEffect(() => {
     if (query.data?.id && query.data.id !== clientId) navigate(`/clients/${query.data.id}`, { replace: true })
   }, [clientId, navigate, query.data?.id])
-  const stats = useQuery({ queryKey: ['client-stats', clientId, today], queryFn: async () => computeClientStats(await workoutsRepository.listSummaries(clientId), today) })
+  const stats = useQuery({ queryKey: ['client-stats', clientId, today], queryFn: () => workoutsRepository.clientStats(clientId, today) })
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const progress = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, today).upcoming : []

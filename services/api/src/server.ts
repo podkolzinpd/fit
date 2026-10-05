@@ -28,6 +28,7 @@ import { DatabasePilotDomainWriter } from './pilot-domain-writer.js'
 import { DatabasePilotProfileReader } from './pilot-profile-reader.js'
 import { DatabasePilotSessionIssuer } from './pilot-session.js'
 import { DatabasePilotTrainingDataReader } from './pilot-training-data-reader.js'
+import { DatabaseClientWorkoutStatsReader } from './client-workout-stats.js'
 import { DatabasePilotTrainerWorkspace } from './pilot-trainer-workspace.js'
 import { DatabasePilotWorkoutsWriter } from './pilot-workouts-writer.js'
 import { DatabasePilotWorkoutTemplates } from './workout-templates.js'
@@ -317,6 +318,7 @@ const app = buildApp(
     ...(existingCredentialsProvider === undefined ? {} : { existingCredentialsProvider }),
     yandexOnlyAuthEnabled,
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
+    ...(databasePool === undefined ? {} : { clientWorkoutStatsReader: new DatabaseClientWorkoutStatsReader(databasePool) }),
     ...(pilotTrainerWorkspace === undefined ? {} : { pilotTrainerWorkspace }),
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
