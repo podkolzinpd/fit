@@ -72,3 +72,53 @@
 .phone-frame.fit-client-lime .workout-feedback-options { gap: 6px; }
 .phone-frame.fit-client-lime .workout-feedback-option { min-height: 44px; border-radius: 999px; font-size: 14px; }
 .phone-frame.fit-client-lime .workout-completion-actions { gap: 12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+
+/* A workout list is one surface. Exercise rows and block contents are not cards. */
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) {
+  gap: 0;
+  padding: 0 16px;
+  overflow: hidden;
+  border: 1px solid var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) :is(.planned-detail-exercise, .completed-exercise) {
+  margin: 0;
+  padding: 16px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > :is(.planned-detail-exercise, .completed-exercise):not(:last-child),
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view:not(:last-child) {
+  border-bottom: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) .workout-detail-exercise-row {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) .workout-detail-exercise-heading strong {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view {
+  margin: 0;
+  padding: 12px 0 12px 12px;
+  border-top: 0;
+  border-right: 0;
+  border-left: 2px solid var(--lime-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view :is(.planned-detail-exercise, .completed-exercise) {
+  padding: 12px 0;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view :is(.planned-detail-exercise, .completed-exercise) + :is(.planned-detail-exercise, .completed-exercise) {
+  border-top: 1px solid var(--lime-divider);
+}
