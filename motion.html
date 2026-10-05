@@ -9997,12 +9997,15 @@ show(current, false)
   const slide = document.querySelector('[data-section="07 · ПРИВЛЕЧЕНИЕ"]');
   const content = slide.querySelector('.content');
   const rows = [...content.children];
+  // Реферальная программа ещё не запущена — мельче и приглушённо.
   rows[0].querySelector('p').innerHTML = [
     'Тестирование с тренерами <strong>крупной сети клубов</strong>.',
+    'Раскатка на фитнес-залы для яндексоидов.'
+  ].map(text => `<span style="display:block;margin-bottom:8px">${text}</span>`).join('') + [
     'Тренеры приглашают клиентов, клиенты — своих тренеров.',
     'За приглашённого тренера — 2 000 ₽ после его первых 5 оплат.',
     'За приглашение друзей — бонусы.'
-  ].map(text => `<span style="display:block;margin-bottom:8px">${text}</span>`).join('');
+  ].map(text => `<span style="display:block;margin-bottom:4px;font-size:.78em;color:#a7acae">${text}</span>`).join('');
   rows[4].remove();
   rows[5].querySelector('p').textContent = 'Предлагаем иконку Fit в Go и размещения в других сервисах Яндекса, чтобы знакомить их аудиторию с Fit.';
   content.style.marginTop = '16px';
