@@ -2,7 +2,7 @@ import { generateProgramOnce, programGenerationKey, supabaseProgramGenerationJob
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
 import { isProgramEnabled } from './program/model.js'
-import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './program/turn.js'
+import { extractProgramBrief, invokeProgramGenerator, programPilotTurn, reusableProgramContinuation } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
 import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
 import { readProgramBrief } from './program/brief.js'
@@ -28,7 +28,6 @@ type Tool = typeof tools[number]
 export type AssistantAction = { id?: string; tool: Tool; status: 'needs_input' | 'proposed'; title: string; description: string; payload: Record<string, unknown> }
 export type AssistantTurnResponse = { reply: string; action: AssistantAction | null }
 
-type AssistantCapability = { title: string; description: string }
 type SummaryCandidate = { id: string; fullName: string }
 type SummaryPeriod = { periodStart: string; periodEnd: string; label: string }
 export type ClientDraft = {
@@ -39,12 +38,6 @@ export type ClientDraft = {
   goal?: string | undefined
   initialWeightKg?: number | undefined
 }
-
-// Add a capability here only together with its implemented confirmation handler.
-// This list is the sole source for answers about what the assistant can do.
-const executableCapabilities: readonly AssistantCapability[] = [
-  { title: 'Подготовить запись тренировки', description: 'для выбранного клиента и открыть её в существующем разборе упражнений' },
-]
 
 const smallTalkSchema = {
   type: 'object', additionalProperties: false, required: ['reply', 'action'], properties: {
@@ -700,18 +693,27 @@ export function summaryPeriodFromMessage(message: string, now = new Date()): Sum
   return undefined
 }
 
-export function assistantCapabilitiesReply(): string {
-  if (executableCapabilities.length === 0) return 'Могу коротко пообщаться.'
-  return 'Могу коротко пообщаться и записать тренировку — целиком или по одному упражнению, текстом или голосом.'
+export function assistantCapabilitiesReply(options: { programEnabled?: boolean; navigationEnabled?: boolean; workoutRecordingEnabled?: boolean } = {}): string {
+  const workoutRecordingEnabled = options.workoutRecordingEnabled ?? !options.navigationEnabled
+  const capabilities = [
+    options.programEnabled ? 'составить рекомендованный черновик одной тренировки или программы на 1–4 недели' : null,
+    options.navigationEnabled ? 'найти нужный раздел приложения и дать переход' : null,
+    workoutRecordingEnabled ? 'подготовить запись выполненной тренировки' : null,
+    'коротко обсудить тренировки, упражнения, восстановление и спорт',
+  ].filter((value): value is string => value !== null)
+  const workoutEntry = options.navigationEnabled
+    ? ' Запись выполненной тренировки открою на главной странице.'
+    : ''
+  return `Могу ${capabilities.join('; ')}.${workoutEntry}`
 }
 
 export function assistantSmallTalkPrompt(history: readonly { author: string; content: string }[], informal: boolean): string {
   return [
-    'Ты дружелюбная минимальная болталка фитнес-приложения. Отвечай по-русски одним коротким предложением, максимум двумя.',
+    'Ты дружелюбная минимальная болталка фитнес-приложения. Поддерживай короткий разговор о фитнесе, тренировках, упражнениях, восстановлении и спорте. Отвечай по-русски одним коротким предложением, максимум двумя.',
     `Обращайся к пользователю на ${informal ? 'ты' : 'вы'}.`,
     'Всегда возвращай action=null. Никогда не создавай карточки и не обещай изменить данные.',
     'Не повторяй инструкцию про доступные функции без прямого вопроса пользователя. На приветствие отвечай естественным приветствием.',
-    'Не ставь диагнозов и не давай опасных советов. При боли или травме кратко рекомендуй обратиться к врачу или профильному специалисту.',
+    'Если вопрос не о фитнесе или спорте, мягко скажи, что лучше всего помогаешь с тренировочными темами. Не ставь диагнозов и не давай опасных советов. При боли или травме кратко рекомендуй обратиться к врачу или профильному специалисту.',
     `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
   ].join('\n\n')
 }
@@ -720,7 +722,7 @@ export function assistantSmallTalkFallback(message: string): string {
   const normalized = normalizeAssistantMessage(message)
   if (/^(?:привет|здравствуй|здравствуйте|доброе утро|добрый день|добрый вечер|хай|hello)$/u.test(normalized)) return 'Привет! Чем помочь?'
   if (/^(?:спасибо|благодарю|спс)$/u.test(normalized)) return 'Пожалуйста!'
-  return 'Я на связи — можем немного пообщаться или записать тренировку.'
+  return 'Я на связи — можем коротко обсудить тренировки, упражнения, восстановление или спорт.'
 }
 
 export function assistantModelMessages(prompt: string): Array<{ role: 'system' | 'user'; text: string }> {
@@ -815,8 +817,7 @@ export async function runAssistantTurn(
     if (isTurnIdReuse(existingUser?.content, command.message)) throw new HttpError(409, 'turn_id_reused')
   }
   if (isAssistantCapabilityQuestion(command.message)) {
-    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply() + (isProgramEnabled(user.id)
-      ? '\nТакже могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.' : ''), action: null }
+    const result: AssistantTurnResponse = { reply: assistantCapabilitiesReply({ programEnabled: isProgramEnabled(user.id) }), action: null }
     console.info('assistant_capabilities_reply_persisted', { operationId: turnId, releaseSha })
     return persistAssistantResponse(service, command.conversationId, turnId, result)
   }
@@ -831,6 +832,7 @@ export async function runAssistantTurn(
     .select('author,content,action').eq('conversation_id', command.conversationId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20)
   if (historyError) throw new HttpError(503, 'history_unavailable')
   const latestAssistantAction: unknown = (rows ?? []).find((row) => row.author === 'assistant')?.action
+  const reusableProgram = reusableProgramContinuation(command.message, rows ?? [])
   const history = [...(rows ?? [])].reverse().flatMap((row): { author: string; content: string }[] =>
     typeof row.author === 'string' && typeof row.content === 'string' ? [{ author: row.author, content: row.content.slice(0, 1_000) }] : [])
   if (isProgramEnabled(user.id)) {
@@ -848,7 +850,7 @@ export async function runAssistantTurn(
       if (lifecycle.data.status === 'applied' || lifecycle.data.status === 'cancelled') active = null
     }
     const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profileRecord?.timezone === 'string' ? profileRecord.timezone : 'Europe/Moscow' })
-    const routed = await routedAssistantTurn({ message: command.message, history, active, operationId: turnId }, {
+    const routed = await routedAssistantTurn({ message: command.message, history, active: active ?? reusableProgram, operationId: turnId }, {
       record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true, accountRole === 'client'),
       cancel: async (action) => {
         if (!action.id) return
@@ -861,7 +863,7 @@ export async function runAssistantTurn(
       },
       program: (previous) => accountRole === 'client' && clientRows.length === 0
         ? Promise.resolve({ reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к составлению программы.', action: null })
-        : programPilotTurn(command.message, clientRows, previous, {
+        : programPilotTurn(command.message, clientRows, previous ?? reusableProgram, {
           actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
           matchClients: (message) => {
             const matches = matchingSummaryClients(message, clientRows)

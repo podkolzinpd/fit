@@ -35,18 +35,22 @@ describe('assistant orchestrator contract', () => {
     expect(allowsAssistantAction('Добавь нового клиента')).toBe(true)
   })
 
-  it('answers capability questions from the executable capability registry', () => {
+  it('answers capability questions from the enabled product scope', () => {
     expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
     expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
     expect(isAssistantCapabilityQuestion('привет')).toBe(false)
-    expect(assistantCapabilitiesReply()).toContain('записать тренировку')
-    expect(assistantCapabilitiesReply()).not.toContain('программу')
+    expect(assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })).toContain('составить рекомендованный черновик')
+    expect(assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })).toContain('найти нужный раздел приложения')
+    expect(assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })).toContain('обсудить тренировки')
+    expect(assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })).toContain('Запись выполненной тренировки открою на главной странице')
+    expect(assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })).not.toContain('подготовить запись выполненной тренировки')
+    expect(assistantCapabilitiesReply()).toContain('подготовить запись выполненной тренировки')
   })
 
   it('keeps non-workout chat minimal and strictly action-free', () => {
     expect(assistantSmallTalkFallback('привет')).toBe('Привет! Чем помочь?')
     expect(assistantSmallTalkFallback('спасибо')).toBe('Пожалуйста!')
-    expect(assistantSmallTalkFallback('как дела?')).toBe('Я на связи — можем немного пообщаться или записать тренировку.')
+    expect(assistantSmallTalkFallback('как дела?')).toBe('Я на связи — можем коротко обсудить тренировки, упражнения, восстановление или спорт.')
     const prompt = assistantSmallTalkPrompt([{ author: 'user', content: 'привет' }], true)
     expect(prompt).toContain('одним коротким предложением')
     expect(prompt).toContain('Всегда возвращай action=null')

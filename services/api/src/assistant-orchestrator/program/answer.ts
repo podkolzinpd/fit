@@ -43,6 +43,32 @@ function explicitEquipment(text: string): Equipment[] | undefined {
 /** Explicit absence is an answer, not a request to delete a field. */
 export function explicitBriefAnswer(message: string, context?: BriefAnswerContext, today?: string, brief?: ProgramBrief): unknown {
   const text = message.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim().replace(/[.!]$/, '')
+  if (context?.fields.length === 1 && context.fields[0] === 'continuationPlan') {
+    if (/^(?:продолжаем|продолжить)(?:\s+(?:без изменений|как есть|тот же курс|прежний курс|тот же подход))?$/u.test(text)) {
+      return { patch: { continuationPlan: message }, clear: [], evidence: { continuationPlan: message }, clarification: null }
+    }
+    if (/^(?:меняем|изменить|новая)\s+(?:программу|подход|курс)$/u.test(text)) {
+      return { patch: { continuationPlan: message }, clear: [], evidence: { continuationPlan: message }, clarification: null }
+    }
+  }
+  if (context?.fields.length === 1 && ['goalText', 'goal'].includes(context.fields[0]!)) {
+    const goal = /^(?:сила|стать сильнее|силовая)$/u.test(text) ? 'strength'
+      : /^(?:набор мышц|набрать мышцы|мышечная масса|гипертрофия)$/u.test(text) ? 'hypertrophy'
+        : /^(?:общая форма|поддерживать форму|быть в форме)$/u.test(text) ? 'general_fitness'
+          : /^(?:снижение веса|снизить вес|похудеть|похудение)$/u.test(text) ? 'weight_loss' : undefined
+    if (goal) return { patch: { goalText: message, goal }, clear: [], evidence: { goalText: message, goal: message }, clarification: null }
+  }
+  if (context?.fields.length === 1 && context.fields[0] === 'experience') {
+    if (/^(?:новичок|опыта нет|раньше не тренировался|раньше не тренировалась)$/u.test(text)) {
+      return { patch: { experience: 'beginner', experienceText: message }, clear: [], evidence: { experience: message, experienceText: message }, clarification: null }
+    }
+    if (/(?:был|была|после|возвращаюсь|возвращение).{0,30}перерыв|перерыв.{0,30}(?:был|была|месяц|недел|год)/u.test(text)) {
+      return { patch: { experience: 'returning', experienceText: message }, clear: [], evidence: { experience: message, experienceText: message }, clarification: null }
+    }
+    if (/^(?:опыт есть|есть опыт|тренируюсь регулярно|без перерыва)$/u.test(text)) {
+      return { patch: { experience: 'experienced', experienceText: message }, clear: [], evidence: { experience: message, experienceText: message }, clarification: null }
+    }
+  }
   if (context?.fields.length === 1 && context.fields[0] === 'scope') {
     if (/^(?:одн(?:у|а)\s+)?тренировк(?:у|а)$/u.test(text)) return { patch: { scope: 'single_workout' }, clear: [], evidence: { scope: message }, clarification: null }
     if (/^программ(?:у|а)(?:\s+тренировок)?$/u.test(text)) return { patch: { scope: 'program' }, clear: [], evidence: { scope: message }, clarification: null }

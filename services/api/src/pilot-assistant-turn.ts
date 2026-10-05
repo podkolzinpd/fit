@@ -20,7 +20,7 @@ import {
 import { generateProgramOnce, programGenerationKey, type ProgramGenerationJobState, type ProgramGenerationJobStore } from './assistant-orchestrator/program/job.js'
 import { isProgramEnabled } from './assistant-orchestrator/program/model.js'
 import { loadDatabaseProgramContext } from './assistant-orchestrator/program/source.js'
-import { extractProgramBrief, invokeProgramGenerator, programPilotTurn } from './assistant-orchestrator/program/turn.js'
+import { extractProgramBrief, invokeProgramGenerator, programPilotTurn, reusableProgramContinuation } from './assistant-orchestrator/program/turn.js'
 import { latestActiveAssistantTool, routedAssistantTurn } from './assistant-orchestrator/router.js'
 import { assistantNavigationTurn } from './assistant-orchestrator/navigation.js'
 import {
@@ -286,6 +286,7 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
       timeZone: actor.timezone || 'Europe/Moscow',
     })
     const programEnabled = isProgramEnabled(actor.id)
+    const reusableProgram = reusableProgramContinuation(command.message, history)
     let response: AssistantTurnResponse
     const navigation = actor.assistant_feature_links
       ? assistantNavigationTurn(command.message, actor.account_role, clients)
@@ -294,16 +295,14 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
       response = navigation
     } else if (isAssistantCapabilityQuestion(command.message)) {
       response = {
-        reply: assistantCapabilitiesReply() + (programEnabled
-          ? '\nТакже могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.'
-          : ''),
+        reply: assistantCapabilitiesReply({ programEnabled, navigationEnabled: actor.assistant_feature_links }),
         action: null,
       }
     } else if (programEnabled) {
       response = await routedAssistantTurn({
         message: command.message,
         history: [...history].reverse().map(({ author, content }) => ({ author, content })),
-        active,
+        active: active ?? reusableProgram,
         operationId: turnId,
       }, {
         record: (previous) => recordWorkoutTurn(
@@ -331,7 +330,7 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
         },
         program: (previous) => actor.account_role === 'client' && clients.length === 0
           ? Promise.resolve({ reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к составлению программы.', action: null })
-          : programPilotTurn(command.message, clients, previous, {
+          : programPilotTurn(command.message, clients, previous ?? reusableProgram, {
             actorId: actor.id,
             turnId,
             today,

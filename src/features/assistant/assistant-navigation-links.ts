@@ -3,13 +3,14 @@ export type AssistantNavigationLink = { path: string; label: string }
 const LINK_MARKER = /\[\[fit-link:([^|\]\n]+)\|([^\]\n]+)\]\]/gu
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
 const STATIC_PATHS = new Set([
-  '/assistant', '/chat', '/join', '/me', '/me/edit', '/me/settings', '/me/workouts', '/me/progress', '/me/progress?view=pro',
+  '/assistant', '/chat', '/join', '/me', '/me?entry=workout', '/me/edit', '/me/settings', '/me/workouts', '/me/progress', '/me/progress?view=pro',
   '/me/progress?view=pro&mapMode=load#body-map', '/me/progress?view=pro&resultsOpen=1',
   '/me/progress#measurements', '/me/achievements', '/me/goal', '/me/finance', '/me/trainers',
-  '/me/profile', '/workouts/new', '/today', '/clients', '/clients/new', '/clients/archive', '/schedule', '/schedule/templates',
-  '/schedule/templates/new', '/exercises', '/finance', '/profile', '/profile/settings', '/profile/trainer',
+  '/me/profile', '/workouts/new', '/today', '/today?view=compose', '/today?view=compose&entry=text', '/clients', '/clients/new',
+  '/clients/archive', '/schedule', '/schedule/templates', '/schedule/templates/new', '/schedule/templates/new/editor',
+  '/schedule/templates/from-workout', '/exercises', '/finance', '/profile', '/profile/settings', '/profile/trainer',
 ])
-const DYNAMIC_PATH = new RegExp(`^(?:/progress/${UUID}(?:\\?view=pro)?|/clients/${UUID}(?:/(?:workouts|goal|finance))?)$`, 'iu')
+const DYNAMIC_PATH = new RegExp(`^(?:/progress/${UUID}(?:\\?view=(?:pro|measurements))?|/clients/${UUID}(?:/(?:workouts|goal|finance|edit))?)$`, 'iu')
 
 export function isSafeAssistantNavigationPath(path: string): boolean {
   return STATIC_PATHS.has(path) || DYNAMIC_PATH.test(path)

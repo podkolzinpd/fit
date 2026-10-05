@@ -21,6 +21,7 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
   const rangeLabel = singleWorkout ? 'Одна тренировка' : brief.success && brief.data.weeks ? `Программа на ${brief.data.weeks} нед.` : 'Программа тренировок'
   const effort = (date: string, position: number, saved?: number) => saved ?? (sessionDoses.success ? sessionDoses.data.find((session) => session.day === date)?.exercises[position]?.rpe : undefined)
   const catalog = z.array(z.object({ ref: z.string(), name: z.string(), inputKind: z.string() })).safeParse(payload.editableCatalog)
+  const answerSuggestions = z.array(z.string().min(1)).max(6).safeParse(payload.answerSuggestions)
   function submitEdit() {
     if (!edit) return
     onSuggestion(`Измени упражнение ${edit.position + 1} в занятии ${edit.date}; область: ${edit.scope}; упражнение: ${edit.name}; подходы: ${edit.sets}; повторы: ${edit.reps || 'нет'}; секунды: ${edit.seconds || 'нет'}; усилие: ${edit.rpe}; отдых: ${edit.rest}.`)
@@ -48,6 +49,9 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Это все тренировки')}>Это все тренировки</button>
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Часть тренировок не записана')}>Часть тренировок не записана</button>
     </div>}
+    {answerSuggestions.success && answerSuggestions.data.length > 0 && <div className="assistant-choice-chips" aria-label="Варианты ответа">
+      {answerSuggestions.data.map((label) => <button type="button" key={label} disabled={busy} onClick={() => onSuggestion(label)}>{label}</button>)}
+    </div>}
     {payload.readyToGenerate === true && (typeof payload.sourceSummary === 'string' || typeof payload.briefSummary === 'string') && <details className="assistant-program-context-details" open>
       <summary><ChevronRightIcon />Данные и условия</summary>
       {typeof payload.sourceSummary === 'string' && <p className="assistant-card-hint">{payload.sourceSummary}</p>}
@@ -66,6 +70,9 @@ export function AssistantProgramPilotCard({ payload, enabled, running, onApply, 
     {!confirm && payload.historyQuestion === true && <div className="assistant-flow-actions">
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Это все тренировки')}>Это все тренировки</button>
       <button type="button" disabled={busy} aria-busy={running} onClick={() => onSuggestion('Часть тренировок не записана')}>Часть тренировок не записана</button>
+    </div>}
+    {!confirm && answerSuggestions.success && answerSuggestions.data.length > 0 && <div className="assistant-choice-chips" aria-label="Варианты ответа">
+      {answerSuggestions.data.map((label) => <button type="button" key={label} disabled={busy} onClick={() => onSuggestion(label)}>{label}</button>)}
     </div>}
     {!confirm && (typeof payload.sourceSummary === 'string' || typeof payload.briefSummary === 'string') && <details className="assistant-program-context-details" key={`${String(payload.clientId ?? payload.clientName ?? '')}-${payload.readyToGenerate === true}`} open={payload.readyToGenerate === true}>
       <summary><ChevronRightIcon />Данные и условия</summary>
