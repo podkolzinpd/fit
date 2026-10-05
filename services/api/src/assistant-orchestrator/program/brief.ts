@@ -239,6 +239,24 @@ export const briefQuestions: Partial<Record<keyof ProgramBrief, string>> = {
   adult: 'Клиенту уже исполнилось 18 лет?',
 }
 
+export const briefAnswerSuggestions: Partial<Record<keyof ProgramBrief, readonly string[]>> = {
+  scope: ['Одна тренировка', 'Программа на 4 недели'],
+  weeks: ['1 неделя', '2 недели', '4 недели'],
+  continuationPlan: ['Продолжаем без изменений', 'Продолжаем, но хочу изменить нагрузку', 'Меняем программу'],
+  goalText: ['Хочу стать сильнее', 'Набрать мышечную массу', 'Поддерживать общую форму', 'Снизить вес'],
+  goal: ['Сила', 'Набор мышц', 'Общая форма', 'Снижение веса'],
+  frequency: ['1 занятие', '2 занятия', '3 занятия'],
+  weekdays: ['Понедельник и четверг', 'Понедельник, среда и пятница', 'Дни не важны'],
+  durationMin: ['30 минут', '45 минут', '60 минут'],
+  startDate: ['Сегодня', 'Завтра', 'Со следующего понедельника'],
+  experience: ['Новичок', 'Опыт есть, перерыва не было', 'Возвращаюсь после перерыва 2 месяца'],
+  equipment: ['Полностью оборудованный зал', 'Гантели и скамья', 'Без оборудования'],
+  limitations: ['Ограничений нет', 'Есть боль или ограничения'],
+  preferences: ['Предпочтений нет', 'Хочу больше базовых упражнений'],
+  otherActivity: ['Другой нагрузки нет', 'Бег 2 раза: вторник и суббота'],
+  adult: ['Да, 18 лет уже исполнилось', 'Нет'],
+}
+
 export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (keyof ProgramBrief)[] {
   const missing = Object.keys(briefQuestions).filter((key) => key !== 'otherActivities' && (key !== 'continuationPlan' || hasHistory)
     && (brief.scope !== 'single_workout' || !['weeks', 'frequency', 'weekdays'].includes(key))

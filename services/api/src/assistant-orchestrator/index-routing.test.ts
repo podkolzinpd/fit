@@ -107,7 +107,7 @@ describe('program routing in the authenticated orchestrator', () => {
 it('describes the recommended program capability to a client account', async () => {
   const { actor, service } = setup('record_workout', 'applied', false, 'client')
   await expect(runAssistantTurn('Bearer actor-token', { conversationId, turnId: crypto.randomUUID(), message: 'Что ты умеешь?' })).resolves.toEqual({
-    reply: 'Могу коротко пообщаться и записать тренировку — целиком или по одному упражнению, текстом или голосом.\nТакже могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели: уточню цель и условия, учту доступную историю и покажу результат перед добавлением в расписание.',
+    reply: 'Могу составить рекомендованный черновик одной тренировки или программы на 1–4 недели; подготовить запись выполненной тренировки; коротко обсудить тренировки, упражнения, восстановление и спорт.',
     action: null,
   })
   expect(programModelJson).not.toHaveBeenCalled()
