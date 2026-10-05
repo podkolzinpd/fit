@@ -3224,6 +3224,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(page.getByRole('region', { name: 'Тренировка завершена', exact: true })).toBeVisible()
     await expect(page.getByText('Выполнено 1 из 1 подходов')).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`client-completion-${theme}.png`) })
+    const completionClearance = await page.locator('.content').evaluate((content) => {
+      content.scrollTop = content.scrollHeight
+      const navigation = document.querySelector('.client-tab-bar')!.getBoundingClientRect()
+      const lastAction = content.querySelector('.workout-completion-share-actions')!.getBoundingClientRect()
+      return navigation.top - lastAction.bottom
+    })
+    expect(completionClearance).toBeGreaterThanOrEqual(16)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
@@ -3358,6 +3365,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     })
     expect(geometry.separated && geometry.explanationFits).toBe(true)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    const historyClearance = await page.locator('.content').evaluate((content) => {
+      content.scrollTop = content.scrollHeight
+      const navigation = document.querySelector('.client-tab-bar')!.getBoundingClientRect()
+      const lastAction = content.querySelector('.workout-detail-actions')!.getBoundingClientRect()
+      return navigation.top - lastAction.bottom
+    })
+    expect(historyClearance).toBeGreaterThanOrEqual(16)
     await page.screenshot({ path: testInfo.outputPath(`client-workout-history-${theme}-${width}.png`) })
   })
 }
