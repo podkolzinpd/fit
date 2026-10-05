@@ -1105,7 +1105,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     it('binds assistant feature links to only the reviewed Yandex login and supports an immediate kill switch', async () => {
       if (!ownerPool) throw new Error('Owner pool is not ready')
       const connection = await ownerPool.connect()
-      const reviewedLogin = 'cb34df8e58e7ee2b8e26a5adf3244394f3a599616f5d7a607fd4a38b0ae754e3'
+      const reviewedLogin = 'f0afe245c0ed9fd6c2447048feb3b620175e5a887c7a7c50283aba9408139904'
+      const mistypedLogin = 'cb34df8e58e7ee2b8e26a5adf3244394f3a599616f5d7a607fd4a38b0ae754e3'
       const profileId = randomUUID()
       const otherProfileId = randomUUID()
       const subject = randomBytes(32).toString('hex')
@@ -1128,6 +1129,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [subjectHash, loginHash],
         )).rows[0]?.bound
 
+        expect(await bind(subject, mistypedLogin)).toBe(false)
         expect(await bind(subject, 'a'.repeat(64))).toBe(false)
         expect(await bind(subject, reviewedLogin)).toBe(true)
         expect(await bind(otherSubject, reviewedLogin)).toBe(false)

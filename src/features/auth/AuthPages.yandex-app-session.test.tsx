@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AuthPage, YandexAppSessionPage, YandexPilotCallbackPage } from './AuthPages'
+import { AuthPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from './AuthPages'
 import {
   createYandexAuthorizationUrl,
   readPendingYandexNativeRegistration,
@@ -405,6 +405,38 @@ describe('Yandex app session auth flow', () => {
     )
     expect(establish).toHaveBeenCalledWith(session)
     expect(window.location.search).toBe('')
+  })
+
+  it('prepares a same-account refresh without signing the current actor out', async () => {
+    authState.mockReturnValue({
+      actor: { userId: PROFILE_ID, role: 'client' },
+      loading: false,
+      error: null,
+    })
+    appSessionState.mockReturnValue({
+      session,
+      loading: false,
+      error: null,
+      establish,
+      retry,
+      reset,
+      signOut,
+    })
+
+    render(<MemoryRouter initialEntries={['/auth/yandex/refresh-assistant']}>
+      <Routes>
+        <Route path="/auth/yandex/refresh-assistant" element={<YandexAssistantFeaturesRefreshPage />} />
+        <Route path="/assistant" element={<p>assistant route</p>} />
+      </Routes>
+    </MemoryRouter>)
+
+    const link = await screen.findByRole('link', { name: 'Продолжить с Yandex ID' })
+    const authorizationUrl = new URL(link.getAttribute('href')!)
+    expect(authorizationUrl.origin + authorizationUrl.pathname).toBe('https://oauth.yandex.ru/authorize')
+    expect(authorizationUrl.searchParams.get('force_confirm')).toBe('yes')
+    expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256')
+    expect(signOut).not.toHaveBeenCalled()
+    expect(screen.getByRole('link', { name: 'Не сейчас' })).toHaveAttribute('href', '/assistant')
   })
 
   it('explains when Yandex rejects authorization for the current account', async () => {
