@@ -3069,6 +3069,22 @@ for (const width of [390, 430]) {
       const expected = value === 'light' ? 'rgb(246, 247, 242)' : 'rgb(0, 0, 0)'
       await expect(page.locator('.phone-frame')).toHaveCSS('background-color', expected)
       await expect(page.locator('body')).toHaveCSS('background-color', expected)
+      const bottomClearance = await page.locator('.phone-frame').evaluate((frame) => {
+        const content = frame.querySelector('.content')
+        const navigation = frame.querySelector('.client-tab-bar')
+        if (!content || !navigation) return 0
+        const navigationBounds = navigation.getBoundingClientRect()
+        return parseFloat(getComputedStyle(content).paddingBottom) - navigationBounds.height - (innerHeight - navigationBounds.bottom)
+      })
+      expect(bottomClearance).toBeGreaterThanOrEqual(16)
+      const lastContentClearance = await page.locator('.phone-frame').evaluate((frame) => {
+        const content = frame.querySelector('.content')
+        const navigation = frame.querySelector('.client-tab-bar')
+        if (!content || !navigation || !content.lastElementChild) return -1
+        content.scrollTop = content.scrollHeight
+        return navigation.getBoundingClientRect().top - content.lastElementChild.getBoundingClientRect().bottom
+      })
+      expect(lastContentClearance).toBeGreaterThanOrEqual(16)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`client-settings-${value}-${width}.png`), fullPage: true })
       await page.reload()
