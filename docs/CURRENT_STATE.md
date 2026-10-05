@@ -22,8 +22,7 @@ disable останавливает timer. Candidate smoke/pinned tag защищ�
 Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap,
 functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
 Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063,
-DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236,
-CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
+DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
 ## Активная задача — визуальное завершение клиентского Lime
 
