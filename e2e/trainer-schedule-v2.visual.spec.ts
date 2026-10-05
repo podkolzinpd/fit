@@ -3327,6 +3327,20 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       }
       await expect(page.getByText('Загружаем…', { exact: true })).toHaveCount(0)
       await expect(page.locator('.state-panel-error')).toHaveCount(0)
+      if (route === '/me/progress') {
+        const period = page.locator('.progress-story-period .ai-progress-periods.period-count-1')
+        await expect(period).toBeVisible()
+        const widths = await period.evaluate((element) => ({
+          period: element.getBoundingClientRect().width,
+          card: element.closest('.progress-story-period')!.getBoundingClientRect().width,
+        }))
+        expect(widths.period).toBeLessThan(widths.card / 2)
+        const emphasis = await page.evaluate(() => ({
+          period: getComputedStyle(document.querySelector('.progress-story-period .ai-progress-periods.period-count-1 button.active')!).backgroundColor,
+          overview: getComputedStyle(document.querySelector('.progress-view-tabs button.active')!).backgroundColor,
+        }))
+        expect(emphasis.period).not.toBe(emphasis.overview)
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
     }
