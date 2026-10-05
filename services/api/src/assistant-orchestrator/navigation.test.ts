@@ -10,6 +10,11 @@ describe('assistant feature navigation', () => {
       .toEqual({ reply: 'Нужный раздел здесь:\n[[fit-link:/me/progress?view=pro|ПРО-сводка прогресса]]', action: null })
   })
 
+  it('links the exact plain progress question from the reported production failure', () => {
+    expect(assistantNavigationTurn('где мне найти мой прогресс?', 'client', [client]))
+      .toEqual({ reply: 'Нужный раздел здесь:\n[[fit-link:/me/progress|Прогресс]]', action: null })
+  })
+
   it('uses an exact client route only after an unambiguous trainer match', () => {
     expect(assistantNavigationTurn('Дай ссылку на прогресс Антона Ковалёва', 'trainer', [client])?.reply)
       .toContain(`/progress/${client.id}`)

@@ -6,7 +6,7 @@ import { StartupSplash } from '../shared/StartupSplash'
 import { AppLayout } from './AppLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, isTrainerFinancePilotEnabled, trainerHomePath } from './feature-flags'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexPilotCallbackPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from '../features/auth'
 import { ArchivedClientsPage, ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
@@ -84,6 +84,7 @@ const router = createBrowserRouter([
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   { path: '/auth/yandex/callback', element: <YandexPilotCallbackPage /> },
   { path: '/auth/yandex/session', element: <YandexAppSessionPage /> },
+  { path: '/auth/yandex/refresh-assistant', element: <YandexAssistantFeaturesRefreshPage /> },
   { path: '/legal/terms', element: <TermsPage /> },
   { path: '/legal/privacy', element: <PrivacyPage /> },
   { path: '/legal/delete-account', element: <AccountDeletionPage /> },

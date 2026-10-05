@@ -79,12 +79,13 @@ Acceptance: `docs/design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md`.
 ## Следующий персональный pilot — ссылки на функции в Assistant
 
 Пользователь разрешил реализацию, PR, слияние зелёного CI и production-выпуск
-только для native Yandex login `irainbuster98`. План и критерии:
+только для native Yandex login `brainbuster98`. План и критерии:
 `docs/design/ASSISTANT_FEATURE_LINKS_PILOT_20261004.md`. Сервер отвечает на
 навигационные вопросы только reviewed internal link markers, frontend отклоняет
 внешние и неизвестные пути. Доступ требует одновременно environment switch и
-привязанный hash allowlist; после первого API rollout нужен повторный вход
-Yandex ID. До успешных CI, API/migration rollout и frontend activation задачу
+привязанный hash allowlist; старая FIT-сессия обновляется через защищённый
+`/auth/yandex/refresh-assistant` без предварительного выхода. До успешных CI,
+API/migration rollout и frontend activation задачу
 нельзя считать выпущенной.
 
 ## Постоянные границы

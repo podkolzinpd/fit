@@ -17,13 +17,17 @@ LLM, поэтому модель не придумывает URL.
 - Независимый default-off выключатель — `enabled` в приватном database allowlist.
   Серверный experiment переносит это решение во frontend; browser allowlist нет.
 - Персональный серверный allowlist хранит только SHA-256 нормализованного native
-  Yandex login `irainbuster98`, без email и публичного UUID.
+  Yandex login `brainbuster98`, без email и публичного UUID. Миграция `000123`
+  заменяет ошибочно внесённый login, снимает возможную старую привязку и
+  разрешает повторное связывание только после проверенного OAuth callback.
 - Привязка к профилю выполняется после проверенного Yandex OAuth callback и
   только для роли `trainer` или `client`.
 - Остальные аккаунты продолжают проходить прежний Assistant pipeline и не
   получают link markers.
-- После первого production-выпуска пользователю нужен повторный вход через
-  Yandex ID, чтобы выполнить привязку.
+- Уже открытая до выпуска FIT-сессия не содержит подтверждённый Yandex login.
+  Маршрут `/auth/yandex/refresh-assistant` обновляет её через обычный PKCE
+  callback без предварительного выхода и возвращает пользователя в Assistant.
+  Backend по-прежнему привязывает флаг только после проверки разрешённого login.
 
 ## Приёмка
 
@@ -34,6 +38,8 @@ LLM, поэтому модель не придумывает URL.
 - [x] 44 px touch target для ссылок в сообщении.
 - [x] Отдельный environment kill switch и database allowlist.
 - [x] Повторный callback идемпотентен; выключенный allowlist не включается снова.
+- [x] Существующую FIT-сессию можно обновить без выхода; другой Yandex ID не
+  заменяет текущий профиль.
 - [x] Unit и PostgreSQL integration contracts.
 
 ## Откат

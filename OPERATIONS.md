@@ -1160,8 +1160,10 @@ JWT, OAuth Client secret или новый YandexGPT secret endpoint-у не н�
 Таблица содержит один разрешённый SHA-256 native Yandex login; email и UUID не
 публикуются. Привязку выполняет
 `app_private.bind_assistant_feature_links_for_yandex_login` после проверенного
-Yandex OAuth callback. После первого выпуска пользователь должен выйти и снова
-войти через Yandex ID.
+Yandex OAuth callback. Для сессии, открытой до выпуска, используйте
+`/auth/yandex/refresh-assistant`: пользователь подтверждает текущий Yandex ID
+без предварительного выхода и возвращается в Assistant. Callback отклоняет
+другой FIT-профиль, а backend не привязывает login вне allowlist.
 
 Rollback: owner-транзакцией установить `enabled=false` у единственной строки и
 прочитать значение обратно. Повторный OAuth callback не возвращает выключенную
