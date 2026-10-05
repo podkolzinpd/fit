@@ -19,6 +19,24 @@ it('leaves ambiguous negatives and substantive preferences to the model', () => 
   expect(explicitBriefAnswer('нет, приседания не хочу')).toBeUndefined()
 })
 
+it('accepts the reported short goal without asking for the same priority twice', () => {
+  const context: BriefAnswerContext = { question: 'Какова цель?', fields: ['goalText'] }
+  expect(mergeExtractedBrief({}, 'Сила', explicitBriefAnswer('Сила', context)).brief)
+    .toMatchObject({ goalText: 'Сила', goal: 'strength' })
+})
+
+it('accepts a recent break as the experience answer', () => {
+  const context: BriefAnswerContext = { question: 'Какой опыт и был ли перерыв?', fields: ['experience'] }
+  expect(mergeExtractedBrief({}, 'Был перерыв', explicitBriefAnswer('Был перерыв', context)).brief)
+    .toMatchObject({ experience: 'returning', experienceText: 'Был перерыв' })
+})
+
+it('accepts a terse continuation answer in its question context', () => {
+  const context: BriefAnswerContext = { question: 'Продолжаем прежний подход?', fields: ['continuationPlan'] }
+  expect(mergeExtractedBrief({}, 'Продолжаем', explicitBriefAnswer('Продолжаем', context)).brief)
+    .toMatchObject({ continuationPlan: 'Продолжаем' })
+})
+
 it('records unknown adaptations without erasing the stated limitation', () => {
   const message = 'пока неизвестно'
   const result = mergeExtractedBrief({ limitations: 'present', limitationsText: 'Дискомфорт при нагрузке' }, message,

@@ -2,8 +2,8 @@ import { deriveProgramLoad } from './load.js'
 import { editableProgramCatalog, editProgram } from './edit.js'
 import { programGenerationKey } from './job.js'
 import { aiStudioUsage, reportAiStudioMetric } from '../../ai-studio-usage-metrics.js'
-import type { AssistantTurnResponse } from '../index.js'
-import { briefExtractionSchema, briefProperties, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
+import type { AssistantAction, AssistantTurnResponse } from '../index.js'
+import { briefAnswerSuggestions, briefExtractionSchema, briefProperties, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
 import { PROGRAM_CATALOG, PROGRAM_EQUIPMENT } from './catalog.js'
 import { addDays, materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
 import { programIamToken, programModelJson } from './model.js'
@@ -22,6 +22,36 @@ type Dependencies = {
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined
+}
+function isProgramContinuationRequest(message: string): boolean {
+  const text = message.toLocaleLowerCase('ru-RU').replace(/ё/gu, 'е')
+  return /(?:продолж\S*|тот\s+же|прежн\S*|без\s+изменени\S*).{0,40}(?:курс\S*|программ\S*|план\S*|подход\S*)|(?:курс\S*|программ\S*|план\S*|подход\S*).{0,40}(?:продолж\S*|тот\s+же|прежн\S*|без\s+изменени\S*)/u.test(text)
+}
+
+export function reusableProgramContinuation(message: string, history: readonly { action?: unknown }[]): AssistantAction | null {
+  if (!isProgramContinuationRequest(message)) return null
+  for (const row of history) {
+    const candidate = record(row.action)
+    const payload = record(candidate?.payload)
+    const brief = readProgramBrief(payload?.briefState)
+    if (candidate?.tool !== 'create_program_draft' || !payload || !brief || typeof payload.clientId !== 'string' || typeof payload.clientName !== 'string') continue
+    const retained = { ...brief }
+    delete retained.startDate
+    return {
+      ...(candidate as AssistantAction),
+      status: 'needs_input',
+      payload: {
+        ...payload,
+        programPilot: true,
+        step: 'brief',
+        briefState: { ...retained, continuationPlan: message },
+        readyToGenerate: false,
+        resumePreviousProgram: true,
+        briefAnswerVersion: 2,
+      },
+    }
+  }
+  return null
 }
 export function isProgramPilotRequest(message: string, latestAction: unknown): boolean {
   return record(record(latestAction)?.payload)?.programPilot === true
@@ -46,9 +76,10 @@ function collectState(client: ProgramClient, brief: ProgramBrief, today: string,
     : issues.length ? briefIssueText(issues) : ready ? 'Проверьте условия перед составлением программы.'
     : blocked ? '' : missing.slice(0, 1).map((key) => briefQuestions[key]).join('\n') || (extra ? '' : 'Уточните последний ответ, чтобы продолжить.')
   const reply = [extra, guidance].filter(Boolean).join('\n\n')
+  const nextField = ready || blocked || brief.adult === false || issues.length ? undefined : missing[0]
   return action(reply, { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal,
     sourceSummary: basis?.summary, hasHistory: basis?.hasHistory, briefState: brief, briefSummary: briefSummary(brief), readyToGenerate: ready, briefAnswerVersion: 2,
-    askedFields: ready || blocked || brief.adult === false || issues.length ? [] : missing.slice(0, 1),
+    askedFields: nextField ? [nextField] : [], answerSuggestions: nextField ? briefAnswerSuggestions[nextField] ?? [] : [],
     briefStatus: ready ? 'ready' : blocked || issues.length || brief.adult === false ? 'needs_clarification' : 'needs_answers',
     clarification: blocked ? extra ?? guidance : null,
     missing: missing.map((key) => briefQuestions[key]),
@@ -104,6 +135,9 @@ export async function programPilotTurn(message: string, clients: readonly Progra
   // The database age overrides a model/user attempt to bypass minority checks.
   if (client.ageYears !== null) brief = { ...brief, adult: client.ageYears >= 18 }
   if (brief.adult === false) return collect(client, brief, 'Этот пилот предназначен для взрослых клиентов. Автоматически составить программу для несовершеннолетнего не могу.')
+  if (sameClient && previous.resumePreviousProgram === true) {
+    return collect(client, brief, 'Продолжаем прежний курс: сохранила цель, график, опыт, оборудование и ограничения из прошлой программы. Уточните только изменившиеся условия; если изменений нет — выберите дату начала следующего блока.')
+  }
   if (!sameClient) {
     let clarification = previous?.step === 'client' && typeof previous.pendingClarification === 'string' ? previous.pendingClarification : null
     if (!chosenCandidates.length) {

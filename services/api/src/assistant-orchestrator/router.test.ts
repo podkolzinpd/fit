@@ -34,6 +34,13 @@ describe('model assistant router', () => {
     expect(await chooseAssistantRoute(CONFIRM_PROGRAM_BRIEF, [], draft('create_program_draft'), 'turn')).toMatchObject({ tool: 'create_program_draft', mode: 'continue' })
     expect(programModelJson).not.toHaveBeenCalled()
   })
+  it('continues a restored previous course without a paid routing guess', async () => {
+    const active = draft('create_program_draft')
+    active.payload.resumePreviousProgram = true
+    expect(await chooseAssistantRoute('Продолжаем тот же курс тренировок', [], active, 'turn'))
+      .toEqual({ tool: 'create_program_draft', mode: 'continue', reply: '' })
+    expect(programModelJson).not.toHaveBeenCalled()
+  })
   it.each([
     ['create_program_draft', 'Подготовить программу для Антон Ковалёв'],
     ['record_workout', 'Записать тренировку для Антон Ковалёв'],
