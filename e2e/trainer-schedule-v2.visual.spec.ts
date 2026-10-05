@@ -3054,6 +3054,47 @@ test('Client Lime baseline keeps another client outside the redesign', async ({ 
   await page.screenshot({ path: testInfo.outputPath('client-before.png'), fullPage: true })
 })
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime planned exercises have one list surface ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    const exercises: WorkoutExercise[] = [0, 1, 2].map((position) => ({
+      id: `10000000-0000-4000-8000-${String(80 + position).padStart(12, '0')}`,
+      source: 'system', ref: 'squat',
+      name: position === 0 ? 'Разводка гантелей на наклонной скамье с длинным названием упражнения' : `Упражнение ${position + 1}`,
+      muscleGroup: 'chest', inputKind: 'strength', position,
+      blockId: position === 0 ? '10000000-0000-4000-8000-000000000090' : '10000000-0000-4000-8000-000000000091',
+      blockType: position === 0 ? 'single' : 'group', blockPreset: 'set', blockRounds: 3,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: `10000000-0000-4000-8000-${String(92 + position).padStart(12, '0')}`, position: 0, weightKg: 12, reps: 10, fact: {}, confirmedAt: null, version: 1 }],
+    }))
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    const list = page.locator('.workout-detail-page > .planned-exercise-list')
+    await expect(list.locator('.planned-detail-exercise')).toHaveCount(3)
+    const geometry = await list.evaluate((element) => {
+      const rows = Array.from(element.querySelectorAll('.planned-detail-exercise'))
+      const rowStyles = rows.map((row) => getComputedStyle(row))
+      const heading = rows[0]?.querySelector('.workout-detail-exercise-heading')
+      return {
+        listBorder: getComputedStyle(element).borderTopWidth,
+        rowBorders: rowStyles.map((style) => style.borderTopWidth),
+        rowRadii: rowStyles.map((style) => style.borderTopLeftRadius),
+        innerBorders: rows.map((row) => getComputedStyle(row.querySelector('.workout-detail-exercise-row')!).borderTopWidth),
+        headingFits: !!heading && heading.scrollWidth <= heading.clientWidth,
+        noOverlap: rows.every((row, index) => index === 0 || rows[index - 1]!.getBoundingClientRect().bottom <= row.getBoundingClientRect().top),
+      }
+    })
+    expect(geometry.listBorder).toBe('1px')
+    expect(geometry.rowBorders).toEqual(['0px', '0px', '1px'])
+    expect(geometry.rowRadii).toEqual(['0px', '0px', '0px'])
+    expect(geometry.innerBorders).toEqual(['0px', '0px', '0px'])
+    expect(geometry.headingFits).toBe(true)
+    expect(geometry.noOverlap).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-plan-list-${theme}-${width}.png`) })
+  })
+}
+
 for (const width of [390, 430]) {
   test(`Client Lime shell themes and account isolation ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
@@ -3133,6 +3174,39 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(page.getByText('Выполнено 1 из 1 подходов')).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`client-completion-${theme}.png`) })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime live secondary actions ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    const exercise: WorkoutExercise = {
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'reps', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, reps: 8, fact: {}, confirmedAt: null, version: 1 }],
+    }
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises: [
+      exercise,
+      { ...exercise, id: '10000000-0000-4000-8000-000000000083', ref: 'lunge', name: 'Выпады с гантелями', position: 1,
+        blockId: '10000000-0000-4000-8000-000000000084', sets: [{ ...exercise.sets[0]!, id: '10000000-0000-4000-8000-000000000085' }] },
+    ] }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    await expect(page.locator('.fit-client-lime')).toBeVisible()
+    await page.goto(`/workouts/${workoutId}`)
+    await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+    const live = page.locator('.fit-client-lime.live-identity')
+    await expect(live.locator('.live-exercise.current')).toBeVisible()
+    await expect(live.locator('.live-exercise-upcoming')).toBeVisible()
+    await expect(live.locator('.live-add-set')).toHaveCSS('border-radius', '999px')
+    await expect(live.locator('.live-add-set')).toHaveCSS('min-height', '44px')
+    await expect(live.locator('.live-exercise-start')).toHaveCSS('border-radius', '999px')
+    await expect(live.locator('.live-bottom-bar .workout-cta')).toHaveCSS('border-radius', '999px')
+    await expect(live.locator('.live-exercise-note summary')).toHaveCSS('min-height', '44px')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-live-actions-${theme}-${width}.png`) })
   })
 }
 

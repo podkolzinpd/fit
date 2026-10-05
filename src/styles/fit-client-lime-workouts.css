@@ -26,7 +26,60 @@
 .phone-frame.fit-client-lime.theme-light.live-identity .finish-confirm .workout-cta[data-variant='primary'] { color: var(--lime-surface); }
 .phone-frame.fit-client-lime :is(.workout-completion-report, .workout-completion-share-card) { overflow-wrap: anywhere; }
 
-.phone-frame.fit-client-lime.live-identity .live-add-set { width: fit-content; min-height: 44px; padding-inline: 12px; }
+.phone-frame.fit-client-lime.live-identity .live-add-set {
+  width: fit-content;
+  min-height: 44px;
+  margin: 12px 0 4px;
+  padding: 8px 16px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.live-identity .live-add-set:disabled {
+  color: var(--lime-text-tertiary);
+  opacity: 1;
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-note summary {
+  width: fit-content;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--lime-text-secondary);
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-note[open] summary {
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-upcoming {
+  gap: 10px;
+  margin: 8px 0;
+  padding: 14px 16px;
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-upcoming .live-upcoming-row {
+  gap: 8px;
+}
+.phone-frame.fit-client-lime.live-identity .live-exercise-start {
+  min-height: 44px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.live-identity .live-bottom-bar .workout-cta {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime.live-identity .live-bottom-bar .workout-cta[data-variant='secondary'] {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
 
 .phone-frame.fit-client-lime:not(.theme-light).client-home-identity :is(.voice-action-button, .today-voice-text-inline) svg[data-original-icon] { filter: none; }
 
@@ -72,3 +125,53 @@
 .phone-frame.fit-client-lime .workout-feedback-options { gap: 6px; }
 .phone-frame.fit-client-lime .workout-feedback-option { min-height: 44px; border-radius: 999px; font-size: 14px; }
 .phone-frame.fit-client-lime .workout-completion-actions { gap: 12px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+
+/* A workout list is one surface. Exercise rows and block contents are not cards. */
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) {
+  gap: 0;
+  padding: 0 16px;
+  overflow: hidden;
+  border: 1px solid var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) :is(.planned-detail-exercise, .completed-exercise) {
+  margin: 0;
+  padding: 16px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > :is(.planned-detail-exercise, .completed-exercise):not(:last-child),
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view:not(:last-child) {
+  border-bottom: 1px solid var(--lime-divider);
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) .workout-detail-exercise-row {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) .workout-detail-exercise-heading strong {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view {
+  margin: 0;
+  padding: 12px 0 12px 12px;
+  border-top: 0;
+  border-right: 0;
+  border-left: 2px solid var(--lime-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view :is(.planned-detail-exercise, .completed-exercise) {
+  padding: 12px 0;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view :is(.planned-detail-exercise, .completed-exercise) + :is(.planned-detail-exercise, .completed-exercise) {
+  border-top: 1px solid var(--lime-divider);
+}
