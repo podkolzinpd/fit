@@ -3321,9 +3321,16 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await page.goto(route)
       await expect(page.locator('.fit-client-lime')).toBeVisible()
       await expect(page.locator('h1').first()).toBeVisible()
-      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
+      if (route === '/assistant' && process.env.VITE_ASSISTANT_NAV_ENABLED === 'true' && process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS?.split(',').includes(clientId)) {
         await expect(page).toHaveURL(/\/assistant$/)
         await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeVisible()
+        const starter = page.locator('.assistant-first-entry-actions button')
+        await expect(starter).toHaveCount(3)
+        await expect.poll(async () => {
+          const colors = await starter.evaluateAll((buttons) => buttons.slice(0, 2).map((button) => getComputedStyle(button).backgroundColor))
+          return colors.length === 2 && colors[0] !== colors[1]
+        }).toBe(true)
+        await expect(page.locator('.assistant-composer .assistant-icon-button').first()).toHaveCSS('border-top-left-radius', '999px')
       }
       await expect(page.getByText('Загружаем…', { exact: true })).toHaveCount(0)
       await expect(page.locator('.state-panel-error')).toHaveCount(0)

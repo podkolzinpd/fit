@@ -65,6 +65,41 @@
 .phone-frame.fit-client-lime .chat-message.own { border-color: var(--lime-accent-ink); }
 .phone-frame.fit-client-lime .chat-surface { scrollbar-color: var(--lime-divider) transparent; }
 html.fit-client-lime-document .fit-lime-chat-sheet { background: var(--lime-overlay); }
+.phone-frame.fit-client-lime.assistant-identity .assistant-first-entry-icon {
+  border-color: var(--lime-divider);
+  border-radius: 16px;
+  background: var(--lime-accent-muted);
+  color: var(--lime-accent-ink);
+}
+.phone-frame.fit-client-lime.assistant-identity .assistant-first-entry-actions button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+  font-size: 14px;
+}
+.phone-frame.fit-client-lime.assistant-identity .assistant-first-entry-actions button:first-child {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime.assistant-identity .assistant-composer .assistant-icon-button:not(.recording) {
+  border-color: var(--lime-divider);
+  border-radius: 999px;
+  background: var(--lime-surface);
+  color: var(--lime-text);
+}
+.phone-frame.fit-client-lime.assistant-identity .assistant-composer > .assistant-icon-button:last-child:not(:disabled) {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.phone-frame.fit-client-lime.assistant-identity .assistant-composer > .assistant-icon-button:last-child:disabled {
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
+}
 
 .phone-frame.fit-client-lime :is(.athlete-achievements-home, .athlete-achievements-preview, .athlete-achievements-new),
 html.fit-client-lime-document .athlete-achievement-detail {
