@@ -34,7 +34,7 @@ const CLAIM_TOKEN = 'c'.repeat(43)
 const PROFILE_ID = '10000000-0000-4000-8000-000000000001'
 
 describe('DatabaseTrainerScheduleV2Claimer', () => {
-  it('consumes the token without disabling the other reviewed trainer', async () => {
+  it('consumes the token without disabling the other reviewed trainers', async () => {
     const pool = new Pool()
     pool.connection.results = [
       [],
@@ -46,7 +46,7 @@ describe('DatabaseTrainerScheduleV2Claimer', () => {
       [],
       [],
       [],
-      [{ enabled_assignments: '2' }],
+      [{ enabled_assignments: '3' }],
       [],
     ]
 
@@ -86,7 +86,7 @@ describe('DatabaseTrainerScheduleV2Claimer', () => {
     expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
   })
 
-  it('does not allow a trainer outside the reviewed two-account allowlist', async () => {
+  it('does not allow a trainer outside the reviewed three-account allowlist', async () => {
     const pool = new Pool()
     pool.connection.results = [
       [],

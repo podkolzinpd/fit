@@ -1367,6 +1367,48 @@ describe('stage tenant migration', () => {
   })
 })
 
+describe('private reviewed trainer Lime enrollment', () => {
+  const key = 'd'.repeat(64)
+  const url = '/stage/experiments/trainer-lime-cohort'
+  function fixture(enabled = true) {
+    const enroll = vi.fn(() => Promise.resolve({ approvedRows: 3, added: true }))
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      ...(enabled ? { trainerLimeCohort: { enroll } } : {}),
+    })
+    apps.push(app)
+    return { app, enroll }
+  }
+  it('is absent by default', async () => {
+    const { app } = fixture(false)
+    expect((await app.inject({ method: 'POST', url, payload: { loginSha256: key } })).statusCode).toBe(404)
+  })
+  it('returns counts, not the private identifier', async () => {
+    const { app, enroll } = fixture()
+    const response = await app.inject({ method: 'POST', url, payload: { loginSha256: key } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'trainer_lime_cohort_ready', approvedRows: 3, added: true })
+    expect(enroll).toHaveBeenCalledWith(key)
+    expect(response.body).not.toContain(key)
+  })
+  it.each([{}, { loginSha256: '' }, { loginSha256: key, profileId: 'untrusted' }, { loginSha256: key.toUpperCase() }])('rejects malformed or extra input', async (payload) => {
+    const { app, enroll } = fixture()
+    const response = await app.inject({ method: 'POST', url, payload })
+    expect(response.statusCode).toBe(400)
+    expect(enroll).not.toHaveBeenCalled()
+  })
+  it('does not expose private database errors', async () => {
+    const { app, enroll } = fixture()
+    enroll.mockRejectedValueOnce(new Error(`secret key ${key}`))
+    const response = await app.inject({ method: 'POST', url, payload: { loginSha256: key } })
+    expect(response.statusCode).toBe(409)
+    expect(response.json()).toEqual({ status: 'trainer_lime_cohort_not_ready' })
+    expect(response.body).not.toContain(key)
+    expect(response.body).not.toContain('secret')
+  })
+})
+
 describe('stage Yandex ID pilot enrollment', () => {
   const subjectHash = 'd'.repeat(64)
 

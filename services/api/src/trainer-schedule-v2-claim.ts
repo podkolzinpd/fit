@@ -118,8 +118,8 @@ export class DatabaseTrainerScheduleV2Claimer implements TrainerScheduleV2Claime
         where experiment_key = 'trainer_schedule_v2' and enabled = true
       `)
       const enabledAssignments = Number(counts[0]?.enabled_assignments ?? 0)
-      if (enabledAssignments < 1 || enabledAssignments > 2) {
-        throw new Error('Trainer Schedule V2 two-account invariant failed')
+      if (enabledAssignments < 1 || enabledAssignments > 3) {
+        throw new Error('Trainer Schedule V2 three-account invariant failed')
       }
       return { enabled: true }
     })

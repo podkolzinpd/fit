@@ -11,6 +11,7 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import type { TrainerLimeCohortManager } from './db/trainer-lime-cohort.js'
 import { FitLimeCalendarNotReadyError, type FitLimeCalendarManager } from './db/fit-lime-calendar-fixtures.js'
 import type { StageCalorieAuditor } from './db/workout-calorie-audit.js'
 import type { RuntimeDomainReadinessResult } from './db/runtime-domain-readiness.js'
@@ -72,6 +73,7 @@ interface BuildMigrationAppOptions {
   rolloutAssignment?: StageRolloutAssignmentManager
   trainerScheduleV2Pilot?: TrainerScheduleV2PilotManager
   fitLimePilot?: FitLimePilotManager
+  trainerLimeCohort?: TrainerLimeCohortManager
   fitLimeCalendar?: FitLimeCalendarManager
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
@@ -559,6 +561,21 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'trainer_profile_not_ready' })
         }
         return reply.code(500).send({ status: 'trainer_schedule_v2_failed' })
+      }
+    })
+  }
+
+  if (options.trainerLimeCohort !== undefined) {
+    const cohort = options.trainerLimeCohort
+    app.post('/stage/experiments/trainer-lime-cohort', async (request, reply) => {
+      const body = request.body
+      if (typeof body !== 'object' || body === null || !('loginSha256' in body)
+        || typeof body.loginSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(body.loginSha256)
+        || Object.keys(body).length !== 1) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        return { status: 'trainer_lime_cohort_ready', ...await cohort.enroll(body.loginSha256) }
+      } catch {
+        return reply.code(409).send({ status: 'trainer_lime_cohort_not_ready' })
       }
     })
   }

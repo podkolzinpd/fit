@@ -29,7 +29,7 @@ const PROFILE_ID = '10000000-0000-4000-8000-000000000001'
 describe('DatabaseTrainerScheduleV2PilotManager', () => {
   it.each([['enable', true], ['disable', false]] as const)('applies a bounded %s assignment', async (action, enabled) => {
     const pool = new Pool()
-    const enabledAssignments = enabled ? 2 : 1
+    const enabledAssignments = enabled ? 3 : 2
     pool.connection.results = [
       [],
       [],
@@ -87,7 +87,7 @@ describe('DatabaseTrainerScheduleV2PilotManager', () => {
     expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
   })
 
-  it('rejects a trainer outside the reviewed two-account allowlist', async () => {
+  it('rejects a trainer outside the reviewed three-account allowlist', async () => {
     const pool = new Pool()
     pool.connection.results = [
       [],
@@ -102,7 +102,7 @@ describe('DatabaseTrainerScheduleV2PilotManager', () => {
     expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
   })
 
-  it('rolls back when the two-account invariant is not satisfied', async () => {
+  it('rolls back when the three-account invariant is not satisfied', async () => {
     const pool = new Pool()
     pool.connection.results = [
       [],
@@ -111,12 +111,12 @@ describe('DatabaseTrainerScheduleV2PilotManager', () => {
       [],
       [],
       [{ enabled: true }],
-      [{ enabled_assignments: 3 }],
+      [{ enabled_assignments: 4 }],
       [],
     ]
     const manager = new DatabaseTrainerScheduleV2PilotManager(pool)
 
-    await expect(manager.apply('enable', PROFILE_ID)).rejects.toThrow('two-account invariant')
+    await expect(manager.apply('enable', PROFILE_ID)).rejects.toThrow('three-account invariant')
     expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
   })
 })

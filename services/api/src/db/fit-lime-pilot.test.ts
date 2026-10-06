@@ -28,11 +28,11 @@ describe('DatabaseFitLimePilotManager', () => {
     const pool = new Pool()
     pool.connection.results = [
       [], [], [{ account_role: 'trainer', trainer_ready: true, pilot_allowed: true }],
-      [], [{ enabled }], [{ enabled_rows: enabled ? 2 : 1 }], [],
+      [], [{ enabled }], [{ enabled_rows: enabled ? 3 : 2 }], [],
     ]
 
     await expect(new DatabaseFitLimePilotManager(pool).apply(action, PROFILE_ID))
-      .resolves.toEqual({ accountRole: 'trainer', enabled, enabledAllowlistRows: enabled ? 2 : 1 })
+      .resolves.toEqual({ accountRole: 'trainer', enabled, enabledAllowlistRows: enabled ? 3 : 2 })
     expect(pool.connection.calls[3]?.values).toEqual([PROFILE_ID, enabled])
     expect(pool.connection.calls.at(-1)?.text).toBe('commit')
     expect(pool.connection.released).toBe(true)
@@ -49,7 +49,7 @@ describe('DatabaseFitLimePilotManager', () => {
     expect(pool.connection.calls.every(({ text }) => !text.includes('set enabled = $2'))).toBe(true)
   })
 
-  it('rejects a trainer outside the two-account allowlist', async () => {
+  it('rejects a trainer outside the three-account allowlist', async () => {
     const pool = new Pool()
     pool.connection.results = [[], [], [{ account_role: 'trainer', trainer_ready: true, pilot_allowed: false }], []]
     await expect(new DatabaseFitLimePilotManager(pool).apply('enable', PROFILE_ID))
@@ -57,14 +57,14 @@ describe('DatabaseFitLimePilotManager', () => {
     expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
   })
 
-  it('rolls back when the two-account invariant is violated', async () => {
+  it('rolls back when the three-account invariant is violated', async () => {
     const pool = new Pool()
     pool.connection.results = [
       [], [], [{ account_role: 'trainer', trainer_ready: true, pilot_allowed: true }],
-      [], [{ enabled: true }], [{ enabled_rows: 3 }], [],
+      [], [{ enabled: true }], [{ enabled_rows: 4 }], [],
     ]
     await expect(new DatabaseFitLimePilotManager(pool).apply('enable', PROFILE_ID))
-      .rejects.toThrow('two-account invariant')
+      .rejects.toThrow('three-account invariant')
     expect(pool.connection.calls.at(-1)?.text).toBe('rollback')
   })
 })

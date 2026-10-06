@@ -1,0 +1,71 @@
+name: Enroll reviewed Fit Lime trainer
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: ADD_ONE_REVIEWED_TRAINER
+        required: true
+        type: string
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+jobs:
+  enroll:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bounded operation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$CONFIRMATION" = ADD_ONE_REVIEWED_TRAINER
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - name: Exchange GitHub OIDC for short-lived IAM
+        run: scripts/yandex-github-oidc.sh
+      - name: Read existing private runner address
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Enroll and verify idempotent private readback
+        working-directory: infra/yandex
+        env:
+          REVIEWED_LOGIN_SHA256: ${{ secrets.FIT_LIME_ADDITIONAL_TRAINER_LOGIN_SHA256 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$REVIEWED_LOGIN_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo 'Reviewed key is unavailable.' >&2; exit 1; }
+          request_file=$(mktemp)
+          trap 'rm -f "$request_file"' EXIT
+          jq -n --arg key "$REVIEWED_LOGIN_SHA256" '{loginSha256: $key}' > "$request_file"
+          migration_url=$(terraform output -raw migration_container_url)
+          for response_file in cohort-response.json cohort-readback.json; do
+            status=$(curl --silent --show-error --max-time 120 \
+              --output "$response_file" --write-out '%{http_code}' \
+              --request POST --header "Authorization: Bearer $YC_TOKEN" \
+              --header 'Content-Type: application/json' --data-binary "@$request_file" \
+              "${migration_url%/}/stage/experiments/trainer-lime-cohort")
+            test "$status" = 200 || { echo "Private enrollment returned HTTP $status." >&2; exit 1; }
+            jq -e '.status == "trainer_lime_cohort_ready" and .approvedRows == 3 and (.added | type == "boolean")' "$response_file" >/dev/null
+          done
+          jq -e '.added == false' cohort-readback.json >/dev/null
+          jq '{approvedRows, added}' cohort-response.json >> "$GITHUB_STEP_SUMMARY"
+          jq '{approvedRows, added}' cohort-readback.json >> "$GITHUB_STEP_SUMMARY"
