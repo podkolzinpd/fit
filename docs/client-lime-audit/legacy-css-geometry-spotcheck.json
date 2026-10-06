@@ -1,0 +1,175 @@
+{
+  "/me": [
+    {
+      "selector": ".today-profile-avatar",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "14px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".chat-header-action",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".quick-start-button",
+      "present": true,
+      "radius": "999px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(0, 0, 0)",
+      "color": "rgb(182, 239, 77)"
+    }
+  ],
+  "/me/workouts": [
+    {
+      "selector": ".past-workout-plan-card",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".client-workout-card",
+      "present": false
+    }
+  ],
+  "/me/progress": [
+    {
+      "selector": ".progress-story-period",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".progress-story-summary",
+      "present": false
+    },
+    {
+      "selector": ".client-progress-measurements-story",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".progress-analysis-preview",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)"
+    }
+  ],
+  "/me/profile": [
+    {
+      "selector": ".client-profile-card",
+      "present": true,
+      "radius": "32px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".client-home-connections",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".client-home-connections > .card",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".client-profile-avatar",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "14px",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)"
+    }
+  ],
+  "/me/settings": [
+    {
+      "selector": ".account-settings-card",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".profile-settings",
+      "present": true,
+      "radius": "18px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".settings-section > .danger.secondary",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "14px",
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(167, 55, 55)"
+    },
+    {
+      "selector": ".body-map-appearance-options",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)"
+    }
+  ],
+  "/assistant": [
+    {
+      "selector": ".assistant-composer textarea",
+      "present": true,
+      "radius": "14px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "16px",
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(32, 35, 28)"
+    },
+    {
+      "selector": ".assistant-first-entry-actions button",
+      "present": true,
+      "radius": "999px",
+      "font": "YS Geo, Onest Variable, sans-serif",
+      "fontSize": "14px",
+      "background": "rgb(182, 239, 77)",
+      "color": "rgb(0, 0, 0)"
+    }
+  ]
+}
