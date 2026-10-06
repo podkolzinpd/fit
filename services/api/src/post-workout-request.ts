@@ -34,6 +34,20 @@ function expectedVersion(value: unknown): number | undefined {
     : undefined
 }
 
+export function readWorkoutDurationRequest(body: unknown): {
+  actualDurationSec: number | null; expectedVersion: number
+} | undefined {
+  const input = record(body)
+  if (!input) return undefined
+  const version = expectedVersion(input.expectedVersion)
+  const seconds = input.actualDurationSec
+  if (version === undefined || (seconds !== null && (
+    typeof seconds !== 'number' || !Number.isInteger(seconds)
+    || seconds < 1 || seconds > 43_200
+  ))) return undefined
+  return { actualDurationSec: seconds, expectedVersion: version }
+}
+
 export function readWorkoutFeedbackRequest(
   body: unknown,
 ): WorkoutFeedbackRequest | undefined {

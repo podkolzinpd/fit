@@ -2808,6 +2808,7 @@ function buildWorkoutsWriter(error?: Error): {
   pilotWorkoutsWriter: PilotWorkoutsWriter
   quickStart: ReturnType<typeof vi.fn>
   cancelEmpty: ReturnType<typeof vi.fn>
+  setActualDuration: ReturnType<typeof vi.fn>
   appendLiveExercise: ReturnType<typeof vi.fn>
   appendLiveSet: ReturnType<typeof vi.fn>
   appendLiveRound: ReturnType<typeof vi.fn>
@@ -2843,6 +2844,7 @@ function buildWorkoutsWriter(error?: Error): {
     : Promise.reject(error)
   const quickStart = vi.fn(() => result({ id: WORKOUT_ID, resumed: false }))
   const cancelEmpty = vi.fn(() => result(2))
+  const setActualDuration = vi.fn(() => result(2))
   const deletePlanned = vi.fn(() => result(3))
   const deleteWorkout = vi.fn(() => result(3))
   const cancelPlanned = vi.fn(() => result(2))
@@ -2916,6 +2918,7 @@ function buildWorkoutsWriter(error?: Error): {
     pilotWorkoutsWriter: {
       quickStart,
       cancelEmpty,
+      setActualDuration,
       submitFeedback,
       setReview,
       askQuestion,
@@ -2948,6 +2951,7 @@ function buildWorkoutsWriter(error?: Error): {
     },
     quickStart,
     cancelEmpty,
+    setActualDuration,
     appendLiveExercise,
     appendLiveSet,
     appendLiveRound,
@@ -5109,6 +5113,36 @@ describe('pilot completed workout lifecycle commands', () => {
 
 describe('pilot post-workout commands', () => {
   const sessionToken = 's'.repeat(43)
+
+  it('corrects duration alone with validated units, session and command errors', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    const url = `/v1/workouts/${WORKOUT_ID}/duration`
+    const headers = { 'x-fit-pilot-session': sessionToken }
+    for (const actualDurationSec of [1, 3000, 43200, null]) {
+      const response = await app.inject({ method: 'PUT', url, headers,
+        payload: { actualDurationSec, expectedVersion: 1 } })
+      expect(response.statusCode).toBe(200)
+      expect(response.headers['cache-control']).toBe('no-store')
+      expect(writer.setActualDuration).toHaveBeenLastCalledWith(sessionToken, WORKOUT_ID, actualDurationSec, 1)
+    }
+    writer.setActualDuration.mockClear()
+    for (const actualDurationSec of [0, -1, 43201, 1.5, '50', undefined]) {
+      expect((await app.inject({ method: 'PUT', url, headers,
+        payload: { actualDurationSec, expectedVersion: 1 } })).statusCode).toBe(400)
+    }
+    expect((await app.inject({ method: 'PUT', url, headers,
+      payload: { actualDurationSec: 3000, expectedVersion: 0 } })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'PUT', url,
+      payload: { actualDurationSec: 3000, expectedVersion: 1 } })).statusCode).toBe(401)
+    expect(writer.setActualDuration).not.toHaveBeenCalled()
+    for (const [failure, status] of [['forbidden', 403], ['conflict', 409], ['invalid', 422]] as const) {
+      writer.setActualDuration.mockRejectedValueOnce(new PilotWorkoutCommandError(failure))
+      expect((await app.inject({ method: 'PUT', url, headers,
+        payload: { actualDurationSec: 3000, expectedVersion: 1 } })).statusCode).toBe(status)
+    }
+    await app.close()
+  })
 
   it('validates and forwards feedback, responses, questions and snooze', async () => {
     const writer = buildWorkoutsWriter()

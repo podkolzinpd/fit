@@ -58,6 +58,7 @@ export function WorkoutCompletionReport({
   totalExercises,
   incompleteExercises,
   duration,
+  durationControl,
   tonnage,
   caloriesKcal,
   calorieBasis,
@@ -86,6 +87,7 @@ export function WorkoutCompletionReport({
   totalExercises: number
   incompleteExercises: string[]
   duration: string | null
+  durationControl?: ReactNode
   tonnage: string | null
   caloriesKcal?: number | null
   calorieBasis?: string | null
@@ -122,7 +124,7 @@ export function WorkoutCompletionReport({
     ...(caloriesKcal && !(clientLime && noConfirmedSets) ? [{ label: 'Активные калории FIT', value: `≈ ${caloriesKcal} ккал` }] : []),
     ...(percent !== null ? [{ label: 'План', value: `${percent}%` }] : []),
   ]
-  const visibleMetrics = metrics.filter((metric) => metric.label !== 'План')
+  const visibleMetrics = metrics.filter((metric) => metric.label !== 'План' && !(durationControl && metric.label === 'Время'))
   const recordAchievement = personalResult?.state === 'record' ? personalResult : undefined
   const positiveVolumeProgress = !recordAchievement && volumeComparison && volumeComparison.changePercent > 0
   const personalAchievement = recordAchievement ?? (!positiveVolumeProgress && personalResult && ['increase', 'baseline'].includes(personalResult.state)
@@ -213,6 +215,7 @@ export function WorkoutCompletionReport({
         ? <p className="workout-completion-count-line"><span>Выполнено {completedSets} из {totalSets} подходов</span><strong>{percent}%</strong></p>
         : <p className="workout-completion-count-line">{countLine}</p>}
 
+      {durationControl}
       {visibleMetrics.length > 0 && <dl className="workout-completion-report-facts" aria-label="Краткий итог тренировки">
         {visibleMetrics.map((metric) => <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
       </dl>}

@@ -13,6 +13,109 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+for (const role of ['client', 'trainer'] as const) for (const width of (role === 'client' ? [390, 430] : [390, 1440])) {
+  test(`Workout actual duration correction ${role} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 932 })
+    await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId,
+      workouts: [{ ...workout, status: 'done', startedAt: '2026-09-24T23:30:00Z', completedAt: '2026-09-25T00:30:00Z' }] })
+    const commands: unknown[] = []
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.endsWith('/duration')) commands.push(request.postDataJSON() as unknown)
+    })
+    await page.goto(`/workouts/${workoutId}`)
+    const control = page.locator('.workout-actual-duration')
+    await expect(control).toContainText('1 ч 00 мин')
+    await page.getByRole('button', { name: 'Изменить длительность' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Длительность тренировки', exact: true })
+    const input = dialog.getByRole('textbox', { name: 'Длительность тренировки, мин' })
+    await expect(input).toHaveValue('60')
+    await input.fill('0')
+    await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(dialog.getByRole('alert')).toContainText('Укажите длительность')
+    expect(commands).toHaveLength(0)
+    await input.fill('50,5')
+    await page.screenshot({ path: testInfo.outputPath(`duration-dialog-${role}-${width}.png`), fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(dialog).not.toBeVisible()
+    await expect(control).toContainText('51 мин')
+    expect(commands).toEqual([{ actualDurationSec: 3030, expectedVersion: 1 }])
+    await page.reload()
+    await expect(control).toContainText('51 мин')
+    await page.getByRole('button', { name: 'Изменить длительность' }).click()
+    await expect(input).toHaveValue('50.5')
+    await input.fill('')
+    await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(control).toContainText('1 ч 00 мин')
+    await page.evaluate(() => { localStorage.setItem('fit.appTheme', 'dark'); window.dispatchEvent(new Event('fit-theme-change')) })
+    await page.getByRole('button', { name: 'Изменить длительность' }).click()
+    await page.screenshot({ path: testInfo.outputPath(`duration-dark-${role}-${width}.png`), fullPage: true })
+    await page.keyboard.press('Escape')
+    await expect(dialog).not.toBeVisible()
+    await expect(page.getByRole('button', { name: 'Изменить длительность' })).toBeFocused()
+  })
+}
+
+for (const role of ['client', 'trainer'] as const) test(`Workout actual duration quick entry and draft ${role}`, async ({ page }) => {
+  const profileId = role === 'client' ? '10000000-0000-4000-8000-000000000099' : trainerId
+  await mockPilot(page, { role, profileId, pilot: false })
+  await page.addInitScript(({ profileId, clientId }) => { if (!localStorage.getItem(`fit.today-draft.${profileId}`)) localStorage.setItem(`fit.today-draft.${profileId}`, JSON.stringify({
+    screen: 'save', text: 'Приседания 3 по 8', choices: {},
+    items: [{ line: 'Приседания 3 по 8', exercise: { source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'reps' }, sets: [{ position: 0, reps: 8 }], hasValues: true }],
+    clientId, recordMode: 'completed', workoutDate: '2026-09-24', startTime: '',
+  })) }, { profileId, clientId })
+  const path = role === 'client' ? '/me?view=save' : '/today?view=save'
+  await page.goto(path)
+  const input = page.getByRole('textbox', { name: 'Длительность тренировки, мин' })
+  await expect(input).toHaveValue('')
+  await input.fill('50,5')
+  await expect.poll(async () => page.evaluate((id) =>
+    (JSON.parse(localStorage.getItem(`fit.today-draft.${id}`) ?? '{}') as { actualDurationMinutes?: string }).actualDurationMinutes,
+  profileId)).toBe('50,5')
+  await page.reload()
+  await expect(input).toHaveValue('50,5')
+  const saved = page.waitForRequest((request) => new URL(request.url()).pathname === '/v1/workouts/completed')
+  await page.getByRole('button', { name: 'Записать тренировку', exact: true }).click()
+  const request = await saved
+  expect((request.postDataJSON() as { actualDurationSec: number }).actualDurationSec).toBe(3030)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
+  await expect(page.locator('.workout-actual-duration')).toContainText('51 мин')
+})
+
+test('Workout actual duration keeps draft through network error and conflict without blind overwrite', async ({ page }) => {
+  const current: MockWorkout = { ...workout, status: 'done', completedAt: '2026-09-24T12:00:00Z', actualDurationSec: null }
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [current] })
+  let attempts = 0
+  await page.route(`**/v1/workouts/${workoutId}/duration`, async (route) => {
+    attempts += 1
+    if (attempts === 1) return route.abort('connectionrefused')
+    if (attempts === 2) {
+      current.actualDurationSec = 2700
+      current.version = 2
+      return route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"conflict"}' })
+    }
+    return route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button', { name: 'Указать длительность' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Длительность тренировки', exact: true })
+  const input = dialog.getByRole('textbox', { name: 'Длительность тренировки, мин' })
+  await expect(input).toHaveValue('')
+  await input.fill('50')
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText(/повторите/i)
+  await expect(input).toHaveValue('50')
+  expect(attempts).toBe(1)
+  await dialog.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('45 мин')
+  await expect(input).toHaveValue('50')
+  expect(attempts).toBe(2)
+  await dialog.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(page.locator('.workout-actual-duration')).toContainText('50 мин')
+  expect(attempts).toBe(3)
+})
+
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Achievement artwork has only earned and gray states ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
@@ -156,7 +259,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
 async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -461,21 +564,34 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     } else if (url.pathname === '/v1/workouts/quick-start' && route.request().method() === 'POST') {
       workouts = [{ ...workout, id: newWorkoutId, status: 'in_progress' }]
       body = { workout: { id: newWorkoutId, resumed: false } }
-    } else if (url.pathname === '/v1/workouts' && route.request().method() === 'POST') {
+    } else if (/^\/v1\/workouts\/[0-9a-f-]+\/duration$/.test(url.pathname) && route.request().method() === 'PUT') {
+      const id = url.pathname.split('/')[3]
+      const command = route.request().postDataJSON() as { actualDurationSec: number | null; expectedVersion: number }
+      const current = workouts.find((item) => item.id === id)!
+      if (current.version !== command.expectedVersion && current.actualDurationSec !== command.actualDurationSec) {
+        await route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"conflict"}' })
+        return
+      }
+      workouts = workouts.map((item) => item.id === id ? { ...item, actualDurationSec: command.actualDurationSec, version: item.version + 1 } : item)
+      body = { workout: { id, version: workouts.find((item) => item.id === id)!.version } }
+    } else if ((url.pathname === '/v1/workouts' || url.pathname === '/v1/workouts/completed') && route.request().method() === 'POST') {
       saveAttempts += 1
       if (options.failFirstSave && saveAttempts === 1) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
         return
       }
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; exercises?: WorkoutExerciseDraft[] }
+      const completed = url.pathname.endsWith('/completed')
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
       lastSavedStartTime = draft.startTime ?? null
       const exercises: WorkoutExercise[] = (draft.exercises ?? []).map((exercise, index) => ({ ...exercise,
         id: `10000000-0000-4000-8000-${String(100 + index).padStart(12, '0')}`, blockId: `10000000-0000-4000-8000-${String(200 + index).padStart(12, '0')}`,
         blockType: exercise.blockType ?? 'single', blockPreset: exercise.blockPreset ?? 'set', blockRounds: exercise.blockRounds ?? 1,
         restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0, restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0, restBetweenSetsSec: exercise.restBetweenSetsSec ?? 60,
-        sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: {}, confirmedAt: null, version: 1 })),
+        sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: completed ? set : {}, confirmedAt: completed ? '2026-09-24T12:00:00Z' : null, version: 1 })),
       }))
-      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null }]
+      workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
+        createdBy: profileId, status: completed ? 'done' : 'planned', actualDurationSec: draft.actualDurationSec,
+        completedAt: completed ? '2026-09-24T12:00:00Z' : null }]
       body = { workout: { id: newWorkoutId } }
     } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {
       const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null }

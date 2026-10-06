@@ -129,6 +129,7 @@ import {
 } from './workout-lifecycle-request.js'
 import {
   readWorkoutFeedbackRequest,
+  readWorkoutDurationRequest,
   readWorkoutQuestionRequest,
   readWorkoutTrainerResponseRequest,
 } from './post-workout-request.js'
@@ -3574,6 +3575,23 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (version) => reply
         .header('cache-control', 'no-store')
         .send({ workout: { id: workoutId, version } }),
+    )
+  })
+
+  app.put('/v1/workouts/:workoutId/duration', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const { workoutId } = request.params as { workoutId?: unknown }
+    const command = readWorkoutDurationRequest(request.body)
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply,
+      () => writer.setActualDuration(sessionToken, workoutId, command.actualDurationSec, command.expectedVersion),
+      (version) => reply.header('cache-control', 'no-store').send({ workout: { id: workoutId, version } }),
     )
   })
 
