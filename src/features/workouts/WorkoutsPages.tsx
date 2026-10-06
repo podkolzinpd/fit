@@ -18,7 +18,7 @@ import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { readLiveRestOverrides, restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, favoriteTemplateToWorkoutDraft, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
-import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTemplate, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing } from '../../shared/domain'
 import { LiveRestTimer } from './LiveRestTimer'
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import {
@@ -105,7 +105,7 @@ import { readTodayDraft, todayDraftKey } from './today-draft'
 import { trainerHomeContext } from './trainer-home-context'
 import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
 import { trainerActionItems, trainerDayActionItems, trainerPlanningDetail, trainerPlanningItems, type TrainerActionItem, type TrainerPlanningItem } from './trainer-attention'
-import { cloneWorkoutTemplate } from '../../data/repositories/workout-templates.repository'
+import { appendWorkoutTemplateExercises, cloneWorkoutTemplate } from '../../data/repositories/workout-templates.repository'
 import { SCHEDULE_HOUR_HEIGHT, useScheduleDensityPreference } from '../../app/schedule-density'
 import { defaultWorkoutTrainingFormat, workoutTrainingFormatLabel } from './workout-training-format'
 
@@ -1232,6 +1232,10 @@ export function WorkoutFormPage() {
   const [formDraftReady, setFormDraftReady] = useState(false)
   const [prefillError, setPrefillError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false)
+  const [addedTemplateName, setAddedTemplateName] = useState<string | null>(null)
+  const templateTriggerRef = useRef<HTMLButtonElement>(null)
+  const notesDetailsRef = useRef<HTMLDetailsElement>(null)
   const [pickerSelectionDraft, setPickerSelectionDraft] = useState<ExerciseSnapshot[]>([])
   const [techniqueExercise, setTechniqueExercise] = useState<ExerciseSnapshot | null>(null)
   const [pickerSearch, setPickerSearch] = useState('')
@@ -1265,6 +1269,20 @@ export function WorkoutFormPage() {
   // переключить в «Завершённую».
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   const limePlan = isFitLimeEnabled(actor) && !completedMode
+  const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen && !clientMode && !completedMode })
+  function closeTemplatePicker() {
+    setTemplatePickerOpen(false)
+    window.requestAnimationFrame(() => templateTriggerRef.current?.focus())
+  }
+  function addTemplate(template: WorkoutTemplate) {
+    setDraftExercises((current) => appendWorkoutTemplateExercises(current ?? initial?.exercises ?? [], template))
+    if (!notes.trim() && template.notes?.trim()) {
+      setNotes(template.notes)
+      if (notesDetailsRef.current) notesDetailsRef.current.open = true
+    }
+    setAddedTemplateName(template.name)
+    closeTemplatePicker()
+  }
   useEffect(() => {
     if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && favorites.isLoading) || formDraftReady) return
     // Only creation persists drafts. An unfinished copy must never populate an edit.
@@ -1537,13 +1555,14 @@ export function WorkoutFormPage() {
             {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
           </select>
         </Field>}
-        <details className="workout-notes" open={Boolean(initial?.notes)}>
+        <details ref={notesDetailsRef} className="workout-notes" open={Boolean(initial?.notes)}>
           <summary>Заметка для спортсмена <span>Необязательно</span></summary>
           <VoiceNoteField name="notes" source="workout_form" value={notes} onValueChange={setNotes} hideLabel />
         </details>
       </section>
       <section className="workout-form-section workout-form-exercises">
-        <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2></div>
+        <div className="workout-form-section-head workout-form-exercise-heading"><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2>{!clientMode && !completedMode && <button ref={templateTriggerRef} type="button" className="secondary workout-form-template-trigger" onClick={() => setTemplatePickerOpen(true)}><CopyIcon />Добавить шаблон</button>}</div>
+        {addedTemplateName && <p className="workout-template-added" role="status">Добавлен шаблон «{addedTemplateName}»</p>}
         <QuickWorkoutEntry catalog={catalog.exercises} preferredExerciseRefs={clientRecentExercises.map((exercise) => exercise.ref)} parseWorkout={(text, systemCatalog) => exercisesRepository.parseWorkout(text, systemCatalog)} onAdd={(parsed) => void addQuickEntry(parsed)} compact={exercises.length > 0} onOpenCatalog={exercises.length === 0 ? (search, onSelect) => { parsedExerciseSelection.current = onSelect ?? null; setPickerSearch(search); setReplaceIndex(null); setPickerOpen(true) } : undefined} />
         {exercises.length === 0 && <p className="workout-empty-hint" role="status">{limePlan ? 'Можно сохранить план сейчас и добавить упражнения позже.' : 'Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.'}</p>}
         <WorkoutExerciseEditor exercises={exercises} onChange={setDraftExercises} onOpenPicker={() => { setReplaceIndex(null); setPickerOpen(true) }} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }}
@@ -1558,9 +1577,36 @@ export function WorkoutFormPage() {
       <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>
     </form>}</AsyncView>
     {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialSearch={pickerSearch} initialMode={parsedExerciseSelection.current ? 'all' : replaceIndex === null && exercises.length === 0 ? 'choose' : 'all'} techniqueActionLabel={parsedExerciseSelection.current ? 'Выбрать упражнение' : replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={pickExercise} onPickMany={pickExercises} selectionDraft={replaceIndex === null && !parsedExerciseSelection.current ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null && !parsedExerciseSelection.current ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null && !parsedExerciseSelection.current} onClose={closePicker} />}
+    {templatePickerOpen && <WorkoutTemplatePicker templates={templates.data ?? []} loading={templates.isLoading} error={templates.error} onRetry={() => void templates.refetch()} onSelect={addTemplate} onClose={closeTemplatePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmLeaveDialog}
   </Page>
+}
+
+function WorkoutTemplatePicker({ templates, loading, error, onRetry, onSelect, onClose }: {
+  templates: WorkoutTemplate[]
+  loading: boolean
+  error: Error | null
+  onRetry: () => void
+  onSelect: (template: WorkoutTemplate) => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onEscape = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onEscape)
+    return () => document.removeEventListener('keydown', onEscape)
+  }, [onClose])
+  return <div className="sheet-overlay" onClick={onClose}>
+    <section className="workout-decision-sheet workout-template-picker" role="dialog" aria-modal="true" aria-label="Добавить шаблон тренировки" onKeyDown={keepScheduleSheetFocusInside} onClick={(event) => event.stopPropagation()}>
+      <header className="picker-header"><div><p className="eyebrow">ВАШИ ШАБЛОНЫ</p><h2>Добавить шаблон</h2></div><button type="button" className="picker-close" aria-label="Закрыть" autoFocus onClick={onClose}><CloseIcon /></button></header>
+      <AsyncView loading={loading} error={error} onRetry={onRetry}>
+        {templates.length > 0 ? <div className="workout-template-picker-list">{templates.map((template) => <button type="button" className="workout-template-picker-item" key={template.id} disabled={template.exercises.length === 0} onClick={() => onSelect(template)}>
+          <strong>{template.name}</strong><span>{template.exercises.length} {exerciseCountLabel(template.exercises.length)}</span>
+          <small>{template.exercises.slice(0, 3).map((exercise) => exercise.name).join(' · ')}{template.exercises.length > 3 ? ` · ещё ${template.exercises.length - 3}` : ''}</small>
+        </button>)}</div> : <EmptyState title="Шаблонов пока нет" description="Создайте шаблон в разделе «Расписание». Текущий план не изменился." />}
+      </AsyncView>
+    </section>
+  </div>
 }
 
 function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }: {

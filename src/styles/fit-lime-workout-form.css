@@ -36,6 +36,23 @@
   font-size: 20px;
   font-weight: 500;
 }
+.fit-lime-shell.workout-create-edit-identity .workout-form-template-trigger {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-template-added,
+.fit-lime-shell.workout-create-edit-identity .workout-template-picker-item :is(span, small) { color: var(--lime-text-secondary) }
+.fit-lime-shell.workout-create-edit-identity .workout-template-picker {
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
+  background: var(--lime-surface);
+}
+.fit-lime-shell.workout-create-edit-identity .workout-template-picker-item {
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+}
 .fit-lime-shell.workout-create-edit-identity .workout-form .field input,
 .fit-lime-shell.workout-create-edit-identity .workout-form .field select,
 .fit-lime-shell.workout-create-edit-identity .workout-form .field textarea,
