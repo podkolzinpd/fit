@@ -1,19 +1,17 @@
 # Fit — текущее состояние проекта
 
-## Аудит БД четвёртый шаг — 2026-10-06
+## Аудит БД и дублирующие индексы — 2026-10-06
 
-Первый шаг #1434: `a9b9c8e6`, CI37306986244/API37307751042 success; фото защищены.
-Второй шаг #1449 слит на `04eae004`: snapshot; CI37340759203/API37340759274 success.
-План WORKOUT_SNAPSHOT в docs/design; frontend37341195922 failure: `fetch failed`.
-Третий шаг #1450 слит `a009e373`: pagination; CI37350611007/API37350610759
-и frontend37352537161 success, smoke/readback verified; `/auth` HTTP200.
-Четвёртый шаг от `f4bcc188`, #1454/`codex/db-client-stats`: карточка читает
-пять показателей одним actor-scoped SQL-агрегатом без истории/children ради
-статистики. ИИ, Progress, ближайшие назначения, схема/grants/auth сохранены.
-Targeted repository46/API227/actor-RLS85/WebKit13/Chromium13 и полный check (2380+1094,build) зелёные; CI-гейт.
-Новый HTTP-лог — только шаблон операции без client ID/query/session; regression test.
-local:verify блокирован исторической Supabase-миграцией; baseline не сбрасывался.
-План: design/DATABASE_AUDIT_CLIENT_STATS_20261006.md. Production ещё не менялся.
+#1434 защищает фото, #1449 — snapshot, #1450 — серверную pagination; все слиты.
+#1454 слит `4eab2e22`: статистика карточки — один actor SQL-агрегат,
+ИИ/Progress/ближайшие назначения сохранены. CI37384227309,
+API37384227223/frontend37385582939 success. Планы — DATABASE_AUDIT в docs/design.
+Новая ветка от `e17ed22c`: migration125 удаляет только два дублирующих position
+индекса, проверяя каталог; UNIQUE DEFERRABLE, данные/RLS/API не меняются.
+При lock wait3s миграция откатывается. Clean PostgreSQL17 chain/actor-RLS91/91
+зелёные; check2409/1159/build и WebKit3/3 passed; CI-гейт. Plan: DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md.
+local:verify блокирован прежней Supabase-миграцией; baseline не сбрасывался.
+Production не менялся; на12:10МСК `/auth`/assets/health200; probe37423991268 ранее: HTML timeout12s/CSS5.3s.
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 

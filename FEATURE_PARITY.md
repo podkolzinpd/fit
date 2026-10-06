@@ -1,5 +1,9 @@
 # Feature parity с trainer-app
 
+Workout aggregate: Yandex migration125 удаляет только дубли индексов позиций;
+UNIQUE DEFERRABLE, чтение, перестановка и actor/RLS сохраняются. Приёмка:
+`docs/design/DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md`.
+
 Карточка клиента: Yandex `workouts.clientStats` возвращает существующие пять
 показателей одним actor-scoped SQL-агрегатом, без полной истории/children
 ради статистики. Done/пропуск/округление/14-дневное внимание и независимый

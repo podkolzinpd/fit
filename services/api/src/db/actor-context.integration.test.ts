@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
@@ -868,6 +869,163 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    describe('workout position index migration', () => {
+      const migrationUrl = new URL('../../db/migrations/000125_drop_duplicate_workout_position_indexes.sql', import.meta.url)
+
+      it('removes only redundant indexes and retains deferrable unique constraints', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const result = await ownerPool.query(`
+          select conname, condeferrable, condeferred, convalidated,
+            index.indisunique, index.indisvalid, index.indisready
+          from pg_constraint constraint_record
+          join pg_index index on index.indexrelid = constraint_record.conindid
+          where conname in ('workout_exercises_position_unique', 'workout_sets_position_unique')
+            and connamespace = 'public'::regnamespace
+          order by conname
+        `)
+        expect(result.rows).toEqual([
+          { conname: 'workout_exercises_position_unique', condeferrable: true, condeferred: false,
+            convalidated: true, indisunique: true, indisvalid: true, indisready: true },
+          { conname: 'workout_sets_position_unique', condeferrable: true, condeferred: false,
+            convalidated: true, indisunique: true, indisvalid: true, indisready: true },
+        ])
+        const indexes = await ownerPool.query(`
+          select to_regclass('public.workout_exercises_workout_position_idx') exercises,
+            to_regclass('public.workout_sets_exercise_position_idx') sets
+        `)
+        expect(indexes.rows).toEqual([{ exercises: null, sets: null }])
+      })
+
+      it('preserves ordered reads through unique indexes after a down and up roundtrip', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          await connection.query(down)
+          const cases = [
+            { sql: 'select id, position from public.workout_exercises where workout_id = any($1::uuid[]) order by workout_id, position, id',
+              parentId: ROOT_WORKOUT_ID, index: 'workout_exercises_position_unique' },
+            { sql: 'select id, position from public.workout_sets where workout_exercise_id = any($1::uuid[]) order by workout_exercise_id, position, id',
+              parentId: ROOT_WORKOUT_EXERCISE_ID, index: 'workout_sets_position_unique' },
+          ]
+          const before: QueryResultRow[][] = []
+          for (const testCase of cases) {
+            before.push((await connection.query<QueryResultRow>(testCase.sql, [[testCase.parentId]])).rows)
+          }
+          await connection.query(up)
+          // Tiny fixtures normally prefer a sequential scan. This proves the
+          // ordered index path remains available, not a production cost claim.
+          await connection.query('set local enable_seqscan = off; set local enable_bitmapscan = off')
+          for (const [index, testCase] of cases.entries()) {
+            expect((await connection.query(testCase.sql, [[testCase.parentId]])).rows).toEqual(before[index])
+            const plan = await connection.query(`explain (format json) ${testCase.sql}`, [[testCase.parentId]])
+            expect(JSON.stringify(plan.rows)).toContain(testCase.index)
+          }
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      })
+
+      it('rejects catalog drift before dropping either index', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          await connection.query(down)
+          await connection.query(`
+            drop index public.workout_sets_exercise_position_idx;
+            create index workout_sets_exercise_position_idx
+              on public.workout_sets (workout_exercise_id, position desc)
+          `)
+          await connection.query('savepoint guarded_migration')
+          await expect(connection.query(up)).rejects.toMatchObject({
+            message: 'workout_position_index_catalog_mismatch: workout_sets_exercise_position_idx',
+          })
+          await connection.query('rollback to savepoint guarded_migration')
+          const remaining = await connection.query(`
+            select to_regclass('public.workout_exercises_workout_position_idx') is not null exercises,
+              to_regclass('public.workout_sets_exercise_position_idx') is not null sets
+          `)
+          expect(remaining.rows).toEqual([{ exercises: true, sets: true }])
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      })
+
+      it('times out on an active reader without removing either index', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+        const blockerPool = new Pool({ connectionString: requireLocalTestDatabaseUrl(), max: 1 })
+        const blocker = await blockerPool.connect()
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          await connection.query(down)
+          await connection.query('commit')
+          await blocker.query('begin; lock table public.workout_exercises in access share mode')
+          await connection.query('begin')
+          await expect(connection.query(up)).rejects.toMatchObject({ code: '55P03' })
+          await connection.query('rollback')
+          const remaining = await connection.query(`
+            select to_regclass('public.workout_exercises_workout_position_idx') is not null exercises,
+              to_regclass('public.workout_sets_exercise_position_idx') is not null sets
+          `)
+          expect(remaining.rows).toEqual([{ exercises: true, sets: true }])
+        } finally {
+          await blocker.query('rollback')
+          blocker.release()
+          await blockerPool.end()
+          await connection.query('rollback')
+          // Restore the schema expected by the other integration scenarios.
+          await connection.query('begin')
+          await connection.query(up)
+          await connection.query('commit')
+          connection.release()
+        }
+      }, 10_000)
+
+      it.each([
+        { table: 'workout_exercises', constraint: 'workout_exercises_position_unique',
+          columns: 'id, workout_id, trainer_id, client_id, position, exercise_source, exercise_ref, exercise_name, muscle_group, input_kind',
+          values: "$1, workout_id, trainer_id, client_id, 1, exercise_source, exercise_ref, exercise_name, muscle_group, input_kind",
+          originalId: ROOT_WORKOUT_EXERCISE_ID },
+        { table: 'workout_sets', constraint: 'workout_sets_position_unique',
+          columns: 'id, workout_exercise_id, trainer_id, client_id, position',
+          values: '$1, workout_exercise_id, trainer_id, client_id, 1',
+          originalId: ROOT_WORKOUT_SET_ID },
+      ])('keeps uniqueness and deferred reordering for $table', async (testCase) => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const connection = await ownerPool.connect()
+        const extraId = randomUUID()
+        try {
+          await connection.query('begin')
+          await connection.query(`insert into public.${testCase.table} (${testCase.columns})
+            select ${testCase.values} from public.${testCase.table} where id = $2`, [extraId, testCase.originalId])
+          await connection.query('savepoint duplicate_position')
+          await expect(connection.query(`update public.${testCase.table} set position = 0 where id = $1`, [extraId]))
+            .rejects.toMatchObject({ code: '23505', constraint: testCase.constraint })
+          await connection.query('rollback to savepoint duplicate_position')
+          await connection.query(`set constraints public.${testCase.constraint} deferred`)
+          await connection.query(`update public.${testCase.table} set position = 1 where id = $1`, [testCase.originalId])
+          await connection.query(`update public.${testCase.table} set position = 0 where id = $1`, [extraId])
+          await connection.query(`set constraints public.${testCase.constraint} immediate`)
+          const reordered = await connection.query(`select position from public.${testCase.table}
+            where id = any($1::uuid[]) order by position`, [[extraId, testCase.originalId]])
+          expect(reordered.rows).toEqual([{ position: 0 }, { position: 1 }])
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      })
     })
 
     describe('trainer profile first-write concurrency', () => {
