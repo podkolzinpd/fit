@@ -10,6 +10,16 @@ PR#1467 слит223cb7d4; CI37502696391 success. Plan37521471733 success:771фа
 Migration127 задаёт лимит трёх тренеров и owner-only подключение к Fit Lime/Schedule V2 через IAM runner. Новый ключ передаётся repository secret, не публикуется; два прежних назначения сохраняются. Привязка — при новом входе через Яндекс. Клиентский пилот не меняется.
 PR#1461: первый CI37469475413 success; rebase от `85584a47`, повторный check2412/1176/build, clean-chain127/actor92/92, rollback/reapply3→2→3 и legacy1511/1511 зелёные. CI обновлённой ветки повторяется. Общая локальная БД сохранена: старый drift migration112. Владелец явно разрешил закрытый GitHub Secret; ключ сохранён, подключение выполняется после зелёного CI/штатной выкладки. Реальной сессии третьего тренера нет. План: design/YAFIT_595_FIT_LIME_THIRD_TRAINER.md.
 
+## Выпады в ходьбе: ввод веса — 2026-10-06
+
+Исправлен формат системной карточки `vital-walking-lunge-ex270`: новые планы
+получают кг + повторы вместо времени + повторов. Yandex migration 127 меняет
+только snapshot этой карточки в запланированных и идущих тренировках, не
+изменяя подходы и завершённую историю; версия затронутой тренировки повышается.
+Целевые catalog/UI-тесты и чистая цепочка PostgreSQL 17 пройдены. Production
+пока не менялся; общая локальная БД имеет прежний drift миграции 112, поэтому
+для clean-chain использована отдельная локальная база.
+
 ## Клиентский Lime: остатки заполненного прогресса — 2026-10-06
 
 #1459/#1462/#1465 слиты; release85584a47 CI37486398084/Android37486397713 success; deploy37488943876 verified206/readback12/YS Geo2. Published8cases. Новый скриншот подтвердил analysis/goal18px и sheet18px/close14px; база223cb7d4 после #1467, plan CLIENT_LIME_PROGRESS_FILLED_20261006.md. V16–19 используют cards/7PRO headers32px, sheet40px/close44круг, tertiary14/500/44; только client scope. WebKit13/13 D/L390/430/pending/error/PRO/off-control passed; Chromium13/13; check2412/API1176+92 skipped/policy/hosting/build success. hosting114/114 passed; PR1468 слит28309ef4, CI37522475372/Android37522475377 success, main CI/выпуск выполняются. Раскрытие всех7 ПРО подтвердило V20 D/L390/430: body-mode14/pseudo9/7px; план CLIENT_LIME_BODY_MODE_20261006.md, существующий segmented28/24/44 только client, WebKit16/16/Chromium16/16 passed: все7 открыты, empty/filled mode, другой клиент/trainer; check2412/API1176+92 skipped/policy/hosting114/build success; rebasec39bc3fc после1469, UI/E2E/package diff пустой, hosting115 passed; CI/readback далее. Выпуск28309ef4 не активирован: main обновился. Полное покрытие не заявляется; НЕ ПРОВЕРЕНО остаётся в аудите. Физический iPhone/удалённые LLM/SpeechKit/Store-релиз не подтверждены.

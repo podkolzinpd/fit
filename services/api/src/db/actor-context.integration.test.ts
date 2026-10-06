@@ -1028,6 +1028,63 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
     })
 
+    it('updates only editable walking-lunge snapshots without changing their sets or history', async () => {
+      if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+      const migrationUrl = new URL('../../db/migrations/000127_walking_lunge_weight.sql', import.meta.url)
+      const up = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')[0]
+      if (up === undefined) throw new Error('migration up section is missing')
+      const workoutIds = [randomUUID(), randomUUID(), randomUUID()]
+      const exerciseIds = [randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+      const setId = randomUUID()
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        await connection.query(`
+          insert into public.workouts (
+            id, trainer_id, client_id, created_by, workout_date, status, started_at, completed_at
+          ) values
+            ($1, $4, $5, $4, date '2026-10-01', 'planned', null, null),
+            ($2, $4, $5, $4, date '2026-10-02', 'in_progress', now(), null),
+            ($3, $4, $5, $4, date '2026-10-03', 'done', null, now())
+        `, [...workoutIds, ACTOR_ID, CLIENT_ID])
+        await connection.query(`
+          insert into public.workout_exercises (
+            id, workout_id, trainer_id, client_id, position,
+            exercise_source, exercise_ref, exercise_name, muscle_group, input_kind
+          ) values
+            ($1, $5, $8, $9, 0, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps'),
+            ($2, $5, $8, $9, 1, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps'),
+            ($3, $6, $8, $9, 0, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps'),
+            ($4, $7, $8, $9, 0, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps')
+        `, [...exerciseIds, ...workoutIds, ACTOR_ID, CLIENT_ID])
+        await connection.query(`
+          insert into public.workout_sets (
+            id, workout_exercise_id, trainer_id, client_id, position, plan_reps, fact_reps
+          ) values ($1, $2, $3, $4, 0, 10, 10)
+        `, [setId, exerciseIds[2], ACTOR_ID, CLIENT_ID])
+
+        await connection.query(up)
+        const exercises = await connection.query<{ id: string; input_kind: string }>(`
+          select id, input_kind from public.workout_exercises where id = any($1::uuid[])
+        `, [exerciseIds])
+        const kinds = new Map(exercises.rows.map((row) => [row.id, row.input_kind]))
+        expect(exerciseIds.slice(0, 3).map((id) => kinds.get(id))).toEqual(['strength', 'strength', 'strength'])
+        expect(kinds.get(exerciseIds[3] ?? '')).toBe('reps')
+        const workouts = await connection.query<{ id: string; version: string }>(`
+          select id, version::text from public.workouts where id = any($1::uuid[])
+        `, [workoutIds])
+        const versions = new Map(workouts.rows.map((row) => [row.id, row.version]))
+        expect(workoutIds.map((id) => versions.get(id))).toEqual(['2', '2', '1'])
+        const sets = await connection.query<{ plan_reps: number; fact_reps: number }>(`
+          select plan_reps, fact_reps from public.workout_sets where id = $1
+        `, [setId])
+        expect(sets.rows).toEqual([{ plan_reps: 10, fact_reps: 10 }])
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
     describe('trainer profile first-write concurrency', () => {
       let photoPool: PgDatabasePool
       let profileId: string

@@ -273,13 +273,18 @@ describe('system exercise catalog', () => {
   })
 
   it('применяет полный аудит формата результата ко всем исправленным карточкам', () => {
-    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(123)
+    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(124)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 
     for (const [ref, correction] of Object.entries(EXERCISE_METRIC_CORRECTIONS)) {
       expect(catalogByRef.get(ref), `нет проверенной карточки ${ref}`)
         .toMatchObject({ ref, ...correction })
     }
+  })
+
+  it('offers kilograms and repetitions for walking lunges', () => {
+    expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'vital-walking-lunge-ex270'))
+      .toMatchObject({ inputKind: 'strength', equipment: 'Без оборудования' })
   })
 
   it('разделяет все доступные упражнения на время и время с дистанцией без фиктивных километров', () => {

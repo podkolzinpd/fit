@@ -91,6 +91,9 @@ export const EXERCISE_METRIC_CORRECTIONS: Readonly<Record<string, ExerciseMetric
   'vital-banded-one-arm-row-ex571': { inputKind: 'reps' },
   'vital-hip-abduction-ex603': { inputKind: 'strength' },
   'vital-hip-adduction-ex604': { inputKind: 'strength' },
+  // Walking lunges may be performed with an external load; record its kg
+  // alongside repetitions instead of asking for an unrelated duration.
+  'vital-walking-lunge-ex270': { inputKind: 'strength' },
   'vital-gym-pro-r043-0101': { inputKind: 'reps' },
   'vital-gym-pro-r072-0177': { inputKind: 'strength', equipment: 'Блок' },
   'vital-gym-pro-r114-0266': { inputKind: 'duration' },
