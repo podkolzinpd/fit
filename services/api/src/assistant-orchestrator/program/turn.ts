@@ -25,7 +25,8 @@ function record(value: unknown): Record<string, unknown> | undefined {
 }
 function isProgramContinuationRequest(message: string): boolean {
   const text = message.toLocaleLowerCase('ru-RU').replace(/ё/gu, 'е')
-  return /(?:продолж\S*|тот\s+же|прежн\S*|без\s+изменени\S*).{0,40}(?:курс\S*|программ\S*|план\S*|подход\S*)|(?:курс\S*|программ\S*|план\S*|подход\S*).{0,40}(?:продолж\S*|тот\s+же|прежн\S*|без\s+изменени\S*)/u.test(text)
+  return /^(?:продолжаем(?:\s+без\s+изменений)?|без\s+изменений)[.!?]*$/u.test(text.trim())
+    || /(?:продолж\S*|тот\s+же|прежн\S*|без\s+изменени\S*).{0,40}(?:курс\S*|программ\S*|план\S*|подход\S*)|(?:курс\S*|программ\S*|план\S*|подход\S*).{0,40}(?:продолж\S*|тот\s+же|прежн\S*|без\s+изменени\S*)/u.test(text)
 }
 
 export function reusableProgramContinuation(message: string, history: readonly { action?: unknown }[]): AssistantAction | null {
@@ -34,7 +35,12 @@ export function reusableProgramContinuation(message: string, history: readonly {
     const candidate = record(row.action)
     const payload = record(candidate?.payload)
     const brief = readProgramBrief(payload?.briefState)
-    if (candidate?.tool !== 'create_program_draft' || !payload || !brief || typeof payload.clientId !== 'string' || typeof payload.clientName !== 'string') continue
+    // An unfinished questionnaire can be newer than the last generated
+    // program. It is not a reusable course: keep scanning for the latest
+    // confirmed recommendation instead of restarting from partial answers.
+    if (candidate?.tool !== 'create_program_draft' || payload?.step !== 'confirm' || !brief
+      || !Array.isArray(payload.canonicalWorkouts) || payload.canonicalWorkouts.length < 1
+      || typeof payload.clientId !== 'string' || typeof payload.clientName !== 'string') continue
     const retained = { ...brief }
     delete retained.startDate
     return {

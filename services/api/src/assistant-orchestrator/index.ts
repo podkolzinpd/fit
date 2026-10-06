@@ -850,7 +850,9 @@ export async function runAssistantTurn(
       if (lifecycle.data.status === 'applied' || lifecycle.data.status === 'cancelled') active = null
     }
     const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profileRecord?.timezone === 'string' ? profileRecord.timezone : 'Europe/Moscow' })
-    const routed = await routedAssistantTurn({ message: command.message, history, active: active ?? reusableProgram, operationId: turnId }, {
+    // An explicit "continue unchanged" selection deliberately replaces a
+    // newer partial questionnaire with the last confirmed course.
+    const routed = await routedAssistantTurn({ message: command.message, history, active: reusableProgram ?? active, operationId: turnId }, {
       record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true, accountRole === 'client'),
       cancel: async (action) => {
         if (!action.id) return
