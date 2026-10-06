@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { Gender, Workout } from '../../shared/domain'
 import { useAuth } from '../../app/auth-context'
+import { isClientLimeEnabled } from '../../app/client-lime'
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import {
   loadBodyMap,
@@ -119,7 +121,7 @@ function BodyRegion({ region, variant, side, selected, mode, onSelect, decorativ
   </g>
 }
 
-export function MapPanel({ data, selected, insightCandidates, variant, side, onSideChange, onSelect, onShowDetails, hideDetail = false, decorative = false, compact = false, detailFooter }: {
+export function MapPanel({ data, selected, insightCandidates, variant, side, onSideChange, onSelect, onShowDetails, hideDetail = false, decorative = false, compact = false, detailFooter, clientLime = false }: {
   data: BodyMapData
   selected: BodyMapRegion | undefined
   insightCandidates: readonly string[]
@@ -131,6 +133,7 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, onS
   hideDetail?: boolean
   decorative?: boolean
   compact?: boolean
+  clientLime?: boolean
   detailFooter?: ReactNode
 }) {
   const figure = variant === 'neutral' ? null : BODY_FIGURES[variant]
@@ -235,7 +238,7 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, onS
       </button>
     </div>}
     </div>
-    {!listOnly && !decorative && <details className="body-progress-zone-picker"><summary>Выбрать зону</summary>{zoneList}</details>}
+    {!listOnly && !decorative && <details className="body-progress-zone-picker">{clientLime ? <ProgressDetailsSummary>Выбрать зону</ProgressDetailsSummary> : <summary>Выбрать зону</summary>}{zoneList}</details>}
   </div>
 }
 
@@ -304,6 +307,7 @@ export function TrainingBodyProgressMap({ summary, workouts, clientId, insightCa
       : mode === 'load' && loadLoading
       ? <p className="body-progress-empty" role="status">Загружаем карту…</p>
       : <MapPanel
+          clientLime={isClientLimeEnabled(actor)}
           data={data}
           selected={selected}
           insightCandidates={insightCandidates}

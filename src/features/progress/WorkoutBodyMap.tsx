@@ -2,6 +2,7 @@ import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isClientLimeEnabled } from '../../app/client-lime'
 import type { Gender, Workout } from '../../shared/domain'
 import { ChevronRightIcon } from '../../shared/icons'
 import { formatLocalDate, formatWeekRange, localDate, type LocalDate } from '../../shared/local-date'
@@ -51,6 +52,7 @@ export function PeriodLoadMap({ workouts, clientId, periodStart, periodEnd, gend
     <h3>Нагрузка по телу</h3>
     <div className="workout-load-map-layout">
       {data.regions.length > 0 ? <MapPanel
+          clientLime={isClientLimeEnabled(actor)}
           data={data}
           selected={selected}
           insightCandidates={[]}
@@ -64,7 +66,7 @@ export function PeriodLoadMap({ workouts, clientId, periodStart, periodEnd, gend
         /> : <p className="body-progress-empty">{data.emptyMessage}</p>}
     </div>
     {data.regions.length === 0 && <p className="body-progress-period"><span>За последний месяц</span><span>{formatWeekRange(periodStart, periodEnd)}</span></p>}
-    {data.regions.length > 0 && <details className="body-progress-meaning"><summary>Что означает процент?</summary><p>Доля подтверждённых подходов этой зоны среди подходов, распределённых по мышцам за указанный период. Кардио и упражнения без определённой зоны не входят в расчёт. Вес и число повторов не учитываются.</p></details>}
+    {data.regions.length > 0 && <details className="body-progress-meaning">{isClientLimeEnabled(actor) ? <ProgressDetailsSummary>Что означает процент?</ProgressDetailsSummary> : <summary>Что означает процент?</summary>}<p>Доля подтверждённых подходов этой зоны среди подходов, распределённых по мышцам за указанный период. Кардио и упражнения без определённой зоны не входят в расчёт. Вес и число повторов не учитываются.</p></details>}
     <Link className="link body-progress-action-row" to={periodLoadMapLink()}><span>Открыть в прогрессе</span><ChevronRightIcon /></Link>
   </section>
 }

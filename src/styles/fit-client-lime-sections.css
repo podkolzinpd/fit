@@ -124,3 +124,40 @@ html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
 /* Authored badge artwork retains its original background and colors. */
 
 .phone-frame.fit-client-lime .athlete-achievement-card { background: transparent; border-radius: 14px; padding: 4px 0; }
+
+/* Tertiary actions keep a 44px target without competing with primary CTA. */
+.phone-frame.fit-client-lime.progress-identity .client-progress-goal-story .link,
+.phone-frame.fit-client-lime :is(.personal-workout-result, .period-exercise-result, .client-progress-goal-story,
+  .goal-block, .stage-row, .measurement-actions, .client-progress-history, .metrics-manager) .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lime-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime :is(.goal-block, .stage-row, .client-progress-history, .metrics-manager) .link.danger {
+  color: var(--danger);
+}
+.phone-frame.fit-client-lime :is(.body-progress-zone-picker, .body-progress-meaning) > .progress-details-toggle {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  gap: 12px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--lime-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
