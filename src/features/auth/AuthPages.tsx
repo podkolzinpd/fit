@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { authRepository } from '../../data/repositories/auth.repository'
@@ -13,6 +13,7 @@ import {
   YandexAuthHandoffRefreshRequiredError,
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
+import { ClientLimeStandaloneThemeContext } from '../../app/client-lime-standalone-context'
 import {
   getYandexAppSessionEntryConfig,
   getYandexIdPilotConfig,
@@ -81,19 +82,26 @@ function InvitationAuthRedirect({
 }
 
 export function AuthIdentityScreen({ children, className }: PropsWithChildren<{ className?: string }>) {
-  const theme = useAppTheme()
+  const clientTheme = useContext(ClientLimeStandaloneThemeContext)
+  const clientLime = clientTheme !== null
+  const baseTheme = useAppTheme()
+  const theme = clientTheme ?? baseTheme
   const themeVariant = resolveThemeVariant(theme)
 
   useEffect(() => {
+    if (clientLime) return
     applyThemeVariant(themeVariant)
     const root = document.documentElement
     root.classList.add('ui-identity')
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#FBFAF7' : '#111214')
     return () => {
+      // The actor can arrive after this passive effect mounted. Its new Lime
+      // layout already owns the document; old auth cleanup must not repaint it.
+      if (root.classList.contains('fit-client-lime-document')) return
       root.classList.remove('ui-identity')
       applyThemeVariant(resolveThemeVariant(theme))
     }
-  }, [theme, themeVariant])
+  }, [theme, themeVariant, clientLime])
 
   return <main className={[
     'auth-screen',

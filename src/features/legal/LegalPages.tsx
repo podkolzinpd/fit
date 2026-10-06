@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type PropsWithChildren } from 'react'
+import { useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { ClientLimeStandaloneLayout } from '../../app/ClientLimeStandaloneLayout'
+import { BackIcon } from '../../shared/icons'
+import { FitLimeIconsContext } from '../../shared/fit-lime-icons'
 import { useDataBackend } from '../../app/data-backend-context'
 import { FitLogo } from '../../shared/FitLogo'
 import { StartupSplash } from '../../shared/StartupSplash'
@@ -29,9 +32,10 @@ const documents = legalDocuments as {
 
 function LegalShell({ title, children }: PropsWithChildren<{ title: string }>) {
   const navigate = useNavigate()
+  const limeIcons = useContext(FitLimeIconsContext)
   return <main className="legal-screen ui-identity">
     <header className="legal-header">
-      <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(-1)}>←</button>
+      <button type="button" className="page-back" aria-label="Назад" onClick={() => navigate(-1)}>{limeIcons ? <BackIcon /> : '←'}</button>
       <div><FitLogo /><h1>{title}</h1></div>
     </header>
     <article className="legal-document">{children}</article>
@@ -115,14 +119,14 @@ export function LegalAcceptanceGate({ children }: PropsWithChildren) {
   // Profile refresh clears server-state queries. Keep an already accepted user
   // inside the app while the same actor's audit row is checked again.
   if ((actorKey !== null && acceptedActorKey === actorKey) || status.data?.accepted) return children
-  if (status.isLoading) return <StartupSplash />
-  if (status.error) return <main className="legal-gate ui-identity"><StatePanel
+  if (status.isLoading) return <ClientLimeStandaloneLayout><StartupSplash /></ClientLimeStandaloneLayout>
+  if (status.error) return <ClientLimeStandaloneLayout><main className="legal-gate ui-identity"><StatePanel
     tone="error"
     title="Не удалось проверить документы"
     description={status.error.message}
     action={<div className="stack"><button type="button" onClick={() => void status.refetch()}>Повторить</button><button type="button" className="secondary" onClick={() => void signOut()}>Выйти</button></div>}
-  /></main>
-  return <main className="legal-gate ui-identity">
+  /></main></ClientLimeStandaloneLayout>
+  return <ClientLimeStandaloneLayout><main className="legal-gate ui-identity">
     <FitLogo />
     <section className="legal-gate-card">
       <p className="eyebrow">ДОКУМЕНТЫ FIT</p>
@@ -133,7 +137,7 @@ export function LegalAcceptanceGate({ children }: PropsWithChildren) {
       <button type="button" className="primary" disabled={accept.isPending} onClick={() => accept.mutate()}>{accept.isPending ? 'Сохраняем…' : 'Принять и продолжить'}</button>
       <button type="button" className="secondary" onClick={() => void signOut()}>Выйти</button>
     </section>
-  </main>
+  </main></ClientLimeStandaloneLayout>
 }
 
 export function AccountDeletionPage() {

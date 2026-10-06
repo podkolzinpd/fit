@@ -158,7 +158,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -235,7 +235,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
           lastName: null,
           timezone: 'Europe/Moscow',
           accountRole: options.role ?? 'trainer',
-          ...(options.role === 'client' ? { client: { id: clientId, trainerId, fullName: 'Алексей Смирнов' } } : {}),
+          ...(options.role === 'client' ? { client: { id: clientId, trainerId: options.clientTrainerId ?? trainerId, fullName: 'Алексей Смирнов' } } : {}),
           experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true, clientLime: options.role === 'client' && options.profileId === clientId },
           preferences: { scheduleDensity },
         },
@@ -3941,6 +3941,278 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(page.getByRole('heading', { name: 'Сообщение отправлено' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('feedback-success.png') })
     expect(attempts).toBe(2)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+const publicTrainerId = '10000000-0000-4000-8000-000000000060'
+const publicTrainerDraft = {
+  displayName: 'Тестовый тренер', bio: 'Анкета для проверки интерфейса без реальных пользовательских данных.',
+  specialties: ['Тренажёрный зал / силовой тренинг'], city: 'Москва', metroStationIds: [], customLocations: ['Тестовый зал'],
+  trainingModes: ['online', 'in_person'], experienceStartYear: 2020, education: 'Тестовое образование', formats: 'Индивидуальные занятия', price: 'По договорённости', acceptingClients: true,
+  avatarDataUrl: null,
+  photos: [0, 1].map((index) => ({ id: `10000000-0000-4000-8000-00000000006${index + 1}`, url: 'http://127.0.0.1:5173/assets/startup-photo-983c93dc4df8.jpg', thumbnailUrl: 'http://127.0.0.1:5173/assets/startup-photo-983c93dc4df8.jpg', mimeType: 'image/jpeg', width: 940, height: 1673 })),
+  certificates: [{ title: 'Тестовый сертификат', organization: 'Фикстура', year: 2020 }],
+}
+
+async function mockPublicTrainer(page: Page) {
+  await page.route(`**/v1/trainers/${publicTrainerId}/public-profile`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ publicId: publicTrainerId, draft: publicTrainerDraft, published: publicTrainerDraft, listedInCatalog: true, publishedAt: '2026-09-24T09:00:00.000Z', updatedAt: '2026-09-24T09:00:00.000Z', version: 1, isBrandTrainer: false }) }))
+  await page.route('**/v1/trainers/catalog*', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [{ publicId: publicTrainerId, profile: publicTrainerDraft, isBrandTrainer: false }], totalCount: 1, nextOffset: null }) }))
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime public context and photo portal ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await mockPublicTrainer(page)
+    await page.route('**/v1/account-deletion-request', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ supported: true, request: null }) }))
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me/trainers')
+    await expect(page.getByRole('link', { name: 'Посмотреть анкету' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('catalog-filled.png') })
+    await page.getByRole('link', { name: 'Посмотреть анкету' }).click()
+    await expect(page.locator('.fit-client-lime-public')).toBeVisible()
+    await expect(page.locator('html')).toHaveClass(/fit-client-lime-document/)
+    await expect(page.locator('.trainer-card')).toContainText('Тестовый тренер')
+    await expect(page.locator('.trainer-card')).toHaveCSS('border-radius', '32px')
+    await page.getByText('Тестовый сертификат', { exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('public-trainer.png') })
+    await page.getByRole('button', { name: 'Открыть фото тренера Тестовый тренер' }).click()
+    const viewer = page.getByRole('dialog', { name: 'Фотографии тренера' })
+    await expect(viewer).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('photo-portal-before.png') })
+    await expect(viewer.locator('.fullscreen-image-controls span')).toHaveCSS('font-family', /YS Geo/)
+    await expect(viewer.getByRole('button', { name: 'Закрыть фото' })).toHaveCSS('border-radius', '999px')
+    await viewer.getByRole('button', { name: 'Следующее фото' }).click()
+    await expect(viewer.locator('.fullscreen-image-counter')).toHaveText('2 из 2')
+    await viewer.getByRole('button', { name: 'Увеличить', exact: true }).click()
+    await expect(viewer.locator('.fullscreen-image-controls span')).toHaveText('150%')
+    await page.screenshot({ path: testInfo.outputPath('photo-portal.png') })
+    await viewer.getByRole('button', { name: 'Закрыть фото' }).click()
+    await expect(viewer).toHaveCount(0)
+    await page.reload()
+    await expect(page.locator('.fit-client-lime-public')).toBeVisible()
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'light' ? '#f6f7f2' : '#000000')
+    for (const route of ['/legal/terms', '/legal/privacy', '/legal/delete-account', '/invite']) {
+      await page.goto(route)
+      await expect(page.locator('.fit-client-lime-public')).toBeVisible()
+      await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'light' ? '#f6f7f2' : '#000000')
+      await expect(page.locator('.fit-client-lime-public')).toHaveCSS('font-family', /YS Geo/)
+      if (route === '/legal/delete-account') {
+        await page.getByRole('button', { name: 'Запросить удаление аккаунта' }).click()
+        await expect(page.getByRole('alertdialog')).toBeVisible()
+        await page.screenshot({ path: testInfo.outputPath('account-deletion-confirm.png') })
+        await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+      }
+      if (route.startsWith('/legal/')) {
+        await page.locator('.legal-footer-links').scrollIntoViewIfNeeded()
+        await expect(page.locator('.legal-footer-links')).toBeVisible()
+      }
+      await page.screenshot({ path: testInfo.outputPath(`${route.split('/').at(-1)}.png`) })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    await page.goto('/me')
+    await expect(page.locator('.client-tab-bar')).toBeVisible()
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime legal acceptance and valid invitation ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    let accepted = false
+    let attempts = 0
+    await page.route('**/v1/legal/acceptance', async (route) => {
+      if (route.request().method() === 'PUT') {
+        attempts++
+        if (attempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        accepted = true
+        return route.fulfill({ contentType: 'application/json', body: '{"acceptedAt":"2026-10-06T10:00:00.000Z"}' })
+      }
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ applicable: true, accepted, acceptedAt: accepted ? '2026-10-06T10:00:00.000Z' : null }) })
+    })
+    await page.goto('/me')
+    await expect(page.getByRole('heading', { name: 'Условия обновились' })).toBeVisible()
+    await expect(page.locator('.legal-gate-card')).toHaveCSS('border-radius', '32px')
+    const accept = page.getByRole('button', { name: 'Принять и продолжить' })
+    await expect(accept).toHaveCSS('border-radius', '999px')
+    await accept.click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('legal-acceptance-error.png') })
+    await accept.click()
+    await expect(page.locator('.client-tab-bar')).toBeVisible()
+    const token = `ABCDEF123456.${'a'.repeat(64)}`
+    await page.route('**/v1/invitation-links/preview', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ invitation: { inviterName: 'Тестовый тренер', targetRole: 'client', expiresAt: '2099-01-01T00:00:00.000Z', status: 'active' } }) }))
+    let claims = 0
+    await page.route('**/v1/invitation-links/claim', (route) => { claims++; return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ clientId }) }) })
+    await page.goto(`/invite?source=yandex&token=${token}`)
+    const connect = page.getByRole('button', { name: 'Подключиться к тренеру' })
+    await expect(connect).toHaveCSS('border-radius', '999px')
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', theme === 'light' ? '#f6f7f2' : '#000000')
+    await page.screenshot({ path: testInfo.outputPath('valid-invitation.png') })
+    await connect.click()
+    await expect(page.getByRole('heading', { name: 'Тренер подключён' })).toBeVisible()
+    expect(claims).toBe(1)
+    await page.getByRole('button', { name: 'Открыть кабинет' }).click()
+    await expect(page).toHaveURL(/\/me$/)
+    await expect(page.locator('.client-tab-bar')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const kind of ['anonymous', 'other-client', 'trainer'] as const) {
+  test(`Client Lime public routes exclude ${kind}`, async ({ page }) => {
+    await mockPilot(page, { role: kind === 'trainer' ? 'trainer' : 'client', profileId: kind === 'other-client' ? '10000000-0000-4000-8000-000000000010' : kind === 'trainer' ? trainerId : clientId, fitLime: kind === 'trainer' })
+    if (kind === 'anonymous') await page.addInitScript(() => localStorage.removeItem('fit.yandexAppSession.v1'))
+    await page.addInitScript((id) => localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark'), clientId)
+    await mockPublicTrainer(page)
+    for (const route of ['/legal/privacy', `/trainers/${publicTrainerId}`, '/invite']) {
+      await page.goto(route)
+      await expect(page.getByRole('heading').first()).toBeVisible()
+      await expect(page.locator('.fit-client-lime')).toHaveCount(0)
+      await expect(page.locator('html')).not.toHaveClass(/fit-client-lime-document/)
+    }
+  })
+}
+
+for (const withTrainer of [false, true]) for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime first run and trainer connection ${withTrainer ? 'connected' : 'independent'} ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, clientTrainerId: withTrainer ? trainerId : clientId, workouts: [] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.route('**/v1/connections', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ memberships: withTrainer ? [{ clientId, trainerId, firstName: 'Тестовый тренер', lastName: null, joinedAt: '2026-09-01T00:00:00.000Z', isRoot: true }] : [], invitations: [] }) }))
+    await page.goto('/me')
+    await expect(page.getByRole('heading', { name: 'Тренируйтесь и следите за прогрессом' })).toBeVisible()
+    const invitation = page.getByRole('link', { name: 'Подключиться по приглашению' })
+    if (withTrainer) await expect(invitation).toHaveCount(0)
+    else await invitation.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('first-run.png') })
+    await page.goto('/me/profile')
+    const connections = page.getByRole('region', { name: 'Связь с тренером' })
+    if (withTrainer) {
+      await expect(connections).toContainText('Основной тренер')
+      await connections.getByRole('button', { name: 'Действия с тренером Тестовый тренер' }).click()
+      await page.getByRole('menuitem', { name: 'Отключить' }).click()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await page.screenshot({ path: testInfo.outputPath('trainer-disconnect-confirm.png') })
+      await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    } else {
+      await expect(connections).toContainText('Найдите своего тренера')
+      const find = connections.getByRole('link', { name: 'Найти тренера' })
+      await expect(find).toHaveCSS('border-radius', '999px')
+      await find.scrollIntoViewIfNeeded()
+      await page.screenshot({ path: testInfo.outputPath('independent-profile.png') })
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime filled finance assistant and chat media ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-06T12:00:00+03:00'))
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    let financeFailure = true
+    const packageId = '10000000-0000-4000-8000-000000000090'
+    await page.route('**/v1/me/finance', (route) => route.fulfill(financeFailure
+      ? { status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }
+      : { contentType: 'application/json', body: JSON.stringify({ finance: { trainers: [{ trainerId, trainerName: 'Тестовый тренер', packages: [{ id: packageId, kind: 'session_pack', title: 'Персональные тренировки с длинным названием услуги', sessionsTotal: 10, sessionsUsed: 2, sessionsRemaining: 8, priceCents: 2500000, paidCents: 1000000, dueCents: 1500000, startsOn: '2026-10-01', endsOn: '2026-11-01', paymentDueOn: '2026-10-10', packageStatus: 'active', paymentStatus: 'partial' }], payments: [{ id: '10000000-0000-4000-8000-000000000091', packageId, amountCents: 1000000, receivedOn: '2026-10-01' }] }] } }) }))
+    await page.goto('/me/finance')
+    await expect(page.locator('.state-panel-error')).toBeVisible()
+    financeFailure = false
+    await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+    const service = page.locator('.client-finance-package')
+    await expect(service).toContainText('8 из 10')
+    await expect(service).toHaveCSS('border-radius', '32px')
+    await page.getByRole('heading', { name: 'Оплаты', exact: true }).scrollIntoViewIfNeeded()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('finance-filled.png'), fullPage: true })
+
+    let attempts = 0
+    await page.route('**/v1/assistant/turn', (route) => {
+      attempts++
+      return route.fulfill(attempts === 1
+        ? { status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }
+        : { contentType: 'application/json', body: JSON.stringify({ reply: 'Продолжайте тренировки по плану. Проверенный тестовый ответ.', action: null }) })
+    })
+    await page.goto('/assistant')
+    const composer = page.getByRole('textbox', { name: 'Сообщение ассистенту' })
+    await expect(composer).toBeEnabled()
+    await composer.fill('Как идёт мой прогресс?')
+    await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('assistant-error.png') })
+    await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(page.getByText('Продолжайте тренировки по плану. Проверенный тестовый ответ.')).toBeVisible()
+    expect(attempts).toBe(2)
+    await expect(composer).toHaveCSS('font-family', /YS Geo/)
+    await page.screenshot({ path: testInfo.outputPath('assistant-filled.png') })
+
+    const programPayload = {
+      programPilot: true, step: 'confirm', clientId, clientName: 'Тестовый клиент',
+      goal: 'Регулярные тренировки', briefState: { scope: 'single_workout', weeks: 1, frequency: 1, durationMin: 30 },
+      editableCatalog: [{ ref: 'squat', name: 'Приседания', inputKind: 'reps' }],
+      modelInputJson: { fixture: true }, modelOutputJson: { fixture: true },
+      canonicalWorkouts: [{ requestId: '10000000-0000-4000-8000-000000000093', clientId, workoutDate: '2026-10-07', exercises: [{ name: 'Приседания', restBetweenSetsSec: 90, sets: [{ reps: 10, rpe: 6 }] }] }],
+    }
+    await page.route('**/v1/assistant/turn', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ reply: 'Готова рекомендация к тренировке.', action: { tool: 'create_program_draft', status: 'proposed', title: 'Одна тренировка', description: 'Проверьте тренировку', payload: programPayload } }) }))
+    await composer.fill('Составь одну тренировку')
+    await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+    await expect(page.locator('.assistant-program-card')).toBeVisible()
+    await page.locator('.assistant-program-sessions summary').click()
+    await expect(page.locator('.assistant-program-sessions')).toContainText('Приседания')
+    const addProgram = page.getByRole('button', { name: 'Добавить в расписание', exact: true })
+    await addProgram.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('assistant-program-before.png') })
+    await expect(addProgram).toHaveCSS('border-radius', '999px')
+    await page.screenshot({ path: testInfo.outputPath('assistant-program-result.png') })
+    await page.locator('.assistant-program-sessions').getByRole('button', { name: 'Изменить', exact: true }).click()
+    const editProgram = page.getByRole('region', { name: 'Изменение упражнения' })
+    await expect(editProgram).toBeVisible()
+    await expect(editProgram.getByRole('button', { name: 'Проверить изменение' })).toHaveCSS('border-radius', '999px')
+    await editProgram.locator('input').first().scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('assistant-program-fields.png') })
+    await expect(editProgram.locator('input').first()).toHaveCSS('border-radius', '16px')
+    await expect(editProgram.getByRole('combobox', { name: 'Область изменения' })).toHaveCSS('min-height', '48px')
+    await page.getByRole('button', { name: 'Закрыть правку' }).click()
+    if (process.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true') {
+      await page.getByRole('button', { name: 'Оставить обратную связь', exact: true }).click()
+      await page.getByRole('button', { name: 'Что-то не так', exact: true }).click()
+      await expect(page.getByRole('button', { name: 'Отправить отзыв', exact: true })).toBeDisabled()
+      await page.getByRole('textbox', { name: 'Комментарий к программе' }).fill('Тестовая проверка формы')
+      await expect(page.getByRole('button', { name: 'Отправить отзыв', exact: true })).toBeEnabled()
+      await page.getByRole('button', { name: 'Отправить отзыв', exact: true }).scrollIntoViewIfNeeded()
+      await expect(page.getByRole('button', { name: 'Отправить отзыв', exact: true })).toBeInViewport()
+      await page.screenshot({ path: testInfo.outputPath('program-feedback.png') })
+      await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+
+    const summaryResult = {
+      status: 'applied', summaryId: '10000000-0000-4000-8000-000000000094', clientId, clientName: 'Тестовый клиент',
+      periodStart: '2026-09-01', periodEnd: '2026-09-30', periodLabel: 'Последний месяц',
+      trainer: { headline: 'Темп стал стабильнее', progress: ['Жим растёт'], consistency: 'Две тренировки в неделю', attention: ['Следить за плечом'] },
+      metrics: { completedWorkouts: 6, workoutsPerWeek: 1.5, activeWeeks: 4 },
+    }
+    await page.route('**/v1/assistant/turn', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ reply: 'Готова сводка прогресса.', action: { tool: 'summarize_progress', status: 'proposed', lifecycleStatus: 'applied', title: 'Сводка прогресса', description: 'Проверенная тестовая сводка', payload: {}, result: summaryResult } }) }))
+    await composer.fill('Покажи сводку прогресса')
+    await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+    const saveSummary = page.getByRole('button', { name: 'Сохранить в прогресс', exact: true })
+    await saveSummary.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('assistant-summary.png') })
+    await expect(saveSummary).toHaveCSS('border-radius', '999px')
+
+    await page.route(`**/v1/chat/conversations/${conversationId}/messages*`, (route) => route.request().method() === 'GET'
+      ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ messages: [{ id: messageId, conversationId, senderId: trainerId, body: 'Тестовое фото', createdAt: '2026-10-06T09:00:00.000Z', editedAt: null, replyTo: null, image: { url: 'http://127.0.0.1:5173/assets/startup-photo-983c93dc4df8.jpg', mimeType: 'image/jpeg', width: 600, height: 800, sizeBytes: 10000 } }], nextCursor: null }) })
+      : route.fallback())
+    await page.goto(`/chat/${conversationId}`)
+    await page.getByRole('button', { name: 'Открыть фото', exact: true }).click()
+    await expect(page.locator('.fullscreen-image-viewer')).toBeVisible()
+    await expect(page.locator('.fullscreen-image-viewer')).toHaveCSS('font-family', /YS Geo/)
+    await page.screenshot({ path: testInfo.outputPath('chat-photo-portal.png') })
+    await page.getByRole('button', { name: 'Закрыть фото', exact: true }).click()
+    await expect(page.locator('.fullscreen-image-viewer')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
