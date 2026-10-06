@@ -7000,6 +7000,17 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .finance-payment-ledger .finance-payment:last-child { border-bottom:0; }
 .finance-payment-ledger .finance-payment-package { min-width:0; overflow:hidden; color:var(--muted); font-size:11px; text-align:right; text-overflow:ellipsis; white-space:nowrap; }
 .finance-payment-ledger .overflow-menu { width:44px; }
+.finance-payment-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-8,8px); min-width:0; align-items:end; }
+.finance-cost-payment { display:grid; min-width:0; gap:8px; }
+.finance-payment-fields > :only-child { grid-column:1/-1; }
+.finance-payment-fields .field { display:flex; flex-direction:column; justify-content:flex-end; min-width:0; }
+.finance-fill-payment { justify-self:end; min-height:44px; padding:0 8px; }
+.finance-service-balance { grid-template-columns:minmax(0,1fr); }
+.finance-service-balance p { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }
+.finance-service-money { margin:0; }
+.finance-service-payments .finance-payment { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:center; gap:8px; }
+.finance-service-payments .finance-payment span { white-space:normal; overflow-wrap:anywhere; }
+.finance-service-payments .finance-empty { margin:8px 0 0; }
 .finance-session-filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:0; }
 .finance-session-filters button { min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; padding:6px 8px; font-size:11px; line-height:1.1; text-align:center; }
 .finance-session-list { overflow:hidden; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised); }

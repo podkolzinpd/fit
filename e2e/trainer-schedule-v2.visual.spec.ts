@@ -3,6 +3,7 @@ import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calend
 import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
 import { computeClientStats } from '../src/data/repositories/workout-rules'
 import { localDate } from '../src/shared/local-date'
+import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/repositories/trainer-finance.repository'
 
 const trainerId = '10000000-0000-4000-8000-000000000001'
 const clientId = '10000000-0000-4000-8000-000000000002'
@@ -791,10 +792,10 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await expect(page.getByRole('group', { name: 'Стоимость и оплата' })).toBeVisible()
     await expect(page.getByLabel('Уже проведено, занятий', { exact: true })).not.toBeVisible()
     await page.getByLabel('Стоимость, ₽', { exact: true }).fill('30000')
-    await page.getByText('Перенести текущие остатки', { exact: true }).click()
+    await page.getByText('Уже проведённые занятия', { exact: true }).click()
     const used = page.getByLabel('Уже проведено, занятий', { exact: true })
     await used.fill('30000')
-    await page.getByText('Перенести текущие остатки', { exact: true }).click()
+    await page.getByText('Уже проведённые занятия', { exact: true }).click()
     const save = page.getByRole('button', { name: 'Сохранить', exact: true })
     await save.click()
     await expect(used).toBeFocused()
@@ -816,6 +817,119 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await expect(page.locator('.lime-finance-form')).toHaveCount(0)
     expect(commands).toHaveLength(2)
     expect(commands[1]).toEqual(commands[0])
+  })
+}
+
+for (const fitLime of [false, true]) for (const theme of ['light', 'dark']) for (const width of [320, 390, 430, 1440]) {
+  test(`Finance payment lifecycle compact ${fitLime ? 'Lime' : 'Mono'} ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { fitLime })
+    await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
+    const ledger: TrainerFinanceClientBundle = { clientId, packages: [], payments: [], sessions: [] }
+    const receiptIds: string[] = []
+    const updateTotals = () => {
+      const service = ledger.packages[0]!
+      service.paidCents = ledger.payments.filter((payment) => !payment.voidedAt).reduce((sum, payment) => sum + payment.amountCents, 0)
+      service.dueCents = Math.max(0, service.priceCents - service.paidCents)
+      service.paymentStatus = service.dueCents === 0 ? 'paid' : service.paidCents ? 'partial' : 'unpaid'
+    }
+    await page.route(`**/v1/clients/${clientId}/finance`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ finance: ledger }) }))
+    await page.route(`**/v1/clients/${clientId}/finance/packages`, async (route) => {
+      const draft = route.request().postDataJSON() as TrainerFinancePackageDraft
+      expect(draft.openingReceivedOn).toBe('2026-08-27')
+      expect(draft.requestId).toBeTruthy()
+      ledger.packages.push({ ...draft, id: newWorkoutId, clientId, trainerId, sessionsUsed: 0, sessionsRemaining: draft.sessionsTotal, paidCents: draft.openingPaidCents, dueCents: draft.priceCents - draft.openingPaidCents, packageStatus: 'active', paymentStatus: 'partial', closedAt: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' })
+      ledger.payments.push({ id: messageId, packageId: newWorkoutId, amountCents: draft.openingPaidCents, receivedOn: draft.openingReceivedOn!, source: 'opening', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' })
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ package: ledger.packages[0] }) })
+    })
+    await page.route(`**/v1/finance/packages/${newWorkoutId}/payments`, async (route) => {
+      const draft = route.request().postDataJSON() as TrainerFinancePaymentDraft
+      expect(draft.requestId).toBeTruthy()
+      receiptIds.push(draft.requestId!)
+      const payment = { ...draft, id: `20000000-0000-4000-8000-${String(receiptIds.length).padStart(12, '0')}`, packageId: newWorkoutId, source: 'manual' as const, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' }
+      ledger.payments.push(payment)
+      updateTotals()
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ payment }) })
+    })
+    await page.route('**/v1/finance/payments/*', async (route) => {
+      const payment = ledger.payments.find((item) => item.id === new URL(route.request().url()).pathname.split('/').pop())!
+      if (route.request().method() === 'DELETE') payment.voidedAt = '2026-10-07T00:00:00Z'
+      else { Object.assign(payment, route.request().postDataJSON()); payment.version += 1 }
+      updateTotals()
+      await route.fulfill({ status: route.request().method() === 'DELETE' ? 204 : 200, contentType: 'application/json', body: route.request().method() === 'DELETE' ? '' : JSON.stringify({ payment }) })
+    })
+    await page.goto(`/clients/${clientId}/finance`)
+    await page.getByRole('button', { name: 'Новая', exact: true }).click()
+    await page.getByLabel('Название', { exact: true }).fill('Персональные тренировки с длинным названием услуги')
+    const cost = page.getByLabel('Стоимость, ₽', { exact: true })
+    const paid = page.getByLabel('Уже оплачено, ₽', { exact: true })
+    await cost.fill('30000')
+    await page.getByRole('button', { name: 'Вся сумма', exact: true }).click()
+    await expect(paid).toHaveValue('30000')
+    await paid.fill('10000')
+    await page.getByLabel('Дата получения', { exact: true }).fill('2026-08-27')
+    await page.getByLabel('Начало', { exact: true }).fill('2026-09-01')
+    const boxes = await Promise.all([cost.boundingBox(), paid.boundingBox()])
+    expect(Math.abs(boxes[0]!.y - boxes[1]!.y)).toBeLessThanOrEqual(1)
+    expect(boxes[0]!.x + boxes[0]!.width).toBeLessThan(boxes[1]!.x)
+    await page.screenshot({ path: testInfo.outputPath('new-service.png'), fullPage: true })
+    const save = page.getByRole('button', { name: 'Сохранить', exact: true })
+    await page.setViewportSize({ width, height: 400 })
+    await page.getByLabel('Комментарий', { exact: true }).focus()
+    await save.scrollIntoViewIfNeeded()
+    await expect(save).toBeInViewport()
+    const saveBox = await save.boundingBox()
+    const cancelBox = await page.getByRole('button', { name: 'Отмена', exact: true }).boundingBox()
+    expect(Math.abs(saveBox!.y - cancelBox!.y)).toBeLessThanOrEqual(1)
+    expect(saveBox!.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await save.click()
+    await page.setViewportSize({ width, height: 844 })
+    const card = page.locator('.finance-package').first()
+    const facts = card.locator('.finance-service-money')
+    await expect(facts).toContainText(/10\s000/)
+    await expect(facts).toContainText(/20\s000/)
+    await page.screenshot({ path: testInfo.outputPath('service-paid-due.png'), fullPage: true })
+    await card.getByRole('button', { name: 'Внести оплату', exact: true }).click()
+    await expect(page.getByLabel('Сумма, ₽', { exact: true })).toHaveValue('20000')
+    await page.getByLabel('Сумма, ₽', { exact: true }).fill('5000')
+    await save.click()
+    await expect(facts).toContainText(/15\s000/)
+    await card.locator('.finance-service-payments > summary').click()
+    const partial = card.locator('.finance-payment').filter({ hasText: /5\s000/ })
+    await partial.getByRole('button', { name: /Действия с оплатой/ }).click()
+    await page.getByRole('menuitem', { name: 'Изменить', exact: true }).click()
+    await expect(page.getByLabel('Сумма, ₽', { exact: true })).toHaveValue('5000')
+    await page.getByLabel('Сумма, ₽', { exact: true }).fill('3000')
+    await save.click()
+    await expect(facts).toContainText(/17\s000/)
+    await card.locator('.finance-service-payments > summary').click()
+    const edited = card.locator('.finance-payment').filter({ hasText: /3\s000/ })
+    await edited.getByRole('button', { name: /Действия с оплатой/ }).click()
+    await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toContainText(/3\s000/)
+    await expect(dialog).toContainText('от ')
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(ledger.payments[1]!.voidedAt).toBeNull()
+    await edited.getByRole('button', { name: /Действия с оплатой/ }).click()
+    await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(facts).toContainText(/20\s000/)
+    await card.getByRole('button', { name: 'Внести оплату', exact: true }).click()
+    await expect(page.getByLabel('Сумма, ₽', { exact: true })).toHaveValue('20000')
+    await save.click()
+    await expect(card).toContainText('Оплачен')
+    await expect(facts.locator('p').last()).toContainText('0')
+    expect(new Set(receiptIds).size).toBe(2)
+    await card.locator('.finance-service-payments > summary').click()
+    await expect(card.locator('.finance-payment')).toHaveCount(2)
+    await page.screenshot({ path: testInfo.outputPath('payments-expanded.png'), fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.getByRole('tab', { name: 'Оплаты: 2', exact: true }).click()
+    await expect(page.locator('.finance-payment-ledger .finance-payment')).toHaveCount(2)
+    await page.reload()
+    await expect(page.locator('.finance-service-money')).toContainText(/30\s000/)
   })
 }
 

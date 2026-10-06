@@ -45,13 +45,13 @@ Scope: `/clients/:clientId/finance`, существующий Yandex finance API
 | PR1.4 | SQL и UI: после удаления paid/due пересчитаны, занятия неизменны | Проверено локально |
 | PR1.5 | Actor integration: foreign trainer/client denied; клиентский readback после исправлений | Проверено локально |
 | PR1.6 | Additive migration, старые функции и записи сохранены; clean PG17 chain130, actor100/100 | Проверено локально |
-| PR2.1 | — | Ожидает PR1 |
-| PR2.2 | — | Ожидает PR1 |
-| PR2.3 | — | Ожидает PR1 |
-| PR2.4 | — | Ожидает PR1 |
-| PR2.5 | — | Ожидает PR1 |
-| PR2.6 | — | Ожидает PR1 |
-| PR2.7 | — | Ожидает PR1 |
+| PR2.1 | Поле видно сразу, «Вся сумма», условная дата; component оба UI + E2E creation | Проверено локально |
+| PR2.2 | Стоимость/оплачено/к оплате без повторов; E2E 10 000/20 000 → 15 000/15 000 → 13 000/17 000 | Проверено локально |
+| PR2.3 | Нейтральное «Внести оплату» в карточке текущей/исторической услуги | Проверено локально |
+| PR2.4 | Остаток 20 000; изменение до 5 000; выбор иной услуги меняет сумму; unit + E2E | Проверено локально |
+| PR2.5 | Раскрытие истории внутри услуги; один renderer для локальной и общей истории; edit/delete E2E | Проверено локально |
+| PR2.6 | Сумма и дата в confirmation; cancel и confirm проверены E2E | Проверено локально |
+| PR2.7 | Существующие Fit primitives; static actions после полей; один тап при keyboard в обоих UI | Проверено локально |
 
 Production-проверка выполняется штатной выкладкой и readback; финансовые данные реальных клиентов не меняем ради тестов. При отсутствии авторизованной production-сессии честно фиксируем эту границу проверки.
 
@@ -63,3 +63,15 @@ PR1 UI: исходный маршрут на WebKit320/430; error/retry/умен
 PR1 после переноса на main6fd02c67 (#1464): отдельная clean PostgreSQL17 chain130 и actor99/99, finance component18/18, migration safety passed. Общая локальная база сохранена.
 
 PR1 после всех предшествующих слияний (#1471/#1463, main07c9dcb1): clean PostgreSQL17 chain130 и actor100/100, finance/Yandex repository64/64 passed. Конфликт переноса был только в CURRENT_STATE; все upstream-разделы сохранены.
+
+PR2: component23/23. Новый полный route lifecycle 18/18 passed; проверен на WebKit320/390/430/1440, Mono/Lime, light/dark и viewport400 при input focus. Production ещё не выпущен; screenshot матрица сохраняется в PR.
+
+Визуальная приёмка: `finance-payments-20261007/` — Mono light service, Mono dark expanded payments, Lime light form и Lime dark service. Screenshot просмотрены: поля выровнены, меню в своей колонке, кнопки после полей. Физическая клавиатура iPhone не проверена: эмулированный WebKit/focus/viewport400.
+
+PR2 общий прогон: lint/typecheck passed; обычное покрытие — 2 соседних таймаута ExercisePicker, последовательное без изменений — 283 files / 2419 tests passed. Policy/db-types/iOS/media/hosting/API build/frontend build passed.
+
+CI визуального PR2 выявил лишнюю строку в редактировании Mono. Сохранена прежняя компактная строка «Всего занятий / Стоимость». Linux и macOS visual finance3/3 each passed; обновлены только mobile online-coaching baselines из-за запланированной кнопки «Вся сумма», threshold сохранён. Screenshot просмотрены, edit baselines не менялись.
+
+PR2: форма остаётся в состоянии сохранения до обновления остатка после оплаты или создания услуги. Целевой сценарий медленного обновления: следующая форма подставляет новый долг, повторный платёж не отправляется; finance component23/23, scoped ESLint/typecheck passed.
+
+Выпуск PR1: CI37546811112 текущего head314915c5 success; #1473 слит3bea5635. PR2 перенесён на этот main, финальные finance component23/23 passed; далее обязательный CI интерфейса и production readback. Серверная миграция130 выкатывается штатным Yandex workflow.

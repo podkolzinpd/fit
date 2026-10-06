@@ -65,6 +65,8 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
   const [startsOn, setStartsOn] = useState(current?.startsOn ?? renewalStart)
   const [kind, setKind] = useState<TrainerFinancePackage['kind']>(source?.kind ?? 'session_pack')
   const [title, setTitle] = useState(source?.title ?? 'Персональные тренировки')
+  const [priceValue, setPriceValue] = useState(source ? String(source.priceCents / 100) : '')
+  const [paidValue, setPaidValue] = useState('0')
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setValidationError(null)
@@ -83,7 +85,7 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
         price: 'Укажите стоимость в рублях: от 0, не больше двух знаков после запятой',
         openingPaid: 'Укажите оплату в рублях: от 0, не больше двух знаков после запятой',
         startsOn: 'Укажите дату начала', endsOn: 'Укажите дату окончания не раньше начала',
-        paymentDueOn: 'Проверьте дату оплаты', comment: 'Сократите комментарий до 2000 символов',
+        openingReceivedOn: 'Укажите дату получения', paymentDueOn: 'Проверьте дату оплаты', comment: 'Сократите комментарий до 2000 символов',
       }
       const controls = Array.from(form.elements).filter((element): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
         element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)
@@ -113,6 +115,7 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
       onSubmit({
         kind, title: String(form.get('title') ?? '').trim(), sessionsTotal, openingUsedSessions,
         priceCents, openingPaidCents,
+        ...(!current && openingPaidCents > 0 ? { openingReceivedOn: String(form.get('openingReceivedOn') ?? '') } : {}),
         startsOn, endsOn,
         paymentDueOn: optional(form, 'paymentDueOn'), comment: optional(form, 'comment'),
       })
@@ -126,8 +129,13 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
     : <Field key={name} label={label}>{input}</Field>
   const sessions = kind === 'session_pack' && field('sessionsTotal', lime ? 'Количество занятий' : 'Всего занятий', <input {...validation('sessionsTotal')} name="sessionsTotal" type="number" inputMode="numeric" min="1" max="10000" required defaultValue={source?.sessionsTotal || 10} />)
   const used = kind === 'session_pack' && !current && field('openingUsedSessions', lime ? 'Уже проведено, занятий' : 'Уже проведено', <input {...validation('openingUsedSessions')} name="openingUsedSessions" type="number" inputMode="numeric" min="0" max="10000" required defaultValue="0" />)
-  const price = field('price', 'Стоимость, ₽', <input {...validation('price')} name="price" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue={source ? source.priceCents / 100 : ''} />)
-  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required defaultValue="0" />)
+  const price = field('price', 'Стоимость, ₽', <input {...validation('price')} name="price" type="number" inputMode="decimal" min="0" step="0.01" required value={priceValue} onChange={(event) => setPriceValue(event.target.value)} />)
+  const paid = !current && field('openingPaid', 'Уже оплачено, ₽', <input {...validation('openingPaid')} name="openingPaid" type="number" inputMode="decimal" min="0" step="0.01" required value={paidValue} onChange={(event) => setPaidValue(event.target.value)} />)
+  const costAndPayment = <div className="finance-cost-payment">
+    <div className="finance-payment-fields">{price}{paid}</div>
+    {!current && <button type="button" className="link finance-fill-payment" disabled={saving || Number(priceValue) <= 0 || !priceValue} onClick={() => setPaidValue(priceValue)}>Вся сумма</button>}
+    {!current && Number(paidValue) > 0 && field('openingReceivedOn', 'Дата получения', <input {...validation('openingReceivedOn')} name="openingReceivedOn" type="date" required defaultValue={today} />)}
+  </div>
   const dates = <>
     {field('startsOn', 'Начало', <input {...validation('startsOn')} name="startsOn" type="date" required value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />)}
     {field('endsOn', 'Окончание', <input {...validation('endsOn')} name="endsOn" type="date" required={kind === 'online_coaching'} min={startsOn} defaultValue={current?.endsOn ?? renewalEnd} />)}
@@ -143,16 +151,19 @@ export function PackageForm({ current, template, today, saving, error, onCancel,
     {field('title', 'Название', <input {...validation('title')} name="title" required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />)}
     {lime ? <>
       {kind === 'session_pack' && <fieldset><legend>Занятия</legend>{sessions}</fieldset>}
-      <fieldset><legend>Стоимость и оплата</legend>{price}</fieldset>
+      <fieldset><legend>Стоимость и оплата</legend>{costAndPayment}</fieldset>
       <fieldset><legend>Сроки</legend><div className="finance-form-grid">{dates}</div></fieldset>
-      {!current && <details className="finance-opening-balances"><summary>Перенести текущие остатки</summary><p>Заполните, только если часть занятий уже проведена или оплачена. Иначе оставьте нули.</p><div className="finance-form-grid">{used}{paid}</div></details>}
-    </> : <div className="finance-form-grid">{sessions}{used}{price}{paid}{dates}</div>}
+      {used && <details className="finance-opening-balances"><summary>Уже проведённые занятия</summary><div className="finance-form-grid">{used}</div></details>}
+    </> : <>{current
+      ? <div className="finance-form-grid">{sessions}{price}</div>
+      : <><div className="finance-form-grid">{sessions}{used}</div>{costAndPayment}</>}
+      <div className="finance-form-grid">{dates}</div></>}
     {field('comment', 'Комментарий', <textarea {...validation('comment')} name="comment" rows={2} maxLength={2000} defaultValue={source?.comment ?? ''} />)}
     {validationError && <p className="error" role="alert">{validationError}</p>}
     {error && <InlineRequestError error={error} />}
     {/* Keep the focused input until click: keyboard recovery on pointerdown
         otherwise moves this row before pointerup and loses the submission. */}
-    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={lime ? (event) => event.preventDefault() : undefined} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={lime ? (event) => event.preventDefault() : undefined}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form>
 }
 
@@ -167,7 +178,9 @@ export function PaymentForm({ current, packages = [], packageId, today, saving, 
   onSubmit: (draft: TrainerFinancePaymentDraft, packageId: string) => void
 }) {
   const [validationError, setValidationError] = useState<string | null>(null)
-  return <form className="finance-form card" onSubmit={(event) => {
+  const [selectedPackageId, setSelectedPackageId] = useState(packageId ?? packages[0]?.id ?? '')
+  const [amount, setAmount] = useState(current ? String(current.amountCents / 100) : initialPaymentAmount(selectedPackageId, packages))
+  return <form className="finance-form card" aria-busy={saving} onSubmit={(event) => {
     event.preventDefault()
     setValidationError(null)
     try {
@@ -182,13 +195,18 @@ export function PaymentForm({ current, packages = [], packageId, today, saving, 
     }
   }}>
     <div className="finance-form-heading"><div><p className="eyebrow">ОПЛАТА</p><h2>{current ? 'Редактирование' : 'Добавить оплату'}</h2></div></div>
-    {!current && packages.length > 1 && <Field label="Услуга"><select name="packageId" required defaultValue={packageId ?? packages[0]?.id}>{packages.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>}
-    <div className="finance-form-grid"><Field label="Сумма, ₽"><input name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" required defaultValue={current ? current.amountCents / 100 : ''} /></Field><Field label="Дата"><input name="receivedOn" type="date" required defaultValue={current?.receivedOn ?? today} /></Field></div>
+    {!current && packages.length > 1 && <Field label="Услуга"><select name="packageId" required value={selectedPackageId} onChange={(event) => { setSelectedPackageId(event.target.value); setAmount(initialPaymentAmount(event.target.value, packages)) }}>{packages.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>}
+    <div className="finance-form-grid"><Field label="Сумма, ₽"><input name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} /></Field><Field label="Дата"><input name="receivedOn" type="date" required defaultValue={current?.receivedOn ?? today} /></Field></div>
     <Field label="Комментарий"><input name="comment" maxLength={2000} defaultValue={current?.comment ?? ''} /></Field>
     {validationError && <p className="error" role="alert">{validationError}</p>}
     {error && <InlineRequestError error={error} />}
-    <div className="actions"><button type="button" className="secondary" disabled={saving} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    <div className="actions"><button type="button" className="secondary" disabled={saving} onPointerDown={(event) => event.preventDefault()} onClick={onCancel}>Отмена</button><button type="submit" className="primary" disabled={saving} onPointerDown={(event) => event.preventDefault()}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form>
+}
+
+function initialPaymentAmount(packageId: string, packages: TrainerFinancePackage[]) {
+  const due = packages.find((item) => item.id === packageId)?.dueCents ?? 0
+  return due > 0 ? String(due / 100) : ''
 }
 
 type FinanceTab = 'packages' | 'sessions' | 'payments'
@@ -211,7 +229,7 @@ export function TrainerFinancePage() {
   const [activeTab, setActiveTab] = useState<FinanceTab>('packages')
   const [sessionFilter, setSessionFilter] = useState<'all' | 'unassigned' | 'trial'>('all')
   const [packageEditor, setPackageEditor] = useState<PackageEditor | null>(null)
-  const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment } | null>(null)
+  const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment; direct?: boolean } | null>(null)
   const packageRequest = useRef<string | null>(null)
   const paymentRequest = useRef<string | null>(null)
   const manualOperation = useRef<{ payload: string; requestId: string } | null>(null)
@@ -227,7 +245,7 @@ export function TrainerFinancePage() {
       packageRequest.current ??= crypto.randomUUID()
       return trainerFinance.createPackage(clientId, { ...draft, requestId: packageRequest.current })
     },
-    onSuccess: async () => { packageRequest.current = null; setPackageEditor(null); await refresh() },
+    onSuccess: async () => { await refresh(); packageRequest.current = null; setPackageEditor(null) },
   })
   const savePayment = useMutation({
     mutationFn: async ({ draft, packageId }: { draft: TrainerFinancePaymentDraft; packageId: string }) => {
@@ -235,7 +253,7 @@ export function TrainerFinancePage() {
       paymentRequest.current ??= crypto.randomUUID()
       return trainerFinance.addPayment(packageId, { ...draft, requestId: paymentRequest.current })
     },
-    onSuccess: async () => { paymentRequest.current = null; setPaymentEditor(null); await refresh() },
+    onSuccess: async () => { await refresh(); paymentRequest.current = null; setPaymentEditor(null) },
   })
   const removePayment = useMutation({
     mutationFn: (payment: TrainerFinancePayment) => trainerFinance.voidPayment(payment.id, payment.version, 'Удалено тренером'),
@@ -293,23 +311,39 @@ export function TrainerFinancePage() {
   const receivedCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0)
   const dueCents = packages.filter((item) => item.closedAt === null).reduce((sum, item) => sum + item.dueCents, 0)
   const tabCount: Record<FinanceTab, number> = { packages: packages.length, sessions: sessions.length, payments: payments.length }
+  const openPayment = (packageId: string, payment?: TrainerFinancePayment, direct = false) => {
+    paymentRequest.current = null
+    savePayment.reset()
+    setPaymentEditor({ packageId, payment, direct })
+  }
+  const renderPayment = (payment: TrainerFinancePayment, showService = true) => <div className="finance-payment" key={payment.id}>
+    <div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div>
+    {showService && <span className="finance-payment-package">{packageById.get(payment.packageId)?.title ?? 'Услуга удалена'}</span>}
+    <OverflowMenu label={`Действия с оплатой ${money(payment.amountCents)}`} items={[
+      { label: 'Изменить', onClick: () => openPayment(payment.packageId, payment) },
+      { label: 'Удалить', danger: true, onClick: () => void confirm({ message: `Удалить оплату ${money(payment.amountCents)} от ${formatLocalDate(localDate(payment.receivedOn))}?`, confirmLabel: 'Удалить', danger: true }).then((ok) => { if (ok) removePayment.mutate(payment) }) },
+    ]} />
+  </div>
   const renderPackage = (item: TrainerFinancePackage, history = false) => {
+    const servicePayments = payments.filter((payment) => payment.packageId === item.id)
     return <article className={`finance-package card${history ? ' is-history' : ''}`} key={item.id}>
       <header><div><span className={`finance-status finance-status-${item.packageStatus}`}>{item.kind === 'online_coaching' ? 'Онлайн · ' : ''}{PACKAGE_STATUS[item.packageStatus]}</span><h2>{item.title}</h2></div><OverflowMenu label={`Действия с услугой ${item.title}`} items={[{ label: 'Продлить', onClick: () => setPackageEditor({ mode: 'renew', item }) }, { label: 'Редактировать', onClick: () => setPackageEditor({ mode: 'edit', item }) }]} /></header>
-      <div className="finance-package-summary">
+      <div className="finance-package-summary finance-service-balance">
         {item.kind === 'session_pack'
           ? <p><span>Осталось занятий</span><strong>{item.sessionsRemaining} из {item.sessionsTotal}</strong></p>
           : <p><span>Период</span><strong>{formatLocalDate(localDate(item.startsOn))} — {item.endsOn ? formatLocalDate(localDate(item.endsOn)) : '—'}</strong></p>}
-        <p><span>Оплата</span><strong>{money(item.paidCents)}</strong><small>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : `${PAYMENT_STATUS[item.paymentStatus]} · из ${money(item.priceCents)}`}</small></p>
       </div>
+      <div className="finance-package-facts finance-service-money"><p><span>Стоимость</span><strong>{money(item.priceCents)}</strong></p><p><span>Оплачено</span><strong>{money(item.paidCents)}</strong></p><p><span>К оплате</span><strong>{money(item.dueCents)}</strong></p></div>
       <div className="finance-package-meta">
         <span>С {formatLocalDate(localDate(item.startsOn))}{item.endsOn ? ` по ${formatLocalDate(localDate(item.endsOn))}` : ''}</span>
-        {item.dueCents > 0 && <strong className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>К оплате {money(item.dueCents)}</strong>}
+        <span className={item.paymentStatus === 'overdue' ? 'is-overdue' : ''}>{item.priceCents === 0 && item.paidCents > 0 ? 'Стоимость не указана' : item.paidCents > item.priceCents ? `Переплата ${money(item.paidCents - item.priceCents)}` : PAYMENT_STATUS[item.paymentStatus]}</span>
       </div>
+      <button type="button" className="secondary finance-inline-action" onClick={() => openPayment(item.id, undefined, true)}>Внести оплату</button>
+      <details className="finance-service-payments finance-disclosure"><summary><span>Оплаты</span><small>{servicePayments.length}</small></summary><div className="finance-disclosure-content"><div className="finance-payment-list">{servicePayments.map((payment) => renderPayment(payment, false))}</div>{servicePayments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}</div></details>
       <details className="finance-package-details finance-disclosure">
         <summary><span>Подробнее</span></summary>
         <div className="finance-disclosure-content">
-          <div className="finance-package-facts">{item.kind === 'session_pack' && <p><span>Проведено</span><strong>{item.sessionsUsed}</strong></p>}<p><span>Оплачено</span><strong>{money(item.paidCents)}</strong></p><p><span>К оплате</span><strong>{money(item.dueCents)}</strong></p></div>
+          <div className="finance-package-facts">{item.kind === 'session_pack' && <p><span>Проведено</span><strong>{item.sessionsUsed}</strong></p>}</div>
           {item.comment && <p className="finance-comment">{item.comment}</p>}
           <div className="finance-package-actions"><button type="button" className="secondary" onClick={() => setPackageEditor({ mode: 'renew', item })}>Продлить</button><button type="button" className="secondary" onClick={() => setPackageEditor({ mode: 'edit', item })}>Изменить</button></div>
         </div>
@@ -323,7 +357,7 @@ export function TrainerFinancePage() {
   return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
       {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => { packageRequest.current = null; setPackageEditor(null) }} onSubmit={(draft) => savePackage.mutate(draft)} />}
-      {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => { paymentRequest.current = null; setPaymentEditor(null) }} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}
+      {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={paymentEditor.direct ? packages.filter((item) => item.id === paymentEditor.packageId) : packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => { paymentRequest.current = null; setPaymentEditor(null) }} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}
       {!packageEditor && !paymentEditor && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
@@ -352,8 +386,8 @@ export function TrainerFinancePage() {
 
         <section id="finance-payments-panel" className="finance-tab-panel" data-finance-tab="payments" role="tabpanel" aria-labelledby="finance-payments-tab" hidden={activeTab !== 'payments'}>
           <div className="finance-payment-overview"><p><span>Получено</span><strong>{money(receivedCents)}</strong></p><p><span>К оплате</span><strong>{money(dueCents)}</strong></p></div>
-          <div className="finance-section-heading"><div><p className="eyebrow">ОПЛАТЫ</p><h2>История</h2></div><button type="button" className="primary" disabled={packages.length === 0} onClick={() => setPaymentEditor({ packageId: activePackages[0]?.id ?? packages[0]!.id })}>Добавить</button></div>
-          <div className="finance-payment-list finance-payment-ledger">{payments.map((payment) => { const paymentPackage = packageById.get(payment.packageId); return <div className="finance-payment" key={payment.id}><div><strong>{money(payment.amountCents)}</strong><span>{formatLocalDate(localDate(payment.receivedOn))}{payment.comment ? ` · ${payment.comment}` : ''}</span></div><span className="finance-payment-package">{paymentPackage?.title ?? 'Услуга удалена'}</span><OverflowMenu label={`Действия с оплатой ${money(payment.amountCents)}`} items={[{ label: 'Изменить', onClick: () => setPaymentEditor({ packageId: payment.packageId, payment }) }, { label: 'Удалить', danger: true, onClick: () => void confirm({ message: `Удалить оплату ${money(payment.amountCents)}? Итог пересчитается, запись останется в истории.`, confirmLabel: 'Удалить', danger: true }).then((ok) => { if (ok) removePayment.mutate(payment) }) }]} /></div> })}</div>
+          <div className="finance-section-heading"><div><p className="eyebrow">ОПЛАТЫ</p><h2>История</h2></div><button type="button" className="primary" disabled={packages.length === 0} onClick={() => openPayment(activePackages[0]?.id ?? packages[0]!.id)}>Добавить</button></div>
+          <div className="finance-payment-list finance-payment-ledger">{payments.map((payment) => renderPayment(payment))}</div>
           {finance.isSuccess && payments.length === 0 && <p className="finance-empty">Оплат пока нет.</p>}
         </section>
       </>}
