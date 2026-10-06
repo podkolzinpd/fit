@@ -24,6 +24,7 @@ PR2#1475 добавляет видимое «Уже оплачено», «Вся
 
 PR#1467 и #1469 слиты; обязательный CI зелёный. Исправлены реальные форматы YC CLI: отсутствующий размер допускается только у подтверждённого пустого folder marker; HEAD использует last_modified_at с секундной точностью, сохраняя точный ETag/размер. Retention23/23, hosting115/115, npm run check (frontend2412/API1176+92 DB skipped/build) passed; Yandex DB проверена в CI.
 Штатная ежедневная очистка включена (целевое время 06:17 МСК; scheduler может задерживать запуск). Первый guarded apply завершён успешно: https://github.com/podkolzinpd/fit/actions/runs/37527012718; каждый DELETE подтверждён, gateway/site smoke passed, backup artifact сохранён. Текущий/предыдущий, последние3дня и общие файлы сохранены; версии не purged, прежнее lifecycle удаляет нетекущие версии через3дня. Независимый static smoke: auth/JS/CSS/sw на обоих frontend-адресах HTTP200 и одинаковые bytes; БД/media/state не затрагиваются.
+История Terraform state (PR#1477): по подтверждению владельца включён lifecycle только для `fit/stage/terraform.tfstate`: NoncurrentVersionExpiration30 дней с момента перехода в нетекущую версию. Readback после reload: правило enabled, versioning enabled. Текущий state сохраняется; ручного purge/чтения содержимого/изменения IAM и других бакетов не было. Полное прохождение lifecycle не проверено; контракт — STAGE_DEPLOYMENT.md §2.
 
 ## YAFIT-595 — третий тренер Fit Lime — 2026-10-06
 

@@ -87,7 +87,26 @@ JSON duration required by REST, such as `300s`.
 ## 2. One-time Yandex Cloud bootstrap
 
 Use the existing stage folder, versioned private Object Storage state bucket
-and infrastructure service account. Attach that service account to a Workload
+and infrastructure service account. The state bucket is bootstrap infrastructure,
+not a resource in the stack whose state it stores. Configure its lifecycle
+separately: one enabled rule with prefix `fit/stage/terraform.tfstate` and only
+`NoncurrentVersionExpiration` / `NoncurrentDays=30`. Keep versioning enabled;
+do not add current-version expiration, transitions, or delete-marker cleanup.
+The 30-day window starts when a version becomes noncurrent, not when it was
+uploaded. Older noncurrent versions are permanently deleted by Object Storage;
+disabling the rule stops future cleanup but cannot restore deleted versions.
+This is state history retention, not a backup of the application database.
+
+On 7 October 2026 the owner confirmed this irreversible retention policy and
+the rule was enabled in the bucket selected by `YC_TFSTATE_BUCKET`. A console
+reload confirmed the enabled rule, exact prefix, and 30-day trigger; versioning
+remained enabled. No state body was read, no objects were manually deleted,
+and no IAM/ACL, frontend/media bucket, or application deployment changed.
+Lifecycle processing and storage usage updates are asynchronous. At the initial
+rule readback, physical cleanup had not yet been verified; enabling the rule
+does not prove that all eligible versions have already been processed.
+
+Attach that service account to a Workload
 Identity Federation configured as follows:
 
 - issuer: `https://token.actions.githubusercontent.com`;
