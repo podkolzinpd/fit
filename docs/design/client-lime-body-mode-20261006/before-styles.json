@@ -1,0 +1,38 @@
+[
+  {
+    "state": "Client Lime filled progress analysis and compact goal light 390",
+    "styles": {
+      "radius": "14px",
+      "oldSurface": "\"\"",
+      "oldSurfaceRadius": "9px",
+      "selectedRadius": "7px"
+    }
+  },
+  {
+    "state": "Client Lime filled progress analysis and compact goal light 430",
+    "styles": {
+      "radius": "14px",
+      "oldSurface": "\"\"",
+      "oldSurfaceRadius": "9px",
+      "selectedRadius": "7px"
+    }
+  },
+  {
+    "state": "Client Lime filled progress analysis and compact goal dark 390",
+    "styles": {
+      "radius": "14px",
+      "oldSurface": "\"\"",
+      "oldSurfaceRadius": "9px",
+      "selectedRadius": "7px"
+    }
+  },
+  {
+    "state": "Client Lime filled progress analysis and compact goal dark 430",
+    "styles": {
+      "radius": "14px",
+      "oldSurface": "\"\"",
+      "oldSurfaceRadius": "9px",
+      "selectedRadius": "7px"
+    }
+  }
+]

@@ -217,3 +217,10 @@ C02–C05 не превратились в доказанные дефекты: 
 | V19/P2 | progress-analysis-actions link / ai-progress-auto-error, styles.css6123/3939 | Tertiary16px → существующий14/500/44; error18px → card32px | Создание/обновление анализа; нейтральные и semantic цвета сохраняются | Pending/disabled/error/retry на фикстуре |
 
 Уже корректны шрифт YS Geo, «Открыть анализ» pill48px, goal tertiary44px и semantic success. Перекрытие на промежуточном скролле не доказало дефект: до нижнего края доступ сохраняется. Эти элементы заново не перепроектируются. Статус затронутых поверхностей до правки — СМЕШАННЫЙ; после полного CI/readback будет отмечен отдельно.
+
+
+### Дополнительное раскрытие всех разделов ПРО — V20
+
+Полный дополнительный WebKit-проход раскрытых разделов обнаружил режимы карты, пропущенные при проверке закрытых заголовков. V20/P1: `.body-progress-modes` в `ClientBodyMapDisclosure → TrainingBodyProgressMap`, CSS2233–2237/3867–3870: контейнер14px, pseudo-surface9px и selected7px вместо уже принятого клиентского segmented28/24/44px. Подтверждено вычисленными стилями и снимками **во всех D/L390/430**, а не по одному совпадению токена.
+
+[До](design/client-lime-body-mode-20261006/before-dark-390.png), [стили](design/client-lime-body-mode-20261006/before-styles.json), [план](design/CLIENT_LIME_BODY_MODE_20261006.md). Замена — существующий общий клиентский segmented в `fit-client-lime.css`, с учётом `aria-pressed`. Источник один; основной клиентский потребитель — карта тела в ПРО. Shared trainer-потребитель сохраняется, проверяется отдельно. Приёмка: empty/filled load, progress/load selected, обе темы и размеры, другой клиент и trainer без нового scope; скролл до низа. Клетки графика и уже pill-контрол «Спереди/Сзади» по внешнему сходству не перепроектируются.
