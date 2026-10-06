@@ -7,7 +7,7 @@ import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import { bmiLabel } from '../../data/repositories/workouts.repository'
 import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
-import { AsyncView, Page } from '../../shared/ui'
+import { AsyncView, Coachmark, Page } from '../../shared/ui'
 import { ChevronRightIcon, CloseIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { ChatStartButton } from '../chat'
 import { useChatThreads } from '../chat/use-chat-threads'
@@ -21,6 +21,7 @@ const CLIENTS_SEARCH_MIN = 6
 const CLIENTS_SCROLL_KEY = 'fit.clientsListScroll'
 const CLIENTS_ARCHIVE_SCROLL_KEY = 'fit.clientsArchiveListScroll'
 const CLIENT_SWIPE_WIDTH = 112
+const fullSwipeThreshold = (width: number) => Math.max(168, Math.min(260, width * 0.6))
 
 interface ClientSwipeCardProps {
   client: Client
@@ -31,25 +32,37 @@ interface ClientSwipeCardProps {
   financeLabel?: string
   open: boolean
   busy: boolean
+  pending: boolean
   onOpenChange: (open: boolean) => void
   onArchiveChange: (client: Client, archived: boolean) => void
   onBeforeOpen: () => void
 }
 
 function ClientSwipeCard({
-  client, canOpenChat, conversationId, trainerId, unreadCount, financeLabel, open, busy,
+  client, canOpenChat, conversationId, trainerId, unreadCount, financeLabel, open, busy, pending,
   onOpenChange, onArchiveChange, onBeforeOpen,
 }: ClientSwipeCardProps) {
   const [dragOffset, setDragOffset] = useState<number | null>(null)
-  const dragOffsetRef = useRef<number | null>(null)
-  const pointer = useRef<{ id: number; x: number; y: number; axis: 'pending' | 'horizontal' | 'vertical' } | null>(null)
+  const [armed, setArmed] = useState(false)
+  const pointer = useRef<{ id: number; x: number; y: number; width: number; base: number; axis: 'pending' | 'horizontal' | 'vertical' } | null>(null)
   const suppressClick = useRef(false)
   const archived = client.archivedAt !== null
   const baseOffset = open ? -CLIENT_SWIPE_WIDTH : 0
 
+  useEffect(() => {
+    if (!busy) return
+    pointer.current = null
+    setDragOffset(null)
+    setArmed(false)
+  }, [busy])
+
   const startDrag = (event: ReactPointerEvent<HTMLElement>) => {
-    if (busy || event.button !== 0 || (event.target as Element).closest('button, input, textarea, select')) return
-    pointer.current = { id: event.pointerId, x: event.clientX, y: event.clientY, axis: 'pending' }
+    if (pointer.current || event.isPrimary === false) return
+    // A new tap is independent of a previous swipe, including taps on ⋯/chat.
+    suppressClick.current = false
+    if (busy || event.button !== 0 || (event.target as Element).closest('input, textarea, select')) return
+    pointer.current = { id: event.pointerId, x: event.clientX, y: event.clientY,
+      width: event.currentTarget.getBoundingClientRect().width, base: baseOffset, axis: 'pending' }
   }
   const moveDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const active = pointer.current
@@ -59,19 +72,29 @@ function ClientSwipeCard({
     if (active.axis === 'pending') {
       if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 8) return
       active.axis = Math.abs(deltaX) > Math.abs(deltaY) * 1.2 ? 'horizontal' : 'vertical'
-      if (active.axis === 'vertical') return
+      if (active.axis === 'vertical') {
+        // No capture for scrolling. Do not retain a mouse pointer whose up may
+        // happen outside this card, or allow a drag to become a profile click.
+        pointer.current = null
+        suppressClick.current = true
+        return
+      }
       // Захватываем указатель только после того, как отличили горизонтальный
       // жест от прокрутки. Иначе Safari/Chrome могут передать следующие move/up
       // вложенной ссылке или соседней карточке, и строка останется на месте.
       if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
         try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* Старые WebView могут не поддержать capture. */ }
       }
+      // Close another row's rail as soon as this swipe starts, while keeping
+      // this row's rail if the gesture continues an already open card.
+      onOpenChange(open)
     }
     event.preventDefault()
     suppressClick.current = true
-    const nextOffset = Math.max(-CLIENT_SWIPE_WIDTH, Math.min(0, baseOffset + deltaX))
-    dragOffsetRef.current = nextOffset
+    const limit = archived ? CLIENT_SWIPE_WIDTH : active.width
+    const nextOffset = Math.max(-limit, Math.min(0, active.base + deltaX))
     setDragOffset(nextOffset)
+    setArmed(!archived && -nextOffset >= fullSwipeThreshold(active.width))
   }
   const finishDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const active = pointer.current
@@ -79,24 +102,28 @@ function ClientSwipeCard({
     pointer.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
     if (active.axis === 'horizontal') {
-      const finalOffset = dragOffsetRef.current ?? baseOffset
+      // Use the release coordinate too: the last move may have been coalesced,
+      // especially when the user pulls back immediately before letting go.
+      const limit = archived ? CLIENT_SWIPE_WIDTH : active.width
+      const finalOffset = Math.max(-limit, Math.min(0, active.base + event.clientX - active.x))
       onOpenChange(finalOffset <= -CLIENT_SWIPE_WIDTH / 2)
-      window.setTimeout(() => { suppressClick.current = false }, 0)
+      const threshold = fullSwipeThreshold(active.width)
+      if (!busy && !archived && -finalOffset >= threshold) onArchiveChange(client, true)
     }
-    dragOffsetRef.current = null
     setDragOffset(null)
+    setArmed(false)
   }
   const cancelDrag = (event: ReactPointerEvent<HTMLElement>) => {
     const active = pointer.current
     if (!active || active.id !== event.pointerId) return
     pointer.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    dragOffsetRef.current = null
     setDragOffset(null)
-    suppressClick.current = false
+    setArmed(false)
+    suppressClick.current = active.axis === 'horizontal'
   }
   const captureClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (suppressClick.current) {
+    if ((suppressClick.current || busy) && event.detail !== 0) {
       event.preventDefault()
       event.stopPropagation()
       suppressClick.current = false
@@ -109,17 +136,21 @@ function ClientSwipeCard({
     }
   }
 
-  return <div className={`client-swipe-row${open ? ' is-open' : ''}${open || dragOffset !== null ? ' is-revealing' : ''}`} data-client-swipe-id={client.id}
+  return <div className={`client-swipe-row${open ? ' is-open' : ''}${open || dragOffset !== null ? ' is-revealing' : ''}${dragOffset !== null ? ' is-dragging' : ''}${armed ? ' is-armed' : ''}`} data-client-swipe-id={client.id} aria-busy={pending}
     onKeyDown={(event) => { if (event.key === 'Escape') onOpenChange(false) }}>
-    <div className={`client-swipe-actions${archived ? ' is-restore' : ''}`} aria-hidden={!open}>
+    <div className={`client-swipe-actions${archived ? ' is-restore' : ''}`} aria-hidden={!open}
+      style={{ width: Math.max(CLIENT_SWIPE_WIDTH, -(dragOffset ?? baseOffset)) }}>
       <button type="button" tabIndex={open ? 0 : -1} disabled={busy}
         onClick={() => onArchiveChange(client, !archived)}>
-        {archived ? 'Восстановить' : 'В архив'}
+        {pending ? (archived ? 'Восстанавливаем…' : 'Архивируем…') : armed ? 'Отпустите — в архив' : archived ? 'Восстановить' : 'В архив'}
       </button>
     </div>
     <article className="card client-card client-swipe-surface"
       style={{ transform: `translate3d(${dragOffset ?? baseOffset}px, 0, 0)` }}
       onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={cancelDrag}
+      // Transferring implicit touch capture from a child icon to this surface
+      // emits a bubbling lostpointercapture on the child, not a cancelled swipe.
+      onLostPointerCapture={(event) => { if (event.target === event.currentTarget) cancelDrag(event) }}
       onDragStart={(event) => event.preventDefault()}
       onClickCapture={captureClick}>
       <Link className="client-card-main" to={`/clients/${client.id}`} draggable={false} onClick={onBeforeOpen}>
@@ -148,6 +179,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   const pageRef = useRef<HTMLDivElement>(null)
   const [openClientId, setOpenClientId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ client: Client; message: string; canUndo: boolean } | null>(null)
+  const archiveInFlight = useRef(false)
   const scrollKey = archivedOnly ? CLIENTS_ARCHIVE_SCROLL_KEY : CLIENTS_SCROLL_KEY
   // Список — рабочая очередь тренера, поэтому при каждом входе показываем
   // актуальную активность, а не данные из короткого SPA-кэша.
@@ -181,6 +213,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       ?.filter((client) => !normalizedSearch || client.fullName.toLocaleLowerCase('ru').includes(normalizedSearch))
       .sort((left, right) => (right.lastActivityAt ?? '').localeCompare(left.lastActivityAt ?? '')) ?? []
   }, [query.data, search, showSearch])
+  const firstArchiveClientId = clients.find((item) => item.canArchive)?.id
   const archive = useMutation({
     mutationFn: ({ client, archived }: { client: Client; archived: boolean }) => clientsRepository.setArchived(client, archived),
     onSuccess: async (updated, variables) => {
@@ -192,7 +225,17 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       })
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
+    // A failed response may have followed a committed write. Refresh the list
+    // before a manual retry; do not blindly reuse an obsolete client version.
+    onError: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }) },
+    onSettled: () => { archiveInFlight.current = false },
   })
+  const changeArchive = (client: Client, archived: boolean) => {
+    if (archiveInFlight.current) return
+    archiveInFlight.current = true
+    setFeedback(null)
+    archive.mutate({ client, archived })
+  }
 
   const updateSearch = (value: string) => {
     const next = new URLSearchParams(searchParams)
@@ -244,7 +287,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
     {feedback && <div className="clients-archive-feedback" role="status">
       <span>{feedback.message}</span>
       {feedback.canUndo && <button type="button" className="link" disabled={archive.isPending}
-        onClick={() => archive.mutate({ client: feedback.client, archived: false })}>Вернуть</button>}
+        onClick={() => changeArchive(feedback.client, false)}>Вернуть</button>}
       <button type="button" className="clients-archive-feedback-close" aria-label="Закрыть сообщение" onClick={() => setFeedback(null)}><CloseIcon /></button>
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
@@ -274,12 +317,17 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
               conversationId={thread?.conversationId} partnerName={client.fullName} unreadCount={thread?.unreadCount ?? 0}
               className="client-chat-action" iconOnly back="clients" onBeforeOpen={rememberListPosition} />}
           </article>
-        return <ClientSwipeCard key={client.id} client={client} canOpenChat={canOpenChat}
+        const card = <ClientSwipeCard key={client.id} client={client} canOpenChat={canOpenChat}
           conversationId={thread?.conversationId} trainerId={thread?.trainerId ?? actor!.userId}
           unreadCount={thread?.unreadCount ?? 0} financeLabel={financeLabel} open={openClientId === client.id}
-          busy={archive.isPending} onOpenChange={(open) => setOpenClientId(open ? client.id : null)}
-          onArchiveChange={(target, archived) => archive.mutate({ client: target, archived })}
+          busy={archive.isPending} pending={archive.isPending && archive.variables?.client.id === client.id}
+          onOpenChange={(open) => setOpenClientId(open ? client.id : null)}
+          onArchiveChange={changeArchive}
           onBeforeOpen={rememberListPosition} />
+        return !archivedOnly && client.id === firstArchiveClientId
+          ? <Coachmark key={client.id} id="clients-full-swipe-2026-10" userId={actor?.userId}
+            title="В архив одним свайпом" description="Смахните карточку далеко влево и отпустите; после архивации можно нажать «Вернуть».">{card}</Coachmark>
+          : card
       })}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>
     {!archivedOnly && <Link className="clients-archive-link" to="/clients/archive" onClick={rememberListPosition}>

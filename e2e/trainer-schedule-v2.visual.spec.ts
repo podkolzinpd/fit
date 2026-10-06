@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
 import { computeClientStats } from '../src/data/repositories/workout-rules'
@@ -2152,6 +2152,168 @@ const limeClients = [
   { id: '10000000-0000-4000-8000-000000000024', fullName: 'Дарья Ершова', archivedAt: null, version: 1 },
   { id: '10000000-0000-4000-8000-000000000025', fullName: 'Егор Панов', archivedAt: null, version: 1 },
 ]
+
+// Chromium uses trusted browser touch input. WebKit's public input API only
+// supports mouse drag here; that result is not physical iPhone acceptance.
+async function beginClientGesture(page: Page, surface: Locator, browserName: string) {
+  await surface.scrollIntoViewIfNeeded()
+  const box = await surface.boundingBox()
+  if (!box) throw new Error('Client surface is not visible')
+  const from = { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
+  const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
+  if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
+  else { await page.mouse.move(from.x, from.y); await page.mouse.down() }
+  let position = from
+  return {
+    width: box.width,
+    async move(distance: number, vertical = 0) {
+      const to = { x: from.x - distance, y: from.y + vertical }
+      const previous = position
+      for (let step = 1; step <= 8; step += 1) {
+        position = { x: previous.x + (to.x - previous.x) * step / 8, y: previous.y + (to.y - previous.y) * step / 8 }
+        if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [position] })
+        else await page.mouse.move(position.x, position.y)
+      }
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    },
+    async end(cancel = false) {
+      if (cdp) {
+        await cdp.send('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] })
+        await cdp.detach()
+      } else if (cancel) {
+        // WebKit cancellation state is tested separately from its mouse path.
+        await surface.dispatchEvent('pointercancel', { pointerId: 1 })
+        await page.mouse.up()
+      } else await page.mouse.up()
+    },
+  }
+}
+
+async function openSwipeFixture(page: Page, fitLime: boolean, width = 390, theme = 'light') {
+  await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+  await mockPilot(page, { fitLime, clientRecords: limeClients.map((item, index) => index === 5 ? { ...item, fullName: 'Александра Константинопольская-Оченьдлиннаяфамилия' } : item) })
+  await page.addInitScript((theme) => localStorage.setItem('fit.appTheme', theme), theme)
+  await page.goto('/clients')
+  await expect(page.locator('.client-swipe-surface').first()).toBeVisible()
+  const tip = page.getByRole('status').filter({ hasText: 'В архив одним свайпом' })
+  if (await tip.isVisible()) await tip.getByRole('button', { name: 'Понятно' }).click()
+  return page.locator(`[data-client-swipe-id="${clientId}"]`)
+}
+
+for (const [fitLime, width, theme] of [
+  [false, 390, 'light'], [false, 430, 'dark'], [true, 390, 'dark'], [true, 430, 'dark'], [false, 1440, 'light'],
+] as const) test(`Client full swipe archives without a click and persists ${fitLime ? 'Lime' : theme} ${width}`, async ({ page, browserName }, testInfo) => {
+  const row = await openSwipeFixture(page, fitLime, width, theme)
+  const commands: Array<{ archived: boolean; expectedVersion: number }> = []
+  page.on('request', (request) => { if (new URL(request.url()).pathname === `/v1/clients/${clientId}/archive` && request.method() === 'PUT') commands.push(request.postDataJSON() as { archived: boolean; expectedVersion: number }) })
+  const gesture = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
+  await gesture.move(Math.min(280, gesture.width * 0.72))
+  await expect(row).toHaveClass(/is-armed/)
+  await expect(row.getByText('Отпустите — в архив')).toBeVisible()
+  expect(commands).toHaveLength(0)
+  await page.screenshot({ path: testInfo.outputPath('full-swipe-armed.png') })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await gesture.end()
+  await expect(row).toHaveCount(0)
+  await expect(page).toHaveURL(/\/clients$/)
+  expect(commands).toEqual([{ archived: true, expectedVersion: 1 }])
+  await page.getByRole('button', { name: 'Вернуть' }).click()
+  await expect(row).toBeVisible()
+  expect(commands).toEqual([{ archived: true, expectedVersion: 1 }, { archived: false, expectedVersion: 2 }])
+  const again = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
+  await again.move(Math.min(280, again.width * 0.72))
+  await again.end()
+  await expect(row).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Клиенты', exact: true })).toBeVisible()
+  await expect(row).toHaveCount(0)
+  await page.getByRole('link', { name: 'Архив', exact: true }).click()
+  await expect(row).toBeVisible()
+  // A long gesture must not silently restore an archived client.
+  const restore = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
+  await restore.move(Math.min(280, restore.width * 0.72))
+  await restore.end()
+  await expect(row.getByRole('button', { name: 'Восстановить' })).toBeVisible()
+  expect(commands).toHaveLength(3)
+  await page.screenshot({ path: testInfo.outputPath('full-swipe-archive.png') })
+})
+
+for (const fitLime of [false, true]) test(`Client full swipe keeps short reversed vertical and cancelled gestures harmless ${fitLime ? 'Lime' : 'ordinary'}`, async ({ page, browserName }) => {
+  const row = await openSwipeFixture(page, fitLime)
+  const commands: string[] = []
+  page.on('request', (request) => { if (new URL(request.url()).pathname.endsWith('/archive') && request.method() === 'PUT') commands.push(request.url()) })
+  const surface = row.locator('.client-swipe-surface')
+  const vertical = await beginClientGesture(page, surface, browserName)
+  const before = await page.locator('.content').evaluate((element) => element.scrollTop)
+  await vertical.move(3, -100)
+  await vertical.end()
+  await expect(row).not.toHaveClass(/is-open/)
+  if (browserName === 'chromium') await expect.poll(() => page.locator('.content').evaluate((element) => element.scrollTop)).toBeGreaterThan(before)
+  const short = await beginClientGesture(page, surface, browserName)
+  await short.move(96)
+  await short.end()
+  await expect(row.getByRole('button', { name: 'В архив' })).toBeVisible()
+  const other = page.locator('[data-client-swipe-id="10000000-0000-4000-8000-000000000021"]')
+  const next = await beginClientGesture(page, other.locator('.client-swipe-surface'), browserName)
+  await next.move(96)
+  await expect(row).not.toHaveClass(/is-open/)
+  await next.end()
+  await expect(other).toHaveClass(/is-open/)
+  const back = await beginClientGesture(page, surface, browserName)
+  await back.move(96)
+  await expect(other).not.toHaveClass(/is-open/)
+  await back.end()
+  await row.getByRole('link', { name: /Алексей Смирнов/ }).click()
+  await expect(row).not.toHaveClass(/is-open/)
+  await expect(page).toHaveURL(/\/clients$/)
+  const reversed = await beginClientGesture(page, surface, browserName)
+  await reversed.move(250)
+  await expect(row).toHaveClass(/is-armed/)
+  await reversed.move(10)
+  await expect(row).not.toHaveClass(/is-armed/)
+  await reversed.end()
+  await expect(row).not.toHaveClass(/is-open/)
+  const cancelled = await beginClientGesture(page, surface, browserName)
+  await cancelled.move(250)
+  await cancelled.end(true)
+  await expect(row).not.toHaveClass(/is-open/)
+  await expect(page).toHaveURL(/\/clients$/)
+  expect(commands).toHaveLength(0)
+})
+
+test('Client full swipe has pending feedback, single request and a recoverable server error', async ({ page, browserName }) => {
+  const row = await openSwipeFixture(page, true)
+  let release: () => void = () => undefined
+  const gate = new Promise<void>((done) => { release = done })
+  let attempts = 0
+  await page.route(`**/v1/clients/${clientId}/archive`, async (route) => {
+    attempts += 1
+    if (attempts === 1) {
+      await gate
+      return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+    }
+    return route.fallback()
+  })
+  const gesture = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
+  await gesture.move(250)
+  await gesture.end()
+  await expect(row).toHaveAttribute('aria-busy', 'true')
+  await expect(row.getByRole('button', { name: 'Архивируем…' })).toBeDisabled()
+  const duplicate = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
+  await duplicate.move(250)
+  await duplicate.end()
+  expect(attempts).toBe(1)
+  expect(await page.getByRole('button', { name: 'Вернуть' }).count()).toBe(0)
+  release()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(row).toBeVisible()
+  await expect(row).toHaveAttribute('aria-busy', 'false')
+  expect(await page.getByRole('button', { name: 'Вернуть' }).count()).toBe(0)
+  await row.getByRole('button', { name: 'В архив' }).click()
+  await expect(row).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Вернуть' })).toBeVisible()
+  expect(attempts).toBe(2)
+})
 
 for (const [account, profileId] of [
   ['first', trainerId],
