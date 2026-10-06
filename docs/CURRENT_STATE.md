@@ -1,5 +1,9 @@
 # Fit — текущее состояние проекта
 
+## Полный свайп клиентов — 2026-10-06
+
+План: design/CLIENT_FULL_SWIPE_20261006.md. Длинный свайп архивирует при отпускании; короткий открывает кнопку, обратный/вертикальный/cancel не меняют данные. Старые ownership/version API сохранены, pending блокирует дубли, error обновляет список, undo использует новую версию. Chromium touch/WebKit matrix24/24; contrast10/10, rail16/16/component27; check2421/API1176+92 skipped/build passed. Физический iPhone Safari/PWA не проверен. Выпуск СТРОГО при отсутствии любых других открытых PR, включая более поздние; чужие PR не сливать ради очереди. Задача не выпущена.
+
 ## Очистка frontend-релизов — 2026-10-07
 
 PR#1467 и #1469 слиты; обязательный CI зелёный. Исправлены реальные форматы YC CLI: отсутствующий размер допускается только у подтверждённого пустого folder marker; HEAD использует last_modified_at с секундной точностью, сохраняя точный ETag/размер. Retention23/23, hosting115/115, npm run check (frontend2412/API1176+92 DB skipped/build) passed; Yandex DB проверена в CI.
@@ -98,19 +102,14 @@ SpeechKit transcript устраняет финальные повторы, со�
 ## Ранее открытые post-cutover задачи
 
 Ниже — незакрытые пункты прежнего snapshot; в этой UI-задаче не перепроверялись.
-1. Выполнить успешный media migration без `allow-missing` для оставшихся chat
-   и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
+1. Выполнить успешный media migration без `allow-missing` для оставшихся chat и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
 2. Добавить Yandex custom-exercise photo adapter.
 3. На время диагностического отката #1144 frontend снова создаёт Supabase SDK
    при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска.
    Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме;
    отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять
    сохранённый auth token; это не dual-write и не перенос данных обратно. Переменные и серверные bridge secrets для recovery/media пока не удалять.
-4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer,
-   linked client, recovery старого email-only профиля, новый Yandex-only аккаунт
-   и оба invitation path. Автоматизированы серверные контракты, production auth
-   DOM, PKCE redirect и unauthenticated guards; реальный OAuth callback в этом
-   cutover-сеансе не выполнялся.
+4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer, linked client, recovery старого email-only профиля, новый Yandex-only аккаунт и оба invitation path. Автоматизированы серверные контракты, production auth DOM, PKCE redirect и unauthenticated guards; реальный OAuth callback в этом cutover-сеансе не выполнялся.
 5. Провести backup restore drill, повторить authenticated AI summary и push
    smoke. До завершения observation window Supabase не удалять: write gate
    остаётся paused, а обратной миграции Yandex writes нет.

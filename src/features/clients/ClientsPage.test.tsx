@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -32,6 +32,29 @@ const thread = (clientId: string, unreadCount = 0, activeConnection = true): Cha
 
 const NAMES = ['Анна Смирнова', 'Борис Иванов', 'Вера Кузнецова', 'Глеб Орлов', 'Дарья Ершова', 'Егор Панов']
 
+// State-machine coverage only: real browser input is verified separately in E2E.
+class TestPointerEvent extends MouseEvent {
+  pointerId: number
+  isPrimary: boolean
+  constructor(type: string, init: PointerEventInit = {}) {
+    super(type, init)
+    this.pointerId = init.pointerId ?? 1
+    this.isPrimary = init.isPrimary ?? true
+  }
+}
+
+async function swipeSurface() {
+  const link = await screen.findByRole('link', { name: /Анна Смирнова/ })
+  const surface = link.closest<HTMLElement>('.client-swipe-surface')!
+  vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 350, 100))
+  Object.assign(surface, { hasPointerCapture: () => false, setPointerCapture: vi.fn(), releasePointerCapture: vi.fn() })
+  return surface
+}
+
+function pointerEvent(surface: Element, type: string, x: number, y = 40) {
+  fireEvent(surface, new TestPointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, clientX: x, clientY: y }))
+}
+
 function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
   if (clients) backend.list.mockResolvedValue(clients)
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -45,6 +68,7 @@ function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
 }
 
 beforeEach(() => {
+  Object.assign(HTMLElement.prototype, { hasPointerCapture: () => false, setPointerCapture: () => undefined, releasePointerCapture: () => undefined })
   backend.list.mockReset()
   backend.setArchived.mockReset()
   backend.listThreads.mockReset().mockResolvedValue([])
@@ -55,6 +79,92 @@ beforeEach(() => {
 })
 
 describe('ClientsPage archive actions', () => {
+  it('archives once on a full swipe release without an archive-button click and undo uses the returned version', async () => {
+    const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
+    backend.setArchived.mockResolvedValueOnce({ ...root, archivedAt: '2026-10-06T12:00:00Z', version: 2 })
+      .mockResolvedValueOnce({ ...root, version: 3 })
+    renderPage([root])
+    const surface = await swipeSurface()
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 65)
+    pointerEvent(surface.querySelector('svg')!, 'lostpointercapture', 65)
+    expect(surface.closest('.client-swipe-row')).toHaveClass('is-armed')
+    expect(backend.setArchived).not.toHaveBeenCalled()
+    pointerEvent(surface, 'pointerup', 65)
+    pointerEvent(surface, 'pointerup', 65)
+    await waitFor(() => expect(backend.setArchived).toHaveBeenCalledExactlyOnceWith(root, true))
+    fireEvent.click(surface.querySelector('a')!, { detail: 1 })
+    expect(screen.queryByText('Профиль открыт')).not.toBeInTheDocument()
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Вернуть' }))
+    await waitFor(() => expect(backend.setArchived).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'root', version: 2 }), false))
+  })
+
+  it.each(['short', 'reversed', 'vertical', 'cancelled', 'lost-capture'] as const)('does not archive a %s gesture', async (kind) => {
+    renderPage([{ ...client('root', 'Анна Смирнова'), canArchive: true }])
+    const surface = await swipeSurface()
+    pointerEvent(surface, 'pointerdown', 310)
+    if (kind === 'vertical') pointerEvent(surface, 'pointermove', 305, 110)
+    else {
+      pointerEvent(surface, 'pointermove', kind === 'short' ? 210 : 60)
+      if (kind === 'reversed') pointerEvent(surface, 'pointermove', 300)
+    }
+    pointerEvent(surface, kind === 'cancelled' ? 'pointercancel' : kind === 'lost-capture' ? 'lostpointercapture' : 'pointerup', kind === 'short' ? 210 : kind === 'reversed' ? 300 : 60)
+    expect(backend.setArchived).not.toHaveBeenCalled()
+    expect(surface.closest('.client-swipe-row')).not.toHaveClass('is-armed')
+    expect(surface).toHaveStyle({ transform: kind === 'short' ? 'translate3d(-112px, 0, 0)' : 'translate3d(0px, 0, 0)' })
+  })
+
+  it('keeps the card and an error without success feedback when full-swipe archiving fails', async () => {
+    backend.setArchived.mockRejectedValue(new Error('Нет связи. Повторите попытку.'))
+    renderPage([{ ...client('root', 'Анна Смирнова'), canArchive: true }])
+    const surface = await swipeSurface()
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 60)
+    pointerEvent(surface, 'pointerup', 60)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Нет связи')
+    expect(screen.getByRole('link', { name: /Анна Смирнова/ })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Вернуть' })).not.toBeInTheDocument()
+    expect(backend.list.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it('uses the release position to cancel a coalesced pull-back and accepts a swipe after vertical scrolling', async () => {
+    const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
+    backend.setArchived.mockResolvedValue({ ...root, archivedAt: '2026-10-06T12:00:00Z', version: 2 })
+    renderPage([root])
+    const surface = await swipeSurface()
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 60)
+    pointerEvent(surface, 'pointerup', 300)
+    expect(backend.setArchived).not.toHaveBeenCalled()
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 305, 120)
+    pointerEvent(surface, 'pointerup', 305, 120)
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 60)
+    pointerEvent(surface, 'pointerup', 60)
+    await waitFor(() => expect(backend.setArchived).toHaveBeenCalledExactlyOnceWith(root, true))
+  })
+
+  it('blocks another full swipe while the server has not confirmed the first', async () => {
+    let resolve: (value: Client) => void = () => undefined
+    const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
+    backend.setArchived.mockReturnValue(new Promise<Client>((done) => { resolve = done }))
+    renderPage([root])
+    const surface = await swipeSurface()
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 60)
+    pointerEvent(surface, 'pointerup', 60)
+    expect(await screen.findByRole('button', { name: 'Архивируем…' })).toBeDisabled()
+    expect(surface.closest('.client-swipe-row')).toHaveAttribute('aria-busy', 'true')
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 60)
+    pointerEvent(surface, 'pointerup', 60)
+    expect(backend.setArchived).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Вернуть' })).not.toBeInTheDocument()
+    resolve({ ...root, archivedAt: '2026-10-06T12:00:00Z', version: 2 })
+    expect(await screen.findByRole('button', { name: 'Вернуть' })).toBeEnabled()
+  })
+
   it('keeps archived clients out of the working list and always shows the archive entry last', async () => {
     renderPage([
       client('active', 'Анна Смирнова'),
@@ -127,6 +237,15 @@ describe('ClientsPage archive actions', () => {
     expect(first).toHaveAttribute('aria-expanded', 'true')
     await user.click(second)
     expect(first).toHaveAttribute('aria-expanded', 'false')
+    expect(second).toHaveAttribute('aria-expanded', 'true')
+    await user.click(first)
+    const surface = second.closest<HTMLElement>('.client-swipe-surface')!
+    vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 350, 100))
+    pointerEvent(surface, 'pointerdown', 310)
+    pointerEvent(surface, 'pointermove', 210)
+    expect(first).toHaveAttribute('aria-expanded', 'false')
+    expect(surface).toHaveStyle({ transform: 'translate3d(-100px, 0, 0)' })
+    pointerEvent(surface, 'pointerup', 210)
     expect(second).toHaveAttribute('aria-expanded', 'true')
   })
 
