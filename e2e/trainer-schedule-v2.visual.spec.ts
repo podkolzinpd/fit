@@ -3337,6 +3337,10 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(live.locator('.live-exercise-start')).toHaveCSS('border-radius', '999px')
     await expect(live.locator('.live-bottom-bar .workout-cta')).toHaveCSS('border-radius', '999px')
     await expect(live.locator('.live-exercise-note summary')).toHaveCSS('min-height', '44px')
+    const repsInput = live.locator('input.live-set-input[type="number"]').first()
+    await expect(repsInput).toHaveCSS('appearance', 'textfield')
+    await repsInput.fill('10')
+    await expect(repsInput).toHaveValue('10')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-live-actions-${theme}-${width}.png`) })
   })
@@ -3479,6 +3483,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
         await expect(page.locator('.client-profile-edit')).toHaveCSS('border-top-left-radius', '0px')
       }
       if (route === '/me/settings') {
+        await expect(page.getByRole('button', { name: 'Выйти', exact: true })).toHaveCSS('border-radius', '999px')
         const options = page.locator('.body-map-appearance-options.count-1')
         await expect(options).toBeVisible()
         const widths = await options.evaluate((element) => ({
@@ -3488,8 +3493,20 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
         expect(widths.option).toBeLessThan(widths.card / 2)
       }
       if (route === '/me/edit') {
+        for (const button of await page.locator('.client-profile-form .actions button').all()) {
+          await expect(button).toHaveCSS('border-radius', '999px')
+          await expect(button).toHaveCSS('font-size', '16px')
+        }
+        await expect(page.locator('.client-form-section').first()).toHaveCSS('border-radius', '32px')
+        await expect(page.locator('.client-profile-form input').first()).toHaveCSS('border-radius', '16px')
         await expect(page.locator('.client-profile-form select')).toHaveCSS('appearance', 'none')
         await expect(page.locator('.client-profile-form input[type="number"]').first()).toHaveCSS('appearance', 'textfield')
+      }
+      if (route === '/me/finance') await expect(page.locator('.page-back')).toHaveCSS('border-radius', '50%')
+      if (route === '/join') {
+        await expect(page.locator('.join-card')).toHaveCSS('border-radius', '32px')
+        await expect(page.locator('.join-form input')).toHaveCSS('border-radius', '16px')
+        await expect(page.locator('.join-form button')).toHaveCSS('border-radius', '999px')
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
@@ -3592,6 +3609,9 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await page.goto(route)
       const composer = page.locator('.fit-client-lime.workout-create-edit-identity .workout-composer-card')
       const voice = composer.locator('.voice-input-button')
+      await expect(page.locator('.page-back')).toHaveCSS('border-radius', '50%')
+      await expect(page.locator('.workout-form-section').first()).toHaveCSS('border-radius', '32px')
+      await expect(page.locator('.workout-form .field input').first()).toHaveCSS('border-radius', '16px')
       await expect(voice).toBeVisible()
       await expect(voice).toHaveCSS('border-radius', '999px')
       await expect(voice).toHaveCSS('min-height', '44px')

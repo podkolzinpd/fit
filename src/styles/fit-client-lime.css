@@ -1,4 +1,4 @@
-/* Client extension of the approved Fit Lime identity. AppLayout alone assigns
+/* Client extension of the approved Fit Lime identity. AppLayout assigns
    this scope after the independent single-account gate. Trainer is unchanged. */
 html.fit-client-lime-document,
 .phone-frame.fit-lime.fit-client-lime {
@@ -199,4 +199,43 @@ html.fit-client-lime-document .sheet-overlay .modal-dialog {
   background: var(--lime-surface-raised);
   border-color: var(--lime-divider);
   color: var(--lime-text-secondary);
+}
+
+/* Identity-specific monochrome rules must not override the client control
+   contract. Keep this scope separate from the trainer and non-pilot client. */
+.phone-frame.fit-client-lime:is(.workout-create-edit-identity, .client-card-edit-identity,
+  .auth-join-identity, .client-profile-shell-identity, .client-finance-identity)
+  :is(button.primary, button.secondary, .button, .workout-cta) {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-focused-page > .page-header .page-back,
+.phone-frame.fit-client-lime.client-finance-identity .page-back {
+  border-radius: 50%;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-form-page .workout-form-section,
+.phone-frame.fit-client-lime.client-card-edit-identity .client-form-section,
+.phone-frame.fit-client-lime.auth-join-identity .join-card {
+  border-radius: var(--lime-radius-card);
+  border-color: var(--lime-divider);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-form .field :is(input, select, textarea),
+.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form :is(input, select, textarea),
+.phone-frame.fit-client-lime.auth-join-identity .join-form input {
+  border-radius: 16px;
+  border-color: var(--lime-divider);
+  background-color: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-size: 16px;
+  font-weight: 400;
+}
+.phone-frame.fit-client-lime.live-identity input.live-set-input[type='number'] { appearance: textfield; }
+.phone-frame.fit-client-lime.live-identity input.live-set-input[type='number']::-webkit-inner-spin-button,
+.phone-frame.fit-client-lime.live-identity input.live-set-input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
