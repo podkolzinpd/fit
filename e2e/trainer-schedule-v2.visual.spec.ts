@@ -4216,3 +4216,92 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime filled progress analysis and compact goal ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true, workouts: [
+      { ...workout, status: 'done', completedAt: '2026-09-24T08:00:00.000Z' },
+      { ...workout, id: newWorkoutId, workoutDate: '2026-08-01', status: 'done', completedAt: '2026-08-01T08:00:00.000Z' },
+    ] })
+    await page.route(`http://127.0.0.1:4100/v1/clients/${clientId}/training-summaries`, (route) => route.fulfill({
+      contentType: 'application/json', body: JSON.stringify({ summaries: [{
+        id: '10000000-0000-4000-8000-000000000090', source_summary_id: '10000000-0000-4000-8000-000000000091', client_id: clientId,
+        period_start: '2026-08-24', period_end: '2026-09-23', generated_at: '2026-09-23T08:00:00.000Z', published_at: '2026-09-23T08:05:00.000Z',
+        summary: { headline: 'Тренировки стали регулярнее.', achievements: [], consistency: 'За период завершено 12 тренировок; средний ритм — 2,7 в неделю.', encouragement: 'Продолжай в том же ритме.' },
+        display_metrics: { completed_workouts: 12, workouts_per_week: 2.7, active_weeks: 4, longest_gap_days: 3 },
+      }] }),
+    }))
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me/progress')
+    const analysis = page.locator('.progress-analysis-preview')
+    const goal = page.locator('.progress-overview-panel .client-progress-goal-story')
+    await expect(analysis).toContainText('Предыдущий ИИ-анализ')
+    await expect(analysis).toContainText('Есть новые тренировки')
+    await goal.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`filled-progress-${theme}-${width}.png`) })
+    await expect(analysis).toHaveCSS('border-radius', '32px')
+    await expect(goal).toHaveCSS('border-radius', '32px')
+    await expect(analysis.getByRole('button', { name: 'Обновить анализ' })).toHaveCSS('font-size', '14px')
+    await expect(goal.getByRole('link', { name: 'Изменить цель' })).toHaveCSS('min-height', '44px')
+    const styles = await page.locator('.progress-analysis-preview, .progress-analysis-actions button, .client-progress-goal-story.compact, .client-progress-goal-story.compact .link').evaluateAll((elements) => elements.map((element) => {
+      const style = getComputedStyle(element)
+      return { element: element.getAttribute('class'), text: element.textContent?.slice(0, 40), radius: style.borderRadius, height: style.minHeight, font: style.fontFamily, weight: style.fontWeight, size: style.fontSize, background: style.backgroundColor }
+    }))
+    await testInfo.attach('filled-progress-styles', { body: JSON.stringify(styles, null, 2), contentType: 'application/json' })
+    await analysis.getByRole('button', { name: 'Открыть анализ' }).click()
+    await expect(page.getByRole('dialog')).toContainText('Подробный анализ')
+    await expect(page.getByRole('dialog')).toHaveCSS('border-top-left-radius', '40px')
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Закрыть', exact: true })).toHaveCSS('border-radius', '50%')
+    await page.screenshot({ path: testInfo.outputPath(`filled-analysis-dialog-${theme}-${width}.png`) })
+    await testInfo.attach('filled-analysis-sheet-styles', { body: JSON.stringify(await page.locator('.ai-progress-sheet, .ai-progress-sheet .picker-close').evaluateAll((elements) => elements.map((element) => {
+      const style = getComputedStyle(element)
+      return { element: element.getAttribute('class'), radius: style.borderRadius, height: style.minHeight, font: style.fontFamily, size: style.fontSize }
+    }))), contentType: 'application/json' })
+    await page.getByRole('dialog').getByRole('button', { name: 'Закрыть', exact: true }).click()
+    let releaseGeneration: () => void = () => undefined
+    let generationRequests = 0
+    const pendingGeneration = new Promise<void>((resolve) => { releaseGeneration = resolve })
+    await page.route(`http://127.0.0.1:4100/v1/clients/${clientId}/training-summaries/generate`, async (route) => {
+      generationRequests += 1
+      await pendingGeneration
+      await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+    })
+    const refresh = analysis.getByRole('button', { name: 'Обновить анализ' })
+    await refresh.click()
+    await expect(refresh).toBeDisabled()
+    await expect(analysis.getByRole('status')).toHaveText('Формируем ИИ-анализ…')
+    releaseGeneration()
+    await expect(analysis.getByRole('alert')).toBeVisible()
+    await expect(analysis.getByRole('alert')).toHaveCSS('border-radius', '32px')
+    await expect(refresh).toBeEnabled()
+    await expect(analysis.getByRole('alert').getByRole('button', { name: 'Повторить' })).toBeVisible()
+    await analysis.getByRole('alert').getByRole('button', { name: 'Повторить' }).click()
+    await expect.poll(() => generationRequests).toBe(2)
+    await expect(analysis.getByRole('alert')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`filled-progress-error-${theme}-${width}.png`) })
+    await goal.getByRole('link', { name: 'Подробнее в ПРО' }).click()
+    await expect(page.getByRole('tab', { name: 'ПРО' })).toHaveAttribute('aria-selected', 'true')
+    const summaries = page.locator('.progress-pro-list > details > summary.progress-details-toggle')
+    await expect(summaries).toHaveCount(7)
+    for (const summary of await summaries.all()) await expect(summary).toHaveCSS('border-radius', '32px')
+    await expect(page.locator('.progress-pro-panel .client-progress-goal-story')).toHaveCSS('border-radius', '0px')
+    await page.screenshot({ path: testInfo.outputPath(`filled-progress-pro-${theme}-${width}.png`) })
+    await testInfo.attach('filled-pro-surfaces', { body: JSON.stringify(await page.locator('.progress-pro-list > details > summary, .progress-pro-panel .client-progress-goal-story').evaluateAll((elements) => elements.map((element) => ({ element: element.getAttribute('class'), radius: getComputedStyle(element).borderRadius })))), contentType: 'application/json' })
+    await page.locator('.content').evaluate((element) => { element.scrollTop = element.scrollHeight })
+    const clearance = await page.locator('.weekly-training-load').evaluate((element) => {
+      const nav = document.querySelector('.client-tab-bar')!.getBoundingClientRect()
+      return nav.top - element.getBoundingClientRect().bottom
+    })
+    expect(clearance).toBeGreaterThanOrEqual(16)
+  })
+}
+
+test('Client progress outside the Lime pilot retains its original surfaces', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: '10000000-0000-4000-8000-000000000009', withGoal: true })
+  await page.goto('/me/progress')
+  await expect(page.locator('.fit-client-lime')).toHaveCount(0)
+  await expect(page.locator('.progress-analysis-preview')).toHaveCSS('border-radius', '18px')
+  await expect(page.locator('.progress-overview-panel .client-progress-goal-story')).toHaveCSS('border-radius', '18px')
+})

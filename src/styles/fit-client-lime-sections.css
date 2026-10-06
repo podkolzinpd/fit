@@ -127,7 +127,7 @@ html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
 .phone-frame.fit-client-lime .athlete-achievement-card { background: transparent; border-radius: 14px; padding: 4px 0; }
 
 /* Tertiary actions keep a 44px target without competing with primary CTA. */
-.phone-frame.fit-client-lime.progress-identity .client-progress-goal-story .link,
+.phone-frame.fit-client-lime.progress-identity :is(.client-progress-goal-story, .progress-analysis-actions) .link,
 .phone-frame.fit-client-lime :is(.personal-workout-result, .period-exercise-result, .client-progress-goal-story,
   .goal-block, .stage-row, .measurement-actions, .client-progress-history, .metrics-manager) .link {
   display: inline-flex;
@@ -230,3 +230,23 @@ html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fulls
 }
 
 .phone-frame.fit-client-lime.assistant-identity .assistant-program-card select { padding-right: 44px; }
+
+/* Filled progress and its disclosures retain the approved client geometry.
+   The goal embedded in PRO remains flat; trainer summaries keep their scope. */
+.phone-frame.fit-client-lime.progress-identity .progress-overview-panel > :is(.progress-analysis-preview, .client-progress-goal-story.standalone),
+.phone-frame.fit-client-lime.progress-identity .progress-pro-list > details > summary.progress-details-toggle {
+  border-radius: var(--lime-radius-card);
+  border-color: var(--lime-divider);
+}
+.phone-frame.fit-client-lime.progress-identity .ai-progress-sheet {
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.progress-identity .ai-progress-sheet .picker-close {
+  border-radius: 50%;
+  background: var(--lime-surface-high);
+  color: var(--lime-text);
+}
+
+.phone-frame.fit-client-lime.progress-identity .ai-progress-auto-error { border-radius: var(--lime-radius-card); }
