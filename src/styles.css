@@ -4906,10 +4906,12 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .trainer-clients-identity .client-swipe-actions { position:absolute; inset:0 0 0 auto; width:112px; display:grid; place-items:stretch; opacity:0; background:var(--danger) }
 .trainer-clients-identity .client-swipe-row.is-revealing .client-swipe-actions { opacity:1 }
 .trainer-clients-identity .client-swipe-actions.is-restore { background:var(--mono-primary) }
-.trainer-clients-identity .client-swipe-actions button { width:100%; min-height:76px; padding:8px; border:0; border-radius:0; background:transparent; color:#fff; font-size:12px; font-weight:600; line-height:1.2 }
+.trainer-clients-identity .client-swipe-actions button { width:100%; min-height:76px; padding:8px; border:0; border-radius:0; background:transparent; color:var(--bg); font-size:12px; font-weight:600; line-height:1.2 }
 .trainer-clients-identity .client-swipe-actions.is-restore button { color:var(--mono-on-primary) }
 .trainer-clients-identity .client-swipe-surface { position:relative; z-index:1; width:100%; transition:transform 180ms ease; touch-action:pan-y; -webkit-user-select:none; user-select:none; will-change:transform }
 .trainer-clients-identity .client-swipe-surface:active { transition:none }
+.trainer-clients-identity .client-swipe-row.is-dragging .client-swipe-surface { transition:none }
+.trainer-clients-identity .client-swipe-row.is-armed .client-swipe-actions button { padding-inline:16px }
 .trainer-clients-identity .client-card-menu { flex:0 0 44px; width:44px; height:44px; min-height:44px; margin-right:8px; padding:0; display:grid; place-items:center; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg) }
 .trainer-clients-identity .client-card-menu svg { width:20px; height:20px }
 .trainer-clients-identity .clients-archive-feedback { display:flex; min-height:48px; align-items:center; gap:10px; margin:0 0 12px; padding:10px 12px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:13px }
