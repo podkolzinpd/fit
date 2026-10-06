@@ -158,7 +158,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -389,7 +389,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         hasAccount: true,
         fullName: client.fullName,
         canonicalFullName: client.fullName,
-        gender: null,
+        gender: options.clientGender ?? null,
         ageYears: null,
         ageUpdatedAt: null,
         heightCm: null,
@@ -3823,3 +3823,124 @@ for (const theme of ['light', 'dark']) test(`Client Lime zero completion is neut
   await page.screenshot({ path: testInfo.outputPath(`client-zero-${theme}.png`), fullPage: true })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime tertiary actions and nested disclosures ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    const exercise: WorkoutExercise = {
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, weightKg: 20, reps: 8, fact: { weightKg: 20, reps: 8 }, confirmedAt: '2026-09-24T10:50:00.000Z', version: 2 }],
+    }
+    await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true, clientGender: 'male', workouts: [{ ...workout, status: 'done', startedAt: '2026-09-24T10:00:00.000Z', completedAt: '2026-09-24T11:00:00.000Z', exercises: [exercise] }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me')
+    const latestWorkoutAction = page.locator('.personal-workout-result .actions .link').first()
+    await expect(latestWorkoutAction).toHaveCSS('text-decoration-line', 'none')
+    await expect(latestWorkoutAction).toHaveCSS('min-height', '44px')
+    for (const selector of ['.body-progress-zone-picker', '.body-progress-meaning']) {
+      const disclosure = page.locator(selector).first()
+      const summary = disclosure.locator('summary')
+      await summary.scrollIntoViewIfNeeded()
+      await expect(summary).toHaveClass(/progress-details-toggle/)
+      await expect(summary).toHaveCSS('text-decoration-line', 'none')
+      await expect(summary.locator('svg')).toBeVisible()
+      await summary.click()
+      await expect(disclosure).toHaveAttribute('open', '')
+      await page.screenshot({ path: testInfo.outputPath(`${selector.slice(1)}.png`) })
+      await summary.click()
+    }
+    await page.goto('/me/progress')
+    const history = page.getByRole('button', { name: /История замеров/ })
+    await expect(history).toHaveCSS('text-decoration-line', 'none')
+    await expect(history).toHaveCSS('min-height', '44px')
+    await history.click()
+    const entry = page.locator('.client-progress-history .card').first()
+    await expect(entry.getByRole('button', { name: 'Изменить' })).toHaveCSS('min-height', '44px')
+    const remove = entry.getByRole('button', { name: 'Удалить' })
+    expect(await remove.evaluate((element) => getComputedStyle(element).color)).not.toBe(await history.evaluate((element) => getComputedStyle(element).color))
+    await remove.click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('measurement-confirm.png') })
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await entry.getByRole('button', { name: 'Изменить' }).click()
+    await expect(entry.getByRole('button', { name: 'Сохранить замер', exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('measurement-edit.png') })
+    await entry.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await page.getByRole('button', { name: 'Настроить показатели', exact: true }).click()
+    await expect(page.getByRole('group', { name: 'Новый показатель' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('measurement-metrics.png') })
+    await page.goto('/me/goal')
+    const goal = page.locator('.goal-block').first()
+    await expect(goal.getByRole('button', { name: 'Изменить' })).toHaveCSS('min-height', '44px')
+    await goal.getByRole('button', { name: 'Изменить' }).click()
+    await expect(page.getByRole('textbox', { name: 'Цель', exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('goal-edit.png') })
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await page.locator('.stage-row').getByRole('button', { name: 'Удалить' }).click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime catalog and support nested states ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/workouts/new')
+    await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await expect(picker).toBeVisible()
+    await expect(picker).toHaveCSS('background-color', theme === 'light' ? 'rgb(238, 240, 232)' : 'rgb(37, 37, 41)')
+    await expect(picker).toHaveCSS('border-top-left-radius', '40px')
+    await page.screenshot({ path: testInfo.outputPath('exercise-picker.png') })
+    await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Фильтры упражнений' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('exercise-filters.png') })
+    await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
+    await picker.getByLabel('Поиск упражнения').fill('присед со штангой')
+    await picker.getByRole('button', { name: 'Проиграть технику: Присед со штангой', exact: true }).click()
+    await picker.getByRole('button', { name: 'Открыть технику: Присед со штангой', exact: true }).click()
+    await expect(picker.getByRole('heading', { name: 'Техника', exact: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('exercise-technique.png') })
+    await picker.getByRole('button', { name: 'Назад к выбору' }).click()
+    await picker.getByRole('button', { name: 'Создать упражнение' }).click()
+    await expect(picker.getByRole('heading', { name: 'Своё упражнение' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('exercise-create.png') })
+    await page.goto('/me/trainers')
+    await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
+    const filters = page.getByRole('dialog', { name: 'Фильтры тренеров' })
+    await expect(filters).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('trainer-filters.png') })
+    await filters.getByRole('button', { name: 'Закрыть фильтры' }).click()
+    await page.goto('/me/settings')
+    await page.getByRole('button', { name: 'Предложение или проблема' }).click()
+    const form = page.getByRole('form', { name: 'Напишите команде Fit' })
+    const suggestion = form.getByRole('button', { name: 'Предложение', exact: true })
+    const problem = form.getByRole('button', { name: 'Проблема', exact: true })
+    const background = async () => suggestion.evaluate((element) => getComputedStyle(element).backgroundColor)
+    await page.screenshot({ path: testInfo.outputPath('feedback-selection.png') })
+    expect(await background()).not.toBe(await form.locator('.app-feedback-kinds').evaluate((element) => getComputedStyle(element).backgroundColor))
+    await problem.click()
+    await expect(problem).toHaveAttribute('aria-pressed', 'true')
+    await expect(form.getByRole('button', { name: 'Отправить', exact: true })).toBeDisabled()
+    await form.getByLabel('Сообщение', { exact: true }).fill('Тест интерфейса, данные только в фикстуре')
+    let attempts = 0
+    await page.route('**/v1/app-feedback', async (route) => {
+      attempts += 1
+      await route.fulfill({ status: attempts === 1 ? 503 : 200, contentType: 'application/json', body: attempts === 1 ? '{"error":"unavailable"}' : '{"feedback":{"id":"10000000-0000-4000-8000-000000000070"}}' })
+    })
+    await form.getByRole('button', { name: 'Отправить', exact: true }).click()
+    await expect(form.getByRole('alert')).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('feedback-error.png') })
+    await form.getByRole('button', { name: 'Отправить', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Сообщение отправлено' })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath('feedback-success.png') })
+    expect(attempts).toBe(2)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}

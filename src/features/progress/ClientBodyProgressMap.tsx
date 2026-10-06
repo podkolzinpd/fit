@@ -1,6 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { Gender, Workout } from '../../shared/domain'
 import { useAuth } from '../../app/auth-context'
+import { isClientLimeEnabled } from '../../app/client-lime'
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 import { ChevronRightIcon, CloseIcon } from '../../shared/icons'
 import {
   loadBodyMap,
@@ -133,6 +135,7 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, onS
   compact?: boolean
   detailFooter?: ReactNode
 }) {
+  const { actor } = useAuth()
   const figure = variant === 'neutral' ? null : BODY_FIGURES[variant]
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const listOnly = !figure || failedImage === figure.image
@@ -235,7 +238,7 @@ export function MapPanel({ data, selected, insightCandidates, variant, side, onS
       </button>
     </div>}
     </div>
-    {!listOnly && !decorative && <details className="body-progress-zone-picker"><summary>Выбрать зону</summary>{zoneList}</details>}
+    {!listOnly && !decorative && <details className="body-progress-zone-picker">{isClientLimeEnabled(actor) ? <ProgressDetailsSummary>Выбрать зону</ProgressDetailsSummary> : <summary>Выбрать зону</summary>}{zoneList}</details>}
   </div>
 }
 
