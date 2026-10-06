@@ -2,8 +2,8 @@
 
 ## Очистка frontend-релизов — 2026-10-06
 
-Plan37209255407 упал на `releases/`: YC CLI опустил size=0 → NaN. Исправлены только канонические пустые маркеры с ETag; неверные размеры/ключи fail-closed. Raw CLI regression и inventory-summary artifact добавлены.
-Локально retention22/22, hosting114/114, check2412/API1176+92 skipped/build passed. Ежедневное удаление требует зелёного CI, production plan и scoped DeleteObject; текущий/предыдущий, последние3дня и общие файлы защищены. Media/state вне scope.
+PR#1467 слит223cb7d4; CI37502696391 success. Plan37521471733 success:771файл+121manifest/241207827байт,56релизов сохранены, overlap0; raw CLI size исправлен fail-closed. Второй gate: HEAD last_modified_at/секунды vs list last_modified/миллисекунды. Follow-up исправлен локально:retention23/23,hosting115/115,check2412/API1176+92 skipped/build passed; база28309ef4 после #1468, ETag/размер сохранены.
+Ежедневное удаление пока выключено. По подтверждению владельца frontend deployer получил ACL READ+WRITE только frontend-бакета и policy DeleteObject releases/*; DeleteObjectVersion явно запрещён, wildcard AWS-service правило исключает deployer. IAM uploader/viewer сохранены; без editor/admin/media/state/БД. Readback ACL2/policy8/versioning enabled подтверждён; текущий/предыдущий, последние3дня и общие файлы защищены; apply ещё не был.
 
 ## YAFIT-595 — третий тренер Fit Lime — 2026-10-06
 

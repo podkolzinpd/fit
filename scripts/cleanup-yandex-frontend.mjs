@@ -182,8 +182,14 @@ export function cleanupCloud({ directory, token, run = promisify(execFile), requ
     assertObjectUnchanged: async (item) => {
       const { stdout } = await yc(['storage', 's3api', 'head-object', ...objectArgs(item.key), '--format', 'json'])
       const head = JSON.parse(stdout)
-      if (!item.etag || head.etag !== item.etag || Number(head.content_length) !== item.size
-          || Date.parse(head.last_modified) !== Date.parse(item.lastModified)) throw new Error('Object changed; cleanup stopped')
+      const headTime = Date.parse(head.last_modified_at)
+      const listedTime = Date.parse(item.lastModified)
+      // HEAD uses HTTP Last-Modified (whole seconds), while ListObjectsV2
+      // retains milliseconds. Compare at the available server precision;
+      // ETag and exact size must still match before any DELETE.
+      if (!item.etag || head.etag !== item.etag || inventorySize({ size: head.content_length }) !== item.size
+          || !Number.isFinite(headTime) || !Number.isFinite(listedTime)
+          || Math.floor(headTime / 1000) !== Math.floor(listedTime / 1000)) throw new Error('Object changed; cleanup stopped')
     },
     remove: async (key) => {
       await yc(['storage', 's3api', 'delete-object', ...objectArgs(key)])

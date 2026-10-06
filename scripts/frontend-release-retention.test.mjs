@@ -324,6 +324,30 @@ test('inventory follows pagination; delete adapter refuses keys outside release 
   await assert.rejects(cloud.remove('other-bucket/key'), /Unsafe/)
 })
 
+test('real YC HEAD date field and HTTP second precision verify unchanged objects; malformed or changed metadata stops deletion', async () => {
+  const item = { key: `releases/${'a'.repeat(40)}-${'b'.repeat(64)}/assets/app-12345678.js`,
+    size: 765737, etag: '"9c4ef9833503f3bab296ad3714d54e17"', lastModified: '2026-09-27T20:10:00.959Z' }
+  const head = { content_length: '765737', etag: item.etag, last_modified_at: '2026-09-27T20:10:00Z' }
+  let response = head
+  const cloud = cleanupCloud({ run: async (_cli, args) => {
+    assert.equal(args[2], 'head-object')
+    assert.equal(args[args.indexOf('--key') + 1], item.key)
+    return { stdout: JSON.stringify(response) }
+  } })
+  await cloud.assertObjectUnchanged(item)
+  for (const change of [
+    { etag: 'changed' }, { content_length: '765738' }, { content_length: null },
+    { content_length: '' }, { last_modified_at: '2026-09-27T20:10:01Z' },
+    { last_modified_at: undefined, last_modified: head.last_modified_at },
+    { last_modified_at: 'invalid' },
+  ]) {
+    response = { ...head, ...change }
+    await assert.rejects(cloud.assertObjectUnchanged(item), /Object changed; cleanup stopped/)
+  }
+  response = head
+  await assert.rejects(cloud.assertObjectUnchanged({ ...item, lastModified: 'invalid' }), /Object changed/)
+})
+
 test('partial deletion can be replanned, without losing retained objects or deleting the manifest early', async (t) => {
   const data = await history(t)
   const plan = planCleanup(data)
