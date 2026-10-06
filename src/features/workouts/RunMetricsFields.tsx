@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   formatRunDistanceInput,
   preferredRunDistanceUnit,
@@ -10,6 +10,7 @@ import {
 import { WorkoutDurationField } from './WorkoutDurationField'
 
 interface RunMetricsFieldsProps {
+  loadField?: ReactNode
   idPrefix: string
   durationSec?: number
   distanceKm?: number
@@ -33,6 +34,7 @@ interface RunMetricsFieldsProps {
 }
 
 export function RunMetricsFields({
+  loadField,
   idPrefix,
   durationSec,
   distanceKm,
@@ -63,7 +65,7 @@ export function RunMetricsFields({
   const [strokeRateText, setStrokeRateText] = useState(() => strokeRate === undefined ? '' : String(strokeRate))
   const parsedDuration = localDuration
   const parsedDistance = runDistanceKmFromInput(distanceText, unit)
-  const pace = optionalDistance ? null : rowing ? rowingPaceLabel(parsedDuration, parsedDistance) : runPaceLabel(parsedDuration, parsedDistance)
+  const pace = optionalDistance || loadField ? null : rowing ? rowingPaceLabel(parsedDuration, parsedDistance) : runPaceLabel(parsedDuration, parsedDistance)
 
   useEffect(() => setLocalDuration(durationSec), [durationSec])
   useEffect(() => {
@@ -112,10 +114,12 @@ export function RunMetricsFields({
     window.requestAnimationFrame(() => form?.dispatchEvent(new Event('input', { bubbles: true })))
   }
 
-  return <>
-    <div className="run-duration-field">
+  const durationField = <div className={loadField ? 'run-duration-field loaded-distance-time' : 'run-duration-field'}>
+      {loadField && <span>Время (необязательно)</span>}
       <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} compact={compactDuration} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
     </div>
+  return <>
+    {loadField ?? durationField}
     <div className="run-distance-field">
       {!distanceVisible ? <button type="button" className="run-distance-add" disabled={disabled} onClick={() => setDistanceVisible(true)}>+ Добавить дистанцию</button> : <>
       <div className="run-distance-control">
@@ -149,7 +153,7 @@ export function RunMetricsFields({
           </select>
         </span>
       </div>
-      <small>{optionalDistance ? 'По дисплею тренажёра' : pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>
+      {!loadField && <small>{optionalDistance ? 'По дисплею тренажёра' : pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>}
       {optionalDistance && !disabled && <button type="button" className="run-distance-remove" aria-label="Убрать дистанцию" onClick={hideDistance}>Убрать</button>}
       {rowing && <label className="rowing-stroke-rate-field">
         <span>Гребков в минуту</span>
@@ -170,5 +174,6 @@ export function RunMetricsFields({
       </label>}
       </>}
     </div>
+    {loadField && durationField}
   </>
 }

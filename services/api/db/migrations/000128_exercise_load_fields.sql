@@ -1,7 +1,7 @@
 -- Up Migration
 
 -- Existing editable workout snapshots keep their original input kind. Align
--- this one reviewed system exercise with the catalog so active Live sessions
+-- these reviewed system exercises with the catalog so active Live sessions
 -- expose weight and repetitions. Sets (including entered values) are untouched.
 with corrected as (
   update public.workout_exercises exercise
@@ -10,7 +10,11 @@ with corrected as (
   where workout.id = exercise.workout_id
     and workout.status in ('planned', 'in_progress')
     and exercise.exercise_source = 'system'
-    and exercise.exercise_ref = 'vital-walking-lunge-ex270'
+    and exercise.exercise_ref in (
+      'vital-walking-lunge-ex270', 'vital-lunge-forward-ex314',
+      'vital-reverse-lunge-ex322', 'vital-side-lunge-ex325',
+      'vital-curtsy-lunge-ex244', 'vital-stepup-ex332'
+    )
     and exercise.input_kind = 'reps'
   returning exercise.workout_id
 )

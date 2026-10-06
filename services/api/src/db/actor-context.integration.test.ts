@@ -1028,9 +1028,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
     })
 
-    it('updates only editable walking-lunge snapshots without changing their sets or history', async () => {
+    it.each(['vital-walking-lunge-ex270', 'vital-lunge-forward-ex314', 'vital-reverse-lunge-ex322', 'vital-side-lunge-ex325', 'vital-curtsy-lunge-ex244', 'vital-stepup-ex332'])('updates only editable %s snapshots without changing their sets or history', async (exerciseRef) => {
       if (ownerPool === undefined) throw new Error('owner pool is not initialized')
-      const migrationUrl = new URL('../../db/migrations/000127_walking_lunge_weight.sql', import.meta.url)
+      const migrationUrl = new URL('../../db/migrations/000128_exercise_load_fields.sql', import.meta.url)
       const up = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')[0]
       if (up === undefined) throw new Error('migration up section is missing')
       const workoutIds = [randomUUID(), randomUUID(), randomUUID()]
@@ -1052,11 +1052,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             id, workout_id, trainer_id, client_id, position,
             exercise_source, exercise_ref, exercise_name, muscle_group, input_kind
           ) values
-            ($1, $5, $8, $9, 0, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps'),
-            ($2, $5, $8, $9, 1, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps'),
-            ($3, $6, $8, $9, 0, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps'),
-            ($4, $7, $8, $9, 0, 'system', 'vital-walking-lunge-ex270', 'Выпады в ходьбе', 'legs', 'reps')
-        `, [...exerciseIds, ...workoutIds, ACTOR_ID, CLIENT_ID])
+            ($1, $5, $8, $9, 0, 'system', $10, 'Выпады', 'legs', 'reps'),
+            ($2, $5, $8, $9, 1, 'system', $10, 'Выпады', 'legs', 'reps'),
+            ($3, $6, $8, $9, 0, 'system', $10, 'Выпады', 'legs', 'reps'),
+            ($4, $7, $8, $9, 0, 'system', $10, 'Выпады', 'legs', 'reps')
+        `, [...exerciseIds, ...workoutIds, ACTOR_ID, CLIENT_ID, exerciseRef])
         await connection.query(`
           insert into public.workout_sets (
             id, workout_exercise_id, trainer_id, client_id, position, plan_reps, fact_reps

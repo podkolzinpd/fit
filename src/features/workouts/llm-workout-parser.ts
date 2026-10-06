@@ -4,6 +4,8 @@ import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, resolveQuickWo
 import { selectableExercises } from '../exercises/selectable-exercises'
 import { isActiveCatalogExercise } from '../../shared/exercise-catalog-retirement'
 import { formatRunDuration, isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
+import { allowsDurationWeight, isLoadedDistance } from '../../shared/exercise-measurements'
+import { compactExerciseDetailSummary } from '../../data/repositories/workout-rules'
 
 /**
  * Ниже этого порога выбор модели нужно подтвердить. Локальный строгий матчинг
@@ -273,6 +275,9 @@ export function orderParsedWorkoutItems(items: readonly ParsedWorkoutExercise[])
 export function workoutParseSetSummary(item: ParsedWorkoutExercise): string {
   const first = item.sets[0]
   if (!item.hasValues || !first) return 'без значений'
+  if (isLoadedDistance(item.exercise) || allowsDurationWeight(item.exercise)) {
+    return compactExerciseDetailSummary(item.exercise.inputKind, item.sets, 'planned', false, item.exercise.ref)
+  }
   if (item.exercise.inputKind === 'distance') {
     const duration = formatRunDuration(first.durationSec)
     const distance = runDistanceLabel(first.distanceKm)

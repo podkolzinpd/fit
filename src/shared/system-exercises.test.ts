@@ -273,7 +273,7 @@ describe('system exercise catalog', () => {
   })
 
   it('применяет полный аудит формата результата ко всем исправленным карточкам', () => {
-    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(124)
+    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(129)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 
     for (const [ref, correction] of Object.entries(EXERCISE_METRIC_CORRECTIONS)) {
@@ -291,7 +291,7 @@ describe('system exercise catalog', () => {
     const active = selectableExercises(SYSTEM_EXERCISE_CATALOG)
     expect(active).toHaveLength(1040)
     expect(active.filter((exercise) => exercise.inputKind === 'distance')).toHaveLength(24)
-    expect(active.filter((exercise) => exercise.inputKind === 'duration')).toHaveLength(113)
+    expect(active.filter((exercise) => exercise.inputKind === 'duration')).toHaveLength(112)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     for (const ref of OPTIONAL_DISTANCE_EXERCISE_REFS) {
       const exercise = catalogByRef.get(ref)

@@ -33,6 +33,14 @@ function FractionalWeightEditorHarness() {
   return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
 }
 
+function LoadedEditorHarness({ exerciseRef, inputKind, entryMode = 'plan' }: { exerciseRef: string; inputKind: WorkoutExerciseDraft['inputKind']; entryMode?: 'plan' | 'fact' }) {
+  const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([{
+    source: 'system', ref: exerciseRef, name: 'Проверяемое упражнение', muscleGroup: 'legs', inputKind, position: 0,
+    sets: [{ position: 0, weightKg: 3.4, reps: 12, durationSec: 30, distanceKm: 0.02216 }],
+  }])
+  return <><WorkoutExerciseEditor entryMode={entryMode} exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} /><output aria-label="Черновик">{JSON.stringify(draft)}</output></>
+}
+
 function ReorderEditorHarness() {
   const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
     exercises[0]!,
@@ -62,6 +70,38 @@ function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
 }
 
 describe('workout exercise editor rules', () => {
+  it.each(['vital-barbell-hold-ex010', 'vital-gym-pro-r003-0006', 'vital-gym-pro-r289-1625'])('shows weight and duration for %s without repetitions', (ref) => {
+    render(<LoadedEditorHarness exerciseRef={ref} inputKind="duration" />)
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(3.4)
+    expect(screen.getByRole('group', { name: 'Время, подход 1' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Повторы, подход 1')).not.toBeInTheDocument()
+  })
+  it.each(['plan', 'fact'] as const)('records fractional load and distance in %s mode and carries the load into a new set', async (entryMode) => {
+    const user = userEvent.setup()
+    render(<LoadedEditorHarness exerciseRef="farmer-carry" inputKind="distance" entryMode={entryMode} />)
+    const weight = screen.getByLabelText(entryMode === 'fact' ? 'Фактический вес, подход 1' : 'Вес, подход 1')
+    await user.clear(weight)
+    await user.type(weight, '22.16')
+    expect((weight as HTMLInputElement).checkValidity()).toBe(true)
+    expect(screen.getByText('Время (необязательно)')).toBeInTheDocument()
+    expect(screen.queryByText(/Темп/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '＋ Подход' }))
+    expect(screen.getByLabelText(entryMode === 'fact' ? 'Фактический вес, подход 2' : 'Вес, подход 2')).toHaveValue(22.16)
+    expect(screen.getByLabelText('Черновик')).toHaveTextContent('"distanceKm":0.02216')
+  })
+  it('switches ViPR to time and back without discarding load, reps or time', async () => {
+    const user = userEvent.setup()
+    render(<LoadedEditorHarness exerciseRef="vital-gym-pro-r303-1645" inputKind="strength" />)
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Настройки упражнения' }))
+    await user.selectOptions(screen.getByLabelText('Измерение подхода'), 'duration')
+    expect(screen.getByLabelText('Черновик')).toHaveTextContent('"inputKind":"duration"')
+    expect(screen.getByLabelText('Черновик')).toHaveTextContent('"reps":12')
+    await user.selectOptions(screen.getByLabelText('Измерение подхода'), 'strength')
+    await user.click(screen.getByRole('button', { name: 'Готово' }))
+    expect(screen.getByLabelText('Повторы, подход 1')).toHaveValue(12)
+    expect(screen.getByLabelText('Черновик')).toHaveTextContent('"durationSec":30')
+  })
   it('warns before removing a filled superset round and removes it for both exercises', async () => {
     const user = userEvent.setup()
     render(<GroupEditorHarness />)

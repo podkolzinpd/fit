@@ -66,7 +66,7 @@ import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutDurationField } from './WorkoutDurationField'
-import { allowsOptionalDistance, OPTIONAL_DISTANCE_EXERCISE_REFS } from '../../shared/exercise-measurements'
+import { allowsOptionalDistance, OPTIONAL_DISTANCE_EXERCISE_REFS, allowsDurationWeight, allowsRepetitionTimeChoice, isLoadedDistance, exerciseSetColumnLabels, LOADED_DISTANCE_EXERCISE_REFS } from '../../shared/exercise-measurements'
 import { isRowingExerciseRef, parseRunDurationInput, rowingPaceLabel, runDistanceKmFromInput, runDistanceLabel, runPaceLabel, type RunDistanceUnit } from '../../shared/run-metrics'
 import { WorkoutExerciseHeader } from './WorkoutExerciseHeader'
 import { ExerciseProgressHistory, ExerciseProgressSummary } from './ExerciseProgressSummary'
@@ -2322,6 +2322,9 @@ function WorkoutHistorySet({ set, index, done, showRpe, exerciseRef }: { set: Wo
 // (раньше был только тусклым placeholder). null — если план не задан.
 function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exerciseRef?: string): string | null {
   const parts: string[] = []
+  if (inputKind !== 'strength' && set.weightKg !== undefined
+    && (allowsDurationWeight({ source: 'system', ref: exerciseRef ?? '', inputKind })
+      || isLoadedDistance({ source: 'system', ref: exerciseRef ?? '', inputKind }))) parts.push(`${set.weightKg} кг`)
   if (inputKind === 'strength') {
     if (set.weightKg !== undefined) parts.push(`${set.weightKg} кг`)
     if (set.reps !== undefined) parts.push(`${set.reps} повт.`)
@@ -2344,6 +2347,7 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   if (set.rpe !== undefined) parts.push(`RPE ${set.rpe}`)
   const plan = parts.length ? parts.join(' × ') : null
   const pace = inputKind === 'distance' && !OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef)
+    && !LOADED_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef)
     && exerciseRef !== 'vital-gym-pro-r213-1533'
     ? isRowingExerciseRef(exerciseRef)
       ? rowingPaceLabel(durationSeconds(set.durationSec, set.durationMin), set.distanceKm)
@@ -2357,7 +2361,7 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
 // строку в набор крупных степперов.
 function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false, selectZero = false }: {
   name: string; label: string; placeholder: string; defaultValue: number | undefined
-  step: number; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean; selectZero?: boolean
+  step: number | 'any'; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean; selectZero?: boolean
 }) {
   return <input
     key={inputKey}
@@ -2396,13 +2400,16 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
   const isPlanHint = (fact: number | undefined, plan: number | undefined) => !locked && fact === undefined && plan !== undefined
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
-  const distanceCapable = inputKind === 'distance' || allowsOptionalDistance({ source, ref: exerciseRef ?? '', inputKind }) || (inputKind === 'duration' && (set.distanceKm !== undefined || set.fact.distanceKm !== undefined))
+  const distanceCapable = !allowsDurationWeight({ source, ref: exerciseRef ?? '', inputKind }) && (inputKind === 'distance' || allowsOptionalDistance({ source, ref: exerciseRef ?? '', inputKind }) || (inputKind === 'duration' && (set.distanceKm !== undefined || set.fact.distanceKm !== undefined)))
   const rpeField = showRpe ? <select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
     <option value="">—</option>
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select> : null
+  const measurements = { source, ref: exerciseRef ?? '', inputKind }
+  const weightField = <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />
   if (inputKind === 'strength') return <>
-    <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step={0.1} disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />
+    {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
+    {weightField}
     <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
     {rpeField}
   </>
@@ -2412,12 +2419,16 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {rpeField}
   </>
   if (inputKind === 'duration' && !distanceCapable) return <>
+    {allowsDurationWeight(measurements) && <input type="hidden" name="distanceKm" value={value(set.fact.distanceKm, set.distanceKm) ?? ''} />}
+    {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="reps" value={value(set.fact.reps, set.reps) ?? ''} />}
+    {allowsDurationWeight(measurements) && weightField}
     <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />
-    <span className="live-set-empty" aria-hidden="true" />
+    {!allowsDurationWeight(measurements) && <span className="live-set-empty" aria-hidden="true" />}
     {rpeField}
   </>
   return <>
     <RunMetricsFields
+      loadField={isLoadedDistance(measurements) ? weightField : undefined}
       idPrefix={`live-run-${set.id}-${k}`}
       rowing={isRowingExerciseRef(exerciseRef)}
       optionalDistance={inputKind === 'duration'}
@@ -3495,7 +3506,7 @@ export function LiveWorkoutPage() {
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
-              <WorkoutSetTable variant="live" inputKind={exercise.inputKind} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
+              <WorkoutSetTable variant="live" inputKind={exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
               {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}

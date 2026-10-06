@@ -1,4 +1,24 @@
 import { describe, expect, it } from 'vitest'
+
+describe('loaded duration and distance summaries', () => {
+  it.each([
+    ['duration', 'vital-barbell-hold-ex010'],
+    ['duration', 'vital-gym-pro-r003-0006'],
+    ['duration', 'vital-gym-pro-r289-1625'],
+    ['duration', 'vital-gym-pro-r303-1645'],
+    ['distance', 'farmer-carry'],
+    ['distance', 'sled-push'],
+    ['distance', 'fedb-prowler-sprint'],
+    ['distance', 'fedb-sled-drag-harness'],
+  ] as const)('retains load in planned and completed %s %s summaries', (kind, ref) => {
+    const set = { id: 'set', position: 0, weightKg: 22.16, durationSec: 30, distanceKm: 0.02216,
+      fact: { weightKg: 23.25, durationSec: 40, distanceKm: 0.025 }, confirmedAt: 'now', version: 2 }
+    expect(compactExerciseDetailSummary(kind, [set], 'planned', false, ref)).toContain('22.16 кг')
+    expect(compactExerciseDetailSummary(kind, [set], 'completed', false, ref)).toContain('23.25 кг')
+    expect(compactExerciseDetailSummary(kind, [set], 'completed', false, ref)).not.toContain('/км')
+    expect(formatFactVsPlan(set, false, ref)).not.toContain('темп')
+  })
+})
 import type { ExerciseSnapshot, InputKind, Workout, WorkoutExerciseDraft, WorkoutSet, WorkoutStatus, WorkoutSummary } from '../../shared/domain'
 import { applyRunningActiveRecoveryPreset, applyRunningIntervalPreset, bmiLabel, bmiValue, canTransition, chartUnitFor, clientWorkoutStatusLabel, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, completedWorkoutDraft, computeClientStats, copyWorkout, createRunningFormatDrafts, ensureBlockIds, enteredFactLine, exerciseChartPoints, exerciseSummary, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, formatFactVsPlan, factLine, groupDraftsIntoBlocks, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, mergeBlockWithNext, moveBlock, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, resizeDraftBlockRounds, splitBlock, syncBlockRounds, draftBlockRoundsView, nextSetDraft, setBlockPreset, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from './workout-rules'
 import { localDate } from '../../shared/local-date'
@@ -38,6 +58,20 @@ describe('catalog names in new copies only', () => {
       }],
     }
   }
+
+  it.each(['strength', 'duration'] as const)('preserves the selected ViPR %s mode and factual load when copying', (inputKind) => {
+    const source = sourceWorkout()
+    source.exercises[0] = {
+      ...source.exercises[0]!, ref: 'vital-gym-pro-r303-1645', inputKind,
+      sets: [{ id: 'vipr-set', position: 0, weightKg: 20, reps: 12, durationSec: 30,
+        fact: { weightKg: 22.16, reps: 14, durationSec: 40 }, confirmedAt: 'now', version: 2 }],
+    }
+    const original = structuredClone(source)
+    const copy = copyWorkout(source, TODAY, { refreshCatalogNames: true }).exercises[0]!
+    expect(copy.inputKind).toBe(inputKind)
+    expect(copy.sets[0]).toMatchObject({ weightKg: 22.16, reps: 14, durationSec: 40 })
+    expect(source).toEqual(original)
+  })
 
   it('changes only the copy label, retaining fields, notes, rest and historical refs', () => {
     const source = sourceWorkout()

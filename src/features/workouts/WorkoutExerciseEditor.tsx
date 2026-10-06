@@ -9,7 +9,7 @@ import { OverflowMenu, useConfirm } from '../../shared/ui'
 import { ArrowDownIcon, ArrowUpIcon, CloseIcon } from '../../shared/icons'
 import { isRowingExerciseRef } from '../../shared/run-metrics'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
-import { allowsOptionalDistance } from '../../shared/exercise-measurements'
+import { allowsOptionalDistance, allowsDurationWeight, allowsRepetitionTimeChoice, isLoadedDistance, exerciseSetColumnLabels } from '../../shared/exercise-measurements'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutDurationField } from './WorkoutDurationField'
@@ -128,6 +128,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   function commitExercises(next: WorkoutExerciseDraft[]) {
     latestExercises.current = next
     onChange(next)
+  }
+  function changeRepetitionTimeMode(value: string) {
+    commitExercises(latestExercises.current.map((item, index) => index === settingsExerciseIndex
+      ? { ...item, inputKind: value === 'duration' ? 'duration' : 'strength' } : item))
   }
   function updateRestBetweenSets(blockId: string, next: number) {
     commitExercises(setBlockRest([...latestExercises.current], blockId, { betweenSets: next }))
@@ -249,8 +253,9 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const set = exercise.sets[setIndex]
     if (!set) return null
     const durationSec = set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
-    const distanceCapable = exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((item) => item.distanceKm !== undefined)))
+    const distanceCapable = !allowsDurationWeight(exercise) && (exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((item) => item.distanceKm !== undefined))))
     const inputClass = 'planned-set-input'
+    const weightField = <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
     const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
       <option value="">—</option>
       {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -266,12 +271,14 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {rpeField}
     </>
     if (exercise.inputKind === 'duration' && !distanceCapable) return <>
+      {allowsDurationWeight(exercise) && weightField}
       <WorkoutDurationField className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />
-      <span aria-hidden="true" />
+      {!allowsDurationWeight(exercise) && <span aria-hidden="true" />}
       {rpeField}
     </>
     return <>
       <RunMetricsFields
+        loadField={isLoadedDistance(exercise) ? weightField : undefined}
         key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
         rowing={isRowingExerciseRef(exercise.ref)}
@@ -300,7 +307,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 
   // Одиночное упражнение (вне блока): подходы и видимый вход в суперсет.
   function renderExercise(exercise: WorkoutExerciseDraft, exerciseIndex: number, canMergeNext: boolean, reorder?: React.ReactNode, canReorder = false) {
-    const distanceCapable = exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((set) => set.distanceKm !== undefined)))
+    const distanceCapable = !allowsDurationWeight(exercise) && (exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((set) => set.distanceKm !== undefined))))
     const showRpe = isRpeVisible(exerciseIndex)
     const showRest = showRestByDefault
     const expanded = isExerciseExpanded(exercise, exerciseIndex)
@@ -328,7 +335,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {expanded && <div className="compact-editor-exercise-fields">
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<ClampedNumberInput label={`Отдых между подходами, ${exercise.name}`} value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>}
-      <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} showRpe={showRpe}>
+      <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={showRpe}>
         {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
@@ -434,6 +441,10 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         <section className="exercise-settings-sheet" role="dialog" aria-modal="true" aria-label={`Настройки упражнения «${exercise.name}»`} onClick={(event) => event.stopPropagation()}>
           <header className="picker-header"><div><p className="eyebrow">НАСТРОЙКИ УПРАЖНЕНИЯ</p><h2>{exercise.name}</h2></div><button type="button" className="picker-close" aria-label="Закрыть" onClick={() => setSettingsExerciseIndex(null)}><CloseIcon /></button></header>
           <div className="exercise-settings-fields">
+            {allowsRepetitionTimeChoice(exercise) && <label className="field">Измерение подхода<select aria-label="Измерение подхода" value={exercise.inputKind} onChange={(event) => changeRepetitionTimeMode(event.target.value)}>
+              <option value="strength">Кг + повторы</option>
+              <option value="duration">Кг + время</option>
+            </select></label>}
             <label className="field">Отдых между подходами, сек.<ClampedNumberInput label="Отдых между подходами, с" value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>
             {showRunningPresets && <div className="running-preset-actions">
               <span>Быстрые схемы</span>
