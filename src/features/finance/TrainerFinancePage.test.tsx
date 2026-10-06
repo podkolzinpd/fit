@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, SessionActor } from '../../shared/domain'
-import type { TrainerFinanceClientBundle } from '../../data/repositories/trainer-finance.repository'
+import type { TrainerFinanceClientBundle, TrainerFinanceRepository } from '../../data/repositories/trainer-finance.repository'
 import { PackageForm, TrainerFinancePage } from './TrainerFinancePage'
 
 const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
@@ -21,7 +21,7 @@ const bundle: TrainerFinanceClientBundle = {
   sessions: [{ id: sessionId, packageId, workoutId, disposition: 'charged', source: 'automatic', comment: null, workoutDate: '2026-09-05', voidedAt: null, voidReason: null, version: 1, createdAt: '2026-09-05T10:00:00.000Z', updatedAt: '2026-09-05T10:00:00.000Z' }],
 }
 const clients = vi.hoisted(() => ({ get: vi.fn() }))
-const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn(), updatePackage: vi.fn(), addPayment: vi.fn(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn() }))
+const finance = vi.hoisted(() => ({ listClient: vi.fn(), createPackage: vi.fn<TrainerFinanceRepository['createPackage']>(), updatePackage: vi.fn(), addPayment: vi.fn<TrainerFinanceRepository['addPayment']>(), updatePayment: vi.fn(), voidPayment: vi.fn(), updateSession: vi.fn(), createManualSession: vi.fn() }))
 const workouts = vi.hoisted(() => ({ saveCompleted: vi.fn() }))
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { kind: 'trainer', role: 'trainer', userId: trainerId, email: null, firstName: 'Ирина', lastName: null, timezone: 'Europe/Moscow' } as SessionActor }) }))
@@ -94,10 +94,10 @@ describe('TrainerFinancePage', () => {
   beforeEach(() => {
     clients.get.mockReset().mockResolvedValue(client)
     finance.listClient.mockReset().mockResolvedValue(bundle)
-    finance.createPackage.mockReset().mockResolvedValue(bundle.packages[0])
-    finance.updatePackage.mockReset().mockResolvedValue(bundle.packages[0])
-    finance.addPayment.mockReset().mockResolvedValue(bundle.payments[0])
-    finance.updatePayment.mockReset().mockResolvedValue(bundle.payments[0])
+    finance.createPackage.mockReset().mockResolvedValue(bundle.packages[0]!)
+    finance.updatePackage.mockReset().mockResolvedValue(bundle.packages[0]!)
+    finance.addPayment.mockReset().mockResolvedValue(bundle.payments[0]!)
+    finance.updatePayment.mockReset().mockResolvedValue(bundle.payments[0]!)
     finance.voidPayment.mockReset().mockResolvedValue(undefined)
     finance.updateSession.mockReset().mockResolvedValue({ ...bundle.sessions[0], disposition: 'free', packageId: null, version: 2 })
     finance.createManualSession.mockReset().mockResolvedValue(bundle.sessions[0])
@@ -155,6 +155,61 @@ describe('TrainerFinancePage', () => {
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledWith(packageId, expect.objectContaining({
       amountCents: 750000, comment: null,
     })))
+  })
+
+  it('reuses the payment request after an uncertain response and allows a separate next payment', async () => {
+    const user = userEvent.setup()
+    finance.addPayment.mockRejectedValueOnce(new Error('Нет связи')).mockResolvedValue(bundle.payments[0]!)
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Оплаты: 1' }))
+    await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(1))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(2))
+    const firstRequest = finance.addPayment.mock.calls[0]![1].requestId
+    expect(firstRequest).toEqual(expect.any(String))
+    expect(finance.addPayment.mock.calls[1]![1].requestId).toBe(firstRequest)
+    await user.click(within(await screen.findByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '1000')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(3))
+    expect(finance.addPayment.mock.calls[2]![1].requestId).not.toBe(firstRequest)
+  })
+
+  it('reuses the service request after an uncertain response', async () => {
+    const user = userEvent.setup()
+    finance.createPackage.mockRejectedValueOnce(new Error('Нет связи')).mockResolvedValue(bundle.packages[0]!)
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Новая' }))
+    await user.type(screen.getByLabelText('Стоимость, ₽'), '25000')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.createPackage).toHaveBeenCalledTimes(1))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.createPackage).toHaveBeenCalledTimes(2))
+    expect(finance.createPackage.mock.calls[0]![1].requestId).toEqual(expect.any(String))
+    expect(finance.createPackage.mock.calls[1]![1].requestId).toBe(finance.createPackage.mock.calls[0]![1].requestId)
+  })
+
+  it('confirms deletion and refreshes the paid amount and debt without changing sessions', async () => {
+    const user = userEvent.setup()
+    finance.voidPayment.mockImplementation(() => {
+      finance.listClient.mockResolvedValue({ ...bundle, packages: [{ ...bundle.packages[0], paidCents: 0, dueCents: 2500000 }], payments: [{ ...bundle.payments[0], voidedAt: '2026-10-06T12:00:00Z' }] })
+      return Promise.resolve()
+    })
+    renderPage()
+    await user.click(await screen.findByRole('tab', { name: 'Оплаты: 1' }))
+    await user.click(screen.getByRole('button', { name: /Действия с оплатой/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Удалить' }))
+    expect(finance.voidPayment).not.toHaveBeenCalled()
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Удалить' }))
+    await waitFor(() => expect(finance.voidPayment).toHaveBeenCalledWith(paymentId, 1, 'Удалено тренером'))
+    expect(await screen.findByRole('tab', { name: 'Оплаты: 0' })).toBeVisible()
+    const total = within(screen.getByRole('tabpanel')).getByText('К оплате').closest('p')!
+    expect(total).toHaveTextContent(/25\s000/)
+    await user.click(screen.getByRole('tab', { name: 'Услуги: 1' }))
+    expect(screen.getByText('8 из 10')).toBeVisible()
   })
 
   it('adds a completed session and lets the trainer correct its accounting', async () => {

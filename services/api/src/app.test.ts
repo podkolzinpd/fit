@@ -1090,6 +1090,31 @@ describe('trainer finance', () => {
     expect(createPackage).toHaveBeenCalledWith(session, clientId, draft)
   })
 
+  it('passes receipt dates and request ids through finance mutations', async () => {
+    const { service: pilotTrainerFinance, createPackage, addPayment } = finance()
+    const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)
+    const requestId = '85a62bc9-a420-46a0-9cf9-b01a3278e660'
+    const draft = { kind: 'session_pack', title: 'Занятия', sessionsTotal: 10,
+      openingUsedSessions: 0, priceCents: 2500000, openingPaidCents: 1000000,
+      openingReceivedOn: '2026-08-27', requestId, startsOn: '2026-09-01',
+      endsOn: null, paymentDueOn: null, comment: null }
+    const created = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: draft })
+    expect(created.statusCode).toBe(201)
+    expect(createPackage).toHaveBeenCalledWith(session, clientId, draft)
+    const paymentDraft = { amountCents: 500000, receivedOn: '2026-09-03', comment: null, requestId }
+    const paid = await app.inject({ method: 'POST', url: `/v1/finance/packages/${packageId}/payments`, headers: { 'x-fit-session': session.token }, payload: paymentDraft })
+    expect(paid.statusCode).toBe(201)
+    expect(addPayment).toHaveBeenCalledWith(session, packageId, paymentDraft)
+    for (const invalid of [{ ...paymentDraft, requestId: 'wrong' }, { ...paymentDraft, requestId: null }]) {
+      const response = await app.inject({ method: 'POST', url: `/v1/finance/packages/${packageId}/payments`, headers: { 'x-fit-session': session.token }, payload: invalid })
+      expect(response.statusCode).toBe(400)
+    }
+    const badDate = await app.inject({ method: 'POST', url: `/v1/clients/${clientId}/finance/packages`, headers: { 'x-fit-session': session.token }, payload: { ...draft, openingReceivedOn: 'yesterday' } })
+    expect(badDate.statusCode).toBe(400)
+    expect(createPackage).toHaveBeenCalledTimes(1)
+    expect(addPayment).toHaveBeenCalledTimes(1)
+  })
+
   it('rejects an opening payment above the package price', async () => {
     const { service: pilotTrainerFinance, createPackage } = finance()
     const app = buildApp({ pilotTrainerFinance, logger: false }); apps.push(app)

@@ -126,6 +126,8 @@ export interface ClientFinanceSummary {
 }
 
 export interface TrainerFinancePackageDraft {
+  requestId?: string
+  openingReceivedOn?: string
   kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
@@ -151,6 +153,7 @@ export interface TrainerFinancePackageUpdate {
 }
 
 export interface TrainerFinancePaymentDraft {
+  requestId?: string
   amountCents: number
   receivedOn: string
   comment: string | null
@@ -254,12 +257,12 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   createPackage(session: YandexActorSessionInput, clientId: string, draft: TrainerFinancePackageDraft) {
     return this.run(session, async (client) => {
       const rows = await client.query<PackageRow>(
-        `select public.create_trainer_finance_service(
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+        `select public.create_trainer_finance_service_v2(
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
         ) as package`,
         [clientId, draft.kind, draft.title, draft.sessionsTotal, draft.openingUsedSessions,
           draft.priceCents, draft.openingPaidCents, draft.startsOn, draft.endsOn,
-          draft.paymentDueOn, draft.comment],
+          draft.paymentDueOn, draft.comment, draft.openingReceivedOn ?? draft.startsOn, draft.requestId ?? null],
       )
       return rows[0]!.package
     })
@@ -282,8 +285,8 @@ export class DatabasePilotTrainerFinance implements PilotTrainerFinance {
   addPayment(session: YandexActorSessionInput, packageId: string, draft: TrainerFinancePaymentDraft) {
     return this.run(session, async (client) => {
       const rows = await client.query<PaymentRow>(
-        'select public.add_trainer_finance_payment($1, $2, $3, $4) as payment',
-        [packageId, draft.amountCents, draft.receivedOn, draft.comment],
+        'select public.add_trainer_finance_payment_v2($1, $2, $3, $4, $5) as payment',
+        [packageId, draft.amountCents, draft.receivedOn, draft.comment, draft.requestId ?? null],
       )
       return rows[0]!.payment
     })

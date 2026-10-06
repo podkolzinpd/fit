@@ -212,6 +212,8 @@ export function TrainerFinancePage() {
   const [sessionFilter, setSessionFilter] = useState<'all' | 'unassigned' | 'trial'>('all')
   const [packageEditor, setPackageEditor] = useState<PackageEditor | null>(null)
   const [paymentEditor, setPaymentEditor] = useState<{ packageId: string; payment?: TrainerFinancePayment } | null>(null)
+  const packageRequest = useRef<string | null>(null)
+  const paymentRequest = useRef<string | null>(null)
   const manualOperation = useRef<{ payload: string; requestId: string } | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
   const [sessionEditor, setSessionEditor] = useState<string | null>(null)
@@ -220,16 +222,20 @@ export function TrainerFinancePage() {
   const finance = useQuery({ queryKey: ['trainer-finance', clientId], queryFn: () => trainerFinance.listClient(clientId) })
   const refresh = async () => { await queryClient.invalidateQueries({ queryKey: ['trainer-finance', clientId] }) }
   const savePackage = useMutation({
-    mutationFn: async (draft: TrainerFinancePackageDraft) => packageEditor?.mode !== 'edit'
-      ? trainerFinance.createPackage(clientId, draft)
-      : trainerFinance.updatePackage(packageEditor.item.id, { ...draft, expectedVersion: packageEditor.item.version }),
-    onSuccess: async () => { setPackageEditor(null); await refresh() },
+    mutationFn: async (draft: TrainerFinancePackageDraft) => {
+      if (packageEditor?.mode === 'edit') return trainerFinance.updatePackage(packageEditor.item.id, { ...draft, expectedVersion: packageEditor.item.version })
+      packageRequest.current ??= crypto.randomUUID()
+      return trainerFinance.createPackage(clientId, { ...draft, requestId: packageRequest.current })
+    },
+    onSuccess: async () => { packageRequest.current = null; setPackageEditor(null); await refresh() },
   })
   const savePayment = useMutation({
-    mutationFn: async ({ draft, packageId }: { draft: TrainerFinancePaymentDraft; packageId: string }) => paymentEditor?.payment
-      ? trainerFinance.updatePayment(paymentEditor.payment.id, { ...draft, expectedVersion: paymentEditor.payment.version })
-      : trainerFinance.addPayment(packageId, draft),
-    onSuccess: async () => { setPaymentEditor(null); await refresh() },
+    mutationFn: async ({ draft, packageId }: { draft: TrainerFinancePaymentDraft; packageId: string }) => {
+      if (paymentEditor?.payment) return trainerFinance.updatePayment(paymentEditor.payment.id, { ...draft, expectedVersion: paymentEditor.payment.version })
+      paymentRequest.current ??= crypto.randomUUID()
+      return trainerFinance.addPayment(packageId, { ...draft, requestId: paymentRequest.current })
+    },
+    onSuccess: async () => { paymentRequest.current = null; setPaymentEditor(null); await refresh() },
   })
   const removePayment = useMutation({
     mutationFn: (payment: TrainerFinancePayment) => trainerFinance.voidPayment(payment.id, payment.version, 'Удалено тренером'),
@@ -316,8 +322,8 @@ export function TrainerFinancePage() {
     : `/clients/${clientId}`
   return <Page title="Финансы" subtitle={client.data?.fullName} back={financeBackTo} swipeBack className="trainer-finance-page">
     <AsyncView loading={client.isLoading || finance.isLoading} error={(client.error ?? finance.error) as Error | null} onRetry={() => { void client.refetch(); void finance.refetch() }}>
-      {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => setPackageEditor(null)} onSubmit={(draft) => savePackage.mutate(draft)} />}
-      {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => setPaymentEditor(null)} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}
+      {packageEditor && <PackageForm lime={isFitLimeEnabled(actor)} current={packageEditor.mode === 'edit' ? packageEditor.item : undefined} template={packageEditor.mode === 'renew' ? packageEditor.item : undefined} today={today} saving={savePackage.isPending} error={savePackage.error} onCancel={() => { packageRequest.current = null; setPackageEditor(null) }} onSubmit={(draft) => savePackage.mutate(draft)} />}
+      {paymentEditor && <PaymentForm current={paymentEditor.payment} packages={packages} packageId={paymentEditor.packageId} today={today} saving={savePayment.isPending} error={savePayment.error} onCancel={() => { paymentRequest.current = null; setPaymentEditor(null) }} onSubmit={(draft, packageId) => savePayment.mutate({ draft, packageId })} />}
       {!packageEditor && !paymentEditor && <>
         <div className="finance-tabs" role="tablist" aria-label="Раздел финансов клиента">{FINANCE_TABS.map((tab) => <button id={`finance-${tab.id}-tab`} key={tab.id} type="button" role="tab" aria-label={`${tab.label}: ${tabCount[tab.id]}`} aria-selected={activeTab === tab.id} aria-controls={`finance-${tab.id}-panel`} className={activeTab === tab.id ? 'is-active' : ''} onClick={() => setActiveTab(tab.id)}><span>{tab.label}</span><small>{tabCount[tab.id]}</small></button>)}</div>
 
