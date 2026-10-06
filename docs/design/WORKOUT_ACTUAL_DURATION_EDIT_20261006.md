@@ -73,6 +73,25 @@ server validation/session/status errors проверены через Fastify,
 авторизация/версии/неизменность aggregate — на настоящем PostgreSQL17.
 Production release проверяется отдельно после обязательного зелёного CI/merge.
 
+## Завершение выпуска — 7 октября
+
+Владелец повторно разрешил довести PR#1463 до production. Ветка обновлена от
+main7bd0f903. Сохранены все пять согласованных пунктов и границы прав.
+Исправлены две устаревшие E2E-подписи: упражнения client-authored остаются
+read-only, но отдельная duration CTA доступна. Оба сценария прошли 2/2
+после отдельного повторного запуска; первый запуск столкнулся с конфликтом
+версии Live и сохранения отзыва в общей локальной среде.
+Убрана пустая колонка сводки после выноса времени; количество колонок следует
+реальным метрикам. Добавлена проверка двух колонок и настоящей тёмной темы
+клиента (его actor-specific preference, не общий theme key).
+Полный npm run check прошёл без увеличения лимитов: frontend2419/2419,
+API1177/1177 (93 DB cases отдельно), coverage/lint/types/build/startup и policy.
+Чистый task-only PostgreSQL17 на55437: actor/RLS93/93, включая duration
+и неизменность плана. Yandex-contract WebKit/Chromium14/14, размеры390/430
+и trainer390/1440, screenshots light/dark просмотрены.
+Обязательный CI, merge, migration/API rollout и frontend readback — последние
+гейты; до их успешного завершения не заявляем production-выпуск.
+
 Локальные гейты: lint/typecheck, frontend coverage2417/2417, API1254/1254
 (включая все92 actor/RLS), build/startup, DB types, iOS permissions, media2/2,
 infra/calendar/hosting112 checks прошли. `npm run check` был выполнен;

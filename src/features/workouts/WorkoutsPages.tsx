@@ -1743,6 +1743,9 @@ export function WorkoutDetailPage() {
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec) : null
+  // Duration now has its own control; size the remaining summary to real metrics.
+  const factSummaryMetricCount = 2 + Number(Boolean(workout?.activeCaloriesKcal))
+    + Number(!limeHistory && Boolean(workout?.activeCaloriesKcal ? workout.calorieEstimateBasis : workout?.calorieEstimateNotice))
   const durationControl = done && workout ? <WorkoutActualDuration workout={workout}
     onSave={async (seconds, expectedVersion) => {
       await workoutsRepository.setActualDuration({ ...workout, version: expectedVersion }, seconds)
@@ -1922,7 +1925,7 @@ export function WorkoutDetailPage() {
         event.preventDefault()
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
-      {done && !clientCompletionReport && <><section className={`workout-fact-summary${workout.activeCaloriesKcal ? ' has-calories' : ''}`} aria-label="Сводка тренировки">
+      {done && !clientCompletionReport && <><section className={`workout-fact-summary${factSummaryMetricCount >= 4 ? ' has-calories' : ''}${factSummaryMetricCount === 2 ? ' has-two-metrics' : ''}`} aria-label="Сводка тренировки">
         <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
         {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
         {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}

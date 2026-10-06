@@ -22,17 +22,9 @@ WebKit5/5: plan→Live/reload удержания/проходки, выпады,
 
 ## Фактическая длительность тренировки — 2026-10-06
 
-Ветка `codex/workout-duration-edit-20261006` от `ba911a31`, обновлена до `9a8734d9`; один PR, полный выпуск разрешён.
-План/приёмка: design/WORKOUT_ACTUAL_DURATION_EDIT_20261006.md, пункты1–5 сохранены.
-Быстрый completed-ввод обеих ролей: необязательные минуты с дробями/черновиком;
-done detail/report: отдельный диалог, manual выше Live, очистка возвращает timer.
-Migration126/PUT duration: только время/версия, visible done actor, без прав на план.
-Clean PostgreSQL17 chain и actor92/92 passed; timestamps/sets неизменны, calories refresh.
-WebKit7/7 + visual Darwin/Linux12/12; check stages2417/1254/build passed с2workers/local15s.
-local:verify блокирован старой историей000111/112; общая база не сбрасывалась, использована изолированная55434. CI/merge и API/frontend rollout — гейты; до подтверждения production не выпущено.
+PR#1463 обновлён до6fd02c67 после выпуска#1464; полный выпуск повторно разрешён7октября. План design/WORKOUT_ACTUAL_DURATION_EDIT_20261006.md, пункты1–5 сохранены. Ввод#1357 переиспользован; отдельное изменение done duration не даёт прав на план/подходы. Migration126/PUT: время+версия, calorie refresh; timestamps/sets неизменны, manual выше Live, очистка возвращает timer. Исправлены устаревшие E2E-подписи и пустая колонка сводки. Check на7bd0: frontend2419/API1177/build/policy success; clean PostgreSQL17 на55437actor93/93, WebKit/Chromium14/14, legacy2/2. Light/dark390/430/trainer1440 просмотрены; Darwin matrix3/3, Linux2/3 (WebKit target crash, повторяется). Повторный check после rebase, обязательный CI, API/frontend rollout и readback ещё гейты; production пока не выпущено. Общая локальная БД сохранена (старый drift112).
 
 ## Аудит БД и дублирующие индексы — 2026-10-06
-
 #1434 защищает фото, #1449 — snapshot, #1450 — серверную pagination; все слиты. #1454 слит `4eab2e22`: статистика карточки — один actor SQL-агрегат, ИИ/Progress/ближайшие назначения сохранены. CI37384227309, API37384227223/frontend37385582939 success. Планы — DATABASE_AUDIT в docs/design.
 PR#1457 слит: migration125 удаляет два дублирующих position индекса с проверкой каталога и lock wait3s; UNIQUE DEFERRABLE/данные/RLS/API сохранены.
 Clean PostgreSQL17 chain/actor91/91, check2409/1159/build и WebKit3/3 passed;
@@ -40,7 +32,6 @@ local:verify блокирован прежней Supabase-миграцией, ba
 План: DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md; production API200 до выпуска.
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
-
 #1433: private Node.js22/128МБ/60s, часовой timer `/healthz`/`auth` на одном IP; без PII/чатов.
 Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
 Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана.
@@ -90,19 +81,12 @@ record-workout card в Assistant, старый активный черновик
 
 ## Постоянные границы
 
-<<<<<<< HEAD
 Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17.
 Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
 Supabase — только legacy recovery/media/test, не fallback поверх новых Yandex writes.
 Pilot не авторизует данные: RLS/ownership на сервере. Откат Lime: CLIENT_LIME_ENABLED=false + deployment.
 SpeechKit transcript устраняет финальные повторы, сохраняет реплики и разделяет упражнения с параметрами.
 История/чеклисты — PRODUCT_WIKI, docs/design и Git.
-=======
-Frontend: Yandex API Gateway/Object Storage, fit-training.ru. API/auth/данные: Yandex Cloud PostgreSQL17. Vercel — legacy redirect; новые Vercel deployments и Supabase migrations запрещены. Supabase остаётся legacy recovery/media/test зависимостью; нельзя включать его обратно поверх новых Yandex writes.
-Клиентский pilot — только оформление, не авторизация данных. RLS/ownership проверяются сервером. Откат: CLIENT_LIME_ENABLED=false и новый frontend deployment.
-Голосовой transcript устраняет перекрывающиеся финальные фрагменты SpeechKit, сохраняет границы реплик и разделяет однословные упражнения с параметрами.
-Предыдущая продуктовая история и полные чеклисты — PRODUCT_WIKI, docs/design и Git.
->>>>>>> 91aaa1e6 (feat(workouts): allow narrow actual duration correction)
 
 ## Ранее открытые post-cutover задачи
 

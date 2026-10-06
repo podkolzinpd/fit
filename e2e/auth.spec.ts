@@ -633,7 +633,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByRole('heading', { name: 'Тренировка', exact: true })).toBeVisible()
 
   // Завершённая тренировка, которую клиент записал сам, входит в общую
-  // историю тренера, но остаётся недоступной для редактирования и запуска.
+  // историю тренера, но её упражнения остаются недоступны для редактирования
+  // и запуска. Длительность исправляется отдельным точечным действием.
   await page.goto('/me/profile')
   await logoutFromProfile(page)
   await page.getByLabel('Email').fill(trainerEmail)
@@ -650,7 +651,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(clientAuthoredCard).toContainText('Создано клиентом')
   await page.getByRole('status').filter({ hasText: 'История по датам' }).getByRole('button', { name: 'Понятно' }).click()
   await clientAuthoredCard.click()
-  await expect(page.getByText('Создано клиентом · только просмотр')).toBeVisible()
+  await expect(page.getByText('Создано клиентом · упражнения только для просмотра')).toBeVisible()
+  await expect(page.locator('.workout-actual-duration').getByRole('button')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Изменить результат' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Удалить тренировку' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Другие действия с тренировкой' })).toHaveCount(0)
