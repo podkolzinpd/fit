@@ -142,6 +142,52 @@ test('cleanup preserves zero-byte legacy folder markers but rejects non-empty or
   }
 })
 
+test('raw YC inventory with omitted zero size preserves verified legacy markers across pages', async (t) => {
+  const data = await history(t)
+  const baseline = planCleanup(data)
+  const markers = ['releases/', `releases/${data.manifests[0].release}/assets/`]
+  let pages = 0
+  const cloud = cleanupCloud({ run: async (_cli, args) => {
+    assert.equal(args[2], 'list-objects-v2')
+    if (++pages === 1) return { stdout: JSON.stringify({
+      contents: markers.map((key) => ({ key, last_modified: '2025-01-01',
+        etag: '"d41d8cd98f00b204e9800998ecf8427e"' })),
+      is_truncated: true, next_continuation_token: 'next',
+    }) }
+    assert.ok(args.includes('next'))
+    return { stdout: JSON.stringify({ contents: data.inventory.map((item) => ({
+      key: item.key, size: String(item.size), last_modified: item.lastModified, etag: item.etag,
+    })) }) }
+  } })
+  const inventory = await cloud.inventory()
+  assert.equal(pages, 2)
+  assert.deepEqual(inventory.slice(0, 2).map((item) => item.size), [0, 0])
+  const plan = planCleanup({ ...data, inventory })
+  assert.deepEqual(plan, baseline)
+  for (const key of markers) await assert.rejects(cloud.remove(key), /Unsafe/)
+})
+
+test('raw YC inventory never coerces unknown missing sizes or malformed sizes to empty objects', async (t) => {
+  const data = await history(t)
+  const regular = data.inventory[0]
+  const cases = [
+    { key: regular.key },
+    { key: 'releases/' },
+    { key: 'releases/../../', etag: '"d41d8cd98f00b204e9800998ecf8427e"' },
+    ...[null, '', 'garbage', -1, 0.5, Number.MAX_SAFE_INTEGER + 1]
+      .map((size) => ({ key: regular.key, size })),
+    { key: 'releases/', size: 1, etag: '"d41d8cd98f00b204e9800998ecf8427e"' },
+  ]
+  for (const item of cases) {
+    const cloud = cleanupCloud({ run: async () => ({ stdout: JSON.stringify({
+      contents: [{ ...item, last_modified: regular.lastModified }],
+    }) }) })
+    const [invalid] = await cloud.inventory()
+    assert.throws(() => planCleanup({ ...data, inventory: [invalid, ...data.inventory.slice(1)] }),
+      /Invalid object inventory: item 0, (invalid size|unsupported key)/)
+  }
+})
+
 test('cleanup accepts cloud-expanded defaults but refuses real parameter drift before deletion', async (t) => {
   const data = await history(t)
   const expand = (spec) => {
