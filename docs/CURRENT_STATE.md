@@ -33,7 +33,7 @@ WebKit5/5: plan→Live/reload удержания/проходки, выпады,
 
 ## Клиентский Lime: остатки заполненного прогресса — 2026-10-06
 
-#1468/#1470 слиты; release7bd0f903 CI37531524852/Android37531524466/deploy37534515149 success; readback12/YS Geo2; native build206/install/anonymous launch passed (отдельный симулятор). V16–20: cards/7PRO32, sheet40/close44, tertiary14/500/44 и body modes28/24/44, только client. Published WebKit8/8 и Chromium8/8; raster-артефакты WebKit не визуальное доказательство, просмотрены Chromium. Дополнительный published Chromium4/4 D/L390/430 заполнил results/comparison/body/load, прошёл7PRO со скроллом: V21/P1 results-center-filters native0/44. План CLIENT_LIME_RESULTS_FIELDS_20261007.md, existing client field16/48/YS Geo/tokens/select arrow; selected/empty/reset/URL и внепилотный scope. V21 PR1478: WebKit8/8/Chromium8/8, полный check2449/API1176+98 skipped/policy177/hosting115/build success; после восстановления локальных API-deps lockfile неизменён. Android3bc8993d success37538368593, Rebase2867f1d9 после1471: CSS/own E2E cases идентичны, повтор8/8 в двух engines/types passed; CI/очередь/выпуск нового head ожидаются. Published154b3d1b/deploy37538002657/readback12/YS Geo2 подтверждены отдельно. Другие НЕ ПРОВЕРЕНО остаются; физический iPhone/native pilot login/удалённые LLM/SpeechKit/Store не подтверждены.
+#1468/#1470 (V16–20) опубликованы и подтверждены web/native-симулятором; исходные акты сохранены. PR1478 закрывает V21/P1: results select16/48/YS Geo/tokens/arrow и V22/P0: light close SVG фото-портала через existing brightness(0), public trainer/chat. План/до-после: design/CLIENT_LIME_RESULTS_FIELDS_20261007.md; полный реестр: client-lime-migration-audit.md. На прежнем head5b0a0d5b CI37547090059/Android37547090075 success, Chromium98/98/WebKit23/23 и check2465/API1177+99 skipped/build passed. После merge1476 (90435247) ветка обновлена, ownCSS прежний; свежие проверки и выпуск обязательны. Пользователь прямо разрешил1478 после1476 без ожидания1477. V21–22 до merge/deploy/readback не доставлены. Другие НЕ ПРОВЕРЕНО сохраняются: физический iPhone/native pilot login, внешние OAuth/LLM/SpeechKit/Store. Новая палитра/сценарии/trainer/nonpilot не вводятся.
 
 ## Фактическая длительность тренировки — 2026-10-06
 
@@ -108,11 +108,7 @@ SpeechKit transcript устраняет финальные повторы, со�
 Ниже — незакрытые пункты прежнего snapshot; в этой UI-задаче не перепроверялись.
 1. Выполнить успешный media migration без `allow-missing` для оставшихся chat и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
 2. Добавить Yandex custom-exercise photo adapter.
-3. На время диагностического отката #1144 frontend снова создаёт Supabase SDK
-   при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска.
-   Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме;
-   отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять
-   сохранённый auth token; это не dual-write и не перенос данных обратно. Переменные и серверные bridge secrets для recovery/media пока не удалять.
+3. На время диагностического отката #1144 frontend снова создаёт Supabase SDK при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска. Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме; отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять сохранённый auth token; это не dual-write и не перенос данных обратно. Переменные и серверные bridge secrets для recovery/media пока не удалять.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer, linked client, recovery старого email-only профиля, новый Yandex-only аккаунт и оба invitation path. Автоматизированы серверные контракты, production auth DOM, PKCE redirect и unauthenticated guards; реальный OAuth callback в этом cutover-сеансе не выполнялся.
 5. Провести backup restore drill, повторить authenticated AI summary и push
    smoke. До завершения observation window Supabase не удалять: write gate

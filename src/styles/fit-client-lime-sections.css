@@ -120,7 +120,7 @@ html.fit-client-lime-document .athlete-achievement-detail p { color: var(--lime-
 html.fit-client-lime-document .athlete-achievement-detail > strong { color: var(--lime-accent-ink); font-weight: 500; }
 html.fit-client-lime-document .athlete-achievement-detail-overlay { background: var(--lime-overlay); }
 html.fit-client-lime-document .athlete-achievement-detail-heading button { background: var(--lime-surface-raised); color: var(--lime-text); }
-html.fit-client-lime-document.theme-light .athlete-achievement-detail-heading svg[data-original-icon] { filter: brightness(0); }
+html.fit-client-lime-document.theme-light :is(.athlete-achievement-detail-heading, .fullscreen-image-viewer) svg[data-original-icon] { filter: brightness(0); }
 html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
 .phone-frame.fit-client-lime :is(.athlete-achievements-home, .athlete-achievements-page) :focus-visible { outline-color: var(--lime-accent-ink); }
 /* Authored badge artwork retains its original background and colors. */
