@@ -40,9 +40,9 @@
 
 | PR | Статус | Доказательства |
 | --- | --- | --- |
-| [PR1 #1459](https://github.com/podkolzinpd/fit/pull/1459) | Слит `9a8734d9`, штатная выкладка ожидает main CI | `npm run check` success; WebKit 13/13; WebKit/Chromium с trainer-контролем 32/32, обе темы 390/430, trainer 1440 |
-| PR2 | Локальная приёмка | V05–V07, V12; вложенные окна WebKit8/8 |
-| PR3 | Ожидает PR2 | — |
+| [PR1 #1459](https://github.com/podkolzinpd/fit/pull/1459) | Слит `9a8734d9`; main CI37470357042 success, его выкладка безопасно пропущена из-за нового main | `npm run check` success; WebKit 13/13; WebKit/Chromium с trainer-контролем 32/32, обе темы 390/430, trainer 1440 |
+| [PR2 #1462](https://github.com/podkolzinpd/fit/pull/1462) | CI37473801546 success на bce5f0a6; обновлён от main12d9505d, новый CI ожидается | V05–V07, V12; body-map geometry1/1, вложенные окна8/8 |
+| PR3 | Локальная приёмка на базе PR2 + main12d9505d | V08–V09, V13; WebKit78/78 + filled/program4/4, Chromium82/82; auth/legal unit20/20 |
 
 ### Приёмка PR1
 
@@ -55,3 +55,19 @@ V05–V07: tertiary actions 44px, danger остаётся семантическ
 Каталог/фильтры/техника/создание упражнения, фильтры тренеров, формы цели и замеров, подтверждения, обратная связь error/retry/success проверены WebKit8/8 в D/L390/430. Каталог использует утверждённую raised-поверхность и sheet40px из `fit-lime-workout-form.css` — не переделывается. Пикер техники сохраняет два тапа: проигрывание и детали.
 
 V05 также проверен на `.personal-workout-result .actions .link`: «Открыть тренировку» на главной использует тот же tertiary-контракт, что результат периода. WebKit59: 57 прошли сразу, 2 маршрутных timeout повторно прошли отдельно7s; итоговая проверка изменённых V05–V07 ещё4/4. Первый полный локальный прогон пересёкся с браузерным и дал3 timeout; изолированный фронтенд2410/2410. Проверки hosting требуют доступного локального порта — полный прогон повторяется с ним.
+
+### Приёмка PR3
+
+V08–V09: `ClientLimeStandaloneLayout` использует тот же server-assigned gate и `useClientLimeTheme`, что AppLayout; маршруты остаются публичными. LegalAcceptanceGate оборачивает только видимую loading/error/acceptance-поверхность, не принятую клиентскую часть. AuthIdentityScreen получает необязательный presentation context, сохраняя возможность изолированного рендера без AuthProvider. Старый auth-cleanup не перекрашивает уже назначенный Lime-document после позднего восстановления actor.
+
+**V13 / P1** — C01 подтверждён: body-portal фотографии наследовал Onest, а не YS Geo. Исправлен document font scope в существующем `fit-lime-type.css` и клиентский контроль просмотрщика на текущих токенах. Media canvas остаётся тёмным. [До](client-lime-completion-20261006/pr3/photo-portal-before.png), [после](client-lime-completion-20261006/pr3/photo-portal-dark-430.png). Источник — `FullscreenImageViewer`, места — публичная анкета и фото в клиентском чате.
+
+На текущем UI WebKit78/78: оба режима, 390/430, light/dark/system, скролл, reload, изоляция другого аккаунта/выход; защита public-контекста от anonymous/other-client/trainer; каталог с найденным тренером, длинная анкета и сертификаты, фото/zoom/gallery, legal3, подтверждение удаления с отменой, принятие документов error/retry/success, валидное приглашение, первый запуск и профиль с тренером и без него, подтверждение отключения с отменой. Профиль самостоятельного клиента использует настоящий контракт self-root (`trainerId=userId`), не `null`. Реальные данные не изменяются.
+
+[Первый запуск L390](client-lime-completion-20261006/pr3/first-run-light-390.png), [отключение D430](client-lime-completion-20261006/pr3/trainer-disconnect-dark-430.png), [финансы](client-lime-completion-20261006/pr3/finance-filled-light-390.png), [ответ ассистента](client-lime-completion-20261006/pr3/assistant-filled-light-390.png). Финансы error/retry/filled, ответ ассистента error/retry и chat-photo portal дополнительно4/4; результат программы, раскрытие назначений, вложенная правка и обратная связь checked4/4 с включённым штатным флагом программы.
+
+Тесты используют контрактные локальные фикстуры. Настоящая авторизация/удалённая генерация LLM/SpeechKit, системная клавиатура, OAuth/PWA-окна ОС и физический iPhone не подтверждаются этими кадрами. Production ещё не объявлен обновлённым: требуется фактический deployment/readback.
+
+**V14 / P1:** в сгенерированном результате программы и вложенной правке первичное действие оставалось16px из `.fit-lime-shell.assistant-identity .assistant-flow-actions .primary` (`fit-lime-assistant.css:85–96`), соседние клиентские действия — pill. [До](client-lime-completion-20261006/pr3/assistant-program-before.png), [после](client-lime-completion-20261006/pr3/assistant-program-light-390.png). Общий клиентский override использует существующие pill48px и14/16px по роли; включает prepared actions, подтверждение тренировки/сводки и вложенную правку программы. Trainer-слой сохранён. Контрактный результат4/4 D/L390/430, feedback selected/disabled/filled и footer со скроллом, chat-photo close. Эти фикстуры не вызывают LLM и не меняют программу в production.
+
+Финальный `npm run check` на fa7f2f97 + PR3 diff, Node24/maxWorkers2, прошёл целиком: frontend2412/2412, API1161/1161 +91 skipped DB, lint/typecheck, политики/hosting и обе сборки. Chromium82/82, обе темы и ширины; WebKit78/78 + программа/финансы/чат4/4 после V14. Repo build flag `VITE_CLIENT_LIME_ENABLED=true` прочитан без изменения. Production пока не подтверждён.

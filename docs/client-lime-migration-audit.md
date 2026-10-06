@@ -176,3 +176,29 @@
 
 - **V12 / P1** — переключатель «Предложение/Проблема» в настройках: выбранный пункт и фон одинаковы в светлой теме. Источник: `styles.css:4263–4265`; место: `ClientProfileSettingsPage → AppFeedbackForm`. Замена: существующий сегментированный клиентский Lime-контрол, поле16px. Проверка: D/L390/430, selected/disabled/error/retry/success; [до](design/client-lime-completion-20261006/pr2/feedback-before.png), [после](design/client-lime-completion-20261006/pr2/feedback-error.png). Тренерский `AppFeedbackForm` сохраняет свой scope.
 - Каталог упражнения: raised-поверхность и sheet40px — текущий утверждённый Lime-стиль, **не дефект**. Детали, поиск, фильтры и создание открыты повторно в PR2.
+
+## Текущая приёмка реализации (после исходного снимка)
+
+Источник исполнения: [план и доказательства](design/CLIENT_LIME_COMPLETION_20261006.md). PR1#1459 слит, PR2#1462 прошёл полный CI на bce5f0a6 и обновляется от main12d9505d. PR3 визуально проверен на объединённом клиентском слое; исходная таблица выше остаётся историей воспроизведения, а не текущим состоянием выпуска.
+
+| Маршрут / состояние | Темы / ширина | Текущий результат | Доказательство |
+| --- | --- | --- | --- |
+| Формы создания/правки, профиль, join, finance/back, settings/logout; V01–V04,V10–V11 | D/L390/430 | НОВЫЙ | [PR1](design/CLIENT_LIME_COMPLETION_20261006.md#приёмка-pr1) |
+| Кабинет/цель/замеры, раскрытия карты тела; V05–V07 | D/L390/430 | НОВЫЙ | [PR2](design/CLIENT_LIME_COMPLETION_20261006.md#приёмка-pr2) |
+| Каталог/поиск/фильтры/детали техники/создание своего упражнения; цель/замеры/подтверждения | D/L390/430 | НОВЫЙ в перечисленных открытых окнах | Playwright catalog/support8/8 + disclosures4/4 |
+| Обратная связь selected/disabled/error/retry/success; V12 | D/L390/430 | НОВЫЙ | [кадр](design/client-lime-completion-20261006/pr2/feedback-error.png) |
+| План/история/list/calendar; Live/круг/таймер/заметка/error/retry/partial/full/zero/обратная связь | D/L390/430 | НОВЫЙ в исполняемых сценариях | WebKit78/78, lifecycle/live/circuit/voice-to-completion |
+| Каталог с тренером → публичная анкета/сертификаты/галерея/zoom/reload | D/L390/430 | НОВЫЙ; V08 устранён | [анкета](design/client-lime-completion-20261006/pr3/public-trainer-light-390.png) |
+| terms/privacy/delete-account/отмена подтверждения; принятие документов error/retry/success | D/L390/430 | НОВЫЙ; V09 устранён | [privacy](design/client-lime-completion-20261006/pr3/privacy-light-430.png), [ошибка](design/client-lime-completion-20261006/pr3/legal-acceptance-error-light-390.png) |
+| Валидное/невалидное приглашение, подключение с фикстурой | D/L390/430 | НОВЫЙ | [invite](design/client-lime-completion-20261006/pr3/valid-invitation-dark-430.png) |
+| Первый запуск, профиль без тренера/с тренером, подтверждение отключения/отмена | D/L390/430 | НОВЫЙ | [первый запуск](design/client-lime-completion-20261006/pr3/first-run-light-390.png), [подтверждение](design/client-lime-completion-20261006/pr3/trainer-disconnect-dark-430.png) |
+| Финансы с услугой/оплатой error/retry/filled; диалог ИИ error/retry/ответ; фото чата | D/L390/430 | НОВЫЙ в контрактных фикстурах | [финансы](design/client-lime-completion-20261006/pr3/finance-filled-light-390.png), [ответ](design/client-lime-completion-20261006/pr3/assistant-filled-light-390.png) |
+| Анонимный посетитель/другой клиент/trainer на public routes | отрицательные проверки | Клиентский пилот не включён, сохраняется существующее оформление соответствующей роли | public exclusions3/3 |
+
+**V13 / P1:** C01 подтверждён текущим браузером: Onest у body-portal фотографии. Источник — `FullscreenImageViewer`, `fit-lime-type.css`; замена — YS Geo document scope и текущие `--lime-surface-raised`, `--lime-text`, pill-контролы. Все места: фото публичного тренера и фото чата. Приёмка: gallery/zoom/close/reload, обе темы, 390/430, без изменения canvas и непилотных ролей. [До](design/client-lime-completion-20261006/pr3/photo-portal-before.png), [после](design/client-lime-completion-20261006/pr3/photo-portal-dark-430.png).
+
+C02–C05 не превратились в доказанные дефекты: экспортная картинка/арт, оттенок chevron select, запуск до известного actor и роли аватара/сообщений не меняются произвольно. Уже корректные карточки планов/Live/итогов/истории/каталога и согласованные семантические success/danger не перепроектировались. Общий body map не требует AuthProvider: pilot передаётся существующими auth-aware родителями, изолированная geometry-проверка прошла1/1.
+
+Ограничения: эти фикстуры не доказывают реальную серверную генерацию программы, распознавание удалённым SpeechKit, авторизацию на внешнем OAuth, native/PWA-окна и физический iPhone. Для произвольного сочетания server-error и каждой вложенной формы нет отдельного визуального кадра; оно не объявляется проверенным по одному общему error-state. Исходные «НЕ ПРОВЕРЕНО», не перечисленные в текущей матрице или доказательствах, сохраняют этот статус. Полностью просмотренным каждый возможный клиентский state приложение не объявляется.
+
+**V14 / P1:** CTA результата программы и вложенной правки используют16px вместо клиентского pill. Источник: `fit-lime-assistant.css:85–96`, `AssistantProgramPilotCard → assistant-flow-actions`; тот же корень используется prepared actions/подтверждением тренировки/сводки. Замена: существующий клиентский pill48px,14px secondary/16px primary, только `.phone-frame.fit-client-lime.assistant-identity`; trainer без изменений. [До](design/client-lime-completion-20261006/pr3/assistant-program-before.png), [после](design/client-lime-completion-20261006/pr3/assistant-program-light-390.png), [feedback](design/client-lime-completion-20261006/pr3/program-feedback-light-390.png). Проверены4/4 WebKit D/L390/430: результат, раскрытие, правка, selected/disabled/filled feedback/доступность нижнего действия и фото чата.

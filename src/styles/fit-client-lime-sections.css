@@ -161,3 +161,56 @@ html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
   line-height: 20px;
   font-weight: 500;
 }
+
+/* Public client destinations reuse the same card/control contract. */
+.phone-frame.fit-client-lime-public :is(.legal-screen, .auth-flow-identity) {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 24px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--lime-bg);
+}
+.phone-frame.fit-client-lime-public .legal-gate { min-height: 100%; padding: 24px 16px; }
+.phone-frame.fit-client-lime-public :is(.legal-document, .legal-gate-card, .legal-delete-card, .trainer-card, .invitation-summary) {
+  min-width: 0;
+  border-color: var(--lime-divider);
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime-public :is(h1, h2, h3, strong, b) { font-weight: 500; }
+.phone-frame.fit-client-lime-public :is(.legal-header, .auth-entry-head) h1 { font-size: 24px; line-height: 28px; }
+.phone-frame.fit-client-lime-public :is(button.primary, button.secondary, .button, .auth-yandex) {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime-public .page-back { width: 44px; height: 44px; border-radius: 999px; }
+.phone-frame.fit-client-lime-public :is(input, textarea, select) { border-radius: 16px; font-size: 16px; }
+.phone-frame.fit-client-lime-public :is(.legal-footer-links, .legal-gate-links) a { min-height: 44px; }
+.phone-frame.fit-client-lime-public .legal-gate-links a { border-radius: 16px; }
+.phone-frame.fit-client-lime-public .trainer-card-primary-action { border-radius: 999px; }
+
+/* Media canvas stays dark; body-portal controls inherit the client identity. */
+html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fullscreen-image-stage button, .fullscreen-image-controls button) {
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* Client prepared actions share the pill contract; trainer keeps its variant. */
+.phone-frame.fit-client-lime.assistant-identity :is(.assistant-flow-actions, .assistant-action-card, .assistant-progress-preview) > button:not(.assistant-action-cancel) {
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.phone-frame.fit-client-lime.assistant-identity :is(.assistant-flow-actions, .assistant-action-card, .assistant-progress-preview) > button.primary {
+  font-size: 16px;
+}

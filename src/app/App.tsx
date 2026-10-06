@@ -4,6 +4,7 @@ import { trackPageView } from '../shared/yandex-metrika'
 import { AuthenticatedMetrika } from './authenticated-metrika'
 import { StartupSplash } from '../shared/StartupSplash'
 import { AppLayout } from './AppLayout'
+import { ClientLimeStandaloneLayout } from './ClientLimeStandaloneLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, isTrainerFinancePilotEnabled, trainerHomePath } from './feature-flags'
 import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from '../features/auth'
@@ -78,6 +79,7 @@ function TrainerTodayPage() {
 }
 
 const router = createBrowserRouter([
+  { element: <ClientLimeStandaloneLayout />, children: [
   { path: '/auth', element: <AuthPage /> },
   { path: '/auth/forgot', element: <ForgotPasswordPage /> },
   { path: '/auth/reset', element: <ResetPasswordPage /> },
@@ -90,6 +92,7 @@ const router = createBrowserRouter([
   { path: '/legal/delete-account', element: <AccountDeletionPage /> },
   { path: '/trainers/:publicId', element: <PublicTrainerProfilePage /> },
   { path: '/invite', element: <InvitationRoute /> },
+  ] },
   { element: <Protected />, children: [{ element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },

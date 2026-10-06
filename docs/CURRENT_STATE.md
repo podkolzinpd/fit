@@ -2,7 +2,7 @@
 
 ## Завершение клиентского Lime — 2026-10-06
 
-Владелец разрешил три PR и production-выкладку; план — design/CLIENT_LIME_COMPLETION_20261006.md. PR1#1459 слит `9a8734d9` от `ba911a31`: клиентские CSS-конфликты форм/кнопок/возврата/выхода, числовые поля Live. Серверное назначение пилота не расширяется. YS Geo проверены по SHA-256 действующего выпуска; лицензированные файлы не в Git. Локально `npm run check` success, WebKit13/13 и WebKit/Chromium32/32 с trainer1440. PR2: tertiary/disclosure V05–V07 и выбранное состояние обратной связи V12; WebKit59/59 с отдельным повтором2 timeout и4/4 финальных проверок. Production подтверждается только после main CI и readback.
+План — design/CLIENT_LIME_COMPLETION_20261006.md, разрешены три PR и production. PR1#1459 слит9a8734d9, CI37470357042 success; его старый deploy безопасно пропущен из-за нового main. PR2#1462: V05–V07/V12, чистая MapPanel geometry1/1; CI37473801546 success, обновлён от main12d9505d (fa7f2f97), повторный CI. PR3: server-assigned Lime public/auth/legal context, YS Geo body-portal V13 и CTA результатов ИИ V14; WebKit78/78 + filled/program4/4, auth/legal20/20. Реальные YS Geo2/2 SHA; шрифты вне Git. Trainer/anonymous/other-client не получают client scope. Chromium82/82; полный check success (frontend2412/API1161+91 skipped, политики/hosting/build); CI и production readback продолжаются; физический iPhone/удалённые LLM/SpeechKit не проверены.
 
 ## Аудит БД и дублирующие индексы — 2026-10-06
 
