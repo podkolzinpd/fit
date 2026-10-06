@@ -393,7 +393,7 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
     </section>
     <section ref={threadRef} className="assistant-thread" aria-label="Диалог с ассистентом">
       {loadingMessages && <p className="assistant-thread-status">Загружаю сессию…</p>}
-      {!loadingMessages && conversationId && visibleMessages.length === 0 && !latestActiveAction && !readOnly && <AssistantFirstEntry programEnabled={programEnabled} clientMode={actor?.role === 'client'} onChoose={chooseStarterPrompt} />}
+      {!loadingMessages && conversationId && visibleMessages.length === 0 && !latestActiveAction && !readOnly && <AssistantFirstEntry programEnabled={programEnabled} navigationEnabled={featureLinksEnabled} clientMode={actor?.role === 'client'} onChoose={chooseStarterPrompt} />}
       {visibleMessages.map((message) => {
         if (message.author === 'user') {
           if (groupedDictationMessageIds.has(message.id)) return null
