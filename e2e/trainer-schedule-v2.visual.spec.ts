@@ -4286,6 +4286,31 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     const summaries = page.locator('.progress-pro-list > details > summary.progress-details-toggle')
     await expect(summaries).toHaveCount(7)
     for (const summary of await summaries.all()) await expect(summary).toHaveCSS('border-radius', '32px')
+    for (const summary of await summaries.all()) {
+      const panel = summary.locator('..')
+      if (!(await panel.evaluate((element) => element.hasAttribute('open')))) await summary.click()
+      await expect(panel).toHaveAttribute('open', '')
+    }
+    const modes = page.locator('.client-body-map-disclosure .body-progress-modes')
+    await modes.scrollIntoViewIfNeeded()
+    await testInfo.attach('body-mode-styles', { body: JSON.stringify(await modes.evaluate((element) => ({
+      radius: getComputedStyle(element).borderRadius,
+      oldSurface: getComputedStyle(element, '::before').content,
+      oldSurfaceRadius: getComputedStyle(element, '::before').borderRadius,
+      selectedRadius: getComputedStyle(element.querySelector('[aria-pressed="true"]')!, '::before').borderRadius,
+    }))), contentType: 'application/json' })
+    await page.screenshot({ path: testInfo.outputPath(`body-modes-${theme}-${width}.png`) })
+    await expect(modes).toHaveCSS('border-radius', '28px')
+    expect(await modes.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('none')
+    for (const name of ['Прогресс', 'Нагрузка']) {
+      const button = modes.getByRole('button', { name, exact: true })
+      await button.click()
+      await expect(button).toHaveAttribute('aria-pressed', 'true')
+      await expect(button).toHaveCSS('min-height', '44px')
+      await expect(button).toHaveCSS('border-radius', '24px')
+      await expect(button).toHaveCSS('background-color', await page.locator('.ai-progress-periods button.active').evaluate((element) => getComputedStyle(element).backgroundColor))
+      expect(await button.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('none')
+    }
     await expect(page.locator('.progress-pro-panel .client-progress-goal-story')).toHaveCSS('border-radius', '0px')
     await page.screenshot({ path: testInfo.outputPath(`filled-progress-pro-${theme}-${width}.png`) })
     await testInfo.attach('filled-pro-surfaces', { body: JSON.stringify(await page.locator('.progress-pro-list > details > summary, .progress-pro-panel .client-progress-goal-story').evaluateAll((elements) => elements.map((element) => ({ element: element.getAttribute('class'), radius: getComputedStyle(element).borderRadius })))), contentType: 'application/json' })
@@ -4304,4 +4329,60 @@ test('Client progress outside the Lime pilot retains its original surfaces', asy
   await expect(page.locator('.fit-client-lime')).toHaveCount(0)
   await expect(page.locator('.progress-analysis-preview')).toHaveCSS('border-radius', '18px')
   await expect(page.locator('.progress-overview-panel .client-progress-goal-story')).toHaveCSS('border-radius', '18px')
+  await page.getByRole('tab', { name: 'ПРО' }).click()
+  await page.locator('.client-body-map-disclosure > summary').click()
+  await expect(page.locator('.body-progress-modes')).toBeVisible()
+  expect(await page.locator('.body-progress-modes').evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('9px')
 })
+
+for (const theme of ['light', 'dark']) for (const role of ['client', 'trainer'] as const) {
+  if (role === 'trainer' && theme === 'light') continue
+  test(`Filled body-map modes preserve client and trainer scope ${role} ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 430, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    const exercise: WorkoutExercise = {
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, weightKg: 20, reps: 8, fact: { weightKg: 20, reps: 8 }, confirmedAt: '2026-09-24T08:00:00.000Z', version: 2 }],
+    }
+    await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId, clientGender: 'male', fitLime: true,
+      workouts: [{ ...workout, status: 'done', startedAt: '2026-09-24T07:00:00.000Z', completedAt: '2026-09-24T08:00:00.000Z', exercises: [exercise] }] })
+    await page.route(`http://127.0.0.1:4100/v1/clients/${clientId}/training-summaries*`, (route) => route.fulfill({
+      contentType: 'application/json', body: JSON.stringify({ summaries: [{
+        id: '10000000-0000-4000-8000-000000000090', source_summary_id: '10000000-0000-4000-8000-000000000091', client_id: clientId,
+        period_start: '2026-08-25', period_end: '2026-09-24', generated_at: '2026-09-24T09:00:00.000Z', published_at: '2026-09-24T09:00:00.000Z',
+        summary: { headline: 'Тренировка сохранена.', achievements: [], consistency: 'Одна тренировка.', encouragement: 'Продолжай.' },
+        trainer_summary: { headline: 'Тренировка сохранена.', progress: [], consistency: 'Одна тренировка.', attention: [] },
+        client_summary: { headline: 'Тренировка сохранена.', achievements: [], consistency: 'Одна тренировка.', encouragement: 'Продолжай.' },
+        version: 1, published: true,
+        display_metrics: { completed_workouts: 1, workouts_per_week: 1, active_weeks: 1, longest_gap_days: 0 },
+      }] }),
+    }))
+    await page.addInitScript(({ id, theme, role }) => localStorage.setItem(role === 'client' ? `fit.clientLime.theme.${id}` : 'fit.appTheme', theme), { id: role === 'client' ? clientId : trainerId, theme, role })
+    await page.goto(role === 'client' ? '/me/progress' : `/progress/${clientId}`)
+    if (role === 'client') {
+      await page.getByRole('tab', { name: 'ПРО' }).click()
+      await page.locator('.client-body-map-disclosure > summary').click()
+    }
+    const modes = page.locator('.body-progress-modes')
+    await expect(modes).toBeVisible()
+    if (theme === 'light') await expect(page.locator('.phone-frame')).toHaveClass(/theme-light/)
+    else await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
+    const load = modes.getByRole('button', { name: 'Нагрузка', exact: true })
+    await load.click()
+    await expect(load).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.body-progress-region-load').first()).toBeVisible()
+    if (role === 'client') {
+      await expect(modes).toHaveCSS('border-radius', '28px')
+      await expect(load).toHaveCSS('border-radius', '24px')
+      expect(await modes.evaluate((element) => getComputedStyle(element, '::before').content)).toBe('none')
+    } else {
+      await expect(page.locator('.fit-client-lime')).toHaveCount(0)
+      expect(await modes.evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('9px')
+      expect(await load.evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('7px')
+    }
+    await modes.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`body-modes-filled-${role}-${theme}.png`) })
+  })
+}
