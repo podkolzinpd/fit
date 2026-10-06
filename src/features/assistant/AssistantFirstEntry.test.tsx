@@ -23,6 +23,27 @@ describe('assistant first entry', () => {
     expect(onChoose).toHaveBeenCalledExactlyOnceWith('Составь программу тренировок')
     expect(screen.getByRole('button', { name: 'Записать тренировку' })).toBeVisible()
   })
+  it('shows the current navigation, program and fitness chat examples for the feature-links pilot', async () => {
+    const onChoose = vi.fn()
+    render(<AssistantFirstEntry navigationEnabled programEnabled onChoose={onChoose} />)
+
+    expect(screen.getByRole('heading', { name: 'Чем помочь?' })).toBeVisible()
+    expect(screen.getByText(/запись тренировки открою на главной/i)).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Записать тренировку' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(4)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Где мой прогресс?' }))
+    expect(onChoose).toHaveBeenCalledWith('Где в приложении посмотреть мой прогресс?')
+    await userEvent.click(screen.getByRole('button', { name: 'Как восстановиться?' }))
+    expect(onChoose).toHaveBeenLastCalledWith('Как лучше восстановиться после силовой тренировки?')
+  })
+  it('does not promise program creation when only navigation is enabled', () => {
+    render(<AssistantFirstEntry navigationEnabled onChoose={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: 'Составить программу' })).not.toBeInTheDocument()
+    expect(screen.getByText(/^Найду нужный раздел приложения/)).toBeVisible()
+    expect(screen.queryByText(/^Составлю программу/)).not.toBeInTheDocument()
+  })
   it('uses the current client without trainer-only wording', async () => {
     const onChoose = vi.fn()
     render(<AssistantFirstEntry clientMode onChoose={onChoose} />)

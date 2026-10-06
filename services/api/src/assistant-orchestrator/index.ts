@@ -695,16 +695,24 @@ export function summaryPeriodFromMessage(message: string, now = new Date()): Sum
 
 export function assistantCapabilitiesReply(options: { programEnabled?: boolean; navigationEnabled?: boolean; workoutRecordingEnabled?: boolean } = {}): string {
   const workoutRecordingEnabled = options.workoutRecordingEnabled ?? !options.navigationEnabled
+  if (options.navigationEnabled) {
+    const capabilities = [
+      options.programEnabled ? '— составить рекомендованный черновик одной тренировки или программы на 1–4 недели;' : null,
+      '— найти нужный раздел приложения и дать ссылку;',
+      '— коротко обсудить тренировки, упражнения, восстановление и спорт.',
+    ].filter((value): value is string => value !== null)
+    return [
+      `Я могу:\n${capabilities.join('\n')}`,
+      'Запись тренировки открывается на главной странице: скажите «запиши тренировку», и я дам переход.',
+      'Например: «Составь программу на месяц», «Где посмотреть InBody?» или «Как восстановиться после тренировки?»',
+    ].join('\n\n')
+  }
   const capabilities = [
     options.programEnabled ? 'составить рекомендованный черновик одной тренировки или программы на 1–4 недели' : null,
-    options.navigationEnabled ? 'найти нужный раздел приложения и дать переход' : null,
     workoutRecordingEnabled ? 'подготовить запись выполненной тренировки' : null,
     'коротко обсудить тренировки, упражнения, восстановление и спорт',
   ].filter((value): value is string => value !== null)
-  const workoutEntry = options.navigationEnabled
-    ? ' Запись выполненной тренировки открою на главной странице.'
-    : ''
-  return `Могу ${capabilities.join('; ')}.${workoutEntry}`
+  return `Могу ${capabilities.join('; ')}.`
 }
 
 export function assistantSmallTalkPrompt(history: readonly { author: string; content: string }[], informal: boolean): string {
