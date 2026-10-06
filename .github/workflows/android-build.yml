@@ -99,3 +99,82 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+  rustore-release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/android-rustore-release-20261006'
+    runs-on: ubuntu-latest
+    environment: fit-frontend-candidate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: e17ed22c860f99f19825bb3c7f93ad4e2ecc235d
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Build production Android release
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          npm run build
+          npx cap sync android
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          FIT_LIME_FONTS_REQUIRED: 'true'
+          FIT_LIME_YS_GEO_REGULAR_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_REGULAR_BASE64_PART1 }}
+          FIT_LIME_YS_GEO_REGULAR_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_REGULAR_BASE64_PART2 }}
+          FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1 }}
+          FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2 }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          VITE_YANDEX_API_BASE_URL: https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
+          VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
+          VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+          VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+          VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+          VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+          VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
+          VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
+          VITE_MAINTENANCE_MODE: 'false'
+      - run: ./gradlew assembleRelease
+        working-directory: android
+      - name: Sign and verify release APK
+        shell: bash
+        env:
+          FIT_ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.FIT_ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          FIT_ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.FIT_ANDROID_RELEASE_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$FIT_ANDROID_RELEASE_KEYSTORE_BASE64"
+          test -n "$FIT_ANDROID_RELEASE_STORE_PASSWORD"
+          keyfile="$RUNNER_TEMP/fit-release.p12"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$FIT_ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keyfile"
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$signer"
+          tools_dir=$(dirname "$signer")
+          mkdir -p rustore-release
+          "$tools_dir/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/fit-aligned.apk"
+          "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out rustore-release/fit-1.0-release.apk "$RUNNER_TEMP/fit-aligned.apk"
+          "$signer" verify --verbose --print-certs rustore-release/fit-1.0-release.apk | tee rustore-release/signature.txt
+          "$tools_dir/zipalign" -c -P 16 4 rustore-release/fit-1.0-release.apk
+          "$tools_dir/aapt" dump badging rustore-release/fit-1.0-release.apk > rustore-release/package-info.txt
+          if grep -q '^application-debuggable' rustore-release/package-info.txt; then
+            echo 'Refusing debuggable release APK'
+            exit 1
+          fi
+          grep -q "package: name='com.coachspace.fit' versionCode='1' versionName='1.0'" rustore-release/package-info.txt
+          sha256sum rustore-release/fit-1.0-release.apk > rustore-release/SHA256SUMS
+          printf '%s\n' 'Source commit: e17ed22c860f99f19825bb3c7f93ad4e2ecc235d' > rustore-release/source.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fit-rustore-signed-release-1.0
+          path: rustore-release/
+          if-no-files-found: error
+          retention-days: 30

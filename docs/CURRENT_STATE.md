@@ -1,5 +1,16 @@
 # Fit — текущее состояние проекта
 
+## Android release для RuStore — подготовка 2026-10-06
+
+Владелец подтвердил возврат из Yandex OAuth в Android debug-приложение.
+Подготовлен manual-only release workflow в отдельной ветке без PR; исходный
+main e17ed22c имеет зелёный CI. YAML/shell и diff проверены. После явного разрешения владельца создан постоянный RSA4096 ключ:
+encrypted PKCS12 вне Git на Mac, пароль в macOS Keychain, копия в GitHub
+environment secrets fit-frontend-candidate. Нужна резервная копия владельца.
+Подписанный APK ещё не собран. Детали:
+`docs/design/ANDROID_RUSTORE_RELEASE_20261006.md`. Release не публиковался;
+проверка release на физическом телефоне остаётся обязательной.
+
 ## Аудит БД четвёртый шаг — 2026-10-06
 
 Первый шаг #1434: `a9b9c8e6`, CI37306986244/API37307751042 success; фото защищены.
@@ -119,4 +130,4 @@ Yandex Cloud PostgreSQL17. Vercel — legacy redirect; новые Vercel deploym
 
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
-- Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Android origin закреплён как `https://localhost` и включён в API CORS allowlist deployment workflow. Внешний браузер Yandex ID не может вернуть OAuth-код на `https://localhost` в WebView, поэтому Android использует deep link `com.coachspace.fit://auth/yandex/callback` с PKCE state-проверкой. Этот Redirect URI зарегистрирован в Yandex OAuth 2 октября; прежние URI сохранены. Работающий вход ещё не подтверждён: нужна проверка на устройстве. Ручной GitHub Actions job собирает production-configured debug APK для проверки входа; это не release-сборка. Подпись release и публикация не выполнялись.
+- Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Android origin закреплён как `https://localhost` и включён в API CORS allowlist deployment workflow. Внешний браузер Yandex ID не может вернуть OAuth-код на `https://localhost` в WebView, поэтому Android использует deep link `com.coachspace.fit://auth/yandex/callback` с PKCE state-проверкой. Этот Redirect URI зарегистрирован в Yandex OAuth 2 октября; прежние URI сохранены. Владелец подтвердил возврат из OAuth в Android-приложение; полная проверка пользовательских сценариев остаётся. Ручной GitHub Actions job собирает production-configured debug APK для проверки входа; это не release-сборка. Подпись release и публикация не выполнялись.
