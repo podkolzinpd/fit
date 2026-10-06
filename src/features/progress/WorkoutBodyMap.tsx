@@ -52,6 +52,7 @@ export function PeriodLoadMap({ workouts, clientId, periodStart, periodEnd, gend
     <h3>Нагрузка по телу</h3>
     <div className="workout-load-map-layout">
       {data.regions.length > 0 ? <MapPanel
+          clientLime={isClientLimeEnabled(actor)}
           data={data}
           selected={selected}
           insightCandidates={[]}
