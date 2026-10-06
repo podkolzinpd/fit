@@ -1,9 +1,9 @@
 # Fit — текущее состояние проекта
 
-## Очистка frontend-релизов — 2026-10-06
+## Очистка frontend-релизов — 2026-10-07
 
-PR#1467 слит223cb7d4; CI37502696391 success. Plan37521471733 success:771файл+121manifest/241207827байт,56релизов сохранены, overlap0; raw CLI size исправлен fail-closed. Второй gate: HEAD last_modified_at/секунды vs list last_modified/миллисекунды. Follow-up исправлен локально:retention23/23,hosting115/115,check2412/API1176+92 skipped/build passed; база28309ef4 после #1468, ETag/размер сохранены.
-Ежедневное удаление пока выключено. По подтверждению владельца frontend deployer получил ACL READ+WRITE только frontend-бакета и policy DeleteObject releases/*; DeleteObjectVersion явно запрещён, wildcard AWS-service правило исключает deployer. IAM uploader/viewer сохранены; без editor/admin/media/state/БД. Readback ACL2/policy8/versioning enabled подтверждён; текущий/предыдущий, последние3дня и общие файлы защищены; apply ещё не был.
+PR#1467 и #1469 слиты; обязательный CI зелёный. Исправлены реальные форматы YC CLI: отсутствующий размер допускается только у подтверждённого пустого folder marker; HEAD использует last_modified_at с секундной точностью, сохраняя точный ETag/размер. Retention23/23, hosting115/115, npm run check (frontend2412/API1176+92 DB skipped/build) passed; Yandex DB проверена в CI.
+Штатная ежедневная очистка включена (целевое время 06:17 МСК; scheduler может задерживать запуск). Первый guarded apply завершён успешно: https://github.com/podkolzinpd/fit/actions/runs/37527012718; каждый DELETE подтверждён, gateway/site smoke passed, backup artifact сохранён. Текущий/предыдущий, последние3дня и общие файлы сохранены; версии не purged, прежнее lifecycle удаляет нетекущие версии через3дня. Независимый static smoke: auth/JS/CSS/sw на обоих frontend-адресах HTTP200 и одинаковые bytes; БД/media/state не затрагиваются.
 
 ## YAFIT-595 — третий тренер Fit Lime — 2026-10-06
 
