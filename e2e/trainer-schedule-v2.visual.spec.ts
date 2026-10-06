@@ -37,6 +37,28 @@ for (const role of ['client', 'trainer'] as const) for (const width of (role ===
     await expect(dialog.getByRole('alert')).toContainText('Укажите длительность')
     expect(commands).toHaveLength(0)
     await input.fill('50,5')
+    if (width <= 430) {
+      // WKWebView keeps layout height while the keyboard shrinks visualViewport.
+      const original = await page.evaluate(() => {
+        const style = document.documentElement.style
+        const values = [style.getPropertyValue('--app-visible-height'), style.getPropertyValue('--app-viewport-offset-top')]
+        style.setProperty('--app-visible-height', '460px')
+        style.setProperty('--app-viewport-offset-top', '36px')
+        return values
+      })
+      const bounds = await dialog.evaluate((element) => {
+        const box = element.getBoundingClientRect()
+        const save = element.querySelector<HTMLButtonElement>('button[type="submit"]')!.getBoundingClientRect()
+        return { top: box.top, bottom: box.bottom, saveBottom: save.bottom }
+      })
+      expect(bounds.top).toBeGreaterThanOrEqual(52)
+      expect(bounds.bottom).toBeLessThanOrEqual(480)
+      expect(bounds.saveBottom).toBeLessThanOrEqual(480)
+      await page.evaluate((values) => {
+        document.documentElement.style.setProperty('--app-visible-height', values[0]!)
+        document.documentElement.style.setProperty('--app-viewport-offset-top', values[1]!)
+      }, original)
+    }
     await page.screenshot({ path: testInfo.outputPath(`duration-dialog-${role}-${width}.png`), fullPage: true })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()

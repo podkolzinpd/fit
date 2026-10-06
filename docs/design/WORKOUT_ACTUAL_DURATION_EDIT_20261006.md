@@ -92,6 +92,14 @@ API1177/1177 (93 DB cases отдельно), coverage/lint/types/build/startup �
 Обязательный CI, merge, migration/API rollout и frontend readback — последние
 гейты; до их успешного завершения не заявляем production-выпуск.
 
+При финальной проверке клавиатуры выявлено перекрытие: при visible viewport460px
+кнопка сохранения находилась на577px. Диалог теперь использует существующие
+--app-visible-height/--app-viewport-offset-top, без изменений глобального
+viewport-контроллера. Повторный замер: кнопка341px, диалог97–362px.
+В мобильные Yandex-route сценарии добавлены проверки видимости диалога и
+сохранения при viewport460px с offset36px; это эмуляция геометрии клавиатуры,
+не ручная проверка физического iPhone. Обычные light/dark размеры сохраняются.
+
 Локальные гейты: lint/typecheck, frontend coverage2417/2417, API1254/1254
 (включая все92 actor/RLS), build/startup, DB types, iOS permissions, media2/2,
 infra/calendar/hosting112 checks прошли. `npm run check` был выполнен;

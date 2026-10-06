@@ -1952,7 +1952,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-actual-duration span { color:var(--secondary-label-fg); font-size:var(--text-sm) }
 .workout-actual-duration strong { font-size:var(--text-title); font-weight:600 }
 .workout-actual-duration button { min-height:44px; flex:0 0 auto; font-size:var(--text-sm) }
-.workout-duration-dialog { margin:auto; width:min(calc(100% - 32px),360px); max-height:calc(100dvh - 32px); overflow:auto }
+.workout-duration-dialog { position:fixed; inset:calc(var(--app-viewport-offset-top,0px) + var(--app-visible-height,100dvh)/2) 0 auto; transform:translateY(-50%); margin:0 auto; width:min(calc(100% - 32px),360px); max-height:calc(var(--app-visible-height,100dvh) - 32px); overflow:auto }
 .workout-duration-dialog:not([open]) { display:none }
 .workout-duration-dialog::backdrop { background:var(--overlay) }
 .workout-duration-dialog h2 { margin:0; font-size:var(--text-title) }
