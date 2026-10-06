@@ -343,6 +343,12 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  setActualDuration(workout: Workout, durationSec: number | null): Promise<number> {
+    // Frozen legacy adapter: production duration correction uses the Yandex implementation.
+    void workout
+    void durationSec
+    return Promise.reject(new Error('Изменение длительности недоступно в этой версии приложения'))
+  },
   async submitFeedback(workout: Workout, feedback: WorkoutFeedbackDraft): Promise<number> {
     const result = await workoutQueries.submitFeedback(workout.id, feedback, workout.version)
     if (result.error) throw repositoryError(result.error)

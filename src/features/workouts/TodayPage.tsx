@@ -26,6 +26,7 @@ import { clientTodayDraftKey, readClientTodayDrafts, writeClientTodayDraft, read
 import { type WorkoutRecordMode } from './workout-entry-rules'
 import { firstCardioDraftMissingEnteredDuration } from './calorie-duration-prompt'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
+import { WorkoutActualDurationField } from './WorkoutActualDuration'
 import { WorkoutComposer } from './WorkoutComposer'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorKind } from './WorkoutParseErrorNotice'
@@ -1025,7 +1026,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         </>}
         <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label><label className="today-date-field"><span>{recordMode === 'planned' ? 'Время' : 'Время начала'}</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
         {!clientMode && <div className="today-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
-        {recordMode === 'completed' && <label className="today-date-field"><span>Длительность, мин · необязательно</span><input aria-label="Длительность тренировки, мин" inputMode="decimal" value={actualDurationMinutes} placeholder="Например, 50" onChange={(event) => setActualDurationMinutes(event.target.value)} /><small>Сколько длилась сама тренировка, а не её запись в приложении.</small></label>}
+        {recordMode === 'completed' && <WorkoutActualDurationField value={actualDurationMinutes} onChange={setActualDurationMinutes} disabled={save.isPending} />}
         {recordMode === 'completed' && missingCardioTime
           ? <div className="finish-confirm" role="status">
               <p>У «{missingCardioTime}» есть дистанция, но нет фактического времени. Добавьте время на шаге проверки или сохраните результат без оценки активных калорий FIT.</p>

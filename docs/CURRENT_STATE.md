@@ -24,8 +24,11 @@ WebKit5/5: plan→Live/reload удержания/проходки, выпады,
 
 #1459/#1462/#1465 слиты; release85584a47 CI37486398084/Android37486397713 success; deploy37488943876 verified206/readback12/YS Geo2. Published8cases. Новый скриншот подтвердил analysis/goal18px и sheet18px/close14px; база223cb7d4 после #1467, plan CLIENT_LIME_PROGRESS_FILLED_20261006.md. V16–19 используют cards/7PRO headers32px, sheet40px/close44круг, tertiary14/500/44; только client scope. WebKit13/13 D/L390/430/pending/error/PRO/off-control passed; Chromium13/13; check2412/API1176+92 skipped/policy/hosting/build success. hosting114/114 passed; PR1468 слит28309ef4, CI37522475372/Android37522475377 success, main CI/выпуск выполняются. Раскрытие всех7 ПРО подтвердило V20 D/L390/430: body-mode14/pseudo9/7px; план CLIENT_LIME_BODY_MODE_20261006.md, существующий segmented28/24/44 только client, WebKit16/16/Chromium16/16 passed: все7 открыты, empty/filled mode, другой клиент/trainer; check2412/API1176+92 skipped/policy/hosting114/build success; rebasec39bc3fc после1469, UI/E2E/package diff пустой, hosting115 passed; CI/readback далее. Выпуск28309ef4 не активирован: main обновился. Полное покрытие не заявляется; НЕ ПРОВЕРЕНО остаётся в аудите. Физический iPhone/удалённые LLM/SpeechKit/Store-релиз не подтверждены.
 
-## Аудит БД и дублирующие индексы — 2026-10-06
+## Фактическая длительность тренировки — 2026-10-06
 
+PR#1463 включает main2867f1d9 (#1464/#1474/#1471); полный выпуск повторно разрешён7октября. План design/WORKOUT_ACTUAL_DURATION_EDIT_20261006.md, пункты1–5 сохранены. Ввод#1357 переиспользован; narrow done duration не даёт прав на план/подходы. Migration126/PUT: время+версия, calorie refresh; timestamps/sets неизменны, manual выше Live, очистка возвращает timer. Исправлены старые E2E-подписи, пустая колонка и геометрия клавиатуры (эмуляция, не физический iPhone). Full check: frontend2456/API1177/build/policy success; task-only PostgreSQL17 на55437actor99/99 и late126 после128 прошли, legacy2/2. WebKit/Chromium38/38; light/dark390/430/trainer1440 просмотрены. CI37542191860:21 gates green, WebKit два старых sections430 превысили общий30s. Trace подтвердил deadline; разделены на6+6страниц/detail без удаления assertions/изменения лимитов. Новый CI, merge, API/frontend rollout/readback и свежий iOS ещё гейты; production не выпущено. Общая БД сохранена (drift112).
+
+## Аудит БД и дублирующие индексы — 2026-10-06
 #1434 защищает фото, #1449 — snapshot, #1450 — серверную pagination; все слиты. #1454 слит `4eab2e22`: статистика карточки — один actor SQL-агрегат, ИИ/Progress/ближайшие назначения сохранены. CI37384227309, API37384227223/frontend37385582939 success. Планы — DATABASE_AUDIT в docs/design.
 PR#1457 слит: migration125 удаляет два дублирующих position индекса с проверкой каталога и lock wait3s; UNIQUE DEFERRABLE/данные/RLS/API сохранены.
 Clean PostgreSQL17 chain/actor91/91, check2409/1159/build и WebKit3/3 passed;
@@ -33,13 +36,10 @@ local:verify блокирован прежней Supabase-миграцией, ba
 План: DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md; production API200 до выпуска.
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
-
 #1433: private Node.js22/128МБ/60s, часовой timer `/healthz`/`auth` на одном IP; без PII/чатов.
-Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается,
-disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
+Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
 Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана.
-Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap,
-functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
+Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap, functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
 Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063,
 DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
@@ -69,15 +69,8 @@ Acceptance: design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md; Lime identity/pilo
 Production browser ограничен без обхода; внешний YAFIT не настроен, чужие credentials не используются.
 ## Следующий персональный pilot — ссылки на функции в Assistant
 
-Пользователь разрешил реализацию, PR, слияние зелёного CI и production-выпуск
-только для native Yandex login `brainbuster98`. План и критерии:
-`docs/design/ASSISTANT_FEATURE_LINKS_PILOT_20261004.md`. Сервер отвечает на
-навигационные вопросы только reviewed internal link markers, frontend отклоняет
-внешние и неизвестные пути. Доступ требует одновременно environment switch и
-привязанный hash allowlist; старая FIT-сессия обновляется через защищённый
-`/auth/yandex/refresh-assistant` без предварительного выхода. До успешных CI,
-API/migration rollout и frontend activation задачу
-нельзя считать выпущенной.
+Пользователь разрешил реализацию, PR, слияние зелёного CI и production-выпуск только для native Yandex login `brainbuster98`. План и критерии: `docs/design/ASSISTANT_FEATURE_LINKS_PILOT_20261004.md`.
+Сервер отвечает на навигационные вопросы только reviewed internal link markers, frontend отклоняет внешние и неизвестные пути. Доступ требует одновременно environment switch и привязанный hash allowlist; старая FIT-сессия обновляется через защищённый `/auth/yandex/refresh-assistant` без предварительного выхода. До успешных CI, API/migration rollout и frontend activation задачу нельзя считать выпущенной.
 
 Исправление от 6 октября: в production Yandex-orchestrator запись тренировки
 целиком уходит на главный экран роли. Прямая диктовка больше не создаёт

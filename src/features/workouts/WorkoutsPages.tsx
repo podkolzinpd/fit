@@ -7,6 +7,7 @@ import { FitLimeScheduleList } from './FitLimeScheduleList'
 import { readScheduleScroll, writeScheduleScroll } from './schedule-scroll'
 import { filterScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
+import { WorkoutActualDuration, WorkoutActualDurationField } from './WorkoutActualDuration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -1527,7 +1528,7 @@ export function WorkoutFormPage() {
         {showEndTime
           ? <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
           : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}>＋ Добавить время окончания</button>}
-        {completedMode && <Field label="Длительность, мин · необязательно"><input aria-label="Длительность тренировки, мин" inputMode="decimal" value={actualDurationMinutes} placeholder="Например, 50" onChange={(event) => { setActualDurationMinutes(event.target.value); setDurationError(null) }} /><small>Сколько длилась сама тренировка, а не её запись в приложении.</small></Field>}
+        {completedMode && <WorkoutActualDurationField value={actualDurationMinutes} onChange={(value) => { setActualDurationMinutes(value); setDurationError(null) }} disabled={mutation.isPending} />}
         {durationError && <p className="error" role="alert">{durationError}</p>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
@@ -1742,6 +1743,20 @@ export function WorkoutDetailPage() {
   const workout = query.data
   const done = workout?.status === 'done'
   const duration = workout ? workoutDurationLabel(workout.startedAt, workout.completedAt, workout.actualDurationSec) : null
+  // Duration now has its own control; size the remaining summary to real metrics.
+  const factSummaryMetricCount = 2 + Number(Boolean(workout?.activeCaloriesKcal))
+    + Number(!limeHistory && Boolean(workout?.activeCaloriesKcal ? workout.calorieEstimateBasis : workout?.calorieEstimateNotice))
+  const durationControl = done && workout ? <WorkoutActualDuration workout={workout}
+    onSave={async (seconds, expectedVersion) => {
+      await workoutsRepository.setActualDuration({ ...workout, version: expectedVersion }, seconds)
+      await invalidateWorkoutSurfaces()
+    }}
+    onReload={async () => {
+      const refreshed = await query.refetch()
+      if (!refreshed.data || refreshed.error) throw refreshed.error ?? new Error('Не удалось перечитать тренировку')
+      await invalidateWorkoutResults(queryClient)
+      return refreshed.data.version
+    }} /> : null
   const groups = workout ? muscleGroupLabels(workout.exercises) : []
   const tonnage = workout ? workoutTonnage(workout) : 0
   const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
@@ -1863,6 +1878,7 @@ export function WorkoutDetailPage() {
         totalExercises={workout.exercises.length}
         incompleteExercises={incompleteExercises}
         duration={duration && duration !== '0 мин' ? duration : null}
+        durationControl={durationControl}
         tonnage={tonnage > 0 ? tonnageLabel(tonnage) : null}
         caloriesKcal={workout.activeCaloriesKcal}
         calorieBasis={workout.calorieEstimateBasis}
@@ -1893,7 +1909,7 @@ export function WorkoutDetailPage() {
         statusLabel={statusPresentation?.label}
         showStatus={detailState !== 'completed'}
         action={manageMenuInHeader ? <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} /> : undefined}
-        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · только просмотр</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
+        meta={<><span>{formatLocalDate(workout.workoutDate)} · {workout.startTime?.slice(0, 5) ?? 'без времени'}</span><span>{workoutTrainingFormatLabel(workout.trainingFormat ?? 'self')}</span>{clientMode && !done && authorLabel && <span>{authorLabel}</span>}{clientAuthoredReadOnly && <span>Создано клиентом · упражнения только для просмотра</span>}{stageTitle && <span>Цель: {stageTitle}</span>}</>} />}
       {isFitLimeEnabled(actor) && workout.title && <p className="workout-plan-title">{workout.title}</p>}
       {isFitLimeEnabled(actor) && workout.plannedDate && <p className="workout-plan-title">Исходный план: {formatLocalDate(localDate(workout.plannedDate))}{workout.plannedStartTime ? ` · ${workout.plannedStartTime.slice(0, 5)}${workout.plannedEndTime ? `–${workout.plannedEndTime.slice(0, 5)}` : ''}` : ' · без времени'}</p>}
       {isFitLimeEnabled(actor) && workout.status === 'planned' && canExecute && workout.workoutDate !== today && <p className="workout-plan-title">При запуске сейчас тренировка начнётся сегодня, {formatLocalDate(today)}. Исходная дата плана сохранится отдельно.</p>}
@@ -1909,8 +1925,7 @@ export function WorkoutDetailPage() {
         event.preventDefault()
         openLive(workoutId)
       }}>Продолжить тренировку</Link>}
-      {done && !clientCompletionReport && <><section className={`workout-fact-summary${workout.activeCaloriesKcal ? ' has-calories' : ''}`} aria-label="Сводка тренировки">
-        <p><span>Время</span><strong>{duration && duration !== '0 мин' ? duration : '—'}</strong></p>
+      {done && !clientCompletionReport && <><section className={`workout-fact-summary${factSummaryMetricCount >= 4 ? ' has-calories' : ''}${factSummaryMetricCount === 2 ? ' has-two-metrics' : ''}`} aria-label="Сводка тренировки">
         <p><span>Тоннаж</span><strong>{tonnage > 0 ? tonnageLabel(tonnage) : '—'}</strong></p>
         {workout.activeCaloriesKcal && <p><span>{limeHistory ? 'Калории FIT' : 'Оценка активных калорий FIT'}</span><strong>≈ {workout.activeCaloriesKcal} ккал</strong></p>}
         {!limeHistory && workout.activeCaloriesKcal && workout.calorieEstimateBasis && <p><span>Основа оценки</span><strong>{workout.calorieEstimateBasis}</strong></p>}
@@ -1919,6 +1934,7 @@ export function WorkoutDetailPage() {
         {groups.length > 0 && <p className="workout-fact-summary-groups"><span>Группы мышц</span><strong>{groups.join(' · ')}</strong></p>}
         {clientMode && workout.hasPr && <p className="workout-fact-summary-record"><RecordIcon /><span>Личный рекорд</span><strong>Лучший результат тренировки</strong></p>}
       </section>{limeHistory && (workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice) && <p className="workout-calorie-explanation"><span>{workout.activeCaloriesKcal ? 'Основа оценки калорий FIT' : 'Активные калории FIT'}</span>{workout.activeCaloriesKcal ? workout.calorieEstimateBasis : workout.calorieEstimateNotice}</p>}</>}
+      {done && !clientCompletionReport && <section className="workout-review workout-duration-surface">{durationControl}</section>}
       {done && !clientCompletionReport && <WorkoutClientFeedback workout={workout} canEdit={clientMode} saving={feedback.isPending} error={feedback.error} onSave={(value) => feedback.mutateAsync(value)} />}
       {done && clientMode && hasActiveTrainer && !clientCompletionReport && <WorkoutClientQuestion workout={workout} saving={question.isPending} error={question.error} onSave={(value) => question.mutateAsync(value)} />}
       {done && !clientMode && workout.clientQuestion && <WorkoutTrainerQuestion workout={workout} canReply={canReview} startEditing={new URLSearchParams(location.search).get('reply') === '1'} authorName={responseAuthorName} saving={questionAnswer.isPending} error={questionAnswer.error} onSave={(value) => questionAnswer.mutateAsync(value)} />}

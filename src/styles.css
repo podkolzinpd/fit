@@ -1947,6 +1947,18 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .modal-dialog { width: min(100%, 360px); display: flex; flex-direction: column; gap: 18px; padding: 22px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-elevated); box-shadow:none}
 .modal-message { margin: 0; font-size: 15px; line-height: 1.4; color: var(--fg); text-align: center }
 .modal-dialog .actions { margin: 0 }
+.workout-actual-duration { display:flex; align-items:center; justify-content:space-between; gap:16px }
+.workout-actual-duration > div { display:grid; gap:4px; min-width:0 }
+.workout-actual-duration span { color:var(--secondary-label-fg); font-size:var(--text-sm) }
+.workout-actual-duration strong { font-size:var(--text-title); font-weight:600 }
+.workout-actual-duration button { min-height:44px; flex:0 0 auto; font-size:var(--text-sm) }
+.workout-duration-dialog { position:fixed; inset:calc(var(--app-viewport-offset-top,0px) + var(--app-visible-height,100dvh)/2) 0 auto; transform:translateY(-50%); margin:0 auto; width:min(calc(100% - 32px),360px); max-height:calc(var(--app-visible-height,100dvh) - 32px); overflow:auto }
+.workout-duration-dialog:not([open]) { display:none }
+.workout-duration-dialog::backdrop { background:var(--overlay) }
+.workout-duration-dialog h2 { margin:0; font-size:var(--text-title) }
+.workout-duration-dialog .field input { width:100%; min-height:48px; font-size:16px }
+.workout-duration-dialog small { color:var(--secondary-label-fg); font-size:var(--text-sm) }
+.workout-duration-saved { margin:8px 0 0; color:var(--success-fg); font-size:var(--text-sm) }
 .modal-dialog .actions > * { flex: 1 }
 /* destructive-кнопка в диалоге: красная заливка (не только текст), чтобы
    опасное действие читалось как основное-опасное. */
@@ -4668,6 +4680,8 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .workout-detail-history-identity .workout-fact-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; margin:0 0 16px; padding:0; overflow:hidden; border:1px solid var(--border); border-radius:16px; background:var(--surface-raised) }
 .workout-detail-history-identity .workout-fact-summary p { display:grid; gap:3px; margin:0; padding:11px 10px; border:0; border-right:1px solid var(--border); border-radius:0; background:transparent; text-align:center }
 .workout-detail-history-identity .workout-fact-summary p:nth-child(3) { border-right:0 }
+.workout-detail-history-identity .workout-fact-summary.has-two-metrics { grid-template-columns:repeat(2,minmax(0,1fr)) }
+.workout-detail-history-identity .workout-fact-summary.has-two-metrics p:nth-child(2) { border-right:0 }
 .workout-detail-history-identity .workout-fact-summary.has-calories { grid-template-columns:repeat(2,minmax(0,1fr)) }
 .workout-detail-history-identity .workout-fact-summary.has-calories p:nth-child(3) { border-top:1px solid var(--border); border-right:1px solid var(--border) }
 .workout-detail-history-identity .workout-fact-summary.has-calories p:nth-child(2n) { border-right:0 }

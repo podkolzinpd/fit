@@ -89,6 +89,7 @@ import {
   setWorkoutReview,
   snoozeClientAttention,
   submitWorkoutFeedback,
+  setWorkoutActualDuration,
   resolveWorkoutQuestion,
   setClientWorkoutComment,
   setLiveExerciseComment,
@@ -4788,6 +4789,64 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(afterUpdate.rows).toEqual([{ favorite_title: 'Ноги и спина' }])
 
       await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+    })
+
+    it('corrects only duration for the athlete and accessible trainer history without rewriting the plan', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const athleteId = randomUUID()
+      const clientId = randomUUID()
+      await ownerPool.query("insert into public.profiles(id,first_name,account_role) values($1,'Duration athlete','client')", [athleteId])
+      await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Duration fixture')", [clientId, ACTOR_ID, athleteId])
+      const draft: PlannedWorkoutDraft = {
+        id: null, clientId, workoutDate: '2026-10-02', startTime: '23:30', endTime: '00:30', notes: 'Unchanged plan',
+        exercises: [{
+          position: 0, source: 'system', ref: 'stationary-bike', customExerciseId: null,
+          name: 'Велотренажёр', muscleGroup: 'cardio', inputKind: 'duration',
+          blockId: randomUUID(), blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0, trainerComment: 'Unchanged instruction',
+          sets: [{ position: 0, weightKg: null, reps: null, durationSec: 1200, durationMin: null,
+            distanceKm: 8, rpe: 6, metricSources: { duration: 'entered', distance: 'entered', rpe: 'entered' } }],
+        }],
+      }
+      const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveCompletedWorkout(client, draft, null))
+      try {
+        const snapshot = async () => (await ownerPool!.query<Record<string, unknown>>(`select workout_date,start_time,end_time,started_at,completed_at,
+          notes,created_by,training_format,(select jsonb_agg(to_jsonb(e) order by e.position) from public.workout_exercises e where e.workout_id=w.id) as exercises,
+          (select jsonb_agg(to_jsonb(s) order by s.position) from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id where e.workout_id=w.id) as sets
+          from public.workouts w where id=$1`, [created.id])).rows[0]
+        const before = await snapshot()
+        const correction = (actorId: string, seconds: number | null, version: number) =>
+          withActorTransaction(runtimePool!, actorId, (client) => setWorkoutActualDuration(client, created.id, seconds, version))
+        await expect(correction(OUTSIDE_TRAINER_ID, 3000, created.version)).rejects.toMatchObject({ failure: 'forbidden' })
+        const version = await correction(athleteId, 3000, created.version)
+        expect(version).toBe(created.version + 1)
+        await expect(correction(athleteId, 3000, created.version)).resolves.toBe(version)
+        await expect(correction(ACTOR_ID, 2400, created.version)).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(correction(athleteId, 0, version)).rejects.toMatchObject({ failure: 'invalid' })
+        await expect(withActorTransaction(runtimePool, athleteId,
+          (client) => saveCompletedWorkout(client, { ...draft, id: created.id, notes: 'Not allowed' }, version))).rejects.toMatchObject({ failure: 'forbidden' })
+        expect(await snapshot()).toEqual(before)
+        const calories = await ownerPool.query<{ actual_duration_sec: number | null; calorie_v2_shadow_details: unknown }>('select actual_duration_sec,calorie_v2_shadow_details from public.workouts where id=$1', [created.id])
+        expect(calories.rows[0]).toMatchObject({ actual_duration_sec: 3000, calorie_v2_shadow_details: { elapsedSeconds: 3000 } })
+        const cleared = await correction(ACTOR_ID, null, version)
+        expect(await snapshot()).toEqual(before)
+        expect((await ownerPool.query<{ actual_duration_sec: number | null }>('select actual_duration_sec from public.workouts where id=$1', [created.id])).rows[0]?.actual_duration_sec).toBeNull()
+        // A trainer may correct visible athlete-authored history, not another trainer's assignment.
+        await ownerPool.query('update public.workouts set created_by=$2 where id=$1', [created.id, athleteId])
+        await ownerPool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [clientId, OUTSIDE_TRAINER_ID])
+        const historyVersion = await correction(OUTSIDE_TRAINER_ID, 3600, cleared)
+        await ownerPool.query('delete from public.client_trainers where client_id=$1 and trainer_id=$2', [clientId, OUTSIDE_TRAINER_ID])
+        await expect(correction(OUTSIDE_TRAINER_ID, 3500, historyVersion)).rejects.toMatchObject({ failure: 'forbidden' })
+        await ownerPool.query("update public.workouts set status='planned',started_at=null,completed_at=null where id=$1", [created.id])
+        await expect(correction(athleteId, 3500, historyVersion)).rejects.toMatchObject({ failure: 'invalid' })
+        await ownerPool.query('update public.workouts set deleted_at=now() where id=$1', [created.id])
+        await expect(correction(athleteId, 3500, historyVersion)).rejects.toMatchObject({ failure: 'forbidden' })
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=$1', [created.id])
+        await ownerPool.query('delete from public.client_trainers where client_id=$1', [clientId])
+        await ownerPool.query('delete from public.clients where id=$1', [clientId])
+        await ownerPool.query('delete from public.profiles where id=$1', [athleteId])
+      }
     })
 
     it('persists actual duration with authorization, replay safety, clearing and calorie recalculation', async () => {

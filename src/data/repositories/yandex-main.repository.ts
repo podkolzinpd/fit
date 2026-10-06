@@ -1538,6 +1538,7 @@ export function createYandexMainRepository(
       async setExerciseComment(item, exerciseId, comment) { return liveCommand(`/v1/workout-exercises/${exerciseId}/comment`, 'PUT', item.version, { comment }) },
       async setWorkoutReview(item, value) { return commandVersion(`/v1/workouts/${item.id}/review`, 'PUT', { reaction: value.reaction, review: value.review, expectedVersion: item.version }) },
       async setClientWorkoutComment(item, comment) { return commandVersion(`/v1/workouts/${item.id}/comment`, 'PUT', { comment, expectedVersion: item.version }) },
+      async setActualDuration(item, actualDurationSec) { return commandVersion(`/v1/workouts/${item.id}/duration`, 'PUT', { actualDurationSec, expectedVersion: item.version }) },
       async submitFeedback(item, value) { return commandVersion(`/v1/workouts/${item.id}/feedback`, 'PUT', { ...value, expectedVersion: item.version }) },
       async askQuestion(item, question) { return commandVersion(`/v1/workouts/${item.id}/question`, 'PUT', { question, expectedVersion: item.version }) },
       async answerQuestion(item, value) { return commandVersion(`/v1/workouts/${item.id}/question/answer`, 'PUT', { reaction: value.reaction ?? null, review: value.review, expectedVersion: item.version }) },

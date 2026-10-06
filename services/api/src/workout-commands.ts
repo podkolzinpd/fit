@@ -327,6 +327,18 @@ export function setClientWorkoutComment(
   )
 }
 
+export function setWorkoutActualDuration(
+  client: DatabaseClient,
+  workoutId: string,
+  durationSec: number | null,
+  expectedVersion: number,
+): Promise<number> {
+  return runVersionCommand(
+    client, 'select public.set_workout_actual_duration($1, $2, $3) as version',
+    [workoutId, durationSec, expectedVersion],
+  )
+}
+
 export function submitWorkoutFeedback(
   client: DatabaseClient,
   workoutId: string,

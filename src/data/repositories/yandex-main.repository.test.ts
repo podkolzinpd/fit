@@ -855,6 +855,10 @@ describe('Yandex main repository', () => {
     await repository.workouts.setWorkoutReview(item, { reaction: 'fire', review: 'Отлично' })
     await repository.workouts.setClientWorkoutComment(item, 'Сложно')
     await repository.workouts.submitFeedback(item, { sessionRpe: 8, wellbeing: 'normal', discomfort: false, comment: 'Хорошо' })
+    await repository.workouts.setActualDuration(item, 3000)
+    expect(fetchMock).toHaveBeenCalledWith(`${apiBaseUrl}/v1/workouts/${item.id}/duration`, expect.objectContaining({
+      method: 'PUT', body: JSON.stringify({ actualDurationSec: 3000, expectedVersion: item.version }),
+    }))
     await repository.workouts.askQuestion(item, 'Что дальше?')
     await repository.workouts.answerQuestion(item, { reaction: undefined, review: 'Продолжаем' })
     await repository.workouts.resolveQuestion(item)

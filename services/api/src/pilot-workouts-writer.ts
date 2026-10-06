@@ -35,6 +35,7 @@ import {
   quickStartLiveWorkout,
   cancelEmptyLiveWorkout,
   submitWorkoutFeedback,
+  setWorkoutActualDuration,
   setWorkoutReview,
   askWorkoutQuestion,
   answerWorkoutQuestion,
@@ -51,6 +52,7 @@ import type {
 } from './post-workout-request.js'
 
 export interface PilotWorkoutsWriter {
+  setActualDuration(sessionToken: YandexActorSessionInput, workoutId: string, durationSec: number | null, expectedVersion: number): Promise<number>
   quickStart(sessionToken: YandexActorSessionInput, clientId: string | null, operationId: string, trainingFormat?: 'self' | 'with_trainer'): Promise<PilotQuickStartResult>
   cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number): Promise<number>
   submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest): Promise<number>
@@ -224,6 +226,11 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
 
   cancelEmpty(sessionToken: YandexActorSessionInput, workoutId: string, expectedVersion: number) {
     return this.withSession(sessionToken, (client) => cancelEmptyLiveWorkout(client, workoutId, expectedVersion))
+  }
+
+  setActualDuration(sessionToken: YandexActorSessionInput, workoutId: string, durationSec: number | null, expectedVersion: number) {
+    return this.withSession(sessionToken, (client) =>
+      setWorkoutActualDuration(client, workoutId, durationSec, expectedVersion))
   }
 
   submitFeedback(sessionToken: YandexActorSessionInput, workoutId: string, feedback: WorkoutFeedbackRequest) {

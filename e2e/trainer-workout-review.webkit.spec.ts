@@ -343,9 +343,11 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(page.locator('.workout-feedback').getByRole('button')).toHaveCount(0)
 
   // Для client-authored workout отвечает только основной тренер карточки.
-  // Сама тренировка остаётся read-only, а ответ на явный вопрос уже сохранён.
+  // Упражнения остаются read-only, длительность доступна отдельно,
+  // а ответ на явный вопрос уже сохранён.
   await page.goto(ownWorkoutUrl)
-  await expect(page.getByText('Создано клиентом · только просмотр', { exact: true })).toBeVisible()
+  await expect(page.getByText('Создано клиентом · упражнения только для просмотра', { exact: true })).toBeVisible()
+  await expect(page.locator('.workout-actual-duration').getByRole('button')).toBeVisible()
   await expect(ownTrainerReviewCard).toHaveClass(/workout-review-readonly/)
   await expect(ownTrainerReviewCard.getByText(ownTrainerReview, { exact: true })).toBeVisible()
 
