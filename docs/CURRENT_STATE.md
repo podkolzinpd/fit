@@ -7,7 +7,10 @@
 main e17ed22c имеет зелёный CI. YAML/shell и diff проверены. После явного разрешения владельца создан постоянный RSA4096 ключ:
 encrypted PKCS12 вне Git на Mac, пароль в macOS Keychain, копия в GitHub
 environment secrets fit-frontend-candidate. Нужна резервная копия владельца.
-Подписанный APK ещё не собран. Детали:
+Release run37448377447 прошёл assembleRelease, zipalign, подпись v2/v3 и
+non-debuggable/package/version gates. Артефакт11404153316 скачан; SHA256 и
+сертификат сверены локально. APK1.0/code1. Полный local check не повторялся:
+код приложения неизменён, CI исходного main зелёный. Детали:
 `docs/design/ANDROID_RUSTORE_RELEASE_20261006.md`. Release не публиковался;
 проверка release на физическом телефоне остаётся обязательной.
 
