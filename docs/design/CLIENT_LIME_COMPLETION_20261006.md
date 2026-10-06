@@ -41,8 +41,8 @@
 | PR | Статус | Доказательства |
 | --- | --- | --- |
 | [PR1 #1459](https://github.com/podkolzinpd/fit/pull/1459) | Слит `9a8734d9`; main CI37470357042 success, его выкладка безопасно пропущена из-за нового main | `npm run check` success; WebKit 13/13; WebKit/Chromium с trainer-контролем 32/32, обе темы 390/430, trainer 1440 |
-| [PR2 #1462](https://github.com/podkolzinpd/fit/pull/1462) | CI37473801546 success на bce5f0a6; обновлён от main12d9505d, новый CI ожидается | V05–V07, V12; body-map geometry1/1, вложенные окна8/8 |
-| PR3 | Локальная приёмка на базе PR2 + main12d9505d | V08–V09, V13; WebKit78/78 + filled/program4/4, Chromium82/82; auth/legal unit20/20 |
+| [PR2 #1462](https://github.com/podkolzinpd/fit/pull/1462) | Слит2c8122d1; повторный CI37477110617 и Android37477110826 success | V05–V07, V12; body-map geometry1/1, вложенные окна8/8 |
+| [PR3 #1465](https://github.com/podkolzinpd/fit/pull/1465) | Локальная приёмка на базе слитого PR2 | V08–V09, V13–V15; WebKit78/78 + filled/program4/4, Chromium82/82; auth/legal unit20/20 |
 
 ### Приёмка PR1
 
@@ -71,3 +71,9 @@ V08–V09: `ClientLimeStandaloneLayout` использует тот же server-
 **V14 / P1:** в сгенерированном результате программы и вложенной правке первичное действие оставалось16px из `.fit-lime-shell.assistant-identity .assistant-flow-actions .primary` (`fit-lime-assistant.css:85–96`), соседние клиентские действия — pill. [До](client-lime-completion-20261006/pr3/assistant-program-before.png), [после](client-lime-completion-20261006/pr3/assistant-program-light-390.png). Общий клиентский override использует существующие pill48px и14/16px по роли; включает prepared actions, подтверждение тренировки/сводки и вложенную правку программы. Trainer-слой сохранён. Контрактный результат4/4 D/L390/430, feedback selected/disabled/filled и footer со скроллом, chat-photo close. Эти фикстуры не вызывают LLM и не меняют программу в production.
 
 Финальный `npm run check` на fa7f2f97 + PR3 diff, Node24/maxWorkers2, прошёл целиком: frontend2412/2412, API1161/1161 +91 skipped DB, lint/typecheck, политики/hosting и обе сборки. Chromium82/82, обе темы и ширины; WebKit78/78 + программа/финансы/чат4/4 после V14. Repo build flag `VITE_CLIENT_LIME_ENABLED=true` прочитан без изменения. Production пока не подтверждён.
+
+**V15 / P1:** текущий WebKit подтвердил старый radius14px у числового поля и min-height18px у native select во вложенной правке программы (`AssistantProgramPilotCard`, `styles.css:5925–5927`). Использован уже существующий клиентский field48px/radius16px, YS Geo16px, `--lime-divider`, `--lime-surface-raised`, `--lime-text` и стрелка select из клиентского профиля. Только client scope; поведение редактирования и trainer не меняются. [До](client-lime-completion-20261006/pr3/program-fields-before.png), [после](client-lime-completion-20261006/pr3/program-fields-light-390.png). Сводка прогресса открыта в том же сценарии: её primary уже pill999px, дополнительная CSS-замена не нужна. [Сводка](client-lime-completion-20261006/pr3/assistant-summary-light-390.png).
+
+После слияния PR2 третий PR перебазирован на main2c8122d1. Финальный check повторён после V15: frontend2412/API1161+91 skipped, обе сборки и все политики success. Вложенные поля/сводка/финансы/чат повторно прошли WebKit4/4 и Chromium4/4 D/L390/430. Изменения select сохраняют место для утверждённой стрелки.
+
+Полный CI37481695252 и Android37481695368 на7b6f6e2d success, включая оба полных браузерных набора. Во время прогона main получил PR1466: только migration126 и actor-context integration test, без UI. PR3 обновлён на mainff4bf999; diff UI/e2e по сравнению с зелёным7b6f6e2d пустой, API check1161+91 skipped повторён и зелёный. Новый обязательный CI запускается на обновлённой ветке.

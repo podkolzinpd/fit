@@ -37,7 +37,8 @@
   min-width: 116px;
   border-radius: 999px;
 }
-.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form select {
+.phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form select,
+.phone-frame.fit-client-lime.assistant-identity .assistant-program-card select {
   appearance: none;
   border-radius: 16px;
   padding-right: 44px;
@@ -214,3 +215,18 @@ html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fulls
 .phone-frame.fit-client-lime.assistant-identity :is(.assistant-flow-actions, .assistant-action-card, .assistant-progress-preview) > button.primary {
   font-size: 16px;
 }
+
+.phone-frame.fit-client-lime.assistant-identity .assistant-program-card :is(input, select) {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--lime-divider);
+  border-radius: 16px;
+  background-color: var(--lime-surface-raised);
+  color: var(--lime-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.phone-frame.fit-client-lime.assistant-identity .assistant-program-card select { padding-right: 44px; }

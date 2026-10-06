@@ -4171,6 +4171,10 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     const editProgram = page.getByRole('region', { name: 'Изменение упражнения' })
     await expect(editProgram).toBeVisible()
     await expect(editProgram.getByRole('button', { name: 'Проверить изменение' })).toHaveCSS('border-radius', '999px')
+    await editProgram.locator('input').first().scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('assistant-program-fields.png') })
+    await expect(editProgram.locator('input').first()).toHaveCSS('border-radius', '16px')
+    await expect(editProgram.getByRole('combobox', { name: 'Область изменения' })).toHaveCSS('min-height', '48px')
     await page.getByRole('button', { name: 'Закрыть правку' }).click()
     if (process.env.VITE_ASSISTANT_PROGRAM_ENABLED === 'true') {
       await page.getByRole('button', { name: 'Оставить обратную связь', exact: true }).click()
@@ -4184,6 +4188,20 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+
+    const summaryResult = {
+      status: 'applied', summaryId: '10000000-0000-4000-8000-000000000094', clientId, clientName: 'Тестовый клиент',
+      periodStart: '2026-09-01', periodEnd: '2026-09-30', periodLabel: 'Последний месяц',
+      trainer: { headline: 'Темп стал стабильнее', progress: ['Жим растёт'], consistency: 'Две тренировки в неделю', attention: ['Следить за плечом'] },
+      metrics: { completedWorkouts: 6, workoutsPerWeek: 1.5, activeWeeks: 4 },
+    }
+    await page.route('**/v1/assistant/turn', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ reply: 'Готова сводка прогресса.', action: { tool: 'summarize_progress', status: 'proposed', lifecycleStatus: 'applied', title: 'Сводка прогресса', description: 'Проверенная тестовая сводка', payload: {}, result: summaryResult } }) }))
+    await composer.fill('Покажи сводку прогресса')
+    await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+    const saveSummary = page.getByRole('button', { name: 'Сохранить в прогресс', exact: true })
+    await saveSummary.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath('assistant-summary.png') })
+    await expect(saveSummary).toHaveCSS('border-radius', '999px')
 
     await page.route(`**/v1/chat/conversations/${conversationId}/messages*`, (route) => route.request().method() === 'GET'
       ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ messages: [{ id: messageId, conversationId, senderId: trainerId, body: 'Тестовое фото', createdAt: '2026-10-06T09:00:00.000Z', editedAt: null, replyTo: null, image: { url: 'http://127.0.0.1:5173/assets/startup-photo-983c93dc4df8.jpg', mimeType: 'image/jpeg', width: 600, height: 800, sizeBytes: 10000 } }], nextCursor: null }) })

@@ -2,7 +2,7 @@
 
 ## Завершение клиентского Lime — 2026-10-06
 
-План — design/CLIENT_LIME_COMPLETION_20261006.md, разрешены три PR и production. PR1#1459 слит9a8734d9, CI37470357042 success; его старый deploy безопасно пропущен из-за нового main. PR2#1462: V05–V07/V12, чистая MapPanel geometry1/1; CI37473801546 success, обновлён от main12d9505d (fa7f2f97), повторный CI. PR3: server-assigned Lime public/auth/legal context, YS Geo body-portal V13 и CTA результатов ИИ V14; WebKit78/78 + filled/program4/4, auth/legal20/20. Реальные YS Geo2/2 SHA; шрифты вне Git. Trainer/anonymous/other-client не получают client scope. Chromium82/82; полный check success (frontend2412/API1161+91 skipped, политики/hosting/build); CI и production readback продолжаются; физический iPhone/удалённые LLM/SpeechKit не проверены.
+План — design/CLIENT_LIME_COMPLETION_20261006.md, разрешены три PR и production. PR1#1459 слит9a8734d9, CI37470357042 success; его старый deploy безопасно пропущен из-за нового main. PR2#1462: V05–V07/V12, чистая MapPanel geometry1/1; слит2c8122d1 после CI37477110617 и Android37477110826 success. PR3#1465: server-assigned Lime public/auth/legal context, YS Geo body-portal V13 и CTA результатов ИИ V14 и вложенные поля V15; WebKit78/78 + filled/program4/4, auth/legal20/20. Реальные YS Geo2/2 SHA; шрифты вне Git. Trainer/anonymous/other-client не получают client scope. Chromium82/82; check на main2c8122d1 success (frontend2412/API1161+91 skipped, политики/hosting/build), V15 WebKit/Chromium4/4+4/4; CI37481695252/Android37481695368 success; обновлён от mainff4bf999 (migration126), API check success, повторный CI/readback; физический iPhone/удалённые LLM/SpeechKit не проверены.
 
 ## Аудит БД и дублирующие индексы — 2026-10-06
 
