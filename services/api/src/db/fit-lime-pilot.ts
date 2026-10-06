@@ -87,11 +87,11 @@ export class DatabaseFitLimePilotManager implements FitLimePilotManager {
       const enabledAllowlistRows = Number(count[0]?.enabled_rows ?? 0)
       if (
         enabledAllowlistRows < 0
-        || enabledAllowlistRows > 2
+        || enabledAllowlistRows > 3
         || (action === 'enable' && !enabled)
         || (action === 'disable' && enabled)
       ) {
-        throw new Error('Fit Lime two-account invariant failed')
+        throw new Error('Fit Lime three-account invariant failed')
       }
       await connection.query('commit')
       return { accountRole: 'trainer', enabled, enabledAllowlistRows }

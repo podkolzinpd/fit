@@ -3,6 +3,28 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const workflow = readFileSync(new URL('../.github/workflows/manage-fit-lime-calendar.yml', import.meta.url), 'utf8')
+const enrollment = readFileSync(new URL('../.github/workflows/enroll-fit-lime-trainer.yml', import.meta.url), 'utf8')
+
+test('trainer enrollment is bounded main-only and stores no public account input', () => {
+  assert.match(enrollment, /workflow_dispatch:/)
+  assert.doesNotMatch(enrollment, /\n\s+(push|schedule):/)
+  assert.match(enrollment, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(enrollment, /test "\$CONFIRMATION" = ADD_ONE_REVIEWED_TRAINER/)
+  assert.match(enrollment, /group: yandex-stage\n\s+cancel-in-progress: false/)
+  assert.match(enrollment, /secrets.FIT_LIME_ADDITIONAL_TRAINER_LOGIN_SHA256/)
+  assert.doesNotMatch(enrollment, /inputs\.(login|email|hash|profile)|DATABASE_URL|terraform apply|[0-9a-f]{64}/)
+  assert.doesNotMatch(enrollment, /echo.*REVIEWED_LOGIN_SHA256|\bcat\b.*request_file|set -x/)
+})
+
+test('trainer enrollment uses private IAM and verifies counts twice without exposing identity', () => {
+  assert.match(enrollment, /scripts\/yandex-github-oidc\.sh/)
+  assert.match(enrollment, /migration_container_url/)
+  assert.match(enrollment, /\/stage\/experiments\/trainer-lime-cohort/)
+  assert.match(enrollment, /for response_file in cohort-response.json cohort-readback.json/)
+  assert.match(enrollment, /\.approvedRows == 3/)
+  assert.match(enrollment, /\.added == false/)
+  assert.match(enrollment, /jq '\{approvedRows, added\}' cohort-readback.json/)
+})
 
 test('calendar data writes are explicit main-only bounded operations', () => {
   assert.match(workflow, /workflow_dispatch:/)

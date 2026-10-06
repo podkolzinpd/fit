@@ -110,11 +110,11 @@ export class DatabaseTrainerScheduleV2PilotManager implements TrainerScheduleV2P
       const enabledAssignments = Number(assignmentCount[0]?.enabled_assignments ?? 0)
       if (
         enabledAssignments < 0
-        || enabledAssignments > 2
+        || enabledAssignments > 3
         || (action === 'enable' && (!enabled || enabledAssignments < 1))
         || (action === 'disable' && enabled)
       ) {
-        throw new Error('Trainer Schedule V2 two-account invariant failed')
+        throw new Error('Trainer Schedule V2 three-account invariant failed')
       }
       await connection.query('commit')
       return { accountRole: 'trainer', enabled, enabledAssignments }

@@ -1221,6 +1221,77 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('binds all three reviewed trainers and isolates other identities, clients and a disabled Lime flag', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const logins = [
+        '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71',
+        '1a13619899d89af007676a24b698ad3685b9e6a48cc27c84bad16927b7a2d581',
+        'd'.repeat(64),
+      ]
+      const profiles = Array.from({ length: 5 }, () => randomUUID())
+      const subjects = Array.from({ length: 5 }, () => randomBytes(32).toString('hex'))
+      const bind = async (functionName: string, subject: string, login: string) =>
+        (await connection.query<{ bound: boolean }>(
+          `select app_private.${functionName}($1, $2) as bound`, [subject, login],
+        )).rows[0]?.bound
+      const flags = async (profileId: string) => {
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [profileId])
+        return (await connection.query<{ schedule: boolean; lime: boolean }>(
+          'select app_private.trainer_schedule_v2_enabled() as schedule, app_private.fit_lime_enabled() as lime',
+        )).rows[0]
+      }
+      try {
+        await connection.query('begin')
+        await connection.query('savepoint runtime_cannot_extend')
+        await connection.query('set local role fit_api')
+        await expect(connection.query('select * from app_private.add_reviewed_trainer_lime_login($1)', [logins[2]]))
+          .rejects.toMatchObject({ code: '42501' })
+        await connection.query('rollback to savepoint runtime_cannot_extend')
+        const enroll = () => connection.query<{ approved_rows: number; added: boolean }>('select * from app_private.add_reviewed_trainer_lime_login($1)', [logins[2]])
+        expect((await enroll()).rows[0]).toEqual({ approved_rows: 3, added: true })
+        expect((await enroll()).rows[0]).toEqual({ approved_rows: 3, added: false })
+        await connection.query('savepoint fourth_trainer_blocked')
+        await expect(connection.query('select * from app_private.add_reviewed_trainer_lime_login($1)', ['e'.repeat(64)]))
+          .rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint fourth_trainer_blocked')
+        for (const [index, profile] of profiles.entries()) {
+          await connection.query('insert into public.profiles (id, account_role) values ($1, $2)', [profile, index === 4 ? 'client' : 'trainer'])
+          if (index < 4) await connection.query('insert into public.trainers (profile_id) values ($1)', [profile])
+          await connection.query("insert into app_private.auth_identities (provider, provider_subject_sha256, profile_id) values ('yandex', $1, $2)", [subjects[index], profile])
+        }
+
+        // A client's identity cannot occupy the third trainer's pilot row.
+        for (const functionName of ['activate_trainer_schedule_v2_for_yandex_login', 'bind_fit_lime_for_yandex_login']) {
+          expect(await bind(functionName, subjects[4]!, logins[2]!)).toBe(false)
+          expect(await bind(functionName, subjects[2]!, 'e'.repeat(64))).toBe(false)
+          expect(await bind(functionName, subjects[2]!, 'f'.repeat(64))).toBe(false)
+        }
+        for (const [index, login] of logins.entries()) {
+          expect(await bind('activate_trainer_schedule_v2_for_yandex_login', subjects[index]!, login)).toBe(true)
+          expect(await bind('bind_fit_lime_for_yandex_login', subjects[index]!, login)).toBe(true)
+        }
+        for (const profile of profiles.slice(0, 3)) expect(await flags(profile)).toEqual({ schedule: true, lime: true })
+        for (const profile of profiles.slice(3)) expect(await flags(profile)).toEqual({ schedule: false, lime: false })
+        const count = await connection.query<{ count: number }>("select count(*)::integer as count from app_private.user_experiment_assignments where experiment_key = 'trainer_schedule_v2' and enabled")
+        expect(count.rows[0]?.count).toBe(3)
+
+        // A different trainer cannot reuse a bound login or use an unknown key.
+        for (const functionName of ['activate_trainer_schedule_v2_for_yandex_login', 'bind_fit_lime_for_yandex_login']) {
+          expect(await bind(functionName, subjects[3]!, logins[2]!)).toBe(false)
+          expect(await bind(functionName, subjects[3]!, randomBytes(32).toString('hex'))).toBe(false)
+        }
+        await connection.query('update app_private.fit_lime_pilot_allowlist set enabled = false where login_sha256 = $1', [logins[2]])
+        expect((await enroll()).rows[0]).toEqual({ approved_rows: 3, added: false })
+        expect(await bind('bind_fit_lime_for_yandex_login', subjects[2]!, logins[2]!)).toBe(true)
+        expect(await flags(profiles[2]!)).toEqual({ schedule: true, lime: false })
+        for (const profile of profiles.slice(0, 2)) expect(await flags(profile)).toEqual({ schedule: true, lime: true })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
     it('binds Client Lime only to the verified native login and keeps rollback and trainer isolation', async () => {
       if (!ownerPool) throw new Error('Owner pool is not ready')
       const connection = await ownerPool.connect()
