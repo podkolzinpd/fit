@@ -91,6 +91,17 @@ export function latestActiveAssistantAction(messages: readonly AssistantMessage[
   return undefined
 }
 
+export function latestAssistantSurfaceAction(
+  messages: readonly AssistantMessage[],
+  conversationId: string | undefined,
+  workoutEntryNavigation: boolean,
+): AssistantActionMessage | undefined {
+  const active = latestActiveAssistantAction(messages, conversationId)
+  return workoutEntryNavigation && active?.action.tool === 'record_workout'
+    ? undefined
+    : active
+}
+
 export function latestActiveWorkoutAction(messages: readonly AssistantMessage[], conversationId?: string): AssistantActionMessage | undefined {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index]

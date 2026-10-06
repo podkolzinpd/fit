@@ -67,6 +67,16 @@ function marker(target: NavigationTarget): string {
   return `[[fit-link:${target.path}|${target.label}]]`
 }
 
+export function assistantWorkoutEntryTurn(role: Role): AssistantTurnResponse {
+  const target = role === 'client'
+    ? byPath(clientTargets, '/me?entry=workout')
+    : byPath(trainerTargets, '/today?view=compose')
+  return {
+    reply: `Запись тренировки открывается на главной странице:\n${marker(target)}`,
+    action: null,
+  }
+}
+
 function byPath(targets: readonly NavigationTarget[], path: string): NavigationTarget {
   const target = targets.find((candidate) => candidate.path === path)
   if (!target) throw new Error(`Missing assistant navigation target: ${path}`)

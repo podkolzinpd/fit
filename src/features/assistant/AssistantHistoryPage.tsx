@@ -17,7 +17,7 @@ import { parseWorkoutWithLlm } from '../workouts/llm-workout-parser'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { optionalProgramNumber, programSessions, programWorkoutDrafts, updateProgramExercise } from './program-draft'
 import { appendAssistantTranscript, appendWorkoutParse, appendedWorkoutTranscript, assistantWorkoutDraftKey, assistantWorkoutSaveInput, clearAssistantWorkoutDraft, enqueueWorkoutParse, readAssistantWorkoutDraft, removeWorkoutParseSource, resolveWorkoutParseSource, updateWorkoutParseMetrics, writeAssistantWorkoutDraft, type WorkoutParseQueue } from './workout-draft'
-import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isReadOnlyConversation, latestActiveAssistantAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
+import { compactAssistantContent, conversationLocalDate, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isReadOnlyConversation, latestAssistantSurfaceAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel, type AssistantConversation, type AssistantMessage } from './assistant-sessions'
 import { AssistantInlineSummaryCard } from './AssistantInlineSummary'
 import { parseAssistantInlineSummary } from './assistant-inline-summary'
 import { assistantActionView } from './assistant-action-view'
@@ -159,12 +159,12 @@ export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
   const historyConversations = conversations.filter((conversation) => conversation.id !== todayConversationId)
   const conversationGroups = groupAssistantConversations(historyConversations, actor?.timezone, today)
   const lastMessageId = messages[messages.length - 1]?.id
-  const latestActiveAction = readOnly ? undefined : latestActiveAssistantAction(messages, conversationId)
+  const featureLinksEnabled = actor?.experiments?.assistantFeatureLinks === true
+  const latestActiveAction = readOnly ? undefined : latestAssistantSurfaceAction(messages, conversationId, featureLinksEnabled)
   const programCollecting = latestActiveAction?.action.tool === 'create_program_draft' && latestActiveAction.action.status === 'needs_input'
   const clientProgramBrief = actor?.role === 'client' && latestActiveAction?.action.payload.programPilot === true
     && assistantActionView({ tool: latestActiveAction.action.tool, payload: latestActiveAction.action.payload }) === 'program-brief'
   const programEnabled = isAssistantProgramSurfaceEnabled(backend.cacheKey, actor?.userId)
-  const featureLinksEnabled = actor?.experiments?.assistantFeatureLinks === true
 
   useLayoutEffect(() => {
     if (!conversationId || loadingMessages) return

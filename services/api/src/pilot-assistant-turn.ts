@@ -22,7 +22,7 @@ import { isProgramEnabled } from './assistant-orchestrator/program/model.js'
 import { loadDatabaseProgramContext } from './assistant-orchestrator/program/source.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn, reusableProgramContinuation } from './assistant-orchestrator/program/turn.js'
 import { latestActiveAssistantTool, routedAssistantTurn } from './assistant-orchestrator/router.js'
-import { assistantNavigationTurn } from './assistant-orchestrator/navigation.js'
+import { assistantNavigationTurn, assistantWorkoutEntryTurn } from './assistant-orchestrator/navigation.js'
 import {
   type AssistantTurnRequest,
 } from './assistant-state-request.js'
@@ -81,6 +81,27 @@ export interface PilotAssistantTurnRunner {
 
 interface NativeAssistantTurnOptions {
   createId?: () => string
+}
+
+export function activeAssistantToolForFeatureLinks(
+  active: ReturnType<typeof latestActiveAssistantTool>,
+  featureLinksEnabled: boolean,
+): ReturnType<typeof latestActiveAssistantTool> {
+  return featureLinksEnabled && active?.tool === 'record_workout' ? null : active
+}
+
+export function recordWorkoutTurnForFeatureLinks(
+  message: Parameters<typeof recordWorkoutTurn>[0],
+  clients: Parameters<typeof recordWorkoutTurn>[1],
+  previous: Parameters<typeof recordWorkoutTurn>[2],
+  programEnabled: Parameters<typeof recordWorkoutTurn>[3],
+  clientMode: Parameters<typeof recordWorkoutTurn>[4],
+  featureLinksEnabled: boolean,
+): AssistantTurnResponse | undefined {
+  const draft = recordWorkoutTurn(message, clients, previous, programEnabled, clientMode)
+  return draft && featureLinksEnabled
+    ? assistantWorkoutEntryTurn(clientMode ? 'client' : 'trainer')
+    : draft
 }
 
 function responseFromStoredMessage(
@@ -287,6 +308,10 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
     })
     const programEnabled = isProgramEnabled(actor.id)
     const reusableProgram = reusableProgramContinuation(command.message, history)
+    // Workout recording belongs to the role home page whenever feature links
+    // are enabled. Ignore an older Assistant draft so it cannot reappear,
+    // consume dictated fragments or block a new program request.
+    const routedActive = activeAssistantToolForFeatureLinks(active, actor.assistant_feature_links)
     let response: AssistantTurnResponse
     const navigation = actor.assistant_feature_links
       ? assistantNavigationTurn(command.message, actor.account_role, clients)
@@ -302,15 +327,16 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
       response = await routedAssistantTurn({
         message: command.message,
         history: [...history].reverse().map(({ author, content }) => ({ author, content })),
-        active: active ?? reusableProgram,
+        active: reusableProgram ?? routedActive,
         operationId: turnId,
       }, {
-        record: (previous) => recordWorkoutTurn(
+        record: (previous) => recordWorkoutTurnForFeatureLinks(
           command.message,
           clients,
           previous,
           true,
           actor.account_role === 'client',
+          actor.assistant_feature_links,
         ),
         cancel: async (action) => {
           const actionId = action.id
@@ -357,12 +383,13 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
           }, true),
       })
     } else {
-      const workoutDraft = recordWorkoutTurn(
+      const workoutDraft = recordWorkoutTurnForFeatureLinks(
         command.message,
         clients,
         history.find((row) => row.author === 'assistant')?.action,
         false,
         actor.account_role === 'client',
+        actor.assistant_feature_links,
       )
       response = workoutDraft ?? {
         reply: assistantSmallTalkFallback(command.message),

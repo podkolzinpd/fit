@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
 import type { LocalDate } from '../../shared/local-date'
-import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel } from './assistant-sessions'
+import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, latestAssistantSurfaceAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel } from './assistant-sessions'
 
 const conversations = [
   { id: 'old', title: null, created_at: '2026-08-24T18:00:00.000Z' },
@@ -123,6 +123,17 @@ describe('assistant sessions', () => {
     ]
     expect(latestActiveAssistantAction(messages, 'today')?.message.id).toBe('legacy')
     expect(latestActiveWorkoutAction(messages, 'today')).toBeUndefined()
+  })
+
+  it('does not restore a workout card when recording is routed to the home page', () => {
+    const workout = { tool: 'record_workout' as const, status: 'needs_input' as const, title: 'Тренировка', description: 'Продолжайте', payload: { step: 'workout' } }
+    const program = { tool: 'create_program_draft' as const, status: 'needs_input' as const, title: 'Программа', description: 'Уточните', payload: { step: 'brief' } }
+    const workoutMessage = { id: 'workout', conversation_id: 'today', turn_id: 'workout', author: 'assistant', content: 'Продолжайте', action: workout, created_at: '2026-08-25T09:00:00.000Z' }
+    const programMessage = { ...workoutMessage, id: 'program', action: program }
+
+    expect(latestAssistantSurfaceAction([workoutMessage], 'today', true)).toBeUndefined()
+    expect(latestAssistantSurfaceAction([workoutMessage], 'today', false)?.message.id).toBe('workout')
+    expect(latestAssistantSurfaceAction([programMessage], 'today', true)?.message.id).toBe('program')
   })
 
   it('keeps an applied progress action for the durable inline summary', () => {

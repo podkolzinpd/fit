@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { assistantNavigationTurn } from './navigation.js'
+import { assistantNavigationTurn, assistantWorkoutEntryTurn } from './navigation.js'
 
 const client = { id: '123e4567-e89b-42d3-a456-426614174000', fullName: 'Антон Ковалёв' }
 
@@ -33,6 +33,10 @@ describe('assistant feature navigation', () => {
   ] as const)('routes workout recording out of Assistant and into the main %s flow', (role, path) => {
     expect(assistantNavigationTurn('Запиши выполненную тренировку', role, [client])?.reply)
       .toContain(`[[fit-link:${path}|Записать тренировку]]`)
+    expect(assistantWorkoutEntryTurn(role)).toEqual({
+      reply: `Запись тренировки открывается на главной странице:\n[[fit-link:${path}|Записать тренировку]]`,
+      action: null,
+    })
   })
 
   it.each([

@@ -83,6 +83,12 @@ Production browser ограничен без обхода; внешний YAFIT 
 API/migration rollout и frontend activation задачу
 нельзя считать выпущенной.
 
+Исправление от 6 октября: в production Yandex-orchestrator запись тренировки
+должна целиком уходить на главный экран роли. Прямая диктовка больше не создаёт
+record-workout card в Assistant, старый активный черновик не восстанавливается и
+не блокирует программу. Ветка `codex/assistant-workout-navigation-only` от
+`d3670a91`; до зелёного CI, merge и production smoke изменение не выпущено.
+
 ## Постоянные границы
 
 Frontend: Yandex API Gateway/Object Storage, fit-training.ru. API/auth/данные:

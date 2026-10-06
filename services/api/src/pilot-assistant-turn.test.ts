@@ -3,6 +3,8 @@ import type { QueryResultRow } from 'pg'
 
 import { AssistantStateError } from './assistant-state.js'
 import {
+  activeAssistantToolForFeatureLinks,
+  recordWorkoutTurnForFeatureLinks,
   runNativePilotAssistantTurn,
 } from './pilot-assistant-turn.js'
 import type { DatabaseClient } from './db/types.js'
@@ -32,6 +34,45 @@ function clientWithRows(rows: readonly unknown[][]): {
 }
 
 describe('native pilot assistant turn', () => {
+  it('retires an old workout draft when feature-link navigation owns workout entry', () => {
+    const workout = {
+      tool: 'record_workout' as const,
+      status: 'needs_input' as const,
+      title: 'Продолжайте диктовку',
+      description: 'Добавила фрагмент.',
+      payload: { step: 'workout', transcript: 'жим лёжа 3 по 10' },
+    }
+    const program = {
+      tool: 'create_program_draft' as const,
+      status: 'needs_input' as const,
+      title: 'Условия программы',
+      description: 'Уточните цель.',
+      payload: { step: 'brief', programPilot: true },
+    }
+
+    expect(activeAssistantToolForFeatureLinks(workout, true)).toBeNull()
+    expect(activeAssistantToolForFeatureLinks(workout, false)).toBe(workout)
+    expect(activeAssistantToolForFeatureLinks(program, true)).toBe(program)
+  })
+
+  it('turns a dictated fragment from an old workout draft into a home-page link', () => {
+    const active = {
+      tool: 'record_workout' as const,
+      status: 'needs_input' as const,
+      title: 'Продолжайте диктовку',
+      description: 'Добавила фрагмент.',
+      payload: { step: 'workout', clientId: CLIENT_ID, clientName: 'Анна Смирнова', transcript: 'жим лёжа 3 по 10' },
+    }
+    const clients = [{ id: CLIENT_ID, fullName: 'Анна Смирнова', goal: null, ageYears: 30, heightCm: 170, gender: 'female' }]
+
+    expect(recordWorkoutTurnForFeatureLinks('тяга 3 по 12', clients, active, true, false, true)).toEqual({
+      reply: 'Запись тренировки открывается на главной странице:\n[[fit-link:/today?view=compose|Записать тренировку]]',
+      action: null,
+    })
+    expect(recordWorkoutTurnForFeatureLinks('тяга 3 по 12', clients, active, true, false, false)?.action?.tool)
+      .toBe('record_workout')
+  })
+
   it('persists deterministic capability replies without Supabase authorization', async () => {
     const { client, query } = clientWithRows([
       [],
