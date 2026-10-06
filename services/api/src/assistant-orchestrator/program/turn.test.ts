@@ -18,7 +18,7 @@ function setup() {
 describe('program chat state', () => {
   it('reuses the previous course and asks only for the next block start date', async () => {
     const { deps, latest } = setup()
-    const previous = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Черновик', payload: { ...latest.payload, clientName: client.fullName } }
+    const previous = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Черновик', payload: { ...latest.payload, step: 'confirm', canonicalWorkouts: [{}], clientName: client.fullName } }
     const reusable = reusableProgramContinuation('Продолжаем тот же курс тренировок', [{ action: previous }])
     expect(reusable?.payload.briefState).toMatchObject({ goal: 'general_fitness', frequency: 3, continuationPlan: 'Продолжаем тот же курс тренировок' })
     expect(reusable?.payload.briefState).not.toHaveProperty('startDate')
@@ -29,9 +29,27 @@ describe('program chat state', () => {
     expect(deps.loadContext).not.toHaveBeenCalled()
   })
 
+  it('skips the newer partial quiz for the unchanged-course control', async () => {
+    const { deps, latest } = setup()
+    const partial = { tool: 'create_program_draft', status: 'needs_input', title: 'Программа', description: 'Уточняем', payload: {
+      programPilot: true, step: 'brief', clientId: client.id, clientName: client.fullName,
+      briefState: { adult: true, continuationPlan: 'Продолжаем без изменений' },
+    } }
+    const confirmed = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Готово', payload: {
+      ...latest.payload, step: 'confirm', canonicalWorkouts: [{}], clientName: client.fullName,
+    } }
+    const reusable = reusableProgramContinuation('Продолжаем без изменений', [{ action: partial }, { action: confirmed }])
+    expect(reusable?.payload).toMatchObject({ resumePreviousProgram: true, step: 'brief', briefState: {
+      goal: 'general_fitness', frequency: 3, continuationPlan: 'Продолжаем без изменений',
+    } })
+    const result = await programPilotTurn('Продолжаем без изменений', [client], reusable, deps)
+    expect(result?.action?.payload).toMatchObject({ askedFields: ['startDate'] })
+    expect(deps.extract).not.toHaveBeenCalled()
+  })
+
   it('does not reuse a previous program for an unrelated message', () => {
     const { latest } = setup()
-    const previous = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Черновик', payload: { ...latest.payload, clientName: client.fullName } }
+    const previous = { tool: 'create_program_draft', status: 'proposed', title: 'Программа', description: 'Черновик', payload: { ...latest.payload, step: 'confirm', canonicalWorkouts: [{}], clientName: client.fullName } }
     expect(reusableProgramContinuation('Что нового?', [{ action: previous }])).toBeNull()
   })
   it('keeps one question and passes its context to the next extraction', async () => {

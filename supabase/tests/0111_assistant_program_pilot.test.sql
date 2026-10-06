@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(19);
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password) values
   ('50000000-0000-4000-8000-000000000057', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'assistant-a@example.test', ''),
   ('50000000-0000-0000-0000-000000000058', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'assistant-b@example.test', ''),
@@ -29,7 +29,7 @@ select n, gen_random_uuid(), gen_random_uuid(), (
       'sets',jsonb_build_array(jsonb_build_object('position',0,'reps',8,'rpe',6.5))
     ))
   )) from generate_series(1,n) i
-) from (values (4),(8),(12)) sizes(n);
+) from (values (1),(4),(8),(12)) sizes(n);
 insert into public.assistant_messages(id,conversation_id,turn_id,author,content)
 select message_id,'a0000000-0000-4000-8000-000000000057',gen_random_uuid(),'assistant','Program' from pilot_cases;
 insert into public.assistant_actions(id,owner_id,conversation_id,assistant_message_id,tool,payload)
@@ -43,8 +43,8 @@ select is((select count(*) from public.workouts),0::bigint,'Tampering saves noth
 select is(public.apply_assistant_action(action_id,jsonb_build_object('workouts',workouts),1)->>'status','applied','Save all ' || n) from pilot_cases order by n;
 select is((select count(*) from public.workouts where notes='Pilot ' || n),n::bigint,'Correct count ' || n) from pilot_cases order by n;
 select is(public.apply_assistant_action(action_id,jsonb_build_object('workouts',workouts),1)->>'status','applied','Idempotent retry ' || n) from pilot_cases order by n;
-select is((select count(*) from public.workouts),24::bigint,'No duplicate workouts on retry');
-select is((select count(*) from public.workout_sets where plan_rpe=6.5),24::bigint,'Prescriptions survive persistence');
+select is((select count(*) from public.workouts),25::bigint,'No duplicate workouts on retry');
+select is((select count(*) from public.workout_sets where plan_rpe=6.5),25::bigint,'Prescriptions survive persistence');
 reset role;
 select * from finish();
 rollback;
