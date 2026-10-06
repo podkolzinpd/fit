@@ -86,6 +86,8 @@ export interface TrainerFinanceOverview {
 }
 
 export interface TrainerFinancePackageDraft {
+  requestId?: string
+  openingReceivedOn?: string
   kind: TrainerFinancePackageKind
   title: string
   sessionsTotal: number
@@ -98,11 +100,12 @@ export interface TrainerFinancePackageDraft {
   comment: string | null
 }
 
-export type TrainerFinancePackageUpdate = Omit<TrainerFinancePackageDraft, 'openingUsedSessions' | 'openingPaidCents'> & {
+export type TrainerFinancePackageUpdate = Omit<TrainerFinancePackageDraft, 'openingUsedSessions' | 'openingPaidCents' | 'openingReceivedOn' | 'requestId'> & {
   expectedVersion: number
 }
 
 export interface TrainerFinancePaymentDraft {
+  requestId?: string
   amountCents: number
   receivedOn: string
   comment: string | null

@@ -7,6 +7,12 @@ import type {
   TrainerFinanceSessionUpdate,
 } from './trainer-finance.js'
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function validRequestId(value: unknown): boolean {
+  return value === undefined || (typeof value === 'string' && uuidPattern.test(value))
+}
+
 const localDatePattern = /^\d{4}-\d{2}-\d{2}$/
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -38,6 +44,9 @@ function text(value: unknown, maximum: number, nullable = false): string | null 
 export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePackageDraft | undefined {
   const input = record(value)
   if (!input) return undefined
+  if (!validRequestId(input.requestId)) return undefined
+  const openingReceivedOn = input.openingReceivedOn === undefined ? undefined : date(input.openingReceivedOn)
+  if (input.openingReceivedOn !== undefined && typeof openingReceivedOn !== 'string') return undefined
   const kind = input.kind
   const title = text(input.title, 120)
   const sessionsTotal = integer(input.sessionsTotal, 0, 10000)
@@ -57,7 +66,10 @@ export function readTrainerFinancePackageDraft(value: unknown): TrainerFinancePa
     || endsOn === undefined || paymentDueOn === undefined || comment === undefined
     || (endsOn !== null && endsOn < startsOn)) return undefined
   return { kind, title, sessionsTotal, openingUsedSessions, priceCents, openingPaidCents,
-    startsOn, endsOn, paymentDueOn, comment }
+    startsOn, endsOn, paymentDueOn, comment,
+    ...(typeof input.requestId === 'string' ? { requestId: input.requestId } : {}),
+    ...(typeof openingReceivedOn === 'string' ? { openingReceivedOn } : {}),
+  }
 }
 
 export function readTrainerFinancePackageUpdate(value: unknown): TrainerFinancePackageUpdate | undefined {
@@ -82,12 +94,15 @@ export function readTrainerFinancePackageUpdate(value: unknown): TrainerFinanceP
 export function readTrainerFinancePaymentDraft(value: unknown): TrainerFinancePaymentDraft | undefined {
   const input = record(value)
   if (!input) return undefined
+  if (!validRequestId(input.requestId)) return undefined
   const amountCents = integer(input.amountCents, 1, 100000000000)
   const receivedOn = date(input.receivedOn)
   const comment = text(input.comment, 2000, true)
   if (amountCents === undefined || receivedOn === undefined || receivedOn === null
     || comment === undefined) return undefined
-  return { amountCents, receivedOn, comment }
+  return { amountCents, receivedOn, comment,
+    ...(typeof input.requestId === 'string' ? { requestId: input.requestId } : {}),
+  }
 }
 
 export function readTrainerFinancePaymentUpdate(value: unknown): TrainerFinancePaymentUpdate | undefined {

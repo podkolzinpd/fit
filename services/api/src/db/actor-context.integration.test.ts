@@ -2600,6 +2600,62 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(visibleMemberships).toHaveLength(2)
     })
 
+    it('retries finance writes once, preserves receipt dates and recalculates both roles after corrections', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const runtime = runtimePool
+      for (const table of ['trainer_finance_events', 'trainer_finance_payments', 'trainer_finance_sessions', 'trainer_finance_packages']) {
+        await ownerPool.query(`delete from public.${table} where client_id = $1`, [CLIENT_ID])
+      }
+      const write = (actor: string, sql: string, args: unknown[]) => withActorTransaction(runtime, actor,
+        (client) => client.query<JsonResultRow>(sql, args))
+      const createSql = `select public.create_trainer_finance_service_v2($1, 'session_pack', 'Пакет',
+        10, 0, 3000000, 1000000, date '2026-09-01', null, null, null, date '2026-08-27', $2) as result`
+      const createArgs = [CLIENT_ID, randomUUID()]
+      try {
+        const first = await write(ACTOR_ID, createSql, createArgs)
+        const repeated = await write(ACTOR_ID, createSql, createArgs)
+        expect(repeated).toEqual(first)
+        const packageId = (first[0]!.result as { id: string }).id
+        const addSql = `select public.add_trainer_finance_payment_v2($1, $2, date '2026-09-02', null, $3) as result`
+        const partialArgs = [packageId, 500000, randomUUID()]
+        const partial = await write(ACTOR_ID, addSql, partialArgs)
+        expect(await write(ACTOR_ID, addSql, partialArgs)).toEqual(partial)
+        const partialId = (partial[0]!.result as { id: string }).id
+        await expect(write(ACTOR_ID, addSql, [packageId, 600000, partialArgs[2]]))
+          .rejects.toThrow('trainer_finance_conflict')
+        await expect(write(MEMBER_TRAINER_ID, addSql, [packageId, 500000, randomUUID()]))
+          .rejects.toThrow('trainer_finance_package_not_found')
+        await expect(write(OUTSIDE_TRAINER_ID, createSql, [CLIENT_ID, randomUUID()]))
+          .rejects.toThrow('trainer_finance_client_not_found')
+        const read = () => write(ACTOR_ID, 'select public.list_trainer_finance_client_v2($1) as result', [CLIENT_ID])
+        const state = (await read())[0]!.result as { packages: { id: string; paidCents: number; dueCents: number }[]; payments: { id: string; source: string; receivedOn: string }[] }
+        expect(state.packages).toHaveLength(1)
+        expect(state.packages[0]).toMatchObject({ paidCents: 1500000, dueCents: 1500000 })
+        expect(state.payments).toHaveLength(2)
+        const opening = state.payments.find((item) => item.source === 'opening')!
+        expect(opening.receivedOn).toBe('2026-08-27')
+        const august = await write(ACTOR_ID, `select public.list_trainer_finance_overview_v2(date '2026-08-01') as result`, [])
+        expect(august[0]!.result).toMatchObject({ receivedCents: 1000000 })
+        const full = await write(ACTOR_ID, addSql, [packageId, 1500000, randomUUID()])
+        expect((await read())[0]!.result).toMatchObject({ packages: [expect.objectContaining({ paidCents: 3000000, dueCents: 0, paymentStatus: 'paid' })] })
+        await write(ACTOR_ID, `select public.update_trainer_finance_payment($1, 1, 200000, date '2026-09-02', null) as result`, [partialId])
+        await write(ACTOR_ID, `select public.void_trainer_finance_payment($1, 1, 'Ошибка') as result`, [(full[0]!.result as { id: string }).id])
+        expect((await read())[0]!.result).toMatchObject({ packages: [expect.objectContaining({ paidCents: 1200000, dueCents: 1800000 })] })
+        await write(ACTOR_ID, `select public.void_trainer_finance_payment($1, 1, 'Ошибка') as result`, [opening.id])
+        expect((await read())[0]!.result).toMatchObject({ packages: [expect.objectContaining({ paidCents: 200000, dueCents: 2800000 })] })
+        const clientState = await write(OTHER_ACTOR_ID, 'select public.list_client_finance_self_v2() as result', [])
+        expect(clientState[0]!.result).toMatchObject({ trainers: [expect.objectContaining({ packages: [expect.objectContaining({ id: packageId, paidCents: 200000, dueCents: 2800000 })], payments: [expect.objectContaining({ amountCents: 200000 })] })] })
+        expect(await write(LINK_ACTOR_ID, 'select public.list_client_finance_self_v2() as result', [])).toMatchObject([{ result: { trainers: [] } }])
+        await expect(write(MEMBER_TRAINER_ID, `select public.void_trainer_finance_payment($1, 2, 'Ошибка') as result`, [partialId])).rejects.toThrow('trainer_finance_payment_not_found')
+        await expect(write(ACTOR_ID, 'select payload as result from app_private.finance_payment_requests', [])).rejects.toThrow('permission denied')
+      } finally {
+        for (const table of ['trainer_finance_events', 'trainer_finance_payments', 'trainer_finance_sessions', 'trainer_finance_packages']) {
+          await ownerPool.query(`delete from public.${table} where client_id = $1`, [CLIENT_ID])
+        }
+        await ownerPool.query('delete from app_private.finance_payment_requests where actor_id = $1', [ACTOR_ID])
+      }
+    })
+
     it('isolates trainer finance and derives balances from active payments', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
