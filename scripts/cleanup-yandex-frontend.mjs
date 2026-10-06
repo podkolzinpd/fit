@@ -9,9 +9,17 @@ import { releaseId, isReleaseObject, manifestKey, routeObject, releaseBatch, dig
 
 const DAY = 86_400_000
 const hashedAsset = (path) => /^\/assets\/[a-zA-Z0-9_./-]+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/.test(path)
-const legacyFolderMarker = (item) => item?.size === 0 && typeof item.key === 'string'
-  && (item.key === 'releases/'
-    || /^releases\/[a-f0-9]{40}-[a-f0-9]{64}\/(?:[a-zA-Z0-9_-]+\/)*$/.test(item.key))
+const legacyFolderKey = (key) => typeof key === 'string' && (key === 'releases/'
+  || /^releases\/[a-f0-9]{40}-[a-f0-9]{64}\/(?:[a-zA-Z0-9_-]+\/)*$/.test(key))
+const legacyFolderMarker = (item) => item?.size === 0 && legacyFolderKey(item.key)
+const inventorySize = (item) => {
+  // YC CLI omits zero-valued size for legacy S3 folder markers. Only accept
+  // that omission for a canonical marker with the empty-object ETag.
+  if (item.size === undefined && legacyFolderKey(item.key)
+      && item.etag === '"d41d8cd98f00b204e9800998ecf8427e"') return 0
+  return typeof item.size === 'number' || (typeof item.size === 'string' && /^\d+$/.test(item.size))
+    ? Number(item.size) : NaN
+}
 export function referencedObjects(spec) {
   validateSpecification(spec)
   const objects = new Set()
@@ -64,14 +72,18 @@ export function planCleanup({ specification, manifests, inventory, now = new Dat
   }
   for (const key of referencedObjects(next)) protectedKeys.add(key)
   const seen = new Set()
-  for (const item of inventory) {
+  for (const [index, item] of inventory.entries()) {
     // Existing bootstrap bundle observed in the bucket; never a deletion target.
     const bootstrapBundle = item.key === 'releases/frontend-release.json'
     // The console and older upload tooling may have left zero-byte S3 folder
     // markers. They carry no release data and are preserved, not cleanup targets.
     const folderMarker = legacyFolderMarker(item)
-    if ((!isReleaseObject(item.key) && !bootstrapBundle && !folderMarker) || seen.has(item.key) || !Number.isFinite(Date.parse(item.lastModified))
-        || !Number.isSafeInteger(item.size) || item.size < 0) throw new Error('Invalid object inventory')
+    const reason = !Number.isSafeInteger(item.size) || item.size < 0 ? 'invalid size'
+      : !isReleaseObject(item.key) && !bootstrapBundle && !folderMarker ? 'unsupported key'
+        : seen.has(item.key) ? 'duplicate key'
+          : !Number.isFinite(Date.parse(item.lastModified)) ? 'invalid date' : undefined
+    // Do not print arbitrary object keys or raw cloud responses in failure logs.
+    if (reason) throw new Error(`Invalid object inventory: item ${index}, ${reason}`)
     seen.add(item.key)
   }
   if ([...protectedKeys].some((key) => !seen.has(key))) throw new Error('Protected object missing; cleanup refused')
@@ -145,7 +157,7 @@ export function cleanupCloud({ directory, token, run = promisify(execFile), requ
           '--prefix', 'releases/', '--max-keys', '1000', ...(token ? ['--continuation-token', token] : []), '--format', 'json'])
         const page = JSON.parse(stdout)
         if (!Array.isArray(page.contents)) throw new Error('Unknown list response')
-        for (const item of page.contents) items.push({ key: item.key, size: Number(item.size),
+        for (const item of page.contents) items.push({ key: item.key, size: inventorySize(item),
           lastModified: item.last_modified, etag: item.etag })
         token = page.is_truncated ? page.next_continuation_token : undefined
         if (page.is_truncated && (!token || tokens.has(token))) throw new Error('Incomplete inventory')
@@ -201,6 +213,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   await cloud.assertReady()
   const specification = await cloud.specification()
   const inventory = await cloud.inventory()
+  // Keep a safe diagnostic artifact even if manifest/inventory validation fails.
+  await writeFile(join(directory, 'cleanup-inventory-summary.json'), JSON.stringify({
+    schemaVersion: 1, objects: inventory.length,
+    folderMarkers: inventory.filter(legacyFolderMarker).length,
+    invalidSizes: inventory.filter((item) => !Number.isSafeInteger(item.size) || item.size < 0).length,
+    invalidDates: inventory.filter((item) => !Number.isFinite(Date.parse(item.lastModified))).length,
+  }))
   const keys = inventory.filter((item) => item.key.endsWith('/release-manifest.json')).map((item) => item.key)
   const manifests = await releaseBatch(keys, (key) => cloud.readManifest(key))
   const plan = planCleanup({ specification, manifests, inventory })

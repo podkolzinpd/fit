@@ -1,5 +1,10 @@
 # Fit — текущее состояние проекта
 
+## Очистка frontend-релизов — 2026-10-06
+
+Plan37209255407 упал на `releases/`: YC CLI опустил size=0 → NaN. Исправлены только канонические пустые маркеры с ETag; неверные размеры/ключи fail-closed. Raw CLI regression и inventory-summary artifact добавлены.
+Локально retention22/22, hosting114/114, check2412/API1176+92 skipped/build passed. Ежедневное удаление требует зелёного CI, production plan и scoped DeleteObject; текущий/предыдущий, последние3дня и общие файлы защищены. Media/state вне scope.
+
 ## YAFIT-595 — третий тренер Fit Lime — 2026-10-06
 
 Migration127 задаёт лимит трёх тренеров и owner-only подключение к Fit Lime/Schedule V2 через IAM runner. Новый ключ передаётся repository secret, не публикуется; два прежних назначения сохраняются. Привязка — при новом входе через Яндекс. Клиентский пилот не меняется.
@@ -12,12 +17,10 @@ PR#1461: первый CI37469475413 success; rebase от `85584a47`, повто�
 ## Аудит БД и дублирующие индексы — 2026-10-06
 
 #1434 защищает фото, #1449 — snapshot, #1450 — серверную pagination; все слиты. #1454 слит `4eab2e22`: статистика карточки — один actor SQL-агрегат, ИИ/Progress/ближайшие назначения сохранены. CI37384227309, API37384227223/frontend37385582939 success. Планы — DATABASE_AUDIT в docs/design.
-Новая ветка от `e17ed22c`: migration125 удаляет только два дублирующих position
-индекса, проверяя каталог; UNIQUE DEFERRABLE, данные/RLS/API не меняются.
-При lock wait3s миграция откатывается. Clean PostgreSQL17 chain/actor-RLS91/91
-зелёные; check2409/1159/build и WebKit3/3 passed; CI-гейт. Plan: DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md.
-local:verify блокирован прежней Supabase-миграцией; baseline не сбрасывался.
-Production не менялся; на12:10МСК `/auth`/assets/health200; probe37423991268 ранее: HTML timeout12s/CSS5.3s.
+PR#1457 слит: migration125 удаляет два дублирующих position индекса с проверкой каталога и lock wait3s; UNIQUE DEFERRABLE/данные/RLS/API сохранены.
+Clean PostgreSQL17 chain/actor91/91, check2409/1159/build и WebKit3/3 passed;
+local:verify блокирован прежней Supabase-миграцией, baseline не сбрасывался.
+План: DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md; production API200 до выпуска.
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 
@@ -85,15 +88,12 @@ record-workout card в Assistant, старый активный черновик
 
 ## Постоянные границы
 
-Frontend: Yandex API Gateway/Object Storage, fit-training.ru. API/auth/данные:
-Yandex Cloud PostgreSQL17. Vercel — legacy redirect; новые Vercel deployments
-и Supabase migrations запрещены. Supabase остаётся legacy recovery/media/test
-зависимостью; нельзя включать его обратно поверх новых Yandex writes.
-Клиентский pilot — только оформление, не авторизация данных. RLS/ownership
-проверяются сервером. Откат: CLIENT_LIME_ENABLED=false и новый frontend deployment.
-Голосовой transcript устраняет перекрывающиеся финальные фрагменты SpeechKit,
-сохраняет границы реплик и разделяет однословные упражнения с параметрами.
-Предыдущая продуктовая история и полные чеклисты — PRODUCT_WIKI, docs/design и Git.
+Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17.
+Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
+Supabase — только legacy recovery/media/test, не fallback поверх новых Yandex writes.
+Pilot не авторизует данные: RLS/ownership на сервере. Откат Lime: CLIENT_LIME_ENABLED=false + deployment.
+SpeechKit transcript устраняет финальные повторы, сохраняет реплики и разделяет упражнения с параметрами.
+История/чеклисты — PRODUCT_WIKI, docs/design и Git.
 
 ## Ранее открытые post-cutover задачи
 
