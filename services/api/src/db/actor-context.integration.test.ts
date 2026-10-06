@@ -8312,10 +8312,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       // plan - origin stays manual (see design doc part 1).
       expect(storedOrigin.rows).toEqual([{ origin: 'manual' }])
 
-      const programWorkouts = Array.from({ length: 4 }, (_, index) => ({
+      // Six sessions is a valid two-week, three-times-per-week program. It
+      // guards the flexible generator contract rather than only the legacy
+      // 4/8/12-session shapes.
+      const programWorkouts = Array.from({ length: 6 }, (_, index) => ({
         ...workout,
         requestId: `ef691fd5-86ee-4740-838c-b37166df7e7${index}`,
-        workoutDate: `2026-09-${21 + index * 3}`,
+        workoutDate: new Date(Date.UTC(2026, 8, 21 + index * 3))
+          .toISOString().slice(0, 10),
         notes: 'Клиентская программа из Assistant',
       }))
       // PostgreSQL and the Node test process can differ by a few milliseconds.
@@ -8370,7 +8374,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         ),
       )
       expect(programApplied).toMatchObject({ status: 'applied', version: 2 })
-      expect(programApplied.workoutIds).toHaveLength(4)
+      expect(programApplied.workoutIds).toHaveLength(6)
       expect(programAppliedAgain).toMatchObject({ status: 'applied', version: 2 })
       const storedProgram = await ownerPool.query<CountRow>(
         `select count(*)::integer count from public.workouts
@@ -8378,12 +8382,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
            and client_id = $1 and created_by = $2`,
         [CLIENT_ID, OTHER_ACTOR_ID],
       )
-      expect(storedProgram.rows[0]?.count).toBe(4)
+      expect(storedProgram.rows[0]?.count).toBe(6)
       const storedProgramOrigin = await ownerPool.query<CountRow>(
         `select count(*)::integer count from public.workouts
          where notes = 'Клиентская программа из Assistant' and origin = 'ai'`,
       )
-      expect(storedProgramOrigin.rows[0]?.count).toBe(4)
+      expect(storedProgramOrigin.rows[0]?.count).toBe(6)
 
       await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
         appendAssistantUserMessage(
