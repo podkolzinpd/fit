@@ -5,7 +5,7 @@ import { runningFormatExerciseName } from '../../shared/running-formats'
 import { MUSCLE_GROUP_LABELS } from '../../shared/system-exercises'
 import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { correctedExerciseInputKind } from '../../shared/exercise-metric-corrections'
-import { OPTIONAL_DISTANCE_EXERCISE_REFS } from '../../shared/exercise-measurements'
+import { OPTIONAL_DISTANCE_EXERCISE_REFS, LOADED_DISTANCE_EXERCISE_REFS, allowsDurationWeight } from '../../shared/exercise-measurements'
 import { isRowingExerciseRef, rowingPaceLabel, runDistanceLabel, runPaceLabel } from '../../shared/run-metrics'
 
 export interface ExerciseBlock {
@@ -412,9 +412,9 @@ export function nextSetDraft(sets: WorkoutSetDraft[], inputKind: InputKind): Wor
   const inherit = <T extends object>(values: T) => Object.fromEntries(
     Object.entries(values).filter(([, value]) => value !== undefined),
   ) as WorkoutSetDraft
-  if (inputKind === 'distance') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
+  if (inputKind === 'distance') return inherit({ position, weightKg: last.weightKg, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
   if (inputKind === 'reps') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, reps: last.reps, rpe: last.rpe })
-  if (inputKind === 'duration') return inherit({ position, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
+  if (inputKind === 'duration') return inherit({ position, weightKg: last.weightKg, durationSec: last.durationSec, durationMin: last.durationMin, distanceKm: last.distanceKm, rpe: last.rpe })
   return inherit({ position, weightKg: last.weightKg, reps: last.reps, rpe: last.rpe })
 }
 
@@ -538,7 +538,7 @@ function setLine(weightKg?: number, reps?: number, distanceKm?: number, duration
   const duration = durationLabel(durationSec, durationMin)
   const distance = runDistanceLabel(distanceKm)
   const rowing = isRowingExerciseRef(exerciseRef)
-  const pace = OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef) || exerciseRef === 'vital-gym-pro-r213-1533' ? null : rowing
+  const pace = OPTIONAL_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef) || LOADED_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef) || exerciseRef === 'vital-gym-pro-r213-1533' ? null : rowing
     ? rowingPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
     : runPaceLabel(durationSeconds(durationSec, durationMin), distanceKm)
   const repsLabel = reps && `${reps} ${rowing ? 'гребков/мин' : 'повт.'}`
@@ -683,7 +683,13 @@ export function compactExerciseDetailSummary(
     summary = repeatedSeries(values.map((value) => value.skipped || value.reps === undefined ? '—' : String(value.reps)), ' повт.')
     if (completed.some((value) => value.durationSec !== undefined)) summary += ` · ${repeatedSeries(values.map((value) => value.skipped ? '—' : durationLabel(value.durationSec) ?? '—'))}`
   } else if (inputKind === 'duration') {
-    summary = repeatedSeries(values.map((value) => value.skipped ? '—' : [durationLabel(value.durationSec), runDistanceLabel(value.distanceKm)].filter(Boolean).join(' · ') || '—'))
+    const loaded = allowsDurationWeight({ source: 'system', ref: exerciseRef ?? '', inputKind })
+    summary = repeatedSeries(values.map((value) => value.skipped ? '—' : [loaded && value.weightKg !== undefined ? `${value.weightKg} кг` : null, durationLabel(value.durationSec), runDistanceLabel(value.distanceKm)].filter(Boolean).join(' · ') || '—'))
+  } else if (LOADED_DISTANCE_EXERCISE_REFS.some((ref) => ref === exerciseRef)) {
+    summary = repeatedSeries(values.map((value) => value.skipped ? '—' : [
+      value.weightKg !== undefined ? `${value.weightKg} кг` : null,
+      runDistanceLabel(value.distanceKm), durationLabel(value.durationSec),
+    ].filter(Boolean).join(' · ') || '—'))
   } else {
     const distances = completed.map((value) => runDistanceLabel(value.distanceKm))
     const commonDistance = distances[0] && distances.every((distance) => distance === distances[0]) ? distances[0] : null

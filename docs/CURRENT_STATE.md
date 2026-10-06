@@ -10,6 +10,12 @@ PR#1467 и #1469 слиты; обязательный CI зелёный. Исп�
 Migration127 задаёт лимит трёх тренеров и owner-only подключение к Fit Lime/Schedule V2 через IAM runner. Новый ключ передаётся repository secret, не публикуется; два прежних назначения сохраняются. Привязка — при новом входе через Яндекс. Клиентский пилот не меняется.
 PR#1461: первый CI37469475413 success; rebase от `85584a47`, повторный check2412/1176/build, clean-chain127/actor92/92, rollback/reapply3→2→3 и legacy1511/1511 зелёные. CI обновлённой ветки повторяется. Общая локальная БД сохранена: старый drift migration112. Владелец явно разрешил закрытый GitHub Secret; ключ сохранён, подключение выполняется после зелёного CI/штатной выкладки. Реальной сессии третьего тренера нет. План: design/YAFIT_595_FIT_LIME_THIRD_TRAINER.md.
 
+## Вес в выпадах, удержаниях и проходках — 2026-10-06
+
+PR#1464:14refs — шесть выпадов/зашагиваний кг+повторы, три удержания кг+время, ВиПР кг+повторы с выбором кг+время, четыре проходки кг+дистанция/необязательное время без темпа. Plan/fact/review/Live/summary/copy сохраняют подходы/историю. План: design/EXERCISE_LOAD_FIELDS_20261006.md.
+Migration128 исправляет только editable snapshots шести выпадов, version+1 однократно. Check2449/API1176/build и clean PostgreSQL17/actor98/98 прошли; shared local:verify блокирован старым drift112, без сброса.
+WebKit5/5: plan→Live/reload удержания/проходки, выпады, дроби, ВиПР, light/dark390/430/1440. CI37525942947/Android37525942882 зелёные; после нового main повторяются. Владелец разрешил#1464 раньше красного#1463, не меняя его. Production пока не менялся: CI/миграция/deploy/readback впереди.
+
 ## Клиентский Lime: остатки заполненного прогресса — 2026-10-06
 
 #1459/#1462/#1465 слиты; release85584a47 CI37486398084/Android37486397713 success; deploy37488943876 verified206/readback12/YS Geo2. Published8cases. Новый скриншот подтвердил analysis/goal18px и sheet18px/close14px; база223cb7d4 после #1467, plan CLIENT_LIME_PROGRESS_FILLED_20261006.md. V16–19 используют cards/7PRO headers32px, sheet40px/close44круг, tertiary14/500/44; только client scope. WebKit13/13 D/L390/430/pending/error/PRO/off-control passed; Chromium13/13; check2412/API1176+92 skipped/policy/hosting/build success. hosting114/114 passed; PR1468 слит28309ef4, CI37522475372/Android37522475377 success, main CI/выпуск выполняются. Раскрытие всех7 ПРО подтвердило V20 D/L390/430: body-mode14/pseudo9/7px; план CLIENT_LIME_BODY_MODE_20261006.md, существующий segmented28/24/44 только client, WebKit16/16/Chromium16/16 passed: все7 открыты, empty/filled mode, другой клиент/trainer; check2412/API1176+92 skipped/policy/hosting114/build success; rebasec39bc3fc после1469, UI/E2E/package diff пустой, hosting115 passed; CI/readback далее. Выпуск28309ef4 не активирован: main обновился. Полное покрытие не заявляется; НЕ ПРОВЕРЕНО остаётся в аудите. Физический iPhone/удалённые LLM/SpeechKit/Store-релиз не подтверждены.
@@ -48,13 +54,7 @@ Assets/award logic сохранены; mobile WebKit/Chromium и CI/deployment/r
 
 ## Выпуск клиентских исправлений — 2026-10-05
 
-Семь PR #1408/#1410/#1411/#1412/#1413/#1415/#1417 слиты после зелёного CI.
-#1426 дал каждому smoke-запросу отдельный 20-секундный таймер, сохранив
-проверки файлов и откат. Две выкладки 0ca85201 откатились на `/healthz`;
-причина сетевого таймаута не доказана. CI37237418210/deployment37238448692
-выпустили 8fc46a31; readback37238977765 ACTIVE, warm37238988653 HTTP200.
-Затем выпущены достижения: frontend `6810452f`, CI37241760363,
-deployment37242590195 и readback37260193474 success/ACTIVE.
+Семь PR #1408/#1410/#1411/#1412/#1413/#1415/#1417 слиты после зелёного CI. #1426 дал каждому smoke-запросу отдельный 20-секундный таймер, сохранив проверки файлов и откат. Две выкладки 0ca85201 откатились на `/healthz`; причина сетевого таймаута не доказана. CI37237418210/deployment37238448692 выпустили 8fc46a31; readback37238977765 ACTIVE, warm37238988653 HTTP200. Затем выпущены достижения: frontend `6810452f`, CI37241760363, deployment37242590195 и readback37260193474 success/ACTIVE.
 
 Пилот клиентского Lime по-прежнему только `budoha1@yandex.ru`.
 Локальная регрессия416/416 WebKit/Chromium; Android debug run37232171038
