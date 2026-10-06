@@ -91,6 +91,14 @@ export const EXERCISE_METRIC_CORRECTIONS: Readonly<Record<string, ExerciseMetric
   'vital-banded-one-arm-row-ex571': { inputKind: 'reps' },
   'vital-hip-abduction-ex603': { inputKind: 'strength' },
   'vital-hip-adduction-ex604': { inputKind: 'strength' },
+  // Walking lunges may be performed with an external load; record its kg
+  // alongside repetitions instead of asking for an unrelated duration.
+  'vital-walking-lunge-ex270': { inputKind: 'strength' },
+  'vital-lunge-forward-ex314': { inputKind: 'strength' },
+  'vital-reverse-lunge-ex322': { inputKind: 'strength' },
+  'vital-side-lunge-ex325': { inputKind: 'strength' },
+  'vital-curtsy-lunge-ex244': { inputKind: 'strength' },
+  'vital-stepup-ex332': { inputKind: 'strength' },
   'vital-gym-pro-r043-0101': { inputKind: 'reps' },
   'vital-gym-pro-r072-0177': { inputKind: 'strength', equipment: 'Блок' },
   'vital-gym-pro-r114-0266': { inputKind: 'duration' },
@@ -137,7 +145,7 @@ export const EXERCISE_METRIC_CORRECTIONS: Readonly<Record<string, ExerciseMetric
   'vital-gym-pro-r298-1640': { inputKind: 'reps' },
   'vital-gym-pro-r299-1641': { inputKind: 'reps' },
   'vital-gym-pro-r300-1642': { inputKind: 'reps' },
-  'vital-gym-pro-r303-1645': { inputKind: 'duration' },
+  'vital-gym-pro-r303-1645': { inputKind: 'strength' },
   'vital-gym-pro-r310-1350': { inputKind: 'duration' },
   'vital-gym-pro-r393-1497': { inputKind: 'reps' },
   'vital-gym-pro-r397-1516': { inputKind: 'reps' },
@@ -148,6 +156,10 @@ export function correctedExerciseInputKind(exercise: {
   ref: string
   inputKind: InputKind
 }): InputKind {
+  // Existing ViPR interval plans and an explicit timed selection remain timed.
+  // The catalog itself applies the reviewed default directly.
+  if (exercise.source === 'system' && exercise.ref === 'vital-gym-pro-r303-1645'
+    && exercise.inputKind === 'duration') return 'duration'
   return exercise.source === 'system'
     ? EXERCISE_METRIC_CORRECTIONS[exercise.ref]?.inputKind ?? exercise.inputKind
     : exercise.inputKind

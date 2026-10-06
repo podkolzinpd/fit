@@ -11,6 +11,14 @@ const workout = (source: 'entered' | 'planned' | 'unknown', seconds?: number) =>
 }) as Pick<Workout, 'exercises'>
 
 describe('cardio duration prompt', () => {
+  it.each(['farmer-carry', 'sled-push', 'fedb-prowler-sprint', 'fedb-sled-drag-harness'])('does not require optional time for loaded distance %s', (ref) => {
+    const candidate = workout('unknown')
+    Object.assign(candidate.exercises[0]!, { ref, source: 'system', inputKind: 'distance' })
+    expect(firstCardioSetMissingEnteredDuration(candidate)).toBeNull()
+    const draft = { exercises: [{ ref, source: 'system', inputKind: 'distance', name: 'Переноска', muscleGroup: 'cardio', sets: [{ position: 0, weightKg: 22.16, distanceKm: 0.02216 }] }] } as Pick<WorkoutDraft, 'exercises'>
+    expect(firstCardioDraftMissingEnteredDuration(draft)).toBeNull()
+  })
+
   it('asks when bike distance is confirmed but time is missing', () => {
     expect(firstCardioSetMissingEnteredDuration(workout('unknown'))).toMatchObject({
       exerciseId: 'bike', setId: 'set-1', exerciseName: 'Велотренажёр',

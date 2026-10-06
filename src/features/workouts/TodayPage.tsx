@@ -32,7 +32,7 @@ import { WorkoutParseErrorNotice, workoutParseErrorKind, type WorkoutParseErrorK
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutDurationField } from './WorkoutDurationField'
-import { allowsOptionalDistance } from '../../shared/exercise-measurements'
+import { allowsOptionalDistance, allowsDurationWeight, allowsRepetitionTimeChoice, isLoadedDistance, exerciseSetColumnLabels } from '../../shared/exercise-measurements'
 import { isRowingExerciseRef } from '../../shared/run-metrics'
 import { WearableHealthCard } from '../wearables'
 import { isTodayGreetingPilotEnabled, isWearablesPilotEnabled } from '../../app/feature-flags'
@@ -951,7 +951,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         const canMergeNext = itemInBlockIndex === block.items.length - 1 && Boolean(nextBlock && nextBlock.items.length === 1
           && block.items.every(({ item: member }) => member.structure?.blockPreset !== 'interval' && member.structure?.blockPreset !== 'circuit')
           && nextBlock.items[0]!.item.structure?.blockPreset !== 'interval' && nextBlock.items[0]!.item.structure?.blockPreset !== 'circuit' && nextBlock.items[0]!.item.structure?.blockType !== 'group')
-        const distanceCapable = item.exercise.inputKind === 'distance' || (item.exercise.inputKind === 'duration' && (allowsOptionalDistance(item.exercise) || item.sets.some((set) => set.distanceKm !== undefined)))
+        const distanceCapable = !allowsDurationWeight(item.exercise) && (item.exercise.inputKind === 'distance' || (item.exercise.inputKind === 'duration' && (allowsOptionalDistance(item.exercise) || item.sets.some((set) => set.distanceKm !== undefined))))
+        const reviewWeightField = (set: WorkoutSetDraft, setIndex: number) => <input className="planned-set-input" aria-label={item.exercise.name + ': вес, подход ' + (setIndex + 1)} type="number" inputMode="decimal" min="0" step="any" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} />
         const reorderActions = itemInBlockIndex === 0 ? <span className="block-reorder today-review-order-buttons">
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вверх`} disabled={blockIndex === 0} onClick={() => moveReviewBlock(index, -1)}><ArrowUpIcon /></button>
           <button type="button" className="reorder-btn" aria-label={`Переместить блок «${item.exercise.name}» вниз`} disabled={blockIndex === reviewBlocks.length - 1} onClick={() => moveReviewBlock(index, 1)}><ArrowDownIcon /></button>
@@ -970,28 +971,32 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           <p className={workoutParseSetSummary(item) === 'без значений' ? 'today-exercise-missing' : undefined}>{workoutParseSetSummary(item)}</p>
           {!reordering && <details className="today-exercise-editor">
             <summary>{workoutParseSetSummary(item) === 'без значений' ? 'Добавить значения' : 'Править подходы'}</summary>
+            {allowsRepetitionTimeChoice(item.exercise) && <label className="field">Измерение подхода<select aria-label="Измерение подхода" value={item.exercise.inputKind} onChange={(event) => setItems((current) => current.map((entry, itemIndex) => itemIndex === index ? { ...entry, exercise: { ...entry.exercise, inputKind: event.target.value === 'duration' ? 'duration' : 'strength' } } : entry))}>
+              <option value="strength">Кг + повторы</option><option value="duration">Кг + время</option>
+            </select></label>}
             {showRest && block.items.length === 1 && <label className="exercise-plan-rest-field">Отдых между подходами, с
               <input key={index + '-' + (item.structure?.restBetweenSetsSec ?? 90)} aria-label={'Отдых между подходами, ' + item.exercise.name} type="number" inputMode="numeric" min="0" max="600" defaultValue={item.structure?.restBetweenSetsSec ?? 90}
                 onFocus={(event) => event.currentTarget.select()}
                 onBlur={(event) => { const raw = event.currentTarget.value; const next = raw === '' || Number.isNaN(Number(raw)) ? 90 : Math.min(600, Math.max(0, Number(raw))); event.currentTarget.value = String(next); updateRestBetweenSets(index, next) }}
                 onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
             </label>}
-            <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : item.exercise.inputKind} layout={distanceCapable || item.exercise.inputKind === 'reps' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">
+            <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : item.exercise.inputKind} columnLabels={exerciseSetColumnLabels(item.exercise)} layout={distanceCapable || item.exercise.inputKind === 'reps' ? 'full' : 'singleValue'} showRpe={showRpe} className="today-set-list">
               {item.sets.map((set, setIndex) => <WorkoutSetRow state="planned" className={'today-set-editor planned-set ' + (distanceCapable ? 'planned-set-running ' : '') + (showRpe ? 'rpe-visible' : '')} key={set.position}>
                 <strong className="workout-set-number planned-set-number">{setIndex + 1}</strong>
                 {item.exercise.inputKind === 'strength' && <>
-                  <label><span className="sr-only">Кг</span><input className="planned-set-input" aria-label={item.exercise.name + ': вес, подход ' + (setIndex + 1)} type="number" inputMode="decimal" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(index, setIndex, { weightKg: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>
+                  {reviewWeightField(set, setIndex)}
                   <label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={item.exercise.name + ': повторы, подход ' + (setIndex + 1)} type="number" inputMode="numeric" value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>
                 </>}
                 {item.exercise.inputKind === 'duration' && !distanceCapable && <>
+                  {allowsDurationWeight(item.exercise) && reviewWeightField(set, setIndex)}
                   <WorkoutDurationField className="planned-set-input" label={item.exercise.name + ': время, подход ' + (setIndex + 1)} durationSec={set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))} onCommit={(next) => updateSet(index, setIndex, { durationSec: next, durationMin: undefined })} />
-                  <span />
+                  {!allowsDurationWeight(item.exercise) && <span />}
                 </>}
                 {item.exercise.inputKind === 'reps' && <>
                   <WorkoutDurationField className="planned-set-input" label={item.exercise.name + ': время, подход ' + (setIndex + 1)} durationSec={set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))} onCommit={(next) => updateSet(index, setIndex, { durationSec: next, durationMin: undefined })} />
                   <label><span className="sr-only">Повт.</span><input className="planned-set-input" aria-label={item.exercise.name + ': повторы, подход ' + (setIndex + 1)} type="number" inputMode="numeric" value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(index, setIndex, { reps: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>
                 </>}
-                {distanceCapable && <RunMetricsFields idPrefix={'today-run-' + index + '-' + setIndex} rowing={isRowingExerciseRef(item.exercise.ref)} optionalDistance={item.exercise.inputKind === 'duration'} durationSec={set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={item.exercise.name + ': время, подход ' + (setIndex + 1)} distanceLabel={item.exercise.name + ': расстояние, подход ' + (setIndex + 1)} distanceUnitLabel={item.exercise.name + ': единица расстояния, подход ' + (setIndex + 1)} onCommit={(patch) => updateSet(index, setIndex, patch)} />}
+                {distanceCapable && <RunMetricsFields loadField={isLoadedDistance(item.exercise) ? reviewWeightField(set, setIndex) : undefined} idPrefix={'today-run-' + index + '-' + setIndex} rowing={isRowingExerciseRef(item.exercise.ref)} optionalDistance={item.exercise.inputKind === 'duration'} durationSec={set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))} distanceKm={set.distanceKm} strokeRate={set.reps} inputClassName="planned-set-input" durationLabel={item.exercise.name + ': время, подход ' + (setIndex + 1)} distanceLabel={item.exercise.name + ': расстояние, подход ' + (setIndex + 1)} distanceUnitLabel={item.exercise.name + ': единица расстояния, подход ' + (setIndex + 1)} onCommit={(patch) => updateSet(index, setIndex, patch)} />}
                 {showRpe && <label><span className="sr-only">RPE</span><input className="planned-set-rpe" aria-label={item.exercise.name + ': RPE, подход ' + (setIndex + 1)} type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ''} onChange={(event) => updateSet(index, setIndex, { rpe: event.target.value === '' ? undefined : Number(event.target.value) })} /></label>}
                 {block.items.length === 1 && item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={'Удалить подход ' + (setIndex + 1)} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}
               </WorkoutSetRow>)}

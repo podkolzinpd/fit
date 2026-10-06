@@ -273,7 +273,7 @@ describe('system exercise catalog', () => {
   })
 
   it('применяет полный аудит формата результата ко всем исправленным карточкам', () => {
-    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(123)
+    expect(Object.keys(EXERCISE_METRIC_CORRECTIONS)).toHaveLength(129)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
 
     for (const [ref, correction] of Object.entries(EXERCISE_METRIC_CORRECTIONS)) {
@@ -282,11 +282,16 @@ describe('system exercise catalog', () => {
     }
   })
 
+  it('offers kilograms and repetitions for walking lunges', () => {
+    expect(SYSTEM_EXERCISE_CATALOG.find((exercise) => exercise.ref === 'vital-walking-lunge-ex270'))
+      .toMatchObject({ inputKind: 'strength', equipment: 'Без оборудования' })
+  })
+
   it('разделяет все доступные упражнения на время и время с дистанцией без фиктивных километров', () => {
     const active = selectableExercises(SYSTEM_EXERCISE_CATALOG)
     expect(active).toHaveLength(1040)
     expect(active.filter((exercise) => exercise.inputKind === 'distance')).toHaveLength(24)
-    expect(active.filter((exercise) => exercise.inputKind === 'duration')).toHaveLength(113)
+    expect(active.filter((exercise) => exercise.inputKind === 'duration')).toHaveLength(112)
     const catalogByRef = new Map(SYSTEM_EXERCISE_CATALOG.map((exercise) => [exercise.ref, exercise]))
     for (const ref of OPTIONAL_DISTANCE_EXERCISE_REFS) {
       const exercise = catalogByRef.get(ref)
