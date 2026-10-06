@@ -116,3 +116,12 @@ coverage/lint/types/build/startup/policy — без изменения лими�
 геометрии клавиатуры Yandex-route WebKit/Chromium14/14 и lint/types/build
 повторно прошли. 7 октября включён новый main2867f1d9 (#1471) штатным merge
 без конфликтов; изменения duration сохранены, обязательный CI повторяется.
+
+CI37542191860 наc922cbb3: все21 core/visual/legacy/Chromium gates прошли;
+WebKit315 passed, два старых Client Lime sections430 упали по общему30s
+лимиту. Trace: девять последовательных страниц и screenshots прошли,
+следующая проверка началась на30224ms, после глобального deadline.
+Все duration cases прошли. Длинный sections-тест разделён на два блока
+по шесть страниц и отдельный achievement detail; все исходные assertions,
+размеры/темы/screenshots сохранены, timeouts/retries/gates не увеличены.
+Целевой Darwin WebKit/Chromium38/38 и lint/types прошли. Новый CI обязателен.

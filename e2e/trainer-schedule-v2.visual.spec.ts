@@ -3739,12 +3739,17 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime sections ${theme} ${width}`, async ({ page }, testInfo) => {
+  // Keep the default 30s limit and every assertion. Twelve document loads plus
+  // screenshots and a detail dialog exceeded one shared budget on CI WebKit.
+  for (const [section, routes] of [
+    ['profile', ['/me/progress', '/me/goal', '/me/profile', '/me/settings', '/me/edit', '/me/finance']],
+    ['communication', ['/me/trainers', '/me/achievements', '/chat', `/chat/${conversationId}`, '/assistant', '/join']],
+  ] as const) test(`Client Lime sections ${theme} ${width} ${section}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
-    for (const route of ['/me/progress', '/me/goal', '/me/profile', '/me/settings', '/me/edit', '/me/finance', '/me/trainers', '/me/achievements', '/chat', `/chat/${conversationId}`, '/assistant', '/join']) {
+    for (const route of routes) {
       await page.goto(route)
       await expect(page.locator('.fit-client-lime')).toBeVisible()
       await expect(page.locator('h1').first()).toBeVisible()
@@ -3818,6 +3823,12 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`section-${route.replaceAll('/', '-')}.png`) })
     }
+  })
+  test(`Client Lime achievement detail ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+    await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     await page.goto('/me/achievements')
     await page.locator('.athlete-achievement-card').first().click()
     const detail = page.locator('.athlete-achievement-detail')
