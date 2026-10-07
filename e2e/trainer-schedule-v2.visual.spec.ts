@@ -291,7 +291,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -369,7 +369,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
           timezone: 'Europe/Moscow',
           accountRole: options.role ?? 'trainer',
           ...(options.role === 'client' ? { client: { id: clientId, trainerId: options.clientTrainerId ?? trainerId, fullName: 'Алексей Смирнов' } } : {}),
-          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true, clientLime: options.role === 'client' && options.profileId === clientId },
+          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true, clientLime: options.role === 'client' && options.profileId === clientId && options.clientLime !== false },
           preferences: { scheduleDensity },
         },
       }
@@ -4995,3 +4995,51 @@ for (const theme of ['light', 'dark']) for (const role of ['client', 'trainer'] 
     await page.screenshot({ path: testInfo.outputPath(`body-modes-filled-${role}-${theme}.png`) })
   })
 }
+
+for(const theme of ['light','dark']) for(const width of [390,430]) test('Client Lime InBody disclosures preserve review and retry '+theme+' '+width,async({page},testInfo)=>{
+ await page.setViewportSize({width,height:844});
+ await mockPilot(page,{role:'client',profileId:clientId,withMeasurements:true});
+ await page.addInitScript(({id,theme})=>localStorage.setItem('fit.clientLime.theme.'+id,theme),{id:clientId,theme});
+ let attempt=0, release:()=>void=()=>{}; let hold=false;
+ await page.route('https://functions.yandexcloud.net/d4eerma5vk3fqtahbbea',async route=>{
+  if(route.request().method()==='OPTIONS'){await route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':'content-type,authorization'}});return;}
+  attempt++; if(hold) await new Promise<void>(r=>{release=r});
+  await route.fulfill({status:attempt===1?422:200,headers:{'access-control-allow-origin':'*'},contentType:'application/json',body:attempt===1?'{}':JSON.stringify({recordedOn:'2026-09-24',weightKg:70,inBody:{schemaVersion:1,bodyFatPercent:18,skeletalMuscleMassKg:32,deviceModel:'Test InBody',waistHipRatio:0.85,phaseAngleDeg:5.1},recognizedFieldCount:5,warnings:['Проверьте значения перед сохранением.']})});
+ });
+ await page.goto('/me/progress'); await expect(page.locator('.inbody-import')).toBeVisible();
+ const upload=()=>page.locator('.inbody-import input[type=file]').setInputFiles({name:'inbody-test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAUAAAAG4CAIAAAC7M6mJAAAFEUlEQVR4nO3TMQ0AIBDAQMC/3d/xwEKa3Cno0j0zC2g6vwOAdwaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCsrgtMLQZPVLE0hgAAAABJRU5ErkJggg==','base64')});
+ await upload();await expect(page.locator('.inbody-import-error')).toBeVisible();await page.screenshot({path:testInfo.outputPath('inbody-error.png')});
+ hold=true;await upload();await expect(page.getByRole('button',{name:'Распознаём отчёт…'})).toBeDisabled();await page.screenshot({path:testInfo.outputPath('inbody-loading.png')});release();
+ await expect(page.locator('.inbody-import-result')).toBeVisible();await page.screenshot({path:testInfo.outputPath('inbody-result.png')});
+ await page.getByRole('button',{name:'Проверить и сохранить'}).click();const toggle=page.locator('.client-progress-form .inbody-details summary');await expect(toggle).toHaveClass('progress-details-toggle');await expect(toggle).toHaveCSS('min-height','48px');await toggle.focus();await expect(toggle).toBeFocused();await page.keyboard.press('Enter');await expect(page.locator('.client-progress-form .inbody-details')).toHaveAttribute('open','');await page.screenshot({path:testInfo.outputPath('inbody-review-details.png')});
+ const form=page.locator('.client-progress-form');await form.getByRole('button',{name:'Отмена'}).click();
+ await page.getByRole('button',{name:'Настроить показатели'}).click();await page.screenshot({path:testInfo.outputPath('metrics-form.png')});
+});
+
+
+for(const pilot of [true,false]) test(`Client InBody card and history scope ${pilot ? 'lime' : 'original'}`,async({page})=>{
+ await mockPilot(page,{role:'client',profileId:clientId,clientLime:pilot,withMeasurements:true});
+ const entries=[24,23].map((day,i)=>({id:`10000000-0000-4000-8000-00000000005${i}`,clientId,createdBy:clientId,recordedOn:`2026-09-${day}`,weightKg:70-i,chestCm:null,waistCm:null,hipCm:null,notes:null,customMetrics:[],version:1,inBody:{schemaVersion:1,skeletalMuscleMassKg:32,bodyFatPercent:18}}));
+ await page.route(`http://127.0.0.1:4100/v1/clients/${clientId}/progress`,r=>r.fulfill({contentType:'application/json',body:JSON.stringify({entries,customMetrics:[],goal:null})}));
+ await page.goto('/me/progress');
+ const card=page.locator('.inbody-progress-card .inbody-details summary');await expect(card).toBeVisible();
+ if(pilot){await expect(card).toHaveClass('progress-details-toggle');await expect(card).toHaveCSS('min-height','48px');}else{await expect(card).not.toHaveClass('progress-details-toggle');await expect(card.locator('svg')).toHaveCount(0);}
+ await card.click();await expect(page.locator('.inbody-progress-card .inbody-details')).toHaveAttribute('open','');
+ await page.getByRole('button',{name:/История замеров/}).click();
+ for(const summary of await page.locator('.client-progress-history .inbody-details summary').all()){
+  if(pilot)await expect(summary).toHaveCSS('min-height','48px');else await expect(summary).not.toHaveClass('progress-details-toggle');
+  await summary.click();await expect(summary.locator('..')).toHaveAttribute('open','');
+ }
+});
+
+for(const theme of ['light','dark'])for(const width of [390,430])test(`Client Lime short home actions ${theme} ${width}`,async({page},testInfo)=>{
+ await page.setViewportSize({width,height:844});await mockPilot(page,{role:'client',profileId:clientId,withGoal:true,workouts:[{...workout,workoutDate:'2026-08-01',status:'planned',exercises:[]}]});
+ await page.addInitScript(({id,theme})=>localStorage.setItem(`fit.clientLime.theme.${id}`,theme),{id:clientId,theme});
+ await page.goto('/me');
+ for(const link of [page.locator('.client-home-past-plan > a'),page.locator('.client-home-highlight > a')]){
+  await expect(link).toBeVisible();await link.scrollIntoViewIfNeeded();expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await link.focus();await expect(link).toBeFocused();
+ }
+ await page.screenshot({path:testInfo.outputPath(`short-home-actions-${theme}-${width}.png`)});
+ await page.locator('.client-home-past-plan > a').click();await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`));
+});

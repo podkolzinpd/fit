@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isClientLimeEnabled } from '../../app/client-lime'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { splitClientWorkouts } from '../../data/repositories/workouts.repository'
@@ -154,6 +155,7 @@ export function MyWorkoutsPage() {
 export function MyProgressPage() {
   const { progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
+  const clientLime = isClientLimeEnabled(actor)
   const today = todayInTimeZone(actor?.timezone)
   const mine = useMine()
   const queryClient = useQueryClient()
@@ -216,20 +218,21 @@ export function MyProgressPage() {
   const measurementManagement = entries.data ? <div className="client-measurement-management">
     <InBodyImport busy={recognizeInBody.isPending} error={recognizeInBody.error} result={recognizedInBody} onRecognize={(image) => recognizeInBody.mutate(image)} onReset={() => { recognizeInBody.reset(); setRecognizedInBody(null) }} onApply={() => setMeasurementFormOpen(true)} />
     <nav className="measurement-actions" aria-label="Действия с замерами"><button type="button" className="secondary measurement-primary-action" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>{entries.data.length > 0 && <button type="button" className="link" aria-expanded={measurementHistoryOpen} onClick={() => setMeasurementHistoryOpen((open) => !open)}>История замеров · {entries.data.length}</button>}<button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((open) => !open)}>{metricsOpen ? 'Закрыть показатели' : 'Настроить показатели'}</button></nav>
-    {measurementFormOpen && <ClientProgressForm entry={null} recognized={recognizedInBody} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => { setMeasurementFormOpen(false); setRecognizedInBody(null) }} />}
+    {measurementFormOpen && <ClientProgressForm clientLime={clientLime} entry={null} recognized={recognizedInBody} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => { setMeasurementFormOpen(false); setRecognizedInBody(null) }} />}
     {measurementHistoryOpen && <section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ИСТОРИЯ</p><h2>Все замеры</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
-      ? <article className="card editing" key={entry.id}><ClientProgressForm entry={entry} recognized={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
-      : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.inBody && <InBodyDetails result={entry.inBody} />}{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
+      ? <article className="card editing" key={entry.id}><ClientProgressForm clientLime={clientLime} entry={entry} recognized={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
+      : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.inBody && <InBodyDetails result={entry.inBody} clientLime={clientLime} />}{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
     {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
   </div> : null
   return <Page className="client-progress-page" title="Мой прогресс"><AsyncView loading={mine.isLoading} error={mine.error} empty={!mine.data} onRetry={() => void mine.refetch()}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он связывает тренировки, замеры и анализ прогресса в одном месте." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
-    {mine.data && <div className="client-progress-stack"><AthleteAchievementPreview clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} />{entries.data && <InBodyProgressCard entries={entries.data} />}</div>}
+    {mine.data && <div className="client-progress-stack"><AthleteAchievementPreview clientId={mine.data.id} /><ClientTrainingSummaryCard clientId={mine.data.id} profileGoal={mine.data.goal} gender={mine.data.gender} measurementManagement={measurementManagement} />{entries.data && <InBodyProgressCard entries={entries.data} clientLime={clientLime} />}</div>}
     {confirmDialog}
   </AsyncView></Page>
 }
 
-function ClientProgressForm({ entry, recognized, metrics, today, busy, error, onSubmit, onCancel }: {
+function ClientProgressForm({ entry, recognized, metrics, today, busy, error, onSubmit, onCancel, clientLime }: {
+  clientLime: boolean
   entry: ProgressEntry | null
   recognized: InBodyRecognitionResult | null
   metrics: CustomMetric[]
@@ -243,7 +246,7 @@ function ClientProgressForm({ entry, recognized, metrics, today, busy, error, on
   return <section className="client-progress-form"><div className="client-progress-section-head"><p className="eyebrow">{entry ? 'ИСПРАВИТЬ РЕЗУЛЬТАТ' : 'ЗАФИКСИРОВАТЬ РЕЗУЛЬТАТ'}</p><h2>{entry ? 'Изменить замер' : 'Новый замер'}</h2></div><form className="stack compact" onSubmit={onSubmit}>
     <Field label="Дата"><input name="recordedOn" type="date" max={today} defaultValue={entry?.recordedOn ?? recognized?.recordedOn ?? today} required /></Field>
     <div className="measure-grid"><Field label="Вес, кг"><input name="weightKg" type="number" step="0.1" defaultValue={entry?.weightKg ?? recognized?.weightKg} /></Field><Field label="Грудь, см"><input name="chestCm" type="number" step="0.1" defaultValue={entry?.chestCm ?? recognized?.chestCm} /></Field><Field label="Талия, см"><input name="waistCm" type="number" step="0.1" defaultValue={entry?.waistCm ?? recognized?.waistCm} /></Field><Field label="Бёдра, см"><input name="hipCm" type="number" step="0.1" defaultValue={entry?.hipCm ?? recognized?.hipCm} /></Field></div>
-    {recognized && <InBodyDetails result={recognized.inBody} />}
+    {recognized && <InBodyDetails result={recognized.inBody} clientLime={clientLime} />}
     {groupMetricRows(activeMetrics).map((row) => row.kind === 'single'
       ? <Field key={row.metric.id} label={`${row.metric.name}${row.metric.unit ? `, ${row.metric.unit}` : ''}`}><ClientMetricInput metric={row.metric} entry={entry} /></Field>
       : <Field key={row.base} label={`${row.base}${row.unit ? `, ${row.unit}` : ''}`}><div className="measure-pair">{row.left && <ClientMetricInput metric={row.left} entry={entry} placeholder="Л" />}{row.right && <ClientMetricInput metric={row.right} entry={entry} placeholder="П" />}</div></Field>)}

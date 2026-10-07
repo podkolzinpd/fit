@@ -48,5 +48,11 @@ UI, срок действия токенов, права на профили, Su
 
 Tracker connector недоступен; чужие credentials не используются. UI/маршруты
 не меняются, отдельная visual/native сборка не является приёмкой этой DB-задачи.
-CI/merge/production пока не подтверждены. В очереди раньше открыт активный
-PR#1487; перед merge нужен его выпуск, обновление от main и повторный CI.
+CI37613263450 на130d41e1 прошёл, включая clean-chain131/actor106/106.
+PR#1487 выпущен; 7 октября ветка PR#1488 объединена с main4896e70f после
+#1487/#1490. Конфликт только в CURRENT_STATE: оба актуальных раздела сохранены.
+Backend/миграция не конфликтовали. Свежие clean PostgreSQL17 chain/actor106/106,
+полный `npm run check` (API1201/1201, build/startup verification) и
+`migrations:check` прошли. `local:verify` повторно ограничен той же legacy
+Supabase migration20260919145000, без сброса базы. Повторный CI на объединённом
+head запускается после push; merge/production не подтверждены.
