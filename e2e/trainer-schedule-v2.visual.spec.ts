@@ -4451,6 +4451,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: testInfo.outputPath('photo-portal-before.png') })
     await expect(viewer.locator('.fullscreen-image-controls span')).toHaveCSS('font-family', /YS Geo/)
     await expect(viewer.getByRole('button', { name: 'Закрыть фото' })).toHaveCSS('border-radius', '999px')
+    await expect(viewer.getByRole('button', { name: 'Закрыть фото' }).locator('svg[data-original-icon="close"]')).toHaveCSS('filter', theme === 'light' ? 'brightness(0)' : 'none')
     await viewer.getByRole('button', { name: 'Следующее фото' }).click()
     await expect(viewer.locator('.fullscreen-image-counter')).toHaveText('2 из 2')
     await viewer.getByRole('button', { name: 'Увеличить', exact: true }).click()
@@ -4678,6 +4679,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.getByRole('button', { name: 'Открыть фото', exact: true }).click()
     await expect(page.locator('.fullscreen-image-viewer')).toBeVisible()
     await expect(page.locator('.fullscreen-image-viewer')).toHaveCSS('font-family', /YS Geo/)
+    await expect(page.getByRole('button', { name: 'Закрыть фото', exact: true }).locator('svg[data-original-icon="close"]')).toHaveCSS('filter', theme === 'light' ? 'brightness(0)' : 'none')
     await page.screenshot({ path: testInfo.outputPath('chat-photo-portal.png') })
     await page.getByRole('button', { name: 'Закрыть фото', exact: true }).click()
     await expect(page.locator('.fullscreen-image-viewer')).toHaveCount(0)
@@ -4689,9 +4691,15 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime filled progress analysis and compact goal ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
-    await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true, workouts: [
-      { ...workout, status: 'done', completedAt: '2026-09-24T08:00:00.000Z' },
-      { ...workout, id: newWorkoutId, workoutDate: '2026-08-01', status: 'done', completedAt: '2026-08-01T08:00:00.000Z' },
+    const checkedExercise: WorkoutExercise = {
+      id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+      restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, weightKg: 20, reps: 8, fact: { weightKg: 20, reps: 8 }, confirmedAt: '2026-09-24T08:00:00.000Z', version: 2 }],
+    }
+    await mockPilot(page, { role: 'client', profileId: clientId, clientGender: 'male', withGoal: true, withMeasurements: true, workouts: [
+      { ...workout, workoutDate: '2026-09-24', status: 'done', completedAt: '2026-09-24T08:00:00.000Z', exercises: [checkedExercise] },
+      { ...workout, id: newWorkoutId, workoutDate: '2026-08-01', status: 'done', completedAt: '2026-08-01T08:00:00.000Z', exercises: [{ ...checkedExercise, sets: [{ ...checkedExercise.sets[0]!, weightKg: 15, fact: { weightKg: 15, reps: 8 }, confirmedAt: '2026-08-01T08:00:00.000Z' }] }] },
     ] })
     await page.route(`http://127.0.0.1:4100/v1/clients/${clientId}/training-summaries`, (route) => route.fulfill({
       contentType: 'application/json', body: JSON.stringify({ summaries: [{
@@ -4751,14 +4759,65 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: testInfo.outputPath(`filled-progress-error-${theme}-${width}.png`) })
     await goal.getByRole('link', { name: 'Подробнее в ПРО' }).click()
     await expect(page.getByRole('tab', { name: 'ПРО' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.locator('#goal-details')).toHaveAttribute('open', '')
     const summaries = page.locator('.progress-pro-list > details > summary.progress-details-toggle')
     await expect(summaries).toHaveCount(7)
     for (const summary of await summaries.all()) await expect(summary).toHaveCSS('border-radius', '32px')
-    for (const summary of await summaries.all()) {
+    for (const [index, summary] of (await summaries.all()).entries()) {
       const panel = summary.locator('..')
       if (!(await panel.evaluate((element) => element.hasAttribute('open')))) await summary.click()
       await expect(panel).toHaveAttribute('open', '')
+      await summary.scrollIntoViewIfNeeded()
+      await page.locator('.content').evaluate((element) => { element.scrollTop = Math.max(0, element.scrollTop - 12) })
+      const figureSources = await panel.locator('.body-progress-figure-image').evaluateAll((elements) => elements.map((element) => element.getAttribute('href')!).filter(Boolean))
+      await page.evaluate(async (sources) => { for (const source of sources) { const picture = new Image(); picture.src = source; await picture.decode() } }, figureSources)
+      await page.screenshot({ path: testInfo.outputPath(`pro-section-${index + 1}-${theme}-${width}.png`) })
+      let scrollSteps = 0
+      while (await panel.evaluate((element) => {
+        const content = document.querySelector('.content')!.getBoundingClientRect()
+        const nav = document.querySelector('.client-tab-bar')!.getBoundingClientRect()
+        return element.getBoundingClientRect().bottom > Math.min(content.bottom, nav.top) - 4
+      })) {
+        expect(scrollSteps).toBeLessThan(20)
+        const moved = await page.locator('.content').evaluate((element) => {
+          const content = element.getBoundingClientRect()
+          const nav = document.querySelector('.client-tab-bar')!.getBoundingClientRect()
+          const before = element.scrollTop
+          element.scrollTop += Math.max(100, Math.floor((Math.min(content.bottom, nav.top) - Math.max(0, content.top)) * 0.7))
+          return element.scrollTop > before
+        })
+        expect(moved).toBe(true)
+        scrollSteps += 1
+        await page.screenshot({ path: testInfo.outputPath(`pro-section-${index + 1}-scroll-${scrollSteps}-${theme}-${width}.png`) })
+      }
+      await testInfo.attach(`pro-section-${index + 1}-coverage`, { body: JSON.stringify({ title: await summary.innerText(), scrollSteps, bottomShown: true }), contentType: 'application/json' })
     }
+    const results = page.locator('.client-results-center')
+    const exerciseFilter = results.getByRole('combobox', { name: 'Упражнение', exact: true })
+    const metricFilter = results.getByRole('combobox', { name: 'Показатель', exact: true })
+    for (const field of [exerciseFilter, metricFilter]) {
+      await expect(field).toHaveCSS('border-radius', '16px')
+      await expect(field).toHaveCSS('min-height', '48px')
+      await expect(field).toHaveCSS('font-family', /YS Geo/)
+      await expect(field).toHaveCSS('background-color', await page.locator('.phone-frame').evaluate((element) => (() => { const probe = document.createElement('span'); probe.style.backgroundColor = 'var(--lime-surface-raised)'; element.append(probe); const color = getComputedStyle(probe).backgroundColor; probe.remove(); return color })()))
+    }
+    await expect(results.locator('.center-result-row')).toHaveCount(3)
+    await exerciseFilter.selectOption({ label: 'Приседания' })
+    await metricFilter.selectOption('weight')
+    await expect(results.locator('.center-result-row')).toHaveCount(1)
+    await expect(results.locator('.center-result-row')).toContainText('Максимальный вес: 20 кг')
+    expect(new URL(page.url()).searchParams.get('resultMetric')).toBe('weight')
+    expect(new URL(page.url()).searchParams.get('resultExercise')).toBeTruthy()
+    await metricFilter.selectOption('distance')
+    await expect(results).toContainText('Нет результатов.')
+    await exerciseFilter.selectOption('')
+    await metricFilter.selectOption('')
+    await expect(results.locator('.center-result-row')).toHaveCount(3)
+    expect(new URL(page.url()).searchParams.has('resultExercise')).toBe(false)
+    expect(new URL(page.url()).searchParams.has('resultMetric')).toBe(false)
+    await results.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: testInfo.outputPath(`results-fields-${theme}-${width}.png`) })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     const modes = page.locator('.client-body-map-disclosure .body-progress-modes')
     await modes.scrollIntoViewIfNeeded()
     await testInfo.attach('body-mode-styles', { body: JSON.stringify(await modes.evaluate((element) => ({
@@ -4798,6 +4857,11 @@ test('Client progress outside the Lime pilot retains its original surfaces', asy
   await expect(page.locator('.progress-analysis-preview')).toHaveCSS('border-radius', '18px')
   await expect(page.locator('.progress-overview-panel .client-progress-goal-story')).toHaveCSS('border-radius', '18px')
   await page.getByRole('tab', { name: 'ПРО' }).click()
+  await page.locator('.client-results-center > summary').click()
+  for (const field of await page.locator('.results-center-filters select').all()) {
+    await expect(field).toHaveCSS('min-height', '44px')
+    await expect(field).not.toHaveCSS('border-radius', '16px')
+  }
   await page.locator('.client-body-map-disclosure > summary').click()
   await expect(page.locator('.body-progress-modes')).toBeVisible()
   expect(await page.locator('.body-progress-modes').evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('9px')

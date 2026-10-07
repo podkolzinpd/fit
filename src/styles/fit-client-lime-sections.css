@@ -38,7 +38,8 @@
   border-radius: 999px;
 }
 .phone-frame.fit-client-lime.client-card-edit-identity .client-profile-form select,
-.phone-frame.fit-client-lime.assistant-identity .assistant-program-card select {
+.phone-frame.fit-client-lime.assistant-identity .assistant-program-card select,
+.phone-frame.fit-client-lime.progress-identity .results-center-filters select {
   appearance: none;
   border-radius: 16px;
   padding-right: 44px;
@@ -119,7 +120,7 @@ html.fit-client-lime-document .athlete-achievement-detail p { color: var(--lime-
 html.fit-client-lime-document .athlete-achievement-detail > strong { color: var(--lime-accent-ink); font-weight: 500; }
 html.fit-client-lime-document .athlete-achievement-detail-overlay { background: var(--lime-overlay); }
 html.fit-client-lime-document .athlete-achievement-detail-heading button { background: var(--lime-surface-raised); color: var(--lime-text); }
-html.fit-client-lime-document.theme-light .athlete-achievement-detail-heading svg[data-original-icon] { filter: brightness(0); }
+html.fit-client-lime-document.theme-light :is(.athlete-achievement-detail-heading, .fullscreen-image-viewer) svg[data-original-icon] { filter: brightness(0); }
 html.fit-client-lime-document .athlete-achievement-detail :focus-visible,
 .phone-frame.fit-client-lime :is(.athlete-achievements-home, .athlete-achievements-page) :focus-visible { outline-color: var(--lime-accent-ink); }
 /* Authored badge artwork retains its original background and colors. */
@@ -216,7 +217,8 @@ html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fulls
   font-size: 16px;
 }
 
-.phone-frame.fit-client-lime.assistant-identity .assistant-program-card :is(input, select) {
+.phone-frame.fit-client-lime.assistant-identity .assistant-program-card :is(input, select),
+.phone-frame.fit-client-lime.progress-identity .results-center-filters select {
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
@@ -229,7 +231,8 @@ html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fulls
   font-weight: 400;
 }
 
-.phone-frame.fit-client-lime.assistant-identity .assistant-program-card select { padding-right: 44px; }
+.phone-frame.fit-client-lime.assistant-identity .assistant-program-card select,
+.phone-frame.fit-client-lime.progress-identity .results-center-filters select { padding-right: 44px; }
 
 /* Filled progress and its disclosures retain the approved client geometry.
    The goal embedded in PRO remains flat; trainer summaries keep their scope. */

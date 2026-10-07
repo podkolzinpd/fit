@@ -1,0 +1,84 @@
+{
+  "stats": {
+    "startTime": "2026-10-06T23:04:07.561Z",
+    "duration": 39307.146,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "cases": [
+    {
+      "case": "Published photo close glyph trainer light 390",
+      "theme": "theme-light ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph trainer light 430",
+      "theme": "theme-light ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph trainer dark 390",
+      "theme": "ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(37, 37, 41)",
+      "color": "rgb(255, 255, 255)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph trainer dark 430",
+      "theme": "ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(37, 37, 41)",
+      "color": "rgb(255, 255, 255)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph chat light 390",
+      "theme": "theme-light ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph chat light 430",
+      "theme": "theme-light ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(238, 240, 232)",
+      "color": "rgb(32, 35, 28)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph chat dark 390",
+      "theme": "ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(37, 37, 41)",
+      "color": "rgb(255, 255, 255)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    },
+    {
+      "case": "Published photo close glyph chat dark 430",
+      "theme": "ui-identity fit-lime-document fit-client-lime-document",
+      "background": "rgb(37, 37, 41)",
+      "color": "rgb(255, 255, 255)",
+      "filter": "none",
+      "icon": "<svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" data-icon=\"close\" data-original-icon=\"close\"><image href=\"data:image/svg+xml,%3csvg%20preserveAspectRatio='none'%20overflow='visible'%20style='display:%20block;'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cg%20id='Icon%20/%20Close'%3e%3cpath%20id='%20'%20d='M10.5841%2012.0002L4%205.41598L5.41594%204L12%2010.5842L18.5841%204L20%205.41598L13.4159%2012.0002L19.9996%2018.584L18.5836%2020L12%2013.4162L5.41639%2020L4.00045%2018.584L10.5841%2012.0002Z'%20fill='white'/%3e%3c/g%3e%3c/svg%3e\" width=\"24\" height=\"24\"></image></svg>",
+      "parent": null
+    }
+  ]
+}

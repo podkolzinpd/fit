@@ -1,0 +1,454 @@
+[
+  {
+    "case": "Client Lime filled progress analysis and compact goal light 390",
+    "controls": [
+      {
+        "tag": "SUMMARY",
+        "class": "progress-details-toggle",
+        "text": "Все результатыИстория, упражнения и показатели",
+        "radius": "32px",
+        "height": 63.6875,
+        "minHeight": "58px",
+        "border": "1px solid rgb(216, 221, 206)",
+        "background": "rgb(255, 255, 255)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все упражненияПриседания",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(118, 118, 118)",
+        "background": "rgb(255, 255, 255)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все показателиМаксимальный весПовторы при фиксированном весеОбъёмПовторыДистанцияДлительность",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(118, 118, 118)",
+        "background": "rgb(255, 255, 255)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SUMMARY",
+        "class": null,
+        "text": "Подходы, вес и повторы",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(32, 35, 28)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      }
+    ]
+  },
+  {
+    "case": "Client Lime filled progress analysis and compact goal light 430",
+    "controls": [
+      {
+        "tag": "SUMMARY",
+        "class": "progress-details-toggle",
+        "text": "Все результатыИстория, упражнения и показатели",
+        "radius": "32px",
+        "height": 63.6875,
+        "minHeight": "58px",
+        "border": "1px solid rgb(216, 221, 206)",
+        "background": "rgb(255, 255, 255)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все упражненияПриседания",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(118, 118, 118)",
+        "background": "rgb(255, 255, 255)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все показателиМаксимальный весПовторы при фиксированном весеОбъёмПовторыДистанцияДлительность",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(118, 118, 118)",
+        "background": "rgb(255, 255, 255)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(85, 92, 76)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SUMMARY",
+        "class": null,
+        "text": "Подходы, вес и повторы",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(32, 35, 28)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      }
+    ]
+  },
+  {
+    "case": "Client Lime filled progress analysis and compact goal dark 390",
+    "controls": [
+      {
+        "tag": "SUMMARY",
+        "class": "progress-details-toggle",
+        "text": "Все результатыИстория, упражнения и показатели",
+        "radius": "32px",
+        "height": 63.6875,
+        "minHeight": "58px",
+        "border": "1px solid rgb(59, 59, 64)",
+        "background": "rgb(26, 26, 28)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все упражненияПриседания",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(133, 133, 133)",
+        "background": "rgb(59, 59, 59)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все показателиМаксимальный весПовторы при фиксированном весеОбъёмПовторыДистанцияДлительность",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(133, 133, 133)",
+        "background": "rgb(59, 59, 59)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SUMMARY",
+        "class": null,
+        "text": "Подходы, вес и повторы",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(255, 255, 255)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      }
+    ]
+  },
+  {
+    "case": "Client Lime filled progress analysis and compact goal dark 430",
+    "controls": [
+      {
+        "tag": "SUMMARY",
+        "class": "progress-details-toggle",
+        "text": "Все результатыИстория, упражнения и показатели",
+        "radius": "32px",
+        "height": 63.6875,
+        "minHeight": "58px",
+        "border": "1px solid rgb(59, 59, 64)",
+        "background": "rgb(26, 26, 28)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все упражненияПриседания",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(133, 133, 133)",
+        "background": "rgb(59, 59, 59)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SELECT",
+        "class": null,
+        "text": "Все показателиМаксимальный весПовторы при фиксированном весеОбъёмПовторыДистанцияДлительность",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "1px solid rgb(133, 133, 133)",
+        "background": "rgb(59, 59, 59)",
+        "appearance": "auto",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "24 сентября 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "A",
+        "class": "link",
+        "text": "Ранее · 1 августа 2026 г.",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(184, 184, 189)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      },
+      {
+        "tag": "SUMMARY",
+        "class": null,
+        "text": "Подходы, вес и повторы",
+        "radius": "0px",
+        "height": 44,
+        "minHeight": "44px",
+        "border": "0px none rgb(255, 255, 255)",
+        "background": "rgba(0, 0, 0, 0)",
+        "appearance": "none",
+        "font": "\"YS Geo\", \"Onest Variable\", sans-serif"
+      }
+    ]
+  }
+]
