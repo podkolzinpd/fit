@@ -1,75 +1,47 @@
 # Fit — текущее состояние проекта
-
 ## Рекорды выбранной тренировки — 2026-10-07
 PR#1495, план design/DATABASE_WORKOUT_RECORDS_20261007.md. Обновление от mainfca6cb75 после#1493/#1494/#1497: обе стороны snapshot и соседние API/repository tests сохранены; собственная невыпущенная migration134 перенумерована136, поскольку134/135 уже в main. GET personal-records — одно actor-scoped чтение без лимита20; confirmed/first/tie/shared-history/author contract, strength без primary-дубля, volume с весом/повторами своего подхода. После разрешения конфликтов fresh clean PostgreSQL17 chain136/actor125/125, WebKit1/1 и полный check2514frontend/1205API/build passed. Предыдущий exact-head CI37629455480/Android37629455419 на8d2c91b9 success; CI новой объединённой ветки ещё гейт, merge/production не объявлены. local:verify повторно ограничен прежней legacy migration20260919145000; общая база не сбрасывалась.
-
+## Общий Lime rollout — подготовка, включение запрещено
+План design/LIME_GLOBAL_ROLLOUT_20261007.md; PR#1498 — private controls pilot/pilot/pilot, #1500/#1501 — ручные операции клиента/тренера. Пользователь разрешил выкладку флагов, но all/расширение пилота требуют нового явного ОК. После merge#1495/mainf89e0e79 невыпущенная Lime migration перенумерована137; clean-chain137/actor126, exact Down→Up137 и все этапы check (2514frontend/1228API/build) прошли; sandbox EPERM для локального policy HTTP проверен повторно без изменения тестов. Новый CI/merge/deploy впереди. Production-активация не запускалась; прежний local:verify drift112 сохранён.
 ## Надёжность шаблонов и функциональная приёмка — 2026-10-07
-
 GitHub#1492, PR#1494 слит70708ef8 после свежего CI37643415295/225ea9d4 и Android37643415198 success; план design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md. Пункты1–2: migration134/стабильный ID, точный replay без дублей и обхода ownership/version, account/context-scoped черновик и защита от старого pending save. После #1493/main25c046b2 повторены clean-chain132→134/actor111, check2512frontend/1202API/build, template WebKit4/4, DB cross-role16, exact Down→Up134/grants и real old/Lime API/DB/browser2×15 — passed; исходная полная WebKit359/359. Production70708ef8 API37646348676/mainCI37646348715 выполняется. local:verify ограничен прежним drift112, общая база сохранена. Быстрый старт не меняется; полный план3–10 не закрыт. Отключение современной связи — отдельный#1497/135; real OAuth/AI/voice/Health/devices/payments не подменяются fixtures.
-
 ## Live: таймер фаз и ранний старт будущего плана — 2026-10-07
-
 План: `design/live-phase-timer.md`, выпуск разрешён владельцем после локальной проверки. Одна кнопка таймера ведёт подготовку → подход по плановому времени → отдых; `workouts.prep_seconds` (migration132, ключ не пришёл — значение сохраняется). migration133 расширяет триггер 000120 вне пилота Lime только для будущих дат: старт Live переносит план на фактический день клиента, `planned_*` хранит исходный план; прошедшие даты вне пилота не меняются. Тест «Контроль без флага» переписан под новое правило. Supabase не менялся. Проверено: clean PostgreSQL17 chain/actor100/100, frontend unit817/817, Yandex repository47/47; UI сценарий — локально в браузере (dev-сборка на Supabase, без prep_seconds в legacy-схеме). Production ещё не подтверждён.
-
 ## Отключение выбранного тренера — 2026-10-07
-
 GitHub#1492 пункт6, план design/SELECTED_TRAINER_DISCONNECT_20261007.md. Реальный API/DB/browser воспроизвёл204/успех с оставшейся active relationship: прежний Yandex writer удалял только membership. Migration135 закрывает обе формы доступа атомарно; чужие акторы/legacy trainer-owned guard/другие тренеры/история сохранены. После #1493/#1494/main70708ef8 повторены fresh clean-chain132→135/actor116, real old/Lime UI/API/DB2×18, exact Down→Up135 и полный check2512/1202/build — passed. Первый CI37638048028/31686ab3 зелёный; свежий CI перед merge повторяется. Ждёт более ранние#1495/#1496 и последующее обновление от main; production не подтверждён.
-
 ## Фоновая очистка app-сессий — 2026-10-07
-
 PR#1488 слит ca796686; план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106, full check2479/1201/build и exact-head CI37618069869 passed. Production37618758871: migration131 применена, API/dispatcher exact-release health/smoke passed,50/50 прямых health probes. Независимые /health + /ready200, API tree hash совпал. local:verify ограничен прежней недостающей legacy migration20260919145000; общая база сохранена. Это устранение риска, не доказанная причина502.
-
 ## Клиентский Lime — завершение, PR1–PR4 — 2026-10-07
-
 План `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md`, YAFIT-599. #1485 опубликован; #1487 опубликован на mainca796686 официальным37619414157: ресурсы7/7, production UI16/16. #1489 слит62a92c46 после CI37622487729 success; штатный выпуск ожидается. #1491 обновлён от этого main: portal чата/TimeWheel500 и подтверждённая потеря окна конкурса при замене auth frame (host после commit; условия/данные прежние). Общий проход352/354 +2/2 повтор навигационных таймаутов; программа12сессий/24редактора8/8, running8/8, уведомления8/8, fonts8/8, конкурс8/8. Frontend2488/lint/typecheck/build passed; реестр `client-lime-migration-audit.md`. Физический iPhone/реальные внешние эффекты НЕ ПРОВЕРЕНО; итоговая публикация и полное соответствие не объявлены.
-
 ## YAFIT-597 — надёжность оплат — 2026-10-07
-
 План: `design/FINANCE_PAYMENTS_20261006.md`, GitHub#1472, PR1#1473 / PR2#1475. Владелец разрешил оба выпуска по общей очереди. PR1 добавляет actor-scoped request receipts и фактическую дату начальной оплаты (migration130/v2, старые записи и контракты сохранены). Clean PostgreSQL17 chain/actor93/93, UI/repository64/64 и WebKit error/retry2/2 passed. `local:verify` ограничен прежним drift общей базы migration112; общая база не сбрасывалась. Параллельный check ловил локальные таймауты соседних тестов; последовательный API1177/1177 и frontend-покрытие надстройки PR2 —2419/2419 passed без изменений тестов; policy/db-types/iOS/media/hosting/build и CI API/RLS/app-tests зелёные. После #1464 clean-chain/actor99/99; после #1471/#1463 (main07c9dcb1) финальная clean-chain/actor100/100 и finance/Yandex repository64/64 passed. CI финального head314915c5 (37546811112) success; PR1#1473 слит3bea5635. API/migration130 rollout выполняется, production ещё не подтверждён; реальная финансовая сессия клиента не проверена.
-
 ## Оформление свайпа клиентов — 2026-10-07
-
 PR#1479, план design/CLIENT_SWIPE_PRESENTATION_20261007.md. Только оформление: короткая нейтральная панель с иконкой архива, прежний danger-акцент после порога, читаемый pending, feedback с подтверждением/Вернуть44px; на телефоне действия отдельной строкой. Механика/API не меняются; другие жесты только предложены. Component77/77; browser20/20 (Chromium touch/WebKit mouse, light/dark/Lime320/390/430/1440, long-name/reduced-motion/focus/contrast) passed, screenshots просмотрены. Check на90435247: frontend2475/API1178+100 skipped/policy/hosting115/build passed; финальный build повторён. После переноса на mainbfe826b3 combined77/browser20 повторно passed. CI текущего head/новый production ещё не подтверждены.
-
 ## YAFIT-597 — интерфейс оплат — 2026-10-07
-
 PR2#1475 добавляет видимое «Уже оплачено», «Вся сумма», дату получения и прямую оплату остатка в карточке; локальная история использует действующие edit/delete формы с подтверждением суммы и даты. Кнопки после полей, единая геометрия Mono/Lime; исправлен потерянный первый тап при blur клавиатуры; форма закрывается после обновления остатка, исключая прежнюю сумму при быстром повторном открытии. Component23/23, WebKit18/18 (320/390/430/1440, light/dark/focus400), coverage283 files/2419 tests и build passed. Обычный параллельный check ловил соседние таймауты ExercisePicker, последовательный набор прошёл без ослаблений. Production и физический iPhone пока не подтверждены. План: `design/FINANCE_PAYMENTS_20261006.md`.
-
 ## Очистка frontend-релизов — 2026-10-07
-
 PR#1467 и #1469 слиты; обязательный CI зелёный. Исправлены реальные форматы YC CLI: отсутствующий размер допускается только у подтверждённого пустого folder marker; HEAD использует last_modified_at с секундной точностью, сохраняя точный ETag/размер. Retention23/23, hosting115/115, npm run check (frontend2412/API1176+92 DB skipped/build) passed; Yandex DB проверена в CI.
 Штатная ежедневная очистка включена (целевое время 06:17 МСК; scheduler может задерживать запуск). Первый guarded apply завершён успешно: https://github.com/podkolzinpd/fit/actions/runs/37527012718; каждый DELETE подтверждён, gateway/site smoke passed, backup artifact сохранён. Текущий/предыдущий, последние3дня и общие файлы сохранены; версии не purged, прежнее lifecycle удаляет нетекущие версии через3дня. Независимый static smoke: auth/JS/CSS/sw на обоих frontend-адресах HTTP200 и одинаковые bytes; БД/media/state не затрагиваются.
 История Terraform state (PR#1477): по подтверждению владельца включён lifecycle только для `fit/stage/terraform.tfstate`: NoncurrentVersionExpiration30 дней с момента перехода в нетекущую версию. Readback после reload: правило enabled, versioning enabled. Текущий state сохраняется; ручного purge/чтения содержимого/изменения IAM и других бакетов не было. Полное прохождение lifecycle не проверено; контракт — STAGE_DEPLOYMENT.md §2.
-
 ## YAFIT-595 — третий тренер Fit Lime — 2026-10-06
-
 Migration127 задаёт лимит трёх тренеров и owner-only подключение к Fit Lime/Schedule V2 через IAM runner. Новый ключ передаётся repository secret, не публикуется; два прежних назначения сохраняются. Привязка — при новом входе через Яндекс. Клиентский пилот не меняется.
 PR#1461: первый CI37469475413 success; rebase от `85584a47`, повторный check2412/1176/build, clean-chain127/actor92/92, rollback/reapply3→2→3 и legacy1511/1511 зелёные. CI обновлённой ветки повторяется. Общая локальная БД сохранена: старый drift migration112. Владелец явно разрешил закрытый GitHub Secret; ключ сохранён, подключение выполняется после зелёного CI/штатной выкладки. Реальной сессии третьего тренера нет. План: design/YAFIT_595_FIT_LIME_THIRD_TRAINER.md.
-
 ## Вес в выпадах, удержаниях и проходках — 2026-10-06
-
 PR#1464:14refs — шесть выпадов/зашагиваний кг+повторы, три удержания кг+время, ВиПР кг+повторы с выбором кг+время, четыре проходки кг+дистанция/необязательное время без темпа. Plan/fact/review/Live/summary/copy сохраняют подходы/историю. План: design/EXERCISE_LOAD_FIELDS_20261006.md.
 Migration128 исправляет только editable snapshots шести выпадов, version+1 однократно. Check2449/API1176/build и clean PostgreSQL17/actor98/98 прошли; shared local:verify блокирован старым drift112, без сброса.
 WebKit5/5: plan→Live/reload удержания/проходки, выпады, дроби, ВиПР, light/dark390/430/1440. CI37525942947/Android37525942882 зелёные; после нового main повторяются. Владелец разрешил#1464 раньше красного#1463, не меняя его. Production пока не менялся: CI/миграция/deploy/readback впереди.
-
 ## Клиентский Lime: остатки заполненного прогресса — 2026-10-06
-
 #1468/#1470 (V16–20) опубликованы и подтверждены web/native-симулятором; исходные акты сохранены. PR1478 закрывает V21/P1: results select16/48/YS Geo/tokens/arrow и V22/P0: light close SVG фото-портала через existing brightness(0), public trainer/chat. План/до-после: design/CLIENT_LIME_RESULTS_FIELDS_20261007.md; полный реестр: client-lime-migration-audit.md. На прежнем head5b0a0d5b CI37547090059/Android37547090075 success, Chromium98/98/WebKit23/23 и check2465/API1177+99 skipped/build passed. После merge1476 (90435247) ветка обновлена, ownCSS прежний; свежие проверки и выпуск обязательны. Пользователь прямо разрешил1478 после1476 без ожидания1477. V21–22 до merge/deploy/readback не доставлены. Другие НЕ ПРОВЕРЕНО сохраняются: физический iPhone/native pilot login, внешние OAuth/LLM/SpeechKit/Store. Новая палитра/сценарии/trainer/nonpilot не вводятся.
-
 ## Фактическая длительность тренировки — 2026-10-06
-
 PR#1463 включает main2867f1d9 (#1464/#1474/#1471); полный выпуск повторно разрешён7октября. План design/WORKOUT_ACTUAL_DURATION_EDIT_20261006.md, пункты1–5 сохранены. Ввод#1357 переиспользован; narrow done duration не даёт прав на план/подходы. Migration126/PUT: время+версия, calorie refresh; timestamps/sets неизменны, manual выше Live, очистка возвращает timer. Исправлены старые E2E-подписи, пустая колонка и геометрия клавиатуры (эмуляция, не физический iPhone). Full check: frontend2456/API1177/build/policy success; task-only PostgreSQL17 на55437actor99/99 и late126 после128 прошли, legacy2/2. WebKit/Chromium38/38; light/dark390/430/trainer1440 просмотрены. CI37542191860:21 gates green, WebKit два старых sections430 превысили общий30s. Trace подтвердил deadline; разделены на6+6страниц/detail без удаления assertions/изменения лимитов. Новый CI, merge, API/frontend rollout/readback и свежий iOS ещё гейты; production не выпущено. Общая БД сохранена (drift112).
-
 ## Аудит БД и дублирующие индексы — 2026-10-06
 #1434 защищает фото, #1449 — snapshot, #1450 — серверную pagination; все слиты. #1454 слит `4eab2e22`: статистика карточки — один actor SQL-агрегат, ИИ/Progress/ближайшие назначения сохранены. CI37384227309, API37384227223/frontend37385582939 success. Планы — DATABASE_AUDIT в docs/design.
 PR#1457 слит: migration125 удаляет два дублирующих position индекса с проверкой каталога и lock wait3s; UNIQUE DEFERRABLE/данные/RLS/API сохранены.
 Clean PostgreSQL17 chain/actor91/91, check2409/1159/build и WebKit3/3 passed; local:verify блокирован прежней Supabase-миграцией, baseline не сбрасывался. План: DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md; production API200 до выпуска.
 PR#1484 — диагностика runtime-пула; план design/DATABASE_POOL_DIAGNOSTICS_20261007.md. Агрегаты acquisition/queue/occupied/errors без PII/SQL; лимиты5/20, SESSION/scaling/RLS не меняются. Console readback7октября: runtime20/owner5, SESSION, API8/min1, dispatcher1. Targeted16/16, check frontend2477/policy/hosting115 passed; API compression test упёрся в timeout5s, весь API последовательно1186/1186+100 DB skipped прошёл без изменения assertions/timeout; builds passed. CI37602032366/be207ccc success, clean-chain/actor100/100. Ждёт раннего активного#1483, обновления от main/повторного CI; production ещё не выпущено. 3 API-пула + dispatcher могут занять20 без резерва; это риск, не доказанная причина502.
-
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 #1433: private Node.js22/128МБ/60s, часовой timer `/healthz`/`auth` на одном IP; без PII/чатов.
 Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned tag защищают переключение. Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана. Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap, functions.admin только на функцию и scoped invoker; deployer пока functions.editor. Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063, DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
-
 ## Ачивки — YAFIT-594
 План: design/ACHIEVEMENT_PROGRESS_STATES_20261004.md. #1425/#1427/#1428
 слиты: два состояния, отдельная полоска, сквозная приёмка 24→25 тренировок,
@@ -78,30 +50,23 @@ Assets/award logic сохранены; mobile WebKit/Chromium и CI/deployment/r
 Текущая UI-задача: согласованные тексты всех 15 наград «Регулярность», общая
 подсказка про разные дни и единицы прогресса. Правила награждения не меняются;
 план и приёмка: design/ACHIEVEMENT_REGULARITY_COPY_20261005.md.
-
 ## Выпуск клиентских исправлений — 2026-10-05
 Семь PR #1408/#1410/#1411/#1412/#1413/#1415/#1417 слиты после зелёного CI. #1426 дал каждому smoke-запросу отдельный 20-секундный таймер, сохранив проверки файлов и откат. Две выкладки 0ca85201 откатились на `/healthz`; причина сетевого таймаута не доказана. CI37237418210/deployment37238448692 выпустили 8fc46a31; readback37238977765 ACTIVE, warm37238988653 HTTP200. Затем выпущены достижения: frontend `6810452f`, CI37241760363, deployment37242590195 и readback37260193474 success/ACTIVE.
-
 Пилот клиентского Lime по-прежнему только `budoha1@yandex.ru`. Локальная регрессия416/416 WebKit/Chromium; Android debug run37232171038 success, iOS собран/установлен/запущен в симуляторе. Store-релиза и проверки диктовки на физическом устройстве не было; relay smoke её не заменяет.
-
 Acceptance: design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md; Lime identity/pilot сохранены. SpeechKit smoke `done` прошёл, старый recovery не относится к relay.
 Production browser ограничен без обхода; внешний YAFIT не настроен, чужие credentials не используются.
 ## Следующий персональный pilot — ссылки на функции в Assistant
-
 Пользователь разрешил реализацию, PR, слияние зелёного CI и production-выпуск только для native Yandex login `brainbuster98`. План и критерии: `docs/design/ASSISTANT_FEATURE_LINKS_PILOT_20261004.md`.
 Сервер отвечает на навигационные вопросы только reviewed internal link markers, frontend отклоняет внешние и неизвестные пути. Доступ требует одновременно environment switch и привязанный hash allowlist; старая FIT-сессия обновляется через защищённый `/auth/yandex/refresh-assistant` без предварительного выхода. До успешных CI, API/migration rollout и frontend activation задачу нельзя считать выпущенной.
-
 Исправление от 6 октября: в production Yandex-orchestrator запись тренировки
 целиком уходит на главный экран роли. Прямая диктовка больше не создаёт
 record-workout card в Assistant, старый активный черновик не восстанавливается и
 не блокирует программу.
-
 Следующее уточнение интерфейса от 6 октября: для feature-links pilot стартовый
 экран и ответ «что ты умеешь» показывают только фактические возможности —
 составление программы, навигацию по приложению и короткий разговор о фитнесе и
 спорте. Стартовые примеры: программа, прогресс, восстановление и возможности;
 запись тренировки обозначается как переход на главную.
-
 ## Постоянные границы
 Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17. Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
 Supabase — только legacy recovery/media/test, не fallback поверх новых Yandex writes.
