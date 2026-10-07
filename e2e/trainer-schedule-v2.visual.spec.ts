@@ -2455,6 +2455,7 @@ async function beginClientGesture(page: Page, surface: Locator, browserName: str
   const box = await surface.boundingBox()
   if (!box) throw new Error('Client surface is not visible')
   const from = { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
+  expect(await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), from)).toBe(true)
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
   if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
   else { await page.mouse.move(from.x, from.y); await page.mouse.down() }
@@ -2495,16 +2496,46 @@ async function openSwipeFixture(page: Page, fitLime: boolean, width = 390, theme
   return page.locator(`[data-client-swipe-id="${clientId}"]`)
 }
 
+async function expectSwipeActionReadable(row: Locator) {
+  const ratio = await row.locator('.client-swipe-actions').evaluate((rail) => {
+    const luminance = (value: string) => {
+      const channels = value.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(v => {
+        const channel = v / 255
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+      })
+      return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722
+    }
+    const foreground = luminance(getComputedStyle(rail.querySelector('button')!).color)
+    const background = luminance(getComputedStyle(rail).backgroundColor)
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+  })
+  expect(ratio).toBeGreaterThanOrEqual(4.5)
+}
+
 for (const [fitLime, width, theme] of [
   [false, 390, 'light'], [false, 430, 'dark'], [true, 390, 'dark'], [true, 430, 'dark'], [false, 1440, 'light'],
 ] as const) test(`Client full swipe archives without a click and persists ${fitLime ? 'Lime' : theme} ${width}`, async ({ page, browserName }, testInfo) => {
   const row = await openSwipeFixture(page, fitLime, width, theme)
   const commands: Array<{ archived: boolean; expectedVersion: number }> = []
   page.on('request', (request) => { if (new URL(request.url()).pathname === `/v1/clients/${clientId}/archive` && request.method() === 'PUT') commands.push(request.postDataJSON() as { archived: boolean; expectedVersion: number }) })
+  const short = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
+  await short.move(96)
+  await short.end()
+  const shortAction = row.getByRole('button', { name: 'В архив', exact: true })
+  await expect(shortAction.locator('[data-icon="archive"]')).toBeVisible()
+  await expect(shortAction).toHaveCSS('font-size', '14px')
+  await expectSwipeActionReadable(row)
+  await page.keyboard.press('Tab')
+  await shortAction.focus()
+  await expect(shortAction).toHaveCSS('outline-style', 'solid')
+  await page.screenshot({ path: testInfo.outputPath('full-swipe-short.png') })
+  await row.getByRole('button', { name: /Действия с клиентом/ }).click()
+  expect(commands).toHaveLength(0)
   const gesture = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
   await gesture.move(Math.min(280, gesture.width * 0.72))
   await expect(row).toHaveClass(/is-armed/)
   await expect(row.getByText('Отпустите — в архив')).toBeVisible()
+  await expectSwipeActionReadable(row)
   expect(commands).toHaveLength(0)
   await page.screenshot({ path: testInfo.outputPath('full-swipe-armed.png') })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -2512,6 +2543,11 @@ for (const [fitLime, width, theme] of [
   await expect(row).toHaveCount(0)
   await expect(page).toHaveURL(/\/clients$/)
   expect(commands).toEqual([{ archived: true, expectedVersion: 1 }])
+  const feedback = page.locator('.clients-archive-feedback')
+  await expect(feedback.locator('[data-icon="check"]')).toBeVisible()
+  expect((await feedback.getByRole('button', { name: 'Вернуть' }).boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  expect((await feedback.getByRole('button', { name: 'Закрыть сообщение' }).boundingBox())!.width).toBeGreaterThanOrEqual(44)
+  await page.screenshot({ path: testInfo.outputPath('full-swipe-success.png') })
   await page.getByRole('button', { name: 'Вернуть' }).click()
   await expect(row).toBeVisible()
   expect(commands).toEqual([{ archived: true, expectedVersion: 1 }, { archived: false, expectedVersion: 2 }])
@@ -2576,7 +2612,34 @@ for (const fitLime of [false, true]) test(`Client full swipe keeps short reverse
   expect(commands).toHaveLength(0)
 })
 
-test('Client full swipe has pending feedback, single request and a recoverable server error', async ({ page, browserName }) => {
+for (const fitLime of [false, true]) test(`Client full swipe presentation fits long names with reduced motion ${fitLime ? 'Lime' : 'ordinary'}`, async ({ page, browserName }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await openSwipeFixture(page, fitLime, 320)
+  // Search puts the target card above fixed navigation before trusted input.
+  await page.getByRole('searchbox', { name: 'Поиск клиента' }).fill('Александра')
+  await expect(page.locator('.client-swipe-row')).toHaveCount(1)
+  const row = page.locator('[data-client-swipe-id="10000000-0000-4000-8000-000000000025"]')
+  const surface = row.locator('.client-swipe-surface')
+  const gesture = await beginClientGesture(page, surface, browserName)
+  await gesture.move(gesture.width * 0.72)
+  await expect(row).toHaveClass(/is-armed/)
+  await expectSwipeActionReadable(row)
+  expect(parseFloat(await surface.evaluate((element) => getComputedStyle(element).transitionDuration))).toBeLessThan(0.01)
+  await gesture.end()
+  const feedback = page.locator('.clients-archive-feedback')
+  await expect(feedback).toContainText('Александра Константинопольская-Оченьдлиннаяфамилия')
+  await expect(feedback.getByRole('button', { name: 'Вернуть' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await feedback.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  const messageBox = await feedback.locator('span:not(.clients-archive-feedback-icon)').boundingBox()
+  const undoBox = await feedback.getByRole('button', { name: 'Вернуть' }).boundingBox()
+  expect(undoBox!.y).toBeGreaterThanOrEqual(messageBox!.y + messageBox!.height)
+  await page.screenshot({ path: testInfo.outputPath('full-swipe-long-name-success.png') })
+  await feedback.getByRole('button', { name: 'Вернуть' }).click()
+  await expect(row).toBeVisible()
+})
+
+test('Client full swipe has pending feedback, single request and a recoverable server error', async ({ page, browserName }, testInfo) => {
   const row = await openSwipeFixture(page, true)
   let release: () => void = () => undefined
   const gate = new Promise<void>((done) => { release = done })
@@ -2594,6 +2657,9 @@ test('Client full swipe has pending feedback, single request and a recoverable s
   await gesture.end()
   await expect(row).toHaveAttribute('aria-busy', 'true')
   await expect(row.getByRole('button', { name: 'Архивируем…' })).toBeDisabled()
+  await expect(row.getByRole('button', { name: 'Архивируем…' })).toHaveCSS('opacity', '1')
+  await expectSwipeActionReadable(row)
+  await page.screenshot({ path: testInfo.outputPath('full-swipe-pending.png') })
   const duplicate = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
   await duplicate.move(250)
   await duplicate.end()
