@@ -1,6 +1,6 @@
 import { generateProgramOnce, programGenerationKey, supabaseProgramGenerationJobs } from './program/job.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.js'
+import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
 import { isProgramEnabled } from './program/model.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn, reusableProgramContinuation } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
@@ -13,7 +13,6 @@ import {
   type AssistantTurnRequest,
 } from '../assistant-state-request.js'
 
-const completionUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
 const releaseSha = process.env.RELEASE_SHA?.trim() || 'unknown'
 const assistantSystemPrompt = 'Ты безопасный ассистент фитнес-приложения. Не ставь диагнозов и не давай опасных рекомендаций. Любое write-действие только как предложенная карточка с подтверждением; никогда не утверждай, что данные уже сохранены.'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -54,21 +53,6 @@ function required(name: string): string {
   const value = process.env[name]?.trim()
   if (!value) throw new HttpError(503, 'service_unavailable')
   return value
-}
-
-async function yandexIamToken(): Promise<string> {
-  let response: Response
-  try {
-    response = await fetch('http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token', {
-      headers: { 'Metadata-Flavor': 'Google' },
-    })
-  } catch {
-    throw new HttpError(503, 'orchestrator_auth_unavailable')
-  }
-  if (!response.ok) throw new HttpError(503, 'orchestrator_auth_unavailable')
-  const body = await response.json() as { access_token?: unknown }
-  if (typeof body.access_token !== 'string' || !body.access_token) throw new HttpError(503, 'orchestrator_auth_unavailable')
-  return body.access_token
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -747,37 +731,17 @@ export function assistantModelMessages(prompt: string): Array<{ role: 'system' |
 export async function completeAssistantSmallTalk(
   message: string,
   history: readonly { author: string; content: string }[],
-  options: { invocationId?: string | null; monitoringToken?: string | null; functionName?: string } = {},
+  options: { invocationId?: string | null } = {},
 ): Promise<AssistantTurnResponse> {
   const invocationId = options.invocationId ?? null
-  const monitoringToken = options.monitoringToken ?? null
-  const functionName = options.functionName ?? 'fit-assistant-orchestrator'
   let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(message), action: null }
   try {
-    const iamToken = await yandexIamToken()
-    const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
-    const response = await fetch(completionUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
-      body: JSON.stringify({
-        modelUri,
-        completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' },
-        jsonSchema: { schema: smallTalkSchema },
-        messages: assistantModelMessages(assistantSmallTalkPrompt(history, usesInformalAddress(message))),
-      }),
-    })
-    if (!response.ok) {
-      await reportAiStudioMetric({ functionName, modelUri, invocationId, iamToken: monitoringToken, upstreamRequestId: response.headers.get('x-request-id'), usage: null })
-      throw new Error(`small_talk_http_${response.status}`)
-    }
-    let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
-    try {
-      payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
-    } catch {
-      await reportAiStudioMetric({ functionName, modelUri, invocationId, iamToken: monitoringToken, upstreamRequestId: response.headers.get('x-request-id'), usage: null })
-      throw new Error('small_talk_invalid_json')
-    }
-    await reportAiStudioMetric({ functionName, modelUri, invocationId, iamToken: monitoringToken, upstreamRequestId: response.headers.get('x-request-id'), usage: aiStudioUsage(payload.result?.usage) })
+    const gateway = await invokeYandexLlmCompletion({
+      completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' },
+      jsonSchema: { schema: smallTalkSchema },
+      messages: assistantModelMessages(assistantSmallTalkPrompt(history, usesInformalAddress(message))),
+    }, 90_000)
+    const payload = gateway.payload as { result?: { alternatives?: Array<{ message?: { text?: string } }> } }
     const raw = JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? '') as unknown
     const modelResult = validateEnabledAssistantTurnResponse(raw)
     if (!modelResult || modelResult.action !== null) throw new Error('small_talk_invalid_response')
@@ -828,7 +792,6 @@ export async function runAssistantTurn(
   authorization: string,
   command: AssistantTurnRequest,
   invocationId: string | null = null,
-  monitoringToken: string | null = null,
 ): Promise<AssistantTurnResponse> {
   const actorClient = createClient(required('SUPABASE_URL'), required('SUPABASE_PUBLISHABLE_KEY'), { global: { headers: { Authorization: authorization } } })
   const { data: { user } } = await actorClient.auth.getUser()
@@ -960,7 +923,6 @@ export async function runAssistantTurn(
   }
   const result = await completeAssistantSmallTalk(command.message, history, {
     invocationId: invocationId ?? turnId,
-    monitoringToken,
   })
   console.info('assistant_small_talk_reply_persisted', { operationId: turnId, releaseSha })
   return persistAssistantResponse(service, command.conversationId, turnId, result)
@@ -978,7 +940,6 @@ export async function assistantOrchestrator(request: Request): Promise<Response>
       authorization,
       command,
       request.headers.get('x-yc-request-id'),
-      request.headers.get('x-yc-iam-token'),
     )
     console.info('assistant_orchestrator_succeeded', { operationId: command.turnId ?? 'generated', releaseSha, hasAction: result.action !== null })
     return Response.json(result)

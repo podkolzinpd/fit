@@ -395,7 +395,7 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
       response = workoutDraft ?? await completeAssistantSmallTalk(
         command.message,
         [...history].reverse().map(({ author, content }) => ({ author, content })),
-        { invocationId: turnId, functionName: 'fit-stage-api' },
+        { invocationId: turnId },
       )
     }
 

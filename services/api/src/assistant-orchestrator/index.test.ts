@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
+vi.mock('../yandex-llm-function-client.js', () => ({
+  invokeYandexLlmCompletion: vi.fn(),
+}))
 import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, loadAssistantClientContext, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
+import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
 
 describe('assistant orchestrator contract', () => {
   it('sends one bounded user prompt after the system message', () => {
@@ -69,13 +73,10 @@ describe('assistant orchestrator contract', () => {
   })
 
   it('uses the conversational model for an ordinary chat turn and keeps it action-free', async () => {
-    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'folder')
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'token' })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        result: { alternatives: [{ message: { text: JSON.stringify({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null }) } }] },
-      })))
-    vi.stubGlobal('fetch', fetchMock)
+    vi.mocked(invokeYandexLlmCompletion).mockResolvedValueOnce({
+      payload: { result: { alternatives: [{ message: { text: JSON.stringify({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null }) } }] } },
+      requestId: 'request-id',
+    })
 
     await expect(completeAssistantSmallTalk('Какие рекомендации по питанию?', [
       { author: 'user', content: 'Мой рост 143 см, вес 120 кг.' },
@@ -83,9 +84,11 @@ describe('assistant orchestrator contract', () => {
       { author: 'user', content: 'Какие рекомендации по питанию?' },
     ]))
       .resolves.toEqual({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    vi.unstubAllGlobals()
-    vi.unstubAllEnvs()
+    expect(invokeYandexLlmCompletion).toHaveBeenCalledOnce()
+    expect(invokeYandexLlmCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({ completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' } }),
+      90_000,
+    )
   })
 
   it('recognizes summary requests, periods and informal address deterministically', () => {
