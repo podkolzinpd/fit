@@ -21,7 +21,7 @@ import { generateProgramOnce, programGenerationKey, type ProgramGenerationJobSta
 import { isProgramEnabled } from './assistant-orchestrator/program/model.js'
 import { loadDatabaseProgramContext } from './assistant-orchestrator/program/source.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn, reusableProgramContinuation } from './assistant-orchestrator/program/turn.js'
-import { latestActiveAssistantTool, routedAssistantTurn } from './assistant-orchestrator/router.js'
+import { isAssistantChatPrompt, latestActiveAssistantTool, routedAssistantTurn } from './assistant-orchestrator/router.js'
 import { assistantNavigationTurn, assistantWorkoutEntryTurn } from './assistant-orchestrator/navigation.js'
 import {
   type AssistantTurnRequest,
@@ -323,7 +323,7 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
         reply: assistantCapabilitiesReply({ programEnabled, navigationEnabled: actor.assistant_feature_links }),
         action: null,
       }
-    } else if (programEnabled) {
+    } else if (programEnabled && !isAssistantChatPrompt(command.message, reusableProgram ?? routedActive)) {
       response = await routedAssistantTurn({
         message: command.message,
         history: [...history].reverse().map(({ author, content }) => ({ author, content })),
