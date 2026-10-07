@@ -109,3 +109,5 @@ Foundation PR1498 уже слит c465ca9f: migration137 и API b51c7d859c9fac06
 Целевые проверки: theme/AppLayout/scope66/66; helper/client workflow6/6; WebKit/Chromium390/430 и server admission/rollback8/8. Скриншоты: artifacts/lime-global-activation-20261007/after-theme; baseline2/2. Проверки UI выполнены на synthetic identities, не выданы за production OAuth. Полный check/CI, выпуск workflow/frontend, production inspect/client all/readback и непилотная сессия остаются гейтами перед trainer all.
 
 Полный npm run check на обновлённой клиентской ветке завершился exit0: frontend2518, API1231 (127 DB отдельно/skipped), lint/typecheck/policy/hosting/build passed. Скриншоты dark390/light430 просмотрены; повторный browser harness использует разрешённый путь переиспользуемых зависимостей, без font403. Production client all ещё не запускался.
+
+Фактическая база PR1500 — main a03901d2 (включает опубликованные #1504/#1505 после #1498); полный check2518/API1231 и browser8 выполнены на этой базе. Старые pilot-only описания остаются историей, новое прямое разрешение от владельца действует для client all → trainer/schedule all.
