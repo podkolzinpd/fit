@@ -182,7 +182,7 @@ export function WorkoutCompletionReport({
   async function shareResult() {
     setShareState('sharing')
     try {
-      const result = await shareWorkoutSummary(shareSummary, shareVariant)
+      const result = await shareWorkoutSummary(shareSummary, shareVariant, { clientLime })
       setShareState(result === 'cancelled' ? 'idle' : result)
       if (result !== 'cancelled') setShareOpen(false)
     } catch {

@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
@@ -5043,3 +5044,75 @@ for(const theme of ['light','dark'])for(const width of [390,430])test(`Client Li
  await page.screenshot({path:testInfo.outputPath(`short-home-actions-${theme}-${width}.png`)});
  await page.locator('.client-home-past-plan > a').click();await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`));
 });
+
+for (const theme of ['light', 'dark'] as const) test(`Client Lime exported PNG follows ${theme} identity in every variant`, async ({ page }, testInfo) => {
+  type Paint = { text: string; font: string; left: number; right: number; top: number; bottom: number }
+  type ShareAudit = Window & { limeShared?: File; limePaint?: Paint[] }
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await page.addInitScript(() => {
+    const audit = window as ShareAudit
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- replayed with the original canvas receiver below
+    const original = CanvasRenderingContext2D.prototype.fillText
+    audit.limePaint = []
+    CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+      const measured = this.measureText(text)
+      const left = this.textAlign === 'right' ? x - measured.width : x
+      audit.limePaint!.push({ text, font: this.font, left, right: left + measured.width, top: y - measured.actualBoundingBoxAscent, bottom: y + measured.actualBoundingBoxDescent })
+      if (maxWidth === undefined) original.call(this, text, x, y)
+      else original.call(this, text, x, y, maxWidth)
+    }
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true })
+    Object.defineProperty(navigator, 'share', { configurable: true, value: (data: ShareData) => { audit.limeShared = data.files?.[0]; return Promise.resolve() } })
+  })
+  const exercise: WorkoutExercise = { id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: 'fedb-barbell-squat', name: 'Приседания со штангой и очень длинным названием упражнения', muscleGroup: 'legs', inputKind: 'strength', position: 0, blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0, sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, reps: 10, weightKg: 20, fact: {}, confirmedAt: null, version: 1 }] }
+  const previous = { ...workout, id: '10000000-0000-4000-8000-000000000083', workoutDate: '2026-09-20', status: 'done', completedAt: '2026-09-20T10:00:00Z', exercises: [{ ...exercise, sets: [{ ...exercise.sets[0]!, weightKg: 10, fact: { reps: 10, weightKg: 10 }, confirmedAt: '2026-09-20T10:00:00Z' }] }] }
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, actualDurationSec: 3600, activeCaloriesKcal: 210, exercises: [exercise] }, previous] })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem('fit.clientLime.theme.' + id, theme), { id: clientId, theme })
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  const finish = page.getByRole('button', { name: 'Завершить', exact: true })
+  if (await finish.isVisible()) await finish.click()
+  await expect(page.getByRole('region', { name: 'Тренировка завершена', exact: true })).toBeVisible()
+  for (const [variant, label] of [['summary', 'Итог'], ['achievement', 'Достижение'], ['progress', 'Прогресс']] as const) {
+    await page.getByRole('button', { name: 'Поделиться', exact: true }).click()
+    const option = page.getByRole('radio', { name: new RegExp('^' + label) })
+    await expect(option).toBeEnabled()
+    await option.click()
+    await page.evaluate(() => { const audit = window as ShareAudit; audit.limeShared = undefined; audit.limePaint = [] })
+    await page.getByRole('button', { name: 'Поделиться карточкой', exact: true }).click()
+    await page.waitForFunction(() => Boolean((window as ShareAudit).limeShared))
+    const result = await page.evaluate(async () => {
+      const audit = window as ShareAudit
+      const file = audit.limeShared!
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      let binary = ''
+      for (const byte of bytes) binary += String.fromCharCode(byte)
+      const image = await createImageBitmap(file)
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
+      const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0)
+      const hasInk = (left: number, top: number, width: number, height: number) => {
+        const pixels = context.getImageData(left, top, width, height).data
+        const paper = context.getImageData(0, 0, 1, 1).data
+        for (let i = 0; i < pixels.length; i += 4) if (Math.abs(pixels[i]! - paper[0]!) + Math.abs(pixels[i + 1]! - paper[1]!) + Math.abs(pixels[i + 2]! - paper[2]!) > 80) return true
+        return false
+      }
+      return { ink: { brand: hasInk(80, 65, 150, 55), date: hasInk(650, 65, 350, 55), footer: hasInk(80, 1210, 400, 70) }, base64: btoa(binary), name: file.name, width: image.width, height: image.height, paper: Array.from(context.getImageData(0, 0, 1, 1).data), painted: audit.limePaint! }
+    })
+    expect(result.ink).toEqual({ brand: true, date: true, footer: true })
+    expect(result.name).toBe(`fit-workout-${variant}.png`)
+    expect([result.width, result.height]).toEqual([1080, 1350])
+    expect(result.paper).toEqual(theme === 'dark' ? [0, 0, 0, 255] : [246, 247, 242, 255])
+    expect(result.painted.every((paint) => !paint.font.includes('Onest'))).toBe(true)
+    expect(result.painted.every((paint) => paint.left >= 0 && paint.right <= 1080 && paint.top >= 0 && paint.bottom <= 1350)).toBe(true)
+    expect(result.painted.some((paint) => paint.font.includes('YS Geo'))).toBe(true)
+    if (variant === 'summary') {
+      expect(result.painted.some((paint) => paint.text === '≈ 210 ккал')).toBe(true)
+      expect(result.painted.some((paint) => paint.text === '1 ч 00 мин')).toBe(true)
+    }
+    if (variant === 'progress') expect(result.painted.some((paint) => paint.font.includes('REM'))).toBe(true)
+    await writeFile(testInfo.outputPath(`client-lime-${variant}-${theme}.png`), Buffer.from(result.base64, 'base64'))
+    await writeFile(testInfo.outputPath(`client-lime-${variant}-${theme}.json`), JSON.stringify(result.painted, null, 2))
+  }
+})
