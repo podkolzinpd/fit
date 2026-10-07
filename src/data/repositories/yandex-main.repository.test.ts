@@ -87,6 +87,40 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('deletes only the selected goal stage with its displayed version and no prerequisite reads', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url, init) => {
+      if (url === `${apiBaseUrl}/health`) return Promise.resolve(jsonResponse({ status: 'ok' }))
+      if (url === `${apiBaseUrl}/v1/goal-stages/${stageId}` && init?.method === 'DELETE') return Promise.resolve(emptyResponse())
+      throw new Error('Client overview and unrelated client progress are unavailable')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await repository.goals.deleteStage({ id: stageId, version: 7 })
+    const writes = fetchMock.mock.calls.filter(([url]) => url !== `${apiBaseUrl}/health`)
+    expect(writes).toHaveLength(1)
+    expect(writes[0]?.[1]).toMatchObject({
+      method: 'DELETE', body: JSON.stringify({ expectedVersion: 7 }),
+      headers: { 'x-fit-session': sessionToken },
+    })
+  })
+
+  it.each([
+    [409, 'stage_conflict', 'PT409'],
+    [403, 'forbidden', 'PT403'],
+    [404, 'not_found', 'PT404'],
+  ])('propagates stage deletion HTTP %i without refreshing or retrying the version', async (status, error, code) => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) => Promise.resolve(
+      url === `${apiBaseUrl}/health` ? jsonResponse({ status: 'ok' }) : jsonResponse({ error }, status),
+    ))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.goals.deleteStage({ id: stageId, version: 7 })).rejects.toMatchObject({ code })
+    const writes = fetchMock.mock.calls.filter(([url]) => url !== `${apiBaseUrl}/health`)
+    expect(writes).toHaveLength(1)
+    expect(writes[0]?.[0]).toBe(`${apiBaseUrl}/v1/goal-stages/${stageId}`)
+    expect(writes[0]?.[1]?.body).toBe(JSON.stringify({ expectedVersion: 7 }))
+  })
+
   it('reads records of an old workout in one request without the first Progress page', async () => {
     const records = [{ exerciseRef: 'squat', exerciseName: 'Приседание', inputKind: 'strength',
       metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 }]
@@ -817,7 +851,7 @@ describe('Yandex main repository', () => {
     await repository.goals.archive(goalId, 1)
     await repository.goals.saveStage(stageDraft())
     await repository.goals.saveStage({ ...stageDraft(), id: stageId, version: 1 })
-    await repository.goals.deleteStage(stageId)
+    await repository.goals.deleteStage({ id: stageId, version: 1 })
 
     expect(fetchMock).toHaveBeenCalled()
   })

@@ -8315,6 +8315,63 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    describe('selected goal stage deletion ownership and version', () => {
+      let clientId: string
+      let stageId: string
+      let siblingId: string
+
+      beforeEach(async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+        const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) => createClientCard(client, {
+          fullName: 'Synthetic stage client', gender: null, ageYears: null, ageUpdatedAt: null,
+          heightCm: null, goal: null, note: null,
+        }))
+        clientId = created.id
+        const goalId = randomUUID()
+        stageId = randomUUID()
+        siblingId = randomUUID()
+        await ownerPool.query(`insert into public.client_goals (id, client_id, trainer_id, created_by, title)
+          values ($1, $2, $3, $3, 'Synthetic goal')`, [goalId, clientId, ACTOR_ID])
+        await ownerPool.query(`insert into public.goal_stages
+          (id, goal_id, client_id, trainer_id, created_by, title, starts_on, ends_on, position, version)
+          values ($1, $3, $4, $5, $5, 'Selected stage', '2026-10-01', '2026-10-31', 0, 7),
+                 ($2, $3, $4, $5, $5, 'Sibling stage', '2026-11-01', '2026-11-30', 1, 1)`,
+        [stageId, siblingId, goalId, clientId, ACTOR_ID])
+      })
+
+      afterEach(async () => { await ownerPool?.query('delete from public.clients where id = $1', [clientId]) })
+
+      it('removes only the owned selected version and leaves the sibling intact', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query('select public.delete_goal_stage($1, $2)', [stageId, 7]))
+        const remaining = await ownerPool.query<{ id: string }>('select id from public.goal_stages where client_id = $1', [clientId])
+        expect(remaining.rows).toEqual([{ id: siblingId }])
+      })
+
+      it('preserves a newer stage when deletion uses its previously displayed version', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+        await ownerPool.query("update public.goal_stages set version = 8, title = 'Changed stage' where id = $1", [stageId])
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query('select public.delete_goal_stage($1, $2)', [stageId, 7])))
+          .rejects.toMatchObject({ code: 'PT409', message: 'stage_conflict' })
+        const remaining = await ownerPool.query<{ title: string; version: string }>('select title, version from public.goal_stages where id = $1', [stageId])
+        expect(remaining.rows).toEqual([{ title: 'Changed stage', version: '8' }])
+      })
+
+      it('denies cross-tenant deletion even when the exact version is supplied', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) => client.query('select public.delete_goal_stage($1, $2)', [stageId, 7])))
+          .rejects.toMatchObject({ code: 'PT409', message: 'stage_conflict' })
+        const remaining = await ownerPool.query<{ id: string }>('select id from public.goal_stages where id = $1', [stageId])
+        expect(remaining.rows).toEqual([{ id: stageId }])
+      })
+
+      it('does not report successful deletion for a missing stage', async () => {
+        if (runtimePool === undefined) throw new Error('Database pool is not ready')
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query('select public.delete_goal_stage($1, $2)', [randomUUID(), 7])))
+          .rejects.toMatchObject({ code: 'PT409', message: 'stage_conflict' })
+      })
+    })
+
     it('keeps progress and goals author-scoped while sharing confirmed derived facts', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
