@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
+import type { DatabaseClient } from './types.js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
@@ -35,6 +36,7 @@ import {
 } from '../push-dispatcher-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
+import { readAccessibleChatThreads } from '../pilot-chat.js'
 import {
   claimClientInvitation,
   claimClientInvitationLink,
@@ -1313,6 +1315,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       } finally {
         await connection.query('rollback')
         connection.release()
+      }
+    })
+
+    it('uses published trainer identity consistently in connections and chat without exposing drafts', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const db = await ownerPool.connect()
+      const trainerId = randomUUID()
+      const secondTrainerId = randomUUID()
+      const clientUserId = randomUUID()
+      const clientId = randomUUID()
+      const reader: DatabaseClient = { query: async <Row extends QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+        (await db.query<Row>(sql, values ? [...values] : undefined)).rows }
+      try {
+        await db.query('begin')
+        await db.query(`insert into public.profiles(id, first_name, account_role)
+          values($1,null,'trainer'),($2,'Анна','trainer'),($3,'Synthetic athlete','client')`, [trainerId, secondTrainerId, clientUserId])
+        await db.query('insert into public.trainers(profile_id) values($1),($2)', [trainerId, secondTrainerId])
+        await db.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name)
+          values($1,$2,$3,'Synthetic trainer name test')`, [clientId, trainerId, clientUserId])
+        await db.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [clientId, secondTrainerId])
+        await db.query(`insert into public.trainer_professional_profiles(trainer_id,draft_data,published_data,published_at)
+          values($1,'{"displayName":"Private draft name"}','{"displayName":"Татьяна"}',now()),
+          ($2,'{"displayName":"Private unpublished name"}',null,null)`, [trainerId, secondTrainerId])
+        await db.query('set local role fit_api')
+        const actor = (id: string) => db.query("select set_config('request.jwt.claim.sub',$1,true)", [id])
+        const names = async () => {
+          const connections = await readAccessibleConnections(reader)
+          const threads = await readAccessibleChatThreads(reader)
+          return { card: connections.memberships.find(row => row.trainerId === trainerId)?.displayName,
+            chat: threads.find(row => row.trainerId === trainerId)?.partnerName,
+            secondCard: connections.memberships.find(row => row.trainerId === secondTrainerId)?.displayName,
+            secondChat: threads.find(row => row.trainerId === secondTrainerId)?.partnerName }
+        }
+        await actor(clientUserId)
+        expect(await names()).toEqual({ card: 'Татьяна', chat: 'Татьяна', secondCard: 'Анна', secondChat: 'Анна' })
+        expect((await db.query('select trainer_id from public.trainer_professional_profiles where trainer_id=$1', [secondTrainerId])).rows).toEqual([])
+        await actor(trainerId)
+        await db.query(`update public.trainer_professional_profiles set draft_data='{"displayName":"Changed private name"}' where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect((await names()).card).toBe('Татьяна')
+        await actor(trainerId)
+        await db.query(`update public.trainer_professional_profiles set published_data='{"displayName":"Татьяна Александровна"}' where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect(await names()).toMatchObject({ card: 'Татьяна Александровна', chat: 'Татьяна Александровна' })
+        await actor(trainerId)
+        expect((await readAccessibleChatThreads(reader)).find(row => row.clientId === clientId)?.partnerName).toBe('Synthetic athlete')
+        await db.query(`update public.trainer_professional_profiles set published_data=null, published_at=null where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect(await names()).toMatchObject({ card: 'Тренер', chat: 'Тренер' })
+      } finally {
+        await db.query('rollback')
+        db.release()
       }
     })
 
