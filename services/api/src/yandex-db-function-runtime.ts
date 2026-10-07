@@ -11,7 +11,7 @@ export function yandexDatabasePool(): DatabasePool | undefined {
   if (pool !== undefined) return pool
   const config = buildDatabaseConnectionConfig('DATABASE')
   if (config === undefined) return undefined
-  pool = new PgDatabasePool(config)
+  pool = new PgDatabasePool(config, 'function')
   return pool
 }
 

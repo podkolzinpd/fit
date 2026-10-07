@@ -98,7 +98,7 @@ const privateFeaturePool = pilotEnrollmentEnabled
   || stageTenantMigrationEnabled
   || stageRolloutAssignmentsEnabled
   || yandexIdentityUnlinkEnabled
-  ? new PgDatabasePool(databaseConfig)
+  ? new PgDatabasePool(databaseConfig, 'migration-owner')
   : undefined
 const runtimeDatabaseConfig = stageRuntimeDatabasePreflightEnabled
   ? buildDatabaseConnectionConfig('DATABASE')
@@ -108,7 +108,7 @@ if (stageRuntimeDatabasePreflightEnabled && runtimeDatabaseConfig === undefined)
 }
 const runtimeDatabasePool = runtimeDatabaseConfig === undefined
   ? undefined
-  : new PgDatabasePool(runtimeDatabaseConfig)
+  : new PgDatabasePool(runtimeDatabaseConfig, 'migration-runtime')
 const runtimeClientsReader = runtimeDatabasePool === undefined
   ? undefined
   : new DatabasePilotClientsReader(runtimeDatabasePool)

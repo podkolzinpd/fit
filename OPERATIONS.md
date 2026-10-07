@@ -55,6 +55,60 @@ error/client, SQL, параметров, адреса БД и credentials. За�
 автоматически не повторяются. `/health` и `/internal/warmup` не проверяют БД;
 успешный health soak не доказывает восстановление PostgreSQL после разрыва.
 
+### Диагностика и бюджет PostgreSQL-пула
+
+`PgDatabasePool` пишет JSON `database_pool_window` в stdout (INFO) или stderr
+(WARN при ошибках). `poolRole`: `api`, `dispatcher`, `migration-owner`,
+`migration-runtime`, `function` либо `unspecified` для других consumers.
+Это **агрегат одного пула одного процесса**, не общая метрика кластера.
+Нет SQL/параметров/строк error.message/host/credentials/actor/request IDs.
+
+- `poolMax`, `total`, `idle`, `occupied=total-idle`, `waiting` — snapshot драйвера.
+  Occupied включает создаваемые соединения, не только выполняющиеся запросы.
+- `totalMax`, `occupiedMax`, `waitingMax` — максимумы **наблюдённых** snapshots
+  перед/после connect, постановки в очередь и release; это не непрерывный sampler.
+- `acquired`, `acquireTotalMs`, `acquireMaxMs` — успешные получения соединения.
+  Duration включает очередь **и** создание TCP/TLS/DB соединения; это не чистый
+  queue-wait и не время SQL. Среднее = total/count; percentile не вычисляется.
+- `acquireErrors`, `capacityErrors` (число `53300`), `failedAcquireMaxMs`, `idleErrors` и последний безопасный
+  `databaseErrorCode`/`databaseErrorCategory` — ошибки окна. `53300` помечается
+  `capacity`; ошибки pg без безопасного `.code`, включая некоторые acquisition
+  timeouts, остаются `unknown`, без разбора/логирования текста ошибки.
+
+Окно публикуется на первом завершённом connect/error, далее на следующем connect/error
+после 60 секунд, плюс первая ошибка не чаще раза в 60 секунд и остаток при
+штатном `end()`. Нет interval/background timer: в простое записей нет, процесс
+не удерживается активным. Окна могут быть длиннее минуты; счётчики обнуляются
+после публикации. Краш может потерять последнее незавершённое окно. Существующий
+`database_pool_idle_error` остаётся немедленным на каждую idle-ошибку. Ошибка
+connect пробрасывается без замены и без retry; release не меняется.
+
+Конфигурация в репозитории: pool max=5 на процесс, idle timeout=10s, acquisition
+timeout=5s. API и dispatcher используют один runtime DB-пользователь с
+`conn_limit=20`, mode=SESSION, один primary host; owner имеет отдельный лимит5.
+API concurrency=8, dispatcher concurrency=1 — **не** лимиты числа экземпляров.
+Production workflow задаёт API min_instances=1; минимум также не является cap.
+Пулы ленивые, так что max — верхняя граница, а не постоянное число соединений.
+
+Верхняя граница runtime-бюджета при действующих defaults:
+`5 × live API processes + 5 × live dispatcher processes + runtime preflight/other runtime clients ≤ 20`,
+с дополнительным запасом для перекрытия старой/новой ревизий. Три API-процесса
+и один dispatcher уже могут занять все20; четыре API — без запаса dispatcher.
+Migration runner runtime preflight тоже относится к этому пользователю,
+owner-пул — нет. Сейчас `yandexDatabasePool()` не вызывается функциями; если
+его подключат, такой consumer тоже войдёт в runtime-бюджет.
+
+После deployment проверять в Cloud Logging окна API и dispatcher, особенно
+`waitingMax>0`, рост acquisition duration и `53300`; сопоставлять с Managed
+PostgreSQL Monitoring connections по runtime-пользователю/host и числом живых
+экземпляров/ревизий обоих контейнеров. Snapshot нескольких пулов не заменяет
+общую DB-метрику. Проверить реальную cloud-конфигурацию на drift, overlap при
+выкладке и запас до20. Не увеличивать лимит по одному 502 или числу пользователей:
+эта правка собирает доказательства, не доказывает прежнюю причину 502.
+
+Источники: [node-postgres pool API](https://node-postgres.com/apis/pool),
+[Yandex SESSION conn_limit](https://yandex.cloud/ru/docs/troubleshooting/managed-postgresql/how-to/conn-limit-parameter).
+
 ## Проверка доступности Yandex API после deployment
 
 `.github/workflows/deploy-yandex-stage.yml` проверяет обновлённую ревизию в два
