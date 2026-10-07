@@ -5,6 +5,11 @@ ID при повторе, Yandex migration134 принимает только т
 сохранения без обхода версии; черновик изолирован по аккаунту/шаблону/основе.
 План и ограничения остальных проверок: `docs/design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md`.
 
+Выбранный тренер: Yandex migration135 переносит прежний targeted disconnect
+контракт — закрывает active relationship и membership атомарно, сохраняя
+других тренеров, историю и legacy guard. Приёмка:
+`docs/design/SELECTED_TRAINER_DISCONNECT_20261007.md`, GitHub#1492 пункт6.
+
 Workout aggregate: Yandex migration125 удаляет только дубли индексов позиций;
 UNIQUE DEFERRABLE, чтение, перестановка и actor/RLS сохраняются. Приёмка:
 `docs/design/DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md`.

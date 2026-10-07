@@ -2,11 +2,15 @@
 
 ## Надёжность шаблонов и функциональная приёмка — 2026-10-07
 
-GitHub#1492, PR#1494, план design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md. Пункты1–2: migration134/стабильный ID, точный replay без дублей и обхода ownership/version, account/context-scoped черновик и защита от старого pending save. После #1493/main25c046b2 повторены clean-chain132→134/actor111, check2512frontend/1202API/build, template WebKit4/4, DB cross-role16, exact Down→Up134/grants и real old/Lime API/DB/browser2×15 — passed; исходная полная WebKit359/359. CI37631291854/f2bfda08 зелёный; свежий обязательный CI обновлённой ветки перед merge выполняется. local:verify ограничен прежним drift112, общая база сохранена. Быстрый старт не меняется; полный план3–10 не закрыт. Подтверждённый дефект отключения современной связи исправлен отдельно в#1497/135; real OAuth/AI/voice/Health/devices/payments не подменяются fixtures.
+GitHub#1492, PR#1494 слит70708ef8 после свежего CI37643415295/225ea9d4 и Android37643415198 success; план design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md. Пункты1–2: migration134/стабильный ID, точный replay без дублей и обхода ownership/version, account/context-scoped черновик и защита от старого pending save. После #1493/main25c046b2 повторены clean-chain132→134/actor111, check2512frontend/1202API/build, template WebKit4/4, DB cross-role16, exact Down→Up134/grants и real old/Lime API/DB/browser2×15 — passed; исходная полная WebKit359/359. Production70708ef8 API37646348676/mainCI37646348715 выполняется. local:verify ограничен прежним drift112, общая база сохранена. Быстрый старт не меняется; полный план3–10 не закрыт. Отключение современной связи — отдельный#1497/135; real OAuth/AI/voice/Health/devices/payments не подменяются fixtures.
 
 ## Live: таймер фаз и ранний старт будущего плана — 2026-10-07
 
 План: `design/live-phase-timer.md`, выпуск разрешён владельцем после локальной проверки. Одна кнопка таймера ведёт подготовку → подход по плановому времени → отдых; `workouts.prep_seconds` (migration132, ключ не пришёл — значение сохраняется). migration133 расширяет триггер 000120 вне пилота Lime только для будущих дат: старт Live переносит план на фактический день клиента, `planned_*` хранит исходный план; прошедшие даты вне пилота не меняются. Тест «Контроль без флага» переписан под новое правило. Supabase не менялся. Проверено: clean PostgreSQL17 chain/actor100/100, frontend unit817/817, Yandex repository47/47; UI сценарий — локально в браузере (dev-сборка на Supabase, без prep_seconds в legacy-схеме). Production ещё не подтверждён.
+
+## Отключение выбранного тренера — 2026-10-07
+
+GitHub#1492 пункт6, план design/SELECTED_TRAINER_DISCONNECT_20261007.md. Реальный API/DB/browser воспроизвёл204/успех с оставшейся active relationship: прежний Yandex writer удалял только membership. Migration135 закрывает обе формы доступа атомарно; чужие акторы/legacy trainer-owned guard/другие тренеры/история сохранены. После #1493/#1494/main70708ef8 повторены fresh clean-chain132→135/actor116, real old/Lime UI/API/DB2×18, exact Down→Up135 и полный check2512/1202/build — passed. Первый CI37638048028/31686ab3 зелёный; свежий CI перед merge повторяется. Ждёт более ранние#1495/#1496 и последующее обновление от main; production не подтверждён.
 
 ## Фоновая очистка app-сессий — 2026-10-07
 
@@ -66,9 +70,6 @@ Manual inspect, enable требует согласования стоимост�
 Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap, functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
 Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063, DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
-## Клиентский Lime — визуальный выпуск завершён
-Владелец продукта 5 октября разрешил реализацию, PR и production-выкладку всей серии. Принятый план: `docs/design/CLIENT_LIME_VISUAL_COMPLETION_20261005.md`. Исправляются оставшиеся визуальные дефекты уже выпущенного пилота только для `budoha1@yandex.ru`; действующие сценарии и тренерский UI сохраняются. PR #1435–#1445 слиты в `main` после зелёных CI: общие действия и отступы навигации, списки плана и истории, обычный Live, круги, завершение, создание, кабинет и календарь, прогресс, профиль, чат и ассистент. При последовательном переносе каждый PR сохранял только свою правку; тренерский UI, голосовой поток и серверные контракты не менялись. В CI учтён существующий флаг программы ассистента; длинный тренерский маршрутный тест отдельно разделён в PR #1433. PR #1445 добавил сквозные проверки свободного места над нижней навигацией после завершения и в истории; PR #1452 увеличил лимит CI для полного WebKit прогона. Локально 102/102 Client Lime сценариев на WebKit/Chromium и полный `npm run check` прошли. CI итогового `main` прошёл (37376020377); актуальный CI 37378543406 и production deployment 37380030323 подтвердили выпуск `7eb6c56f`: 206 объектов, активацию, smoke и readback. Визуальная матрица и ограничение ручной проверки на физическом iPhone записаны в `docs/design/CLIENT_LIME_RELEASE_ACCEPTANCE_20261005.md`.
-
 ## Ачивки — YAFIT-594
 План: design/ACHIEVEMENT_PROGRESS_STATES_20261004.md. #1425/#1427/#1428
 слиты: два состояния, отдельная полоска, сквозная приёмка 24→25 тренировок,
@@ -81,8 +82,7 @@ Assets/award logic сохранены; mobile WebKit/Chromium и CI/deployment/r
 ## Выпуск клиентских исправлений — 2026-10-05
 Семь PR #1408/#1410/#1411/#1412/#1413/#1415/#1417 слиты после зелёного CI. #1426 дал каждому smoke-запросу отдельный 20-секундный таймер, сохранив проверки файлов и откат. Две выкладки 0ca85201 откатились на `/healthz`; причина сетевого таймаута не доказана. CI37237418210/deployment37238448692 выпустили 8fc46a31; readback37238977765 ACTIVE, warm37238988653 HTTP200. Затем выпущены достижения: frontend `6810452f`, CI37241760363, deployment37242590195 и readback37260193474 success/ACTIVE.
 
-Пилот клиентского Lime по-прежнему только `budoha1@yandex.ru`.
-Локальная регрессия416/416 WebKit/Chromium; Android debug run37232171038 success, iOS собран/установлен/запущен в симуляторе. Store-релиза и проверки диктовки на физическом устройстве не было; relay smoke её не заменяет.
+Пилот клиентского Lime по-прежнему только `budoha1@yandex.ru`. Локальная регрессия416/416 WebKit/Chromium; Android debug run37232171038 success, iOS собран/установлен/запущен в симуляторе. Store-релиза и проверки диктовки на физическом устройстве не было; relay smoke её не заменяет.
 
 Acceptance: design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md; Lime identity/pilot сохранены. SpeechKit smoke `done` прошёл, старый recovery не относится к relay.
 Production browser ограничен без обхода; внешний YAFIT не настроен, чужие credentials не используются.

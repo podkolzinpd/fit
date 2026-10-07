@@ -3947,6 +3947,87 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it.each(['membership', 'relationship', 'both'] as const)(
+      'disconnects selected trainer atomically for %s access and preserves client data',
+      async (source) => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const connection = await ownerPool.connect()
+        const athlete = randomUUID(), clientId = randomUUID(), workoutId = randomUUID()
+        const db = { query: async <Row extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+          (await connection.query<Row>(sql, values ? [...values] : undefined)).rows }
+        try {
+          await db.query('begin')
+          await db.query("insert into public.profiles(id, account_role) values($1, 'client')", [athlete])
+          await db.query("insert into public.clients(id, trainer_id, auth_user_id, full_name) values($1,$2,$2,'Disconnect fixture')", [clientId, athlete])
+          await db.query("insert into public.workouts(id, trainer_id, created_by, client_id, workout_date, status, notes) values($1,$2,$3,$4,'2026-10-07','planned','Keep client history')", [workoutId, athlete, ACTOR_ID, clientId])
+          if (source !== 'membership') {
+            await db.query('insert into public.client_trainer_relationships(client_id, trainer_id, connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, athlete])
+          }
+          if (source !== 'relationship') {
+            await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, ACTOR_ID])
+          }
+          await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, OUTSIDE_TRAINER_ID])
+          await db.query('set local role fit_api')
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toHaveLength(source === 'relationship' ? 0 : 1)
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [athlete])
+          await removeClientTrainer(db, clientId, ACTOR_ID)
+          await expect(removeClientTrainer(db, clientId, ACTOR_ID)).resolves.toBeUndefined()
+          expect((await readAccessibleConnections(db)).memberships.map(row => row.trainerId)).toEqual([OUTSIDE_TRAINER_ID])
+          expect(await db.query('select id, notes from public.workouts where id=$1', [workoutId])).toEqual([{ id: workoutId, notes: 'Keep client history' }])
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toEqual([])
+          expect(await db.query('select id from public.clients where id=$1', [clientId])).toEqual([])
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [OUTSIDE_TRAINER_ID])
+          expect(await db.query('select id from public.clients where id=$1', [clientId])).toHaveLength(1)
+          await db.query('reset role')
+          const relationships = await db.query('select status, disconnected_by from public.client_trainer_relationships where client_id=$1', [clientId])
+          expect(relationships).toEqual(source === 'membership' ? [] : [{ status: 'disconnected', disconnected_by: athlete }])
+          expect(await db.query('select trainer_id, auth_user_id from public.clients where id=$1', [clientId])).toEqual([{ trainer_id: athlete, auth_user_id: athlete }])
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      },
+    )
+
+    it('denies trainer or foreign client disconnect and keeps legacy partition protected', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const connection = await ownerPool.connect()
+      const athlete = randomUUID(), foreignAthlete = randomUUID(), clientId = randomUUID()
+      const db = { query: async <Row extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+        (await connection.query<Row>(sql, values ? [...values] : undefined)).rows }
+      try {
+        await db.query('begin')
+        await db.query("insert into public.profiles(id, account_role) values($1,'client'),($2,'client')", [athlete, foreignAthlete])
+        await db.query("insert into public.clients(id, trainer_id, auth_user_id, full_name) values($1,$2,$3,'Legacy protected fixture')", [clientId, ACTOR_ID, athlete])
+        await db.query('insert into public.client_trainer_relationships(client_id, trainer_id, connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, athlete])
+        await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, ACTOR_ID])
+        await db.query('set local role fit_api')
+        for (const [actor, failure] of [[ACTOR_ID, 'forbidden'], [foreignAthlete, 'forbidden'], [athlete, 'invalid']] as const) {
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [actor])
+          await db.query('savepoint denied_disconnect')
+          await expect(removeClientTrainer(db, clientId, ACTOR_ID)).rejects.toMatchObject({ failure })
+          await db.query('rollback to savepoint denied_disconnect')
+        }
+        await db.query('reset role')
+        expect(await db.query('select status from public.client_trainer_relationships where client_id=$1', [clientId])).toEqual([{ status: 'active' }])
+        expect(await db.query('select trainer_id from public.client_trainers where client_id=$1', [clientId])).toEqual([{ trainer_id: ACTOR_ID }])
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('exposes only the safe selected-trainer writer to runtime', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const grants = await ownerPool.query(`select
+        has_function_privilege('fit_api','public.remove_client_trainer(uuid,uuid)','execute') as safe,
+        has_function_privilege('fit_api','public.remove_client_trainer_before_disconnect(uuid,uuid)','execute') as legacy,
+        (select prosecdef from pg_proc where oid='public.remove_client_trainer(uuid,uuid)'::regprocedure) as definer`)
+      expect(grants.rows).toEqual([{ safe: true, legacy: false, definer: true }])
+    })
+
     it('runs the invitation lifecycle through guarded database commands', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
