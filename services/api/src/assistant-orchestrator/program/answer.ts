@@ -93,7 +93,7 @@ export function explicitBriefAnswer(message: string, context?: BriefAnswerContex
     if (equipment) return { patch: { equipment }, clear: [], evidence: { equipment: message }, clarification: null }
   }
   if (context?.fields.length === 1 && context.fields[0] === 'weekdays'
-    && /^(?:да,?\s*)?(?:мне\s+)?(?:все равно|не ?важно|без разницы|любые|в любые(?: дни)?|в любой день)$/u.test(text)) {
+    && /^(?:да,?\s*)?(?:мне\s+)?(?:все равно|не ?важно|дни не важны|без разницы|любые|в любые(?: дни)?|в любой день)$/u.test(text)) {
     const weekdays = evenlySpacedWeekdays(brief?.frequency)
     if (weekdays) return { patch: { weekdays }, clear: [], evidence: { weekdays: message }, clarification: null }
   }
