@@ -92,3 +92,9 @@
 - Первые прогоны нашли ошибки самих новых tests: strict multi-locator, storage mock не того объекта, несовпадение browser theme key и тип неполной fixture. Исправлены fixtures/assertion targets, без удаления assertions или изменения timeout; финальный проход выше.
 - Screenshots: project outputs/lime-schedule-1506-week-390.png и lime-schedule-1506-day-390.png; полный browser output /private/tmp/fit-schedule-final-20261007.
 - Реальные production OAuth/device sessions не использовались. PR готовится draft: merge, frontend activation и native main build не выполнялись.
+
+### PR1507 и повтор CI
+
+Draft PR1507 на9f6c1589 создан и прикреплён. Первый CI37683754774 нашёл один собственный test-only дефект: jsdom Storage в Node22 игнорирует spy на методе экземпляра, тогда как локальный Node26 использует подставленный plain store. Browser отказ хранилища в WebKit/Chromium уже passed. Тест теперь явно заменяет window.localStorage на throwing store и восстанавливает property descriptor; все проверки сохранены. Повтор unit9/9, eslint и typecheck passed; продуктовый код неизменён, новый exact-head CI обязателен. Android37683754919 passed.
+
+Попытка создания фонового выпуска отклонена проверкой безопасности: постоянная автоматизация с будущими merge/deploy требует отдельного разрешения. Фоновая автоматизация НЕ создана; вопрос владельцу задан. Без него PR остаётся draft до отдельной команды после обеих выкладок. Это не разрешение включить Lime all.

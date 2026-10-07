@@ -1,10 +1,13 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { readIndependentSchedule, useIndependentSchedule } from './use-independent-schedule'
 
 describe('actor-scoped independent schedule preference', () => {
+  const originalStorage = Object.getOwnPropertyDescriptor(window, 'localStorage')
   beforeEach(() => window.localStorage.clear())
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    if (originalStorage) Object.defineProperty(window, 'localStorage', originalStorage)
+  })
 
   it('is default-off and persists only explicit true for the current actor', () => {
     expect(readIndependentSchedule('coach')).toBe(false)
@@ -26,8 +29,12 @@ describe('actor-scoped independent schedule preference', () => {
   })
 
   it('stays usable with visible save failure and supports retry', () => {
-    const get = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => { throw new Error('unavailable') })
-    const set = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('unavailable') })
+    // Real jsdom Storage uses a WebIDL proxy: spying on its instance methods is
+    // not equivalent to denying storage. Replace the window property explicitly.
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: {
+      getItem: () => { throw new Error('unavailable') },
+      setItem: () => { throw new Error('unavailable') },
+    } })
     const { result, rerender } = renderHook(({ userId }) => useIndependentSchedule(userId), { initialProps: { userId: 'coach' } })
     expect(result.current.enabled).toBe(false)
     act(() => result.current.change(true))
@@ -37,8 +44,7 @@ describe('actor-scoped independent schedule preference', () => {
     expect(result.current.enabled).toBe(false)
     expect(result.current.storageError).toBe(false)
     rerender({ userId: 'coach' })
-    get.mockRestore()
-    set.mockRestore()
+    if (originalStorage) Object.defineProperty(window, 'localStorage', originalStorage)
     act(() => result.current.change(true))
     expect(result.current.storageError).toBe(false)
     expect(readIndependentSchedule('coach')).toBe(true)
