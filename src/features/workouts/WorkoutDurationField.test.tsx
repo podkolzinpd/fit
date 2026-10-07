@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setWorkoutTimeWheel } from '../../app/workout-time-input'
 import { WorkoutDurationField } from './WorkoutDurationField'
+import { markLiveMetricEntered } from './live-set-provenance'
 
 function choose(user: ReturnType<typeof userEvent.setup>, column: 'минуты' | 'секунды', value: number) {
   return user.click(within(screen.getByRole('listbox', { name: column })).getByRole('option', { name: `${String(value).padStart(2, '0')} ${column}` }))
@@ -84,6 +85,20 @@ describe('WorkoutDurationField', () => {
     await choose(user, 'секунды', 15)
     await user.click(screen.getByRole('button', { name: 'Применить · 1:15' }))
     expect(onCommit).toHaveBeenCalledWith(75)
+  })
+
+  it('marks an explicitly applied time as entered even when it matches the plan', async () => {
+    const user = userEvent.setup()
+    render(<form aria-label="Кардиоподход" onInput={(event) => markLiveMetricEntered(event.currentTarget, event.target)}>
+      <WorkoutDurationField name="durationSec" label="Фактическое время" durationSec={1800} compact />
+    </form>)
+
+    await user.click(screen.getByRole('button', { name: 'Фактическое время: 30:00' }))
+    await user.click(screen.getByRole('button', { name: 'Применить · 30:00' }))
+
+    const form = screen.getByRole('form', { name: 'Кардиоподход' }) as HTMLFormElement
+    expect(new FormData(form).get('durationSec')).toBe('1800')
+    expect(form.dataset.enteredDuration).toBe('1')
   })
 
   it('does not open when the set is locked', async () => {

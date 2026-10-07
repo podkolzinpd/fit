@@ -4,6 +4,7 @@ type SaveLiveSet = (id: string, draft: LiveSetDraft, version: number) => Promise
 type ConfirmLiveSet = (id: string, version: number) => Promise<number>
 
 function draftKey(draft: LiveSetDraft): string {
+  // Confirming a planned value as actual is a material write even when the number stays the same.
   return JSON.stringify([
     draft.weightKg ?? null,
     draft.reps ?? null,
@@ -11,6 +12,9 @@ function draftKey(draft: LiveSetDraft): string {
     draft.durationMin ?? null,
     draft.distanceKm ?? null,
     draft.rpe ?? null,
+    draft.metricSources?.duration ?? null,
+    draft.metricSources?.distance ?? null,
+    draft.metricSources?.rpe ?? null,
   ])
 }
 
