@@ -1,3 +1,4 @@
+import { AddActionLabel } from '../../shared/AddActionLabel'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { WhistleIcon } from '../../shared/icons'
@@ -1545,7 +1546,7 @@ export function WorkoutFormPage() {
         {!clientMode && <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
         {showEndTime
           ? <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
-          : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}>＋ Добавить время окончания</button>}
+          : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}><AddActionLabel>Добавить время окончания</AddActionLabel></button>}
         {completedMode && <WorkoutActualDurationField value={actualDurationMinutes} onChange={(value) => { setActualDurationMinutes(value); setDurationError(null) }} disabled={mutation.isPending} />}
         {durationError && <p className="error" role="alert">{durationError}</p>}
         {stages.length > 0 && <Field label="Этап цели">
@@ -3571,7 +3572,7 @@ export function LiveWorkoutPage() {
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
-              {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}>＋ Подход</button>}
+              {canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>}
               {liveCommentField(exercise)}
             </WorkoutExercise>
           })
@@ -3611,7 +3612,7 @@ export function LiveWorkoutPage() {
           </div>
           {canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
             <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
-              onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : '＋ Круг'}</button>
+              onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : <AddActionLabel>Круг</AddActionLabel>}</button>
             {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
               onClick={async () => { if (await askConfirm({ message: 'Убрать последний пустой круг?', confirmLabel: 'Убрать', danger: true })) removeRound.mutate({ blockId: block.blockId, position: latestRound!.round - 1 }) }}>Убрать добавленный круг</button>}
           </div>}
@@ -3643,7 +3644,7 @@ export function LiveWorkoutPage() {
         </div>
       }) })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>}
-      {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>＋ Ещё упражнение</button>}
+      {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>Ещё упражнение</AddActionLabel></button>}
       {error && <p className="error">{error.message}</p>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
@@ -3747,7 +3748,7 @@ export function ExerciseHistoryPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" stroke="var(--muted)" height={40} tick={AxisTick} interval={Math.max(0, Math.ceil(chart.length / 5) - 1)} />
               <YAxis stroke="var(--muted)" style={{ fontSize: '12px' }} domain={computeYDomain(values)} allowDecimals />
-              <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--fg)' }} labelStyle={{ color: 'var(--fg)', fontWeight: 700 }} itemStyle={{ color: 'var(--fg)' }}
+              <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--fg)' }} labelStyle={{ color: 'var(--fg)', fontWeight: 'var(--fit-type-emphasis-weight, 700)' }} itemStyle={{ color: 'var(--fg)' }}
                 formatter={(value) => formatTooltipValue(Number(value), unit, 'Результат')} labelFormatter={(date) => formatTooltipLabel(String(date))} />
               <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
                 dot={(dotProps: { cx?: number; cy?: number; index?: number }) => renderChartDot(dotProps, minIndex, maxIndex, chart.length)}

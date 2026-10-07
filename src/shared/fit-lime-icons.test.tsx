@@ -3,9 +3,19 @@ import { createPortal } from 'react-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AssistantIcon, ClientsIcon, HomeIcon, MicIcon, MessageIcon, TodayIcon } from './icons'
 import { FitLimeIconsContext, fitLimeOriginalIcons } from './fit-lime-icons'
+import { AddActionLabel } from './AddActionLabel'
 
 afterEach(cleanup)
 describe('original Fit Lime icon boundary', () => {
+  it('keeps add actions legible without a system glyph, including portals', () => {
+    const { rerender } = render(<FitLimeIconsContext value={true}>{createPortal(<button><AddActionLabel>Подход</AddActionLabel></button>, document.body)}</FitLimeIconsContext>)
+    const button = document.querySelector('button')!
+    expect(button.textContent).toBe('Подход')
+    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    rerender(<FitLimeIconsContext value={false}>{createPortal(<button><AddActionLabel>Подход</AddActionLabel></button>, document.body)}</FitLimeIconsContext>)
+    expect(button.textContent).toBe('＋ Подход')
+    expect(button.querySelector('svg')).toBeNull()
+  })
   it('preserves monochrome icons outside the server-gated provider', () => {
     const { container } = render(<TodayIcon />)
     expect(container.querySelector('circle')).not.toBeNull()

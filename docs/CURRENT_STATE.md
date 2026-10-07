@@ -1,5 +1,9 @@
 # Fit — текущее состояние проекта
 
+## Клиентский Lime — завершение, PR1: типографика — 2026-10-07
+
+План: `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md` (утверждённая серия из трёх PR, выпуск разрешён). База обновлена с опубликованного b4c3bcdc до main5eda31b2 после #1483/#1484/#1477. PR1 устраняет подтверждённые запросы600–800 в клиентских текстовых ролях, даты400, fallback≈ и текстовые иконки; REM/семантика/данные сохранены. Правки областей нажатия и PNG идут следующими PR. Физический iPhone не подключён; полная готовность и выпуск ещё не подтверждены.
+
 ## Кардио: фактическое время равно плану — 2026-10-07
 
 YAFIT-598: прежний Live dedupe сравнивал только числа и пропускал явное подтверждение времени, совпавшего с планом. Ключ автосохранения учитывает источник метрик: `entered` доходит до БД и участвует в расчёте калорий; сама формула и схема БД не меняются. Регрессии закрывают выбор того же значения в поле, сохранение факта и DB-оценку при неизменном числе.
@@ -96,16 +100,13 @@ record-workout card в Assistant, старый активный черновик
 запись тренировки обозначается как переход на главную.
 
 ## Постоянные границы
-
 Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17.
 Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
 Supabase — только legacy recovery/media/test, не fallback поверх новых Yandex writes.
 Pilot не авторизует данные: RLS/ownership на сервере. Откат Lime: CLIENT_LIME_ENABLED=false + deployment.
 SpeechKit transcript устраняет финальные повторы, сохраняет реплики и разделяет упражнения с параметрами.
 История/чеклисты — PRODUCT_WIKI, docs/design и Git.
-
 ## Ранее открытые post-cutover задачи
-
 Ниже — незакрытые пункты прежнего snapshot; в этой UI-задаче не перепроверялись.
 1. Выполнить успешный media migration без `allow-missing` для оставшихся chat и custom-exercise objects; Vital Gym Pro уже перенесён и полностью проверен.
 2. Добавить Yandex custom-exercise photo adapter.
@@ -114,7 +115,6 @@ SpeechKit transcript устраняет финальные повторы, со�
 5. Провести backup restore drill, повторить authenticated AI summary и push
    smoke. До завершения observation window Supabase не удалять: write gate
    остаётся paused, а обратной миграции Yandex writes нет.
-
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
 - Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Android origin закреплён как `https://localhost` и включён в API CORS allowlist deployment workflow. Внешний браузер Yandex ID не может вернуть OAuth-код на `https://localhost` в WebView, поэтому Android использует deep link `com.coachspace.fit://auth/yandex/callback` с PKCE state-проверкой. Этот Redirect URI зарегистрирован в Yandex OAuth 2 октября; прежние URI сохранены. Работающий вход ещё не подтверждён: нужна проверка на устройстве. Ручной GitHub Actions job собирает production-configured debug APK для проверки входа; это не release-сборка. Подпись release и публикация не выполнялись.

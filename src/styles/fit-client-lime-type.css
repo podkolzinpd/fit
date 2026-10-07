@@ -1,0 +1,44 @@
+/* Client-only completion of the approved 400/500 contract. These are roles
+   observed in the route audit, not a blanket weight reset. REM stays intact. */
+@font-face {
+  font-family: 'YS Geo Symbols';
+  src: url('/fonts/ys-geo-regular-916b7f4a.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  unicode-range: U+2248;
+}
+/* Medium has no approximation glyph. Reuse the licensed Regular for that
+   single codepoint; all other glyphs still come from their YS Geo text face. */
+html.fit-client-lime-document.ui-identity,
+.phone-frame.fit-lime-shell.fit-client-lime {
+  font-family: 'YS Geo Symbols', 'YS Geo', 'Onest Variable', sans-serif;
+  --fit-type-emphasis-weight: 500;
+}
+:is(.phone-frame.fit-client-lime,
+  html.fit-client-lime-document :is(.sheet-overlay, .modal-overlay, .fullscreen-image-viewer))
+  :is(h1, h2, h3, h4, h5, h6, strong, b, button, .button, .link, .eyebrow,
+    .type-section, .type-body-strong, .chat-avatar, .chat-unread-badge,
+    .chat-unread-divider > span, .today-profile-avatar, .client-profile-avatar,
+    .client-trainer-avatar, .personal-result-facts, .body-progress-detail-heading span,
+    .athlete-achievement-card-title, .client-progress-goal-story-head > span,
+    .measurement-story-current > div:last-child span, .measurement-story-facts dd,
+    .measurement-story-selector button span, .inbody-details summary, .inbody-segments p span,
+    .period-result-achievement, .regularity-story-facts dd,
+    .regularity-weekly-strip-head > span, .regularity-weekly-strip li > span,
+    .period-comparison-facts dt, .period-comparison-facts dt span, .period-comparison-facts dd,
+    .save-status, .trainer-specialty-option-all span, .workout-feedback-fieldset legend,
+    .workout-set-table-head > span, .workout-history-set-number, .workout-set-number,
+    .workout-history-set-status, .block-badge, .circuit-round-toggle span:first-child,
+    .recharts-line-dots text):not(.request-diagnostic-code *) {
+  font-weight: 500;
+}
+/* Auxiliary dates are body copy, not headings or button labels. */
+.phone-frame.fit-client-lime :is(.workout-completion-report-date, .assistant-session-label span) {
+  font-weight: 400;
+}
+/* Keep the established numerical accent even under the shared strong role. */
+.phone-frame.fit-client-lime .schedule-v2-summary strong { font-weight: 700; }
+
+.fit-lime-add-label { display: inline-flex; align-items: center; gap: 6px; }
+.fit-lime-add-label svg { flex: none; width: 18px; height: 18px; }
