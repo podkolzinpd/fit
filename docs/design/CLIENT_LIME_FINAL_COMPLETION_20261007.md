@@ -125,3 +125,6 @@
 - Дополнительный C01: окно конкурса при auth transition монтировалось в удалённый public phone-frame (connected=false при правильных флагах/userId/date и visible=true). Выбор контейнера перенесён в useLayoutEffect после commit. Это подтверждённая потеря доступного окна, а не изменение условий/правил конкурса. Unit6/6; браузер8/8 light/dark390/430 Chromium/WebKit, empty/loading503/retry200/success.
 - Полный текущий реестр и покрытие сохранены в docs/client-lime-migration-audit.md; большой комплект артефактов и приложение сохранены отдельно без добавления в Git. Физический iPhone/реальные внешние эффекты остаются НЕ ПРОВЕРЕНО.
 - PR2 #1487 слит4896e70f после зелёного CI; PR3 обновлён от негоa04dd1e1. Одно задание PR3 CI остановилось до браузерных тестов: контейнер БД не смог занять54322 на runner; обязательный CI не обходится, задание будет повторено.
+
+- PR2: официальный выпуск37619414157 success на актуальном mainca796686 (включая более ранний #1488), ключевые ресурсы7/7 SHA matched; production UI InBody/home16/16 passed с synthetic fixtures.
+- PR4 опубликован #1491, дополнительный frontend2488/2488/lint/typecheck/build passed; исходный план hashbd7aca97 не изменён. PR3/PR4 обновлены для отсутствовавших webfont-файлов CI; production credentials не передаются тестам.

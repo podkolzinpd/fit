@@ -70,7 +70,7 @@ Playwright Chromium/WebKit; основной390px, сложные формы/т�
 | F04 | PNG не наследовал Lime: кремовая палитра/Onest | `workout-completion-share.ts`, `WorkoutCompletionReport.tsx`; summary/progress/achievement | Действующие theme tokens фрейма, YS400/500/≈, REM процент, загрузка faces до измерений | P1;24PNG1080×1350, три варианта, темы/приватность, текстовый fallback, trainer legacy; #1489 |
 | F04a | После смены шрифта обрезались длинные единицы четырёх метрик | тот же canvas summary | Существующий fittedFontSize, подписи до двух строк в прежних bounds | P0 читаемость; полные1ч00мин и≈210ккал, все bounds в карточке; #1489 |
 | F04b | WebKit toBlob терял уже нарисованные строки | тот же canvas, все три Lime варианта | Снимок ImageData перед кодированием, только клиентский canvas | P0 читаемость; PNG имеет реальные пиксели бренда/даты/footer и все значения; #1489 |
-| T02 | Portal меню сообщения не был охвачен контрактом500 | ChatActionSheet в `src/features/chat`, host `.fit-lime-chat-sheet` в body; меню сообщений всех клиентских диалогов | Включить существующий host в клиентский контракт YS stack/500 | P2; меню500, «Ответить», negative flag600; PR4 |
+| T02 | Portal меню сообщения не был охвачен контрактом500 | ChatActionSheet в `src/features/chat/ChatPages.tsx:126`, host `.fit-lime-chat-sheet` в body; меню сообщений всех клиентских диалогов | Включить существующий host в клиентский контракт YS stack/500 | P2; меню500, «Ответить», negative flag600; PR4 |
 | T03 | TimeWheel выбранные значения и `:` запрашивали600 | `styles.css`6299–6301; `TimeWheel.tsx`, `LiveRestTimer.tsx`, `WorkoutDurationField.tsx` (все duration/run/time поля при настройке колёсика) | Точные `.rest-time-wheel [role=option].selected`/`.rest-time-separator` роли500 внутри client scope | P2; минуты/секунды, пресеты/активный отдых, обе темы390/430; PR4 |
 | C01 | Конкурс: окно терялось при замене public/auth frame клиентской рамкой | `ContestWinnerDialog.tsx`: container выбирался во время render и затем удалялся; все allowlisted клиентские/тренерские маршруты вне immersive | Выбирать текущий контейнер после layout commit через useLayoutEffect, theme/flags/expiry/submission прежние | P0 доступность; unit6/6 и browser8/8 от auth через профиль, empty/loading/error/retry/success; PR4 |
 
@@ -110,3 +110,11 @@ Playwright Chromium/WebKit; основной390px, сложные формы/т�
 [Все1618 клиентских кадров, computed/CDP и scroll доказательства](/Users/antonknyazev/.codex/.chatgpt-projects/g-p-6a6b5d53f6388191a7a8fc4c045803ce/artifacts/client-lime-ready-20261007/coverage-checkpoints.md). Это кадры, а не1618 разных экранов; результаты сценариев и ограничения выше.
 
 [Условное окно — отдельные8/8 результаты](/Users/antonknyazev/.codex/.chatgpt-projects/g-p-6a6b5d53f6388191a7a8fc4c045803ce/artifacts/client-lime-ready-20261007/winner.json); [журнал](/Users/antonknyazev/.codex/.chatgpt-projects/g-p-6a6b5d53f6388191a7a8fc4c045803ce/artifacts/client-lime-ready-20261007/winner.log).
+
+## Обновление выпуска и CI
+
+PR2 опубликован официальным workflow37619414157 на mainca796686;7/7 ключевых ресурсов совпали с manifest,16/16 production Chromium/WebKit InBody/home-action scenarios passed на fixtures. PR3#1489 получил дополнительную подготовку публичных неизменных YS-файлов для CI: ранее server возвращал200text/html на font URL, поэтому срабатывал корректный текстовый fallback. Validator WOFF2/SHA прежний, production credentials в PR job не добавлены; отрицательные HTTP/SPA и policy18/18, настоящий download2/2 passed. Файлы не в Git.
+
+PR4#1491 закрывает T02/T03/C01 и хранит этот отчёт; обновляется от PR3. Повторный frontend2488/2488, lint/typecheck/build passed. Последний официальный выпуск, native sync/build/install и аппаратные ограничения фиксируются отдельно после принятого main.
+
+[Доказательства по ID и полный перечень потребителей общих компонентов](/Users/antonknyazev/.codex/.chatgpt-projects/g-p-6a6b5d53f6388191a7a8fc4c045803ce/artifacts/client-lime-ready-20261007/issue-evidence.md).
