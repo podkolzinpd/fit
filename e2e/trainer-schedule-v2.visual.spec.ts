@@ -3787,10 +3787,14 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 for (const width of [390, 430]) {
   test(`Client Lime shell themes and account isolation ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
+    await page.emulateMedia({ colorScheme: 'light' })
     await mockPilot(page, { role: 'client', profileId: clientId })
     await page.goto('/me/settings')
     const theme = page.getByLabel('Тема оформления')
     await expect(theme).toBeVisible()
+    await expect(theme).toHaveValue('dark')
+    await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    await page.screenshot({ path: testInfo.outputPath(`client-default-dark-${width}.png`), fullPage: true })
     expect(await theme.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
     for (const value of ['dark', 'light', 'system']) {
       await theme.selectOption(value)
