@@ -109,6 +109,16 @@ describe('planned workout request', () => {
       .toBeUndefined()
   })
 
+  it('accepts an optional prep countdown and keeps it absent for older clients', () => {
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), prepSeconds: 15 }, null))
+      .toMatchObject({ draft: { prepSeconds: 15 } })
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), prepSeconds: null }, null)?.draft)
+      .toHaveProperty('prepSeconds', null)
+    expect(readSavePlannedWorkoutRequest(validRequest(), null)?.draft).not.toHaveProperty('prepSeconds')
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), prepSeconds: 601 }, null)).toBeUndefined()
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), prepSeconds: 1.5 }, null)).toBeUndefined()
+  })
+
   it('keeps the shared block id, preset and rest settings of a superset', () => {
     const first = {
       ...validRequest().exercises[0]!,

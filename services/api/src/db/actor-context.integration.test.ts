@@ -4703,6 +4703,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           workoutDate: '2026-10-03', startTime: '23:59:59', plannedDate: datesRow.future,
           completedAt: '2026-10-03T21:10:00.000Z', status: 'done',
         })
+        // Вне пилота будущий план при раннем старте тоже переезжает на
+        // фактический день, иначе выполненная тренировка выпадает из истории.
         const control = await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, {
           id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'Контроль без флага',
           workoutDate: datesRow.future, startTime: '12:00', endTime: '13:00', notes: null, exercises,
@@ -4712,9 +4714,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const started = await withActorTransaction(db, ACTOR_ID, (client) => startLiveWorkout(client, control.id, control.version, randomUUID()))
         await withActorTransaction(db, ACTOR_ID, (client) => finishLiveWorkout(client, control.id, started.version, randomUUID()))
         const legacy = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
-        const workout = legacy.workouts.find((item) => item.id === control.id)
-        expect(workout).toMatchObject({ workoutDate: datesRow.future, startTime: '12:00:00', endTime: '13:00:00' })
-        expect(workout).not.toHaveProperty('plannedDate')
+        expect(legacy.workouts.find((item) => item.id === control.id)).toMatchObject({
+          workoutDate: datesRow.today, plannedDate: datesRow.future,
+          plannedStartTime: '12:00:00', plannedEndTime: '13:00:00', endTime: null,
+        })
       } finally {
         await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [ids])
         await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])

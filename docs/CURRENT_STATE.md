@@ -1,5 +1,9 @@
 # Fit — текущее состояние проекта
 
+## Live: таймер фаз и ранний старт будущего плана — 2026-10-07
+
+План: `design/live-phase-timer.md`, выпуск разрешён владельцем после локальной проверки. Одна кнопка таймера ведёт подготовку → подход по плановому времени → отдых; `workouts.prep_seconds` (migration132, ключ не пришёл — значение сохраняется). migration133 расширяет триггер 000120 вне пилота Lime только для будущих дат: старт Live переносит план на фактический день клиента, `planned_*` хранит исходный план; прошедшие даты вне пилота не меняются. Тест «Контроль без флага» переписан под новое правило. Supabase не менялся. Проверено: clean PostgreSQL17 chain/actor100/100, frontend unit817/817, Yandex repository47/47; UI сценарий — локально в браузере (dev-сборка на Supabase, без prep_seconds в legacy-схеме). Production ещё не подтверждён.
+
 ## Фоновая очистка app-сессий — 2026-10-07
 
 PR#1488, план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой очистки безопасно диагностируется и не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106, check frontend2479/API1201/policy/hosting/build и CI37613263450 на130d41e1 прошли. После merge#1487/#1490 ветка обновлена от main4896e70f: свежие clean-chain/actor106/106 и полный check/API1201/build passed; повторный CI/production ещё впереди. local:verify ограничен прежней недостающей Supabase migration20260919145000; общая база сохранена. Это устранение риска, не доказанная причина502.
