@@ -143,7 +143,7 @@
 
 /* Compose, review and save share one focused client route. */
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-start-page { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
-.phone-frame.fit-client-lime.workout-create-edit-identity .today-text-fallback { padding: 0; background: transparent; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .today-text-fallback { padding: 18px; background: transparent; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-text-fallback-head { padding-block: 12px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise-list { padding: 0 16px; }
 .phone-frame.fit-client-lime.workout-create-edit-identity .today-exercise.planned-exercise { padding-block: 12px; }

@@ -1,6 +1,7 @@
 import type { QueryResultRow } from 'pg'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import { withYandexActorSession, type YandexActorSessionInput } from './yandex-actor-session.js'
+import { readTrainerDisplayNames } from './trainer-display-name.js'
 
 export type ChatThread = { conversationId: string | null; clientId: string; trainerId: string; partnerUserId: string; partnerName: string; activeConnection: boolean; lastMessageBody: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: number; canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
 export type ChatBlockState = { canMessage: boolean; blockedByMe: boolean; blockedByPartner: boolean }
@@ -57,18 +58,27 @@ export interface PilotChat {
   window(session: YandexActorSessionInput, conversationId: string, messageId: string): Promise<ChatMessage[]>
 }
 
+export async function readAccessibleChatThreads(client: DatabaseClient): Promise<ChatThread[]> {
+  const rows = await client.query<ThreadRow>('select * from public.list_chat_threads()')
+  const names = await readTrainerDisplayNames(client, rows
+    .filter((row) => row.partner_user_id === row.trainer_id)
+    .map((row) => ({ trainerId: row.trainer_id, accountName: row.partner_name })))
+  return rows.map((row) => ({
+    conversationId: row.conversation_id, clientId: row.client_id, trainerId: row.trainer_id, partnerUserId: row.partner_user_id,
+    partnerName: row.partner_user_id === row.trainer_id ? names.get(row.trainer_id)! : row.partner_name,
+    activeConnection: row.active_connection, lastMessageBody: row.last_message_body,
+    lastMessageAt: row.last_message_at, lastMessageSenderId: row.last_message_sender_id, unreadCount: Number(row.unread_count),
+    canMessage: row.can_message, blockedByMe: row.blocked_by_me, blockedByPartner: row.blocked_by_partner,
+  }))
+}
+
 export class DatabasePilotChat implements PilotChat {
   constructor(private readonly pool: DatabasePool) {}
   private run<Result>(session: YandexActorSessionInput, work: (client: DatabaseClient) => Promise<Result>) {
     return withYandexActorSession(this.pool, session, async (client) => { try { return await work(client) } catch (error) { throw chatError(error) ?? error } })
   }
   listThreads(session: YandexActorSessionInput) {
-    return this.run(session, async (client) => (await client.query<ThreadRow>('select * from public.list_chat_threads()')).map((row) => ({
-      conversationId: row.conversation_id, clientId: row.client_id, trainerId: row.trainer_id, partnerUserId: row.partner_user_id,
-      partnerName: row.partner_name, activeConnection: row.active_connection, lastMessageBody: row.last_message_body,
-      lastMessageAt: row.last_message_at, lastMessageSenderId: row.last_message_sender_id, unreadCount: Number(row.unread_count),
-      canMessage: row.can_message, blockedByMe: row.blocked_by_me, blockedByPartner: row.blocked_by_partner,
-    })))
+    return this.run(session, readAccessibleChatThreads)
   }
   openPublicTrainer(session: YandexActorSessionInput, publicProfileId: string) {
     return this.run(session, async (client) => {

@@ -4226,6 +4226,38 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) for (const hasWorkouts of [false, true]) {
+  test(`Client Lime add workout opens compact composer ${theme} ${width} filled=${hasWorkouts}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: hasWorkouts ? [{ ...workout, createdBy: clientId, trainingFormat: 'self' }] : [] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me/workouts', { waitUntil: 'domcontentloaded' })
+    const addWorkout = page.getByRole('link', { name: hasWorkouts ? 'Добавить' : 'Добавить тренировку', exact: true })
+    await expect(addWorkout).toHaveCount(1)
+    await expect(addWorkout).toHaveAttribute('href', '/me?entry=workout')
+    await addWorkout.click()
+    await expect(page).toHaveURL(/\/me\?entry=workout&draft=[\w-]+$/)
+    await expect(page.getByLabel('Тренировка', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Надиктовать тренировку', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Разобрать тренировку', exact: true })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Основная навигация' })).toHaveCount(0)
+    await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+    await expect(page.getByLabel('Дата', { exact: true })).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`client-compact-workout-${theme}-${width}-${hasWorkouts ? 'filled' : 'empty'}.png`) })
+    await page.getByLabel('Тренировка', { exact: true }).fill('Жим лёжа 3 по 10 80 кг')
+    await expect.poll(() => page.evaluate((id) => {
+      const draftId = new URLSearchParams(location.search).get('draft')
+      const saved = localStorage.getItem(`fit.today-draft.${id}.plan.client-${draftId}`)
+      return saved ? (JSON.parse(saved) as { text?: string }).text : null
+    }, clientId)).toBe('Жим лёжа 3 по 10 80 кг')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByLabel('Тренировка', { exact: true })).toHaveValue('Жим лёжа 3 по 10 80 кг')
+    await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
+    await expect(page).toHaveURL(/\/me$/)
+  })
+}
+
 for (const width of [390, 430]) test(`Client Lime isolated drafts survive new input and deletion ${width}`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 844 })
   await mockPilot(page, { role: 'client', profileId: clientId })
@@ -4322,6 +4354,46 @@ async function mockClientStreamingVoice(page: import('@playwright/test').Page, t
     Object.defineProperty(window, 'WebSocket', { configurable: true, value: FakeWebSocket })
   }, transcript)
 }
+
+test('Client Lime direct list entry keeps text through voice, review and save', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+  await mockClientStreamingVoice(page, 'Приседания один подход десять повторений')
+  await page.goto('/me?entry=workout')
+  await expect(page).toHaveURL(/\/me\?entry=workout&draft=[\w-]+$/)
+  const input = page.getByLabel('Тренировка', { exact: true })
+  await input.fill('Жим лёжа один подход десять повторений 40 кг')
+  await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Отменить', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+  await expect(input).toHaveValue('Жим лёжа один подход десять повторений 40 кг')
+  await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+  await page.getByRole('button', { name: /Остановить ·/ }).click()
+  await expect(input).toHaveValue(/Жим лёжа[\s\S]*Присед/)
+  await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать тренировку', exact: true }).click()
+  await expect.poll(() => backend.getSaveAttempts()).toBe(1)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}`))
+})
+
+test('Client Lime compact voice permission denial preserves typed text', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')) },
+    })
+  })
+  await page.goto('/me?entry=workout')
+  const input = page.getByLabel('Тренировка', { exact: true })
+  await input.fill('Жим лёжа 40 кг')
+  await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+  await expect(page.getByText('Нет доступа к микрофону.', { exact: false })).toBeVisible()
+  await expect(input).toHaveValue('Жим лёжа 40 кг')
+})
 
 test('Client Lime voice parsing exposes progress and retains failed transcript', async ({ page }) => {
   await mockPilot(page, { role: 'client', profileId: clientId })
