@@ -79,6 +79,8 @@ for (const lime of [false, true]) {
     }
     await page.getByRole('link', { name: 'Настройки профиля' }).click()
     await expect(page).toHaveURL(/\/me\/settings$/)
+    // URL changes before a cold lazy route commits. Wait until the profile really unmounts.
+    await expect(page.locator('.client-trainer-connection-card')).toHaveCount(0)
     displayName = 'Татьяна Александровна Длинное Проверочное Имя'
     await page.goBack()
     await expect(page).toHaveURL(/\/me\/profile$/)
