@@ -73,7 +73,7 @@ describe('program chat state', () => {
     expect(result?.action?.payload.askedFields).toEqual(['otherActivity'])
     expect(result?.reply).not.toContain('любимые')
   })
-  it.each(['Да все равно', 'Не важно', 'В любые'])('finishes the weekday question without looping on %s', async (message) => {
+  it.each(['Да все равно', 'Не важно', 'Дни не важны', 'В любые'])('finishes the weekday question without looping on %s', async (message) => {
     const { deps, latest } = setup()
     const brief = { ...latest.payload.briefState }
     delete brief.weekdays
