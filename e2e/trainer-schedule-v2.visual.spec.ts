@@ -348,6 +348,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'client-assistant-2026-09',
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
+      'live-phase-timer-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',
       'lime-day-workspace-2026-10',

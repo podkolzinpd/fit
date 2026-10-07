@@ -45,6 +45,7 @@ interface WorkoutRow extends QueryResultRow {
   created_by: string | null
   origin: 'manual' | 'ai'
   favorite_title: string | null
+  prep_seconds: number | null
   title: string | null
   training_format: 'self' | 'with_trainer'
   started_by: string | null
@@ -212,6 +213,7 @@ export interface PilotWorkout {
   createdBy: string | null
   origin: 'manual' | 'ai'
   favoriteTitle: string | null
+  prepSeconds?: number | null
   title?: string | null
   trainingFormat?: 'self' | 'with_trainer'
   startedBy: string | null
@@ -325,6 +327,7 @@ export async function readAccessibleTrainingData(
         workout.created_by,
         workout.origin,
         workout.favorite_title,
+        workout.prep_seconds,
         workout.title,
         workout.training_format,
         workout.started_by,
@@ -512,6 +515,7 @@ export async function readAccessibleTrainingData(
         createdBy: row.created_by,
         origin: row.origin,
         favoriteTitle: row.favorite_title,
+        ...(row.prep_seconds === null || row.prep_seconds === undefined ? {} : { prepSeconds: row.prep_seconds }),
         title: row.title ?? null,
         trainingFormat: row.training_format,
         startedBy: row.started_by,

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseIcon, TimerIcon } from '../../shared/icons'
 import { playGong, prepareGong } from '../../shared/gong'
+import type { LivePhaseTimer } from './live-phase'
 import { wasNativeRestTimerNotificationScheduled } from './rest-timer-notification'
 import { TimeWheel } from './TimeWheel'
 
+const LONG_PRESS_MS = 500
 const MINUTES = Array.from({ length: 61 }, (_, index) => index)
 const SECONDS = Array.from({ length: 60 }, (_, index) => index)
 
@@ -26,13 +28,29 @@ function markGongPlayed(workoutId: string, deadline: number) {
   try { sessionStorage.setItem(gongStorageKey(workoutId, deadline), '1') } catch { /* The timer remains usable without storage. */ }
 }
 
-/** Only this small subtree ticks; workout inputs do not rerender every second. */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange }: {
+const PHASE_COPY = {
+  prep: { label: 'Подготовка', sheet: 'Таймер подготовки', stop: 'Остановить подготовку', tap: 'нажмите, чтобы начать подход сразу' },
+  work: { label: 'Подход', sheet: 'Таймер подхода', stop: 'Остановить подход', tap: 'нажмите, чтобы подтвердить подход' },
+} as const
+
+/**
+ * Only this small subtree ticks; workout inputs do not rerender every second.
+ * One button shows the current phase — prep, timed set or rest — because the
+ * phases never overlap. A short tap runs `onPrimary` (the next logical step);
+ * a long press or the context menu always opens the timer sheet.
+ */
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
   onChange: (deadline: number | null) => void
   onDurationChange?: (seconds: number) => void
+  phase?: LivePhaseTimer | null
+  /** Returns true when the tap was handled; otherwise the sheet opens as before. */
+  onPrimary?: () => boolean
+  onPhaseChange?: (phase: LivePhaseTimer | null) => void
+  onPhaseExpire?: (phase: LivePhaseTimer) => void
+  onRestExpire?: (deadline: number) => void
 }) {
   const [now, setNow] = useState(Date.now)
   const [open, setOpen] = useState(false)
@@ -43,6 +61,12 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const trigger = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLElement>(null)
   const selectedDurationRef = useRef(90)
+  const longPressTimer = useRef<number | null>(null)
+  const longPressFired = useRef(false)
+  const expiredPhase = useRef<string | null>(null)
+  const expiredRest = useRef<number | null>(null)
+  const callbacks = useRef({ onPhaseExpire, onRestExpire })
+  useEffect(() => { callbacks.current = { onPhaseExpire, onRestExpire } }, [onPhaseExpire, onRestExpire])
 
   const signedRemaining = useMemo(() => {
     if (deadline === null) return null
@@ -51,20 +75,34 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     const overdue = Math.floor(Math.abs(difference) / 1000)
     return overdue === 0 ? 0 : -overdue
   }, [deadline, now])
+  const phaseRemaining = phase ? Math.max(0, Math.ceil((phase.endsAt - now) / 1000)) : null
+  const tickDeadline = phase?.endsAt ?? deadline
 
   useEffect(() => {
-    if (deadline === null) return
+    if (tickDeadline === null) return
+    const signal = (end: number, returningFromBackground: boolean) => {
+      if (notified.current === end || gongWasPlayed(workoutId, end)) return
+      notified.current = end
+      markGongPlayed(workoutId, end)
+      const nativeSignalAlreadyScheduled = returningFromBackground
+        && backgrounded.current
+        && wasNativeRestTimerNotificationScheduled(workoutId, end)
+      if (!nativeSignalAlreadyScheduled) void playGong()
+    }
     const tick = (returningFromBackground = false) => {
       const time = Date.now()
       setNow(time)
-      if (time < deadline || notified.current === deadline || gongWasPlayed(workoutId, deadline)) return
-      if (document.visibilityState !== 'visible') return
-      notified.current = deadline
-      markGongPlayed(workoutId, deadline)
-      const nativeSignalAlreadyScheduled = returningFromBackground
-        && backgrounded.current
-        && wasNativeRestTimerNotificationScheduled(workoutId, deadline)
-      if (!nativeSignalAlreadyScheduled) void playGong()
+      if (time < tickDeadline || document.visibilityState !== 'visible') return
+      signal(tickDeadline, returningFromBackground)
+      // Expiry acts once per phase/deadline and only while visible: a set that
+      // ran out with the phone locked is confirmed when the user comes back.
+      if (phase) {
+        const key = `${phase.kind}:${phase.endsAt}`
+        if (expiredPhase.current !== key) { expiredPhase.current = key; callbacks.current.onPhaseExpire?.(phase) }
+      } else if (deadline !== null && expiredRest.current !== deadline) {
+        expiredRest.current = deadline
+        callbacks.current.onRestExpire?.(deadline)
+      }
     }
     const wake = () => {
       if (document.visibilityState !== 'visible') {
@@ -83,7 +121,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('pageshow', wake)
     }
-  }, [deadline, workoutId])
+  }, [deadline, phase, tickDeadline, workoutId])
+  useEffect(() => () => { if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current) }, [])
 
   useEffect(() => {
     if (!open) return
@@ -126,6 +165,11 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   }
 
   function shift(delta: number) {
+    if (phase) {
+      // A phase can be shortened but never ended through −15: that is «Остановить».
+      onPhaseChange?.({ ...phase, endsAt: Math.max(Date.now() + 1000, phase.endsAt + delta * 1000) })
+      return
+    }
     if (deadline !== null) onChange(deadline + delta * 1000)
   }
 
@@ -144,21 +188,60 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     setOpen(true)
   }
 
-  const stateClass = active ? ' resting' : overdue ? ' rest-overdue' : ''
-  const triggerLabel = active && signedRemaining !== null
-    ? `Таймер отдыха: ${formatRest(signedRemaining)}`
-    : overdue && signedRemaining !== null
-      ? `Отдых превышен на ${formatRest(Math.abs(signedRemaining))}`
-      : 'Таймер отдыха'
-  const triggerText = signedRemaining !== null ? `Отдых ${formatRest(signedRemaining)}` : 'Таймер'
+  function cancelLongPress() {
+    if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current)
+    longPressTimer.current = null
+  }
+
+  function startLongPress() {
+    longPressFired.current = false
+    cancelLongPress()
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTimer.current = null
+      longPressFired.current = true
+      openPicker()
+    }, LONG_PRESS_MS)
+  }
+
+  function tap() {
+    cancelLongPress()
+    // The long press already opened the sheet; the click that follows the
+    // release must not also run the short-tap action.
+    if (longPressFired.current) { longPressFired.current = false; return }
+    prepareGong()
+    if (!onPrimary?.()) openPicker()
+  }
+
+  const copy = phase ? PHASE_COPY[phase.kind] : null
+  const stateClass = phase ? ` phase-${phase.kind}` : active ? ' resting' : overdue ? ' rest-overdue' : ''
+  const triggerLabel = copy && phaseRemaining !== null
+    ? `${copy.sheet}: ${formatRest(phaseRemaining)}, ${copy.tap}`
+    : active && signedRemaining !== null
+      ? `Таймер отдыха: ${formatRest(signedRemaining)}${onPrimary ? ', нажмите, чтобы закончить отдых' : ''}`
+      : overdue && signedRemaining !== null
+        ? `Отдых превышен на ${formatRest(Math.abs(signedRemaining))}`
+        : 'Таймер отдыха'
+  const triggerText = copy && phaseRemaining !== null
+    ? `${copy.label} ${formatRest(phaseRemaining)}`
+    : signedRemaining !== null ? `Отдых ${formatRest(signedRemaining)}` : 'Таймер'
+  const sheetTitle = copy?.sheet ?? 'Таймер отдыха'
 
   return <>
-    <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} onClick={openPicker}>
+    <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
+      aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
+      onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
+      onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
+      onClick={onPrimary ? tap : openPicker}>
       <TimerIcon /><span>{triggerText}</span>
     </button>
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
-      <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label="Таймер отдыха" onClick={(event) => event.stopPropagation()}>
-        <header className="picker-header"><h2>Таймер отдыха</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>
+      <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
+        <header className="picker-header"><h2>{sheetTitle}</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>
+        {copy && phase && phaseRemaining !== null ? <>
+          <p className="live-rest-countdown">{formatRest(phaseRemaining)}</p>
+          <div className="rest-controls"><button type="button" className="secondary" aria-label="Минус 15 секунд" onClick={() => shift(-15)}>−15 сек</button><button type="button" className="secondary" aria-label="Плюс 15 секунд" onClick={() => shift(15)}>+15 сек</button></div>
+          <button type="button" className="secondary" aria-label={copy.stop} onClick={() => { onPhaseChange?.(null); setOpen(false) }}>{copy.stop}</button>
+        </> : <>
         {signedRemaining !== null && <>
           <p className={`live-rest-countdown${overdue ? ' overdue' : ''}`}>{formatRest(signedRemaining)}</p>
           <div className="rest-controls"><button type="button" className="secondary" aria-label="Минус 15 секунд" onClick={() => shift(-15)}>−15 сек</button><button type="button" className="secondary" aria-label="Плюс 15 секунд" onClick={() => shift(15)}>+15 сек</button></div>
@@ -173,6 +256,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
         </div>
         <div className="rest-controls rest-presets">{[60, 90, 120, 180].map((value) => <button key={value} type="button" className="secondary" onClick={() => setDuration(value)}>{formatRest(value)}</button>)}</div>
         <div className="live-rest-apply"><button type="button" disabled={!valid} onClick={start}>{signedRemaining === null ? `Начать отдых · ${formatRest(selectedDuration)}` : `Применить время · ${formatRest(selectedDuration)}`}</button></div>
+        </>}
       </section>
     </div>, document.querySelector('.phone-frame') ?? document.body)}
   </>

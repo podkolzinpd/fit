@@ -20,6 +20,7 @@ export interface TodayDraft {
   startTime?: string
   actualDurationMinutes?: string
   trainingFormat?: WorkoutTrainingFormat
+  prepSeconds?: number
 }
 
 function isDraft(value: unknown): value is TodayDraft {
@@ -41,6 +42,7 @@ function isDraft(value: unknown): value is TodayDraft {
     && (draft.startTime === undefined || typeof draft.startTime === 'string')
     && (draft.actualDurationMinutes === undefined || typeof draft.actualDurationMinutes === 'string')
     && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
+    && (draft.prepSeconds === undefined || (Number.isInteger(draft.prepSeconds) && draft.prepSeconds >= 0 && draft.prepSeconds <= 600))
 }
 
 export function todayDraftKey(userId: string, planId?: string | null): string {

@@ -430,10 +430,10 @@ test('trainer can create client, complete workout and save progress', async ({ p
   await page.reload()
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:2\d/ })).toBeVisible()
   // Кнопка +15с продлевает текущий отдых.
-  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click({ button: 'right' })
   await page.getByRole('button', { name: 'Плюс 15 секунд' }).click()
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:3\d/ })).toBeVisible()
-  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click({ button: 'right' })
   await page.getByRole('button', { name: 'Остановить отдых' }).click()
   await page.getByRole('button', { name: '＋ Подход' }).click()
   // Дождаться, пока добавленный подход подтянется (refetch завершён и version
@@ -996,7 +996,7 @@ test('план: суперсет работает в Live без создани�
 
   // Круг 2: упр.A → отдыха нет; упр.B — последнее упражнение последнего круга,
   // блок завершён → отдых НЕ запускается (регресс: раньше запускался лишний).
-  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click()
+  if (!await page.getByRole('dialog', { name: 'Таймер отдыха' }).isVisible()) await page.getByRole('button', { name: /^Таймер отдыха/ }).click({ button: 'right' })
   await page.getByRole('button', { name: 'Остановить отдых' }).click()
   // Берём кнопки именно из текущего круга. На странице остаются disabled-кнопки
   // уже завершённого круга, поэтому глобальный `.first()` иногда выбирал их,

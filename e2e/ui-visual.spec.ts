@@ -2513,7 +2513,7 @@ test('trainer Live keeps desktop controls accessible in both themes', async ({ p
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
   await gotoStable(page, livePath)
-  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
+  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click({ button: 'right' })
   await expectMonochromeAccessibility(page)
   await page.screenshot({ path: testInfo.outputPath('trainer-live-timer-dark.png') })
   await page.getByRole('button', { name: 'Закрыть таймер' }).click()

@@ -445,6 +445,8 @@ export interface WorkoutDraft {
   favoriteTitle?: string
   /** Определяет, должна ли завершённая тренировка списывать занятие из абонемента. */
   trainingFormat?: WorkoutTrainingFormat
+  /** Обратный отсчёт «Подготовка» перед первым подходом Live; null — выключено, отсутствие ключа сохраняет текущее значение. */
+  prepSeconds?: number | null
 }
 
 export type WorkoutTrainingFormat = 'self' | 'with_trainer'
@@ -528,6 +530,8 @@ export interface Workout {
   /** Снэпшот названия избранного на момент планирования (не живая ссылка на favorite_workouts.title); null для тренировок, не из избранного. */
   favoriteTitle?: string | null
   trainingFormat?: WorkoutTrainingFormat
+  /** Обратный отсчёт «Подготовка» перед первым подходом Live; null/отсутствие — без подготовки. */
+  prepSeconds?: number | null
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate
