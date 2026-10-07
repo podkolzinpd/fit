@@ -253,3 +253,9 @@ html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fulls
 }
 
 .phone-frame.fit-client-lime.progress-identity .ai-progress-auto-error { border-radius: var(--lime-radius-card); }
+
+/* The action owns the full44px hit target even with a one-line empty plan
+   or short goal. Existing destinations and surrounding card padding stay. */
+.phone-frame.fit-client-lime.client-home-identity :is(.client-home-past-plan, .client-home-highlight) > a {
+  min-height: var(--control-height-compact);
+}
