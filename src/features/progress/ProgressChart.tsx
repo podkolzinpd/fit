@@ -180,7 +180,7 @@ export function ProgressChart({ entries, metric, label, unit, windowEnd, onWindo
               />}
               {!isDragging && !compact && <Tooltip
                 contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 12 }}
-                labelStyle={{ color: 'var(--fg)', fontWeight: 700 }}
+                labelStyle={{ color: 'var(--fg)', fontWeight: 'var(--fit-type-emphasis-weight, 700)' }}
                 itemStyle={{ color: 'var(--fg)' }}
                 formatter={(value) => formatTooltipValue(Number(value), unit, label)} labelFormatter={(date) => formatTooltipLabel(String(date))} />}
               <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={3}
