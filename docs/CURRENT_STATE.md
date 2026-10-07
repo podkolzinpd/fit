@@ -4,9 +4,9 @@
 
 PR#1488, план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой очистки безопасно диагностируется и не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106, check frontend2479/API1201/policy/hosting/build и CI37613263450 на130d41e1 прошли. После merge#1487/#1490 ветка обновлена от main4896e70f: свежие clean-chain/actor106/106 и полный check/API1201/build passed; повторный CI/production ещё впереди. local:verify ограничен прежней недостающей Supabase migration20260919145000; общая база сохранена. Это устранение риска, не доказанная причина502.
 
-## Клиентский Lime — завершение, PR1/PR2 — 2026-10-07
+## Клиентский Lime — завершение, PR1–PR3 — 2026-10-07
 
-План: `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md` (утверждённая серия из трёх PR, выпуск разрешён). База обновлена с опубликованного b4c3bcdc до main5eda31b2 после #1483/#1484/#1477. PR1 устраняет подтверждённые запросы600–800 в клиентских текстовых ролях, даты400, fallback≈ и текстовые иконки; REM/семантика/данные сохранены. PR1#1485: полный check passed2479frontend/1187API,58browser scenarios. PR2 готовит общий InBody disclosure48px и ссылки главной44px;40browser scenarios passed. PNG идёт PR3. Физический iPhone не подключён; полная готовность и выпуск ещё не подтверждены.
+План: `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md` (утверждённая серия из трёх PR, выпуск разрешён). База обновлена с опубликованного b4c3bcdc до main5eda31b2 после #1483/#1484/#1477. PR1 устраняет подтверждённые запросы600–800 в клиентских текстовых ролях, даты400, fallback≈ и текстовые иконки; REM/семантика/данные сохранены. PR1#1485: полный check passed2479frontend/1187API,58browser scenarios. PR2 готовит общий InBody disclosure48px и ссылки главной44px;40browser scenarios passed. PR3 переводит PNG на шрифты/токены темы и сохраняет единицы/пиксели перед кодированием; CI получает публичные webfonts с проверкой SHA без production credentials (18 policy tests passed, download2/2). Физический iPhone не подключён; полная готовность и выпуск ещё не подтверждены.
 
 ## Кардио: фактическое время равно плану — 2026-10-07
 
