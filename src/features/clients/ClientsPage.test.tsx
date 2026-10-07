@@ -79,6 +79,21 @@ beforeEach(() => {
 })
 
 describe('ClientsPage archive actions', () => {
+  it('labels archiving with an archive icon and keeps restore visually distinct', async () => {
+    const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
+    const { unmount } = renderPage([root])
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' }))
+    const action = screen.getByRole('button', { name: 'В архив' })
+    expect(action.querySelector('svg')).toHaveAttribute('data-icon', 'archive')
+    expect(action.querySelector('.client-swipe-action-icon')).toHaveAttribute('aria-hidden', 'true')
+    expect(action.querySelector('[data-icon="trash"]')).not.toBeInTheDocument()
+    unmount()
+    renderPage([{ ...root, archivedAt: '2026-10-07T12:00:00Z' }], '/clients/archive')
+    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' }))
+    expect(screen.getByRole('button', { name: 'Восстановить' }).querySelector('svg')).toHaveAttribute('data-icon', 'history')
+  })
+
   it('archives once on a full swipe release without an archive-button click and undo uses the returned version', async () => {
     const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
     backend.setArchived.mockResolvedValueOnce({ ...root, archivedAt: '2026-10-06T12:00:00Z', version: 2 })
@@ -163,6 +178,7 @@ describe('ClientsPage archive actions', () => {
     expect(screen.queryByRole('button', { name: 'Вернуть' })).not.toBeInTheDocument()
     resolve({ ...root, archivedAt: '2026-10-06T12:00:00Z', version: 2 })
     expect(await screen.findByRole('button', { name: 'Вернуть' })).toBeEnabled()
+    expect(document.querySelector('.clients-archive-feedback-icon svg')).toHaveAttribute('data-icon', 'check')
   })
 
   it('keeps archived clients out of the working list and always shows the archive entry last', async () => {

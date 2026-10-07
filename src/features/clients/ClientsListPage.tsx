@@ -8,7 +8,7 @@ import { bmiLabel } from '../../data/repositories/workouts.repository'
 import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
-import { ChevronRightIcon, CloseIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
+import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
 import { ChatStartButton } from '../chat'
 import { useChatThreads } from '../chat/use-chat-threads'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
@@ -142,7 +142,8 @@ function ClientSwipeCard({
       style={{ width: Math.max(CLIENT_SWIPE_WIDTH, -(dragOffset ?? baseOffset)) }}>
       <button type="button" tabIndex={open ? 0 : -1} disabled={busy}
         onClick={() => onArchiveChange(client, !archived)}>
-        {pending ? (archived ? 'Восстанавливаем…' : 'Архивируем…') : armed ? 'Отпустите — в архив' : archived ? 'Восстановить' : 'В архив'}
+        <span className="client-swipe-action-icon" aria-hidden="true">{archived ? <HistoryIcon /> : <ArchiveIcon />}</span>
+        <span className="client-swipe-action-label">{pending ? (archived ? 'Восстанавливаем…' : 'Архивируем…') : armed ? 'Отпустите — в архив' : archived ? 'Восстановить' : 'В архив'}</span>
       </button>
     </div>
     <article className="card client-card client-swipe-surface"
@@ -285,6 +286,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   }}><Page title={archivedOnly ? 'Архив' : 'Клиенты'} className={`clients-page${archivedOnly ? ' clients-archive-page' : ''}`}
     back={archivedOnly ? '/clients' : undefined} swipeBack={archivedOnly} action={pageActions}>
     {feedback && <div className="clients-archive-feedback" role="status">
+      <span className="clients-archive-feedback-icon" aria-hidden="true"><CheckIcon /></span>
       <span>{feedback.message}</span>
       {feedback.canUndo && <button type="button" className="link" disabled={archive.isPending}
         onClick={() => changeArchive(feedback.client, false)}>Вернуть</button>}
