@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, loadAssistantClientContext, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, loadAssistantClientContext, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
 
 describe('assistant orchestrator contract', () => {
   it('sends one bounded user prompt after the system message', () => {
@@ -58,6 +58,22 @@ describe('assistant orchestrator contract', () => {
     expect(prompt).toContain('одним коротким предложением')
     expect(prompt).toContain('Всегда возвращай action=null')
     expect(prompt).toContain('На приветствие отвечай естественным приветствием')
+  })
+
+  it('uses the conversational model for an ordinary chat turn and keeps it action-free', async () => {
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'folder')
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'token' })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        result: { alternatives: [{ message: { text: JSON.stringify({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null }) } }] },
+      })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(completeAssistantSmallTalk('Как лучше восстановиться после силовой тренировки?', [{ author: 'user', content: 'Как лучше восстановиться после силовой тренировки?' }]))
+      .resolves.toEqual({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('recognizes summary requests, periods and informal address deterministically', () => {

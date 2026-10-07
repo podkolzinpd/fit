@@ -3,6 +3,7 @@ import type { QueryResultRow } from 'pg'
 
 import {
   assistantCapabilitiesReply,
+  completeAssistantSmallTalk,
   assistantSmallTalkFallback,
   isAssistantCapabilityQuestion,
   isTurnIdReuse,
@@ -391,10 +392,11 @@ export class DatabasePilotAssistantTurnRunner implements PilotAssistantTurnRunne
         actor.account_role === 'client',
         actor.assistant_feature_links,
       )
-      response = workoutDraft ?? {
-        reply: assistantSmallTalkFallback(command.message),
-        action: null,
-      }
+      response = workoutDraft ?? await completeAssistantSmallTalk(
+        command.message,
+        [...history].reverse().map(({ author, content }) => ({ author, content })),
+        { invocationId: turnId, functionName: 'fit-stage-api' },
+      )
     }
 
     return withYandexActorSession(this.pool, session, (client) =>
