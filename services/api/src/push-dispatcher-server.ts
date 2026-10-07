@@ -7,6 +7,7 @@ import { BackgroundDispatcher } from './background-dispatcher.js'
 import { buildPushDispatcherApp } from './push-dispatcher-app.js'
 import { PushDispatcher } from './push-dispatcher.js'
 import { YandexPushNotificationSender } from './push-notifications/http-sender.js'
+import { DatabaseSessionCleanup } from './session-cleanup.js'
 
 function requiredEnv(name: string): string {
   const value = process.env[name]
@@ -33,15 +34,16 @@ const sender = new YandexPushNotificationSender(
 )
 const pushDispatcher = new PushDispatcher(databasePool, sender)
 const appFeedbackConfig = readAppFeedbackIntegrationsConfig(process.env)
-const dispatcher = appFeedbackConfig === undefined
-  ? pushDispatcher
-  : new BackgroundDispatcher(
-      pushDispatcher,
-      new AppFeedbackDispatcher(
+const dispatcher = new BackgroundDispatcher(
+  pushDispatcher,
+  appFeedbackConfig === undefined
+    ? undefined
+    : new AppFeedbackDispatcher(
         databasePool,
         new HttpAppFeedbackSender(appFeedbackConfig),
       ),
-    )
+  new DatabaseSessionCleanup(databasePool),
+)
 const app = buildPushDispatcherApp({
   dispatcher,
   releaseId: requiredEnv('FIT_RELEASE_ID'),

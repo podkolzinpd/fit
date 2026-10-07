@@ -1,7 +1,7 @@
 import { safeDatabaseErrorDiagnostics } from './db/database-readiness.js'
 
-type DispatchOperation = 'push' | 'app_feedback'
-type DispatchPhase = 'prepare' | 'finalize'
+type DispatchOperation = 'push' | 'app_feedback' | 'auth_sessions'
+type DispatchPhase = 'prepare' | 'finalize' | 'cleanup'
 
 export class BackgroundDispatchError extends Error {
   constructor(

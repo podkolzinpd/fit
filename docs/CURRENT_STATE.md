@@ -1,5 +1,9 @@
 # Fit — текущее состояние проекта
 
+## Фоновая очистка app-сессий — 2026-10-07
+
+PR#1488, план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой очистки безопасно диагностируется и не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106, check frontend2479/API1201/policy/hosting/build и CI37613263450 на130d41e1 прошли. После merge#1487/#1490 ветка обновлена от main4896e70f: свежие clean-chain/actor106/106 и полный check/API1201/build passed; повторный CI/production ещё впереди. local:verify ограничен прежней недостающей Supabase migration20260919145000; общая база сохранена. Это устранение риска, не доказанная причина502.
+
 ## Клиентский Lime — завершение, PR1/PR2 — 2026-10-07
 
 План: `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md` (утверждённая серия из трёх PR, выпуск разрешён). База обновлена с опубликованного b4c3bcdc до main5eda31b2 после #1483/#1484/#1477. PR1 устраняет подтверждённые запросы600–800 в клиентских текстовых ролях, даты400, fallback≈ и текстовые иконки; REM/семантика/данные сохранены. PR1#1485: полный check passed2479frontend/1187API,58browser scenarios. PR2 готовит общий InBody disclosure48px и ссылки главной44px;40browser scenarios passed. PNG идёт PR3. Физический iPhone не подключён; полная готовность и выпуск ещё не подтверждены.
@@ -60,8 +64,7 @@ PR#1484 — диагностика runtime-пула; план design/DATABASE_PO
 Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
 Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана.
 Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap, functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
-Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063,
-DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
+Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063, DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
 ## Клиентский Lime — визуальный выпуск завершён
 Владелец продукта 5 октября разрешил реализацию, PR и production-выкладку всей серии. Принятый план: `docs/design/CLIENT_LIME_VISUAL_COMPLETION_20261005.md`. Исправляются оставшиеся визуальные дефекты уже выпущенного пилота только для `budoha1@yandex.ru`; действующие сценарии и тренерский UI сохраняются. PR #1435–#1445 слиты в `main` после зелёных CI: общие действия и отступы навигации, списки плана и истории, обычный Live, круги, завершение, создание, кабинет и календарь, прогресс, профиль, чат и ассистент. При последовательном переносе каждый PR сохранял только свою правку; тренерский UI, голосовой поток и серверные контракты не менялись. В CI учтён существующий флаг программы ассистента; длинный тренерский маршрутный тест отдельно разделён в PR #1433. PR #1445 добавил сквозные проверки свободного места над нижней навигацией после завершения и в истории; PR #1452 увеличил лимит CI для полного WebKit прогона. Локально 102/102 Client Lime сценариев на WebKit/Chromium и полный `npm run check` прошли. CI итогового `main` прошёл (37376020377); актуальный CI 37378543406 и production deployment 37380030323 подтвердили выпуск `7eb6c56f`: 206 объектов, активацию, smoke и readback. Визуальная матрица и ограничение ручной проверки на физическом iPhone записаны в `docs/design/CLIENT_LIME_RELEASE_ACCEPTANCE_20261005.md`.
@@ -100,8 +103,7 @@ record-workout card в Assistant, старый активный черновик
 запись тренировки обозначается как переход на главную.
 
 ## Постоянные границы
-Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17.
-Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
+Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17. Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
 Supabase — только legacy recovery/media/test, не fallback поверх новых Yandex writes.
 Pilot не авторизует данные: RLS/ownership на сервере. Откат Lime: CLIENT_LIME_ENABLED=false + deployment.
 SpeechKit transcript устраняет финальные повторы, сохраняет реплики и разделяет упражнения с параметрами.
@@ -112,9 +114,7 @@ SpeechKit transcript устраняет финальные повторы, со�
 2. Добавить Yandex custom-exercise photo adapter.
 3. На время диагностического отката #1144 frontend снова создаёт Supabase SDK при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска. Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме; отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять сохранённый auth token; это не dual-write и не перенос данных обратно. Переменные и серверные bridge secrets для recovery/media пока не удалять.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer, linked client, recovery старого email-only профиля, новый Yandex-only аккаунт и оба invitation path. Автоматизированы серверные контракты, production auth DOM, PKCE redirect и unauthenticated guards; реальный OAuth callback в этом cutover-сеансе не выполнялся.
-5. Провести backup restore drill, повторить authenticated AI summary и push
-   smoke. До завершения observation window Supabase не удалять: write gate
-   остаётся paused, а обратной миграции Yandex writes нет.
+5. Провести backup restore drill, повторить authenticated AI summary и push smoke. До завершения observation window Supabase не удалять: write gate остаётся paused, а обратной миграции Yandex writes нет.
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
 - Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Android origin закреплён как `https://localhost` и включён в API CORS allowlist deployment workflow. Внешний браузер Yandex ID не может вернуть OAuth-код на `https://localhost` в WebView, поэтому Android использует deep link `com.coachspace.fit://auth/yandex/callback` с PKCE state-проверкой. Этот Redirect URI зарегистрирован в Yandex OAuth 2 октября; прежние URI сохранены. Работающий вход ещё не подтверждён: нужна проверка на устройстве. Ручной GitHub Actions job собирает production-configured debug APK для проверки входа; это не release-сборка. Подпись release и публикация не выполнялись.

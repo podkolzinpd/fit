@@ -55,6 +55,7 @@ import {
   updateCustomExercise,
 } from '../domain-commands.js'
 import { DatabasePilotClientsReader } from '../pilot-clients-reader.js'
+import { DatabaseSessionCleanup } from '../session-cleanup.js'
 import { DatabasePilotConnectionsReader } from '../pilot-connections-reader.js'
 import { DatabasePilotSessionIssuer } from '../pilot-session.js'
 import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.js'
@@ -870,6 +871,160 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    describe('bounded app-session cleanup', () => {
+      const prefix = 'c1ea'
+      const expiredToken = `${prefix}a${'1'.padStart(59, '0')}`
+      const revokedToken = `${prefix}b${'1'.padStart(59, '0')}`
+      const activeToken = `${prefix}${'c'.repeat(60)}`
+      const migrationUrl = new URL('../../db/migrations/000131_background_yandex_session_cleanup.sql', import.meta.url)
+
+      afterEach(async () => {
+        await ownerPool?.query('delete from app_private.yandex_app_sessions where token_sha256 like $1', [`${prefix}%`])
+      })
+
+      async function seed(expired: number, revoked: number) {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        await ownerPool.query(`
+          insert into app_private.yandex_app_sessions (token_sha256, profile_id, created_at, expires_at, revoked_at)
+          select $1 || 'a' || lpad(n::text, 59, '0'), $2::uuid, now() - interval '2 days', now() - interval '1 day', null
+          from generate_series(1, $3::integer) n
+          union all
+          select $1 || 'b' || lpad(n::text, 59, '0'), $2, now(), now() + interval '1 day', now()
+          from generate_series(1, $4::integer) n
+          union all
+          select $1 || repeat('c', 60), $2, now(), now() + interval '1 day', null
+        `, [prefix, APP_ACTOR_ID, expired, revoked])
+      }
+
+      it('deletes at most 50 expired and 50 revoked rows, then drains the remainder without deleting active sessions', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('database pools are not ready')
+        await seed(65, 65)
+        const cleanup = new DatabaseSessionCleanup(runtimePool)
+        await expect(cleanup.run()).resolves.toEqual({ deleted: 100 })
+        const remaining = await ownerPool.query(`
+          select count(*)::integer total,
+            count(*) filter (where revoked_at is not null)::integer revoked,
+            count(*) filter (where revoked_at is null and expires_at <= now())::integer expired
+          from app_private.yandex_app_sessions where token_sha256 like $1
+        `, [`${prefix}%`])
+        expect(remaining.rows).toEqual([{ total: 31, revoked: 15, expired: 15 }])
+        await expect(cleanup.run()).resolves.toEqual({ deleted: 30 })
+        await expect(cleanup.run()).resolves.toEqual({ deleted: 0 })
+        expect((await ownerPool.query('select token_sha256 from app_private.yandex_app_sessions where token_sha256 like $1', [`${prefix}%`])).rows)
+          .toEqual([{ token_sha256: activeToken }])
+      })
+
+      it('skips a locked session and removes it on the next invocation after unlock', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('database pools are not ready')
+        await seed(1, 1)
+        const blockerPool = new Pool({ connectionString: requireLocalTestDatabaseUrl(), max: 1 })
+        const blocker = await blockerPool.connect()
+        try {
+          await blocker.query('begin')
+          await blocker.query('select token_sha256 from app_private.yandex_app_sessions where token_sha256 = $1 for update', [expiredToken])
+          const cleanup = new DatabaseSessionCleanup(runtimePool)
+          await expect(cleanup.run()).resolves.toEqual({ deleted: 1 })
+          await blocker.query('rollback')
+          await expect(cleanup.run()).resolves.toEqual({ deleted: 1 })
+        } finally {
+          await blocker.query('rollback')
+          blocker.release()
+          await blockerPool.end()
+        }
+      })
+
+      it('keeps expired and revoked credentials invalid before their physical removal and does not clean them on login', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('database pools are not ready')
+        await seed(1, 1)
+        for (const token of [expiredToken, revokedToken]) {
+          await expect(withYandexAppSessionTransaction(runtimePool, token, () => Promise.resolve(undefined)))
+            .rejects.toBeInstanceOf(YandexAppSessionInvalidError)
+        }
+        const session = await new DatabaseYandexAppSessionIssuer(runtimePool).issue(APP_SUBJECT_HASH)
+        expect(session?.profile.id).toBe(APP_ACTOR_ID)
+        expect((await ownerPool.query('select count(*)::integer total from app_private.yandex_app_sessions where token_sha256 like $1', [`${prefix}%`])).rows)
+          .toEqual([{ total: 3 }])
+        if (session !== undefined) await ownerPool.query('delete from app_private.yandex_app_sessions where token_sha256 = $1', [hashPilotSessionToken(session.session.token)])
+      })
+
+      it('preserves login/recovery definitions and grants, and restores the old cleanup on rollback', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+        const functions = [
+          'app_private.create_yandex_app_session(text,text,timestamp with time zone)',
+          'app_private.recover_migrated_yandex_account(text,uuid,text,text,timestamp with time zone)',
+        ]
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          for (const signature of functions) {
+            const current = (await connection.query<{ source: string }>('select prosrc source from pg_proc where oid = $1::regprocedure', [signature])).rows[0]?.source
+            expect(current).toBeDefined()
+            expect(current).not.toContain('delete from app_private.yandex_app_sessions')
+            await connection.query(down)
+            const previous = (await connection.query<{ source: string }>('select prosrc source from pg_proc where oid = $1::regprocedure', [signature])).rows[0]?.source
+            expect(previous).toContain('delete from app_private.yandex_app_sessions')
+            expect(previous?.replace('  delete from app_private.yandex_app_sessions\n  where expires_at <= now() or revoked_at is not null;\n\n', '')).toBe(current)
+            expect((await connection.query("select to_regprocedure('app_private.cleanup_yandex_app_sessions()') helper")).rows).toEqual([{ helper: null }])
+            await connection.query(up)
+          }
+          expect((await connection.query(`
+            select has_function_privilege('fit_api', 'app_private.cleanup_yandex_app_sessions()', 'execute') runtime,
+              has_function_privilege('fit_datalens', 'app_private.cleanup_yandex_app_sessions()', 'execute') reader,
+              has_table_privilege('fit_api', 'app_private.yandex_app_sessions', 'delete') direct_delete
+          `)).rows).toEqual([{ runtime: true, reader: false, direct_delete: false }])
+          // The maintenance role can execute only the fixed, parameterless batch.
+          expect((await connection.query<{ acl: string }>(`select proacl::text acl from pg_proc where oid = 'app_private.cleanup_yandex_app_sessions()'::regprocedure`)).rows[0]?.acl).not.toMatch(/(?:\{|,)=[X]/)
+          await connection.query('set local enable_seqscan = off')
+          for (const testCase of [
+            { condition: 'revoked_at is null and expires_at <= now()', order: 'expires_at', index: 'yandex_app_sessions_cleanup_expired_idx' },
+            { condition: 'revoked_at is not null', order: 'revoked_at', index: 'yandex_app_sessions_cleanup_revoked_idx' },
+          ]) {
+            const plan = await connection.query(`explain (format json) select token_sha256 from app_private.yandex_app_sessions where ${testCase.condition} order by ${testCase.order}, token_sha256 limit 50 for update skip locked`)
+            expect(JSON.stringify(plan.rows)).toContain(testCase.index)
+          }
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      })
+
+      it('uses an inclusive database-time expiry boundary', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          await connection.query(`insert into app_private.yandex_app_sessions (token_sha256, profile_id, created_at, expires_at)
+            values ($1, $2, now() - interval '1 second', now())`, [expiredToken, APP_ACTOR_ID])
+          expect((await connection.query<{ deleted: number }>('select app_private.cleanup_yandex_app_sessions() deleted')).rows).toEqual([{ deleted: 1 }])
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      })
+
+      it('safely shares candidates between overlapping invocations', async () => {
+        if (ownerPool === undefined) throw new Error('owner pool is not initialized')
+        await seed(65, 65)
+        const runtimeUrl = new URL(requireLocalTestDatabaseUrl())
+        runtimeUrl.username = 'fit_api'
+        runtimeUrl.password = RUNTIME_PASSWORD
+        const concurrentPool = new PgDatabasePool({ connectionString: runtimeUrl.toString(), max: 2 })
+        try {
+          const cleanup = new DatabaseSessionCleanup(concurrentPool)
+          const results = await Promise.all([cleanup.run(), cleanup.run()])
+          expect(results.every(({ deleted }) => deleted >= 0 && deleted <= 100)).toBe(true)
+          expect(results.reduce((total, { deleted }) => total + deleted, 0)).toBe(130)
+          await expect(cleanup.run()).resolves.toEqual({ deleted: 0 })
+          expect((await ownerPool.query('select token_sha256 from app_private.yandex_app_sessions where token_sha256 like $1', [`${prefix}%`])).rows)
+            .toEqual([{ token_sha256: activeToken }])
+        } finally {
+          await concurrentPool.end()
+        }
+      })
     })
 
     describe('workout position index migration', () => {

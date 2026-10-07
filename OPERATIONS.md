@@ -1053,6 +1053,24 @@ Opaque session token хранится в browser localStorage только дл�
 исполняемому frontend JavaScript, поэтому защита от доступа к данным остаётся
 на backend session, ownership и tenant-проверках.
 
+Физическая очистка `app_private.yandex_app_sessions` вынесена из входа и atomic
+legacy recovery в существующий приватный минутный dispatcher. Migration131
+добавляет SQL-функцию без параметров: максимум 50 просроченных неотозванных и
+50 отозванных строк за вызов, упорядоченных по времени через отдельные partial
+indexes; `FOR UPDATE SKIP LOCKED` пропускает занятые строки. Время берётся из
+БД, HTTP payload не задаёт cutoff или размер порции. Активные сессии сохраняются,
+а истёкшие/отозванные запрещены для авторизации сразу, до физического удаления.
+Нового таймера, облачных ресурсов или IAM-прав нет; запуск работает и без
+feedback-интеграций. Ошибка очистки не отменяет push/feedback, не повторяется
+внутри вызова и проверяется снова следующим timer. Safe events:
+`yandex_session_cleanup` (`deleted`, включая 0) и
+`yandex_session_cleanup_failed` (dispatchOperation=`auth_sessions`, dispatchPhase=`cleanup`,
+allowlisted category/code без текста ошибки, токенов и profile IDs).
+При постоянном failed или длительном deleted=100 проверьте доступность БД и
+темп накопления: порция ограничена, полное осушение за одну минуту не обещается.
+Down возвращает прежние функции входа/recovery, но не восстанавливает уже
+удалённые недействительные сессии. Ручной production SQL не требуется.
+
 Frontend ограничивает OAuth exchange, linking, восстановление и отзыв Yandex
 ID-сессии 12 секундами. При таймауте сохранённый token остаётся доступен для
 повтора, но экран больше не может оставаться в бесконечном loading. Действие
