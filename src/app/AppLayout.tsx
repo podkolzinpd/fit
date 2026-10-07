@@ -28,7 +28,9 @@ export function AppLayout() {
   const clientLimeShell = isClientLimeShellRoute(actor, pathname)
   const fitLimeShell = isFitLimeShellRoute(actor, pathname, search) || clientLimeShell
   const theme = clientLimeShell ? clientTheme.theme : baseTheme
-  const clientCompose = clientLimeShell && pathname === '/me' && new URLSearchParams(search).has('draft') && !['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
+  const clientCompose = clientLimeShell && pathname === '/me'
+    && (new URLSearchParams(search).has('draft') || new URLSearchParams(search).get('entry') === 'workout')
+    && !['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const pilotCompose = clientCompose || (fitLimeShell && pathname === '/today' && new URLSearchParams(search).get('view') === 'compose')
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)

@@ -377,6 +377,19 @@ describe('AppLayout navigation', () => {
       expect(document.querySelector('.content')).toHaveClass('content-immersive')
     },
   )
+
+  it('открывает компактное создание клиента Lime без нижней навигации', () => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    authState.clientLime = true
+    const entry = renderLayout('/me?entry=workout')
+    expect(screen.queryByRole('navigation', { name: 'Основная навигация' })).not.toBeInTheDocument()
+    expect(document.querySelector('.content')).toHaveClass('content-immersive')
+    expect(document.querySelector('.phone-frame')).toHaveClass('workout-create-edit-identity')
+    entry.unmount()
+
+    renderLayout('/me')
+    expect(screen.getByRole('navigation', { name: 'Основная навигация' })).toBeVisible()
+  })
 })
 
 describe('AppLayout: вкладка ассистента', () => {
