@@ -272,7 +272,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   useEffect(() => {
     const draft = readTodayDraft(draftKey)
-    if (clientLime && draftLoadedKey !== draftKey) resetDraftFields(Boolean(requestedClientDraft))
+    if (clientLime && draftLoadedKey !== draftKey) resetDraftFields(Boolean(requestedClientDraft) || compactClientEntry)
     if (draft) {
       if (clientLime) setRestoredClientDraft(true)
       setRestoredDraftScreen(screen === 'compose' && (!limePlanning || draft.text.trim() || draft.items.length) ? draft.screen : null)
@@ -295,6 +295,16 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     }
     setDraftLoadedKey(draftKey)
   }, [draftKey, today, limePlanning])
+
+  useEffect(() => {
+    if (clientLime && compactClientEntry) setTextComposerOpen(true)
+  }, [clientLime, compactClientEntry])
+
+  useEffect(() => {
+    if (clientLime && compactClientEntry && !requestedClientDraft) {
+      navigate(`/me?entry=workout&draft=${clientSessionId}`, { replace: true })
+    }
+  }, [clientLime, compactClientEntry, requestedClientDraft, clientSessionId, navigate])
 
   useEffect(() => {
     if (clientMode && mine.data?.id) setClientId(mine.data.id)
@@ -916,7 +926,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         />
       </div>}
       {restoredDraftScreen && !textComposerOpen && voicePhase === 'idle' && <section className="today-resume"><span><strong>{limePlanning ? 'Есть черновик плана' : 'Есть незавершённая тренировка'}</strong><small>Можно продолжить с того же места</small></span><div><button type="button" className="link" onClick={() => { const target = restoredDraftScreen; setRestoredDraftScreen(null); if (target === 'compose') setTextComposerOpen(true); else setScreen(target) }}>Продолжить</button><button type="button" className="link muted" onClick={() => clearDraftAndForm(false)}>Удалить</button></div></section>}
-      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>{clientLime && restoredClientDraft ? 'Черновик тренировки' : 'Новая тренировка'}</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={false} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); if (!limePlanning && !clientLime) setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
+      {textComposerOpen && <div className="today-text-fallback"><div className="today-text-fallback-head"><div><strong>{clientLime && restoredClientDraft ? 'Черновик тренировки' : 'Новая тренировка'}</strong><small>Введите упражнения, подходы и значения</small></div><button type="button" className="link" onClick={closeTextComposer}>Скрыть</button></div><WorkoutComposer name="today-workout" source="today_workout" value={text} showVoice={clientLime} showVoiceCancel={clientLime} voiceLabel={clientLime ? 'Надиктовать тренировку' : undefined} onValueChange={(value) => { voiceParseVersion.current += 1; reviewRequest.current += 1; setParsing(false); setText(value); setLastLlmText(null); setParseError(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} onTranscriptValueChange={(value) => { setText(value); setParseError(null); setVoiceRefinement(null) }} onTranscriptAppended={({ previousValue, value, transcript }) => refineVoiceTranscript(previousValue, value, transcript)} onClear={() => { setText(''); setParseError(null); setLastLlmText(null); setChoices({}); setRecognized([]); setLlmUnmatched([]); setVoiceRefinement(null) }} primaryAction={<button type="button" className="wide today-primary-cta" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={<button type="button" className="link wide today-picker-cta" onClick={() => { trackGoal('exercise_picker_opened'); if (!limePlanning && !clientLime) setItems([]); setPickerFromCompose(true); setPickerOpen(true) }}>Выбрать упражнения вручную</button>}>
       {voiceRefinement && (clientLime || voiceRefinement.state !== 'loading') && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">

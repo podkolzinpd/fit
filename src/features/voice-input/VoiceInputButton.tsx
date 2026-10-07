@@ -29,6 +29,7 @@ interface VoiceInputButtonProps {
   startupTimeoutMs?: number
   disabled?: boolean
   showTranscriptStatus?: boolean
+  showCancel?: boolean
   /** Idle-only extra control rendered inside the hero card's label area (e.g. a text-entry alternative). */
   secondaryAction?: ReactNode
 }
@@ -53,6 +54,7 @@ export function VoiceInputButton({
   startupTimeoutMs = 30_000,
   disabled = false,
   showTranscriptStatus = true,
+  showCancel = false,
   secondaryAction,
 }: VoiceInputButtonProps) {
   const [phase, setPhase] = useState<VoiceInputPhase>('idle')
@@ -332,6 +334,7 @@ export function VoiceInputButton({
       {voiceButtonLabel(phase, elapsedSeconds, progress, idleLabel)}
       {beta && phase === 'idle' && <span className="voice-beta">beta</span>}
     </button>
+    {showCancel && (recording || phase === 'requesting') && <button type="button" className="link voice-input-cancel" onClick={cancelRecording}>Отменить</button>}
     {phase === 'loading' && <small className="muted">При первом запуске загружается локальная модель (~31 МБ).</small>}
     {message && <VoiceInputStatus message={message} undo={undo} onUndo={() => { undo?.(); setUndo(null); setMessage(null) }} onDismiss={() => setMessage(null)} />}
   </div>
