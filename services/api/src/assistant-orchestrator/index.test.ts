@@ -38,6 +38,8 @@ describe('assistant orchestrator contract', () => {
   it('answers capability questions from the enabled product scope', () => {
     expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
     expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
+    expect(isAssistantCapabilityQuestion('чем ты можешь помочь?')).toBe(true)
+    expect(isAssistantCapabilityQuestion('мой рост метр сорок три, вес 120, это норм? какие рекомендации по питанию и тренировкам ты мне можешь дать?')).toBe(false)
     expect(isAssistantCapabilityQuestion('привет')).toBe(false)
     const pilotReply = assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })
     expect(pilotReply).toContain('составить рекомендованный черновик')
@@ -58,6 +60,12 @@ describe('assistant orchestrator contract', () => {
     expect(prompt).toContain('одним коротким предложением')
     expect(prompt).toContain('Всегда возвращай action=null')
     expect(prompt).toContain('На приветствие отвечай естественным приветствием')
+    expect(prompt).toContain('не проси повторить уже названные данные')
+    expect(assistantSmallTalkPrompt([
+      { author: 'user', content: 'Мой рост 143 см, вес 120 кг.' },
+      { author: 'assistant', content: 'Поняла.' },
+      { author: 'user', content: 'Какие рекомендации по питанию?' },
+    ], true)).toContain('Мой рост 143 см, вес 120 кг.')
   })
 
   it('uses the conversational model for an ordinary chat turn and keeps it action-free', async () => {
@@ -69,7 +77,11 @@ describe('assistant orchestrator contract', () => {
       })))
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(completeAssistantSmallTalk('Как лучше восстановиться после силовой тренировки?', [{ author: 'user', content: 'Как лучше восстановиться после силовой тренировки?' }]))
+    await expect(completeAssistantSmallTalk('Какие рекомендации по питанию?', [
+      { author: 'user', content: 'Мой рост 143 см, вес 120 кг.' },
+      { author: 'assistant', content: 'Поняла.' },
+      { author: 'user', content: 'Какие рекомендации по питанию?' },
+    ]))
       .resolves.toEqual({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null })
     expect(fetchMock).toHaveBeenCalledTimes(2)
     vi.unstubAllGlobals()

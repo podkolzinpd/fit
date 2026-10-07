@@ -341,9 +341,10 @@ function normalizeAssistantMessage(message: string): string {
 
 export function isAssistantCapabilityQuestion(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
-  const asksQuestion = normalized.includes('что') || normalized.includes('какие') || normalized.includes('чем') || normalized.includes('как')
-  const asksAboutCapabilities = ['уме', 'мож', 'функц', 'возможност', 'помощ'].some((stem) => normalized.includes(stem))
-  return asksQuestion && asksAboutCapabilities
+  // This is deliberately an intent, not a bag of words. "Какие рекомендации
+  // по питанию ты можешь дать?" is health chat, not a request for a feature
+  // catalogue.
+  return /^(?:что ты умеешь|что ты можешь(?: делать)?|какие (?:у тебя )?(?:функции|возможности)(?: вообще)? есть|чем ты можешь помочь|какую помощь ты можешь (?:оказать|дать))$/u.test(normalized)
 }
 
 export function isSummaryRequest(message: string): boolean {
@@ -722,7 +723,8 @@ export function assistantSmallTalkPrompt(history: readonly { author: string; con
     'Всегда возвращай action=null. Никогда не создавай карточки и не обещай изменить данные.',
     'Не повторяй инструкцию про доступные функции без прямого вопроса пользователя. На приветствие отвечай естественным приветствием.',
     'Если вопрос не о фитнесе или спорте, мягко скажи, что лучше всего помогаешь с тренировочными темами. Не ставь диагнозов и не давай опасных советов. При боли или травме кратко рекомендуй обратиться к врачу или профильному специалисту.',
-    `Недавняя история:\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
+    'Последняя реплика «Пользователь» — текущий вопрос. Отвечай именно на неё; если это уточнение, используй факты из предыдущих реплик и не проси повторить уже названные данные.',
+    `Недавняя история (в хронологическом порядке):\n${history.slice(-6).map((entry) => `${entry.author === 'user' ? 'Пользователь' : 'Ассистент'}: ${entry.content}`).join('\n')}`,
   ].join('\n\n')
 }
 
