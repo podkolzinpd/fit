@@ -741,6 +741,51 @@ export function assistantModelMessages(prompt: string): Array<{ role: 'system' |
   ]
 }
 
+/** Completes a non-command turn for every assistant entrypoint. */
+export async function completeAssistantSmallTalk(
+  message: string,
+  history: readonly { author: string; content: string }[],
+  options: { invocationId?: string | null; monitoringToken?: string | null; functionName?: string } = {},
+): Promise<AssistantTurnResponse> {
+  const invocationId = options.invocationId ?? null
+  const monitoringToken = options.monitoringToken ?? null
+  const functionName = options.functionName ?? 'fit-assistant-orchestrator'
+  let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(message), action: null }
+  try {
+    const iamToken = await yandexIamToken()
+    const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
+    const response = await fetch(completionUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
+      body: JSON.stringify({
+        modelUri,
+        completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' },
+        jsonSchema: { schema: smallTalkSchema },
+        messages: assistantModelMessages(assistantSmallTalkPrompt(history, usesInformalAddress(message))),
+      }),
+    })
+    if (!response.ok) {
+      await reportAiStudioMetric({ functionName, modelUri, invocationId, iamToken: monitoringToken, upstreamRequestId: response.headers.get('x-request-id'), usage: null })
+      throw new Error(`small_talk_http_${response.status}`)
+    }
+    let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+    try {
+      payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
+    } catch {
+      await reportAiStudioMetric({ functionName, modelUri, invocationId, iamToken: monitoringToken, upstreamRequestId: response.headers.get('x-request-id'), usage: null })
+      throw new Error('small_talk_invalid_json')
+    }
+    await reportAiStudioMetric({ functionName, modelUri, invocationId, iamToken: monitoringToken, upstreamRequestId: response.headers.get('x-request-id'), usage: aiStudioUsage(payload.result?.usage) })
+    const raw = JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? '') as unknown
+    const modelResult = validateEnabledAssistantTurnResponse(raw)
+    if (!modelResult || modelResult.action !== null) throw new Error('small_talk_invalid_response')
+    result = modelResult
+  } catch (error) {
+    console.warn('assistant_small_talk_fallback', { operationId: invocationId ?? 'generated', releaseSha, reason: error instanceof Error ? error.message : 'unknown' })
+  }
+  return result
+}
+
 type AssistantService = SupabaseClient
 
 function responseFromStoredMessage(value: unknown): AssistantTurnResponse | undefined {
@@ -911,60 +956,10 @@ export async function runAssistantTurn(
     console.info('assistant_workout_draft_reply_persisted', { operationId: turnId, releaseSha, status: workoutDraft.action?.status })
     return persistAssistantResponse(service, command.conversationId, turnId, response)
   }
-  let result: AssistantTurnResponse = { reply: assistantSmallTalkFallback(command.message), action: null }
-  try {
-    const iamToken = await yandexIamToken()
-    const modelUri = `gpt://${required('YANDEX_CLOUD_FOLDER_ID')}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
-    const response = await fetch(completionUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${iamToken}` },
-      body: JSON.stringify({
-        modelUri,
-        completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' },
-        jsonSchema: { schema: smallTalkSchema },
-        messages: assistantModelMessages(assistantSmallTalkPrompt(history, usesInformalAddress(command.message))),
-      }),
-    })
-    if (!response.ok) {
-      await reportAiStudioMetric({
-        functionName: 'fit-assistant-orchestrator',
-        modelUri,
-        invocationId,
-        iamToken: monitoringToken,
-        upstreamRequestId: response.headers.get('x-request-id'),
-        usage: null,
-      })
-      throw new Error(`small_talk_http_${response.status}`)
-    }
-    let payload: { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
-    try {
-      payload = await response.json() as { result?: { alternatives?: Array<{ message?: { text?: string } }>; usage?: unknown } }
-    } catch {
-      await reportAiStudioMetric({
-        functionName: 'fit-assistant-orchestrator',
-        modelUri,
-        invocationId,
-        iamToken: monitoringToken,
-        upstreamRequestId: response.headers.get('x-request-id'),
-        usage: null,
-      })
-      throw new Error('small_talk_invalid_json')
-    }
-    await reportAiStudioMetric({
-      functionName: 'fit-assistant-orchestrator',
-      modelUri,
-      invocationId,
-      iamToken: monitoringToken,
-      upstreamRequestId: response.headers.get('x-request-id'),
-      usage: aiStudioUsage(payload.result?.usage),
-    })
-    const raw = JSON.parse(payload.result?.alternatives?.[0]?.message?.text ?? '') as unknown
-    const modelResult = validateEnabledAssistantTurnResponse(raw)
-    if (!modelResult || modelResult.action !== null) throw new Error('small_talk_invalid_response')
-    result = modelResult
-  } catch (error) {
-    console.warn('assistant_small_talk_fallback', { operationId: turnId, releaseSha, reason: error instanceof Error ? error.message : 'unknown' })
-  }
+  const result = await completeAssistantSmallTalk(command.message, history, {
+    invocationId: invocationId ?? turnId,
+    monitoringToken,
+  })
   console.info('assistant_small_talk_reply_persisted', { operationId: turnId, releaseSha })
   return persistAssistantResponse(service, command.conversationId, turnId, result)
 }
