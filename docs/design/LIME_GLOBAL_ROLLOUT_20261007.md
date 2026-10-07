@@ -123,3 +123,5 @@ PR3: владелец разрешил trainer+schedule all после подт�
 
 ### Клиентский merge и исходное production-состояние — 2026-10-08
 PR1500 head e1518c5d: CI37684890567 success, Android37684890354 success, штатный squash merge38bdf7da05c21c41b3a8addd8de0e60feedc9ea8. #1499 пропускает наши два выпуска по прямому ответу владельца. Main CI37688981307/front-end release остаются обязательными гейтами до client all. Private inspect37689049231 success: clientMode=pilot, trainerMode=pilot, scheduleMode=pilot, revision0; две независимые проверки совпали. PR1501 перенесён только своими commits поверх38bdf7da; client workflow/default-dark и foundation не дублируются. Клиентская и тренерская массовые активации ещё не выполнялись.
+
+PR1501 на базе38bdf7da: полный npm run check exit0, frontend2518/API1231 (+127 DB отдельно/skipped), policy/lint/typecheck/build passed, helper/workflow8/8. Отправляется свежий CI; merge и trainer all только после client all/readback.
