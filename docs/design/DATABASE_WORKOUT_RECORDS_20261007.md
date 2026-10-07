@@ -54,4 +54,14 @@ yandex-main.repository, CURRENT_STATE. Перед merge — очередь ра�
   app-session/API: старый workout показывает 60кг×10, один records запрос,
   ноль Progress pages/Supabase calls, нет overflow390/430; 1/1 passed.
   Проверка нового transport не опирается на старый Supabase login.
-- CI, очередь ранних#1491/#1493/#1494, merge и production ещё не завершены.
+- PR#1495: полный CI37626195696 и Android37626195719 на6ca70e74 success.
+  После merge#1491 ветка обновлена от main628b495c: полный npm run check,
+  API1204/1204, WebKit1/1 и свежая чистая PostgreSQL17 chain134/actor115/115
+  повторно passed. Повтор actor suite на ранее использованной тестовой БД
+  дал113/115: истёкшие строки предыдущего запуска меняли глобальный batch
+  cleanup и план индекса. Пересоздан только собственный временный контейнер;
+  общая legacy-БД не менялась, тесты не ослаблялись.
+- Новый exact-head CI, очередь ранних#1493/#1494, merge и production ещё
+  не завершены. У#1493 на момент проверки красный CI; очередь не обходится.
+- iOS/simulator не проверен: Xcode/simctl в текущем окружении отсутствуют.
+  Android debug CI зелёный; физическое устройство и реальный OAuth не проверены.
