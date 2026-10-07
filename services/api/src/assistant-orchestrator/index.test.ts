@@ -52,6 +52,7 @@ describe('assistant orchestrator contract', () => {
   it('keeps non-workout chat minimal and strictly action-free', () => {
     expect(assistantSmallTalkFallback('привет')).toBe('Привет! Чем помочь?')
     expect(assistantSmallTalkFallback('спасибо')).toBe('Пожалуйста!')
+    expect(assistantSmallTalkFallback('Как лучше восстановиться после силовой тренировки?')).toContain('сон, вода')
     expect(assistantSmallTalkFallback('как дела?')).toBe('Я на связи — можем коротко обсудить тренировки, упражнения, восстановление или спорт.')
     const prompt = assistantSmallTalkPrompt([{ author: 'user', content: 'привет' }], true)
     expect(prompt).toContain('одним коротким предложением')
