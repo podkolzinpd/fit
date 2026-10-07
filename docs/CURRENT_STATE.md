@@ -1,24 +1,31 @@
 # Fit — текущее состояние проекта
 
+## Рекорды выбранной тренировки — 2026-10-07
+PR#1495, план design/DATABASE_WORKOUT_RECORDS_20261007.md. Обновление от mainfca6cb75 после#1493/#1494/#1497: обе стороны snapshot и соседние API/repository tests сохранены; собственная невыпущенная migration134 перенумерована136, поскольку134/135 уже в main. GET personal-records — одно actor-scoped чтение без лимита20; confirmed/first/tie/shared-history/author contract, strength без primary-дубля, volume с весом/повторами своего подхода. После разрешения конфликтов fresh clean PostgreSQL17 chain136/actor125/125, WebKit1/1 и полный check2514frontend/1205API/build passed. Предыдущий exact-head CI37629455480/Android37629455419 на8d2c91b9 success; CI новой объединённой ветки ещё гейт, merge/production не объявлены. local:verify повторно ограничен прежней legacy migration20260919145000; общая база не сбрасывалась.
+
+## Надёжность шаблонов и функциональная приёмка — 2026-10-07
+
+GitHub#1492, PR#1494 слит70708ef8 после свежего CI37643415295/225ea9d4 и Android37643415198 success; план design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md. Пункты1–2: migration134/стабильный ID, точный replay без дублей и обхода ownership/version, account/context-scoped черновик и защита от старого pending save. После #1493/main25c046b2 повторены clean-chain132→134/actor111, check2512frontend/1202API/build, template WebKit4/4, DB cross-role16, exact Down→Up134/grants и real old/Lime API/DB/browser2×15 — passed; исходная полная WebKit359/359. Production70708ef8 API37646348676/mainCI37646348715 выполняется. local:verify ограничен прежним drift112, общая база сохранена. Быстрый старт не меняется; полный план3–10 не закрыт. Отключение современной связи — отдельный#1497/135; real OAuth/AI/voice/Health/devices/payments не подменяются fixtures.
+
+## Live: таймер фаз и ранний старт будущего плана — 2026-10-07
+
+План: `design/live-phase-timer.md`, выпуск разрешён владельцем после локальной проверки. Одна кнопка таймера ведёт подготовку → подход по плановому времени → отдых; `workouts.prep_seconds` (migration132, ключ не пришёл — значение сохраняется). migration133 расширяет триггер 000120 вне пилота Lime только для будущих дат: старт Live переносит план на фактический день клиента, `planned_*` хранит исходный план; прошедшие даты вне пилота не меняются. Тест «Контроль без флага» переписан под новое правило. Supabase не менялся. Проверено: clean PostgreSQL17 chain/actor100/100, frontend unit817/817, Yandex repository47/47; UI сценарий — локально в браузере (dev-сборка на Supabase, без prep_seconds в legacy-схеме). Production ещё не подтверждён.
+
+## Отключение выбранного тренера — 2026-10-07
+
+GitHub#1492 пункт6, план design/SELECTED_TRAINER_DISCONNECT_20261007.md. Реальный API/DB/browser воспроизвёл204/успех с оставшейся active relationship: прежний Yandex writer удалял только membership. Migration135 закрывает обе формы доступа атомарно; чужие акторы/legacy trainer-owned guard/другие тренеры/история сохранены. После #1493/#1494/main70708ef8 повторены fresh clean-chain132→135/actor116, real old/Lime UI/API/DB2×18, exact Down→Up135 и полный check2512/1202/build — passed. Первый CI37638048028/31686ab3 зелёный; свежий CI перед merge повторяется. Ждёт более ранние#1495/#1496 и последующее обновление от main; production не подтверждён.
+
 ## Фоновая очистка app-сессий — 2026-10-07
 
-PR#1488, план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой очистки безопасно диагностируется и не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106, check frontend2479/API1201/policy/hosting/build и CI37613263450 на130d41e1 прошли. После merge#1487/#1490 ветка обновлена от main4896e70f: свежие clean-chain/actor106/106 и полный check/API1201/build passed; повторный CI/production ещё впереди. local:verify ограничен прежней недостающей Supabase migration20260919145000; общая база сохранена. Это устранение риска, не доказанная причина502.
+PR#1488 слит ca796686; план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106, full check2479/1201/build и exact-head CI37618069869 passed. Production37618758871: migration131 применена, API/dispatcher exact-release health/smoke passed,50/50 прямых health probes. Независимые /health + /ready200, API tree hash совпал. local:verify ограничен прежней недостающей legacy migration20260919145000; общая база сохранена. Это устранение риска, не доказанная причина502.
 
 ## Клиентский Lime — завершение, PR1–PR4 — 2026-10-07
 
 План `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md`, YAFIT-599. #1485 опубликован; #1487 опубликован на mainca796686 официальным37619414157: ресурсы7/7, production UI16/16. #1489 слит62a92c46 после CI37622487729 success; штатный выпуск ожидается. #1491 обновлён от этого main: portal чата/TimeWheel500 и подтверждённая потеря окна конкурса при замене auth frame (host после commit; условия/данные прежние). Общий проход352/354 +2/2 повтор навигационных таймаутов; программа12сессий/24редактора8/8, running8/8, уведомления8/8, fonts8/8, конкурс8/8. Frontend2488/lint/typecheck/build passed; реестр `client-lime-migration-audit.md`. Физический iPhone/реальные внешние эффекты НЕ ПРОВЕРЕНО; итоговая публикация и полное соответствие не объявлены.
 
-## Кардио: фактическое время равно плану — 2026-10-07
-
-YAFIT-598: прежний Live dedupe сравнивал только числа и пропускал явное подтверждение времени, совпавшего с планом. Ключ автосохранения учитывает источник метрик: `entered` доходит до БД и участвует в расчёте калорий; сама формула и схема БД не меняются. Регрессии закрывают выбор того же значения в поле, сохранение факта и DB-оценку при неизменном числе.
-
 ## YAFIT-597 — надёжность оплат — 2026-10-07
 
 План: `design/FINANCE_PAYMENTS_20261006.md`, GitHub#1472, PR1#1473 / PR2#1475. Владелец разрешил оба выпуска по общей очереди. PR1 добавляет actor-scoped request receipts и фактическую дату начальной оплаты (migration130/v2, старые записи и контракты сохранены). Clean PostgreSQL17 chain/actor93/93, UI/repository64/64 и WebKit error/retry2/2 passed. `local:verify` ограничен прежним drift общей базы migration112; общая база не сбрасывалась. Параллельный check ловил локальные таймауты соседних тестов; последовательный API1177/1177 и frontend-покрытие надстройки PR2 —2419/2419 passed без изменений тестов; policy/db-types/iOS/media/hosting/build и CI API/RLS/app-tests зелёные. После #1464 clean-chain/actor99/99; после #1471/#1463 (main07c9dcb1) финальная clean-chain/actor100/100 и finance/Yandex repository64/64 passed. CI финального head314915c5 (37546811112) success; PR1#1473 слит3bea5635. API/migration130 rollout выполняется, production ещё не подтверждён; реальная финансовая сессия клиента не проверена.
-
-## Полный свайп клиентов — 2026-10-06
-
-PR#1471 слит2867f1d9; exact-head CI37537752452/main CI37541769868/Android37541769919 success. Yandex production37543515079 activation/smoke/readback success; public index/sw/manifest/JS hashes совпали, оба full-swipe markers опубликованы. Trusted production bundle206files проверен внутри iOS binary; sync/build/install/launch собственного simulator прошли. Длинный свайп архивирует при отпускании; короткий открывает кнопку, обратный/вертикальный/cancel не меняют данные. Ownership/version/pending/error/undo сохранены. Владелец подтвердил «работает» на своём устройстве; это не полная физическая Safari/PWA-матрица. Прежняя automation-3 отключена.
 
 ## Оформление свайпа клиентов — 2026-10-07
 
@@ -61,13 +68,7 @@ PR#1484 — диагностика runtime-пула; план design/DATABASE_PO
 
 ## Часовой эксперимент frontend Gateway — 2026-10-05
 #1433: private Node.js22/128МБ/60s, часовой timer `/healthz`/`auth` на одном IP; без PII/чатов.
-Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned tag защищают переключение.
-Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана.
-Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap, functions.admin только на функцию и scoped invoker; deployer пока functions.editor.
-Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063, DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
-
-## Клиентский Lime — визуальный выпуск завершён
-Владелец продукта 5 октября разрешил реализацию, PR и production-выкладку всей серии. Принятый план: `docs/design/CLIENT_LIME_VISUAL_COMPLETION_20261005.md`. Исправляются оставшиеся визуальные дефекты уже выпущенного пилота только для `budoha1@yandex.ru`; действующие сценарии и тренерский UI сохраняются. PR #1435–#1445 слиты в `main` после зелёных CI: общие действия и отступы навигации, списки плана и истории, обычный Live, круги, завершение, создание, кабинет и календарь, прогресс, профиль, чат и ассистент. При последовательном переносе каждый PR сохранял только свою правку; тренерский UI, голосовой поток и серверные контракты не менялись. В CI учтён существующий флаг программы ассистента; длинный тренерский маршрутный тест отдельно разделён в PR #1433. PR #1445 добавил сквозные проверки свободного места над нижней навигацией после завершения и в истории; PR #1452 увеличил лимит CI для полного WebKit прогона. Локально 102/102 Client Lime сценариев на WebKit/Chromium и полный `npm run check` прошли. CI итогового `main` прошёл (37376020377); актуальный CI 37378543406 и production deployment 37380030323 подтвердили выпуск `7eb6c56f`: 206 объектов, активацию, smoke и readback. Визуальная матрица и ограничение ручной проверки на физическом iPhone записаны в `docs/design/CLIENT_LIME_RELEASE_ACCEPTANCE_20261005.md`.
+Manual inspect, enable требует согласования стоимости; через24ч HTTP прекращается, disable останавливает timer. Candidate smoke/pinned tag защищают переключение. Ресурсов/активации нет, invoke/эффект не проверены, причина медленного HTML не доказана. Оценка21₽/31день при60s/повторах, трафик/логи отдельно; OPERATIONS.md. Нужен private bootstrap, functions.admin только на функцию и scoped invoker; deployer пока functions.editor. Прав/UI/auth/API/БД не меняли, внешний probe сохранён. Check frontend2371/API1063, DB71 skipped/hosting112; E2E разделены без ослаблений:48/48, WebKit236/236; CI37294091210 success. На `6f7e3cea` check/E2E52/52 зелёные; далее CI-гейт.
 
 ## Ачивки — YAFIT-594
 План: design/ACHIEVEMENT_PROGRESS_STATES_20261004.md. #1425/#1427/#1428
@@ -81,8 +82,7 @@ Assets/award logic сохранены; mobile WebKit/Chromium и CI/deployment/r
 ## Выпуск клиентских исправлений — 2026-10-05
 Семь PR #1408/#1410/#1411/#1412/#1413/#1415/#1417 слиты после зелёного CI. #1426 дал каждому smoke-запросу отдельный 20-секундный таймер, сохранив проверки файлов и откат. Две выкладки 0ca85201 откатились на `/healthz`; причина сетевого таймаута не доказана. CI37237418210/deployment37238448692 выпустили 8fc46a31; readback37238977765 ACTIVE, warm37238988653 HTTP200. Затем выпущены достижения: frontend `6810452f`, CI37241760363, deployment37242590195 и readback37260193474 success/ACTIVE.
 
-Пилот клиентского Lime по-прежнему только `budoha1@yandex.ru`.
-Локальная регрессия416/416 WebKit/Chromium; Android debug run37232171038 success, iOS собран/установлен/запущен в симуляторе. Store-релиза и проверки диктовки на физическом устройстве не было; relay smoke её не заменяет.
+Пилот клиентского Lime по-прежнему только `budoha1@yandex.ru`. Локальная регрессия416/416 WebKit/Chromium; Android debug run37232171038 success, iOS собран/установлен/запущен в симуляторе. Store-релиза и проверки диктовки на физическом устройстве не было; relay smoke её не заменяет.
 
 Acceptance: design/CLIENT_LIME_VIDEO_REMEDIATION_20261004.md; Lime identity/pilot сохранены. SpeechKit smoke `done` прошёл, старый recovery не относится к relay.
 Production browser ограничен без обхода; внешний YAFIT не настроен, чужие credentials не используются.

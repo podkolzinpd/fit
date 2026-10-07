@@ -6316,6 +6316,13 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
   50% { border-color:var(--danger); background:color-mix(in srgb, var(--danger) 14%, var(--danger-surface)); }
 }
 @media (prefers-reduced-motion:reduce) { .live-rest-trigger.rest-overdue { animation:none; } }
+/* Удержание открывает настройки таймера: без системного меню iOS и выделения текста. */
+.live-rest-trigger { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+/* Фаза видна по цвету издалека и по подписи («Подготовка», «Подход», «Отдых») вблизи. */
+.live-rest-trigger.phase-prep { border-color:var(--accent-strong); background:var(--accent-surface); color:var(--fg); }
+.live-rest-trigger.phase-work { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg); }
+.live-phase-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; padding:6px 6px 6px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; }
+.live-phase-notice button { flex:none; min-height:44px; padding:0 14px; }
 .live-identity .live-workout-page .live-set-table > .live-set,
 .live-identity .live-workout-page .circuit-round .live-set { border:0; }
 .live-identity .live-workout-page .live-set-table > .live-set + .live-set,

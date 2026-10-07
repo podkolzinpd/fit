@@ -169,6 +169,7 @@ describe('workouts repository rules', () => {
     expect(compactCompletedSetSummary([base(0), base(1), base(2)])).toBe('3 × 150 кг × 10 повт.')
     expect(compactCompletedSetSummary([base(0), base(1, 140, 8)])).toBe('150 кг × 10 повт. · 140 кг × 8 повт.')
     expect(compactCompletedSetSummary([base(0), base(1, 150, 10, false)])).toBe('150 кг × 10 повт. · не выполнено: 1')
+    expect(compactCompletedSetSummary([base(0, 150, 10, false)])).toBe('Не выполнено')
     expect(compactCompletedSetSummary([{
       id: 'run', position: 0, durationSec: 1800, distanceKm: 5,
       fact: { durationSec: 1780, distanceKm: 5.2 }, confirmedAt: 'now', version: 1,

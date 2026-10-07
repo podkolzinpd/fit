@@ -606,7 +606,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await chooseWorkoutTime(page, 'Фактическое время', 10 * 60)
   await page.getByLabel('Фактическая дистанция').fill('1.2')
   await page.getByRole('button', { name: 'Готово, отдых' }).click()
-  await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+  // Завершённое упражнение остаётся раскрытым на отдыхе после него.
+  await expect(page.locator('.live-exercise.done')).toBeVisible()
   // В первом упражнении остался неподтверждённый добавленный подход.
   await page.getByRole('button', { name: 'Завершить тренировку' }).click()
   await Promise.all([

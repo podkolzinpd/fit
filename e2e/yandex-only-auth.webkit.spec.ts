@@ -27,6 +27,68 @@ test.afterEach(({ page }) => {
   expect(legacyRequestCounts.get(page), 'Yandex-only auth must not call local Supabase').toBe(0)
 })
 
+test('Yandex workout completion reads personal records once without paginated Progress', async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+    || process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+    || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true', 'Requires the Yandex auth lane.')
+  const actorId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+  const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
+  const workoutId = '948d78c7-994c-4c21-b2fe-81efb2091854'
+  const exerciseId = 'e2fc2c6d-0f33-4826-af68-46b0a5c79ff4'
+  const token = 'a'.repeat(43)
+  let recordReads = 0
+  let progressReads = 0
+  await page.route('https://stage.example.test/v1/**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/v1/auth/yandex/session') return route.fulfill({ json: {
+      accessMode: 'read_write', profile: { id: actorId, firstName: 'Synthetic trainer',
+        lastName: null, timezone: 'Europe/Moscow', accountRole: 'trainer' },
+    } })
+    if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
+    if (path === '/v1/training-data') return route.fulfill({ json: {
+      accessMode: 'read_only', customExercises: [], attention: [], attentionPreferences: [],
+      hasMoreWorkouts: false, totalWorkouts: 1, workouts: [{
+        id: workoutId, trainerId: actorId, clientId, clientName: 'Synthetic client',
+        createdBy: actorId, startedBy: null, completedBy: actorId,
+        workoutDate: '2020-01-02', startTime: null, endTime: null, status: 'done',
+        notes: null, clientComment: null, sessionRpe: null, wellbeing: null, discomfort: null,
+        feedbackSubmittedAt: null, trainerReaction: null, trainerReview: null,
+        trainerReviewAuthorId: null, trainerReviewedAt: null, clientQuestion: null,
+        clientQuestionAskedAt: null, clientQuestionResolvedAt: null,
+        startedAt: null, completedAt: '2020-01-02T12:00:00Z', hasPr: true, version: 1,
+        exercises: [{ id: exerciseId, position: 0, source: 'system', ref: 'squat',
+          customExerciseId: null, name: 'Приседание', muscleGroup: 'legs', inputKind: 'strength',
+          blockId: exerciseId, blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 60,
+          trainerComment: null, sets: [],
+        }],
+      }],
+    } })
+    if (path === `/v1/workouts/${workoutId}/personal-records`) {
+      recordReads += 1
+      expect(route.request().headers()['x-fit-session']).toBe(token)
+      return route.fulfill({ json: { records: [{ exerciseRef: 'squat', exerciseName: 'Приседание',
+        inputKind: 'strength', metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 }] } })
+    }
+    if (path.includes('/progress/exercises/')) progressReads += 1
+    return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+  })
+  await page.addInitScript(({ sessionToken }) => {
+    localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: sessionToken, expiresAt: '2099-01-01T00:00:00Z' }))
+    history.replaceState({ usr: { justCompleted: true }, key: 'records-test', idx: 0 }, '')
+  }, { sessionToken: token })
+  await page.goto(`/workouts/${workoutId}`)
+  const completion = page.getByRole('region', { name: 'Тренировка завершена' })
+  await expect(completion.getByText('Личный рекорд · Приседание')).toBeVisible()
+  await expect(completion.getByText('60 кг × 10 повт.')).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 932 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  }
+  expect(recordReads).toBe(1)
+  expect(progressReads).toBe(0)
+})
+
 test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page }, testInfo) => {
   test.skip(
     process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'

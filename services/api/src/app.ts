@@ -1932,6 +1932,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       (stats) => reply.header('cache-control', 'no-store').send({ stats }))
   })
 
+  app.get('/v1/workouts/:workoutId/personal-records', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { workoutId } = request.params as { workoutId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const data = options.pilotProgressData
+    if (data === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => data.readWorkoutRecords(session, workoutId),
+      (records) => reply.header('cache-control', 'no-store').send({ records }))
+  })
+
   app.get('/v1/clients/:clientId/progress', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { clientId } = request.params as { clientId?: unknown }

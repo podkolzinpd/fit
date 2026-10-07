@@ -595,9 +595,10 @@ export function compactCompletedSetSummary(sets: readonly WorkoutSet[], showRpe 
     return setLine(weight, reps, distance, durationSec, durationMin, rpe, showRpe, exerciseRef) || 'Без результата'
   })
   const first = lines[0]
-  const fact = !first ? 'Без выполненных подходов'
-    : lines.every((line) => line === first) && lines.length > 1 ? `${lines.length} × ${first}`
-      : lines.join(' · ')
+  // Ничего не сделано — одно короткое «Не выполнено», без счётчика пропусков.
+  if (!first) return 'Не выполнено'
+  const fact = lines.every((line) => line === first) && lines.length > 1 ? `${lines.length} × ${first}`
+    : lines.join(' · ')
   const missed = sets.length - completed.length
   return missed > 0 ? `${fact} · не выполнено: ${missed}` : fact
 }
