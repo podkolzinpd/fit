@@ -41,6 +41,10 @@ API, Supabase migration, экранов, CSS и прав.
    frontend2521/API1210, lint/typecheck/coverage/policy/hosting/build/startup.
    CI ещё гейт; перед merge — очередь более ранних активных PR и свежий main.
 
+После локальной приёмки включён main `becd43e0` (#1496): две строки Assistant,
+без пересечения с этой задачей. Повторный полный API-набор1211/1211 passed;
+миграции и frontend task diff не менялись. CI запускается на объединённом head.
+
 Схема БД и API не менялись: новая migration/local:verify не требуются.
 Изолированная тестовая БД удалена; общая legacy БД не сбрасывалась.
 Production, реальный OAuth и физические mobile устройства не проверены.

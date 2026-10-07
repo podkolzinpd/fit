@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 
 ## Удаление выбранного этапа цели — 2026-10-07
-План design/DATABASE_GOAL_STAGE_DELETE_20261007.md; база mainf89e0e79. ID/показанная версия фиксируются до confirm; Yandex DELETE без прогресса всех клиентов и подмены stale version. Server can_access_client/version, UI и frozen legacy ID-only RPC сохранены; новых migrations нет. Repository55/55, rerender1/1, API5/5, clean-chain136/actor129/129, WebKit trainer/client2/2 light/dark390/430/1440 и check2521frontend/1210API/build passed. CI, очередь ранних PR и merge ещё гейты; production не менялся. Собственная временная БД удалена, общие базы сохранены.
+План design/DATABASE_GOAL_STAGE_DELETE_20261007.md; после приёмки включён mainbecd43e0 (#1496). ID/показанная версия фиксируются до confirm; Yandex DELETE без прогресса всех клиентов и подмены stale version. Server can_access_client/version, UI и frozen legacy ID-only RPC сохранены; migrations нет. Repository55/55, rerender1/1, API5/5, clean-chain136/actor129/129, WebKit trainer/client2/2 light/dark390/430/1440 и check2521frontend/1210API/build passed; после нового main полный API1211/1211 passed. CI, очередь ранних PR и merge ещё гейты; production не менялся. Собственная временная БД удалена, общие базы сохранены.
 ## Рекорды выбранной тренировки — 2026-10-07
 PR#1495 слит f89e0e79; план design/DATABASE_WORKOUT_RECORDS_20261007.md. Migration136 (перенумерована после main134/135), один actor-scoped GET без лимита20; confirmed/first/tie/shared-history/author contract и volume-подход сохранены. Fresh clean-chain136/actor125/125, WebKit1/1 и check2514frontend/1205API/build passed; production здесь не перепроверен. local:verify ограничен прежней legacy migration20260919145000, общая база сохранена.
 
