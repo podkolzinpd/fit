@@ -118,3 +118,5 @@ Workflow manage-trainer-lime-rollout: main-only workflow_dispatch, inspect по 
 SET_TRAINER_LIME_ALL + revision атомарно включает trainer/schedule all. Откат оформления отдельный, schedule rollback — после trainer off/pilot, чтобы не получить смешанный shell.
 Helper/workflow8/8 локально; реальное all и production acceptance: ОЖИДАЕТ ОК.
 Ни один workflow в этой задаче не запускался, клиентский и тренерский доступ не расширены.
+
+PR3: владелец разрешил trainer+schedule all после подтверждённого client all. Workflow/helper8/8 passed; результат readback ограничен четырьмя полями modes/revision и безопасно попадает в summary и log. Реальная активация ещё не запускалась.

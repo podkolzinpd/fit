@@ -90,4 +90,4 @@ jobs:
               "${migration_url%/}/stage/experiments/lime-rollout")
             test "$status" = 200 || { echo "Private rollout returned HTTP $status; inspect before any retry." >&2; exit 1; }
           done
-          node scripts/lime-rollout-request.mjs verify "$RUNNER_TEMP/lime-response.json" "$RUNNER_TEMP/lime-readback.json" >> "$GITHUB_STEP_SUMMARY"
+          node scripts/lime-rollout-request.mjs verify "$RUNNER_TEMP/lime-response.json" "$RUNNER_TEMP/lime-readback.json" | tee -a "$GITHUB_STEP_SUMMARY"
