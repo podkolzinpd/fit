@@ -4,7 +4,7 @@ import { aiStudioUsage, reportAiStudioMetric } from '../ai-studio-usage-metrics.
 import { isProgramEnabled } from './program/model.js'
 import { extractProgramBrief, invokeProgramGenerator, programPilotTurn, reusableProgramContinuation } from './program/turn.js'
 import { loadProgramContext } from './program/source.js'
-import { assistantToolStateFilter, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
+import { assistantToolStateFilter, isAssistantChatPrompt, latestActiveAssistantTool, routedAssistantTurn } from './router.js'
 import { readProgramBrief } from './program/brief.js'
 import { programSessionCount } from './program/context.js'
 
@@ -860,35 +860,38 @@ export async function runAssistantTurn(
     const today = new Date().toLocaleDateString('en-CA', { timeZone: typeof profileRecord?.timezone === 'string' ? profileRecord.timezone : 'Europe/Moscow' })
     // An explicit "continue unchanged" selection deliberately replaces a
     // newer partial questionnaire with the last confirmed course.
-    const routed = await routedAssistantTurn({ message: command.message, history, active: reusableProgram ?? active, operationId: turnId }, {
-      record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true, accountRole === 'client'),
-      cancel: async (action) => {
-        if (!action.id) return
-        const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', action.id).eq('owner_id', user.id).maybeSingle()
-        if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
-        const version: unknown = lifecycle.data?.version
-        if (typeof version !== 'number' || !['proposed', 'failed'].includes(String(lifecycle.data?.status))) throw new HttpError(409, 'assistant_action_conflict')
-        const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: action.id, p_expected_version: version })
-        if (cancelled.error) throw new HttpError(409, 'assistant_action_conflict')
-      },
-      program: (previous) => accountRole === 'client' && clientRows.length === 0
-        ? Promise.resolve({ reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к составлению программы.', action: null })
-        : programPilotTurn(command.message, clientRows, previous ?? reusableProgram, {
-          actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
-          matchClients: (message) => {
-            const matches = matchingSummaryClients(message, clientRows)
-            return accountRole === 'client' && matches.length === 0 && clientRows.length === 1 ? clientRows : matches
-          },
-          loadContext: (client) => loadProgramContext(actorClient, client, today),
-          extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
-          generate: (brief, context, clientId) => {
-            const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
-            return generateProgramOnce(supabaseProgramGenerationJobs(service, user.id), key, clientId,
-              () => invokeProgramGenerator(user.id, key, today, brief, context))
-          },
-        }, true),
-    })
-    return persistAssistantResponse(service, command.conversationId, turnId, routed)
+    const activeTool = reusableProgram ?? active
+    if (!isAssistantChatPrompt(command.message, activeTool)) {
+      const routed = await routedAssistantTurn({ message: command.message, history, active: activeTool, operationId: turnId }, {
+        record: (previous) => recordWorkoutTurn(command.message, clientRows, previous, true, accountRole === 'client'),
+        cancel: async (action) => {
+          if (!action.id) return
+          const lifecycle = await service.from('assistant_actions').select('status,version').eq('id', action.id).eq('owner_id', user.id).maybeSingle()
+          if (lifecycle.error) throw new HttpError(503, 'history_unavailable')
+          const version: unknown = lifecycle.data?.version
+          if (typeof version !== 'number' || !['proposed', 'failed'].includes(String(lifecycle.data?.status))) throw new HttpError(409, 'assistant_action_conflict')
+          const cancelled = await actorClient.rpc('cancel_assistant_action', { p_action_id: action.id, p_expected_version: version })
+          if (cancelled.error) throw new HttpError(409, 'assistant_action_conflict')
+        },
+        program: (previous) => accountRole === 'client' && clientRows.length === 0
+          ? Promise.resolve({ reply: 'Сначала заполните свою карточку в разделе «Кабинет», затем вернитесь к составлению программы.', action: null })
+          : programPilotTurn(command.message, clientRows, previous ?? reusableProgram, {
+            actorId: user.id, turnId, today, duplicateTurn: userInsert.error?.code === '23505',
+            matchClients: (message) => {
+              const matches = matchingSummaryClients(message, clientRows)
+              return accountRole === 'client' && matches.length === 0 && clientRows.length === 1 ? clientRows : matches
+            },
+            loadContext: (client) => loadProgramContext(actorClient, client, today),
+            extract: (brief, message, answerContext) => extractProgramBrief(brief, message, today, turnId, answerContext),
+            generate: (brief, context, clientId) => {
+              const key = programGenerationKey(user.id, clientId, brief, context.fingerprint)
+              return generateProgramOnce(supabaseProgramGenerationJobs(service, user.id), key, clientId,
+                () => invokeProgramGenerator(user.id, key, today, brief, context))
+            },
+          }, true),
+      })
+      return persistAssistantResponse(service, command.conversationId, turnId, routed)
+    }
   }
   const workoutDraft = recordWorkoutTurn(
     command.message,

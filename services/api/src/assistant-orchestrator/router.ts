@@ -13,6 +13,21 @@ const changeClientControls = ['Сменить клиента', 'Другой к�
 const isChangeClientControl = (message: string) => changeClientControls.some((control) => control.toLocaleLowerCase('ru') === message.trim().toLocaleLowerCase('ru'))
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value) }
 
+/**
+ * Ordinary questions should not depend on the action router.  The router is a
+ * guard for mutations and program drafting; sending a fitness question through
+ * it makes a temporary routing outage look like a rejected user request.
+ */
+export function isAssistantChatPrompt(message: string, active: AssistantAction | null): boolean {
+  if (active) return false
+  const text = message.trim()
+  if (!text) return false
+  const normalized = text.toLocaleLowerCase('ru')
+  const explicitAction = /(?:запиш|добав|зафикс|сохрани).{0,80}(?:трениров|заняти|подход|упражнен)|(?:состав|созда|подготов|сдела).{0,80}(?:программ|план\s+трениров)/u.test(normalized)
+  if (explicitAction) return false
+  return /[?]$/u.test(text) || /^(?:привет|здравствуй|здравствуйте|доброе (?:утро|день|вечер)|спасибо|благодарю|спс)\b/u.test(normalized)
+}
+
 export function activeAssistantTool(value: unknown): AssistantAction | null {
   if (!record(value) || !routedTools.includes(value.tool as RoutedTool) || !['needs_input', 'proposed'].includes(String(value.status))
     || !record(value.payload) || typeof value.title !== 'string' || typeof value.description !== 'string') return null
