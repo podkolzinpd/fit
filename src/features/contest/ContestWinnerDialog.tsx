@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useDataBackend } from '../../app/data-backend-context'
 import { isContestWinnerPilotEnabled } from '../../app/feature-flags'
@@ -40,6 +40,13 @@ function ContestWinnerDialogContent({ userId, onClose }: { userId: string; onClo
   const dialogRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const contactId = useId()
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
+
+  // The public frame may still exist during the auth commit. Resolve the
+  // destination after the new layout mounts, so the portal stays connected.
+  useLayoutEffect(() => {
+    setPortalHost(document.querySelector<HTMLElement>('.phone-frame') ?? document.body)
+  }, [])
 
   useEffect(() => {
     dialogRef.current?.focus()
@@ -68,7 +75,7 @@ function ContestWinnerDialogContent({ userId, onClose }: { userId: string; onClo
   }
 
   // Портал в .phone-frame, как у useConfirm: диалог наследует активную тему.
-  const host = document.querySelector('.phone-frame') ?? document.body
+  if (!portalHost) return null
   return createPortal(
     <div className="modal-overlay" role="presentation">
       <div ref={dialogRef} tabIndex={-1} className="modal-dialog contest-winner-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
@@ -103,6 +110,6 @@ function ContestWinnerDialogContent({ userId, onClose }: { userId: string; onClo
           </form>}
       </div>
     </div>,
-    host,
+    portalHost,
   )
 }
