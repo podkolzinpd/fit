@@ -1404,3 +1404,12 @@ with empty confirmation/revision. After an explicit new human OK only, run
 (`SET_CLIENT_LIME_OFF`) or `pilot` (`SET_CLIENT_LIME_PILOT`) and a freshly
 inspected revision. Never automatically replay a failed/unknown operation.
 Merge or frontend deployment alone does not dispatch this workflow.
+
+Trainer operation: Actions → Manage trainer Lime rollout, target=trainer.
+Use inspect first. Only after a new human OK, `all` with the inspected revision
+and `SET_TRAINER_LIME_ALL` atomically enables trainer presentation + Schedule V2.
+`SET_TRAINER_LIME_OFF`/`SET_TRAINER_LIME_PILOT` restores presentation separately.
+If calendar rollback is also requested, leave trainer all first, then inspect
+and choose target=trainer-schedule with mode=pilot and
+`SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
+The trainer workflow rejects client targets. No operation has been dispatched.

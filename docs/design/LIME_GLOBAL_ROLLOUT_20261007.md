@@ -111,3 +111,17 @@ Foundation PR1498 уже слит c465ca9f: migration137 и API b51c7d859c9fac06
 Полный npm run check на обновлённой клиентской ветке завершился exit0: frontend2518, API1231 (127 DB отдельно/skipped), lint/typecheck/policy/hosting/build passed. Скриншоты dark390/light430 просмотрены; повторный browser harness использует разрешённый путь переиспользуемых зависимостей, без font403. Production client all ещё не запускался.
 
 Фактическая база PR1500 — main a03901d2 (включает опубликованные #1504/#1505 после #1498); полный check2518/API1231 и browser8 выполнены на этой базе. Старые pilot-only описания остаются историей, новое прямое разрешение от владельца действует для client all → trainer/schedule all.
+
+### PR3 — ручное тренерское переключение подготовлено
+
+Workflow manage-trainer-lime-rollout: main-only workflow_dispatch, inspect по умолчанию, targets только trainer/trainer-schedule.
+SET_TRAINER_LIME_ALL + revision атомарно включает trainer/schedule all. Откат оформления отдельный, schedule rollback — после trainer off/pilot, чтобы не получить смешанный shell.
+Helper/workflow8/8 локально; реальное all и production acceptance: ОЖИДАЕТ ОК.
+Ни один workflow в этой задаче не запускался, клиентский и тренерский доступ не расширены.
+
+PR3: владелец разрешил trainer+schedule all после подтверждённого client all. Workflow/helper8/8 passed; результат readback ограничен четырьмя полями modes/revision и безопасно попадает в summary и log. Реальная активация ещё не запускалась.
+
+### Клиентский merge и исходное production-состояние — 2026-10-08
+PR1500 head e1518c5d: CI37684890567 success, Android37684890354 success, штатный squash merge38bdf7da05c21c41b3a8addd8de0e60feedc9ea8. #1499 пропускает наши два выпуска по прямому ответу владельца. Main CI37688981307/front-end release остаются обязательными гейтами до client all. Private inspect37689049231 success: clientMode=pilot, trainerMode=pilot, scheduleMode=pilot, revision0; две независимые проверки совпали. PR1501 перенесён только своими commits поверх38bdf7da; client workflow/default-dark и foundation не дублируются. Клиентская и тренерская массовые активации ещё не выполнялись.
+
+PR1501 на базе38bdf7da: полный npm run check exit0, frontend2518/API1231 (+127 DB отдельно/skipped), policy/lint/typecheck/build passed, helper/workflow8/8. Отправляется свежий CI; merge и trainer all только после client all/readback.
