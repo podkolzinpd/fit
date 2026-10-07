@@ -1,10 +1,26 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { InBodyImport } from './InBodyImport'
+import { InBodyDetails, InBodyImport } from './InBodyImport'
 import { localDate } from '../../shared/local-date'
 
 describe('InBodyImport', () => {
+  it('keeps the InBody measurements and native disclosure behaviour in both variants', async () => {
+    const data = { schemaVersion: 1 as const, deviceModel: 'InBody 270', skeletalMuscleMassKg: 32, bodyFatPercent: 18 }
+    const { container, rerender } = render(<InBodyDetails result={data} clientLime />)
+    const summary = container.querySelector('summary')!
+    expect(summary).toHaveTextContent('Показатели InBody · 2')
+    expect(summary.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    await userEvent.click(summary)
+    expect(container.querySelector('details')).toHaveAttribute('open')
+    expect(screen.getByText('32 кг')).toBeVisible()
+    expect(screen.getByText('18 %')).toBeVisible()
+    await userEvent.click(summary)
+    expect(container.querySelector('details')).not.toHaveAttribute('open')
+    rerender(<InBodyDetails result={data} />)
+    expect(container.querySelector('summary svg')).toBeNull()
+    expect(container.querySelector('summary')).not.toHaveClass('progress-details-toggle')
+  })
   it('shows a review summary and requires an explicit apply action', async () => {
     const apply = vi.fn()
     render(<InBodyImport busy={false} error={null} result={{

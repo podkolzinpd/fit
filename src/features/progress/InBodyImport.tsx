@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import type { InBodyRecognitionImage, InBodyRecognitionResult } from '../../shared/domain'
 import { prepareImage } from '../../shared/image-prep'
+import { ProgressDetailsSummary } from './ProgressDetailsSummary'
 
 export function InBodyImport({ busy, error, result, onRecognize, onApply, onReset }: {
   busy: boolean
@@ -60,9 +61,9 @@ const LABELS: ReadonlyArray<[keyof InBodyRecognitionResult['inBody'], string, st
 
 const SEGMENTS = { rightArm: 'Правая рука', leftArm: 'Левая рука', trunk: 'Туловище', rightLeg: 'Правая нога', leftLeg: 'Левая нога' } as const
 
-export function InBodyDetails({ result }: { result: InBodyRecognitionResult['inBody'] }) {
+export function InBodyDetails({ result, clientLime = false }: { result: InBodyRecognitionResult['inBody']; clientLime?: boolean }) {
   const values = LABELS.flatMap(([key, label, unit]) => typeof result[key] === 'number' ? [{ key, label, unit, value: result[key] as number }] : [])
-  return <details className="inbody-details"><summary>Показатели InBody · {values.length}</summary>{(result.deviceModel || result.measuredAt) && <p className="muted">{[result.deviceModel, result.measuredAt].filter(Boolean).join(' · ')}</p>}<dl>{values.map(({ key, label, unit, value }) => <div key={key}><dt>{label}</dt><dd>{value}{unit ? ` ${unit}` : ''}</dd></div>)}</dl>{result.segmental && result.segmental.length > 0 && <div className="inbody-segments"><strong>Сегментарный анализ</strong>{result.segmental.map((segment) => <p key={segment.segment}><span>{SEGMENTS[segment.segment]}</span>{[
+  return <details className="inbody-details">{clientLime ? <ProgressDetailsSummary>Показатели InBody · {values.length}</ProgressDetailsSummary> : <summary>Показатели InBody · {values.length}</summary>}{(result.deviceModel || result.measuredAt) && <p className="muted">{[result.deviceModel, result.measuredAt].filter(Boolean).join(' · ')}</p>}<dl>{values.map(({ key, label, unit, value }) => <div key={key}><dt>{label}</dt><dd>{value}{unit ? ` ${unit}` : ''}</dd></div>)}</dl>{result.segmental && result.segmental.length > 0 && <div className="inbody-segments"><strong>Сегментарный анализ</strong>{result.segmental.map((segment) => <p key={segment.segment}><span>{SEGMENTS[segment.segment]}</span>{[
     segment.leanMassKg === undefined ? null : `мышцы ${segment.leanMassKg} кг`,
     segment.leanPercent === undefined ? null : `${segment.leanPercent}% нормы`,
     segment.fatMassKg === undefined ? null : `жир ${segment.fatMassKg} кг`,

@@ -6251,14 +6251,16 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .result-change-arrow { width:16px; height:16px; margin:0 4px; vertical-align:-3px; transform:rotate(90deg); }
 
 /* Explicit client progress disclosures: the label names the content behind the control. */
-.progress-identity .client-progress-card summary.progress-details-toggle {
+.progress-identity .client-progress-card summary.progress-details-toggle,
+.phone-frame.fit-client-lime .inbody-details > summary.progress-details-toggle {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   min-height:48px; padding:12px 14px; margin:0;
   border:1px solid var(--border); border-radius:var(--radius-md);
   background:var(--surface); color:var(--fg); font-size:var(--type-body-size);
   font-weight:500; cursor:pointer; list-style:none;
 }
-.progress-identity .client-progress-card summary.progress-details-toggle::before { display:none; }
+.progress-identity .client-progress-card summary.progress-details-toggle::before,
+.phone-frame.fit-client-lime .inbody-details > summary.progress-details-toggle::before { display:none; }
 .progress-details-toggle::-webkit-details-marker { display:none; }
 .progress-details-toggle svg { width:20px; height:20px; flex-shrink:0; }
 details[open] > .progress-details-toggle svg { transform:rotate(180deg); }

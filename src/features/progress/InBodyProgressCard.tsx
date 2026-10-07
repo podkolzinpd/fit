@@ -21,7 +21,7 @@ function formatted(value: number): string {
   return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 })
 }
 
-export function InBodyProgressCard({ entries, compact = false }: { entries: ProgressEntry[]; compact?: boolean }) {
+export function InBodyProgressCard({ entries, compact = false, clientLime = false }: { entries: ProgressEntry[]; compact?: boolean; clientLime?: boolean }) {
   const measurements = entries.filter((entry) => entry.inBody !== undefined)
   const current = measurements[0]
   if (!current?.inBody) return null
@@ -40,6 +40,6 @@ export function InBodyProgressCard({ entries, compact = false }: { entries: Prog
         : null
       return <div key={metric.key}><span>{metric.label}</span><strong>{formatted(metric.value)} {metric.unit}</strong><small className={improving === null ? '' : improving ? 'positive' : 'negative'}>{metric.delta === undefined ? 'Первый замер' : metric.delta === 0 ? 'Без изменений' : `${metric.delta > 0 ? '+' : '−'}${formatted(Math.abs(metric.delta))} ${metric.unit} к ${formatLocalDate(previous!.recordedOn)}`}</small></div>
     })}</div>}
-    <InBodyDetails result={current.inBody} />
+    <InBodyDetails result={current.inBody} clientLime={clientLime} />
   </section>
 }
