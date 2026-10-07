@@ -465,6 +465,7 @@ jobs:
             browser: webkit
     env:
       FIT_SCHEDULE_V2_VISUAL: '1'
+      FIT_LIME_FONTS_REQUIRED: 'true'
       VITE_CLIENT_LIME_ENABLED: 'true'
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
@@ -484,6 +485,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Public immutable font files are checksum-validated; PR tests receive
+      # no production credentials or proprietary assets in the repository.
+      - name: Prepare verified public Lime fonts for browser acceptance
+        run: node scripts/prepare-fit-lime-ci-fonts.mjs
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.

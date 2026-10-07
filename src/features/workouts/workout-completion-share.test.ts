@@ -19,15 +19,24 @@ const summary: WorkoutShareSummary = {
   },
 }
 
+const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
+
 afterEach(() => {
+  document.querySelector('.phone-frame.fit-client-lime')?.remove()
+  if (originalFonts) Object.defineProperty(document, 'fonts', originalFonts)
+  else Reflect.deleteProperty(document, 'fonts')
+  vi.unstubAllGlobals()
   vi.restoreAllMocks()
   Object.defineProperty(navigator, 'share', { configurable: true, value: undefined })
   Object.defineProperty(navigator, 'canShare', { configurable: true, value: undefined })
 })
 
 function mockCanvasRendering() {
-  const fillText = vi.fn()
+  const painted: { text: string; font: string; color: string | CanvasGradient | CanvasPattern }[] = []
+  const fillText = vi.fn((text: string) => painted.push({ text, font: context.font, color: context.fillStyle }))
   const drawImage = vi.fn()
+  const fillRect = vi.fn()
+  const measureText = vi.fn((text: string) => ({ width: text.length * 18 }))
   const context = {
     beginPath: vi.fn(),
     moveTo: vi.fn(),
@@ -35,16 +44,18 @@ function mockCanvasRendering() {
     closePath: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
-    fillRect: vi.fn(),
+    fillRect,
     drawImage,
     fillText,
-    measureText: vi.fn((text: string) => ({ width: text.length * 18 })),
+    measureText,
+    getImageData: vi.fn(() => ({ data: new Uint8ClampedArray(4) })),
+    putImageData: vi.fn(),
   } as unknown as CanvasRenderingContext2D
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context)
   vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
     callback(new Blob(['png'], { type: 'image/png' }))
   })
-  return { context, fillText, drawImage }
+  return { context, fillText, drawImage, painted, fillRect, measureText }
 }
 
 describe('workout completion sharing', () => {
@@ -125,5 +136,71 @@ describe('workout completion sharing', () => {
 
     await expect(shareWorkoutSummary(withoutProgress, 'progress')).resolves.toBe('shared')
     expect(fillText).toHaveBeenCalledWith('РЕЗУЛЬТАТ СОХРАНЁН', 80, 205)
+  })
+})
+
+
+function mockLimeResources(load = vi.fn().mockResolvedValue([{}])) {
+  vi.stubGlobal('ImageData', class { constructor(readonly data: Uint8ClampedArray, readonly width: number, readonly height: number) {} })
+  const frame = document.createElement('div')
+  frame.className = 'phone-frame fit-client-lime'
+  Object.entries({ '--lime-bg': '#000000', '--lime-text': '#ffffff', '--lime-text-secondary': '#b8b8bd', '--lime-surface-raised': '#252529', '--lime-divider': '#3b3b40', '--success-fg': '#8fc7a8' }).forEach(([name, value]) => frame.style.setProperty(name, value))
+  document.body.append(frame)
+  Object.defineProperty(document, 'fonts', { configurable: true, value: { load, ready: Promise.resolve() } })
+  const share = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+  Object.defineProperty(navigator, 'canShare', { configurable: true, value: vi.fn().mockReturnValue(true) })
+  return { load, share }
+}
+
+describe('client Lime workout PNG', () => {
+  it.each(['summary', 'achievement', 'progress'] as const)('uses loaded identity resources in %s and preserves shared facts', async (variant) => {
+    const { painted, fillRect } = mockCanvasRendering()
+    const { load, share } = mockLimeResources()
+    await expect(shareWorkoutSummary(summary, variant, { clientLime: true })).resolves.toBe('shared')
+    expect(load).toHaveBeenCalledWith('400 16px "YS Geo"', expect.any(String))
+    expect(load).toHaveBeenCalledWith('500 16px "YS Geo"', expect.any(String))
+    expect(load).toHaveBeenCalledWith('500 16px "YS Geo Symbols"', '≈')
+    expect(fillRect).toHaveBeenCalledWith(0, 0, 1080, 1350)
+    expect(painted.find((item) => item.text === summary.date)?.font).toContain('400 28px')
+    expect(painted.find((item) => item.text === summary.date)?.color).toBe('#b8b8bd')
+    expect(painted.every((item) => !item.font.includes('Onest') && /^(400|500|700) /.test(item.font))).toBe(true)
+    if (variant === 'progress') {
+      expect(load).toHaveBeenCalledWith('700 16px REM', expect.any(String))
+      expect(painted.find((item) => item.text === '+20%')?.font).toBe('700 150px REM, sans-serif')
+    }
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({ text: workoutShareText(summary, variant), files: [expect.objectContaining({ type: 'image/png' })] }))
+  })
+
+  it('does not measure or draw before the requested font faces finish loading', async () => {
+    const { painted, measureText } = mockCanvasRendering()
+    let release!: (faces: unknown[]) => void
+    const loading = new Promise<unknown[]>((resolve) => { release = resolve })
+    const { share } = mockLimeResources(vi.fn().mockReturnValue(loading))
+    const result = shareWorkoutSummary(summary, 'summary', { clientLime: true })
+    await Promise.resolve()
+    expect(measureText).not.toHaveBeenCalled()
+    expect(painted).toHaveLength(0)
+    expect(share).not.toHaveBeenCalled()
+    release([{}])
+    await expect(result).resolves.toBe('shared')
+    expect(measureText).toHaveBeenCalled()
+  })
+
+  it.each(['rejected', 'missing'] as const)('keeps the existing text fallback when identity fonts are %s', async (failure) => {
+    const { painted } = mockCanvasRendering()
+    const load = failure === 'rejected' ? vi.fn().mockRejectedValue(new Error('font unavailable')) : vi.fn().mockResolvedValue([])
+    const { share } = mockLimeResources(load)
+    await expect(shareWorkoutSummary(summary, 'summary', { clientLime: true })).resolves.toBe('shared')
+    expect(painted).toHaveLength(0)
+    expect(share).toHaveBeenCalledWith({ title: 'Моя тренировка в Fit', text: workoutShareText(summary) })
+  })
+
+  it('preserves the original export when the client flag is absent', async () => {
+    const { painted } = mockCanvasRendering()
+    const { load } = mockLimeResources()
+    await expect(shareWorkoutSummary(summary)).resolves.toBe('shared')
+    expect(load).not.toHaveBeenCalled()
+    expect(painted.find((item) => item.text === 'FIT')).toMatchObject({ font: '600 42px Onest, Arial, sans-serif', color: '#242426' })
   })
 })
