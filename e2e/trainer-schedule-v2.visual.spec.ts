@@ -4093,6 +4093,7 @@ for (const theme of ['light', 'dark']) {
     const sheet = page.getByRole('dialog', { name: 'Действия с сообщением' })
     await expect(sheet).toBeVisible()
     await expect(sheet).toHaveCSS('background-color', theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 28)')
+    for (const action of await sheet.getByRole('button').all()) await expect(action).toHaveCSS('font-weight', '500')
     await page.screenshot({ path: testInfo.outputPath('chat-menu.png') })
     await page.keyboard.press('Escape')
     await expect(sheet).toHaveCount(0)
@@ -5115,4 +5116,42 @@ for (const theme of ['light', 'dark'] as const) test(`Client Lime exported PNG f
     await writeFile(testInfo.outputPath(`client-lime-${variant}-${theme}.png`), Buffer.from(result.base64, 'base64'))
     await writeFile(testInfo.outputPath(`client-lime-${variant}-${theme}.json`), JSON.stringify(result.painted, null, 2))
   }
+})
+
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`Client Lime rest picker follows the text contract ${theme} ${width}`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
+  await mockPilot(page, { role: 'client', profileId: clientId })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem('fit.clientLime.theme.' + id, theme), { id: clientId, theme })
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })
+  const selected = picker.locator('.rest-time-wheel [aria-selected=true]')
+  for (const value of await selected.all()) await expect(value).toHaveCSS('font-weight', '500')
+  await expect(picker.locator('.rest-time-separator')).toHaveCSS('font-weight', '500')
+  await picker.getByRole('button', { name: '3:00', exact: true }).click()
+  await expect(selected.first()).toHaveText('03')
+  await expect(selected.last()).toHaveText('00')
+  await page.screenshot({ path: testInfo.outputPath(`rest-picker-${theme}-${width}.png`) })
+  await picker.getByRole('button', { name: /Начать отдых/ }).click()
+  await expect(picker).toHaveCount(0)
+  await page.getByRole('button', { name: /Таймер отдыха:/ }).click()
+  for (const value of await selected.all()) await expect(value).toHaveCSS('font-weight', '500')
+})
+
+for (const pilot of [true, false]) test(`Client chat portal preserves font scope ${pilot ? 'lime' : 'original'}`, async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: pilot })
+  await page.goto(`/chat/${conversationId}`)
+  await page.locator('.chat-message').last().click()
+  const sheet = page.getByRole('dialog', { name: 'Действия с сообщением', exact: true })
+  await expect(sheet).toBeVisible()
+  for (const action of await sheet.getByRole('button').all()) {
+    await expect(action).toHaveCSS('font-weight', pilot ? '500' : '600')
+    if (pilot) await expect(action).toHaveCSS('font-family', /YS Geo Symbols.*YS Geo/)
+  }
+  await sheet.getByRole('button', { name: 'Ответить', exact: true }).click()
+  await expect(sheet).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Отменить ответ', exact: true })).toBeVisible()
 })

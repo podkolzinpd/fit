@@ -44,6 +44,22 @@ describe('ContestWinnerDialog', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
+  it('mounts into the new frame when the public auth frame is replaced', () => {
+    enablePilot()
+    function Layout({ signedIn }: { signedIn: boolean }) {
+      return signedIn
+        ? <section key="client" className="phone-frame" data-testid="client-frame"><ContestWinnerDialog userId="winner-1" /></section>
+        : <section key="public" className="phone-frame" data-testid="public-frame" />
+    }
+    const { rerender } = render(<Layout signedIn={false} />)
+    const oldFrame = screen.getByTestId('public-frame')
+    rerender(<Layout signedIn />)
+    const dialog = screen.getByRole('dialog', { name: 'Вы выиграли персональную тренировку' })
+    expect(oldFrame.isConnected).toBe(false)
+    expect(dialog.isConnected).toBe(true)
+    expect(screen.getByTestId('client-frame').contains(dialog)).toBe(true)
+  })
+
   it('stays hidden for the allowlisted user after the announcement end date', () => {
     enablePilot()
     vi.setSystemTime(new Date('2026-10-13T00:00:00+03:00'))
