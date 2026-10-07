@@ -1133,6 +1133,42 @@ test('Lime direct start opens Live immediately after choosing the client', async
   expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'with_trainer' })
 })
 
+test('Lime trainer adds a template directly to a client plan', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  const templateName = 'Силовая тренировка на всё тело с длинным названием'
+  await page.route('http://127.0.0.1:4100/v1/workout-templates', async (route) => route.fulfill({
+    status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+    body: JSON.stringify({ templates: [{
+      id: '10000000-0000-4000-8000-000000000080', trainerId, name: templateName,
+      notes: 'Держать спокойный темп', version: 1,
+      createdAt: '2026-10-06T08:00:00.000Z', updatedAt: '2026-10-06T08:00:00.000Z',
+      exercises: [{ source: 'system', ref: 'plank', name: 'Планка', muscleGroup: 'core', inputKind: 'duration',
+        position: 0, blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockRounds: 1,
+        sets: [{ position: 0, durationSec: 45 }] }],
+    }] }),
+  }))
+  const writes: Array<Record<string, unknown>> = []
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') writes.push(request.postDataJSON() as Record<string, unknown>)
+  })
+  await page.goto(`/workouts/new?client=${clientId}&date=2026-10-07`)
+  await expect(page.locator('.fit-lime-shell')).toBeVisible()
+  await page.getByRole('button', { name: 'Добавить шаблон' }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить шаблон тренировки' })
+  await expect(picker).toContainText(templateName)
+  await page.screenshot({ path: testInfo.outputPath('lime-template-picker-390.png'), fullPage: true, animations: 'disabled' })
+  await picker.locator('.workout-template-picker-item').click()
+  await expect(page.getByText(`Добавлен шаблон «${templateName}»`)).toBeVisible()
+  await expect(page.locator('.workout-notes')).toHaveAttribute('open', '')
+  await expect(page.getByLabel('Заметка')).toHaveValue('Держать спокойный темп')
+  await expect(page.getByLabel('Дата')).toHaveValue('2026-10-07')
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  await page.getByRole('button', { name: 'Сохранить план' }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]).toMatchObject({ clientId, workoutDate: '2026-10-07', notes: 'Держать спокойный темп', exercises: [{ ref: 'plank' }] })
+})
+
 for (const width of [390, 430, 1440]) {
   test(`Lime window typography and client step stay bounded at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })

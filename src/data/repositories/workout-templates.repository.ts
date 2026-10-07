@@ -66,6 +66,11 @@ export function cloneWorkoutTemplate(template: Pick<WorkoutTemplateDraft, 'name'
   return { id: crypto.randomUUID(), name: `${template.name} — копия`, notes: template.notes, exercises: cloneExercises(template.exercises) }
 }
 
+export function appendWorkoutTemplateExercises(existing: WorkoutExerciseDraft[], template: Pick<WorkoutTemplateDraft, 'exercises'>): WorkoutExerciseDraft[] {
+  const copied = cloneExercises(template.exercises)
+  return [...existing, ...copied.map((exercise, index) => ({ ...exercise, position: existing.length + index }))]
+}
+
 function mapRow(row: TemplateRow): WorkoutTemplate {
   return {
     id: row.id,

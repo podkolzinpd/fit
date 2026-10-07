@@ -2722,6 +2722,16 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .workout-form-exercises .workout-form-section-head { gap:0; padding:0 }
 .workout-form-exercises .workout-form-section-head h2 { font-size:var(--type-title-size) }
 .workout-form-exercises .workout-form-exercise-heading h2 { font-size:var(--type-section-size); font-weight:var(--weight-semibold) }
+.workout-form-exercises .workout-form-exercise-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px }
+.workout-form-template-trigger { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:8px 12px; white-space:nowrap }
+.workout-form-template-trigger svg { width:17px; height:17px }
+.workout-template-added { margin:0; color:var(--secondary-label-fg); font-size:var(--text-sm) }
+.workout-template-picker { gap:14px }
+.workout-template-picker-list { display:grid; gap:8px; overflow-y:auto }
+.workout-template-picker-item { display:grid; gap:3px; width:100%; min-width:0; padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); text-align:left; box-shadow:none }
+.workout-template-picker-item strong { font-size:15px; overflow-wrap:anywhere }
+.workout-template-picker-item span,.workout-template-picker-item small { color:var(--secondary-label-fg); font-size:12px; line-height:1.35; overflow-wrap:anywhere }
+.workout-template-picker-item:focus-visible,.workout-form-template-trigger:focus-visible { outline:2px solid var(--accent-ring); outline-offset:2px }
 .workout-form-exercises .workout-composer { margin:0 }
 .workout-form .actions { margin: 0; padding: 0; background: transparent }
 .workout-form .actions button:last-child { min-height: var(--control-height-primary); border-radius: var(--radius-lg); font-size: var(--type-body-size); font-weight: 800 }

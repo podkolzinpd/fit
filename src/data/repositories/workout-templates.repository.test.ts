@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Workout } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
-import { cloneWorkoutTemplate, workoutTemplateFromWorkout } from './workout-templates.repository'
+import { appendWorkoutTemplateExercises, cloneWorkoutTemplate, workoutTemplateFromWorkout } from './workout-templates.repository'
 
 describe('workout templates', () => {
   it('keeps only the planned workout snapshot', () => {
@@ -32,5 +32,25 @@ describe('workout templates', () => {
     expect(copy.name).toBe('Всё тело — копия')
     expect(copy.id).not.toBeUndefined()
     expect(copy.exercises[0]?.blockId).not.toBe(source.exercises[0]?.blockId)
+  })
+
+  it('appends an independent template plan without changing existing exercises or group links', () => {
+    const existing = [{ source: 'system' as const, ref: 'squat', name: 'Присед', muscleGroup: 'legs' as const,
+      inputKind: 'strength' as const, position: 0, blockId: 'existing-block', sets: [{ position: 0, weightKg: 80, reps: 8 }] }]
+    const template = { exercises: [
+      { source: 'system' as const, ref: 'plank', name: 'Планка', muscleGroup: 'core' as const,
+        inputKind: 'duration' as const, position: 0, blockId: 'template-group', blockType: 'group' as const,
+        blockRounds: 3, sets: [{ position: 0, durationSec: 45 }] },
+      { source: 'system' as const, ref: 'pushup', name: 'Отжимания', muscleGroup: 'chest' as const,
+        inputKind: 'strength' as const, position: 1, blockId: 'template-group', blockType: 'group' as const,
+        blockRounds: 3, sets: [{ position: 0, reps: 12 }] },
+    ] }
+    const appended = appendWorkoutTemplateExercises(existing, template)
+    expect(appended.map((exercise) => exercise.position)).toEqual([0, 1, 2])
+    expect(appended[0]).toBe(existing[0])
+    expect(appended[1]?.blockId).toBe(appended[2]?.blockId)
+    expect(appended[1]?.blockId).not.toBe('template-group')
+    expect(appended[1]?.sets).toEqual([{ position: 0, weightKg: undefined, reps: undefined, durationSec: 45, durationMin: undefined, distanceKm: undefined, rpe: undefined }])
+    expect(template.exercises[0]?.blockId).toBe('template-group')
   })
 })
