@@ -75,7 +75,7 @@ function parsePort(value: string | undefined): number {
 
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
 const databasePool =
-  databaseConfig === undefined ? undefined : new PgDatabasePool(databaseConfig)
+  databaseConfig === undefined ? undefined : new PgDatabasePool(databaseConfig, 'api')
 const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
     ? undefined

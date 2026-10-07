@@ -26,7 +26,7 @@ function parsePort(value: string | undefined): number {
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
 if (databaseConfig === undefined) throw new Error('Dispatcher database is required')
 
-const databasePool = new PgDatabasePool(databaseConfig)
+const databasePool = new PgDatabasePool(databaseConfig, 'dispatcher')
 const sender = new YandexPushNotificationSender(
   requiredEnv('PUSH_FUNCTION_URL'),
   requiredEnv('PUSH_DISPATCH_SECRET'),
