@@ -1,7 +1,7 @@
 # Fit — текущее состояние проекта
 
 ## Рекорды выбранной тренировки — 2026-10-07
-План design/DATABASE_WORKOUT_RECORDS_20261007.md, main ca796686. Migration134/GET personal-records заменяют workout+N Progress pages одним actor-scoped чтением без лимита20; first/tie/confirmed/shared-history/author contract сохранён. Strength без primary-дубля; volume с весом/повторами своего подхода. Регрессия old workout после21 новых, все метрики, tenant/author, реальная app-session/revocation, grants/down-up — actor115/115 passed; repository/completion/summary85/85 и API3/3 passed. local:verify ограничен прежней legacy migration20260919145000, без сброса. Полный check/clean-chain134/CI/PR/production ещё гейты. Номера132/133 заняты ранним PR#1493; его контракт не меняется.
+План design/DATABASE_WORKOUT_RECORDS_20261007.md, база обновлена ca796686→62a92c46. Migration134/GET personal-records заменяют workout+N Progress pages одним actor-scoped чтением без лимита20; first/tie/confirmed/shared-history/author contract сохранён. Strength без primary-дубля; volume с весом/повторами своего подхода. Old workout после21 новых/все метрики/tenant/author/app-session/revocation/grants/down-up: clean PostgreSQL17 chain134/actor115/115 passed; repository/completion/summary85/85, API3/3 и полный check/API1204/build passed. WebKit Yandex route1/1: один records request, ноль Progress/Supabase,390/430 без overflow. local:verify ограничен прежней legacy migration20260919145000, без сброса. CI/merge/production ещё гейты; ранние#1491/#1493/#1494 в очереди.132/133 заняты#1493.
 
 ## Фоновая очистка app-сессий — 2026-10-07
 

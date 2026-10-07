@@ -47,4 +47,11 @@ yandex-main.repository, CURRENT_STATE. Перед merge — очередь ра�
   не сбрасывалась. WebKit legacy review остановился на входе в локальный
   Supabase до открытия workout; это не проверка нового Yandex-контракта.
 - Migration134:132/133 уже заняты ранним активным PR#1493. Перед выпуском
-  требуется новый main/clean-chain и обязательный CI. Полный check впереди.
+  требуется новый main и обязательный CI. После обновления от main62a92c46
+  clean PostgreSQL17 chain134/actor115/115 и полный npm run check passed:
+  lint/typecheck/coverage, API1204/1204, policy/hosting/build/startup verification.
+- Реальный `/workouts/:id` на WebKit с Yandex-only flags и синтетическим
+  app-session/API: старый workout показывает 60кг×10, один records запрос,
+  ноль Progress pages/Supabase calls, нет overflow390/430; 1/1 passed.
+  Проверка нового transport не опирается на старый Supabase login.
+- CI, очередь ранних#1491/#1493/#1494, merge и production ещё не завершены.
