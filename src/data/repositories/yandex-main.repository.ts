@@ -1472,18 +1472,15 @@ export function createYandexMainRepository(
           z.object({ workout: z.object({ version: z.number().int().positive() }) }))
         invalidate()
       },
-      async personalRecords(workoutId) {
-        const item = await this.get(workoutId)
-        const records: WorkoutPersonalRecord[] = []
-        for (const exercise of item.exercises) {
-          const page = await this.exerciseProgressPage(item.clientId, exercise.ref, null)
-          const result = page.items.find((candidate) => candidate.workoutId === workoutId)
-          if (!result) continue
-          if (result.isPrimaryPr && result.primaryValue !== null) records.push({ exerciseRef: exercise.ref, exerciseName: exercise.name, inputKind: exercise.inputKind, metric: 'primary', primaryValue: result.primaryValue, weightKg: result.bestWeightKg, reps: result.repsAtBestWeight })
-          if (result.isWeightPr && result.bestWeightKg !== null) records.push({ exerciseRef: exercise.ref, exerciseName: exercise.name, inputKind: exercise.inputKind, metric: 'weight', primaryValue: result.bestWeightKg, weightKg: result.bestWeightKg, reps: result.repsAtBestWeight })
-          if (result.isWeightRepsPr && result.bestWeightReps !== null) records.push({ exerciseRef: exercise.ref, exerciseName: exercise.name, inputKind: exercise.inputKind, metric: 'weight_reps', primaryValue: result.bestWeightReps, weightKg: result.bestWeightKg, reps: result.repsAtBestWeight })
-        }
-        return records
+      async personalRecords(workoutId): Promise<WorkoutPersonalRecord[]> {
+        const payload = await readJson(queries, `/v1/workouts/${workoutId}/personal-records`,
+          z.object({ records: z.array(z.object({
+            exerciseRef: z.string(), exerciseName: z.string(),
+            inputKind: z.enum(['strength', 'distance', 'reps', 'duration']),
+            metric: z.enum(['primary', 'weight', 'weight_reps']), primaryValue: z.number(),
+            weightKg: z.number().nullable(), reps: z.number().int().nullable(),
+          })) }))
+        return payload.records
       },
       async latestExerciseResults(clientId, exerciseRefs) {
         const refs = new Set(exerciseRefs)

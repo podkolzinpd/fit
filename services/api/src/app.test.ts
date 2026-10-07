@@ -2678,15 +2678,20 @@ function buildProgressData(): {
   pilotProgressData: PilotProgressData
   readBundle: ReturnType<typeof vi.fn>
   saveProgress: ReturnType<typeof vi.fn>
+  readWorkoutRecords: ReturnType<typeof vi.fn>
+  readExercise: ReturnType<typeof vi.fn>
 } {
   const readBundle = vi.fn().mockResolvedValue({ entries: [], customMetrics: [], goal: null })
   const saveProgress = vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 })
-  return { readBundle, saveProgress, pilotProgressData: {
+  const readWorkoutRecords = vi.fn().mockResolvedValue([])
+  const readExercise = vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 })
+  return { readBundle, saveProgress, readWorkoutRecords, readExercise, pilotProgressData: {
     readBundle,
     readRegularity: vi.fn().mockResolvedValue([]),
     readRunning: vi.fn().mockResolvedValue([]),
-    readExercise: vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 }),
+    readExercise,
     readChronicle: vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 }),
+    readWorkoutRecords,
     saveProgress,
     deleteProgress: vi.fn().mockResolvedValue(2),
     saveMetric: vi.fn().mockResolvedValue({ id: WORKOUT_ID, archivedAt: null, version: 1 }),
@@ -4242,6 +4247,50 @@ describe('read-only pilot training data endpoint', () => {
 describe('pilot progress and goals endpoints', () => {
   const sessionToken = 's'.repeat(43)
   const clientId = CLIENTS_RESPONSE.clients[0]!.id
+
+  it('reads workout records with the server session and no-store response', async () => {
+    const progress = buildProgressData()
+    const records = [{ exerciseRef: 'squat', exerciseName: 'Squat', inputKind: 'strength',
+      metric: 'weight', primaryValue: 80, weightKg: 80, reps: 5 }]
+    progress.readWorkoutRecords.mockResolvedValue(records)
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'GET',
+      url: `/v1/workouts/${WORKOUT_ID}/personal-records`, headers: { 'x-fit-session': sessionToken } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ records })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(progress.readWorkoutRecords).toHaveBeenCalledExactlyOnceWith(
+      { accessMode: 'read_write', token: sessionToken }, WORKOUT_ID)
+    expect(progress.readExercise).not.toHaveBeenCalled()
+  })
+
+  it('rejects missing sessions and invalid workout IDs before reading records', async () => {
+    const progress = buildProgressData()
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    expect((await app.inject({ method: 'GET', url: `/v1/workouts/${WORKOUT_ID}/personal-records` })).statusCode).toBe(401)
+    expect((await app.inject({ method: 'GET', url: '/v1/workouts/invalid/personal-records',
+      headers: { 'x-fit-session': sessionToken } })).statusCode).toBe(400)
+    expect(progress.readWorkoutRecords).not.toHaveBeenCalled()
+  })
+
+  it('does not turn forbidden or failed workout record reads into empty success', async () => {
+    const progress = buildProgressData()
+    progress.readWorkoutRecords
+      .mockRejectedValueOnce(new PilotDomainCommandError('forbidden'))
+      .mockRejectedValueOnce(new Error('private database details'))
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    const request = { method: 'GET' as const, url: `/v1/workouts/${WORKOUT_ID}/personal-records`,
+      headers: { 'x-fit-session': sessionToken } }
+    const forbidden = await app.inject(request)
+    expect(forbidden.statusCode).toBe(403)
+    expect(forbidden.json()).toEqual({ error: 'action_not_allowed' })
+    const failed = await app.inject(request)
+    expect(failed.statusCode).toBe(503)
+    expect(failed.body).not.toContain('private database')
+  })
 
   it('identifies a missing progress dependency without exposing runtime details', async () => {
     const app = buildApp({ logger: false, releaseId: 'candidate-release' })
