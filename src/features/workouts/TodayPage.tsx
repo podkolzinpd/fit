@@ -24,6 +24,7 @@ import { useRpeDisplay } from '../../app/rpe-display'
 import { type ParsedWorkoutExercise } from './quick-workout-entry'
 import { formatLlmWorkoutText, orderParsedWorkoutItems, parsedWorkoutItems, parseWorkoutWithLlm, resolveWorkoutParseChoice, workoutParseSetSummary, workoutParseUnmatched, type WorkoutParseUnmatchedView } from './llm-workout-parser'
 import { clientTodayDraftKey, readClientTodayDrafts, writeClientTodayDraft, readTodayDraft, removeTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
+import { formatPrepOption, WORKOUT_PREP_OPTIONS } from './live-phase'
 import { type WorkoutRecordMode } from './workout-entry-rules'
 import { firstCardioDraftMissingEnteredDuration } from './calorie-duration-prompt'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
@@ -184,6 +185,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   })
   const [startTime, setStartTime] = useState(limePlanning ? entryState?.planStartTime ?? '' : '')
   const [actualDurationMinutes, setActualDurationMinutes] = useState('')
+  // 0 — без подготовки; иначе обратный отсчёт перед первым подходом Live.
+  const [prepSeconds, setPrepSeconds] = useState(0)
   const [trainingFormat, setTrainingFormat] = useState<WorkoutTrainingFormat | undefined>(clientMode ? 'self' : limePlanning ? entryState?.planTrainingFormat : undefined)
   const trainingFormatTouched = useRef(limePlanning && Boolean(entryState?.planTrainingFormat))
   const finance = useQuery({
@@ -284,6 +287,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       setWorkoutDate(draft.workoutDate ? localDate(draft.workoutDate) : today)
       setStartTime(draft.startTime ?? '')
       setActualDurationMinutes(draft.actualDurationMinutes ?? '')
+      setPrepSeconds(draft.prepSeconds ?? 0)
       setTrainingFormat(clientMode ? 'self' : draft.trainingFormat)
       trainingFormatTouched.current = Boolean(draft.trainingFormat)
       setManualRefs(draft.manualRefs ?? [])
@@ -317,7 +321,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       return
     }
     const persistedItems = planOnly ? items.map((item, index) => ({ ...item, structure: { ...item.structure, blockId: planExercises[index]?.blockId ?? item.structure?.blockId } })) : items
-    const persistedDraft = { ...(limePlanning ? planMetadata : {}), screen, text, reviewedText: reviewedText ?? undefined, lastLlmText: lastLlmText ?? undefined, choices, items: persistedItems, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat }
+    const persistedDraft = { ...(limePlanning ? planMetadata : {}), screen, text, reviewedText: reviewedText ?? undefined, lastLlmText: lastLlmText ?? undefined, choices, items: persistedItems, clientId, manualRefs, removedRefs, recordMode, workoutDate, startTime, actualDurationMinutes, trainingFormat, prepSeconds }
     if (clientLime) writeClientTodayDraft(actor!.userId, clientDraftId, persistedDraft)
     else writeTodayDraft(draftKey, persistedDraft)
     if (limePlanning && planMetadata.sourceFormDraftKey?.startsWith(workoutFormDraftKey(actor!.userId, 'new--'))) {
@@ -328,7 +332,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         endTime: planMetadata.endTime ?? '', trainingFormat, exercises: planExercises,
       })
     }
-  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, planExercises, planOnly, recordMode, removedRefs, reviewedText, screen, startTime, text, trainingFormat, workoutDate])
+  }, [actualDurationMinutes, choices, clientId, draftKey, draftReady, items, lastLlmText, limePlanning, manualRefs, planMetadata, planExercises, planOnly, prepSeconds, recordMode, removedRefs, reviewedText, screen, startTime, text, trainingFormat, workoutDate])
 
   const displayedUnparsed = llmUnmatched
   const resolved = recognized
@@ -364,7 +368,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
-      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : {}), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: planOnly ? planExercises : items.map(draftExercise) }
+      const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : { prepSeconds: prepSeconds || null }), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: planOnly ? planExercises : items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
     onMutate: (mode) => trackGoal(mode === 'planned' ? 'today_plan_save_started' : 'today_workout_save_started'),
@@ -1009,6 +1013,13 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       })}</div>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
       {items.length > 0 && !reordering && <button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button>}
       {removedItem && <div className="today-undo-remove" role="status"><span>Упражнение удалено</span><button type="button" className="link" onClick={undoRemoveExercise}>Отменить</button></div>}
+      {/* Рядом с отдыхом, где настраивают ход тренировки. Для записи выполненной не применяется. */}
+      {items.length > 0 && !reordering && <label className="today-date-field today-prep-field"><span>Подготовка перед стартом</span>
+        <select aria-label="Подготовка перед стартом" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))}>
+          {WORKOUT_PREP_OPTIONS.map((seconds) => <option key={seconds} value={seconds}>{seconds === 0 ? 'Без подготовки' : formatPrepOption(seconds)}</option>)}
+        </select>
+        <small>Обратный отсчёт в Live перед первым подходом, чтобы положить телефон и занять положение.</small>
+      </label>}
       {items.length > 0 && !reordering && <WorkoutCta type="button" className="wide today-review-next" onClick={() => { setReordering(false); trackGoal('today_save_step_opened'); setScreen('save') }}>Далее</WorkoutCta>}
       </>}
       {screen === 'save' && <section className="today-assignment">

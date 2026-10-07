@@ -61,7 +61,18 @@ yandex-main.repository, CURRENT_STATE. Перед merge — очередь ра�
   дал113/115: истёкшие строки предыдущего запуска меняли глобальный batch
   cleanup и план индекса. Пересоздан только собственный временный контейнер;
   общая legacy-БД не менялась, тесты не ослаблялись.
-- Новый exact-head CI, очередь ранних#1493/#1494, merge и production ещё
-  не завершены. У#1493 на момент проверки красный CI; очередь не обходится.
+- Exact-head CI37629455480/Android37629455419 на8d2c91b9 success.
+  После merge#1493/#1494/#1497 ветка повторно обновляется от mainfca6cb75.
+  Git-конфликт snapshot разрешён с сохранением обеих сторон; API/repository
+  и их тесты объединены без удаления соседних изменений. Обнаружена также
+  коллизия номера134 с уже слитой migration шаблонов: только собственная
+  невыпущенная migration рекордов перенумерована136, включая Down/Up test.
+  Миграции134/135 в main не переписываются. Fresh clean PostgreSQL17
+  chain136/actor125/125, WebKit Yandex records1/1 и полный npm run check
+  (frontend2514/API1205/lint/typecheck/policy/build/startup) passed.
+  Migration safety check против origin/main passed, конфликтных маркеров нет.
+  local:verify повторно ограничен прежней missing legacy migration20260919145000;
+  общая БД сохранена. Exact-head CI нового merge ещё гейт; PR не сливался,
+  production этого PR не менялся.
 - iOS/simulator не проверен: Xcode/simctl в текущем окружении отсутствуют.
   Android debug CI зелёный; физическое устройство и реальный OAuth не проверены.

@@ -898,6 +898,22 @@ describe('Yandex main repository', () => {
     await repository.workouts.remove(item)
   })
 
+  it('sends the prep countdown only when the form owns it', async () => {
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect((await repository.workouts.get(workoutId)).prepSeconds).toBeNull()
+    await repository.workouts.save({ ...workoutDraft(), prepSeconds: 20 })
+    await repository.workouts.save({ ...workoutDraft(), id: workoutId, version: 1 })
+    const bodies = fetchMock.mock.calls
+      .filter(([url, init]) => /\/v1\/workouts(\/[0-9a-f-]{36})?$/.test(String(url)) && (init?.method === 'POST' || init?.method === 'PUT'))
+      .map(([, init]) => JSON.parse(String(init?.body)) as Record<string, unknown>)
+    expect(bodies[0]).toMatchObject({ prepSeconds: 20 })
+    // Старый клиент без поля не сбрасывает сохранённую подготовку.
+    expect(bodies[1]).not.toHaveProperty('prepSeconds')
+  })
+
   it('preserves empty optional values across sparse workout and progress contracts', async () => {
     const sparseWorkout = {
       ...workoutPayload(workoutId, 'done', '2026-08-20'),

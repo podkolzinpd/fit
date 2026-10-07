@@ -37,7 +37,10 @@ async function removeNativeRestTimerNotification(workoutId: string) {
   if (matching.length > 0) await LocalNotifications.removeDeliveredNotifications({ notifications: matching })
 }
 
-export async function scheduleNativeRestTimerNotification(workoutId: string, deadline: number): Promise<boolean> {
+const REST_MESSAGE = { title: 'Время отдыха истекло', body: 'Можно переходить к следующему подходу.' }
+
+/** Подготовка, подход и отдых не пересекаются, поэтому делят один слот уведомления. */
+export async function scheduleNativeRestTimerNotification(workoutId: string, deadline: number, message: { title: string; body: string } = REST_MESSAGE): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false
   try {
     const permission = await LocalNotifications.checkPermissions()
@@ -46,8 +49,8 @@ export async function scheduleNativeRestTimerNotification(workoutId: string, dea
     await LocalNotifications.schedule({
       notifications: [{
         id: restTimerNotificationId(workoutId),
-        title: 'Время отдыха истекло',
-        body: 'Можно переходить к следующему подходу.',
+        title: message.title,
+        body: message.body,
         schedule: { at: new Date(deadline), allowWhileIdle: true },
         sound: 'rest-gong.wav',
         foreground: false,
