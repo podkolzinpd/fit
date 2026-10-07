@@ -45,6 +45,9 @@ test('keeps one required E2E result while skipping heavy jobs only for a safe sc
 test('requires Fit Lime route checks in both engines without production secrets', () => {
   const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
   assert.match(job, /FIT_SCHEDULE_V2_VISUAL: '1'/)
+  assert.match(job, /FIT_LIME_FONTS_REQUIRED: 'true'/)
+  assert.match(job, /node scripts\/prepare-fit-lime-ci-fonts\.mjs/)
+  assert.ok(job.indexOf('prepare-fit-lime-ci-fonts.mjs') < job.indexOf('playwright test'))
   assert.match(job, /project: mobile-chromium\n\s+browser: chromium/)
   assert.match(job, /project: lime-acceptance-webkit\n\s+browser: webkit/)
   assert.match(job, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/)
