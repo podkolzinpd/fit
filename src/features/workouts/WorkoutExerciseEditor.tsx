@@ -1,3 +1,4 @@
+import { AddActionLabel } from '../../shared/AddActionLabel'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { BlockPreset, ExerciseSnapshot, WorkoutExerciseDraft, WorkoutSetDraft } from '../../shared/domain'
@@ -346,7 +347,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         </WorkoutSetRow>)}
       </WorkoutSetTable>
       <div className="set-add-row">
-        <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}>＋ Подход</button>
+        <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}><AddActionLabel>Подход</AddActionLabel></button>
       </div>
       {canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
       {showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Заметка спортсмену" initialOpen={Boolean(exercise.trainerComment)}>
@@ -432,7 +433,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         {blockMergeIndex >= 0 && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>Добавить следующее в {mergeTargetLabel}</button>}
       </div>
     })}
-    {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer"><button type="button" className="secondary" onClick={onOpenPicker}>＋ Упражнение</button>{hasExercises && <OverflowMenu label="Действия с планом" trigger="Изменить все" items={planActions} />}</div>}
+    {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer"><button type="button" className="secondary" onClick={onOpenPicker}><AddActionLabel>Упражнение</AddActionLabel></button>{hasExercises && <OverflowMenu label="Действия с планом" trigger="Изменить все" items={planActions} />}</div>}
     {settingsExerciseIndex !== null && exercises[settingsExerciseIndex] && (() => {
       const exercise = exercises[settingsExerciseIndex]!
       const showRunningPresets = entryMode === 'plan' && exercise.ref === 'running' && exercise.inputKind === 'distance' && exercise.blockType !== 'group'

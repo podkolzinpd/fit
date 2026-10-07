@@ -97,6 +97,10 @@ export function AddIcon(props: IconProps) {
   return <Icon data-icon="add" {...props}><path d="M12 5v14M5 12h14" /></Icon>
 }
 
+export function MinusIcon(props: IconProps) {
+  return <Icon data-icon="minus" {...props}><path d="M5 12h14" /></Icon>
+}
+
 export function CheckIcon(props: IconProps) {
   return <Icon data-icon="check" {...props}><path d="m5 12.5 4.2 4.2L19 7" /></Icon>
 }

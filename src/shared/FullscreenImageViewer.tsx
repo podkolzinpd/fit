@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react'
+import { useContext, useEffect, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { CloseIcon } from './icons'
+import { AddIcon, CloseIcon, MinusIcon } from './icons'
+import { FitLimeIconsContext } from './fit-lime-icons'
 
 export function FullscreenImageViewer({ src, alt, images, initialIndex = 0, label = 'Просмотр фото', onClose, saveFileName }: {
   src: string
@@ -11,6 +12,7 @@ export function FullscreenImageViewer({ src, alt, images, initialIndex = 0, labe
   onClose: () => void
   saveFileName?: string
 }) {
+  const lime = useContext(FitLimeIconsContext)
   const items = images?.length ? images : [{ src, alt }]
   const [activeIndex, setActiveIndex] = useState(Math.min(Math.max(0, initialIndex), items.length - 1))
   const [zoom, setZoom] = useState(1)
@@ -111,7 +113,7 @@ export function FullscreenImageViewer({ src, alt, images, initialIndex = 0, labe
       {items.length > 1 && <button type="button" className="fullscreen-image-next" aria-label="Следующее фото" onClick={() => changeImage(1)}>›</button>}
     </div>
     {items.length > 1 && <p className="fullscreen-image-counter" aria-live="polite">{activeIndex + 1} из {items.length}</p>}
-    <div className="fullscreen-image-controls" aria-label="Масштаб"><button type="button" aria-label="Уменьшить" disabled={zoom <= 1} onClick={() => changeZoom(Math.max(1, zoom - .5))}>−</button><span>{Math.round(zoom * 100)}%</span><button type="button" aria-label="Увеличить" disabled={zoom >= 3} onClick={() => changeZoom(Math.min(3, zoom + .5))}>+</button></div>
+    <div className="fullscreen-image-controls" aria-label="Масштаб"><button type="button" aria-label="Уменьшить" disabled={zoom <= 1} onClick={() => changeZoom(Math.max(1, zoom - .5))}>{lime ? <MinusIcon /> : '−'}</button><span>{Math.round(zoom * 100)}%</span><button type="button" aria-label="Увеличить" disabled={zoom >= 3} onClick={() => changeZoom(Math.min(3, zoom + .5))}>{lime ? <AddIcon /> : '+'}</button></div>
     {error && <p role="alert">Не удалось сохранить фото</p>}
   </section>, document.body)
 }

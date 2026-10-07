@@ -1,3 +1,4 @@
+import { AddActionLabel } from '../../shared/AddActionLabel'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -939,7 +940,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </div>}
       {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.length > 1 && <><span className="block-badge">{block.items[0]!.item.structure?.blockPreset === 'interval' ? 'Интервалы' : block.items[0]!.item.structure?.blockPreset === 'circuit' ? 'Круговая' : 'Суперсет'}</span>{block.items[0]!.item.structure?.blockPreset === 'set' && !reordering && <div className="today-review-round-actions">
         <span>Кругов: {Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1)))}</span>
-        <button type="button" className="secondary" disabled={Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1))) >= 20} onClick={() => addReviewRound(block.id)}>＋ Круг</button>
+        <button type="button" className="secondary" disabled={Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1))) >= 20} onClick={() => addReviewRound(block.id)}><AddActionLabel>Круг</AddActionLabel></button>
         {lastAddedReviewRound?.blockId === block.id && <button type="button" className="link" onClick={() => void removeAddedReviewRound(block.id, lastAddedReviewRound.position)}>Убрать добавленный круг</button>}
         <details className="today-review-group-rest"><summary>Отдых в суперсете</summary>
           <label>Между упражнениями, с<input aria-label="Отдых между упражнениями суперсета" type="number" inputMode="numeric" min="0" max="600" key={`${block.id}-exercise-${block.items[0]!.item.structure?.restBetweenExercisesSec ?? 0}`} defaultValue={block.items[0]!.item.structure?.restBetweenExercisesSec ?? 0} onBlur={(event) => updateReviewGroupRest(block.id, 'restBetweenExercisesSec', Number(event.currentTarget.value || 0))} /></label>
@@ -1002,7 +1003,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
                 {block.items.length === 1 && item.sets.length > 1 && <button type="button" className="link danger planned-set-remove" aria-label={'Удалить подход ' + (setIndex + 1)} onClick={() => removeSet(index, setIndex)}><CloseIcon /></button>}
               </WorkoutSetRow>)}
             </WorkoutSetTable>
-            {block.items.length === 1 && <div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}>＋ Подход</button></div>}
+            {block.items.length === 1 && <div className="set-add-row"><button type="button" className="secondary today-add-set" onClick={() => addSet(index)}><AddActionLabel>Подход</AddActionLabel></button></div>}
           </details>}
         </WorkoutExercise>
       })}</div>)}</div> : <section className="today-empty today-exercise-empty"><p>Добавьте упражнения из каталога — можно выбрать несколько сразу.</p><button type="button" className="secondary wide" onClick={() => { setReplaceIndex(null); setPickerOpen(true) }}>Добавить упражнение</button></section>}
