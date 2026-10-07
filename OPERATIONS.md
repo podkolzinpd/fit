@@ -732,8 +732,10 @@ approved enable, an existing Cloud administrator must bootstrap the private
 `fit-frontend-hourly-probe` function and grant the deployer `functions.admin`
 **only on that function**, plus the existing timer identity its scoped invoker
 binding. Do not grant folder-wide Functions admin. The deployment then maintains
-only that function policy. These one-time bindings are pending along with cost
-approval; local/mocked tests do not prove IAM authorization. Role requirements:
+only that function policy. The owner approved the bounded trial on 2026-10-07;
+the private function was bootstrapped with function-scoped deployer admin and
+timer invoker bindings. Local/mocked tests alone do not prove IAM authorization.
+Role requirements:
 [Functions access control](https://yandex.cloud/ru/docs/functions/security/).
 
 The workflow packages only the dependency-free probe modules, creates a
@@ -744,6 +746,17 @@ unchanged. An actual measured HTTP failure is valid experiment data, not a
 failed handler. Unavailable inventories or unexpected existing timer settings
 fail closed instead of creating duplicate resources. Re-enabling explicitly
 starts a new 24-hour window.
+
+YC CLI represents a timer configured with retries as
+`rule.timer.invoke_function_with_retry`, including `retry_settings` (attempts
+may be encoded as a string). Validate the target, tag, invoker and exactly one
+retry with a `10s` interval against this envelope for reuse and readback.
+Run `37652274384` created an ACTIVE timer and passed candidate smoke, but the
+initial readback validator expected the non-retry field and reported failure.
+Owner readback confirmed the reviewed settings: do not rerun `enable` merely
+to make that run green, because it would restart the observation window.
+The first window expires at `2026-10-08T16:30:27.515Z`. GitHub warmup was
+disabled at `2026-10-07T16:28:03Z`; the independent six-hour probe remains on.
 
 Each invocation makes at most two sequential GETs on one resolved Gateway IP:
 `/healthz` then `/auth`, with separate absolute 20-second deadlines and bounded
