@@ -39,6 +39,30 @@ describe('live set coordinator', () => {
     expect(saveLiveSet).toHaveBeenCalledOnce()
   })
 
+  it('saves a confirmed cardio time even when it equals the previously saved plan', async () => {
+    const saveLiveSet = vi.fn()
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(3)
+    const confirmLiveSet = vi.fn().mockResolvedValue(4)
+    const coordinator = createLiveSetCoordinator(saveLiveSet, confirmLiveSet)
+    const planned: LiveSetDraft = {
+      durationSec: 1800, distanceKm: 2.2,
+      metricSources: { duration: 'planned', distance: 'entered', rpe: 'unknown' },
+    }
+    const entered: LiveSetDraft = {
+      ...planned,
+      metricSources: { duration: 'entered', distance: 'entered', rpe: 'unknown' },
+    }
+
+    await coordinator.save(set, planned)
+    await coordinator.confirm(set, entered)
+
+    expect(saveLiveSet).toHaveBeenCalledTimes(2)
+    expect(saveLiveSet).toHaveBeenNthCalledWith(1, 'set-1', planned, 1)
+    expect(saveLiveSet).toHaveBeenNthCalledWith(2, 'set-1', entered, 2)
+    expect(confirmLiveSet).toHaveBeenCalledWith('set-1', 3)
+  })
+
   it('continues the queue after a failed save and retries with the same version', async () => {
     const saveLiveSet = vi.fn()
       .mockRejectedValueOnce(new Error('network'))

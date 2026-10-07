@@ -8884,6 +8884,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(running.calorie_v2_shadow_kcal).toBe(610)
         expect(running.calorie_v2_shadow_details.segments[0]?.met).toBe(9.3)
         const publishedV1 = running.active_calories_kcal
+        expect(publishedV1).toBeGreaterThan(0)
 
         await connection.query(`update public.workout_exercises
           set exercise_ref = 'stationary-bike', exercise_name = 'Велотренажёр'
@@ -8902,6 +8903,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const missing = await read()
         expect(missing.calorie_v2_shadow_kcal).toBeNull()
         expect(missing.calorie_v2_shadow_reason).toBe('missing_activity_duration')
+
+        // Confirming the same numeric time as an actual result must restore
+        // the estimate without making the person change their 60-minute plan.
+        await connection.query(`update public.workout_sets set fact_duration_source = 'entered'
+          where id = $1`, [ROOT_WORKOUT_SET_ID])
+        const reentered = await read()
+        expect(reentered.calorie_v2_shadow_reason).toBeNull()
+        expect(reentered.calorie_v2_shadow_kcal).toBe(425)
+        expect(reentered.active_calories_kcal).toBe(publishedV1)
       } finally {
         await connection.query('rollback')
         connection.release()
