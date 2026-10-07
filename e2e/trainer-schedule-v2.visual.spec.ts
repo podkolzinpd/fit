@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
-import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
+import type { WorkoutExercise, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../src/shared/domain'
 import { computeClientStats } from '../src/data/repositories/workout-rules'
 import { localDate } from '../src/shared/local-date'
 import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/repositories/trainer-finance.repository'
@@ -14,6 +14,68 @@ const messageId = '10000000-0000-4000-8000-000000000005'
 const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
+
+for (const fitLime of [false, true]) {
+  test(`Template reliability lost response and reload lime=${fitLime}`, async ({ page }, info) => {
+    const source = { ...workout, exercises: [{
+      id: '10000000-0000-4000-8000-000000000080', source: 'system' as const, ref: 'squat', name: 'Приседания', muscleGroup: 'legs' as const, inputKind: 'strength' as const, position: 0,
+      blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single' as const, blockRounds: 1,
+      blockPreset: 'set' as const, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 0,
+      sets: [{ id: '10000000-0000-4000-8000-000000000082', position: 0, weightKg: 50.5, reps: 8, fact: { weightKg: 70 }, confirmedAt: '2026-10-07T00:00:00Z', version: 1 }],
+    }] }
+    await mockPilot(page, { fitLime, workouts: [source] })
+    const rows = new Map<string, object>()
+    const commands: Array<{ draft: WorkoutTemplateDraft; expectedVersion: number | null }> = []
+    await page.route('http://127.0.0.1:4100/v1/workout-templates', async (route) => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: { templates: [...rows.values()] } })
+      const command = route.request().postDataJSON() as typeof commands[number]
+      commands.push(command)
+      const row = rows.get(command.draft.id) ?? { ...command.draft, trainerId, notes: command.draft.notes ?? null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' }
+      rows.set(command.draft.id, row)
+      if (commands.length === 1) return route.abort('connectionreset')
+      return route.fulfill({ json: { template: row } })
+    })
+    await page.goto(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`)
+    await page.getByLabel('Название шаблона').fill('Силовая без дублей')
+    await page.locator('.workout-notes summary').click()
+    await page.getByRole('textbox', { name: 'Заметка', exact: true }).fill('Сохранённая инструкция')
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    await page.screenshot({ path: info.outputPath('save-error.png'), fullPage: true })
+    await page.reload()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('Силовая без дублей')
+    await expect(page.getByRole('textbox', { name: 'Заметка', exact: true })).toHaveValue('Сохранённая инструкция')
+    await expect(page.locator('.workout-form-exercise-heading')).toContainText('1 упражнение · 1 подход')
+    await page.screenshot({ path: info.outputPath('restored-draft.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page).toHaveURL(/\/schedule\/templates$/)
+    await expect(page.locator('.template-card')).toHaveCount(1)
+    expect(commands).toHaveLength(2)
+    expect(commands[1]).toEqual(commands[0])
+    expect(JSON.stringify(commands[0])).not.toContain('fact')
+    expect(JSON.stringify(commands[0])).not.toContain('confirmedAt')
+    expect(rows.size).toBe(1)
+    expect(await page.evaluate((key) => localStorage.getItem(key), `fit.workout-template-draft.${trainerId}.source:${workoutId}`)).toBeNull()
+    await page.screenshot({ path: info.outputPath('saved-one-template.png'), fullPage: true })
+  })
+  test(`Template reliability explicit discard lime=${fitLime}`, async ({ page }) => {
+    await mockPilot(page, { fitLime })
+    await page.goto('/schedule/templates/new/editor')
+    await page.getByLabel('Название шаблона').fill('Черновик с нуля')
+    await page.reload()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('Черновик с нуля')
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('Черновик с нуля')
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Выйти', exact: true }).click()
+    await expect(page).toHaveURL(/\/schedule\/templates$/)
+    await page.goto('/schedule/templates/new/editor')
+    await expect(page.getByLabel('Название шаблона')).toHaveValue('')
+  })
+}
 
 for (const role of ['client', 'trainer'] as const) for (const width of (role === 'client' ? [390, 430] : [390, 1440])) {
   test(`Workout actual duration correction ${role} ${width}`, async ({ page }, testInfo) => {

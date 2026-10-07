@@ -1,5 +1,9 @@
 # Fit — текущее состояние проекта
 
+## Надёжность шаблонов и функциональная приёмка — 2026-10-07
+
+GitHub#1492, PR#1494, план design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md. Пункты1–2: migration134/стабильный ID, точный replay без дублей и обхода ownership/version, account/context-scoped черновик и защита от старого pending save. После #1493/main25c046b2 повторены clean-chain132→134/actor111, check2512frontend/1202API/build, template WebKit4/4, DB cross-role16, exact Down→Up134/grants и real old/Lime API/DB/browser2×15 — passed; исходная полная WebKit359/359. CI37631291854/f2bfda08 зелёный; свежий обязательный CI обновлённой ветки перед merge выполняется. local:verify ограничен прежним drift112, общая база сохранена. Быстрый старт не меняется; полный план3–10 не закрыт. Подтверждённый дефект отключения современной связи исправлен отдельно в#1497/135; real OAuth/AI/voice/Health/devices/payments не подменяются fixtures.
+
 ## Live: таймер фаз и ранний старт будущего плана — 2026-10-07
 
 План: `design/live-phase-timer.md`, выпуск разрешён владельцем после локальной проверки. Одна кнопка таймера ведёт подготовку → подход по плановому времени → отдых; `workouts.prep_seconds` (migration132, ключ не пришёл — значение сохраняется). migration133 расширяет триггер 000120 вне пилота Lime только для будущих дат: старт Live переносит план на фактический день клиента, `planned_*` хранит исходный план; прошедшие даты вне пилота не меняются. Тест «Контроль без флага» переписан под новое правило. Supabase не менялся. Проверено: clean PostgreSQL17 chain/actor100/100, frontend unit817/817, Yandex repository47/47; UI сценарий — локально в браузере (dev-сборка на Supabase, без prep_seconds в legacy-схеме). Production ещё не подтверждён.
@@ -12,17 +16,9 @@ PR#1488, план design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 уб
 
 План `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md`, YAFIT-599. #1485 опубликован; #1487 опубликован на mainca796686 официальным37619414157: ресурсы7/7, production UI16/16. #1489 слит62a92c46 после CI37622487729 success; штатный выпуск ожидается. #1491 обновлён от этого main: portal чата/TimeWheel500 и подтверждённая потеря окна конкурса при замене auth frame (host после commit; условия/данные прежние). Общий проход352/354 +2/2 повтор навигационных таймаутов; программа12сессий/24редактора8/8, running8/8, уведомления8/8, fonts8/8, конкурс8/8. Frontend2488/lint/typecheck/build passed; реестр `client-lime-migration-audit.md`. Физический iPhone/реальные внешние эффекты НЕ ПРОВЕРЕНО; итоговая публикация и полное соответствие не объявлены.
 
-## Кардио: фактическое время равно плану — 2026-10-07
-
-YAFIT-598: прежний Live dedupe сравнивал только числа и пропускал явное подтверждение времени, совпавшего с планом. Ключ автосохранения учитывает источник метрик: `entered` доходит до БД и участвует в расчёте калорий; сама формула и схема БД не меняются. Регрессии закрывают выбор того же значения в поле, сохранение факта и DB-оценку при неизменном числе.
-
 ## YAFIT-597 — надёжность оплат — 2026-10-07
 
 План: `design/FINANCE_PAYMENTS_20261006.md`, GitHub#1472, PR1#1473 / PR2#1475. Владелец разрешил оба выпуска по общей очереди. PR1 добавляет actor-scoped request receipts и фактическую дату начальной оплаты (migration130/v2, старые записи и контракты сохранены). Clean PostgreSQL17 chain/actor93/93, UI/repository64/64 и WebKit error/retry2/2 passed. `local:verify` ограничен прежним drift общей базы migration112; общая база не сбрасывалась. Параллельный check ловил локальные таймауты соседних тестов; последовательный API1177/1177 и frontend-покрытие надстройки PR2 —2419/2419 passed без изменений тестов; policy/db-types/iOS/media/hosting/build и CI API/RLS/app-tests зелёные. После #1464 clean-chain/actor99/99; после #1471/#1463 (main07c9dcb1) финальная clean-chain/actor100/100 и finance/Yandex repository64/64 passed. CI финального head314915c5 (37546811112) success; PR1#1473 слит3bea5635. API/migration130 rollout выполняется, production ещё не подтверждён; реальная финансовая сессия клиента не проверена.
-
-## Полный свайп клиентов — 2026-10-06
-
-PR#1471 слит2867f1d9; exact-head CI37537752452/main CI37541769868/Android37541769919 success. Yandex production37543515079 activation/smoke/readback success; public index/sw/manifest/JS hashes совпали, оба full-swipe markers опубликованы. Trusted production bundle206files проверен внутри iOS binary; sync/build/install/launch собственного simulator прошли. Длинный свайп архивирует при отпускании; короткий открывает кнопку, обратный/вертикальный/cancel не меняют данные. Ownership/version/pending/error/undo сохранены. Владелец подтвердил «работает» на своём устройстве; это не полная физическая Safari/PWA-матрица. Прежняя automation-3 отключена.
 
 ## Оформление свайпа клиентов — 2026-10-07
 

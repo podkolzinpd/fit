@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+Надёжность тренерских шаблонов (GitHub#1492, пункты1–2): обе оболочки сохраняют
+ID при повторе, Yandex migration134 принимает только точный повтор последнего
+сохранения без обхода версии; черновик изолирован по аккаунту/шаблону/основе.
+План и ограничения остальных проверок: `docs/design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md`.
+
 Workout aggregate: Yandex migration125 удаляет только дубли индексов позиций;
 UNIQUE DEFERRABLE, чтение, перестановка и actor/RLS сохраняются. Приёмка:
 `docs/design/DATABASE_AUDIT_DUPLICATE_INDEXES_20261006.md`.
