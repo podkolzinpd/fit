@@ -96,3 +96,16 @@ Workflow manage-client-lime-rollout: только workflow_dispatch, main, mode=
 All требует SET_CLIENT_LIME_ALL и заранее прочитанную revision. Запись выполняется один раз; затем независимый inspect проверяет все modes/revision. Timeout/409 не повторяет запись.
 Контракт helper4 и workflow2 проверен локально. CI и реальная активация — отдельно; «перевести во все», production readback и проверки реальных непилотных сессий: ОЖИДАЕТ ОК.
 Сам merge/публикация PR2 сохраняет текущий доступ.
+
+
+### Разрешено последовательное массовое включение — 2026-10-07
+
+Прямая команда владельца: «выкатывай по очереди оба дизайна на всех, разрешаю все выкатить». Затем: «Да, для клиентского автоматом включи темную тему». Предыдущее ожидание ОК снято только для этой операции: клиент all → проверка → trainer+schedule all → проверка. Отдельные ручные переключатели, CAS revision, независимый readback и rollback сохраняются.
+
+Foundation PR1498 уже слит c465ca9f: migration137 и API b51c7d859c9fac06d55112cecd5fa29e88cc99fe опубликованы, официальный release37663816164 SUCCESS; health/ready200, public owner endpoint404. PR1500 обновлён от этого main; старые core commits/migration136 повторно не переносятся.
+
+Клиент: существующий useClientLimeTheme получает dark вместо system при отсутствующем/невалидном выборе и при заблокированном storage. Явные light/dark/system сохраняются; настройки и portals используют прежние токены и один theme context. Новые цвета, шрифты, controls, LLM/SpeechKit/данные не меняются. На первом входе без выбора — тёмный Lime даже при светлой теме телефона; ручная светлая сохраняется после reload, другой account не наследует выбор.
+
+Целевые проверки: theme/AppLayout/scope66/66; helper/client workflow6/6; WebKit/Chromium390/430 и server admission/rollback8/8. Скриншоты: artifacts/lime-global-activation-20261007/after-theme; baseline2/2. Проверки UI выполнены на synthetic identities, не выданы за production OAuth. Полный check/CI, выпуск workflow/frontend, production inspect/client all/readback и непилотная сессия остаются гейтами перед trainer all.
+
+Полный npm run check на обновлённой клиентской ветке завершился exit0: frontend2518, API1231 (127 DB отдельно/skipped), lint/typecheck/policy/hosting/build passed. Скриншоты dark390/light430 просмотрены; повторный browser harness использует разрешённый путь переиспользуемых зависимостей, без font403. Production client all ещё не запускался.
