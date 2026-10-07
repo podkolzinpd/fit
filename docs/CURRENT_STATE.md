@@ -1,4 +1,6 @@
 # Fit — текущее состояние проекта
+## Расписание Lime: автор и самостоятельные планы — 2026-10-07
+GitHub#1506, план design/LIME_TRAINER_SCHEDULE_VISIBILITY_20261007.md. Ветка codex/lime-trainer-schedule-visibility от c465ca9f: default только собственные with_trainer, account-local default-off checkbox добавляет собственные self; клиентские записи только в карточке. Все виды и счётчики едины; self вне занятой часовой сетки, shared repository/права/Live/финансы/Mono сохранены. Unit9/9, WebKit/Chromium40/40 и check2526frontend/1231API/build passed, CI ещё гейт. Выпуск строго ПОСЛЕ фактической публикации и активации Lime обеим ролям (#1500/#1501), не после одного merge workflows. Этот PR не включает all и не расширяет пилот; production не менялся.
 ## Имя тренера в карточке клиента и чате — 2026-10-07
 План design/TRAINER_DISPLAY_NAME_20261007.md. Единый серверный resolver выбирает опубликованное имя анкеты → имя аккаунта → «Тренер»; draft не читается. Connections cache разделяет только текущий запрос, профиль обновляет данные при открытии. Новых DB migrations и изменений invitation/привязок нет. PostgreSQL17 actor/RLS127/127 и Yandex WebKit9/9 (Lime/mono390/430, rename без входа, chat/error/retry) passed. CI, merge и production ещё не подтверждены; snapshot сохраняет границы проверки реальной пользовательской сессии.
 ## Рекорды выбранной тренировки — 2026-10-07
