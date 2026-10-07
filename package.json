@@ -32,7 +32,7 @@
     "home-icons:generate": "node scripts/generate-home-screen-icons.mjs",
     "media:presentation:test": "node --test scripts/exercise-media-presentation.test.mjs",
     "api:check": "npm --prefix services/api run check",
-    "calendar:policy:test": "node --test scripts/manage-fit-lime-calendar.test.mjs scripts/lime-rollout-request.test.mjs scripts/lime-rollout-client-workflow.test.mjs",
+    "calendar:policy:test": "node --test scripts/manage-fit-lime-calendar.test.mjs scripts/lime-rollout-request.test.mjs scripts/lime-rollout-client-workflow.test.mjs scripts/lime-rollout-trainer-workflow.test.mjs",
     "ai:smoke": "node scripts/run-yandex-summary-live.mjs",
     "check": "npm run lint && npm run typecheck && npm run test:coverage && npm run db:types:check && npm run ios:permissions:check && npm run media:presentation:test && npm run infra:policy:test && npm run calendar:policy:test && npm run frontend:hosting:test && npm run api:check && npm run build",
     "build:ios:local": "tsc -b && vite build --mode development",
