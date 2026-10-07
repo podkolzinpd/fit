@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, SessionActor } from '../../shared/domain'
 import type { TrainerFinanceClientBundle, TrainerFinanceRepository } from '../../data/repositories/trainer-finance.repository'
-import { PackageForm, TrainerFinancePage } from './TrainerFinancePage'
+import { PackageForm, PaymentForm, TrainerFinancePage } from './TrainerFinancePage'
 
 const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
 const trainerId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
@@ -37,11 +37,73 @@ function renderPage(financeBackTo?: '/finance') {
 }
 
 describe('TrainerFinancePage', () => {
-  it('Lime exposes opening balances only on demand and saves unchanged financial units', async () => {
+  it.each([true, false])('shows full or partial opening payment with its actual date: Lime=%s', async (lime) => {
+    const user = userEvent.setup()
+    const submit = vi.fn()
+    render(<PackageForm lime={lime} today="2026-10-07" saving={false} error={null} onCancel={vi.fn()} onSubmit={submit} />)
+    expect(screen.getByLabelText('Уже оплачено, ₽')).toBeVisible()
+    expect(screen.queryByLabelText('Дата получения')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Стоимость, ₽'), '30000')
+    await user.click(screen.getByRole('button', { name: 'Вся сумма' }))
+    expect(screen.getByLabelText('Уже оплачено, ₽')).toHaveValue(30000)
+    await user.clear(screen.getByLabelText('Уже оплачено, ₽'))
+    await user.type(screen.getByLabelText('Уже оплачено, ₽'), '10000')
+    await user.clear(screen.getByLabelText('Дата получения'))
+    await user.type(screen.getByLabelText('Дата получения'), '2026-08-27')
+    await user.clear(screen.getByLabelText('Начало'))
+    await user.type(screen.getByLabelText('Начало'), '2026-09-01')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ priceCents: 3000000, openingPaidCents: 1000000, openingReceivedOn: '2026-08-27', startsOn: '2026-09-01' }))
+  })
+
+  it('prefills each selected service debt and preserves an edited payment amount', async () => {
+    const user = userEvent.setup()
+    const second = { ...bundle.packages[0]!, id: 'second', title: 'Онлайн', dueCents: 400000 }
+    const view = render(<PaymentForm packages={[bundle.packages[0]!, second]} packageId={packageId} today="2026-10-07" saving={false} error={null} onCancel={vi.fn()} onSubmit={vi.fn()} />)
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(15000)
+    await user.selectOptions(screen.getByLabelText('Услуга'), 'second')
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(4000)
+    view.unmount()
+    render(<PaymentForm current={bundle.payments[0]} packages={[bundle.packages[0]!]} packageId={packageId} today="2026-10-07" saving={false} error={null} onCancel={vi.fn()} onSubmit={vi.fn()} />)
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(10000)
+  })
+
+  it('adds a partial payment directly to the selected service', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(15000)
+    expect(screen.queryByLabelText('Услуга')).not.toBeInTheDocument()
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.addPayment).toHaveBeenCalledWith(packageId, expect.objectContaining({ amountCents: 750000 })))
+    expect(await screen.findByRole('tab', { name: 'Услуги: 1' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('waits for the updated balance before allowing the next direct payment', async () => {
+    const user = userEvent.setup()
+    let finishRefresh!: (value: TrainerFinanceClientBundle) => void
+    finance.listClient.mockResolvedValueOnce(bundle).mockImplementationOnce(() => new Promise<TrainerFinanceClientBundle>((resolve) => { finishRefresh = resolve }))
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
+    await user.type(screen.getByLabelText('Сумма, ₽'), '5000')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(finance.listClient).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('button', { name: 'Сохраняем…' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Внести оплату' })).not.toBeInTheDocument()
+    finishRefresh({ ...bundle, packages: [{ ...bundle.packages[0]!, paidCents: 1500000, dueCents: 1000000 }] })
+    await user.click(await screen.findByRole('button', { name: 'Внести оплату' }))
+    expect(screen.getByLabelText('Сумма, ₽')).toHaveValue(10000)
+    expect(finance.addPayment).toHaveBeenCalledTimes(1)
+  })
+
+  it('Lime shows opening payment directly and saves unchanged financial units', async () => {
     const user = userEvent.setup()
     const submit = vi.fn()
     render(<PackageForm lime today="2026-10-04" saving={false} error={null} onCancel={vi.fn()} onSubmit={submit} />)
-    expect(screen.getByLabelText('Уже оплачено, ₽')).not.toBeVisible()
+    expect(screen.getByLabelText('Уже оплачено, ₽')).toBeVisible()
     await user.type(screen.getByLabelText('Стоимость, ₽'), '30000')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({ sessionsTotal: 10, priceCents: 3000000, openingUsedSessions: 0, openingPaidCents: 0 }))
@@ -52,11 +114,11 @@ describe('TrainerFinancePage', () => {
     const submit = vi.fn()
     render(<PackageForm lime today="2026-10-04" saving={false} error={null} onCancel={vi.fn()} onSubmit={submit} />)
     await user.type(screen.getByLabelText('Стоимость, ₽'), '30000')
-    await user.click(screen.getByText('Перенести текущие остатки'))
+    await user.click(screen.getByText('Уже проведённые занятия'))
     const used = screen.getByLabelText('Уже проведено, занятий')
     await user.clear(used)
     await user.type(used, '30000')
-    await user.click(screen.getByText('Перенести текущие остатки'))
+    await user.click(screen.getByText('Уже проведённые занятия'))
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     expect(used).toBeVisible()
     expect(used).toHaveFocus()
@@ -75,7 +137,7 @@ describe('TrainerFinancePage', () => {
     const submit = vi.fn()
     render(<PackageForm lime today="2026-10-04" saving={false} error={null} onCancel={vi.fn()} onSubmit={submit} />)
     await user.type(screen.getByLabelText('Стоимость, ₽'), '100')
-    await user.click(screen.getByText('Перенести текущие остатки'))
+    await user.click(screen.getByText('Уже проведённые занятия'))
     const paid = screen.getByLabelText('Уже оплачено, ₽')
     await user.clear(paid)
     await user.type(paid, '101')
@@ -108,8 +170,8 @@ describe('TrainerFinancePage', () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Персональные тренировки' })).toBeVisible()
     expect(screen.getByText('8 из 10')).toBeVisible()
-    expect(screen.getByText(/К оплате 15.*000/)).toBeVisible()
-    expect(screen.getByText('1 сентября 2026 г.')).not.toBeVisible()
+    expect(screen.getByText('К оплате', { selector: '.finance-service-money span' }).closest('p')).toHaveTextContent(/15\s000/)
+    for (const date of screen.getAllByText('1 сентября 2026 г.')) expect(date).not.toBeVisible()
     expect(screen.getByRole('tab', { name: 'Услуги: 1' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Занятия: 1' })).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: 'Оплаты: 1' })).toHaveAttribute('aria-selected', 'false')
@@ -150,6 +212,7 @@ describe('TrainerFinancePage', () => {
     await screen.findByRole('heading', { name: 'Персональные тренировки' })
     await user.click(screen.getByRole('tab', { name: 'Оплаты: 1' }))
     await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
     await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledWith(packageId, expect.objectContaining({
@@ -163,6 +226,7 @@ describe('TrainerFinancePage', () => {
     renderPage()
     await user.click(await screen.findByRole('tab', { name: 'Оплаты: 1' }))
     await user.click(within(screen.getByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
     await user.type(screen.getByLabelText('Сумма, ₽'), '7500')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(1))
@@ -172,6 +236,7 @@ describe('TrainerFinancePage', () => {
     expect(firstRequest).toEqual(expect.any(String))
     expect(finance.addPayment.mock.calls[1]![1].requestId).toBe(firstRequest)
     await user.click(within(await screen.findByRole('tabpanel')).getByRole('button', { name: 'Добавить' }))
+    await user.clear(screen.getByLabelText('Сумма, ₽'))
     await user.type(screen.getByLabelText('Сумма, ₽'), '1000')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
     await waitFor(() => expect(finance.addPayment).toHaveBeenCalledTimes(3))

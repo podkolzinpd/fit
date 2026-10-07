@@ -2,14 +2,19 @@
 
 ## YAFIT-597 — надёжность оплат — 2026-10-07
 
-План: `design/FINANCE_PAYMENTS_20261006.md`, GitHub#1472, PR1#1473 / PR2#1475. Владелец разрешил оба выпуска по общей очереди. PR1 добавляет actor-scoped request receipts и фактическую дату начальной оплаты (migration130/v2, старые записи и контракты сохранены). Clean PostgreSQL17 chain/actor93/93, UI/repository64/64 и WebKit error/retry2/2 passed. `local:verify` ограничен прежним drift общей базы migration112; общая база не сбрасывалась. Параллельный check ловил локальные таймауты соседних тестов; последовательный API1177/1177 и frontend-покрытие надстройки PR2 —2419/2419 passed без изменений тестов; policy/db-types/iOS/media/hosting/build и CI API/RLS/app-tests зелёные. После #1464 clean-chain/actor99/99; после #1471/#1463 (main07c9dcb1) финальная clean-chain/actor100/100 и finance/Yandex repository64/64 passed. CI исходного PR37531454618 success; повторный CI после последнего предшествующего merge и production ещё не подтверждены, реальная финансовая сессия клиента не проверена.
+План: `design/FINANCE_PAYMENTS_20261006.md`, GitHub#1472, PR1#1473 / PR2#1475. Владелец разрешил оба выпуска по общей очереди. PR1 добавляет actor-scoped request receipts и фактическую дату начальной оплаты (migration130/v2, старые записи и контракты сохранены). Clean PostgreSQL17 chain/actor93/93, UI/repository64/64 и WebKit error/retry2/2 passed. `local:verify` ограничен прежним drift общей базы migration112; общая база не сбрасывалась. Параллельный check ловил локальные таймауты соседних тестов; последовательный API1177/1177 и frontend-покрытие надстройки PR2 —2419/2419 passed без изменений тестов; policy/db-types/iOS/media/hosting/build и CI API/RLS/app-tests зелёные. После #1464 clean-chain/actor99/99; после #1471/#1463 (main07c9dcb1) финальная clean-chain/actor100/100 и finance/Yandex repository64/64 passed. CI финального head314915c5 (37546811112) success; PR1#1473 слит3bea5635. API/migration130 rollout выполняется, production ещё не подтверждён; реальная финансовая сессия клиента не проверена.
 
 ## Полный свайп клиентов — 2026-10-06
 
 План: design/CLIENT_FULL_SWIPE_20261006.md. Длинный свайп архивирует при отпускании; короткий открывает кнопку, обратный/вертикальный/cancel не меняют данные. Старые ownership/version API сохранены, pending блокирует дубли, error обновляет список, undo использует новую версию. Chromium touch/WebKit matrix24/24; contrast10/10, rail16/16/component27; check2421/API1176+92 skipped/build passed; CI37528241438/37532586646 success. Физический iPhone Safari/PWA не проверен. Новая команда7октября разрешает слив раньше неготовых PR; готовым чужим не мешать, их не сливать. База154b3d1b после1474, src/e2e не изменились; API37535534399 success; новый CI/production ожидаются. Задача не выпущена.
 
 
+## YAFIT-597 — интерфейс оплат — 2026-10-07
+
+PR2#1475 добавляет видимое «Уже оплачено», «Вся сумма», дату получения и прямую оплату остатка в карточке; локальная история использует действующие edit/delete формы с подтверждением суммы и даты. Кнопки после полей, единая геометрия Mono/Lime; исправлен потерянный первый тап при blur клавиатуры; форма закрывается после обновления остатка, исключая прежнюю сумму при быстром повторном открытии. Component23/23, WebKit18/18 (320/390/430/1440, light/dark/focus400), coverage283 files/2419 tests и build passed. Обычный параллельный check ловил соседние таймауты ExercisePicker, последовательный набор прошёл без ослаблений. Production и физический iPhone пока не подтверждены. План: `design/FINANCE_PAYMENTS_20261006.md`.
+
 ## Очистка frontend-релизов — 2026-10-07
+
 
 
 PR#1467 и #1469 слиты; обязательный CI зелёный. Исправлены реальные форматы YC CLI: отсутствующий размер допускается только у подтверждённого пустого folder marker; HEAD использует last_modified_at с секундной точностью, сохраняя точный ETag/размер. Retention23/23, hosting115/115, npm run check (frontend2412/API1176+92 DB skipped/build) passed; Yandex DB проверена в CI.
