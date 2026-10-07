@@ -87,6 +87,35 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('reads records of an old workout in one request without the first Progress page', async () => {
+    const records = [{ exerciseRef: 'squat', exerciseName: 'Приседание', inputKind: 'strength',
+      metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 }]
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) => {
+      if (url === `${apiBaseUrl}/v1/workouts/${workoutId}/personal-records`) return Promise.resolve(jsonResponse({ records }))
+      throw new Error('Workout aggregates and paginated exercise history must not be requested')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.workouts.personalRecords(workoutId)).toEqual(records)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ 'x-fit-session': sessionToken })
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
+  it('keeps empty records and retries a failed read without cached emptiness or fallback', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403))
+      .mockResolvedValueOnce(jsonResponse({ records: [] }))
+      .mockResolvedValueOnce(jsonResponse({ records: [{ metric: 'invented' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.workouts.personalRecords(workoutId)).rejects.toThrow()
+    expect(await repository.workouts.personalRecords(workoutId)).toEqual([])
+    await expect(repository.workouts.personalRecords(workoutId)).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
   it('reads client stats once without loading workout aggregates', async () => {
     const stats = { doneCount: 123, completionPercent: 75, lastWorkoutDate: '2026-10-01', daysInWork: 300, needsAttention: false }
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ stats }))
@@ -806,7 +835,7 @@ describe('Yandex main repository', () => {
     expect(await repository.workouts.list('2026-08-01', '2026-08-31', clientId)).toHaveLength(2)
     expect(await repository.workouts.listSummaries(clientId)).toHaveLength(2)
     expect((await repository.workouts.findActive(clientId))?.id).toBe(plannedWorkoutId)
-    expect(await repository.workouts.personalRecords(workoutId)).toHaveLength(3)
+    expect(await repository.workouts.personalRecords(workoutId)).toHaveLength(2)
     expect((await repository.workouts.latestExerciseResults(clientId, ['push-up'])).get('push-up')?.sets).toHaveLength(1)
     expect((await repository.workouts.exerciseProgressPage(clientId, 'push-up', {
       completedAt: '2026-08-20T10:00:00.000000+00:00', workoutId,
@@ -1258,6 +1287,10 @@ function installContractFetch() {
     const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url)
     const method = init?.method ?? 'GET'
     const path = url.pathname
+    if (method === 'GET' && path.endsWith('/personal-records')) return jsonResponse({ records: [
+      { exerciseRef: 'push-up', exerciseName: 'Отжимания', inputKind: 'strength', metric: 'weight', primaryValue: 22, weightKg: 22, reps: 10 },
+      { exerciseRef: 'push-up', exerciseName: 'Отжимания', inputKind: 'strength', metric: 'weight_reps', primaryValue: 220, weightKg: 22, reps: 10 },
+    ] })
     if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: url.searchParams.get('archived') === 'true' ? [
       { id: archivedClientId, canArchive: true, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-08-01T00:00:00.000000+00:00', archivedAt: '2026-08-01T00:00:00.000000+00:00', version: 1, membershipVersion: 1 },
     ] : [
