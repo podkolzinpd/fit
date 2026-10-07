@@ -1,5 +1,8 @@
 # Fit — текущее состояние проекта
 
+## Фоновая очистка app-сессий — 2026-10-07
+План: design/DATABASE_SESSION_CLEANUP_20261007.md. Migration131 убирает глобальный DELETE из входа/atomic recovery; приватный минутный dispatcher удаляет ≤50 expired+50 revoked, indexed SKIP LOCKED, без новых ресурсов/IAM. Активные сессии/права/TTL/legacy recovery сохранены; сбой очистки безопасно диагностируется и не отменяет push/feedback. Unit28/28, clean-chain131/actor106/106 и check frontend2479/API1201/policy/hosting/build прошли; CI/production впереди. local:verify блокирован прежней недостающей Supabase migration20260919145000; общая база не сбрасывалась. Это устранение риска, не доказанная причина502.
+
 ## Клиентский Lime — завершение, PR1: типографика — 2026-10-07
 
 План: `design/CLIENT_LIME_FINAL_COMPLETION_20261007.md` (утверждённая серия из трёх PR, выпуск разрешён). База обновлена с опубликованного b4c3bcdc до main5eda31b2 после #1483/#1484/#1477. PR1 устраняет подтверждённые запросы600–800 в клиентских текстовых ролях, даты400, fallback≈ и текстовые иконки; REM/семантика/данные сохранены. Правки областей нажатия и PNG идут следующими PR. Физический iPhone не подключён; полная готовность и выпуск ещё не подтверждены.
@@ -100,8 +103,7 @@ record-workout card в Assistant, старый активный черновик
 запись тренировки обозначается как переход на главную.
 
 ## Постоянные границы
-Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17.
-Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
+Frontend: Yandex Gateway/Storage, fit-training.ru; API/auth/БД: Yandex PostgreSQL17. Vercel — legacy redirect; новые Vercel deployments/Supabase migrations запрещены.
 Supabase — только legacy recovery/media/test, не fallback поверх новых Yandex writes.
 Pilot не авторизует данные: RLS/ownership на сервере. Откат Lime: CLIENT_LIME_ENABLED=false + deployment.
 SpeechKit transcript устраняет финальные повторы, сохраняет реплики и разделяет упражнения с параметрами.
@@ -112,9 +114,7 @@ SpeechKit transcript устраняет финальные повторы, со�
 2. Добавить Yandex custom-exercise photo adapter.
 3. На время диагностического отката #1144 frontend снова создаёт Supabase SDK при импорте и подписывается на Auth; `VITE_SUPABASE_*` обязательны для запуска. Supabase auth events не инициализируют legacy-профиль в Yandex-only режиме; отсутствие Yandex session не выбирает Supabase. Legacy SDK может обновлять сохранённый auth token; это не dual-write и не перенос данных обратно. Переменные и серверные bridge secrets для recovery/media пока не удалять.
 4. Провести ручной E2E matrix с реальными тестовыми identities: linked trainer, linked client, recovery старого email-only профиля, новый Yandex-only аккаунт и оба invitation path. Автоматизированы серверные контракты, production auth DOM, PKCE redirect и unauthenticated guards; реальный OAuth callback в этом cutover-сеансе не выполнялся.
-5. Провести backup restore drill, повторить authenticated AI summary и push
-   smoke. До завершения observation window Supabase не удалять: write gate
-   остаётся paused, а обратной миграции Yandex writes нет.
+5. Провести backup restore drill, повторить authenticated AI summary и push smoke. До завершения observation window Supabase не удалять: write gate остаётся paused, а обратной миграции Yandex writes нет.
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
 - Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Android origin закреплён как `https://localhost` и включён в API CORS allowlist deployment workflow. Внешний браузер Yandex ID не может вернуть OAuth-код на `https://localhost` в WebView, поэтому Android использует deep link `com.coachspace.fit://auth/yandex/callback` с PKCE state-проверкой. Этот Redirect URI зарегистрирован в Yandex OAuth 2 октября; прежние URI сохранены. Работающий вход ещё не подтверждён: нужна проверка на устройстве. Ручной GitHub Actions job собирает production-configured debug APK для проверки входа; это не release-сборка. Подпись release и публикация не выполнялись.
