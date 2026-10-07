@@ -128,3 +128,5 @@
 
 - PR2: официальный выпуск37619414157 success на актуальном mainca796686 (включая более ранний #1488), ключевые ресурсы7/7 SHA matched; production UI InBody/home16/16 passed с synthetic fixtures.
 - PR4 опубликован #1491, дополнительный frontend2488/2488/lint/typecheck/build passed; исходный план hashbd7aca97 не изменён. PR3/PR4 обновлены для отсутствовавших webfont-файлов CI; production credentials не передаются тестам.
+
+- 07.10.2026: PR3#1489 слит62a92c46 после CI37622487729 success; PR4#1491 обновлён от этого main. PR2 уже опубликован37619414157, ресурсы7/7 и production UI16/16 passed. Последние публикации/нативная приёмка ещё выполняются.
