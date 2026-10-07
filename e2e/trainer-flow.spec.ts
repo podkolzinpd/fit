@@ -742,9 +742,11 @@ test('live: порядок упражнений меняется в отдель
   await expect(page.getByRole('button', { name: 'Вниз' }).last()).toBeDisabled()
   // Первым идёт «Присед…», двигаем второе (Жим) вверх.
   await expect(page.locator('.live-exercise-head h2').first()).toContainText('Присед')
-  // Подтверждаем подход первого упражнения: оно сворачивается, а второе
-  // автоматически становится текущим и остаётся доступно для ручной перестановки.
+  // Подтверждаем подход первого упражнения: второе автоматически становится
+  // текущим; первое раскрыто на отдыхе и сворачивается, когда отдых закончен.
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
+  await expect(page.locator('.live-exercise.done')).toHaveCount(1)
+  await page.locator('.live-rest-trigger').click()
   await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
   await expect(page.locator('.live-exercise-collapsed .exercise-thumbnail')).toHaveCount(1)
   await expect(page.locator('.live-exercise-collapsed .exercise-thumbnail video')).toHaveCount(0)

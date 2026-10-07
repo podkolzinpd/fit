@@ -2232,6 +2232,13 @@ test('iPhone: отдых начинается после последнего п
 
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 1:(2[7-9]|30)/ })).toBeVisible()
+  // На отдыхе после упражнения его подходы остаются под рукой для правки.
+  await expect(page.locator('.live-exercise-collapsed')).toHaveCount(0)
+  await expect(page.locator('.live-exercise.done')).toContainText('Присед со штангой')
+  await expect(page.locator('.live-exercise.current')).toContainText('Жим штанги лёжа')
+  await expectNoHorizontalOverflow(page)
+  // Короткий тап заканчивает отдых — завершённое упражнение сворачивается.
+  await page.locator('.live-rest-trigger').click()
   await expect(page.locator('.live-exercise-collapsed')).toContainText('Присед со штангой')
   await expect(page.locator('.live-exercise.current')).toContainText('Жим штанги лёжа')
   await expectNoHorizontalOverflow(page)
