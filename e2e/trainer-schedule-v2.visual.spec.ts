@@ -433,7 +433,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
           timezone: 'Europe/Moscow',
           accountRole: options.role ?? 'trainer',
           ...(options.role === 'client' ? { client: { id: clientId, trainerId: options.clientTrainerId ?? trainerId, fullName: 'Алексей Смирнов' } } : {}),
-          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true, clientLime: options.role === 'client' && options.profileId === clientId && options.clientLime !== false },
+          experiments: { trainerScheduleV2: options.pilot !== false, fitLime: options.fitLime === true, clientLime: options.role === 'client' && (options.clientLime === true || (options.profileId === clientId && options.clientLime !== false)) },
           preferences: { scheduleDensity },
         },
       }
@@ -5217,4 +5217,20 @@ for (const pilot of [true, false]) test(`Client chat portal preserves font scope
   await sheet.getByRole('button', { name: 'Ответить', exact: true }).click()
   await expect(sheet).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Отменить ответ', exact: true })).toBeVisible()
+})
+
+// Global admission is assigned by the server, not a hard-coded browser ID list.
+for (const role of ['client', 'trainer'] as const) test(`Lime rollout honors server admission and rollback for a previously non-pilot ${role}`, async ({ page }) => {
+  const profileId = '10000000-0000-4000-8000-000000000099'
+  const route = role === 'client' ? '/me' : '/clients'
+  const scope = role === 'client' ? 'fit-client-lime' : 'fit-lime-shell'
+  await mockPilot(page, { role, profileId, clientLime: role === 'client', fitLime: role === 'trainer' })
+  await page.goto(route)
+  await expect(page.locator('.phone-frame')).toHaveClass(new RegExp(scope))
+  await page.reload()
+  await expect(page.locator('.phone-frame')).toHaveClass(new RegExp(scope))
+  // A fresh actor refresh must respect a server rollback for the same identity.
+  await mockPilot(page, { role, profileId, clientLime: false, fitLime: false })
+  await page.reload()
+  await expect(page.locator('.phone-frame')).not.toHaveClass(new RegExp(scope))
 })

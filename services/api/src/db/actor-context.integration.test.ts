@@ -1580,6 +1580,68 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('keeps Lime pilots on installation and provides role-scoped all/off controls with owner-only rollback', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const clientId = randomUUID()
+      const trainerId = randomUUID()
+      const newClientId = randomUUID()
+      const readFlags = async (id: string) => {
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [id])
+        await connection.query('set local role fit_api')
+        const result = (await connection.query<{ client: boolean; trainer: boolean; schedule: boolean }>('select app_private.client_lime_enabled() client, app_private.fit_lime_enabled() trainer, app_private.trainer_schedule_v2_enabled() schedule')).rows[0]
+        await connection.query('reset role')
+        return result
+      }
+      const setMode = async (target: string, mode: string, revision: number) =>
+        (await connection.query<{ client_mode: string; trainer_mode: string; schedule_mode: string; revision: number }>('select * from app_private.set_lime_rollout_mode($1, $2, $3)', [target, mode, revision])).rows[0]
+      try {
+        await connection.query('begin')
+        expect((await connection.query('select client_mode, trainer_mode, schedule_mode, revision from app_private.lime_rollout_controls')).rows[0])
+          .toEqual({ client_mode: 'pilot', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 0 })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client'), ($2, 'trainer')", [clientId, trainerId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        for (const sql of ['select * from app_private.lime_rollout_controls', "select * from app_private.set_lime_rollout_mode('client', 'all', 0)"] ) {
+          await connection.query('savepoint forbidden')
+          await connection.query('set local role fit_api')
+          await expect(connection.query(sql)).rejects.toMatchObject({ code: '42501' })
+          await connection.query('rollback to savepoint forbidden')
+        }
+        expect(await setMode('client', 'all', 0)).toEqual({ client_mode: 'all', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 1 })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client')", [newClientId])
+        expect(await readFlags(newClientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(randomUUID())).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('savepoint stale')
+        await expect(setMode('trainer', 'all', 0)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint stale')
+        expect(await setMode('trainer', 'all', 1)).toEqual({ client_mode: 'all', trainer_mode: 'all', schedule_mode: 'all', revision: 2 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: true, schedule: true })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        await connection.query('savepoint dependency')
+        await expect(setMode('trainer-schedule', 'off', 2)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint dependency')
+        expect(await setMode('trainer', 'off', 2)).toEqual({ client_mode: 'all', trainer_mode: 'off', schedule_mode: 'all', revision: 3 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: true })
+        await setMode('client', 'off', 3)
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        // Re-entry cannot reset these controls: the login binder never writes this table.
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [clientId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        await setMode('client', 'pilot', 4)
+        await setMode('trainer', 'pilot', 5)
+        await setMode('trainer-schedule', 'pilot', 6)
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('delete from app_private.lime_rollout_controls')
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
     it('binds Client Lime only to the verified native login and keeps rollback and trainer isolation', async () => {
       if (!ownerPool) throw new Error('Owner pool is not ready')
       const connection = await ownerPool.connect()
