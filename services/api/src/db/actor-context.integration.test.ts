@@ -873,6 +873,81 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool?.end()
     })
 
+    describe('workout template save replay', () => {
+      const templateIds: string[] = []
+      function draft() {
+        const id = randomUUID()
+        templateIds.push(id)
+        return { id, name: 'Повтор сохранения', notes: 'План, не факт', exercises: [{
+          source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'strength', position: 0,
+          blockId: randomUUID(), blockType: 'single', blockRounds: 1, sets: [{ position: 0, weightKg: 50.5, reps: 8 }],
+        }] }
+      }
+      async function save(value: ReturnType<typeof draft>, version: number | null = null, actor = ACTOR_ID, pool = runtimePool) {
+        if (!pool) throw new Error('Runtime pool is not ready')
+        return withActorTransaction(pool, actor, async (client) => {
+          const rows = await client.query<{ id: string }>('select public.save_workout_template($1::jsonb,$2) as id', [JSON.stringify(value), version])
+          return rows[0]?.id
+        })
+      }
+      afterEach(async () => {
+        await ownerPool?.query('delete from public.workout_templates where id=any($1::uuid[])', [templateIds.splice(0)])
+      })
+      it('replays a committed create without another row or version bump', async () => {
+        const value = draft()
+        expect(await save(value)).toBe(value.id)
+        expect(await save(value)).toBe(value.id)
+        const result = await ownerPool?.query('select version,name from public.workout_templates where id=$1', [value.id])
+        expect(result?.rows).toEqual([{ version: '1', name: value.name }])
+        await expect(save({ ...value, name: 'Другой запрос' })).rejects.toThrow('workout_template_conflict')
+      })
+      it('replays a committed edit, but rejects a different stale edit and an older create', async () => {
+        const value = draft()
+        await save(value)
+        const edit = { ...value, name: 'Изменённый шаблон' }
+        await save(edit, 1)
+        await save(edit, 1)
+        await expect(save({ ...edit, notes: 'Устаревшая правка' }, 1)).rejects.toThrow('workout_template_conflict')
+        await expect(save(value)).rejects.toThrow('workout_template_conflict')
+        const result = await ownerPool?.query('select version,name from public.workout_templates where id=$1', [value.id])
+        expect(result?.rows).toEqual([{ version: '2', name: edit.name }])
+      })
+      it('does not expose or overwrite another trainer and does not resurrect an archive', async () => {
+        const value = draft()
+        await save(value)
+        await expect(save(value, null, OUTSIDE_TRAINER_ID)).rejects.toThrow('workout_template_conflict')
+        await expect(save(value, 1, OUTSIDE_TRAINER_ID)).rejects.toThrow('workout_template_not_found')
+        if (!runtimePool) throw new Error('Runtime pool is not ready')
+        const hidden = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) => client.query('select id from public.workout_templates where id=$1', [value.id]))
+        expect(hidden).toEqual([])
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query('select public.archive_workout_template($1,1)', [value.id]))
+        await expect(save(value)).rejects.toThrow('workout_template_conflict')
+        await expect(save(value, 1)).rejects.toThrow('workout_template_not_found')
+      })
+      it('retains validation and prevents direct access to the non-replay writer', async () => {
+        const value = draft()
+        const invalidExercise = { ...value.exercises[0]!, fact: {} }
+        await expect(save({ ...value, exercises: [invalidExercise] })).rejects.toThrow('invalid_workout_template')
+        await expect(save(value, null, DOMAIN_CLIENT_ACTOR_ID)).rejects.toThrow('trainer_not_initialized')
+        if (!runtimePool) throw new Error('Runtime pool is not ready')
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) => client.query('select public.save_workout_template_once($1::jsonb,null)', [JSON.stringify(value)]))).rejects.toThrow('permission denied')
+      })
+      it('serializes concurrent equal creates and rejects a concurrent changed payload', async () => {
+        const url = new URL(requireLocalTestDatabaseUrl())
+        url.username = 'fit_api'
+        url.password = RUNTIME_PASSWORD
+        const pool = new PgDatabasePool({ connectionString: url.toString(), max: 4 })
+        try {
+          const value = draft()
+          expect(await Promise.all([save(value, null, ACTOR_ID, pool), save(value, null, ACTOR_ID, pool)])).toEqual([value.id, value.id])
+          const second = draft()
+          const results = await Promise.allSettled([save(second, null, ACTOR_ID, pool), save({ ...second, name: 'Другой payload' }, null, ACTOR_ID, pool)])
+          expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
+          expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1)
+        } finally { await pool.end() }
+      })
+    })
+
     describe('bounded app-session cleanup', () => {
       const prefix = 'c1ea'
       const expiredToken = `${prefix}a${'1'.padStart(59, '0')}`
@@ -1499,6 +1574,68 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(await bind('bind_fit_lime_for_yandex_login', subjects[2]!, logins[2]!)).toBe(true)
         expect(await flags(profiles[2]!)).toEqual({ schedule: true, lime: false })
         for (const profile of profiles.slice(0, 2)) expect(await flags(profile)).toEqual({ schedule: true, lime: true })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('keeps Lime pilots on installation and provides role-scoped all/off controls with owner-only rollback', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const clientId = randomUUID()
+      const trainerId = randomUUID()
+      const newClientId = randomUUID()
+      const readFlags = async (id: string) => {
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [id])
+        await connection.query('set local role fit_api')
+        const result = (await connection.query<{ client: boolean; trainer: boolean; schedule: boolean }>('select app_private.client_lime_enabled() client, app_private.fit_lime_enabled() trainer, app_private.trainer_schedule_v2_enabled() schedule')).rows[0]
+        await connection.query('reset role')
+        return result
+      }
+      const setMode = async (target: string, mode: string, revision: number) =>
+        (await connection.query<{ client_mode: string; trainer_mode: string; schedule_mode: string; revision: number }>('select * from app_private.set_lime_rollout_mode($1, $2, $3)', [target, mode, revision])).rows[0]
+      try {
+        await connection.query('begin')
+        expect((await connection.query('select client_mode, trainer_mode, schedule_mode, revision from app_private.lime_rollout_controls')).rows[0])
+          .toEqual({ client_mode: 'pilot', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 0 })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client'), ($2, 'trainer')", [clientId, trainerId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        for (const sql of ['select * from app_private.lime_rollout_controls', "select * from app_private.set_lime_rollout_mode('client', 'all', 0)"] ) {
+          await connection.query('savepoint forbidden')
+          await connection.query('set local role fit_api')
+          await expect(connection.query(sql)).rejects.toMatchObject({ code: '42501' })
+          await connection.query('rollback to savepoint forbidden')
+        }
+        expect(await setMode('client', 'all', 0)).toEqual({ client_mode: 'all', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 1 })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client')", [newClientId])
+        expect(await readFlags(newClientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(randomUUID())).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('savepoint stale')
+        await expect(setMode('trainer', 'all', 0)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint stale')
+        expect(await setMode('trainer', 'all', 1)).toEqual({ client_mode: 'all', trainer_mode: 'all', schedule_mode: 'all', revision: 2 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: true, schedule: true })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        await connection.query('savepoint dependency')
+        await expect(setMode('trainer-schedule', 'off', 2)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint dependency')
+        expect(await setMode('trainer', 'off', 2)).toEqual({ client_mode: 'all', trainer_mode: 'off', schedule_mode: 'all', revision: 3 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: true })
+        await setMode('client', 'off', 3)
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        // Re-entry cannot reset these controls: the login binder never writes this table.
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [clientId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        await setMode('client', 'pilot', 4)
+        await setMode('trainer', 'pilot', 5)
+        await setMode('trainer-schedule', 'pilot', 6)
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('delete from app_private.lime_rollout_controls')
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
       } finally {
         await connection.query('rollback')
         connection.release()
@@ -3872,6 +4009,87 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it.each(['membership', 'relationship', 'both'] as const)(
+      'disconnects selected trainer atomically for %s access and preserves client data',
+      async (source) => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const connection = await ownerPool.connect()
+        const athlete = randomUUID(), clientId = randomUUID(), workoutId = randomUUID()
+        const db = { query: async <Row extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+          (await connection.query<Row>(sql, values ? [...values] : undefined)).rows }
+        try {
+          await db.query('begin')
+          await db.query("insert into public.profiles(id, account_role) values($1, 'client')", [athlete])
+          await db.query("insert into public.clients(id, trainer_id, auth_user_id, full_name) values($1,$2,$2,'Disconnect fixture')", [clientId, athlete])
+          await db.query("insert into public.workouts(id, trainer_id, created_by, client_id, workout_date, status, notes) values($1,$2,$3,$4,'2026-10-07','planned','Keep client history')", [workoutId, athlete, ACTOR_ID, clientId])
+          if (source !== 'membership') {
+            await db.query('insert into public.client_trainer_relationships(client_id, trainer_id, connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, athlete])
+          }
+          if (source !== 'relationship') {
+            await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, ACTOR_ID])
+          }
+          await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, OUTSIDE_TRAINER_ID])
+          await db.query('set local role fit_api')
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toHaveLength(source === 'relationship' ? 0 : 1)
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [athlete])
+          await removeClientTrainer(db, clientId, ACTOR_ID)
+          await expect(removeClientTrainer(db, clientId, ACTOR_ID)).resolves.toBeUndefined()
+          expect((await readAccessibleConnections(db)).memberships.map(row => row.trainerId)).toEqual([OUTSIDE_TRAINER_ID])
+          expect(await db.query('select id, notes from public.workouts where id=$1', [workoutId])).toEqual([{ id: workoutId, notes: 'Keep client history' }])
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
+          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toEqual([])
+          expect(await db.query('select id from public.clients where id=$1', [clientId])).toEqual([])
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [OUTSIDE_TRAINER_ID])
+          expect(await db.query('select id from public.clients where id=$1', [clientId])).toHaveLength(1)
+          await db.query('reset role')
+          const relationships = await db.query('select status, disconnected_by from public.client_trainer_relationships where client_id=$1', [clientId])
+          expect(relationships).toEqual(source === 'membership' ? [] : [{ status: 'disconnected', disconnected_by: athlete }])
+          expect(await db.query('select trainer_id, auth_user_id from public.clients where id=$1', [clientId])).toEqual([{ trainer_id: athlete, auth_user_id: athlete }])
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+      },
+    )
+
+    it('denies trainer or foreign client disconnect and keeps legacy partition protected', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const connection = await ownerPool.connect()
+      const athlete = randomUUID(), foreignAthlete = randomUUID(), clientId = randomUUID()
+      const db = { query: async <Row extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+        (await connection.query<Row>(sql, values ? [...values] : undefined)).rows }
+      try {
+        await db.query('begin')
+        await db.query("insert into public.profiles(id, account_role) values($1,'client'),($2,'client')", [athlete, foreignAthlete])
+        await db.query("insert into public.clients(id, trainer_id, auth_user_id, full_name) values($1,$2,$3,'Legacy protected fixture')", [clientId, ACTOR_ID, athlete])
+        await db.query('insert into public.client_trainer_relationships(client_id, trainer_id, connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, athlete])
+        await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, ACTOR_ID])
+        await db.query('set local role fit_api')
+        for (const [actor, failure] of [[ACTOR_ID, 'forbidden'], [foreignAthlete, 'forbidden'], [athlete, 'invalid']] as const) {
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [actor])
+          await db.query('savepoint denied_disconnect')
+          await expect(removeClientTrainer(db, clientId, ACTOR_ID)).rejects.toMatchObject({ failure })
+          await db.query('rollback to savepoint denied_disconnect')
+        }
+        await db.query('reset role')
+        expect(await db.query('select status from public.client_trainer_relationships where client_id=$1', [clientId])).toEqual([{ status: 'active' }])
+        expect(await db.query('select trainer_id from public.client_trainers where client_id=$1', [clientId])).toEqual([{ trainer_id: ACTOR_ID }])
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('exposes only the safe selected-trainer writer to runtime', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool is not ready')
+      const grants = await ownerPool.query(`select
+        has_function_privilege('fit_api','public.remove_client_trainer(uuid,uuid)','execute') as safe,
+        has_function_privilege('fit_api','public.remove_client_trainer_before_disconnect(uuid,uuid)','execute') as legacy,
+        (select prosecdef from pg_proc where oid='public.remove_client_trainer(uuid,uuid)'::regprocedure) as definer`)
+      expect(grants.rows).toEqual([{ safe: true, legacy: false, definer: true }])
+    })
+
     it('runs the invitation lifecycle through guarded database commands', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
@@ -4703,6 +4921,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           workoutDate: '2026-10-03', startTime: '23:59:59', plannedDate: datesRow.future,
           completedAt: '2026-10-03T21:10:00.000Z', status: 'done',
         })
+        // Вне пилота будущий план при раннем старте тоже переезжает на
+        // фактический день, иначе выполненная тренировка выпадает из истории.
         const control = await withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, {
           id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'Контроль без флага',
           workoutDate: datesRow.future, startTime: '12:00', endTime: '13:00', notes: null, exercises,
@@ -4712,9 +4932,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const started = await withActorTransaction(db, ACTOR_ID, (client) => startLiveWorkout(client, control.id, control.version, randomUUID()))
         await withActorTransaction(db, ACTOR_ID, (client) => finishLiveWorkout(client, control.id, started.version, randomUUID()))
         const legacy = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
-        const workout = legacy.workouts.find((item) => item.id === control.id)
-        expect(workout).toMatchObject({ workoutDate: datesRow.future, startTime: '12:00:00', endTime: '13:00:00' })
-        expect(workout).not.toHaveProperty('plannedDate')
+        expect(legacy.workouts.find((item) => item.id === control.id)).toMatchObject({
+          workoutDate: datesRow.today, plannedDate: datesRow.future,
+          plannedStartTime: '12:00:00', plannedEndTime: '13:00:00', endTime: null,
+        })
       } finally {
         await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [ids])
         await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])
@@ -9071,6 +9292,191 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await connection.query('rollback')
         connection.release()
       }
+    })
+
+    describe('workout-scoped personal records', () => {
+      let recordClientId: string
+      let recordClientActorId: string
+      const read = (actorId: string, workoutId: string) => {
+        if (runtimePool === undefined) throw new Error('Database pool is not ready')
+        return withActorTransaction(runtimePool, actorId, async (client) => {
+          const rows = await client.query<JsonResultRow>(
+            'select public.list_workout_personal_records($1) result', [workoutId])
+          return rows[0]?.result
+        })
+      }
+      const seed = async (day: number, inputKind: string, ref: string,
+        sets: Array<{ weight?: number; reps?: number; seconds?: number; distance?: number; confirmed?: boolean }>,
+        author = ACTOR_ID, deleted = false) => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const id = randomUUID()
+        await ownerPool.query(`insert into public.workouts
+          (id, trainer_id, client_id, created_by, workout_date, status, completed_at, deleted_at)
+          values ($1, $2, $3, $4, date '2020-01-01' + $5::integer, 'done',
+            timestamptz '2020-01-01 12:00:00Z' + $5::integer * interval '1 day',
+            case when $6 then timestamptz '2020-06-01 12:00:00Z' else null end)`,
+        [id, ACTOR_ID, recordClientId, author, day, deleted])
+        for (const [position, set] of sets.entries()) {
+          const exerciseId = randomUUID()
+          // Deliberately repeat the ref in multiple exercise rows.
+          await ownerPool.query(`insert into public.workout_exercises
+            (id, workout_id, trainer_id, client_id, position, exercise_source,
+              exercise_ref, exercise_name, muscle_group, input_kind)
+            values ($1, $2, $3, $4, $5, 'system', $6, 'Record exercise', 'other', $7)`,
+          [exerciseId, id, ACTOR_ID, recordClientId, position, ref, inputKind])
+          await ownerPool.query(`insert into public.workout_sets
+            (workout_exercise_id, trainer_id, client_id, position, fact_weight_kg,
+              fact_reps, fact_duration_sec, fact_distance_km, confirmed_at)
+            values ($1, $2, $3, 0, $4, $5, $6, $7,
+              case when $8 then timestamptz '2020-01-01 12:00:00Z' else null end)`,
+          [exerciseId, ACTOR_ID, recordClientId, set.weight ?? null, set.reps ?? null,
+            set.seconds ?? null, set.distance ?? null, set.confirmed !== false])
+        }
+        return id
+      }
+      beforeEach(async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        recordClientId = randomUUID()
+        recordClientActorId = randomUUID()
+        await ownerPool.query("insert into public.profiles (id, account_role) values ($1, 'client')", [recordClientActorId])
+        await ownerPool.query(`insert into public.clients
+          (id, trainer_id, auth_user_id, full_name, gender, age_years, height_cm)
+          values ($1, $2, $3, 'Record fixture', 'female', 30, 170)`,
+        [recordClientId, ACTOR_ID, recordClientActorId])
+        await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id)
+          values ($1, $2), ($1, $3)`, [recordClientId, ACTOR_ID, MEMBER_TRAINER_ID])
+      })
+      afterEach(async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        await ownerPool.query('delete from public.workouts where client_id = $1', [recordClientId])
+        await ownerPool.query('delete from public.client_trainers where client_id = $1', [recordClientId])
+        await ownerPool.query('delete from public.clients where id = $1', [recordClientId])
+        await ownerPool.query('delete from public.profiles where id = $1', [recordClientActorId])
+      })
+
+      it('returns an old record after more than twenty newer results, using the correct volume set', async () => {
+        if (runtimePool === undefined) throw new Error('Database pool is not ready')
+        await seed(0, 'strength', 'record-strength', [{ weight: 50, reps: 5 }])
+        const id = await seed(1, 'strength', 'record-strength', [
+          { weight: 80, reps: 3 }, { weight: 60, reps: 10 }, { weight: 200, reps: 20, confirmed: false },
+        ])
+        for (let day = 2; day <= 22; day++) await seed(day, 'strength', 'record-strength', [{ weight: 90, reps: 10 }])
+        const page = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
+          const rows = await client.query<JsonResultRow>(
+            'select public.list_exercise_progress($1, $2, 20, null, null) result',
+            [recordClientId, 'record-strength'])
+          return rows[0]?.result as { items: Array<{ workoutId: string }>; nextCursor: unknown; totalCount: number }
+        })
+        expect(page.totalCount).toBe(23)
+        expect(page.items).toHaveLength(20)
+        expect(page.items.some((item) => item.workoutId === id)).toBe(false)
+        expect(page.nextCursor).not.toBeNull()
+        expect(await read(ACTOR_ID, id)).toEqual([
+          { exerciseRef: 'record-strength', exerciseName: 'Record exercise', inputKind: 'strength', metric: 'weight', primaryValue: 80, weightKg: 80, reps: 3 },
+          { exerciseRef: 'record-strength', exerciseName: 'Record exercise', inputKind: 'strength', metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 },
+        ])
+      })
+
+      it.each([
+        ['reps', { reps: 10 }, { reps: 12 }, 12],
+        ['duration', { seconds: 60 }, { seconds: 90 }, 90],
+        ['distance', { distance: 1.5 }, { distance: 2.5 }, 2.5],
+      ] as const)('preserves first-result, tie, deleted-history and confirmed %s semantics', async (kind, baseline, improved, value) => {
+        const first = await seed(0, kind, 'record-primary', [baseline])
+        expect(await read(ACTOR_ID, first)).toEqual([])
+        const tie = await seed(1, kind, 'record-primary', [baseline])
+        expect(await read(ACTOR_ID, tie)).toEqual([])
+        await seed(2, kind, 'record-primary', [{ reps: 100, seconds: 1000, distance: 100 }], ACTOR_ID, true)
+        const better = await seed(3, kind, 'record-primary', [improved])
+        expect(await read(ACTOR_ID, better)).toEqual([
+          { exerciseRef: 'record-primary', exerciseName: 'Record exercise', inputKind: kind,
+            metric: 'primary', primaryValue: value, weightKg: null, reps: null },
+        ])
+        const unconfirmed = await seed(4, kind, 'record-primary', [{ ...improved, confirmed: false }])
+        expect(await read(ACTOR_ID, unconfirmed)).toEqual([])
+      })
+
+      it('enforces workout author/client/tenant access while comparing shared history', async () => {
+        await seed(0, 'reps', 'record-access', [{ reps: 5 }], MEMBER_TRAINER_ID)
+        const id = await seed(1, 'reps', 'record-access', [{ reps: 10 }])
+        expect(await read(recordClientActorId, id)).toEqual(await read(ACTOR_ID, id))
+        expect(await read(ACTOR_ID, id)).toHaveLength(1)
+        await expect(read(MEMBER_TRAINER_ID, id)).rejects.toMatchObject({ message: 'workout_forbidden' })
+        await expect(read(OUTSIDE_TRAINER_ID, id)).rejects.toMatchObject({ message: 'workout_forbidden' })
+        const clientAuthored = await seed(2, 'reps', 'record-access', [{ reps: 15 }], recordClientActorId)
+        expect(await read(MEMBER_TRAINER_ID, clientAuthored)).toHaveLength(1)
+        await expect(read(ACTOR_ID, randomUUID())).rejects.toMatchObject({ message: 'workout_forbidden' })
+        const deleted = await seed(3, 'reps', 'record-access', [{ reps: 20 }], ACTOR_ID, true)
+        await expect(read(ACTOR_ID, deleted)).rejects.toMatchObject({ message: 'workout_forbidden' })
+      })
+
+      it('grants runtime execution without PUBLIC or reader access', async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const result = await ownerPool.query<{ runtime: boolean; reader: boolean; public_grant: boolean; definer: boolean; config: string[] }>(`
+          select has_function_privilege('fit_api', oid, 'EXECUTE') runtime,
+            has_function_privilege('fit_datalens', oid, 'EXECUTE') reader,
+            exists (select 1 from aclexplode(proacl) where grantee = 0) public_grant,
+            prosecdef definer, proconfig config
+          from pg_proc where oid = 'public.list_workout_personal_records(uuid)'::regprocedure`)
+        expect(result.rows[0]).toEqual({ runtime: true, reader: false, public_grant: false,
+          definer: true, config: ['search_path=""'] })
+      })
+
+      it('reads records through a real app session and rejects the revoked session', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pool is not ready')
+        await seed(0, 'reps', 'record-session', [{ reps: 5 }])
+        const id = await seed(1, 'reps', 'record-session', [{ reps: 10 }])
+        const token = randomBytes(32).toString('base64url')
+        const hash = hashPilotSessionToken(token)
+        await ownerPool.query(`insert into app_private.profile_rollout_assignments
+          (profile_id, target_backend, access_mode, enabled) values ($1, 'yandex', 'read_write', true)`, [recordClientActorId])
+        await ownerPool.query(`insert into app_private.yandex_app_sessions
+          (token_sha256, profile_id, access_mode, expires_at)
+          values ($1, $2, 'read_write', now() + interval '1 hour')`, [hash, recordClientActorId])
+        const reader = new DatabasePilotProgressData(runtimePool)
+        const session = { accessMode: 'read_write' as const, token }
+        expect(await reader.readWorkoutRecords(session, id)).toEqual(await read(recordClientActorId, id))
+        await expect(reader.readWorkoutRecords(session, randomUUID())).rejects.toMatchObject({ failure: 'forbidden' })
+        await ownerPool.query('update app_private.yandex_app_sessions set revoked_at = now() where token_sha256 = $1', [hash])
+        await expect(reader.readWorkoutRecords(session, id)).rejects.toBeInstanceOf(YandexAppSessionInvalidError)
+      })
+
+      it('uses completed-at then UUID ordering and excludes planned targets', async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const ids = [await seed(0, 'reps', 'record-order', [{ reps: 1 }]),
+          await seed(0, 'reps', 'record-order', [{ reps: 1 }]),
+          await seed(0, 'reps', 'record-order', [{ reps: 1 }])].sort()
+        const [before, target, after] = ids
+        if (before === undefined || target === undefined || after === undefined) throw new Error('Missing fixture')
+        for (const [id, reps] of [[before, 5], [target, 10], [after, 100]] as const) {
+          await ownerPool.query(`update public.workout_sets set fact_reps = $2
+            where workout_exercise_id in (select id from public.workout_exercises where workout_id = $1)`, [id, reps])
+        }
+        expect(await read(ACTOR_ID, before)).toEqual([])
+        expect(await read(ACTOR_ID, target)).toEqual([expect.objectContaining({ primaryValue: 10 })])
+        await ownerPool.query("update public.workouts set status = 'planned', completed_at = null where id = $1", [target])
+        expect(await read(ACTOR_ID, target)).toEqual([])
+      })
+
+      it('rolls back and reapplies the additive read function without modifying facts', async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const id = await seed(0, 'reps', 'record-rollback', [{ reps: 10 }])
+        const [up, down] = (await readFile(new URL('../../db/migrations/000136_workout_personal_records.sql', import.meta.url), 'utf8'))
+          .split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('Incomplete migration')
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          await connection.query(down)
+          expect((await connection.query<{ result: string | null }>("select to_regprocedure('public.list_workout_personal_records(uuid)') result")).rows[0]?.result).toBeNull()
+          await connection.query(up)
+          expect((await connection.query<{ count: number }>('select count(*)::integer count from public.workouts where id = $1', [id])).rows[0]?.count).toBe(1)
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+        expect(await read(ACTOR_ID, id)).toEqual([])
+      })
     })
 
     it('uses bounded activity MET bands and never infers bike intensity from distance', async () => {

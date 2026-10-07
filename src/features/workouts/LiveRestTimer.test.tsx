@@ -147,3 +147,72 @@ describe('Live rest timer', () => {
     expect(formatRest(-90)).toBe('−1:30')
   })
 })
+
+describe('Live phase timer', () => {
+  const work = { kind: 'work', setId: 'set-1', startedAt: 100_000, endsAt: 145_000 } as const
+
+  it('shows the phase, runs the short-tap action and keeps the sheet behind a long press', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onPrimary = vi.fn(() => true)
+    render(<LiveRestTimer workoutId="workout-1" deadline={null} onChange={vi.fn()} phase={work} onPrimary={onPrimary} />)
+
+    const trigger = screen.getByRole('button', { name: /Таймер подхода: 0:45/ })
+    expect(trigger).toHaveTextContent('Подход 0:45')
+    expect(trigger).toHaveClass('phase-work')
+    fireEvent.click(trigger)
+    expect(onPrimary).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    fireEvent.pointerDown(trigger)
+    act(() => vi.advanceTimersByTime(500))
+    fireEvent.pointerUp(trigger)
+    fireEvent.click(trigger)
+    expect(onPrimary).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog', { name: 'Таймер подхода' })).toBeVisible()
+    expect(screen.queryByRole('listbox', { name: 'минуты' })).not.toBeInTheDocument()
+  })
+
+  it('opens the sheet when the short tap has nothing to do', () => {
+    const onPrimary = vi.fn(() => false)
+    render(<LiveRestTimer workoutId="workout-1" deadline={null} onChange={vi.fn()} onPrimary={onPrimary} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Таймер отдыха' }))
+    expect(onPrimary).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog', { name: 'Таймер отдыха' })).toBeVisible()
+  })
+
+  it('opens the sheet from the context menu and adjusts or stops the phase', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onPhaseChange = vi.fn()
+    render(<LiveRestTimer workoutId="workout-1" deadline={null} onChange={vi.fn()} phase={work} onPrimary={() => true} onPhaseChange={onPhaseChange} />)
+
+    fireEvent.contextMenu(screen.getByRole('button', { name: /Таймер подхода/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Плюс 15 секунд' }))
+    expect(onPhaseChange).toHaveBeenLastCalledWith({ ...work, endsAt: 160_000 })
+    fireEvent.click(screen.getByRole('button', { name: 'Остановить подход' }))
+    expect(onPhaseChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('reports an expired phase once and rings the gong', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onPhaseExpire = vi.fn()
+    render(<LiveRestTimer workoutId="workout-1" deadline={null} onChange={vi.fn()} phase={work} onPrimary={() => true} onPhaseExpire={onPhaseExpire} />)
+
+    act(() => vi.advanceTimersByTime(45_000))
+    act(() => vi.advanceTimersByTime(1_000))
+    expect(onPhaseExpire).toHaveBeenCalledTimes(1)
+    expect(onPhaseExpire).toHaveBeenCalledWith(work)
+    expect(playGong).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports the end of rest so the next timed set can start', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onRestExpire = vi.fn()
+    render(<LiveRestTimer workoutId="workout-1" deadline={101_000} onChange={vi.fn()} onPrimary={() => true} onRestExpire={onRestExpire} />)
+    act(() => vi.advanceTimersByTime(2_000))
+    expect(onRestExpire).toHaveBeenCalledExactlyOnceWith(101_000)
+  })
+})

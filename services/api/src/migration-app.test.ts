@@ -1538,3 +1538,30 @@ describe('stage Yandex ID pilot enrollment', () => {
     expect(response.body).not.toContain('secret')
   })
 })
+
+describe('private Lime rollout endpoint', () => {
+  it('is unavailable when the owner manager is absent', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+    expect((await app.inject({ method: 'POST', url: '/stage/experiments/lime-rollout', payload: { target: 'client', mode: 'inspect' } })).statusCode).toBe(404)
+  })
+  it('rejects unconfirmed global activation without calling the manager', async () => {
+    const apply = vi.fn().mockResolvedValue({ clientMode: 'pilot', trainerMode: 'pilot', scheduleMode: 'pilot', revision: 0 })
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]), limeRollout: { apply } })
+    apps.push(app)
+    expect((await app.inject({ method: 'POST', url: '/stage/experiments/lime-rollout', payload: { target: 'client', mode: 'all', expectedRevision: 0 } })).statusCode).toBe(400)
+    expect(apply).not.toHaveBeenCalled()
+  })
+  it('passes a confirmed revision and redacts unexpected errors', async () => {
+    const apply = vi.fn().mockResolvedValue({ clientMode: 'all', trainerMode: 'pilot', scheduleMode: 'pilot', revision: 1 })
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]), limeRollout: { apply } })
+    apps.push(app)
+    const payload = { target: 'client', mode: 'all', expectedRevision: 0, confirmation: 'SET_CLIENT_LIME_ALL' }
+    const response = await app.inject({ method: 'POST', url: '/stage/experiments/lime-rollout', payload })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'lime_rollout_updated', clientMode: 'all', trainerMode: 'pilot', scheduleMode: 'pilot', revision: 1 })
+    expect(apply).toHaveBeenCalledWith({ target: 'client', mode: 'all', expectedRevision: 0 })
+    apply.mockRejectedValueOnce(new Error('private connection URL'))
+    expect((await app.inject({ method: 'POST', url: '/stage/experiments/lime-rollout', payload })).json()).toEqual({ status: 'lime_rollout_failed' })
+  })
+})
