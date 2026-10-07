@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AssistantAction } from './index.js'
 import { recordWorkoutTurn } from './index.js'
-import { chooseAssistantRoute, latestActiveAssistantTool, readAssistantRoute, routedAssistantTurn } from './router.js'
+import { chooseAssistantRoute, isAssistantChatPrompt, latestActiveAssistantTool, readAssistantRoute, routedAssistantTurn } from './router.js'
 import { programModelJson } from './program/model.js'
 import { CONFIRM_PROGRAM_BRIEF } from './program/brief.js'
 import { programPilotTurn } from './program/turn.js'
@@ -18,6 +18,12 @@ function deps(tool: 'record_workout' | 'create_program_draft', mode: 'start' | '
 }
 
 describe('model assistant router', () => {
+  it('sends the pinned recovery question to the chat responder instead of the action router', () => {
+    expect(isAssistantChatPrompt('Как лучше восстановиться после силовой тренировки?', null)).toBe(true)
+    expect(isAssistantChatPrompt('Составь программу на месяц', null)).toBe(false)
+    expect(isAssistantChatPrompt('Как лучше восстановиться после силовой тренировки?', draft('record_workout'))).toBe(false)
+  })
+
   it('passes only short recent chat and active tool metadata to the model', async () => {
     vi.mocked(programModelJson).mockResolvedValue({ tool: 'create_program_draft', mode: 'start', reply: '' })
     const history = Array.from({ length: 10 }, (_, index) => ({ author: 'user', content: String(index).repeat(1_500) }))
