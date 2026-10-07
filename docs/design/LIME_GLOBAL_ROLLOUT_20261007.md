@@ -89,3 +89,10 @@ PR1498 — foundation; PR1500 — client workflow draft; PR1501 — trainer work
 Прямая команда пользователя «выкатывай флаги» разрешает штатный выпуск управления режимами в pilot; запрет all и расширения пилота сохраняется. PR1498 публикуется по общей очереди после1496. После merge1495/mainf89e0e79 невыпущенная rollout migration136 перенумерована137; новая чистая цепочка и CI проверяются до merge. PR1500/1501 остаются отдельными зависимыми операциями, activation требует нового ОК.
 
 После обновления: clean-chain137/actor126/126 и точный Down→Up137 прошли; readback pilot/pilot/pilot revision0, fit_api table SELECT/setter EXECUTE запрещены. Frontend2514/2514, API1228/1228 (126 DB отдельно), lint/typecheck/db-types/iOS/media/policy/hosting/build прошли. Первый check остановился на sandbox EPERM при bind локального policy HTTP server; оставшиеся этапы повторены с разрешением, тесты/таймауты не менялись. Fresh CI следует за публикацией ветки; production ещё не менялся.
+
+### PR2 — ручное клиентское переключение подготовлено
+
+Workflow manage-client-lime-rollout: только workflow_dispatch, main, mode=inspect по умолчанию.
+All требует SET_CLIENT_LIME_ALL и заранее прочитанную revision. Запись выполняется один раз; затем независимый inspect проверяет все modes/revision. Timeout/409 не повторяет запись.
+Контракт helper4 и workflow2 проверен локально. CI и реальная активация — отдельно; «перевести во все», production readback и проверки реальных непилотных сессий: ОЖИДАЕТ ОК.
+Сам merge/публикация PR2 сохраняет текущий доступ.

@@ -1397,3 +1397,10 @@ configuration readback alone does not prove real OAuth/device acceptance.
 
 Owner instruction 2026-10-07: no activation or cohort expansion without a new
 explicit OK. Production remains in the existing pilot until then.
+
+Client operation: Actions → Manage client Lime rollout. First run `inspect`
+with empty confirmation/revision. After an explicit new human OK only, run
+`all` with the reported revision and `SET_CLIENT_LIME_ALL`. Rollback uses `off`
+(`SET_CLIENT_LIME_OFF`) or `pilot` (`SET_CLIENT_LIME_PILOT`) and a freshly
+inspected revision. Never automatically replay a failed/unknown operation.
+Merge or frontend deployment alone does not dispatch this workflow.
