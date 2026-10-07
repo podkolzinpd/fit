@@ -201,6 +201,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FIT_YANDEX_E2E_REQUIRED: 'true'
+      VITE_CLIENT_LIME_ENABLED: 'true'
       VITE_SUPABASE_URL: http://127.0.0.1:54321
       VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
@@ -222,6 +223,7 @@ jobs:
           docker run --rm --init --ipc=host --network host \
             --env CI=true \
             --env FIT_YANDEX_E2E_REQUIRED \
+            --env VITE_CLIENT_LIME_ENABLED \
             --env VITE_SUPABASE_URL \
             --env VITE_SUPABASE_PUBLISHABLE_KEY \
             --env VITE_YANDEX_OAUTH_CLIENT_ID \
