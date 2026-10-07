@@ -38,6 +38,8 @@ describe('assistant orchestrator contract', () => {
   it('answers capability questions from the enabled product scope', () => {
     expect(isAssistantCapabilityQuestion('что ты умеешь?')).toBe(true)
     expect(isAssistantCapabilityQuestion('какие функции вообще есть?')).toBe(true)
+    expect(isAssistantCapabilityQuestion('чем ты можешь помочь?')).toBe(true)
+    expect(isAssistantCapabilityQuestion('мой рост метр сорок три, вес 120, это норм? какие рекомендации по питанию и тренировкам ты мне можешь дать?')).toBe(false)
     expect(isAssistantCapabilityQuestion('привет')).toBe(false)
     const pilotReply = assistantCapabilitiesReply({ programEnabled: true, navigationEnabled: true })
     expect(pilotReply).toContain('составить рекомендованный черновик')

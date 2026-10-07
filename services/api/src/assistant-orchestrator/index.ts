@@ -341,9 +341,10 @@ function normalizeAssistantMessage(message: string): string {
 
 export function isAssistantCapabilityQuestion(message: string): boolean {
   const normalized = normalizeAssistantMessage(message)
-  const asksQuestion = normalized.includes('что') || normalized.includes('какие') || normalized.includes('чем') || normalized.includes('как')
-  const asksAboutCapabilities = ['уме', 'мож', 'функц', 'возможност', 'помощ'].some((stem) => normalized.includes(stem))
-  return asksQuestion && asksAboutCapabilities
+  // This is deliberately an intent, not a bag of words. "Какие рекомендации
+  // по питанию ты можешь дать?" is health chat, not a request for a feature
+  // catalogue.
+  return /^(?:что ты умеешь|что ты можешь(?: делать)?|какие (?:у тебя )?(?:функции|возможности)(?: вообще)? есть|чем ты можешь помочь|какую помощь ты можешь (?:оказать|дать))$/u.test(normalized)
 }
 
 export function isSummaryRequest(message: string): boolean {
