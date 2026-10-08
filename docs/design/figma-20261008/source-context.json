@@ -1,0 +1,11 @@
+{
+  "fileKey": "neJztMaNITn7pwti82uDS6",
+  "nodes": ["351:7878", "351:8922"],
+  "source": "High-fidelity Figma design context and screenshots, 2026-10-08",
+  "assets": [
+    {"file": "assets/coach-filter-settings.svg", "slot": "Filter Settings", "width": 16, "height": 16, "sha256": "8459f02febd06c2e084fba7c9cd02be4ac49eb24a138e12391bee40f345e5dcd"},
+    {"file": "assets/coach-play.svg", "slot": "Exercise image play overlay", "width": 53.4121, "height": 55.3104, "sha256": "93c966aed389361a6a8c8cce8eb5448a09a6d0786b46f13c005812eaf98d61f2", "wrapper": "24px clipped centre, original shadow bounds retained"},
+    {"file": "assets/coach-plus-black.svg", "slot": "Floating create exercise button", "width": 24, "height": 24, "sha256": "7e22c897efe9a0e3f0931cd44f68635398bd3c504a269f1cbf3a7336a01458cd"}
+  ],
+  "approvedAdaptations": ["Lime rather than purple selection and CTA", "44px accessible targets rather than 40px visual buttons", "Actual exercise media rather than copied example imagery", "Existing muscle/equipment filters, running formats, search, create and retry retained"]
+}

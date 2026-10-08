@@ -67,6 +67,45 @@ function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (ex
 }
 
 describe('ExercisePicker', () => {
+  it('reference filters stay open until confirmed and keep equipment and search', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker reference catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Фильтровать' }))
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    expect(screen.getByRole('region', { name: 'Фильтры упражнений' })).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Оборудование' }), 'Штанга')
+    await user.click(screen.getByRole('button', { name: 'Применить фильтры' }))
+    expect(screen.queryByRole('region', { name: 'Фильтры упражнений' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Добавить: Присед (Штанга)' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Добавить: Разгибание ног (Тренажёр)' })).not.toBeInTheDocument()
+  })
+
+  it('reference selection survives failed confirmation and retries the same items', async () => {
+    const user = userEvent.setup()
+    const onPickMany = vi.fn().mockRejectedValueOnce(new Error('Нет связи')).mockResolvedValue(undefined)
+    render(<ExercisePicker reference multiple catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onPickMany={onPickMany} onClose={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Добавить выбранные упражнения' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Выбрать: Присед (Штанга)' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить выбранные упражнения' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Нет связи')
+    expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Добавить 1' }))
+    await waitFor(() => expect(onPickMany).toHaveBeenCalledTimes(2))
+    expect(onPickMany.mock.calls[1]).toEqual(onPickMany.mock.calls[0])
+  })
+
+  it('reference catalog preserves create and retry while legacy header stays unchanged', async () => {
+    const user = userEvent.setup(), retry = vi.fn()
+    const view = render(<ExercisePicker reference catalog={catalog({ error: new Error('Нет связи'), retry })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(retry).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: 'Создать упражнение' }))
+    expect(screen.getByRole('heading', { name: 'Своё упражнение' })).toBeInTheDocument()
+    view.rerender(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(screen.getByRole('heading', { name: 'Выберите упражнения' })).toBeInTheDocument()
+    expect(document.querySelector('.coach-reference-catalog')).not.toBeInTheDocument()
+  })
   it('excludes retired entries from recent and search but keeps used exercises selectable', async () => {
     const user = userEvent.setup()
     const retired = SYSTEM_EXERCISE_CATALOG.find((item) => item.ref === 'fedb-atlas-stones')!
