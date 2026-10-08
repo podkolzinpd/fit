@@ -5224,6 +5224,37 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   })
 }
 
+for (const width of [390, 430]) {
+  test(`Client Lime assistant program choices remain visible on the real route at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await page.addInitScript((id) => localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark'), clientId)
+    await page.route('**/v1/assistant/turn', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      reply: 'Подготовлю рекомендованный черновик одной тренировки или программы на 1–4 недели. Что составить?',
+      action: { tool: 'create_program_draft', status: 'needs_input', title: 'Программа тренировок',
+        description: 'Уточняю условия', payload: { programPilot: true, step: 'brief', briefStatus: 'needs_answers',
+          clientId, clientName: 'Тестовый клиент', answerSuggestions: ['Одна тренировка', 'Программа на 4 недели'], readyToGenerate: false } },
+    }) }))
+    await page.goto('/assistant')
+    await page.getByRole('textbox', { name: 'Сообщение ассистенту' }).fill('Составь программу тренировок')
+    await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+    const context = page.getByRole('region', { name: 'Текущий контекст ассистента' })
+    const choices = context.locator('.assistant-choice-chips button')
+    const cancel = context.getByRole('button', { name: 'Отменить' })
+    await expect(choices).toHaveCount(2)
+    await expect(cancel).toBeVisible()
+    await expect(context).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    const contextBox = await context.boundingBox()
+    const cancelBox = await cancel.boundingBox()
+    expect(contextBox!.height).toBeLessThanOrEqual(110)
+    expect(cancelBox!.x).toBeGreaterThanOrEqual(contextBox!.x)
+    expect(cancelBox!.y + cancelBox!.height).toBeLessThanOrEqual(contextBox!.y + contextBox!.height + 1)
+    await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('client-program-choices-real-route.png') })
+  })
+}
+
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime filled progress analysis and compact goal ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
