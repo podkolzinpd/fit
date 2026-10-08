@@ -136,3 +136,61 @@
 .coach-workout-reference .coach-reference-catalog > .stack { overflow-y: auto; padding-block: 16px }
 .coach-workout-reference .coach-reference-catalog > .picker-header:not(.coach-reference-sheet-header) { padding: 20px }
 .coach-workout-reference .coach-reference-catalog > .picker-header:not(.coach-reference-sheet-header) h1 { font-size: 20px }
+
+/* PR5: full plan/editor from the supplied original 5860×4215 SVG.
+   Source set controls are 54px; keep the owner's existing 48px contract.
+   A planned editor never shows the Live fact-confirmation checkmark. */
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form { padding: 16px 2px calc(36px + env(safe-area-inset-bottom)); background: #000 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form > .page-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; margin: 0 14px 24px; min-height: 44px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form > .page-header h1 { margin: 0; font-size: 16px; font-weight: 400; line-height: 20px; letter-spacing: 0; text-align: center; color: var(--lime-text-secondary) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .page-back { width: 44px; min-height: 44px; padding: 10px; border: 0; border-radius: 99px; background: transparent }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form button.coach-plan-save { min-width: 44px; width: 44px; height: 44px; min-height: 44px; padding: 10px; border-radius: 99px }
+.coach-reference-form .coach-plan-save svg { filter: brightness(0) }
+.coach-reference-form .coach-plan-save:disabled svg { filter: none; opacity: .6 }
+.coach-reference-form .workout-form { gap: 2px }
+.coach-reference-form .coach-plan-form-controls { display: grid; gap: 2px; min-width: 0; margin: 0; padding: 0; border: 0 }
+.coach-reference-form .coach-plan-saving { margin: 8px 18px; font-size: 14px; color: var(--lime-text-secondary) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .workout-form-section { min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; gap: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .workout-form-section:first-child { padding: 0 0 24px; border: 0; background: transparent; gap: 12px }
+.coach-reference-form .coach-plan-details { display: grid; gap: 2px; padding: 0 14px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .coach-plan-title input { width: 100%; height: 48px; padding: 8px 4px; border: 0; background: transparent; font-size: 24px; line-height: 24px; font-weight: 500; letter-spacing: -.48px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .coach-plan-client,
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .coach-plan-date .schedule-v2-calendar,
+.coach-reference-form .coach-plan-time { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 48px; min-width: 0; padding: 4px; border: 0; border-radius: 0; background: transparent; text-align: left; font-size: 16px; line-height: 20px; font-weight: 400 }
+.coach-reference-form .coach-plan-client > span { overflow-wrap: anywhere; min-width: 0 }
+.coach-reference-form .coach-plan-date .schedule-v2-calendar { color: var(--lime-accent) }
+.coach-reference-form .coach-plan-time > span { color: var(--lime-text-secondary); font-size: 14px; flex: 1 }
+.coach-reference-form .coach-plan-time > input { width: 112px; min-height: 48px; padding: 8px 4px; border: 0; background: transparent; font-size: 16px; color: var(--lime-text) }
+.coach-reference-form .coach-plan-details img { flex: 0 0 24px }
+.coach-reference-form .coach-plan-options { margin: 0 18px; padding: 0; border: 0 }
+.coach-reference-form .coach-plan-options[open] { display: grid; gap: 12px }
+.coach-reference-form .workout-notes { padding: 0 18px; margin: 0; border: 0 }
+.coach-reference-form .workout-notes summary { font-weight: 400; color: var(--lime-text-secondary) }
+.coach-reference-form .workout-form-exercises { display: flex; flex-direction: column; gap: 2px }
+.coach-reference-form .coach-plan-editor-controls { order: 1; min-width: 0; width: 100%; margin: 0; padding: 0; border: 0 }
+.coach-reference-form .coach-plan-entry-controls { order: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 2px }
+.coach-reference-form .coach-plan-entry-controls > .quick-workout-entry { grid-column: 1 / -1 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .coach-plan-entry-controls > button { min-height: 80px; padding: 16px 8px; margin: 0; border: 0; border-radius: 20px; background: #3b3b40; font-size: 14px; line-height: 20px; font-weight: 500 }
+.coach-reference-form .coach-plan-entry-controls .quick-workout-expand { color: var(--lime-accent) }
+.coach-reference-form .workout-empty-hint { order: 0; margin: 16px 18px; font-size: 14px; line-height: 20px }
+.coach-reference-form .workout-exercise-editor { gap: 2px }
+.coach-reference-form .workout-gesture-list { gap: 2px }
+.coach-reference-form .workout-swipe { border-radius: 32px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-exercise, .exercise-block) { padding: 16px; border: 0; border-radius: 32px; background: #252529; box-shadow: none; overflow: hidden }
+.coach-reference-form .compact-editor-exercise-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; margin-bottom: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .compact-editor-exercise-toggle { padding: 8px 0; text-align: center; gap: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .compact-editor-exercise-title { display: block }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .compact-editor-exercise-title strong { font-size: 24px; line-height: 26px; font-weight: 500; letter-spacing: -.48px }
+.coach-reference-form .compact-editor-chevron { display: none }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .exercise-head-actions .overflow-trigger { padding: 10px; width: 44px; height: 44px; border: 0; border-radius: 99px; background: transparent; color: var(--lime-text-secondary) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .compact-editor-exercise-summary { font-size: 14px; line-height: 18px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-reference-form .coach-plan-exercise-number { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 99px; background: #3b3b40; font-size: 16px; line-height: 20px; font-weight: 400; color: #fff }
+.coach-reference-form .compact-editor-exercise-fields { margin: 0 -16px; padding: 16px; border-color: #3b3b40 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { height: 48px; min-height: 48px; border: 0; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
+.coach-reference-form .planned-set { gap: 2px; margin-bottom: 2px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .set-add-row { justify-content: center; margin-top: 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .set-add-row > button { min-height: 48px; border: 0; background: transparent; font-size: 14px; font-weight: 400 }
+.coach-reference-form .set-add-row .add-action-label svg { color: var(--lime-accent) }
+.coach-reference-form .exercise-comment-options { margin-top: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .exercise-comment-options > summary { font-size: 14px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-reference-form .workout-editor-footer { justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }

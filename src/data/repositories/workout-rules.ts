@@ -354,6 +354,18 @@ export function setBlockRest(exercises: WorkoutExerciseDraft[], blockId: string,
 // Перемещает блок (целиком, со всеми его упражнениями) на одну позицию вверх/вниз,
 // меняя его местами с соседним блоком. На границах — без изменений. position
 // пересчитывается по итоговому порядку; внутренний порядок блока сохраняется.
+/** Planned editor: move a whole block to a final position, preserving its sets. */
+export function moveDraftBlockTo(exercises: WorkoutExerciseDraft[], blockId: string, target: number): WorkoutExerciseDraft[] {
+  const blocks = groupDraftsIntoBlocks(exercises)
+  const from = blocks.findIndex((block) => block.blockId === blockId)
+  if (from < 0 || !Number.isInteger(target) || target < 0 || target >= blocks.length || from === target) return exercises
+  const reordered = [...blocks]
+  const moved = reordered.splice(from, 1)[0]!
+  reordered.splice(target, 0, moved)
+  return ensureBlockIds(reordered.flatMap((block) => block.items.map(({ exercise }) => exercise)))
+    .map((exercise, position) => ({ ...exercise, position }))
+}
+
 export function moveBlock(exercises: WorkoutExerciseDraft[], blockId: string, direction: -1 | 1): WorkoutExerciseDraft[] {
   const list = ensureBlockIds(exercises)
   const blocks = groupDraftsIntoBlocks(list)

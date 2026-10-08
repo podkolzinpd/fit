@@ -16,6 +16,17 @@ const parseWorkout = vi.fn().mockResolvedValue({ items: [], unmatched: [] })
 describe('QuickWorkoutEntry circuit input', () => {
   beforeEach(() => parseWorkout.mockClear())
 
+  it('opens the same composer from the compact coach reference without losing text when collapsed', () => {
+    render(<QuickWorkoutEntry reference compact catalog={catalog} parseWorkout={parseWorkout} onAdd={vi.fn()} />)
+    expect(screen.queryByLabelText('Запись тренировки')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Надиктовать' }))
+    fireEvent.change(screen.getByLabelText('Запись тренировки'), { target: { value: 'Жим 3 по 10' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Свернуть ввод' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Надиктовать' }))
+    expect(screen.getByLabelText('Запись тренировки')).toHaveValue('Жим 3 по 10')
+    expect(parseWorkout).not.toHaveBeenCalled()
+  })
+
   it('сохраняет разобранные значения при выборе упражнения из полного каталога', async () => {
     const onAdd = vi.fn<(exercises: ParsedWorkoutExercise[]) => void>()
     const onOpenCatalog = vi.fn((_search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => onSelect?.(catalog[1]!))

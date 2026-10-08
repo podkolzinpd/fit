@@ -14,12 +14,14 @@ interface QuickWorkoutEntryProps {
   preferredExerciseRefs?: readonly string[]
   onOpenCatalog?: (search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => void
   compact?: boolean
+  reference?: boolean
+  disabled?: boolean
   parseWorkout: (text: string, systemCatalog: readonly ExerciseSnapshot[]) => Promise<WorkoutParseResponse>
 }
 
 type ParsedEntry = { id: string; groupId?: string; parsed?: ParsedWorkoutExercise; unmatched?: WorkoutParseUnmatchedView }
 
-export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, parseWorkout }: QuickWorkoutEntryProps) {
+export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, reference = false, disabled = false, parseWorkout }: QuickWorkoutEntryProps) {
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [expanded, setExpanded] = useState(!compact)
@@ -155,7 +157,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
     setChoices({})
   }
 
-  if (!expanded) return <button type="button" className="secondary wide quick-workout-expand" onClick={() => setExpanded(true)}><MicIcon />Добавить голосом или текстом</button>
+  if (!expanded) return <button type="button" disabled={disabled} className="secondary wide quick-workout-expand" onClick={() => setExpanded(true)}><MicIcon />{reference ? 'Надиктовать' : 'Добавить голосом или текстом'}</button>
 
   return <div className={`quick-workout-entry${compact ? ' expanded' : ''}`}>
     {compact && <button type="button" className="link quick-workout-collapse" onClick={() => setExpanded(false)}>Свернуть ввод</button>}

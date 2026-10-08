@@ -112,7 +112,7 @@ export function WorkoutDragBlock({ id, children }: { id: string; children: React
   return <div data-workout-block={id} className={`workout-drag-block${drag?.id === id ? ' dragging' : ''}${before ? ' drop-before' : ''}${after ? ' drop-after' : ''}`}>{children}</div>
 }
 
-export function WorkoutDragHandle({ id, label }: { id: string; label: string }) {
+export function WorkoutDragHandle({ id, label, children }: { id: string; label: string; children?: ReactNode }) {
   const context = useWorkoutGestures()
   return <button type="button" className="workout-drag-handle" aria-label={`Переместить: ${label}`}
     aria-describedby={`workout-drag-help-${id}`} aria-pressed={context.drag?.id === id}
@@ -120,7 +120,7 @@ export function WorkoutDragHandle({ id, label }: { id: string; label: string }) 
     onPointerDown={(event) => { if (event.button === 0) context.start(id, event) }}
     onKeyDown={(event) => { if (context.keyboard(id, event.key)) event.preventDefault() }}
     onBlur={() => { if (context.drag?.keyboard) context.cancel() }}>
-    <GripIcon />
+    {children ?? <GripIcon />}
     <span id={`workout-drag-help-${id}`} className="sr-only">Пробел — взять, стрелки — выбрать позицию, Enter — сохранить, Escape — отменить.</span>
   </button>
 }
