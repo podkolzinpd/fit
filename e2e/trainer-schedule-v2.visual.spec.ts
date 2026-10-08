@@ -16,6 +16,102 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+function coachGestureWorkout(grouped = false, count = grouped ? 4 : 3): MockWorkout {
+  const source = restTimerWorkout()
+  source.exercises[0]!.restBetweenSetsSec = 90
+  const base = source.exercises[0]!
+  source.exercises = Array.from({ length: count }, (_, position) => ({
+    ...base, id: `c0ac0000-6010-4000-8000-0000000001${position}0`, name: ['Приседания', 'Жим', 'Тяга', 'Планка'][position] ?? `Упражнение ${position + 1}`, position,
+    blockId: grouped && position === 1 ? base.blockId : position === 0 ? base.blockId : `c0ac0000-6010-4000-8000-0000000002${position}0`,
+    blockType: grouped && position < 2 ? 'group' : 'single',
+    sets: base.sets.map((set, index) => ({ ...set, id: `c0ac0000-6010-4000-8000-000000000${position}3${index}` })),
+  }))
+  return source
+}
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference gestures preserve active fact/rest ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = coachGestureWorkout(), first = source.exercises[0]!
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    const moves: Array<{ targetIndex: number; operationId: string }> = []
+    page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as typeof moves[number]) })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.coach-live-digits')).toHaveText('01:30')
+    const handle = page.getByRole('button', { name: 'Переместить: Приседания' })
+    await expect(handle).toBeEnabled()
+    await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End')
+    expect(moves).toHaveLength(0)
+    await page.keyboard.press('Enter')
+    await expect.poll(() => moves.length).toBe(1)
+    await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Сейчас: Приседания')
+    await expect(page.locator('.coach-live-digits')).toHaveText('01:30')
+    await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-set-input`).first()).toHaveValue('20')
+    expect(moves[0]!.targetIndex).toBe(2)
+    const swipe = page.locator(`[data-workout-swipe="${first.id}"]`)
+    await swipe.scrollIntoViewIfNeeded()
+    const box = (await swipe.boundingBox())!
+    await page.mouse.move(box.x + box.width - 10, box.y + 10); await page.mouse.down()
+    await page.mouse.move(box.x + box.width - 100, box.y + 10, { steps: 8 }); await page.mouse.up()
+    await expect(swipe.getByRole('button', { name: 'Удалить', exact: true })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('coach-reference-swipe.png'), fullPage: true })
+    await swipe.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toContainText('включая выполненные')
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(page.locator('.coach-live-digits')).toHaveText('01:30')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
+    await expect(page.getByRole('menuitem', { name: 'Изменить порядок' })).toHaveCount(0)
+  })
+}
+test('Figma workout Coach reference grouped drag retry has one unchanged receipt', async ({ page }) => {
+  const source = coachGestureWorkout(true), first = source.exercises[0]!
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+  const commands: unknown[] = []
+  await page.route('**/blocks/*/move', async (route) => {
+    commands.push(route.request().postDataJSON() as unknown)
+    if (commands.length === 1) await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"service_unavailable"}' })
+    else await route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const handle = page.getByRole('button', { name: 'Переместить: Приседания, Жим' })
+  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: 'Повторить сохранение порядка' })).toBeVisible()
+  await expect(page.locator('[data-workout-block]').first()).toHaveAttribute('data-workout-block', first.blockId)
+  await page.getByRole('button', { name: 'Повторить сохранение порядка' }).click()
+  await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
+  expect(commands).toHaveLength(2); expect(commands[1]).toEqual(commands[0])
+  await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-exercise-head`).filter({ hasText: 'Приседания' }).first()).toBeVisible()
+  await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-exercise-head`).filter({ hasText: 'Жим' }).first()).toBeVisible()
+})
+
+test('Figma workout Coach reference pointer drag autoscrolls and preserves draft', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  const moves: unknown[] = []
+  page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input`).first()
+  await field.fill('27.5'); await field.blur()
+  const handle = page.getByRole('button', { name: 'Переместить: Приседания' })
+  await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded()
+  const box = (await handle.boundingBox())!
+  const before = await page.locator('.content').evaluate((element) => element.scrollTop)
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
+  await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  await page.mouse.move(box.x + box.width / 2, 820, { steps: 12 })
+  await expect.poll(() => page.locator('.content').evaluate((element) => element.scrollTop)).toBeGreaterThan(before + 100)
+  expect(moves).toHaveLength(0)
+  await page.mouse.up()
+  await expect.poll(() => moves.length).toBe(1)
+  await expect(page.locator('[data-workout-block]').first()).not.toHaveAttribute('data-workout-block', first.blockId)
+  await expect(field).toHaveValue('27.5')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Сейчас: Приседания')
+})
+
 for (const width of [375, 390, 430, 1440]) {
   test(`Figma workout Coach reference Live geometry and rest ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
@@ -891,6 +987,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
       'live-phase-timer-2026-10',
+      'coach-workout-gestures-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',
       'lime-day-workspace-2026-10',
@@ -1146,6 +1243,17 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
           confirmedAt: confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 } : set),
       })) }))
       body = { set: { version: command.expectedVersion + 1 } }
+    } else if (/^\/v1\/workouts\/[0-9a-f-]+\/blocks\/[0-9a-f-]+\/move$/.test(url.pathname) && route.request().method() === 'POST') {
+      const id = url.pathname.split('/')[3]!, blockId = url.pathname.split('/')[5]!
+      const command = route.request().postDataJSON() as { targetIndex: number; expectedVersion: number }
+      workouts = workouts.map((item) => {
+        if (item.id !== id) return item
+        const blocks = [...new Set(item.exercises.map((exercise) => exercise.blockId))]
+        blocks.splice(blocks.indexOf(blockId), 1); blocks.splice(command.targetIndex, 0, blockId)
+        return { ...item, version: item.version + 1,
+          exercises: blocks.flatMap((block) => item.exercises.filter((exercise) => exercise.blockId === block)).map((exercise, position) => ({ ...exercise, position })) }
+      })
+      body = { block: { id: blockId, version: workouts.find((item) => item.id === id)!.version, replayed: false } }
     } else if (/^\/v1\/workouts\/[0-9a-f-]+\/(start|finish)$/.test(url.pathname) && route.request().method() === 'POST') {
       const id = url.pathname.split('/')[3]
       const finished = url.pathname.endsWith('/finish')

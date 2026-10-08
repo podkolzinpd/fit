@@ -116,6 +116,7 @@ import {
   readLiveExerciseRequest,
   readLiveOperationRequest,
   readLiveReorderRequest,
+  readLiveMoveRequest,
   readLiveMergeBlockRequest,
   readLiveSetRequest,
 } from './live-workout-request.js'
@@ -4075,6 +4076,24 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       )
     },
   )
+
+  app.post('/v1/workouts/:workoutId/blocks/:blockId/move', async (request, reply) => {
+    const sessionToken = readCompatibleYandexActorSession(request.headers)
+    const { workoutId, blockId } = request.params as { workoutId?: unknown; blockId?: unknown }
+    const command = readLiveMoveRequest(request.body)
+    if (sessionToken === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof workoutId !== 'string' || !uuidPattern.test(workoutId)
+      || typeof blockId !== 'string' || !uuidPattern.test(blockId) || command === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotWorkoutsWriter
+    if (!writer?.moveLiveBlock) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => writer.moveLiveBlock!(sessionToken, workoutId, blockId,
+      command.targetIndex, command.expectedVersion, command.operationId),
+    (result) => reply.header('cache-control', 'no-store').send({
+      block: { id: result.resourceId, replayed: result.replayed, version: result.version },
+    }))
+  })
 
   app.post('/v1/workouts/:workoutId/blocks/:blockId/merge-next', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)

@@ -326,6 +326,10 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  moveLiveBlock(workout: Workout, blockId: string, targetIndex: number, operationId: string): Promise<number> {
+    void workout; void blockId; void targetIndex; void operationId
+    return Promise.reject(new Error('Перетягивание доступно на новом сервере'))
+  },
   mergeLiveBlockWithNext(workout: Workout, blockId: string, preset: 'set' | 'circuit'): Promise<number> {
     void workout
     void blockId

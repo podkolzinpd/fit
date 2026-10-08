@@ -30,3 +30,20 @@
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger.phase-prep,
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger.phase-work { color: var(--lime-accent); background: var(--lime-surface-raised) }
 /* Input geometry deliberately remains the existing 48px / 16px contract. */
+.coach-workout-reference .workout-gesture-list { display: grid; gap: 12px }
+.coach-workout-reference .workout-drag-block { position: relative; min-width: 0 }
+.coach-workout-reference .workout-drag-block.dragging { opacity: .65 }
+.coach-workout-reference .workout-drag-block.drop-before::before,
+.coach-workout-reference .workout-drag-block.drop-after::after { content: ''; position: absolute; z-index: 3; left: 0; right: 0; height: 3px; background: var(--lime-accent); pointer-events: none }
+.coach-workout-reference .workout-drag-block.drop-before::before { top: -6px }
+.coach-workout-reference .workout-drag-block.drop-after::after { bottom: -6px }
+.coach-workout-reference button.workout-drag-handle { min-width: 44px; min-height: 44px; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--lime-text-secondary); font-size: 24px; cursor: grab; touch-action: none }
+.coach-workout-reference button.workout-drag-handle[aria-pressed='true'] { color: var(--lime-accent); cursor: grabbing }
+.coach-workout-reference button.workout-drag-handle svg { width: 24px; height: 24px }
+.coach-workout-reference .workout-swipe { position: relative; overflow: hidden; border-radius: 24px; touch-action: pan-y; min-width: 0 }
+.coach-workout-reference .workout-swipe-content { position: relative; min-width: 0 }
+.coach-workout-reference button.workout-swipe-action { position: absolute; inset-block: 0; width: 96px; border: 0; border-radius: 20px; font-size: 14px; padding: 8px }
+.coach-workout-reference button.workout-swipe-action.delete { right: 0; background: var(--danger-surface); color: var(--danger) }
+.coach-workout-reference button.workout-swipe-action.replace { left: 0; background: var(--lime-surface-raised); color: var(--lime-accent) }
+.coach-workout-reference .live-completed-gesture-head { display: flex; align-items: center; gap: 4px }
+.coach-workout-reference .live-completed-gesture-head .workout-exercise-compact { flex: 1; min-width: 0 }
