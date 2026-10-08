@@ -305,3 +305,7 @@ reload,503/retry-identical payload, non-pilot fallback, catalog/filters.
 ### PR2 после объединения с main — 2026-10-09
 
 Включён main `f1eade18` с клиентским удалением выбранного подхода (#1527): сохранены его цель, явное подтверждение и блокировка pending, а также тренерские swipe/drag. Полный `npm run check` exit0: frontend2568/2568, API1272/1272, build. Chromium/WebKit26/26 по тренерскому референсу; отдельно WebKit8/8 по клиентскому selected-delete и default90/первому отдыху light/dark390/430. Обновлённый Live WebKit390 снимок просмотрен. PR1#1526 слит, API37839403454 success; private inspector37841723133 подтвердил ровно два trainer UUID без изменения данных. Флаг ещё OFF. PR2#1532 ожидает новый exact-head CI и раннюю очередь; PR3#1534, PR4#1536, PR5#1537 реализованы в отдельных зависимых ветках, не слиты и не выкачены.
+
+### Объединённая цепочка PR2–5 — 2026-10-09
+
+Изменения mainf1eade18 перенесены во все зависимые ветки. Общий `npm run check` exit0: frontend2583/2583, API1272/1272, build; Chromium/WebKit56/56 охватывают full editor/catalog/planning/live/gestures/role boundaries на375/390/430/1440. Выбор клиента «Начать сейчас» сразу вызывает старт; полный editor сохраняет только план. Все прежде проверенные настройки/48px/fact/rest сохранены. Флаг ещё OFF; fresh-main CI, последовательное слияние, APImigration140 и итоговый frontend/native/readback остаются обязательными гейтами.
