@@ -1275,6 +1275,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'lime-day-workspace-2026-10',
       'lime-schedule-history-2026-10',
       'lime-schedule-ownership-2026-10',
+      'client-live-multiple-exercises-2026-10',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -6713,3 +6714,21 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     expect([muscleWeight, pickerWeight]).toEqual(['500', '500'])
   })
 }
+
+ test('Client Lime Live multiple-selection notice is shown once', async ({ page }, info) => {
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+  await page.goto('/me')
+  await page.evaluate((id) => {
+    const key = `fit.coachmarks-seen.${id}`
+    const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+    localStorage.setItem(key, JSON.stringify(seen.filter((item) => item !== 'client-live-multiple-exercises-2026-10')))
+  }, clientId)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  const notice = page.locator('.coachmark-bubble').filter({ hasText: 'Добавляйте несколько упражнений' })
+  await expect(notice).toContainText('Выберите упражнения в каталоге и нажмите «Добавить».')
+  await page.screenshot({ path: info.outputPath('client-live-selection-notice.png') })
+  await notice.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await page.reload()
+  await expect(page.locator('.live-empty-start')).toBeVisible()
+  await expect(notice).toHaveCount(0)
+ })

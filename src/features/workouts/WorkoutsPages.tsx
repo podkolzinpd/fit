@@ -3359,6 +3359,9 @@ export function LiveWorkoutPage() {
   })
   const commentLive = useMutation({ mutationFn: ({ exerciseId, comment }: { exerciseId: string; comment: string }) => runLiveWorkoutMutation(`comment:${exerciseId}`, (workout) => workoutsRepository.setExerciseComment(workout, exerciseId, comment)), onSuccess: async () => { await query.refetch() } })
   function closePicker() { if (appendSelection.isPending) return; setPickerOpen(false); setReplaceExerciseId(null); setLivePickerSelection([]) }
+  function liveExerciseEntry(children: ReactNode) {
+    return clientLime ? <Coachmark id="client-live-multiple-exercises-2026-10" userId={actor?.userId} title="Добавляйте несколько упражнений" description="Выберите упражнения в каталоге и нажмите «Добавить».">{children}</Coachmark> : children
+  }
   async function pickLiveExercises(exercises: ExerciseSnapshot[]) {
     await appendSelection.mutateAsync(exercises)
     closePicker()
@@ -3936,8 +3939,8 @@ export function LiveWorkoutPage() {
         return coachReference ? <><Coachmark id="coach-workout-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark><WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
-      {canManageLiveStructure && query.data.exercises.length === 0 && <section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>}
-      {canManageLiveStructure && query.data.exercises.length > 0 && <button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>Ещё упражнение</AddActionLabel></button>}
+      {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
+      {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>Ещё упражнение</AddActionLabel></button>)}
       {error && <p className="error">{error.message}</p>}
       {coachReference && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
