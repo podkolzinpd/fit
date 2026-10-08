@@ -233,6 +233,8 @@ test('Yandex workout completion reads personal records once without paginated Pr
         lastName: null, timezone: 'Europe/Moscow', accountRole: 'trainer' },
     } })
     if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
+    if (path === '/v1/workouts/home') return route.fulfill({ json: { workouts: [] } })
+    if (path.endsWith('/active-workout')) return route.fulfill({ json: { workout: null } })
     if (path === '/v1/training-data') return route.fulfill({ json: {
       accessMode: 'read_only', customExercises: [], attention: [], attentionPreferences: [],
       hasMoreWorkouts: false, totalWorkouts: 1, workouts: [{

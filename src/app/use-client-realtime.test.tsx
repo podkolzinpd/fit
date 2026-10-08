@@ -64,7 +64,7 @@ describe('client realtime', () => {
 
   it('expires all factual views after local edits and remote deletes', async () => {
     const client = new QueryClient()
-    const keys = [['workouts', 'client-1'], ['workout-personal-records', 'workout-1'], ['training-summary-first-workout', 'client-1'], ['client-progress-story-workouts', 'client-1'], ['exercise-history', 'client-1']]
+    const keys = [['workouts', 'client-1'], ['workout-home', '2026-10-08'], ['workout-personal-records', 'workout-1'], ['training-summary-first-workout', 'client-1'], ['client-progress-story-workouts', 'client-1'], ['exercise-history', 'client-1']]
     for (const key of keys) client.setQueryData(key, ['old result'])
     await invalidateWorkoutResults(client)
     for (const key of keys) expect(client.getQueryState(key)?.isInvalidated).toBe(true)
@@ -187,6 +187,7 @@ describe('client realtime', () => {
     queryClient.setQueryData(['client', 'client-2'], { id: 'client-2' })
     queryClient.setQueryData(['client-canonical-id', 'client-1'], 'client-1')
     queryClient.setQueryData(['client-goal', 'client-1'], { id: 'goal-1' })
+    queryClient.setQueryData(['workout-home', '2026-10-08'], [])
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
 
     await refetchClientSpace(queryClient, 'client-1')
@@ -197,5 +198,6 @@ describe('client realtime', () => {
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client', 'client-2'] })!)).toBe(false)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client-canonical-id', 'client-1'] })!)).toBe(true)
     expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['client-goal', 'client-1'] })!)).toBe(true)
+    expect(options?.predicate?.(queryClient.getQueryCache().find({ queryKey: ['workout-home', '2026-10-08'] })!)).toBe(true)
   })
 })

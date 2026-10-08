@@ -3,6 +3,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../src/shared/domain'
 import { computeClientStats } from '../src/data/repositories/workout-rules'
+import { workoutHomeSummaries } from '../src/data/repositories/workout-home'
 import { localDate } from '../src/shared/local-date'
 import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/repositories/trainer-finance.repository'
 
@@ -890,6 +891,19 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         return { id: item.id, workoutDate: localDate(item.workoutDate), status }
       }),
       localDate(url.searchParams.get('today') ?? '2026-10-06')) }
+    } else if (url.pathname === '/v1/workouts/home') {
+      if (failTrainingData) {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+        return
+      }
+      body = { workouts: workoutHomeSummaries(workouts.map((item) => {
+        const status = item.status
+        if (status !== 'planned' && status !== 'in_progress' && status !== 'done' && status !== 'cancelled') throw new Error('Invalid workout fixture status')
+        return { ...item, status, workoutDate: localDate(item.workoutDate) }
+      }), localDate(url.searchParams.get('today') ?? '2026-10-06')) }
+    } else if (url.pathname.endsWith('/active-workout')) {
+      const active = workouts.find((item) => item.clientId === url.pathname.split('/')[3] && item.status === 'in_progress')
+      body = { workout: active ? { id: active.id, workoutDate: active.workoutDate, status: active.status } : null }
     } else if (url.pathname === '/v1/training-data') {
       if (failTrainingData) {
         await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
@@ -2841,6 +2855,50 @@ test('reading a chat message updates the inbox count on return', async ({ page }
   await page.getByRole('button', { name: 'Назад' }).click()
   await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
   await expect(page.getByRole('button', { name: '1 Вопросы и сообщения' })).toBeVisible()
+})
+
+for (const width of [390, 430, 1440]) for (const fitLime of [false, true]) test(`compact trainer home keeps old active workout without full history ${fitLime ? 'Lime' : 'Mono'} ${width}`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 900 })
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  const rows: MockWorkout[] = Array.from({ length: 121 }, (_, index) => ({ ...workout,
+    id: `c8100000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`, status: 'done',
+    completedAt: '2026-09-20T10:00:00Z', workoutDate: '2026-09-20',
+  }))
+  rows.push({ ...workout, status: 'in_progress', workoutDate: '2025-01-01', startedAt: '2025-01-01T10:00:00Z' })
+  const requests: URL[] = []
+  page.on('request', (request) => {
+    const url = new URL(request.url())
+    if (url.origin === 'http://127.0.0.1:4100') requests.push(url)
+  })
+  await mockPilot(page, { fitLime, workouts: rows })
+  await page.goto('/today')
+  if (fitLime) {
+    await page.getByRole('button', { name: /Незавершённые действия/ }).click()
+    await expect(page.getByRole('dialog', { name: 'Рабочая очередь' }).locator(`a[href="/workouts/${workoutId}/live"]`)).toBeVisible()
+  } else {
+    await expect(page.getByRole('region', { name: 'Активные тренировки' }).getByRole('link')).toHaveAttribute('href', `/workouts/${workoutId}/live`)
+  }
+  expect(requests.some((url) => url.pathname === '/v1/workouts/home' && url.searchParams.get('today') === '2026-09-27')).toBe(true)
+  const history = requests.filter((url) => url.pathname === '/v1/training-data' && url.searchParams.get('scope') === 'workouts')
+  expect(history.every((url) => url.searchParams.has('from') && url.searchParams.has('to'))).toBe(true)
+  await page.screenshot({ path: info.outputPath('compact-home.png'), fullPage: true })
+})
+
+test('compact trainer home failure is not presented as no workouts and retry restores old active', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
+  await mockPilot(page, { workouts: [{ ...workout, status: 'in_progress', workoutDate: '2025-01-01' }] })
+  let fail = true
+  await page.route('**/v1/workouts/home?*', async (route) => {
+    if (fail) await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+    else await route.fallback()
+  })
+  await page.goto('/today')
+  await page.getByRole('button', { name: '— Незавершённые действия' }).click()
+  const queue = page.getByRole('dialog', { name: 'Рабочая очередь' })
+  await expect(queue.getByRole('alert').filter({ hasText: 'Не удалось загрузить действия' })).toBeVisible()
+  fail = false
+  await queue.getByRole('button', { name: 'Повторить загрузку действий' }).click()
+  await expect(page.getByRole('region', { name: 'Активные тренировки' }).getByRole('link')).toHaveAttribute('href', `/workouts/${workoutId}/live`)
 })
 
 test('non-Lime today keeps voice, text, draft, workout context and onboarding beside the calendar', async ({ page }, testInfo) => {

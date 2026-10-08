@@ -20,8 +20,10 @@ export interface TrainerPlanningItem {
   detail: string
 }
 
+type AttentionWorkout = Pick<Workout, 'id' | 'clientId' | 'clientName' | 'status' | 'workoutDate'>
+
 /** Lime replaces the home resume list with this queue; keep every live session reachable. */
-export function trainerDayActionItems(actions: TrainerActionItem[], workouts: Workout[]): TrainerActionItem[] {
+export function trainerDayActionItems(actions: TrainerActionItem[], workouts: readonly AttentionWorkout[]): TrainerActionItem[] {
   const active = workouts.filter((workout) => workout.status === 'in_progress')
   const activeIds = new Set(active.map((workout) => workout.id))
   return [
@@ -54,7 +56,7 @@ function newestAttention(rows: TrainerAttentionWorkout[], reason: 'question' | '
 
 export function trainerActionItems(
   clients: Client[],
-  workouts: Workout[],
+  workouts: readonly AttentionWorkout[],
   attention: TrainerAttentionWorkout[],
   today: LocalDate,
 ): TrainerActionItem[] {
@@ -100,7 +102,7 @@ export function trainerActionItems(
 
 export function trainerPlanningItems(
   clients: Client[],
-  workouts: Workout[],
+  workouts: readonly AttentionWorkout[],
   preferences: ClientAttentionPreference[],
   actionClientIds: ReadonlySet<string>,
   today: LocalDate,

@@ -15,6 +15,7 @@ const clientSpaceRoots = new Set([
   'client-canonical-id',
   'clients',
   'workouts',
+  'workout-home',
   'workout',
   'client-stats',
   'exercise-history',
@@ -126,7 +127,7 @@ export async function refetchClientSpace(queryClient: QueryClient, clientId: str
     predicate: (query) => {
       const [root] = query.queryKey
       if (typeof root !== 'string' || !clientSpaceRoots.has(root)) return false
-      if (root === 'my-client' || root === 'clients' || root === 'workouts' || root === 'workout' || root === 'workout-personal-records') return true
+      if (root === 'my-client' || root === 'clients' || root === 'workouts' || root === 'workout-home' || root === 'workout' || root === 'workout-personal-records') return true
       return query.queryKey.includes(clientId)
     },
     refetchType: 'active',
