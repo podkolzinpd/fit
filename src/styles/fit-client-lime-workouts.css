@@ -280,3 +280,7 @@
 .phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view :is(.planned-detail-exercise, .completed-exercise) + :is(.planned-detail-exercise, .completed-exercise) {
   border-top: 1px solid var(--lime-divider);
 }
+
+/* Local legacy selectors must not override the client pill contract. */
+.phone-frame.fit-client-lime .workout-status { border-radius: 999px; }
+.phone-frame.fit-client-lime.workout-detail-history-identity :is(.workout-detail-primary-actions, .workout-review, .workout-decision-sheet) .workout-cta[data-variant='primary'] { border-radius: 999px; }
