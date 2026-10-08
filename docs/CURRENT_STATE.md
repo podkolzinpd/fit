@@ -2,6 +2,8 @@
 
 ## Клиентский Lime: часть4 утверждённых доработок — 2026-10-08
 
+Свежая база послеPR#1528: main0d1004df. WebKit14/14 иполныйcheck2562frontend/1269API+136DBskipped/build exit0. Дополнительно устранён реально видимыйradius14 кнопкиПонятно вCoachmark существующим48px/16px/500/pill тольковclient scope; trainer/Mono проверены. PR#1527 опубликован37847696829/public13/native207/UI8; PR#1528 слитпослеCI37845957446, mainCI37849201694/публикация ожидаются. ДляPR4 нуженCI свежегоhead, merge иофициальныйreadback/native.
+
 В клиентском Lime статус WorkoutStatus и primary WorkoutCta деталей/review/decision-sheet используют существующий radius999. Размеры/YS Geo500/16 у CTA и семантические цвета статусов сохранены; Личный рекорд уже правильный, не переделывается.
 
 WebKit10/10: planned/start/pending, Live badge, feedback save, decision/reschedule, обе темы390/430 и trainer/Mono geometry1440. Full check после устранения нагрузки параллельных запусков: frontend2556/API1267/build exit0; первые несвязанные таймауты не обходились. CI/merge/официальная публикация и свежий native bundle ещё гейты; production-закрытие ID не заявлено. План: design/CLIENT_LIME_REMEDIATION_20261008.md.
