@@ -915,6 +915,28 @@ describe('Yandex main repository', () => {
     expect(fetchMock).toHaveBeenCalled()
   })
 
+  it.each(['trainer', 'client'] as const)('preserves omitted and explicit rest through create and edit for %s', async (role) => {
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const testActor: SessionActor = role === 'trainer' ? actor : {
+      ...actor, kind: 'client', role: 'client', clientId, trainerId: actor.userId, fullName: 'Клиент',
+    }
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, testActor)
+    const draft = workoutDraft()
+    draft.exercises = [undefined, 0, 60, 120].map((restBetweenSetsSec, position) => ({
+      ...draft.exercises[0]!, position, restBetweenSetsSec,
+    }))
+    await repository.workouts.save(draft)
+    await repository.workouts.save({ ...draft, id: workoutId, version: 1 })
+    const calls = fetchMock.mock.calls.filter(([url, init]) =>
+      String(url).includes('/v1/workouts') && ['POST', 'PUT'].includes(init?.method ?? ''))
+    expect(calls).toHaveLength(2)
+    for (const [, init] of calls) {
+      const payload = JSON.parse(String(init?.body)) as { exercises: { restBetweenSetsSec: number }[] }
+      expect(payload.exercises.map((exercise) => exercise.restBetweenSetsSec)).toEqual([90, 0, 60, 120])
+    }
+  })
+
   it('implements the complete workout lifecycle and derived reads', async () => {
     const fetchMock = installContractFetch()
     vi.stubGlobal('fetch', fetchMock)
