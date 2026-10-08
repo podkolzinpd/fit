@@ -15,6 +15,163 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
+  const exercise: WorkoutExercise = {
+    id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: timed ? 'plank' : 'squat',
+    name: timed ? 'Планка' : 'Приседания', muscleGroup: 'legs', inputKind: timed ? 'duration' : 'strength', position: 0,
+    blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+    restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 2,
+    sets: [82, 83].map((suffix, position) => ({ id: `10000000-0000-4000-8000-0000000000${suffix}`, position,
+      ...(timed ? { durationSec: 3 } : { weightKg: 20, reps: 10 }), fact: {}, confirmedAt: null, version: 1 })),
+  }
+  return { ...workout, status: 'in_progress', startedAt: '2026-10-08T09:00:00Z', ...(prepSeconds > 0 ? { prepSeconds } : {}), exercises: [exercise] }
+}
+
+test('Live rest legacy negative countdown without preparation', async ({ page }) => {
+  // Keep Date fixed across reload while letting loading/render timers run.
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых')
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:04Z'))
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await page.reload()
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await page.locator('.live-rest-trigger').click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+})
+
+test('Live rest starts before the first confirmation response and is not restarted by acknowledgement', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source] })
+  let release = () => {}
+  const responseGate = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/v1/workout-sets/*/confirm', async (route) => { await responseGate; await route.fallback() })
+  try {
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:30')
+    await page.clock.fastForward(5_000)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
+    release()
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
+  } finally { release() }
+})
+
+for (const [width, role] of [[390, 'client'], [430, 'client'], [1440, 'trainer']] as const) for (const clientLime of [false, true]) {
+  test(`Live rest toolbar geometry and typography ${role} ${width} lime=${clientLime}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId, clientLime, fitLime: clientLime, workouts: [restTimerWorkout()] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-rest-trigger')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await page.screenshot({ path: info.outputPath('timer-toolbar.png') })
+    const metrics = await page.locator('.live-timer-toolbar').evaluate((toolbar) => {
+      const timer = toolbar.querySelector('.live-timer')!, rest = toolbar.querySelector('.live-rest-trigger')!
+      return { timer: timer.getBoundingClientRect().height, rest: rest.getBoundingClientRect().height,
+        font: getComputedStyle(rest).fontFamily, size: getComputedStyle(rest).fontSize }
+    })
+    await info.attach('timer-metrics', { body: JSON.stringify(metrics), contentType: 'application/json' })
+    expect(metrics.rest).toBe(metrics.timer)
+    expect(metrics.rest).toBeGreaterThanOrEqual(56)
+    if (clientLime) expect(metrics.font).toContain('YS Geo')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+}
+
+test('Live rest preparation disabled keeps timed sets manual', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await page.clock.fastForward(4_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+})
+
+test('Live rest preparation enabled preserves the automatic phase sequence', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка 0:10')
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 0:02')
+  await page.clock.fastForward(2_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+})
+
+test('Live rest failure and retry preserve the countdown and a manual adjustment', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source], failFirstSetConfirm: true })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  const retry = page.getByRole('button', { name: 'Готово, отдых', exact: true }).filter({ hasText: 'Повтор' })
+  await expect(retry).toBeVisible()
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
+  await page.locator('.live-rest-trigger').click()
+  await page.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
+  await page.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:40')
+  await retry.click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:40')
+})
+
+test('Live rest phase expiry waits for a pending confirmation without timing the same set twice', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
+  let release = () => {}, confirmations = 0
+  const responseGate = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/v1/workout-sets/*/confirm', async (route) => {
+    confirmations += 1
+    await responseGate
+    await route.fallback()
+  })
+  try {
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка')
+    await page.clock.fastForward(10_000)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подход')
+    await page.clock.fastForward(3_000)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых')
+    await expect.poll(() => confirmations).toBe(1)
+    await page.clock.fastForward(5_000)
+    expect(confirmations).toBe(1)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+    release()
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+    await page.clock.fastForward(3_000)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+    expect(confirmations).toBe(2)
+  } finally { release() }
+})
+
+test('Live rest invalid empty result does not start the timer', async ({ page }) => {
+  const source = restTimerWorkout()
+  source.exercises[0]!.sets = source.exercises[0]!.sets.map((set) => ({ ...set, weightKg: undefined, reps: undefined }))
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.getByText('Введите результат подхода', { exact: true })).toBeVisible()
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+})
+
 for (const fitLime of [false, true]) {
   test(`Template reliability lost response and reload lime=${fitLime}`, async ({ page }, info) => {
     const source = { ...workout, exercises: [{
@@ -353,7 +510,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat'> & { createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat'> & { createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
 async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId

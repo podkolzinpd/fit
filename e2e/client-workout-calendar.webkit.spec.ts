@@ -429,11 +429,11 @@ test('client: rest picker uses minute and second wheels and keeps overdue time v
   await page.getByRole('button', { name: 'Начать отдых · 0:01' }).click()
   await page.clock.fastForward(2_100)
 
-  // The end of rest is not a user error: the button leaves the rest state
-  // (next timed set or a calm «Таймер») instead of a red overdue countdown.
+  // Preparation is disabled: preserve the legacy negative rest countdown,
+  // even when the exercise itself has a planned duration.
   const trigger = page.locator('.live-rest-trigger')
-  await expect(trigger).not.toHaveClass(/resting|rest-overdue/)
-  await expect(trigger).not.toHaveText(/Отдых −/)
+  await expect(trigger).toHaveClass(/rest-overdue/)
+  await expect(trigger).toHaveText(/Отдых −0:01/)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 932 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
