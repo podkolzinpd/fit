@@ -5,8 +5,9 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { isFitLimeEnabled } from '../../app/fit-lime'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
-import { AddIcon, BackIcon, CloseIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
+import { AddIcon, ArrowUpIcon, BackIcon, CloseIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
 import { formatLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
@@ -69,6 +70,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   initialDraft: WorkoutFormDraft | null
 }) {
   const { actor } = useAuth()
+  const reference = isCoachWorkoutRedesignEnabled(actor)
   const { clients: clientsRepository, workouts } = useDataBackend()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -90,7 +92,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const draft = {
     clientId, title, requestId, workoutDate: selectedDate, startTime: time.start,
     endTime: time.end, notes: saved?.notes ?? '', stageId: saved?.stageId ?? '',
-    recordCompleted: false, exercises: saved?.exercises ?? [], trainingFormat,
+    recordCompleted: false, exercises: saved?.exercises ?? [], trainingFormat, prepSeconds: saved?.prepSeconds,
   }
   useEffect(() => {
     if (saved?.recordCompleted) {
@@ -157,34 +159,38 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const dateLabel = selectedDate === today ? 'Сегодня' : selectedDate.slice(0, 4) === today.slice(0, 4)
     ? formatLocalDate(selectedDate).replace(/\s+\d{4}\s*г\.$/, '') : formatLocalDate(selectedDate)
   if (!isFitLimeEnabled(actor) || saved?.recordCompleted) return null
-  return <dialog ref={dialog} tabIndex={-1} role="dialog" className="fit-lime-plan-dialog" aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
+  const options = <>
+    {!time.start && <p className="fit-lime-plan-time-hint">{time.end ? 'Начало не указано' : 'Без времени'}</p>}
+    <div className="workout-record-mode" role="group" aria-label="Формат тренировки">
+      <button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button>
+      <button type="button" className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button>
+    </div>
+    <div className="fit-lime-plan-input-methods">
+      <button type="button" onClick={() => openComposer('voice')}><MicIcon />Надиктовать тренировку</button>
+      <button type="button" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
+    </div>
+  </>
+  return <dialog ref={dialog} tabIndex={-1} role="dialog" className={`fit-lime-plan-dialog${reference ? ' coach-reference-composer' : ''}`} aria-label="Быстрое создание тренировки" onClose={(event) => { if (event.target === event.currentTarget) onClose() }} onCancel={(event) => { if (mutation.isPending) event.preventDefault() }}>
     <form className="fit-lime-plan-composer" onSubmit={submit} inert={pickerOpen} style={pickerOpen ? { visibility: 'hidden' } : undefined}>
       <button type="button" className="fit-lime-plan-close" aria-label="Закрыть создание" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={() => dialog.current?.close()}><CloseIcon /></button>
-      {onBack && <button type="button" className="fit-lime-plan-back" aria-label="Назад к выбору действия" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={onBack}><BackIcon /></button>}
-      <h2>Запланировать тренировку</h2>
+      {onBack && !reference && <button type="button" className="fit-lime-plan-back" aria-label="Назад к выбору действия" disabled={mutation.isPending} onPointerDown={(event) => event.preventDefault()} onClick={onBack}><BackIcon /></button>}
+      <h2 className={reference ? 'sr-only' : undefined}>Запланировать тренировку</h2>
       <input aria-label="Название тренировки" placeholder="Название тренировки" maxLength={120} value={title} disabled={mutation.isPending} onChange={(event) => setTitle(event.target.value)} />
       <fieldset disabled={mutation.isPending}>
         <div className="fit-lime-plan-controls">
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
-          <FitLimeDatePicker value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
+          <FitLimeDatePicker value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
+          {reference && (clientId ? <button type="submit" className="fit-lime-plan-send" aria-label="Сохранить план" aria-busy={mutation.isPending}><ArrowUpIcon /></button> : <button type="button" className="fit-lime-plan-mic" aria-label="Надиктовать тренировку" onClick={() => openComposer('voice')}><MicIcon /></button>)}
         </div>
-        {!time.start && <p className="fit-lime-plan-time-hint">{time.end ? 'Начало не указано' : 'Без времени'}</p>}
-        <div className="workout-record-mode" role="group" aria-label="Формат тренировки">
-          <button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button>
-          <button type="button" className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button>
-        </div>
-        <div className="fit-lime-plan-input-methods">
-          <button type="button" onClick={() => openComposer('voice')}><MicIcon />Надиктовать тренировку</button>
-          <button type="button" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>
-        </div>
+        {!reference && options}
         <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
           <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
         </Coachmark>
-        <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить план'}</button>
+        {reference ? <details className="coach-plan-options"><summary>Настройки и способы ввода</summary>{options}{onBack && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад к выбору действия</button>}</details> : <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить план'}</button>}
       </fieldset>
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}
     </form>
-    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
+    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { setClientId(id); setError(null) }} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} reference={reference} autoFocusSearch={false} initialOpen hideTrigger onDismiss={() => setPickerOpen(false)} />}
   </dialog>
 }

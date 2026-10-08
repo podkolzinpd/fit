@@ -53,7 +53,7 @@ export const fitLimeIconNames: Record<string, string> = {
   today: 'checkbox', schedule: 'calendar', clients: 'users',
   assistant: 'assistant', settings: 'settings', close: 'close',
   back: 'arrow-left', 'chevron-right': 'arrow-right', 'arrow-up': 'arrow-up',
-  add: 'plus', check: 'check', bell: 'bell', chat: 'chat',
+  add: 'plus', check: 'check', 'check-small': 'check-small', bell: 'bell', chat: 'chat',
   microphone: 'microphone', mic: 'microphone', message: 'chat', refresh: 'refresh', clock: 'clock',
   sun: 'sun', whistle: 'whistle',
 }
