@@ -25,7 +25,11 @@ export function isAssistantChatPrompt(message: string, active: AssistantAction |
   const normalized = text.toLocaleLowerCase('ru')
   const explicitAction = /(?:запиш|добав|зафикс|сохрани).{0,80}(?:трениров|заняти|подход|упражнен)|(?:состав|созда|подготов|сдела).{0,80}(?:программ|план\s+трениров)/u.test(normalized)
   if (explicitAction) return false
-  return /[?]$/u.test(text) || /^(?:привет|здравствуй|здравствуйте|доброе (?:утро|день|вечер)|спасибо|благодарю|спс)\b/u.test(normalized)
+  // Speech recognition and users themselves often finish a question with an
+  // exclamation mark or no punctuation. Do not turn an ordinary fitness
+  // question into an action-routing failure solely because it lacks `?`.
+  const question = /^(?:как(?:ой|ая|ие|ого|ому|им|их)?|каков(?:а|ы)?|что|кто|где|когда|почему|зачем|сколько|чей|чья|чьё|чьи|можно\s+ли|нужно\s+ли|стоит\s+ли)(?:\s|[!?.…]|$)/u.test(normalized)
+  return /[?]$/u.test(text) || question || /^(?:привет|здравствуй|здравствуйте|доброе (?:утро|день|вечер)|спасибо|благодарю|спс)\b/u.test(normalized)
 }
 
 export function activeAssistantTool(value: unknown): AssistantAction | null {
