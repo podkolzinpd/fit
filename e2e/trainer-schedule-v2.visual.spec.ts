@@ -336,6 +336,65 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   })
 }
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime deletes the selected Live set with explicit confirmation ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    const source = restTimerWorkout()
+    source.exercises[0]!.sets[1]!.fact = { weightKg: 30, reps: 10 }
+    source.exercises[0]!.sets.push({ ...source.exercises[0]!.sets[1]!, id: '10000000-0000-4000-8000-000000000084', position: 2, weightKg: undefined, reps: undefined })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    let attempts = 0
+    await page.route('**/v1/workout-sets/*', async (route) => {
+      if (route.request().method() !== 'DELETE') return route.fallback()
+      attempts += 1
+      if (attempts === 1) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+      return route.fallback()
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const forms = page.locator('[data-live-set-id]')
+    await expect(forms).toHaveCount(3)
+    await forms.nth(2).locator('input').first().focus()
+    await page.locator('.live-exercise-head .overflow-trigger').click()
+    await page.getByRole('menuitem', { name: 'Удалить подход 3', exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toContainText('Удалить подход 3 упражнения «Приседания»?')
+    await page.screenshot({ path: info.outputPath('selected-set-confirmation.png') })
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(attempts).toBe(0)
+    await expect(forms).toHaveCount(3)
+    let finishSave = () => {}
+    const saveGate = new Promise<void>((resolve) => { finishSave = resolve })
+    await page.route('**/v1/workout-sets/*/draft', async (route) => { await saveGate; await route.fallback() })
+    await forms.nth(1).locator('input').first().fill('31')
+    await page.locator('.live-exercise-head .overflow-trigger').click()
+    try { await expect(page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true })).toBeDisabled() }
+    finally { finishSave() }
+    await expect(page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true })).toBeEnabled()
+    await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+    const deletion = page.waitForRequest((request) => request.method() === 'DELETE' && new URL(request.url()).pathname.startsWith('/v1/workout-sets/'))
+    await page.getByRole('button', { name: 'Удалить', exact: true }).click()
+    expect(new URL((await deletion).url()).pathname).toContain(source.exercises[0]!.sets[1]!.id)
+    await expect(page.locator('.error')).toContainText('Yandex Cloud временно недоступен')
+    await expect(forms).toHaveCount(3)
+    await page.locator('.live-exercise-head .overflow-trigger').click()
+    await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+    await page.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(forms).toHaveCount(2)
+    await expect(page.locator(`[data-live-set-id="${source.exercises[0]!.sets[0]!.id}"]`)).toHaveCount(1)
+    await expect(page.locator(`[data-live-set-id="${source.exercises[0]!.sets[2]!.id}"]`)).toHaveCount(1)
+    await forms.nth(1).locator('input').first().focus()
+    await page.locator('.live-exercise-head .overflow-trigger').click()
+    await page.getByRole('menuitem', { name: 'Удалить подход 2', exact: true }).click()
+    await page.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(forms).toHaveCount(1)
+    await page.locator('.live-exercise-head .overflow-trigger').click()
+    await expect(page.getByRole('menuitem', { name: /Удалить подход/ })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await page.reload()
+    await expect(forms).toHaveCount(1)
+  })
+}
+
 test('Live rest legacy negative countdown without preparation', async ({ page }) => {
   // Keep Date fixed across reload while letting loading/render timers run.
   await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
@@ -1233,6 +1292,11 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     } else if (url.pathname === `/v1/workouts/${workoutId}/question/answer` && route.request().method() === 'PUT') {
       questionAnswered = true
       body = { workout: { version: 2 } }
+    } else if (/^\/v1\/workout-sets\/[0-9a-f-]+$/.test(url.pathname) && route.request().method() === 'DELETE') {
+      const id = url.pathname.split('/')[3]
+      workouts = workouts.map((item) => item.exercises.some((exercise) => exercise.sets.some((set) => set.id === id))
+        ? { ...item, version: item.version + 1, exercises: item.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.filter((set) => set.id !== id).map((set, position) => ({ ...set, position })) })) } : item)
+      body = { set: { version: workouts.find((item) => item.id === workoutId)!.version } }
     } else if (/^\/v1\/workout-sets\/[0-9a-f-]+\/(draft|confirm)$/.test(url.pathname)) {
       const id = url.pathname.split('/')[3]
       const command = route.request().postDataJSON() as { expectedVersion: number; draft?: { reps?: number; weightKg?: number } }
