@@ -19,9 +19,10 @@ interface VoiceNoteFieldProps {
   autoResize?: boolean
   maxHeightPx?: number
   showVoice?: boolean
+  showVoiceCancel?: boolean
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true, showVoiceCancel = false }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
@@ -55,7 +56,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
         window.requestAnimationFrame(resizeTextarea)
       } : undefined}
     />
-    {showVoice && <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} onTranscript={(text) => {
+    {showVoice && <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} showCancel={showVoiceCancel} onTranscript={(text) => {
       if (!textareaRef.current) return
       const previous = textareaRef.current.value
       const nextValue = appendTranscript(previous, text)

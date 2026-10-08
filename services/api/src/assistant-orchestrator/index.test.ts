@@ -55,14 +55,24 @@ describe('assistant orchestrator contract', () => {
     expect(assistantCapabilitiesReply()).toContain('подготовить запись выполненной тренировки')
   })
 
-  it('keeps non-workout chat minimal and strictly action-free', () => {
+  it('keeps ordinary wellness chat useful and strictly action-free', () => {
     expect(assistantSmallTalkFallback('привет')).toBe('Привет! Чем помочь?')
     expect(assistantSmallTalkFallback('спасибо')).toBe('Пожалуйста!')
     expect(assistantSmallTalkFallback('Как лучше восстановиться после силовой тренировки?')).toContain('сон, вода')
+    const bmiReply = assistantSmallTalkFallback('Мой рост 143 см, вес 120 кг, это нормально?')
+    expect(bmiReply).toContain('ИМТ ≈ 58,7')
+    expect(bmiReply).toContain('не диагноз')
+    expect(bmiReply).toContain('регулярной еды')
+    const drinkReply = assistantSmallTalkFallback('что лучше пить после тренировки?')
+    expect(drinkReply).toContain('электролитами')
+    expect(drinkReply).toContain('протеиновый коктейль')
+    expect(drinkReply).toContain('креатин')
+    expect(assistantSmallTalkFallback('а пиво?')).toContain('не помогают восстановлению')
     expect(assistantSmallTalkFallback('как дела?')).toBe('Я на связи — можем коротко обсудить тренировки, упражнения, восстановление или спорт.')
     const prompt = assistantSmallTalkPrompt([{ author: 'user', content: 'привет' }], true)
-    expect(prompt).toContain('одним коротким предложением')
+    expect(prompt).toContain('2–5 коротких предложений')
     expect(prompt).toContain('Всегда возвращай action=null')
+    expect(prompt).toContain('не переводи стрелки на врача вместо ответа')
     expect(prompt).toContain('На приветствие отвечай естественным приветствием')
     expect(prompt).toContain('не проси повторить уже названные данные')
     expect(assistantSmallTalkPrompt([
@@ -86,7 +96,7 @@ describe('assistant orchestrator contract', () => {
       .resolves.toEqual({ reply: 'После тренировки оставьте лёгкую заминку и нормально поешьте.', action: null })
     expect(invokeYandexLlmCompletion).toHaveBeenCalledOnce()
     expect(invokeYandexLlmCompletion).toHaveBeenCalledWith(
-      expect.objectContaining({ completionOptions: { stream: false, temperature: 0.3, maxTokens: '100' } }),
+      expect.objectContaining({ completionOptions: { stream: false, temperature: 0.3, maxTokens: '400' } }),
       90_000,
     )
   })

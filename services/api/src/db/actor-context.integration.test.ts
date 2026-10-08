@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
+import type { DatabaseClient } from './types.js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
@@ -35,6 +36,7 @@ import {
 } from '../push-dispatcher-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
+import { readAccessibleChatThreads } from '../pilot-chat.js'
 import {
   claimClientInvitation,
   claimClientInvitationLink,
@@ -1316,6 +1318,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('uses published trainer identity consistently in connections and chat without exposing drafts', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const db = await ownerPool.connect()
+      const trainerId = randomUUID()
+      const secondTrainerId = randomUUID()
+      const clientUserId = randomUUID()
+      const clientId = randomUUID()
+      const reader: DatabaseClient = { query: async <Row extends QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+        (await db.query<Row>(sql, values ? [...values] : undefined)).rows }
+      try {
+        await db.query('begin')
+        await db.query(`insert into public.profiles(id, first_name, account_role)
+          values($1,null,'trainer'),($2,'Анна','trainer'),($3,'Synthetic athlete','client')`, [trainerId, secondTrainerId, clientUserId])
+        await db.query('insert into public.trainers(profile_id) values($1),($2)', [trainerId, secondTrainerId])
+        await db.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name)
+          values($1,$2,$3,'Synthetic trainer name test')`, [clientId, trainerId, clientUserId])
+        await db.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [clientId, secondTrainerId])
+        await db.query(`insert into public.trainer_professional_profiles(trainer_id,draft_data,published_data,published_at)
+          values($1,'{"displayName":"Private draft name"}','{"displayName":"Татьяна"}',now()),
+          ($2,'{"displayName":"Private unpublished name"}',null,null)`, [trainerId, secondTrainerId])
+        await db.query('set local role fit_api')
+        const actor = (id: string) => db.query("select set_config('request.jwt.claim.sub',$1,true)", [id])
+        const names = async () => {
+          const connections = await readAccessibleConnections(reader)
+          const threads = await readAccessibleChatThreads(reader)
+          return { card: connections.memberships.find(row => row.trainerId === trainerId)?.displayName,
+            chat: threads.find(row => row.trainerId === trainerId)?.partnerName,
+            secondCard: connections.memberships.find(row => row.trainerId === secondTrainerId)?.displayName,
+            secondChat: threads.find(row => row.trainerId === secondTrainerId)?.partnerName }
+        }
+        await actor(clientUserId)
+        expect(await names()).toEqual({ card: 'Татьяна', chat: 'Татьяна', secondCard: 'Анна', secondChat: 'Анна' })
+        expect((await db.query('select trainer_id from public.trainer_professional_profiles where trainer_id=$1', [secondTrainerId])).rows).toEqual([])
+        await actor(trainerId)
+        await db.query(`update public.trainer_professional_profiles set draft_data='{"displayName":"Changed private name"}' where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect((await names()).card).toBe('Татьяна')
+        await actor(trainerId)
+        await db.query(`update public.trainer_professional_profiles set published_data='{"displayName":"Татьяна Александровна"}' where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect(await names()).toMatchObject({ card: 'Татьяна Александровна', chat: 'Татьяна Александровна' })
+        await actor(trainerId)
+        expect((await readAccessibleChatThreads(reader)).find(row => row.clientId === clientId)?.partnerName).toBe('Synthetic athlete')
+        await db.query(`update public.trainer_professional_profiles set published_data=null, published_at=null where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect(await names()).toMatchObject({ card: 'Тренер', chat: 'Тренер' })
+      } finally {
+        await db.query('rollback')
+        db.release()
+      }
+    })
+
     describe('trainer profile first-write concurrency', () => {
       let photoPool: PgDatabasePool
       let profileId: string
@@ -1574,6 +1628,68 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(await bind('bind_fit_lime_for_yandex_login', subjects[2]!, logins[2]!)).toBe(true)
         expect(await flags(profiles[2]!)).toEqual({ schedule: true, lime: false })
         for (const profile of profiles.slice(0, 2)) expect(await flags(profile)).toEqual({ schedule: true, lime: true })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('keeps Lime pilots on installation and provides role-scoped all/off controls with owner-only rollback', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const clientId = randomUUID()
+      const trainerId = randomUUID()
+      const newClientId = randomUUID()
+      const readFlags = async (id: string) => {
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [id])
+        await connection.query('set local role fit_api')
+        const result = (await connection.query<{ client: boolean; trainer: boolean; schedule: boolean }>('select app_private.client_lime_enabled() client, app_private.fit_lime_enabled() trainer, app_private.trainer_schedule_v2_enabled() schedule')).rows[0]
+        await connection.query('reset role')
+        return result
+      }
+      const setMode = async (target: string, mode: string, revision: number) =>
+        (await connection.query<{ client_mode: string; trainer_mode: string; schedule_mode: string; revision: number }>('select * from app_private.set_lime_rollout_mode($1, $2, $3)', [target, mode, revision])).rows[0]
+      try {
+        await connection.query('begin')
+        expect((await connection.query('select client_mode, trainer_mode, schedule_mode, revision from app_private.lime_rollout_controls')).rows[0])
+          .toEqual({ client_mode: 'pilot', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 0 })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client'), ($2, 'trainer')", [clientId, trainerId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        for (const sql of ['select * from app_private.lime_rollout_controls', "select * from app_private.set_lime_rollout_mode('client', 'all', 0)"] ) {
+          await connection.query('savepoint forbidden')
+          await connection.query('set local role fit_api')
+          await expect(connection.query(sql)).rejects.toMatchObject({ code: '42501' })
+          await connection.query('rollback to savepoint forbidden')
+        }
+        expect(await setMode('client', 'all', 0)).toEqual({ client_mode: 'all', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 1 })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client')", [newClientId])
+        expect(await readFlags(newClientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(randomUUID())).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('savepoint stale')
+        await expect(setMode('trainer', 'all', 0)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint stale')
+        expect(await setMode('trainer', 'all', 1)).toEqual({ client_mode: 'all', trainer_mode: 'all', schedule_mode: 'all', revision: 2 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: true, schedule: true })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        await connection.query('savepoint dependency')
+        await expect(setMode('trainer-schedule', 'off', 2)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint dependency')
+        expect(await setMode('trainer', 'off', 2)).toEqual({ client_mode: 'all', trainer_mode: 'off', schedule_mode: 'all', revision: 3 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: true })
+        await setMode('client', 'off', 3)
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        // Re-entry cannot reset these controls: the login binder never writes this table.
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [clientId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        await setMode('client', 'pilot', 4)
+        await setMode('trainer', 'pilot', 5)
+        await setMode('trainer-schedule', 'pilot', 6)
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('delete from app_private.lime_rollout_controls')
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
       } finally {
         await connection.query('rollback')
         connection.release()
@@ -9230,6 +9346,191 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await connection.query('rollback')
         connection.release()
       }
+    })
+
+    describe('workout-scoped personal records', () => {
+      let recordClientId: string
+      let recordClientActorId: string
+      const read = (actorId: string, workoutId: string) => {
+        if (runtimePool === undefined) throw new Error('Database pool is not ready')
+        return withActorTransaction(runtimePool, actorId, async (client) => {
+          const rows = await client.query<JsonResultRow>(
+            'select public.list_workout_personal_records($1) result', [workoutId])
+          return rows[0]?.result
+        })
+      }
+      const seed = async (day: number, inputKind: string, ref: string,
+        sets: Array<{ weight?: number; reps?: number; seconds?: number; distance?: number; confirmed?: boolean }>,
+        author = ACTOR_ID, deleted = false) => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const id = randomUUID()
+        await ownerPool.query(`insert into public.workouts
+          (id, trainer_id, client_id, created_by, workout_date, status, completed_at, deleted_at)
+          values ($1, $2, $3, $4, date '2020-01-01' + $5::integer, 'done',
+            timestamptz '2020-01-01 12:00:00Z' + $5::integer * interval '1 day',
+            case when $6 then timestamptz '2020-06-01 12:00:00Z' else null end)`,
+        [id, ACTOR_ID, recordClientId, author, day, deleted])
+        for (const [position, set] of sets.entries()) {
+          const exerciseId = randomUUID()
+          // Deliberately repeat the ref in multiple exercise rows.
+          await ownerPool.query(`insert into public.workout_exercises
+            (id, workout_id, trainer_id, client_id, position, exercise_source,
+              exercise_ref, exercise_name, muscle_group, input_kind)
+            values ($1, $2, $3, $4, $5, 'system', $6, 'Record exercise', 'other', $7)`,
+          [exerciseId, id, ACTOR_ID, recordClientId, position, ref, inputKind])
+          await ownerPool.query(`insert into public.workout_sets
+            (workout_exercise_id, trainer_id, client_id, position, fact_weight_kg,
+              fact_reps, fact_duration_sec, fact_distance_km, confirmed_at)
+            values ($1, $2, $3, 0, $4, $5, $6, $7,
+              case when $8 then timestamptz '2020-01-01 12:00:00Z' else null end)`,
+          [exerciseId, ACTOR_ID, recordClientId, set.weight ?? null, set.reps ?? null,
+            set.seconds ?? null, set.distance ?? null, set.confirmed !== false])
+        }
+        return id
+      }
+      beforeEach(async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        recordClientId = randomUUID()
+        recordClientActorId = randomUUID()
+        await ownerPool.query("insert into public.profiles (id, account_role) values ($1, 'client')", [recordClientActorId])
+        await ownerPool.query(`insert into public.clients
+          (id, trainer_id, auth_user_id, full_name, gender, age_years, height_cm)
+          values ($1, $2, $3, 'Record fixture', 'female', 30, 170)`,
+        [recordClientId, ACTOR_ID, recordClientActorId])
+        await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id)
+          values ($1, $2), ($1, $3)`, [recordClientId, ACTOR_ID, MEMBER_TRAINER_ID])
+      })
+      afterEach(async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        await ownerPool.query('delete from public.workouts where client_id = $1', [recordClientId])
+        await ownerPool.query('delete from public.client_trainers where client_id = $1', [recordClientId])
+        await ownerPool.query('delete from public.clients where id = $1', [recordClientId])
+        await ownerPool.query('delete from public.profiles where id = $1', [recordClientActorId])
+      })
+
+      it('returns an old record after more than twenty newer results, using the correct volume set', async () => {
+        if (runtimePool === undefined) throw new Error('Database pool is not ready')
+        await seed(0, 'strength', 'record-strength', [{ weight: 50, reps: 5 }])
+        const id = await seed(1, 'strength', 'record-strength', [
+          { weight: 80, reps: 3 }, { weight: 60, reps: 10 }, { weight: 200, reps: 20, confirmed: false },
+        ])
+        for (let day = 2; day <= 22; day++) await seed(day, 'strength', 'record-strength', [{ weight: 90, reps: 10 }])
+        const page = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
+          const rows = await client.query<JsonResultRow>(
+            'select public.list_exercise_progress($1, $2, 20, null, null) result',
+            [recordClientId, 'record-strength'])
+          return rows[0]?.result as { items: Array<{ workoutId: string }>; nextCursor: unknown; totalCount: number }
+        })
+        expect(page.totalCount).toBe(23)
+        expect(page.items).toHaveLength(20)
+        expect(page.items.some((item) => item.workoutId === id)).toBe(false)
+        expect(page.nextCursor).not.toBeNull()
+        expect(await read(ACTOR_ID, id)).toEqual([
+          { exerciseRef: 'record-strength', exerciseName: 'Record exercise', inputKind: 'strength', metric: 'weight', primaryValue: 80, weightKg: 80, reps: 3 },
+          { exerciseRef: 'record-strength', exerciseName: 'Record exercise', inputKind: 'strength', metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 },
+        ])
+      })
+
+      it.each([
+        ['reps', { reps: 10 }, { reps: 12 }, 12],
+        ['duration', { seconds: 60 }, { seconds: 90 }, 90],
+        ['distance', { distance: 1.5 }, { distance: 2.5 }, 2.5],
+      ] as const)('preserves first-result, tie, deleted-history and confirmed %s semantics', async (kind, baseline, improved, value) => {
+        const first = await seed(0, kind, 'record-primary', [baseline])
+        expect(await read(ACTOR_ID, first)).toEqual([])
+        const tie = await seed(1, kind, 'record-primary', [baseline])
+        expect(await read(ACTOR_ID, tie)).toEqual([])
+        await seed(2, kind, 'record-primary', [{ reps: 100, seconds: 1000, distance: 100 }], ACTOR_ID, true)
+        const better = await seed(3, kind, 'record-primary', [improved])
+        expect(await read(ACTOR_ID, better)).toEqual([
+          { exerciseRef: 'record-primary', exerciseName: 'Record exercise', inputKind: kind,
+            metric: 'primary', primaryValue: value, weightKg: null, reps: null },
+        ])
+        const unconfirmed = await seed(4, kind, 'record-primary', [{ ...improved, confirmed: false }])
+        expect(await read(ACTOR_ID, unconfirmed)).toEqual([])
+      })
+
+      it('enforces workout author/client/tenant access while comparing shared history', async () => {
+        await seed(0, 'reps', 'record-access', [{ reps: 5 }], MEMBER_TRAINER_ID)
+        const id = await seed(1, 'reps', 'record-access', [{ reps: 10 }])
+        expect(await read(recordClientActorId, id)).toEqual(await read(ACTOR_ID, id))
+        expect(await read(ACTOR_ID, id)).toHaveLength(1)
+        await expect(read(MEMBER_TRAINER_ID, id)).rejects.toMatchObject({ message: 'workout_forbidden' })
+        await expect(read(OUTSIDE_TRAINER_ID, id)).rejects.toMatchObject({ message: 'workout_forbidden' })
+        const clientAuthored = await seed(2, 'reps', 'record-access', [{ reps: 15 }], recordClientActorId)
+        expect(await read(MEMBER_TRAINER_ID, clientAuthored)).toHaveLength(1)
+        await expect(read(ACTOR_ID, randomUUID())).rejects.toMatchObject({ message: 'workout_forbidden' })
+        const deleted = await seed(3, 'reps', 'record-access', [{ reps: 20 }], ACTOR_ID, true)
+        await expect(read(ACTOR_ID, deleted)).rejects.toMatchObject({ message: 'workout_forbidden' })
+      })
+
+      it('grants runtime execution without PUBLIC or reader access', async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const result = await ownerPool.query<{ runtime: boolean; reader: boolean; public_grant: boolean; definer: boolean; config: string[] }>(`
+          select has_function_privilege('fit_api', oid, 'EXECUTE') runtime,
+            has_function_privilege('fit_datalens', oid, 'EXECUTE') reader,
+            exists (select 1 from aclexplode(proacl) where grantee = 0) public_grant,
+            prosecdef definer, proconfig config
+          from pg_proc where oid = 'public.list_workout_personal_records(uuid)'::regprocedure`)
+        expect(result.rows[0]).toEqual({ runtime: true, reader: false, public_grant: false,
+          definer: true, config: ['search_path=""'] })
+      })
+
+      it('reads records through a real app session and rejects the revoked session', async () => {
+        if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pool is not ready')
+        await seed(0, 'reps', 'record-session', [{ reps: 5 }])
+        const id = await seed(1, 'reps', 'record-session', [{ reps: 10 }])
+        const token = randomBytes(32).toString('base64url')
+        const hash = hashPilotSessionToken(token)
+        await ownerPool.query(`insert into app_private.profile_rollout_assignments
+          (profile_id, target_backend, access_mode, enabled) values ($1, 'yandex', 'read_write', true)`, [recordClientActorId])
+        await ownerPool.query(`insert into app_private.yandex_app_sessions
+          (token_sha256, profile_id, access_mode, expires_at)
+          values ($1, $2, 'read_write', now() + interval '1 hour')`, [hash, recordClientActorId])
+        const reader = new DatabasePilotProgressData(runtimePool)
+        const session = { accessMode: 'read_write' as const, token }
+        expect(await reader.readWorkoutRecords(session, id)).toEqual(await read(recordClientActorId, id))
+        await expect(reader.readWorkoutRecords(session, randomUUID())).rejects.toMatchObject({ failure: 'forbidden' })
+        await ownerPool.query('update app_private.yandex_app_sessions set revoked_at = now() where token_sha256 = $1', [hash])
+        await expect(reader.readWorkoutRecords(session, id)).rejects.toBeInstanceOf(YandexAppSessionInvalidError)
+      })
+
+      it('uses completed-at then UUID ordering and excludes planned targets', async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const ids = [await seed(0, 'reps', 'record-order', [{ reps: 1 }]),
+          await seed(0, 'reps', 'record-order', [{ reps: 1 }]),
+          await seed(0, 'reps', 'record-order', [{ reps: 1 }])].sort()
+        const [before, target, after] = ids
+        if (before === undefined || target === undefined || after === undefined) throw new Error('Missing fixture')
+        for (const [id, reps] of [[before, 5], [target, 10], [after, 100]] as const) {
+          await ownerPool.query(`update public.workout_sets set fact_reps = $2
+            where workout_exercise_id in (select id from public.workout_exercises where workout_id = $1)`, [id, reps])
+        }
+        expect(await read(ACTOR_ID, before)).toEqual([])
+        expect(await read(ACTOR_ID, target)).toEqual([expect.objectContaining({ primaryValue: 10 })])
+        await ownerPool.query("update public.workouts set status = 'planned', completed_at = null where id = $1", [target])
+        expect(await read(ACTOR_ID, target)).toEqual([])
+      })
+
+      it('rolls back and reapplies the additive read function without modifying facts', async () => {
+        if (ownerPool === undefined) throw new Error('Database pool is not ready')
+        const id = await seed(0, 'reps', 'record-rollback', [{ reps: 10 }])
+        const [up, down] = (await readFile(new URL('../../db/migrations/000136_workout_personal_records.sql', import.meta.url), 'utf8'))
+          .split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('Incomplete migration')
+        const connection = await ownerPool.connect()
+        try {
+          await connection.query('begin')
+          await connection.query(down)
+          expect((await connection.query<{ result: string | null }>("select to_regprocedure('public.list_workout_personal_records(uuid)') result")).rows[0]?.result).toBeNull()
+          await connection.query(up)
+          expect((await connection.query<{ count: number }>('select count(*)::integer count from public.workouts where id = $1', [id])).rows[0]?.count).toBe(1)
+        } finally {
+          await connection.query('rollback')
+          connection.release()
+        }
+        expect(await read(ACTOR_ID, id)).toEqual([])
+      })
     })
 
     it('uses bounded activity MET bands and never infers bike intensity from distance', async () => {

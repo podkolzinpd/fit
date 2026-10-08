@@ -1,0 +1,93 @@
+name: Manage trainer Lime rollout
+run-name: ${{ inputs.mode }} trainer Lime (explicit owner operation)
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Trainer design or separate calendar rollback (disable trainer all first)
+        type: choice
+        default: trainer
+        options: [trainer, trainer-schedule]
+      mode:
+        description: Inspect only by default; all requires a new owner OK
+        type: choice
+        default: inspect
+        options: [inspect, all, pilot, off]
+      expected_revision:
+        description: Revision from the preceding inspect; leave empty for inspect
+        required: false
+        type: string
+      confirmation:
+        description: SET_TRAINER_LIME_ALL/PILOT/OFF or SET_TRAINER_SCHEDULE_LIME_ALL/PILOT/OFF; empty for inspect
+        required: false
+        type: string
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+jobs:
+  rollout:
+    runs-on: ubuntu-24.04
+    env:
+      LIME_TARGET: ${{ inputs.target }}
+      LIME_MODE: ${{ inputs.mode }}
+      EXPECTED_REVISION: ${{ inputs.expected_revision }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require main and validate the explicitly approved operation
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          case "$LIME_TARGET" in trainer|trainer-schedule) ;; *) exit 1 ;; esac
+          umask 077
+          node scripts/lime-rollout-request.mjs request > "$RUNNER_TEMP/lime-request.json"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - name: Exchange GitHub OIDC for short-lived IAM
+        run: scripts/yandex-github-oidc.sh
+      - name: Read the existing private runner address
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Apply once and independently inspect (never retry an uncertain write)
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -f "$RUNNER_TEMP/lime-request.json" "$RUNNER_TEMP/lime-response.json" "$RUNNER_TEMP/lime-inspect.json" "$RUNNER_TEMP/lime-readback.json"' EXIT
+          migration_url=$(terraform -chdir=infra/yandex output -raw migration_container_url)
+          for operation in apply inspect; do
+            if test "$operation" = apply; then
+              request_file="$RUNNER_TEMP/lime-request.json"
+              response_file="$RUNNER_TEMP/lime-response.json"
+            else
+              LIME_MODE=inspect EXPECTED_REVISION= CONFIRMATION= node scripts/lime-rollout-request.mjs request > "$RUNNER_TEMP/lime-inspect.json"
+              request_file="$RUNNER_TEMP/lime-inspect.json"
+              response_file="$RUNNER_TEMP/lime-readback.json"
+            fi
+            status=$(curl --silent --show-error --max-time 120 \
+              --output "$response_file" --write-out '%{http_code}' \
+              --request POST --header "Authorization: Bearer $YC_TOKEN" \
+              --header 'Content-Type: application/json' --data-binary "@$request_file" \
+              "${migration_url%/}/stage/experiments/lime-rollout")
+            test "$status" = 200 || { echo "Private rollout returned HTTP $status; inspect before any retry." >&2; exit 1; }
+          done
+          node scripts/lime-rollout-request.mjs verify "$RUNNER_TEMP/lime-response.json" "$RUNNER_TEMP/lime-readback.json" | tee -a "$GITHUB_STEP_SUMMARY"

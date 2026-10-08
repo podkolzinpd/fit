@@ -7,7 +7,10 @@
    Keep the native select interaction, with the existing original arrow. */
 .fit-lime-shell .fit-lime-schedule-filters label { position: relative; }
 .fit-lime-shell .fit-lime-schedule-filters select { appearance: none; height: 44px; padding-right: 32px; text-overflow: ellipsis; }
-.fit-lime-shell .fit-lime-schedule-filters label::after { content: ''; position: absolute; right: 12px; bottom: 14px; width: 16px; height: 16px; background: var(--lime-text-secondary); mask: url('../../docs/design/figma-20261002/assets/arrow-right.svg') center / contain no-repeat; transform: rotate(90deg); pointer-events: none; }
+.fit-lime-shell .fit-lime-schedule-filters label:not(.fit-lime-schedule-independent)::after { content: ''; position: absolute; right: 12px; bottom: 14px; width: 16px; height: 16px; background: var(--lime-text-secondary); mask: url('../../docs/design/figma-20261002/assets/arrow-right.svg') center / contain no-repeat; transform: rotate(90deg); pointer-events: none; }
+.fit-lime-shell .fit-lime-schedule-filters .fit-lime-schedule-independent { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--lime-text); font-size: 14px; line-height: 20px; cursor: pointer; }
+.fit-lime-shell .fit-lime-schedule-independent input { flex: 0 0 auto; width: 20px; height: 20px; margin: 0; accent-color: var(--lime-accent); }
+.fit-lime-shell .schedule-independent-label { grid-column: 2; color: var(--lime-text-secondary); font-size: 12px; line-height: 16px; overflow-wrap: anywhere; }
 .fit-lime-shell .fit-lime-history { padding: 0 18px 140px; }
 .fit-lime-shell .fit-lime-history h2 { margin: 20px 0 8px; font-size: 18px; }
 .fit-lime-shell .fit-lime-history h2 button { min-height: 44px; color: var(--lime-text); }

@@ -1375,3 +1375,54 @@ not undo a disabled assignment. Data ownership and RLS remain unchanged.
 Stages 1–4 remain off. Stage 5 deploys the API/migration first, verifies its
 release, then enables the frontend switch and redeploys the green main.
 Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
+
+## Independent Lime rollout controls (prepared, activation requires owner approval)
+
+The Yandex-only `app_private.lime_rollout_controls` singleton starts at
+`client_mode=pilot`, `trainer_mode=pilot`, `schedule_mode=pilot`, revision 0.
+Installing or redeploying it preserves the reviewed cohorts. Never change this
+seed to `all`; never reset controls in login binders. The client frontend build
+switch `VITE_CLIENT_LIME_ENABLED=true` remains an additional prerequisite.
+
+The existing IAM-protected migration owner container exposes
+`POST /stage/experiments/lime-rollout` only when private rollout management is
+configured. The public runtime has neither direct table access nor permission
+to execute the setter. Inspect: `{target:"client",mode:"inspect"}`. Mutations
+require target (`client`, `trainer`, `trainer-schedule`), mode (`pilot`, `all`,
+`off`), the inspected `expectedRevision`, and the exact confirmation
+`SET_<TARGET>_LIME_<MODE>` (upper case, hyphen replaced with underscore).
+Use the prepared main-only manual workflows, never production Dashboard SQL.
+
+Trainer `all` atomically sets schedule `all`, preserving its existing shell
+requirement. Disabling trainer presentation does not reset the calendar:
+rollback schedule separately after leaving trainer `all`. Existing title/date
+gates now apply to trainers admitted by `all`, using their unchanged algorithms.
+No product records are rewritten by activation. Client changes never change
+trainer/schedule modes. Revision conflict is HTTP409: inspect and obtain a fresh
+explicit decision; never retry a stale mutation. If a request times out, inspect
+before retrying: an unknown outcome is not evidence of failure.
+
+Settings survive logins and deployments. An open client picks up flags on
+existing actor refresh, page reload or a new login; this mechanism does not
+promise a live broadcast. Read back the expected modes/revision after every
+operation. Test public `/profile` role-specific experiments separately; private
+configuration readback alone does not prove real OAuth/device acceptance.
+
+Owner instruction 2026-10-07: no activation or cohort expansion without a new
+explicit OK. Production remains in the existing pilot until then.
+
+Client operation: Actions → Manage client Lime rollout. First run `inspect`
+with empty confirmation/revision. After an explicit new human OK only, run
+`all` with the reported revision and `SET_CLIENT_LIME_ALL`. Rollback uses `off`
+(`SET_CLIENT_LIME_OFF`) or `pilot` (`SET_CLIENT_LIME_PILOT`) and a freshly
+inspected revision. Never automatically replay a failed/unknown operation.
+Merge or frontend deployment alone does not dispatch this workflow.
+
+Trainer operation: Actions → Manage trainer Lime rollout, target=trainer.
+Use inspect first. Only after a new human OK, `all` with the inspected revision
+and `SET_TRAINER_LIME_ALL` atomically enables trainer presentation + Schedule V2.
+`SET_TRAINER_LIME_OFF`/`SET_TRAINER_LIME_PILOT` restores presentation separately.
+If calendar rollback is also requested, leave trainer all first, then inspect
+and choose target=trainer-schedule with mode=pilot and
+`SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
+The trainer workflow rejects client targets. No operation has been dispatched.

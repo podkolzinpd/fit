@@ -11,6 +11,7 @@ import {
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
 import type { StageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
+import { LimeRolloutConflictError, readLimeRolloutCommand, type LimeRolloutManager } from './db/lime-rollout.js'
 import type { TrainerLimeCohortManager } from './db/trainer-lime-cohort.js'
 import { FitLimeCalendarNotReadyError, type FitLimeCalendarManager } from './db/fit-lime-calendar-fixtures.js'
 import type { StageCalorieAuditor } from './db/workout-calorie-audit.js'
@@ -73,6 +74,7 @@ interface BuildMigrationAppOptions {
   rolloutAssignment?: StageRolloutAssignmentManager
   trainerScheduleV2Pilot?: TrainerScheduleV2PilotManager
   fitLimePilot?: FitLimePilotManager
+  limeRollout?: LimeRolloutManager
   trainerLimeCohort?: TrainerLimeCohortManager
   fitLimeCalendar?: FitLimeCalendarManager
   runMigrations: () => Promise<readonly string[]>
@@ -561,6 +563,20 @@ export function buildMigrationApp(
           return reply.code(409).send({ status: 'trainer_profile_not_ready' })
         }
         return reply.code(500).send({ status: 'trainer_schedule_v2_failed' })
+      }
+    })
+  }
+
+  if (options.limeRollout !== undefined) {
+    const manager = options.limeRollout
+    app.post('/stage/experiments/lime-rollout', async (request, reply) => {
+      const command = readLimeRolloutCommand(request.body)
+      if (command === undefined) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        return { status: command.mode === 'inspect' ? 'lime_rollout_inspected' : 'lime_rollout_updated', ...await manager.apply(command) }
+      } catch (error) {
+        if (error instanceof LimeRolloutConflictError) return reply.code(409).send({ status: 'lime_rollout_conflict' })
+        return reply.code(500).send({ status: 'lime_rollout_failed' })
       }
     })
   }

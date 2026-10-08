@@ -11,7 +11,7 @@ import { ChatStartButton } from '../chat'
 export function ClientTrainerConnections({ clientId, finance }: { clientId: string; finance?: ReactNode }) {
   const { invitations: invitationsRepository } = useDataBackend()
   const queryClient = useQueryClient()
-  const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
+  const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId), refetchOnMount: 'always' })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
   const [disconnectMessage, setDisconnectMessage] = useState<string | null>(null)
@@ -33,8 +33,8 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
     {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
     {trainers.data?.length === 0 && <p className="client-trainer-empty-description">Посмотрите анкеты и напишите подходящему тренеру.</p>}
     {trainers.data?.map((trainer) => {
-      const name = [trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'
-      const initials = [trainer.firstName, trainer.lastName].filter(Boolean).map((part) => part?.[0] ?? '').join('').toUpperCase() || 'Т'
+      const name = trainer.displayName?.trim() || [trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'
+      const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
       return <article className="card client-trainer-connection-card" key={trainer.trainerId}>
         <span className="client-trainer-avatar" aria-hidden="true">{initials}</span>
         <div className="client-trainer-person"><strong>{name}</strong><p>{trainer.isRoot ? 'Основной тренер' : 'Подключённый тренер'}</p></div>

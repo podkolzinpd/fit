@@ -6,7 +6,8 @@ import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { FitLimeWorkoutEntry } from './FitLimeWorkoutEntry'
 import { FitLimeScheduleList } from './FitLimeScheduleList'
 import { readScheduleScroll, writeScheduleScroll } from './schedule-scroll'
-import { filterScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
+import { filterScheduleWorkouts, isIndependentScheduleWorkout, trainerScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
+import { useIndependentSchedule } from './use-independent-schedule'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { WorkoutActualDuration, WorkoutActualDurationField } from './WorkoutActualDuration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -164,6 +165,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const isTwoWeekView = scheduleRange === '2w'
   const isDayView = forceDayView || Boolean(dateParam)
   const lime = pilot && isFitLimeEnabled(actor)
+  const independentPreference = useIndependentSchedule(lime ? actor?.userId : undefined)
   const isListView = lime && !isDayView && params.get('mode') === 'list'
   const clientFilter = lime ? params.get('client') ?? '' : ''
   const statusFilter = lime ? scheduleStatusFilter(params.get('status')) : 'all'
@@ -203,7 +205,8 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     queryKey: ['workouts', 'schedule-overview', isListView ? 'all' : weekStart, isListView ? 'all' : periodEnd],
     queryFn: () => workoutsRepository.list(isListView ? undefined : weekStart, isListView ? undefined : periodEnd),
   })
-  const items = filterScheduleWorkouts(query.data ?? [], clientFilter, statusFilter)
+  const scheduleItems = lime ? trainerScheduleWorkouts(query.data ?? [], actor?.userId, independentPreference.enabled) : query.data ?? []
+  const items = filterScheduleWorkouts(scheduleItems, clientFilter, statusFilter)
   const itemsByDay = new Map<LocalDate, Workout[]>()
   for (const day of overviewDays) itemsByDay.set(day, [])
   for (const workout of items) itemsByDay.get(workout.workoutDate)?.push(workout)
@@ -217,8 +220,10 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   }
   const dayItems = itemsByDay.get(selected) ?? []
   const totalCount = dayItems.length
-  const timed = dayItems.filter((workout) => workout.startTime)
-  const untimed = dayItems.filter((workout) => !workout.startTime)
+  const independent = lime ? dayItems.filter(isIndependentScheduleWorkout) : []
+  const meetings = lime ? dayItems.filter((workout) => !isIndependentScheduleWorkout(workout)) : dayItems
+  const timed = meetings.filter((workout) => workout.startTime)
+  const untimed = meetings.filter((workout) => !workout.startTime)
 
   useEffect(() => {
     if (!lime || !isDayView || query.isLoading) return
@@ -251,7 +256,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     actor, selected, scheduleRange, isTwoWeekView, isDayView, weekStart,
     overviewDayCount, periodEnd, overviewDays, today, scrollRef, openDay,
     showOverview, shiftOverview, query, itemsByDay, dayItems, totalCount,
-    timed, untimed, todayDisabled, isListView, clientFilter, statusFilter, filteredItems: items,
+    timed, untimed, independent, independentPreference, todayDisabled, isListView, clientFilter, statusFilter, filteredItems: items,
   }
 }
 
@@ -695,7 +700,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
     overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
     query, itemsByDay, timed, untimed, todayDisabled,
-    isListView, clientFilter, statusFilter, filteredItems,
+    isListView, clientFilter, statusFilter, filteredItems, independent, independentPreference,
   } = useTrainerScheduleModel(forceDayView, hourHeight)
   const workspace = useTrainerWorkspace(isDayView)
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
@@ -886,7 +891,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
     </div>}
-    {(fitLimeSchedule || (fitLimeToday && (clientFilter || statusFilter !== 'all'))) && <div className="fit-lime-schedule-filters">
+    {(fitLimeSchedule || fitLimeToday) && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
+    {(fitLimeSchedule || fitLimeToday) && <div className="fit-lime-schedule-filters">
+      {(fitLimeSchedule || clientFilter || statusFilter !== 'all') && <>
       <label>Клиент<select aria-label="Фильтр по клиенту" value={clientFilter} onChange={(event) => changeScheduleFilter('client', event.target.value)}>
         <option value="">Все клиенты</option>
         {clientFilter && !homeClients.data?.some((client) => client.id === clientFilter) && <option value={clientFilter}>{query.data?.find((workout) => workout.clientId === clientFilter)?.clientName ?? 'Выбранный клиент'}</option>}
@@ -894,6 +901,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         {[...new Map((query.data ?? []).filter((workout) => workout.clientId !== clientFilter && !homeClients.data?.some((client) => client.id === workout.clientId)).map((workout) => [workout.clientId, workout.clientName])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
       </select></label>
       <label>Статус<select aria-label="Фильтр по статусу" value={statusFilter} onChange={(event) => changeScheduleFilter('status', event.target.value)}>{SCHEDULE_STATUSES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      </>}
+      <label className="fit-lime-schedule-independent"><input type="checkbox" checked={independentPreference.enabled} onChange={(event) => independentPreference.change(event.target.checked)} />Показывать самостоятельные тренировки</label>
+      {independentPreference.storageError && <p role="alert">Выбор действует до ухода с экрана: не удалось сохранить настройку. <button type="button" className="link" onClick={() => independentPreference.change(independentPreference.enabled)}>Повторить</button></p>}
       {homeClients.isLoading && <p role="status">Загружаем клиентов…</p>}
       {homeClients.isError && <p role="alert">Не удалось загрузить клиентов. <button type="button" className="link" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
     </div>}
@@ -924,13 +934,14 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
-                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b><span className="sr-only">{status.label}</span></span>
+                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
               })}{workouts.length === 0 && <em>Свободный день</em>}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
         </section>
       </> : <>
-        {timelineEvents.length === 0 && untimed.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
+        {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
+        {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
@@ -2665,6 +2676,9 @@ export function LiveWorkoutPage() {
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
   const pendingSetDrafts = useRef<Map<string, LiveSetDraft>>(new Map())
   const pendingSetConfirmations = useRef<Set<string>>(new Set())
+  // A confirmation retry/late response must not restart the rest the user
+  // already began, or overwrite a subsequent manual timer adjustment.
+  const confirmationRestSeconds = useRef<Map<string, number>>(new Map())
   const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
   const [recoveredFormIds, setRecoveredFormIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
@@ -2869,6 +2883,7 @@ export function LiveWorkoutPage() {
     })
   }
   useEffect(() => {
+    confirmationRestSeconds.current.clear()
     const deadline = restoreRestDeadline(workoutId)
     setRestEndsAt(deadline)
     setRestContextExerciseId(null)
@@ -2967,9 +2982,14 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
     onMutate: ({ set, draft }) => {
+      const retry = pendingSetConfirmations.current.has(set.id)
       rememberLiveDraft(set.id, draft)
       pendingSetConfirmations.current.add(set.id)
       if (actor?.userId) writePendingLiveSetConfirmation(actor.userId, workoutId, set.id)
+      if (!confirmationRestSeconds.current.has(set.id)) {
+        const seconds = beginSetRest(set, retry && restEndsAt !== null)
+        if (seconds !== undefined) confirmationRestSeconds.current.set(set.id, seconds)
+      }
     },
     onSuccess: (version, { set, draft }) => {
       setValidationErrorSetIds((current) => {
@@ -2987,26 +3007,12 @@ export function LiveWorkoutPage() {
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft, true)
       setExpandedSetId(null)
-      // Отдых берётся из настроек блока (Этап A), не хардкод:
-      // - одиночное упражнение → отдых между подходами;
-      // - группа: между упражнениями внутри круга → restBetweenExercisesSec;
-      //   после последнего упражнения круга → restBetweenRoundsSec.
-      const workout = query.data
-      const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
-      if (workout && exercise) {
-        const sec = exercise.blockType === 'single'
-          ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
-          : restSecondsAfterSet(workout, exercise, set)
-        setRestContextExerciseId(exercise.blockType === 'single' ? exercise.id : null)
-        setRecentExerciseId(exercise.id)
-        if (sec > 0) setRestPickerSeconds(sec)
-        // Подтверждённый подход больше не может идти по таймеру. Сначала снимаем
-        // фазу, потом ставим отдых: они делят один слот нативного уведомления.
-        const phase = livePhaseRef.current
-        if (phase?.kind === 'work' && phase.setId === set.id) setLivePhase(null)
-        startRestUntil(restDeadline(sec))
-        autoStartNextWork.current = sec <= 0
-      }
+      const seconds = confirmationRestSeconds.current.get(set.id) ?? beginSetRest(set)
+      confirmationRestSeconds.current.delete(set.id)
+      // The next timed set may start only after the confirmed result is in
+      // the cache; starting rest does not pretend the server saved the fact.
+      autoStartNextWork.current = seconds !== undefined && (seconds <= 0
+        || Boolean(query.data?.prepSeconds && restEndsAt !== null && restEndsAt <= Date.now()))
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -3088,6 +3094,21 @@ export function LiveWorkoutPage() {
   function stopRest() {
     startRestUntil(null)
   }
+  function beginSetRest(set: WorkoutSet, preserveDeadline = false): number | undefined {
+    const workout = query.data
+    const exercise = workout?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
+    if (!workout || !exercise) return undefined
+    const seconds = exercise.blockType === 'single'
+      ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
+      : restSecondsAfterSet(workout, exercise, set)
+    setRestContextExerciseId(exercise.blockType === 'single' ? exercise.id : null)
+    setRecentExerciseId(exercise.id)
+    if (seconds > 0) setRestPickerSeconds(seconds)
+    const phase = livePhaseRef.current
+    if (phase?.kind === 'work' && phase.setId === set.id) setLivePhase(null)
+    if (!preserveDeadline) startRestUntil(restDeadline(seconds))
+    return seconds
+  }
   function setLivePhase(next: LivePhaseTimer | null) {
     livePhaseRef.current = next
     setLivePhaseState(next)
@@ -3108,8 +3129,9 @@ export function LiveWorkoutPage() {
   }
   // Запускает таймер подхода на время; false — у подхода нет плановой длительности.
   function startWorkTimer(set: WorkoutSet | undefined, exercise: WorkoutExerciseModel | undefined): boolean {
+    if (!query.data?.prepSeconds) return false
     const seconds = set && exercise ? timedSetSeconds(exercise, set) : null
-    if (!set || seconds === null) return false
+    if (!set || seconds === null || pendingSetConfirmations.current.has(set.id)) return false
     const now = Date.now()
     if (restEndsAt !== null) startRestUntil(null)
     setLivePhase({ kind: 'work', setId: set.id, startedAt: now, endsAt: now + seconds * 1000 })
@@ -3557,16 +3579,19 @@ export function LiveWorkoutPage() {
     ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
     : activeLiveExercise?.sets.find((set) => !set.confirmedAt)
   const currentSetTimed = Boolean(activeLiveExercise && currentLiveSet && timedSetSeconds(activeLiveExercise, currentLiveSet) !== null)
-  // Один раз за тренировку при первом входе: подготовка, если задана, иначе
-  // сразу таймер первого подхода на время.
+  // Preparation opts the entire workout into the phase timer. Without it,
+  // keep the legacy rest-only flow, including negative overtime.
   useEffect(() => {
     const workout = query.data
     if (!workout || workout.status !== 'in_progress') return
+    if (!workout.prepSeconds) {
+      if (livePhaseRef.current) setLivePhase(null)
+      return
+    }
     if (workout.exercises.some((exercise) => exercise.sets.some((set) => set.confirmedAt))) return
     if (livePhaseRef.current || restEndsAt !== null || !claimLiveAutostart(workoutId)) return
-    if (workout.prepSeconds) startPrep(workout.prepSeconds)
-    else startWorkTimer(currentLiveSet, activeLiveExercise)
-  }, [query.data?.id, query.data?.status])
+    startPrep(workout.prepSeconds)
+  }, [query.data?.id, query.data?.status, query.data?.prepSeconds])
   useEffect(() => {
     const phase = livePhaseRef.current
     if (phase?.kind === 'work' && query.data) {
@@ -3575,7 +3600,9 @@ export function LiveWorkoutPage() {
     }
     if (!autoStartNextWork.current || !query.data) return
     autoStartNextWork.current = false
-    if (!livePhaseRef.current && restEndsAt === null) startWorkTimer(currentLiveSet, activeLiveExercise)
+    if (!livePhaseRef.current && (restEndsAt === null || restEndsAt <= Date.now())) {
+      if (!startWorkTimer(currentLiveSet, activeLiveExercise) && query.data.prepSeconds) startRestUntil(null)
+    }
   }, [query.data])
   // «Подход засчитан · Исправить» висит весь отдых после подхода (не меньше
   // 5 секунд): засчитанный по таймеру подход правят как раз на отдыхе.
@@ -3595,14 +3622,18 @@ export function LiveWorkoutPage() {
     }
     confirmWorkFromTimer(phase, phase.endsAt)
   }
-  // Отдых закончился: подход со временем в плане стартует сам; без времени —
-  // кнопка возвращается в спокойное «Таймер», без красного «перерасхода»:
-  // ожидание повторов — не ошибка пользователя.
+  // Only the opted-in phase flow advances at zero. The legacy timer keeps
+  // its deadline and counts negative seconds until the user changes it.
   function handleRestExpire() {
+    if (!query.data?.prepSeconds) return
+    // An immediate rest can finish before the confirmation reaches the server.
+    // Do not start/confirm the same pending set again; resume after acknowledgement.
+    if (confirm.isPending) return
     if (livePhaseRef.current) return
     if (!startWorkTimer(currentLiveSet, activeLiveExercise)) startRestUntil(null)
   }
   function handleTimerPrimary(): boolean {
+    if (!query.data?.prepSeconds) return false
     const phase = livePhaseRef.current
     const action = livePhasePrimaryAction({ phase, restEndsAt, now: Date.now(), currentSetTimed })
     if (action === 'skip-prep') {
@@ -3684,9 +3715,9 @@ export function LiveWorkoutPage() {
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
-            <Coachmark id="live-phase-timer-2026-10" userId={actor?.userId} title="Таймер ведёт тренировку" description="Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.">
+            <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
-                phase={livePhase} onPrimary={handleTimerPrimary} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire} />
+                phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire} />
             </Coachmark>
           </div>
           {phaseNotice && <div className="live-phase-notice" role="status">
