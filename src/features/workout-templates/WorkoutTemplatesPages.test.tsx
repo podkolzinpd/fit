@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WorkoutTemplate, WorkoutTemplateDraft } from '../../shared/domain'
 import { WorkoutTemplateEditorPage, WorkoutTemplatesPage } from './WorkoutTemplatesPages'
 import { readWorkoutTemplateDraft, workoutTemplateDraftKey, writeWorkoutTemplateDraft } from './workout-template-draft'
+import { attachRequestDiagnostics } from '../../shared/request-diagnostics'
 
 const backend = vi.hoisted(() => ({ workoutTemplates: { save: vi.fn<(draft: WorkoutTemplateDraft) => Promise<string>>(), list: vi.fn<() => Promise<WorkoutTemplate[]>>(), get: vi.fn(), archive: vi.fn() }, workouts: { get: vi.fn() }, exercises: { parseWorkout: vi.fn() } }))
 const account = vi.hoisted(() => ({ userId: 'trainer' }))
@@ -43,6 +44,22 @@ beforeEach(() => {
   backend.workoutTemplates.save.mockResolvedValue(template.id)
 })
 describe('template save commands', () => {
+  it('shows safe save diagnostics without dropping the draft or submitting through the copy button', async () => {
+    const error = attachRequestDiagnostics(new Error('Нет соединения'), {
+      requestId: '10000000-0000-4000-8000-000000000099', occurredAt: '2026-10-08T09:00:00Z',
+      backend: 'yandex', operation: 'POST /v1/workout-templates', stage: 'network', errorCode: 'mutation_preflight_failed',
+    })
+    backend.workoutTemplates.save.mockRejectedValueOnce(error)
+    open()
+    await waitFor(() => expect(screen.getByLabelText('Название шаблона')).toHaveValue('Новый шаблон'))
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Нет соединения')
+    expect(alert).toHaveTextContent('FIT-0000-0000-0099')
+    expect(screen.getByRole('button', { name: 'Скопировать диагностику' })).toHaveAttribute('type', 'button')
+    expect(readWorkoutTemplateDraft(workoutTemplateDraftKey('trainer', undefined, 'source'))?.name).toBe('Новый шаблон')
+    expect(screen.getByRole('button', { name: 'Сохранить шаблон' })).toBeEnabled()
+  })
   it('shows a source load error and retries only the enabled source without blanking the draft', async () => {
     backend.workouts.get.mockRejectedValueOnce(new Error('Источник недоступен'))
     open()

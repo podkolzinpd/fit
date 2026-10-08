@@ -6727,6 +6727,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .request-error-inline .request-diagnostic-code strong { color:var(--fg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.02em; }
 .request-error-inline .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
 .request-error-inline .request-diagnostic-copy svg { width:16px; height:16px; }
+.workout-template-editor-page .request-diagnostic-copy,.workout-templates-page .request-diagnostic-copy { min-height:44px; }
 .request-error-inline .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }
 .today-start-page > .request-error-inline { margin-top:14px; }
 
