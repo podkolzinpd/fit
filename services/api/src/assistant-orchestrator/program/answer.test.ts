@@ -13,10 +13,25 @@ it.each(['preferences', 'otherActivity', 'limitations'] as const)('scopes a shor
     .toEqual({ [field]: field === 'limitations' ? 'none' : 'нет' })
 })
 
+it('records explicitly reported back-and-knee pain without a model call', () => {
+  const context: BriefAnswerContext = { question: 'Есть ли сейчас боль, травмы или ограничения?', fields: ['limitations'] }
+  expect(mergeExtractedBrief({}, 'Боли в спине и коленях', explicitBriefAnswer('Боли в спине и коленях', context)).brief)
+    .toEqual({ limitations: 'present', limitationsText: 'Боли в спине и коленях' })
+})
+
 it('leaves ambiguous negatives and substantive preferences to the model', () => {
   expect(explicitBriefAnswer('нет')).toBeUndefined()
   expect(explicitBriefAnswer('нет', { question: 'Два вопроса', fields: ['limitations', 'preferences'] })).toBeUndefined()
   expect(explicitBriefAnswer('нет, приседания не хочу')).toBeUndefined()
+})
+
+it('records the suggested running schedule without asking the extractor again', () => {
+  const message = 'Бег 2 раза: вторник и суббота'
+  const result = mergeExtractedBrief({}, message, explicitBriefAnswer(message, { question: 'Есть ли другая нагрузка?', fields: ['otherActivity'] }))
+  expect(result.brief).toEqual({
+    otherActivity: message,
+    otherActivities: [{ kind: 'бег', frequency: 2, weekdays: [2, 6] }],
+  })
 })
 
 it('accepts the reported short goal without asking for the same priority twice', () => {

@@ -23,6 +23,7 @@ test('skips the browser runtime for explicit non-browser scopes', () => {
     'scripts/e2e-scope.test.mjs',
     'scripts/verify-yandex-stage-access.mjs',
     'scripts/verify-yandex-stage-access.test.mjs',
+    'scripts/yandex-stage-smoke.mjs',
     'vercel.json',
   ]), false)
 })
@@ -33,6 +34,8 @@ test('runs E2E for browser application, Supabase, dependency and CI changes', ()
     'e2e/today-start.spec.ts',
     'supabase/migrations/20260825000000_example.sql',
     'package-lock.json',
+    'package.json',
+    'scripts/unknown-browser-helper.mjs',
     'playwright.config.ts',
     '.github/workflows/ci.yml',
   ]) {

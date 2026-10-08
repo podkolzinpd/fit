@@ -15,6 +15,88 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+async function expectContainedButtonText(button: Locator) {
+  const geometry = await button.evaluate((element) => {
+    const bounds = element.getBoundingClientRect()
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    return { width: bounds.width, height: bounds.height, contained: Array.from(range.getClientRects()).every((rect) =>
+      rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom) }
+  })
+  expect(geometry.width).toBeGreaterThanOrEqual(44)
+  expect(geometry.height).toBeGreaterThanOrEqual(44)
+  expect(geometry.contained).toBe(true)
+}
+
+for (const width of [390, 430, 1440]) for (const fitLime of [false, true]) {
+  test(`Button geometry template empty actions ${width} lime=${fitLime}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockPilot(page, { fitLime })
+    await page.goto('/schedule/templates')
+    const copy = page.getByRole('link', { name: 'Из тренировки', exact: true })
+    await expect(copy).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await expect(copy.locator('svg')).toHaveCSS('width', '20px')
+    await expect(copy.locator('svg')).toHaveCSS('height', '20px')
+    await expectContainedButtonText(copy)
+    const create = page.getByRole('link', { name: 'Создать с нуля', exact: true })
+    expect((await copy.boundingBox())!.height).toBeLessThanOrEqual(52)
+    expect((await copy.boundingBox())!.height).toBe((await create.boundingBox())!.height)
+    const iconTrigger = page.getByRole('button', { name: 'Создать шаблон', exact: true })
+    expect((await iconTrigger.boundingBox())!.width).toBe(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('template-empty-actions.png'), fullPage: true })
+    await copy.click()
+    await expect(page).toHaveURL(/\/schedule\/templates\/from-workout$/)
+    await page.goto('/schedule/templates')
+    await create.click()
+    await expect(page).toHaveURL(/\/schedule\/templates\/new\/editor$/)
+    await addEditorExercise(page)
+    await checkEditorAction(page, info.outputPath('template-editor-actions.png'))
+  })
+}
+
+async function addEditorExercise(page: Page) {
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1', exact: true }).click()
+}
+
+async function checkEditorAction(page: Page, screenshotPath: string) {
+  const edit = page.locator('.workout-editor-footer .overflow-trigger')
+  await edit.scrollIntoViewIfNeeded()
+  await page.evaluate(() => document.fonts.ready)
+  await expectContainedButtonText(edit)
+  const add = page.locator('.workout-editor-footer').getByRole('button', { name: /Упражнение$/ })
+  const editBounds = (await edit.boundingBox())!, addBounds = (await add.boundingBox())!
+  expect(Math.abs(editBounds.y + editBounds.height / 2 - addBounds.y - addBounds.height / 2)).toBeLessThanOrEqual(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await edit.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('menu')).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Сбросить значения', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+}
+
+for (const width of [390, 430, 1440]) for (const variant of ['trainer-mono', 'trainer-lime', 'client-mono', 'client-lime-light', 'client-lime-dark']) {
+  if (width === 1440 && variant.startsWith('client')) continue
+  test(`Button geometry workout editor ${width} ${variant}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    const role = variant.startsWith('client') ? 'client' : 'trainer'
+    const lime = variant.includes('lime')
+    await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId, clientLime: lime, fitLime: lime })
+    if (role === 'client' && lime) await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    }, { id: clientId, theme: variant.endsWith('light') ? 'light' : 'dark' })
+    await page.goto('/workouts/new?date=2026-10-08')
+    await addEditorExercise(page)
+    await checkEditorAction(page, info.outputPath('workout-editor-actions.png'))
+  })
+}
+
 function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
   const exercise: WorkoutExercise = {
     id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: timed ? 'plank' : 'squat',
@@ -172,7 +254,114 @@ test('Live rest invalid empty result does not start the timer', async ({ page })
   await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
 })
 
+for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark']] as const) for (const width of [390, 430, 1440]) {
+  test(`Template slow connection and diagnostic retry ${width} lime=${fitLime} ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    await mockPilot(page, { fitLime, workouts: [{ ...restTimerWorkout(), status: 'planned' }] })
+    await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
+    const rows = new Map<string, object>()
+    const commands: Array<{ draft: WorkoutTemplateDraft; expectedVersion: number | null }> = []
+    await page.route('http://127.0.0.1:4100/v1/workout-templates', async (route) => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: { templates: [...rows.values()] } })
+      const command = route.request().postDataJSON() as typeof commands[number]
+      commands.push(command)
+      const row = rows.get(command.draft.id) ?? { ...command.draft, trainerId, notes: command.draft.notes ?? null, version: 1, createdAt: '2026-10-08T00:00:00Z', updatedAt: '2026-10-08T00:00:00Z' }
+      rows.set(command.draft.id, row)
+      if (commands.length === 1) return route.abort('connectionreset')
+      return route.fulfill({ json: { template: row } })
+    })
+    await page.goto(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`)
+    await page.getByLabel('Название шаблона').fill('Силовая тренировка с длинным названием без потери черновика')
+    await page.clock.install()
+    await page.clock.fastForward(46_000)
+    let probes = 0
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    await page.route('http://127.0.0.1:4100/health', async (route) => {
+      probes += 1
+      await gate
+      await route.fallback()
+    })
+    try {
+      await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+      await expect.poll(() => probes).toBe(1)
+      await expect(page.getByRole('button', { name: 'Сохраняем…', exact: true })).toBeDisabled()
+      await page.clock.fastForward(2192)
+      expect(probes).toBe(1)
+      expect(commands).toHaveLength(0)
+      release()
+      const alert = page.getByRole('alert')
+      await expect(alert).toContainText('Не удалось подключиться к серверу')
+      await expect(alert).toContainText('Код для поддержки: FIT-')
+      expect(commands).toHaveLength(1)
+      const copy = alert.getByRole('button', { name: 'Скопировать диагностику' })
+      await copy.scrollIntoViewIfNeeded()
+      expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: (text: string) => { localStorage.setItem('template-test-diagnostics', text); return Promise.resolve() } } }))
+      await copy.click()
+      await expect(alert.getByRole('status')).toHaveText('Скопировано')
+      const diagnostic = await page.evaluate(() => localStorage.getItem('template-test-diagnostics'))
+      expect(diagnostic).toContain('POST /v1/workout-templates')
+      expect(diagnostic).toContain('Этап: network')
+      expect(diagnostic).not.toContain('mutation_preflight_failed')
+      expect(diagnostic).not.toContain(sessionToken)
+      expect(diagnostic).not.toContain('Силовая тренировка')
+      expect(commands).toHaveLength(1)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath('template-error-diagnostics.png'), fullPage: true })
+      await page.reload()
+      await expect(page.getByLabel('Название шаблона')).toHaveValue('Силовая тренировка с длинным названием без потери черновика')
+      await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+      await expect(page).toHaveURL(/\/schedule\/templates$/)
+      await expect(page.locator('.template-card')).toHaveCount(1)
+      expect(commands).toHaveLength(2)
+      expect(commands[1]).toEqual(commands[0])
+      expect(rows.size).toBe(1)
+      expect(await page.evaluate((key) => localStorage.getItem(key), `fit.workout-template-draft.${trainerId}.source:${workoutId}`)).toBeNull()
+    } finally { release() }
+  })
+}
+
 for (const fitLime of [false, true]) {
+  test(`Template preflight unavailable diagnostic and manual retry lime=${fitLime}`, async ({ page }, info) => {
+    await mockPilot(page, { fitLime, workouts: [{ ...restTimerWorkout(), status: 'planned' }] })
+    const commands: Array<{ draft: WorkoutTemplateDraft; expectedVersion: number | null }> = []
+    let available = false
+    await page.goto(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`)
+    await page.getByLabel('Название шаблона').fill('Черновик при недоступном сервере')
+    await page.clock.install()
+    await page.clock.fastForward(46_000)
+    let probes = 0
+    await page.route('http://127.0.0.1:4100/health', async (route) => {
+      probes += 1
+      if (available) return route.fallback()
+      return route.fulfill({ status: 503, headers: { 'access-control-allow-origin': '*' }, body: '{}' })
+    })
+    await page.route('http://127.0.0.1:4100/v1/workout-templates', async (route) => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: { templates: [] } })
+      const command = route.request().postDataJSON() as typeof commands[number]
+      commands.push(command)
+      return route.fulfill({ json: { template: { ...command.draft, trainerId, notes: null, version: 1, createdAt: '2026-10-08T00:00:00Z', updatedAt: '2026-10-08T00:00:00Z' } } })
+    })
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect.poll(() => probes).toBe(1)
+    for (const delayMs of [250, 750, 1500, 3000]) {
+      const before = probes
+      await page.clock.fastForward(delayMs)
+      await expect.poll(() => probes).toBe(before + 1)
+    }
+    const alert = page.getByRole('alert')
+    await expect(alert).toContainText('Код для поддержки: FIT-')
+    expect(commands).toHaveLength(0)
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}') as { name?: string }, `fit.workout-template-draft.${trainerId}.source:${workoutId}`)).toMatchObject({ name: 'Черновик при недоступном сервере' })
+    await alert.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath('preflight-error-diagnostic.png'), fullPage: true })
+    available = true
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    await expect(page).toHaveURL(/\/schedule\/templates$/)
+    expect(commands).toHaveLength(1)
+  })
+
   test(`Template reliability lost response and reload lime=${fitLime}`, async ({ page }, info) => {
     const source = { ...workout, exercises: [{
       id: '10000000-0000-4000-8000-000000000080', source: 'system' as const, ref: 'squat', name: 'Приседания', muscleGroup: 'legs' as const, inputKind: 'strength' as const, position: 0,

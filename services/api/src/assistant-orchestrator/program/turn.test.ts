@@ -73,6 +73,21 @@ describe('program chat state', () => {
     expect(result?.action?.payload.askedFields).toEqual(['otherActivity'])
     expect(result?.reply).not.toContain('любимые')
   })
+  it('accepts the suggested running schedule without repeating the activity question', async () => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.otherActivity
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: ['otherActivity'], guidance: 'Есть ли другая регулярная нагрузка?' } }
+    deps.extract.mockImplementation((current: ProgramBrief, text: string, context?: BriefAnswerContext) => extractProgramBrief(current, text, deps.today, deps.turnId, context))
+    const result = await programPilotTurn('Бег 2 раза: вторник и суббота', [client], active, deps)
+    expect(result?.action?.payload.briefState).toMatchObject({
+      otherActivity: 'Бег 2 раза: вторник и суббота',
+      otherActivities: [{ kind: 'бег', frequency: 2, weekdays: [2, 6] }],
+    })
+    expect(result?.action?.payload.askedFields).not.toEqual(['otherActivity'])
+    expect(result?.reply).not.toContain('Есть ли другая регулярная нагрузка')
+  })
   it.each(['Да все равно', 'Не важно', 'Дни не важны', 'В любые'])('finishes the weekday question without looping on %s', async (message) => {
     const { deps, latest } = setup()
     const brief = { ...latest.payload.briefState }
@@ -254,6 +269,19 @@ describe('program chat state', () => {
     const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], ready?.action, deps)
     expect(generated?.action?.status).toBe('proposed')
     expect(generated?.action?.payload.limitationReview).toContain('пока неизвестно')
+  })
+  it('keeps a back-and-knee pain answer and asks which movements need adjustment', async () => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.limitations
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: ['limitations'], guidance: 'Есть ли сейчас боль, травмы или ограничения для упражнений?' } }
+    deps.extract.mockResolvedValue({ patch: { limitations: 'present', limitationsText: 'Боли в спине и коленях' }, clear: [],
+      evidence: { limitations: 'Боли в спине и коленях', limitationsText: 'Боли в спине и коленях' }, clarification: null })
+    const result = await programPilotTurn('Боли в спине и коленях', [client], active, deps)
+    expect(result?.action?.payload.briefState).toMatchObject({ limitations: 'present', limitationsText: 'Боли в спине и коленях' })
+    expect(result?.action?.payload.askedFields).toEqual(['limitationAdjustments'])
+    expect(result?.reply).toContain('Какие движения')
   })
   it('retains old fields and explicitly asks again after a frequency mismatch', async () => {
     const { deps, latest } = setup()
