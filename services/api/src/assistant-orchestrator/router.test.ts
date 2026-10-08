@@ -20,6 +20,8 @@ function deps(tool: 'record_workout' | 'create_program_draft', mode: 'start' | '
 describe('model assistant router', () => {
   it('sends the pinned recovery question to the chat responder instead of the action router', () => {
     expect(isAssistantChatPrompt('Как лучше восстановиться после силовой тренировки?', null)).toBe(true)
+    expect(isAssistantChatPrompt('Какой тоннаж нужно набирать за тренировку для улучшения силовых показателей и роста мышечной массы!', null)).toBe(true)
+    expect(isAssistantChatPrompt('Сколько подходов оставить на следующую тренировку', null)).toBe(true)
     expect(isAssistantChatPrompt('Составь программу на месяц', null)).toBe(false)
     expect(isAssistantChatPrompt('Как лучше восстановиться после силовой тренировки?', draft('record_workout'))).toBe(false)
   })
