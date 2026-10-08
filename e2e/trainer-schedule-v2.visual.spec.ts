@@ -15,6 +15,163 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
+  const exercise: WorkoutExercise = {
+    id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: timed ? 'plank' : 'squat',
+    name: timed ? 'Планка' : 'Приседания', muscleGroup: 'legs', inputKind: timed ? 'duration' : 'strength', position: 0,
+    blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+    restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 2,
+    sets: [82, 83].map((suffix, position) => ({ id: `10000000-0000-4000-8000-0000000000${suffix}`, position,
+      ...(timed ? { durationSec: 3 } : { weightKg: 20, reps: 10 }), fact: {}, confirmedAt: null, version: 1 })),
+  }
+  return { ...workout, status: 'in_progress', startedAt: '2026-10-08T09:00:00Z', ...(prepSeconds > 0 ? { prepSeconds } : {}), exercises: [exercise] }
+}
+
+test('Live rest legacy negative countdown without preparation', async ({ page }) => {
+  // Keep Date fixed across reload while letting loading/render timers run.
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых')
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:04Z'))
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await page.reload()
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await page.locator('.live-rest-trigger').click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+})
+
+test('Live rest starts before the first confirmation response and is not restarted by acknowledgement', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source] })
+  let release = () => {}
+  const responseGate = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/v1/workout-sets/*/confirm', async (route) => { await responseGate; await route.fallback() })
+  try {
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:30')
+    await page.clock.fastForward(5_000)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
+    release()
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
+  } finally { release() }
+})
+
+for (const [width, role] of [[390, 'client'], [430, 'client'], [1440, 'trainer']] as const) for (const clientLime of [false, true]) {
+  test(`Live rest toolbar geometry and typography ${role} ${width} lime=${clientLime}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId, clientLime, fitLime: clientLime, workouts: [restTimerWorkout()] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-rest-trigger')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await page.screenshot({ path: info.outputPath('timer-toolbar.png') })
+    const metrics = await page.locator('.live-timer-toolbar').evaluate((toolbar) => {
+      const timer = toolbar.querySelector('.live-timer')!, rest = toolbar.querySelector('.live-rest-trigger')!
+      return { timer: timer.getBoundingClientRect().height, rest: rest.getBoundingClientRect().height,
+        font: getComputedStyle(rest).fontFamily, size: getComputedStyle(rest).fontSize }
+    })
+    await info.attach('timer-metrics', { body: JSON.stringify(metrics), contentType: 'application/json' })
+    expect(metrics.rest).toBe(metrics.timer)
+    expect(metrics.rest).toBeGreaterThanOrEqual(56)
+    if (clientLime) expect(metrics.font).toContain('YS Geo')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+}
+
+test('Live rest preparation disabled keeps timed sets manual', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await page.clock.fastForward(4_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+})
+
+test('Live rest preparation enabled preserves the automatic phase sequence', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка 0:10')
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 0:02')
+  await page.clock.fastForward(2_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+})
+
+test('Live rest failure and retry preserve the countdown and a manual adjustment', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source], failFirstSetConfirm: true })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  const retry = page.getByRole('button', { name: 'Готово, отдых', exact: true }).filter({ hasText: 'Повтор' })
+  await expect(retry).toBeVisible()
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:25')
+  await page.locator('.live-rest-trigger').click()
+  await page.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
+  await page.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:40')
+  await retry.click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:40')
+})
+
+test('Live rest phase expiry waits for a pending confirmation without timing the same set twice', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
+  let release = () => {}, confirmations = 0
+  const responseGate = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/v1/workout-sets/*/confirm', async (route) => {
+    confirmations += 1
+    await responseGate
+    await route.fallback()
+  })
+  try {
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка')
+    await page.clock.fastForward(10_000)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подход')
+    await page.clock.fastForward(3_000)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых')
+    await expect.poll(() => confirmations).toBe(1)
+    await page.clock.fastForward(5_000)
+    expect(confirmations).toBe(1)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+    release()
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+    await page.clock.fastForward(3_000)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+    expect(confirmations).toBe(2)
+  } finally { release() }
+})
+
+test('Live rest invalid empty result does not start the timer', async ({ page }) => {
+  const source = restTimerWorkout()
+  source.exercises[0]!.sets = source.exercises[0]!.sets.map((set) => ({ ...set, weightKg: undefined, reps: undefined }))
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.getByText('Введите результат подхода', { exact: true })).toBeVisible()
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+})
+
 for (const fitLime of [false, true]) {
   test(`Template reliability lost response and reload lime=${fitLime}`, async ({ page }, info) => {
     const source = { ...workout, exercises: [{
@@ -327,6 +484,7 @@ const workout = {
   clientId,
   clientName: 'Алексей Смирнов',
   createdBy: trainerId,
+  trainingFormat: 'with_trainer' as const,
   startedBy: null,
   completedBy: null,
   workoutDate: '2026-09-24',
@@ -352,7 +510,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt'> & { startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat'> & { createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
 async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -367,7 +525,9 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
   let unreadCount = 4
-  let workouts: MockWorkout[] = options.workouts ?? [workout]
+  let workouts: MockWorkout[] = options.workouts ?? [{ ...workout,
+    ...(options.role !== 'client' ? { trainerId: profileId, createdBy: profileId } : {}),
+  }]
   let clientRecords = options.clientRecords ?? [{ id: clientId, fullName: 'Алексей Смирнов', archivedAt: null, version: 1 }]
   let goalRecord: Record<string, unknown> | null = options.withGoal ? {
     id: '10000000-0000-4000-8000-000000000040', clientId, title: 'Подготовка к старту', targetDate: '2026-12-01',
@@ -415,6 +575,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'lime-direct-client-start-2026-10',
       'lime-day-workspace-2026-10',
       'lime-schedule-history-2026-10',
+      'lime-schedule-ownership-2026-10',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -798,6 +959,129 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
 
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+function scheduleVisibilityRows(): MockWorkout[] {
+  return [
+    { ...workout, title: 'Занятие с тренером' },
+    { ...workout, id: newWorkoutId, title: 'Самостоятельный план', trainingFormat: 'self' },
+    { ...workout, id: '10000000-0000-4000-8000-000000000007', title: 'Самостоятельный без времени', trainingFormat: 'self', startTime: null, endTime: null },
+    { ...workout, id: '10000000-0000-4000-8000-000000000008', title: 'Создано спортсменом', clientName: 'Сам клиент', createdBy: clientId, trainingFormat: 'self', status: 'done' },
+    { ...workout, id: '10000000-0000-4000-8000-000000000009', title: 'Старое занятие тренера', createdBy: null, startTime: '12:00', endTime: '13:00' },
+  ]
+}
+
+for (const width of [390, 430, 1440]) {
+  for (const theme of ['light', 'dark']) {
+    test(`Lime schedule ownership calendar list day ${width} ${theme}`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+      await page.clock.setFixedTime(new Date('2026-09-25T09:00:00+03:00'))
+      await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
+      await mockPilot(page, { fitLime: true, workouts: scheduleVisibilityRows() })
+      await page.goto('/schedule?week=2026-09-21')
+      await expect(page.locator('html')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+      const toggle = page.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })
+      await expect(toggle).not.toBeChecked()
+      await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(2)
+      await expect(page.locator('.schedule-v2-period-summary')).toHaveText('2 тренировки · 1 клиент')
+      await expect(page.locator('.schedule-v2-card-grid')).not.toContainText('Сам клиент')
+      expect((await toggle.locator('..').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      await toggle.focus()
+      await page.keyboard.press('Space')
+      await expect(toggle).toBeChecked()
+      await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(4)
+      await expect(page.locator('.schedule-v2-period-summary')).toHaveText('4 тренировки · 1 клиент')
+      await expect(page.locator('.schedule-independent-label')).toHaveCount(2)
+      await page.screenshot({ path: info.outputPath('schedule-week.png'), fullPage: true })
+      await page.getByRole('button', { name: '2 недели', exact: true }).click()
+      await expect(page.locator('.schedule-v2-day-card')).toHaveCount(14)
+      await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(4)
+      await page.getByRole('button', { name: 'Список', exact: true }).click()
+      await expect(page.locator('.fit-lime-history-row')).toHaveCount(4)
+      await expect(page.locator('.fit-lime-history')).not.toContainText('Создано спортсменом')
+      await page.getByRole('combobox', { name: 'Фильтр по клиенту' }).selectOption(clientId)
+      await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('done')
+      await expect(page.getByText('По этим фильтрам тренировок нет.')).toBeVisible()
+      await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('all')
+      await page.locator('.fit-lime-history h2 button').click()
+      await expect(toggle).toBeChecked()
+      await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+      const independent = page.getByRole('region', { name: 'Самостоятельные тренировки' })
+      await expect(independent.locator('a')).toHaveCount(2)
+      await expect(independent).toContainText('10:00–11:00')
+      await expect(independent).toContainText('Без времени')
+      await page.screenshot({ path: info.outputPath('schedule-day.png'), fullPage: true })
+      await page.reload()
+      await expect(toggle).toBeChecked()
+      await expect(independent.locator('a')).toHaveCount(2)
+      await toggle.uncheck()
+      await expect(independent).toHaveCount(0)
+      await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+      await page.goto(`/clients/${clientId}/workouts`)
+      await expect(page.locator(`a[href="/workouts/10000000-0000-4000-8000-000000000008"]`)).toBeVisible()
+      await expect(page.getByText('Создано клиентом', { exact: true })).toBeVisible()
+    })
+  }
+}
+
+test('Lime schedule ownership empty retry preference and account isolation', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+  const backend = await mockPilot(page, { fitLime: true, workouts: scheduleVisibilityRows().slice(1, 4), failTrainingData: true })
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.getByRole('alert')).toBeVisible()
+  backend.setTrainingDataFailure(false)
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(0)
+  await expect(page.locator('.schedule-v2-period-summary')).toHaveText('0 тренировок · 0 клиентов')
+  const toggle = page.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })
+  await toggle.check()
+  await page.reload()
+  await expect(toggle).toBeChecked()
+  await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(2)
+  await mockPilot(page, { profileId: '10000000-0000-4000-8000-000000000010', fitLime: true, workouts: [] })
+  await page.reload()
+  await expect(toggle).not.toBeChecked()
+  await mockPilot(page, { fitLime: true, workouts: scheduleVisibilityRows() })
+  await page.reload()
+  await expect(toggle).toBeChecked()
+  await page.goto('/today?date=2026-09-24')
+  await expect(toggle).toBeChecked()
+  await expect(page.getByRole('region', { name: 'Самостоятельные тренировки' }).locator('a')).toHaveCount(2)
+})
+
+test('Lime schedule ownership storage failure is visible and retry keeps selection', async ({ page }) => {
+  await mockPilot(page, { fitLime: true, workouts: scheduleVisibilityRows() })
+  await page.goto('/schedule?week=2026-09-21')
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem.bind(window.localStorage)
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith('fit.lime-schedule-independent.')) throw new Error('storage denied')
+      original(key, value)
+    }
+  })
+  const toggle = page.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })
+  await toggle.check()
+  await expect(toggle).toBeChecked()
+  await expect(page.getByRole('alert')).toContainText('не удалось сохранить настройку')
+  await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(4)
+  await page.reload()
+  await expect(toggle).not.toBeChecked()
+  await toggle.check()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('Lime schedule ownership preserves non-Lime calendar and athlete history', async ({ page }) => {
+  const rows = scheduleVisibilityRows()
+  await mockPilot(page, { workouts: rows })
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toHaveCount(0)
+  await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(5)
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: rows })
+  await page.goto('/me/workouts')
+  await expect(page.locator('a[href="/workouts/10000000-0000-4000-8000-000000000008"]')).toBeVisible()
+  await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await expect(page.getByRole('button', { name: /24 сентября/ }).first()).toBeVisible()
+})
+
 for (const role of ['trainer', 'client'] as const) {
   test(`Yandex history pagination loads only requested pages for ${role}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 })
@@ -1015,7 +1299,7 @@ for (const width of [320, 390, 430, 1440]) {
     const plan = buildFitLimeCalendarPlan(profileId, '2026-09-28', '2026-10-03')
     await mockPilot(page, { profileId, fitLime: true,
       clientRecords: plan.clients.map((item) => ({ ...item, archivedAt: null, version: 1 })),
-      workouts: plan.workouts.map((item) => ({ ...workout, ...item, trainerId: profileId,
+      workouts: plan.workouts.map((item) => ({ ...workout, ...item, trainerId: profileId, createdBy: profileId,
         clientName: plan.clients.find((client) => client.id === item.clientId)!.fullName,
         completedAt: item.status === 'done' ? `${item.workoutDate}T12:00:00Z` : null,
       })),
@@ -1148,12 +1432,13 @@ for (const width of [390, 430, 1440]) {
   test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     const otherClient = '10000000-0000-4000-8000-000000000099'
-    await mockPilot(page, { fitLime: true, profileId: width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId, workouts: [
+    const profileId = width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId
+    await mockPilot(page, { fitLime: true, profileId, workouts: [
       { ...workout, status: 'done', completedAt: '2026-09-24T08:00:00.000Z', title: 'Силовая' },
       { ...workout, id: newWorkoutId, clientId: otherClient, clientName: 'Александра Константинопольская-Рождественская', status: 'done', workoutDate: '2026-08-01', startTime: null, endTime: null, completedAt: '2026-08-01T08:00:00.000Z' },
       { ...workout, id: '10000000-0000-4000-8000-000000000080', status: 'cancelled' },
       { ...workout, id: '10000000-0000-4000-8000-000000000081', workoutDate: '2026-10-10' },
-    ] })
+    ].map((item) => ({ ...item, trainerId: profileId, createdBy: profileId })) })
     await page.goto('/schedule?week=2026-09-21')
     await page.getByRole('button', { name: 'Список', exact: true }).click()
     const list = page.getByRole('region', { name: 'Список тренировок' })
@@ -1515,6 +1800,40 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
 }
 
 for (const width of [390, 430]) {
+  test(`client Lime assistant input stays above iOS keyboard at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.addInitScript(() => {
+      const viewport = new EventTarget()
+      Object.defineProperties(viewport, {
+        height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? window.innerHeight) },
+        offsetTop: { get: () => 0 },
+      })
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+    })
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true })
+    await page.goto('/assistant')
+    const composer = page.getByRole('textbox', { name: 'Сообщение ассистенту' })
+    await expect(composer).toBeVisible()
+    await composer.fill('Гири и резинка')
+    await page.evaluate(() => {
+      document.documentElement.dataset.testVisibleHeight = '400'
+      window.visualViewport?.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('.phone-frame')).toHaveClass(/keyboard-open/)
+    await expect(page.locator('.client-tab-bar')).toBeHidden()
+    await expect.poll(async () => {
+      const box = await composer.boundingBox()
+      return box ? box.y + box.height : 1000
+    }).toBeLessThanOrEqual(400)
+    await page.screenshot({ path: testInfo.outputPath('client-assistant-keyboard.png') })
+    await composer.blur()
+    await page.evaluate(() => {
+      delete document.documentElement.dataset.testVisibleHeight
+      window.visualViewport?.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('.client-tab-bar')).toBeVisible()
+  })
+
   test(`Lime keyboard visual viewport keeps composer above keyboard at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     // Model Safari's separate layout/visual viewports, not a physical OS keyboard.
@@ -3519,6 +3838,7 @@ test('failed calendar save preserves the form and retry returns to the selected 
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'С тренером', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page.locator('.workout-form .error')).toBeVisible()
   await expect(page.getByLabel('Дата')).toHaveValue('2026-09-29')
@@ -3787,10 +4107,14 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 for (const width of [390, 430]) {
   test(`Client Lime shell themes and account isolation ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
+    await page.emulateMedia({ colorScheme: 'light' })
     await mockPilot(page, { role: 'client', profileId: clientId })
     await page.goto('/me/settings')
     const theme = page.getByLabel('Тема оформления')
     await expect(theme).toBeVisible()
+    await expect(theme).toHaveValue('dark')
+    await expect(page.locator('.phone-frame')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    await page.screenshot({ path: testInfo.outputPath(`client-default-dark-${width}.png`), fullPage: true })
     expect(await theme.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
     for (const value of ['dark', 'light', 'system']) {
       await theme.selectOption(value)
@@ -4897,6 +5221,37 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.getByRole('button', { name: 'Закрыть фото', exact: true }).click()
     await expect(page.locator('.fullscreen-image-viewer')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const width of [390, 430]) {
+  test(`Client Lime assistant program choices remain visible on the real route at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId })
+    await page.addInitScript((id) => localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark'), clientId)
+    await page.route('**/v1/assistant/turn', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      reply: 'Подготовлю рекомендованный черновик одной тренировки или программы на 1–4 недели. Что составить?',
+      action: { tool: 'create_program_draft', status: 'needs_input', title: 'Программа тренировок',
+        description: 'Уточняю условия', payload: { programPilot: true, step: 'brief', briefStatus: 'needs_answers',
+          clientId, clientName: 'Тестовый клиент', answerSuggestions: ['Одна тренировка', 'Программа на 4 недели'], readyToGenerate: false } },
+    }) }))
+    await page.goto('/assistant')
+    await page.getByRole('textbox', { name: 'Сообщение ассистенту' }).fill('Составь программу тренировок')
+    await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+    const context = page.getByRole('region', { name: 'Текущий контекст ассистента' })
+    const choices = context.locator('.assistant-choice-chips button')
+    const cancel = context.getByRole('button', { name: 'Отменить' })
+    await expect(choices).toHaveCount(2)
+    await expect(cancel).toBeVisible()
+    await expect(context).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    const contextBox = await context.boundingBox()
+    const cancelBox = await cancel.boundingBox()
+    expect(contextBox!.height).toBeLessThanOrEqual(110)
+    expect(cancelBox!.x).toBeGreaterThanOrEqual(contextBox!.x)
+    expect(cancelBox!.y + cancelBox!.height).toBeLessThanOrEqual(contextBox!.y + contextBox!.height + 1)
+    await expect(page.getByRole('textbox', { name: 'Сообщение ассистенту' })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath('client-program-choices-real-route.png') })
   })
 }
 

@@ -89,3 +89,39 @@ PR1498 — foundation; PR1500 — client workflow draft; PR1501 — trainer work
 Прямая команда пользователя «выкатывай флаги» разрешает штатный выпуск управления режимами в pilot; запрет all и расширения пилота сохраняется. PR1498 публикуется по общей очереди после1496. После merge1495/mainf89e0e79 невыпущенная rollout migration136 перенумерована137; новая чистая цепочка и CI проверяются до merge. PR1500/1501 остаются отдельными зависимыми операциями, activation требует нового ОК.
 
 После обновления: clean-chain137/actor126/126 и точный Down→Up137 прошли; readback pilot/pilot/pilot revision0, fit_api table SELECT/setter EXECUTE запрещены. Frontend2514/2514, API1228/1228 (126 DB отдельно), lint/typecheck/db-types/iOS/media/policy/hosting/build прошли. Первый check остановился на sandbox EPERM при bind локального policy HTTP server; оставшиеся этапы повторены с разрешением, тесты/таймауты не менялись. Fresh CI следует за публикацией ветки; production ещё не менялся.
+
+### PR2 — ручное клиентское переключение подготовлено
+
+Workflow manage-client-lime-rollout: только workflow_dispatch, main, mode=inspect по умолчанию.
+All требует SET_CLIENT_LIME_ALL и заранее прочитанную revision. Запись выполняется один раз; затем независимый inspect проверяет все modes/revision. Timeout/409 не повторяет запись.
+Контракт helper4 и workflow2 проверен локально. CI и реальная активация — отдельно; «перевести во все», production readback и проверки реальных непилотных сессий: ОЖИДАЕТ ОК.
+Сам merge/публикация PR2 сохраняет текущий доступ.
+
+
+### Разрешено последовательное массовое включение — 2026-10-07
+
+Прямая команда владельца: «выкатывай по очереди оба дизайна на всех, разрешаю все выкатить». Затем: «Да, для клиентского автоматом включи темную тему». Предыдущее ожидание ОК снято только для этой операции: клиент all → проверка → trainer+schedule all → проверка. Отдельные ручные переключатели, CAS revision, независимый readback и rollback сохраняются.
+
+Foundation PR1498 уже слит c465ca9f: migration137 и API b51c7d859c9fac06d55112cecd5fa29e88cc99fe опубликованы, официальный release37663816164 SUCCESS; health/ready200, public owner endpoint404. PR1500 обновлён от этого main; старые core commits/migration136 повторно не переносятся.
+
+Клиент: существующий useClientLimeTheme получает dark вместо system при отсутствующем/невалидном выборе и при заблокированном storage. Явные light/dark/system сохраняются; настройки и portals используют прежние токены и один theme context. Новые цвета, шрифты, controls, LLM/SpeechKit/данные не меняются. На первом входе без выбора — тёмный Lime даже при светлой теме телефона; ручная светлая сохраняется после reload, другой account не наследует выбор.
+
+Целевые проверки: theme/AppLayout/scope66/66; helper/client workflow6/6; WebKit/Chromium390/430 и server admission/rollback8/8. Скриншоты: artifacts/lime-global-activation-20261007/after-theme; baseline2/2. Проверки UI выполнены на synthetic identities, не выданы за production OAuth. Полный check/CI, выпуск workflow/frontend, production inspect/client all/readback и непилотная сессия остаются гейтами перед trainer all.
+
+Полный npm run check на обновлённой клиентской ветке завершился exit0: frontend2518, API1231 (127 DB отдельно/skipped), lint/typecheck/policy/hosting/build passed. Скриншоты dark390/light430 просмотрены; повторный browser harness использует разрешённый путь переиспользуемых зависимостей, без font403. Production client all ещё не запускался.
+
+Фактическая база PR1500 — main a03901d2 (включает опубликованные #1504/#1505 после #1498); полный check2518/API1231 и browser8 выполнены на этой базе. Старые pilot-only описания остаются историей, новое прямое разрешение от владельца действует для client all → trainer/schedule all.
+
+### PR3 — ручное тренерское переключение подготовлено
+
+Workflow manage-trainer-lime-rollout: main-only workflow_dispatch, inspect по умолчанию, targets только trainer/trainer-schedule.
+SET_TRAINER_LIME_ALL + revision атомарно включает trainer/schedule all. Откат оформления отдельный, schedule rollback — после trainer off/pilot, чтобы не получить смешанный shell.
+Helper/workflow8/8 локально; реальное all и production acceptance: ОЖИДАЕТ ОК.
+Ни один workflow в этой задаче не запускался, клиентский и тренерский доступ не расширены.
+
+PR3: владелец разрешил trainer+schedule all после подтверждённого client all. Workflow/helper8/8 passed; результат readback ограничен четырьмя полями modes/revision и безопасно попадает в summary и log. Реальная активация ещё не запускалась.
+
+### Клиентский merge и исходное production-состояние — 2026-10-08
+PR1500 head e1518c5d: CI37684890567 success, Android37684890354 success, штатный squash merge38bdf7da05c21c41b3a8addd8de0e60feedc9ea8. #1499 пропускает наши два выпуска по прямому ответу владельца. Main CI37688981307/front-end release остаются обязательными гейтами до client all. Private inspect37689049231 success: clientMode=pilot, trainerMode=pilot, scheduleMode=pilot, revision0; две независимые проверки совпали. PR1501 перенесён только своими commits поверх38bdf7da; client workflow/default-dark и foundation не дублируются. Клиентская и тренерская массовые активации ещё не выполнялись.
+
+PR1501 на базе38bdf7da: полный npm run check exit0, frontend2518/API1231 (+127 DB отдельно/skipped), policy/lint/typecheck/build passed, helper/workflow8/8. Отправляется свежий CI; merge и trainer all только после client all/readback.

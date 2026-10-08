@@ -311,6 +311,7 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 - В плане, review и Live суперсет можно разделить после подтверждения. Разделение в Live атомарно сохраняет порядок, идентификаторы и все значения подходов, факты и заметки; при потере ответа повтор с тем же operation ID безопасен. Текущий таймер не сбрасывается, последующие паузы берутся из настроек отдельных упражнений. Покрытие: Yandex PostgreSQL actor/RLS, API contract, UI и WebKit сценарии.
 - Экран Live суперсета держит текущий круг открытым, а будущие и завершённые сворачивает в строки прогресса с ручным раскрытием. «＋ Круг» размещено перед кругами; счётчик показан один раз в закреплённой области. Заметка и комментарий тренера — у упражнения без повторного списка внизу; одинаковые названия различаются номерами. Проверяются мобильные 390/430 px и тренерский сценарий.
 - Таймер фаз Live: необязательная подготовка перед стартом (`workouts.prep_seconds`, форма и короткий ввод, копия), подход с плановым временем идёт и засчитывается по таймеру (на нуле — плановое время, раньше — прошедшее), отдых стартует сам, затем следующий подход со временем; короткое/долгое нажатие одной кнопки. Ранний старт будущего плана переносит тренировку на фактический день с сохранением `planned_*`. Покрытие: Yandex PostgreSQL actor (clean chain), API request contract, Yandex repository, unit/component и обновлённые Chromium/WebKit-сценарии таймера.
+- Совместимость Live (8 октября): подготовка выключена — прежний отдых с отрицательным отсчётом и шторкой по нажатию, без автоматических подходов; включена — фазовый режим. Отдых не ждёт серверного подтверждения, поздний ответ/ошибка/повтор не сбрасывают отсчёт и ручную настройку. Геометрия обеих кнопок едина в Mono/Lime; проверены Yandex WebKit/Chromium, 390/430/1440, reload и медленный ответ при истечении отдыха.
 - Live поддерживает добавление подхода и упражнения отдельными транзакционными
   RPC, подтверждение, отдых 90 секунд и частичное завершение с предупреждением.
   Ввод каждого поля сразу сохраняется на устройстве; debounce, blur и
@@ -357,6 +358,16 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 - Milestones 10/25/50/100 показываются только как вторичная отметка количества фактических тренировок и не создают отдельную игровую систему.
 
 ## Workout chronicle acceptance contract
+
+- Lime trainer schedule distinguishes creator and training format: default only
+  actor-created with_trainer; an actor-scoped default-off checkbox adds own self
+  plans without occupying trainer timeline. Athlete-created sessions never enter
+  schedule, but remain in athlete card/history/calendar. Legacy null author is
+  own only with matching trainerId; missing format keeps the existing self
+  fallback. Mono calendar, shared repository, execution and finance unchanged.
+  Acceptance: schedule-filters/use-independent-schedule unit tests and
+  `Lime schedule ownership` Yandex contract route matrix. Release is gated after
+  both global Lime rollouts; preparation is not production delivery.
 
 - Тренерский экран «Тренировки клиента» отдельно загружает и показывает
   planned/in_progress на сегодня и будущее в «Предстоит», независимо от

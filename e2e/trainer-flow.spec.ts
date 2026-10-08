@@ -747,6 +747,7 @@ test('live: порядок упражнений меняется в отдель
   await page.getByRole('button', { name: 'Готово, отдых' }).first().click()
   await expect(page.locator('.live-exercise.done')).toHaveCount(1)
   await page.locator('.live-rest-trigger').click()
+  await page.getByRole('dialog', { name: 'Таймер отдыха' }).getByRole('button', { name: 'Остановить отдых', exact: true }).click()
   await expect(page.locator('.live-exercise-collapsed')).toHaveCount(1)
   await expect(page.locator('.live-exercise-collapsed .exercise-thumbnail')).toHaveCount(1)
   await expect(page.locator('.live-exercise-collapsed .exercise-thumbnail video')).toHaveCount(0)
