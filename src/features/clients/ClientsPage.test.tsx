@@ -316,11 +316,12 @@ describe('ClientsPage archive actions', () => {
 
 describe('ClientsPage search', () => {
   it('shows a compact finance entry and the client finance state', async () => {
-    backend.listFinanceOverview.mockResolvedValue({ month: '2026-09', receivedCents: 2500000, dueCents: 500000, attentionCount: 1, clients: [{ clientId: 'active', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 2, overdue: false, lowSessions: true, unassignedSessions: 0, needsAttention: true }] })
+    backend.listFinanceOverview.mockResolvedValue({ month: '2026-09', receivedCents: 2500000, dueCents: 500000, attentionCount: 1, clients: [{ clientId: 'active', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 1, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 2, overdue: false, lowSessions: true, unassignedSessions: 0, needsAttention: true }] })
     renderPage([client('active', 'Анна Смирнова')])
 
     expect(await screen.findByRole('link', { name: /25.*000.*получено.*1.*требуют внимания/ })).toHaveAttribute('href', '/finance')
     expect(screen.getByText(/К оплате 5.*000.*₽/)).toBeVisible()
+    expect(screen.getByText(/· до 08\.10/)).toBeVisible()
   })
 
   it('offers a direct invitation and keeps manual profile creation available', async () => {

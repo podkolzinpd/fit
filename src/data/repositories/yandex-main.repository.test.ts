@@ -227,6 +227,21 @@ describe('Yandex main repository', () => {
     expect(pilot.listTrainingData).not.toHaveBeenCalled()
   })
 
+  it('preserves the additive overview deadline without per-client requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ overview: {
+      month: '2026-10', receivedCents: 0, dueCents: 250000, attentionCount: 0,
+      clients: [{ clientId, fullName: 'Анна', archivedAt: null, receivedCents: 0, dueCents: 250000,
+        nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 2, activePackageCount: 1, upcomingPackageCount: 0,
+        sessionsRemaining: 8, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false }],
+    } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.trainerFinance.listOverview('2026-10')).resolves.toMatchObject({
+      clients: [{ nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 2 }],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('reads and changes trainer finance only through the Yandex API', async () => {
     const financePackage = {
       id: financePackageId, clientId, trainerId: actor.userId, kind: 'session_pack', title: '10 тренировок',
@@ -259,7 +274,7 @@ describe('Yandex main repository', () => {
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
-    await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1 })
+    await expect(repository.trainerFinance.listOverview('2026-09')).resolves.toMatchObject({ receivedCents: 1000000, attentionCount: 1, clients: [{ nearestPaymentDueOn: null, unpaidPackageCount: 0 }] })
     await expect(repository.trainerFinance.listClient(clientId)).resolves.toMatchObject({ clientId, packages: [{ sessionsRemaining: 8 }] })
     await repository.trainerFinance.createPackage(clientId, {
       kind: 'session_pack', title: '10 тренировок', sessionsTotal: 10, openingUsedSessions: 2,

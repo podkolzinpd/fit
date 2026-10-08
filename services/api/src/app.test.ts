@@ -1093,7 +1093,7 @@ describe('trainer finance', () => {
     month: '2026-09', receivedCents: 1000000, dueCents: 1500000,
     attentionCount: 1, clients: [{
       clientId, fullName: 'Анна Смирнова', archivedAt: null,
-      receivedCents: 1000000, dueCents: 1500000, activePackageCount: 1, upcomingPackageCount: 0,
+      receivedCents: 1000000, dueCents: 1500000, nearestPaymentDueOn: '2026-09-10', unpaidPackageCount: 1, activePackageCount: 1, upcomingPackageCount: 0,
       sessionsRemaining: 8, overdue: true, lowSessions: false,
       unassignedSessions: 0, needsAttention: true,
     }],

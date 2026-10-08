@@ -4946,6 +4946,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .trainer-clients-identity .client-card-main { min-height:76px; padding:14px 8px 14px 16px }
 .trainer-clients-identity .client-card-copy > strong { color:var(--fg); font-size:16px; font-weight:600; line-height:1.25 }
 .trainer-clients-identity .client-card-copy > span { margin-top:3px; color:var(--secondary-label-fg); font-size:12px; font-weight:500; line-height:1.35 }
+.trainer-clients-identity .client-card-copy > .client-finance-state { white-space:pre-line; overflow:visible; overflow-wrap:anywhere; }
 .trainer-clients-identity .client-chat-action:hover { border-color:var(--fg) }
 .trainer-clients-identity .client-chat-action:focus-visible { outline:2px solid var(--fg); outline-offset:2px }
 .trainer-clients-identity .client-chat-action:disabled { opacity:.55 }
@@ -7187,6 +7188,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .finance-overview-client > span:first-child { min-width:0; display:grid; gap:3px; }
 .finance-overview-client strong,.finance-overview-client small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .finance-overview-client small,.finance-overview-client > span:nth-child(2) { color:var(--muted); font-size:12px; }
+.finance-overview-client > span:nth-child(2) { min-width:0; white-space:pre-line; overflow-wrap:anywhere; }
 .finance-overview-client.needs-attention > span:nth-child(2) { color:var(--danger-fg); }
 .finance-overview-client svg { width:20px; }
 @media (max-width:560px) {

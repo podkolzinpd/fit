@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { TrainerFinanceOverview, TrainerFinanceOverviewClient } from '../../data/repositories/trainer-finance.repository'
-import { addMonths, formatMonth, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { addMonths, formatLocalDateShort, formatMonth, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { AsyncView, Page } from '../../shared/ui'
 
@@ -24,9 +24,14 @@ function money(cents: number) {
 }
 
 export function trainerFinanceClientLabel(client: TrainerFinanceOverviewClient): string {
-  if (client.unassignedSessions > 0) return `Не привязано: ${client.unassignedSessions}`
-  if (client.overdue && client.dueCents > 0) return `Просрочено ${money(client.dueCents)}`
-  if (client.dueCents > 0) return `К оплате ${money(client.dueCents)}`
+  const paymentDeadline = client.dueCents > 0 && client.nearestPaymentDueOn && client.unpaidPackageCount > 0
+    ? formatLocalDateShort(localDate(client.nearestPaymentDueOn)).slice(0, 5)
+    : null
+  const dueLabel = client.overdue ? `Просрочено ${money(client.dueCents)}` : `К оплате ${money(client.dueCents)}`
+  if (client.unassignedSessions > 0) return `Не привязано: ${client.unassignedSessions}${paymentDeadline ? `\nБлижайший срок — ${paymentDeadline}` : ''}`
+  if (client.dueCents > 0) return `${dueLabel}${paymentDeadline
+    ? client.unpaidPackageCount === 1 ? ` · до ${paymentDeadline}` : `\nБлижайший срок — ${paymentDeadline}`
+    : ''}`
   if (client.activePackageCount > 1) return 'Несколько абонементов'
   if (client.sessionsRemaining !== null) return `Осталось ${client.sessionsRemaining} ${client.sessionsRemaining === 1 ? 'занятие' : 'занятий'}`
   if (client.upcomingPackageCount > 0) return 'Абонемент начнётся позже'
