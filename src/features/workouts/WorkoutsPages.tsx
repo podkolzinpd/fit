@@ -1592,9 +1592,9 @@ export function WorkoutFormPage() {
         {completedMode && <WorkoutActualDurationField value={actualDurationMinutes} onChange={(value) => { setActualDurationMinutes(value); setDurationError(null) }} disabled={mutation.isPending} />}
         {durationError && <p className="error" role="alert">{durationError}</p>}
         {!completedMode && <Field label="Подготовка перед стартом">
-          <select name="prepSeconds" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))}>
+          <span className="workout-prep-select"><select name="prepSeconds" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))}>
             {WORKOUT_PREP_OPTIONS.map((seconds) => <option key={seconds} value={seconds}>{seconds === 0 ? 'Без подготовки' : formatPrepOption(seconds)}</option>)}
-          </select>
+          </select></span>
           <small>Обратный отсчёт в Live, чтобы положить телефон и занять положение.</small>
         </Field>}
         {stages.length > 0 && <Field label="Этап цели">
