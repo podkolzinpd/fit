@@ -246,7 +246,6 @@ export const briefAnswerSuggestions: Partial<Record<keyof ProgramBrief, readonly
   goalText: ['Хочу стать сильнее', 'Набрать мышечную массу', 'Поддерживать общую форму', 'Снизить вес'],
   goal: ['Сила', 'Набор мышц', 'Общая форма', 'Снижение веса'],
   frequency: ['1 занятие', '2 занятия', '3 занятия'],
-  weekdays: ['Понедельник и четверг', 'Понедельник, среда и пятница', 'Дни не важны'],
   durationMin: ['30 минут', '45 минут', '60 минут'],
   startDate: ['Сегодня', 'Завтра', 'Со следующего понедельника'],
   experience: ['Новичок', 'Опыт есть, перерыва не было', 'Возвращаюсь после перерыва 2 месяца'],
@@ -255,6 +254,18 @@ export const briefAnswerSuggestions: Partial<Record<keyof ProgramBrief, readonly
   preferences: ['Предпочтений нет', 'Хочу больше базовых упражнений'],
   otherActivity: ['Другой нагрузки нет', 'Бег 2 раза: вторник и суббота'],
   adult: ['Да, 18 лет уже исполнилось', 'Нет'],
+}
+
+const weekdayAnswerSuggestions: Record<ProgramFrequency, readonly string[]> = {
+  1: ['Понедельник', 'Дни не важны'],
+  2: ['Понедельник и четверг', 'Дни не важны'],
+  3: ['Понедельник, среда и пятница', 'Дни не важны'],
+}
+
+/** Day suggestions must match the frequency already confirmed in the brief. */
+export function briefSuggestionsFor(field: keyof ProgramBrief, brief: ProgramBrief): readonly string[] {
+  if (field === 'weekdays') return brief.frequency === undefined ? [] : weekdayAnswerSuggestions[brief.frequency]
+  return briefAnswerSuggestions[field] ?? []
 }
 
 export function missingBriefFields(brief: ProgramBrief, hasHistory = false): (keyof ProgramBrief)[] {
