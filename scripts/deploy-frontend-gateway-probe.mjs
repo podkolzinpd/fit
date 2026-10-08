@@ -30,10 +30,14 @@ function findNamed(resources, name) {
 
 function matchesTimer(timer, functionId, invokerId) {
   const rule = timer.rule?.timer
+  // YC returns invoke_function_with_retry when retry settings are configured.
+  const invocation = rule?.invoke_function_with_retry
   return rule?.cron_expression === cron
-    && rule?.invoke_function?.function_id === functionId
-    && rule?.invoke_function?.function_tag === liveTag
-    && rule?.invoke_function?.service_account_id === invokerId
+    && invocation?.function_id === functionId
+    && invocation?.function_tag === liveTag
+    && invocation?.service_account_id === invokerId
+    && ['1', 1].includes(invocation?.retry_settings?.retry_attempts)
+    && invocation?.retry_settings?.interval === '10s'
 }
 
 export async function deployFrontendProbe({
