@@ -2665,6 +2665,9 @@ export function LiveWorkoutPage() {
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
   const pendingSetDrafts = useRef<Map<string, LiveSetDraft>>(new Map())
   const pendingSetConfirmations = useRef<Set<string>>(new Set())
+  // A confirmation retry/late response must not restart the rest the user
+  // already began, or overwrite a subsequent manual timer adjustment.
+  const confirmationRestSeconds = useRef<Map<string, number>>(new Map())
   const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
   const [recoveredFormIds, setRecoveredFormIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
@@ -2869,6 +2872,7 @@ export function LiveWorkoutPage() {
     })
   }
   useEffect(() => {
+    confirmationRestSeconds.current.clear()
     const deadline = restoreRestDeadline(workoutId)
     setRestEndsAt(deadline)
     setRestContextExerciseId(null)
@@ -2967,9 +2971,14 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
     onMutate: ({ set, draft }) => {
+      const retry = pendingSetConfirmations.current.has(set.id)
       rememberLiveDraft(set.id, draft)
       pendingSetConfirmations.current.add(set.id)
       if (actor?.userId) writePendingLiveSetConfirmation(actor.userId, workoutId, set.id)
+      if (!confirmationRestSeconds.current.has(set.id)) {
+        const seconds = beginSetRest(set, retry && restEndsAt !== null)
+        if (seconds !== undefined) confirmationRestSeconds.current.set(set.id, seconds)
+      }
     },
     onSuccess: (version, { set, draft }) => {
       setValidationErrorSetIds((current) => {
@@ -2987,26 +2996,12 @@ export function LiveWorkoutPage() {
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft, true)
       setExpandedSetId(null)
-      // Отдых берётся из настроек блока (Этап A), не хардкод:
-      // - одиночное упражнение → отдых между подходами;
-      // - группа: между упражнениями внутри круга → restBetweenExercisesSec;
-      //   после последнего упражнения круга → restBetweenRoundsSec.
-      const workout = query.data
-      const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
-      if (workout && exercise) {
-        const sec = exercise.blockType === 'single'
-          ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
-          : restSecondsAfterSet(workout, exercise, set)
-        setRestContextExerciseId(exercise.blockType === 'single' ? exercise.id : null)
-        setRecentExerciseId(exercise.id)
-        if (sec > 0) setRestPickerSeconds(sec)
-        // Подтверждённый подход больше не может идти по таймеру. Сначала снимаем
-        // фазу, потом ставим отдых: они делят один слот нативного уведомления.
-        const phase = livePhaseRef.current
-        if (phase?.kind === 'work' && phase.setId === set.id) setLivePhase(null)
-        startRestUntil(restDeadline(sec))
-        autoStartNextWork.current = sec <= 0
-      }
+      const seconds = confirmationRestSeconds.current.get(set.id) ?? beginSetRest(set)
+      confirmationRestSeconds.current.delete(set.id)
+      // The next timed set may start only after the confirmed result is in
+      // the cache; starting rest does not pretend the server saved the fact.
+      autoStartNextWork.current = seconds !== undefined && (seconds <= 0
+        || Boolean(query.data?.prepSeconds && restEndsAt !== null && restEndsAt <= Date.now()))
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -3088,6 +3083,21 @@ export function LiveWorkoutPage() {
   function stopRest() {
     startRestUntil(null)
   }
+  function beginSetRest(set: WorkoutSet, preserveDeadline = false): number | undefined {
+    const workout = query.data
+    const exercise = workout?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
+    if (!workout || !exercise) return undefined
+    const seconds = exercise.blockType === 'single'
+      ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
+      : restSecondsAfterSet(workout, exercise, set)
+    setRestContextExerciseId(exercise.blockType === 'single' ? exercise.id : null)
+    setRecentExerciseId(exercise.id)
+    if (seconds > 0) setRestPickerSeconds(seconds)
+    const phase = livePhaseRef.current
+    if (phase?.kind === 'work' && phase.setId === set.id) setLivePhase(null)
+    if (!preserveDeadline) startRestUntil(restDeadline(seconds))
+    return seconds
+  }
   function setLivePhase(next: LivePhaseTimer | null) {
     livePhaseRef.current = next
     setLivePhaseState(next)
@@ -3108,8 +3118,9 @@ export function LiveWorkoutPage() {
   }
   // Запускает таймер подхода на время; false — у подхода нет плановой длительности.
   function startWorkTimer(set: WorkoutSet | undefined, exercise: WorkoutExerciseModel | undefined): boolean {
+    if (!query.data?.prepSeconds) return false
     const seconds = set && exercise ? timedSetSeconds(exercise, set) : null
-    if (!set || seconds === null) return false
+    if (!set || seconds === null || pendingSetConfirmations.current.has(set.id)) return false
     const now = Date.now()
     if (restEndsAt !== null) startRestUntil(null)
     setLivePhase({ kind: 'work', setId: set.id, startedAt: now, endsAt: now + seconds * 1000 })
@@ -3557,16 +3568,19 @@ export function LiveWorkoutPage() {
     ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
     : activeLiveExercise?.sets.find((set) => !set.confirmedAt)
   const currentSetTimed = Boolean(activeLiveExercise && currentLiveSet && timedSetSeconds(activeLiveExercise, currentLiveSet) !== null)
-  // Один раз за тренировку при первом входе: подготовка, если задана, иначе
-  // сразу таймер первого подхода на время.
+  // Preparation opts the entire workout into the phase timer. Without it,
+  // keep the legacy rest-only flow, including negative overtime.
   useEffect(() => {
     const workout = query.data
     if (!workout || workout.status !== 'in_progress') return
+    if (!workout.prepSeconds) {
+      if (livePhaseRef.current) setLivePhase(null)
+      return
+    }
     if (workout.exercises.some((exercise) => exercise.sets.some((set) => set.confirmedAt))) return
     if (livePhaseRef.current || restEndsAt !== null || !claimLiveAutostart(workoutId)) return
-    if (workout.prepSeconds) startPrep(workout.prepSeconds)
-    else startWorkTimer(currentLiveSet, activeLiveExercise)
-  }, [query.data?.id, query.data?.status])
+    startPrep(workout.prepSeconds)
+  }, [query.data?.id, query.data?.status, query.data?.prepSeconds])
   useEffect(() => {
     const phase = livePhaseRef.current
     if (phase?.kind === 'work' && query.data) {
@@ -3575,7 +3589,9 @@ export function LiveWorkoutPage() {
     }
     if (!autoStartNextWork.current || !query.data) return
     autoStartNextWork.current = false
-    if (!livePhaseRef.current && restEndsAt === null) startWorkTimer(currentLiveSet, activeLiveExercise)
+    if (!livePhaseRef.current && (restEndsAt === null || restEndsAt <= Date.now())) {
+      if (!startWorkTimer(currentLiveSet, activeLiveExercise) && query.data.prepSeconds) startRestUntil(null)
+    }
   }, [query.data])
   // «Подход засчитан · Исправить» висит весь отдых после подхода (не меньше
   // 5 секунд): засчитанный по таймеру подход правят как раз на отдыхе.
@@ -3595,14 +3611,18 @@ export function LiveWorkoutPage() {
     }
     confirmWorkFromTimer(phase, phase.endsAt)
   }
-  // Отдых закончился: подход со временем в плане стартует сам; без времени —
-  // кнопка возвращается в спокойное «Таймер», без красного «перерасхода»:
-  // ожидание повторов — не ошибка пользователя.
+  // Only the opted-in phase flow advances at zero. The legacy timer keeps
+  // its deadline and counts negative seconds until the user changes it.
   function handleRestExpire() {
+    if (!query.data?.prepSeconds) return
+    // An immediate rest can finish before the confirmation reaches the server.
+    // Do not start/confirm the same pending set again; resume after acknowledgement.
+    if (confirm.isPending) return
     if (livePhaseRef.current) return
     if (!startWorkTimer(currentLiveSet, activeLiveExercise)) startRestUntil(null)
   }
   function handleTimerPrimary(): boolean {
+    if (!query.data?.prepSeconds) return false
     const phase = livePhaseRef.current
     const action = livePhasePrimaryAction({ phase, restEndsAt, now: Date.now(), currentSetTimed })
     if (action === 'skip-prep') {
@@ -3684,9 +3704,9 @@ export function LiveWorkoutPage() {
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
-            <Coachmark id="live-phase-timer-2026-10" userId={actor?.userId} title="Таймер ведёт тренировку" description="Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.">
+            <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
-                phase={livePhase} onPrimary={handleTimerPrimary} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire} />
+                phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire} />
             </Coachmark>
           </div>
           {phaseNotice && <div className="live-phase-notice" role="status">
