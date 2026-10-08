@@ -8,6 +8,8 @@ const responseDiagnostics = new WeakMap<Response, RequestDiagnostics>()
 const uuidSegment = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const platformRecoveryDelaysMs = [250, 750, 1_500, 3_000] as const
 const platformProbeTimeoutMs = 1_000
+const mutationProbeTimeoutMs = 5_000
+const mutationPreflightBudgetMs = 10_000
 const mutationPreflightFreshnessMs = 45_000
 const platformRecoveries = new Map<string, Promise<boolean>>()
 const mutationPreflights = new Map<string, Promise<boolean>>()
@@ -78,9 +80,9 @@ function wait(delayMs: number): Promise<void> {
   return new Promise((resolve) => globalThis.setTimeout(resolve, delayMs))
 }
 
-async function probeHealth(fetchImplementation: typeof fetch, endpoint: string): Promise<boolean> {
+async function probeHealth(fetchImplementation: typeof fetch, endpoint: string, timeoutMs = platformProbeTimeoutMs): Promise<boolean> {
   const controller = new AbortController()
-  const timeoutId = globalThis.setTimeout(() => controller.abort(), platformProbeTimeoutMs)
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetchImplementation(endpoint, {
       cache: 'no-store',
@@ -104,8 +106,18 @@ function startMutationPreflight(
   if (activePreflight !== undefined) return activePreflight
 
   const preflight = (async () => {
-    if (await probeHealth(fetchImplementation, endpoint)) return true
-    return startPlatformRecovery(fetchImplementation, endpoint)
+    // A healthy mobile connection can exceed the short read-recovery probe.
+    // Allow slower probes without multiplying their timeout across retries.
+    const deadline = Date.now() + mutationPreflightBudgetMs
+    for (const delayMs of [0, ...platformRecoveryDelaysMs]) {
+      const remainingBeforeDelay = deadline - Date.now()
+      if (remainingBeforeDelay <= delayMs) return false
+      if (delayMs > 0) await wait(delayMs)
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) return false
+      if (await probeHealth(fetchImplementation, endpoint, Math.min(mutationProbeTimeoutMs, remaining))) return true
+    }
+    return false
   })()
   mutationPreflights.set(endpoint, preflight)
   void preflight.finally(() => {
@@ -201,7 +213,7 @@ async function preflightPlatformMutation(
 
   throw new RequestNetworkError(
     'Не удалось подготовить соединение с Yandex Cloud.',
-    diagnostics,
+    { ...diagnostics, errorCode: 'mutation_preflight_failed' },
     new Error('Yandex Serverless Container did not pass the mutation preflight'),
   )
 }
