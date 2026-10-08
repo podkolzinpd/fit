@@ -2162,7 +2162,7 @@ test('client card edit keeps its visual baseline', async ({ page }, testInfo) =>
   test.skip(testInfo.project.name === 'visual-trainer-1440', 'Client Card Edit uses mobile visual profiles')
   await signIn(page, 'client@fit.local', /\/me$/)
   await gotoStable(page, '/me/edit')
-  await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Редактировать профиль' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/client-card-edit-identity/)
   await expect(page.getByLabel('Имя')).toHaveValue('Анна Смирнова')
   await expect(page.getByLabel('Цель')).toBeVisible()

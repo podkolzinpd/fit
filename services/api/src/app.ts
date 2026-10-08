@@ -69,6 +69,7 @@ import type { PilotConnectionsWriter } from './pilot-connections-writer.js'
 import type { PilotInvitationLinks } from './pilot-invitation-links.js'
 import type { PilotLegal } from './pilot-legal.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
+import { readAthleteSportProfile } from './athlete-sport-profile.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 import type {
@@ -2922,6 +2923,43 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       () => writer.createQuickOwnClient(sessionToken, command.fullName),
       (client) => reply.header('cache-control', 'no-store').send({ client }),
     )
+  })
+
+  app.get('/v1/me/sport-profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => writer.getOwnAthleteSportProfile(session),
+      (sport) => reply.header('cache-control', 'no-store').send({ sport }))
+  })
+
+  app.put('/v1/me/client-profile', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const body = request.body
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const input = body as Record<string, unknown>
+    const clientId = input.clientId === null ? null : typeof input.clientId === 'string' ? input.clientId : undefined
+    const version = input.expectedVersion === null ? null : typeof input.expectedVersion === 'number' ? input.expectedVersion : undefined
+    const draft = readCreateClientCardDraft(input.draft)
+    const sport = readAthleteSportProfile(input.sport)
+    if (clientId === undefined || version === undefined
+      || (clientId !== null && !uuidPattern.test(clientId))
+      || (clientId === null && version !== null)
+      || (clientId !== null && (!Number.isSafeInteger(version) || version === null || version < 1))
+      || draft === undefined || sport === undefined) {
+      return reply.code(400).send({ error: 'invalid_request' })
+    }
+    const writer = options.pilotDomainWriter
+    if (writer === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => writer.saveOwnAthleteProfile(session, clientId, version, draft, sport),
+      (client) => reply.header('cache-control', 'no-store').send({ client }))
   })
 
   app.put('/v1/clients/:clientId', async (request, reply) => {

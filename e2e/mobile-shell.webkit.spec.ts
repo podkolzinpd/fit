@@ -930,7 +930,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.goto('/me/profile')
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
   await page.goto('/me/edit')
-  await expect(page.getByRole('heading', { name: 'Редактировать клиента' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Редактировать профиль' })).toBeVisible()
   await page.getByLabel('Имя').fill('Черновик отмены')
   await Promise.all([
     page.waitForURL(/\/me\/profile$/),
