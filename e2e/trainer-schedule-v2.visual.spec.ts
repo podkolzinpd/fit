@@ -1334,7 +1334,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: completed ? set : {}, confirmedAt: completed ? '2026-09-24T12:00:00Z' : null, version: 1 })),
       }))
       workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
-        createdBy: profileId, status: completed ? 'done' : 'planned', prepSeconds: draft.prepSeconds ?? 0, actualDurationSec: draft.actualDurationSec,
+        createdBy: profileId, status: completed ? 'done' : 'planned', ...(draft.prepSeconds ? { prepSeconds: draft.prepSeconds } : {}), actualDurationSec: draft.actualDurationSec,
         completedAt: completed ? '2026-09-24T12:00:00Z' : null }]
       body = { workout: { id: newWorkoutId } }
     } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {
