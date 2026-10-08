@@ -556,6 +556,52 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.screenshot({ path: info.outputPath('decision-action.png') })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
+  test(`Client Lime preparation and native save fields use the field contract ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      localStorage.setItem(`fit.today-draft.${id}.plan.client-fields`, JSON.stringify({ screen: 'review', text: '', choices: {}, clientId: id,
+        items: [{ line: 'Приседания', exercise: { source: 'system', ref: 'squat', name: 'Приседания', muscleGroup: 'legs', inputKind: 'strength' },
+          sets: [{ position: 0, weightKg: 20, reps: 10 }], hasValues: true }] }))
+    }, { id: clientId, theme })
+    await page.goto('/me?draft=fields&view=review')
+    const prep = page.getByLabel('Подготовка перед стартом', { exact: true })
+    await expect(prep).toHaveCSS('border-radius', '16px')
+    await expect(prep).toHaveCSS('font-size', '16px')
+    await expect(prep).toHaveCSS('font-family', /YS Geo/)
+    expect((await prep.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+    await prep.selectOption('10'); await expect(prep).toHaveValue('10')
+    await prep.focus(); await expect(prep).toBeFocused()
+    await prep.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath('preparation-field.png') })
+    await page.getByRole('button', { name: 'Далее', exact: true }).click()
+    for (const mode of ['Запланировать', 'Записать выполненную']) {
+      await page.getByRole('button', { name: mode, exact: true }).click()
+      const date = page.getByLabel('Дата тренировки', { exact: true })
+      const time = page.getByLabel('Время тренировки', { exact: true })
+      for (const field of [date, time]) {
+        await expect(field).toHaveCSS('border-radius', '16px')
+        expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+        await expect(field).toHaveCSS('font-family', /YS Geo/)
+        await expect(field).toHaveCSS('font-size', '16px')
+      }
+      const d = (await date.boundingBox())!, t = (await time.boundingBox())!
+      expect(t.x - (d.x + d.width)).toBeGreaterThanOrEqual(12)
+      await time.fill('12:30'); await expect(time).toHaveValue('12:30')
+      await time.fill(''); await expect(time).toHaveValue('')
+      await page.screenshot({ path: info.outputPath(`save-${mode}.png`) })
+    }
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    const request = page.waitForRequest((req) => new URL(req.url()).pathname === '/v1/workouts' && req.method() === 'POST')
+    await page.getByRole('button', { name: 'Запланировать тренировку', exact: true }).click()
+    expect((await request).postDataJSON()).toMatchObject({ prepSeconds: 10 })
+    await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
+    await page.reload()
+    await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+    await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
 }
 
 test('Live rest legacy negative countdown without preparation', async ({ page }) => {
@@ -1506,7 +1552,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         return
       }
       const completed = url.pathname.endsWith('/completed')
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
       lastSavedStartTime = draft.startTime ?? null
       const exercises: WorkoutExercise[] = (draft.exercises ?? []).map((exercise, index) => ({ ...exercise,
         id: `10000000-0000-4000-8000-${String(100 + index).padStart(12, '0')}`, blockId: `10000000-0000-4000-8000-${String(200 + index).padStart(12, '0')}`,
@@ -1515,7 +1561,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
         sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: completed ? set : {}, confirmedAt: completed ? '2026-09-24T12:00:00Z' : null, version: 1 })),
       }))
       workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
-        createdBy: profileId, status: completed ? 'done' : 'planned', actualDurationSec: draft.actualDurationSec,
+        createdBy: profileId, status: completed ? 'done' : 'planned', ...(draft.prepSeconds ? { prepSeconds: draft.prepSeconds } : {}), actualDurationSec: draft.actualDurationSec,
         completedAt: completed ? '2026-09-24T12:00:00Z' : null }]
       body = { workout: { id: newWorkoutId } }
     } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {
