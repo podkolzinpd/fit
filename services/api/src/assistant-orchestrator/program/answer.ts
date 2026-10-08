@@ -101,6 +101,11 @@ export function explicitBriefAnswer(message: string, context?: BriefAnswerContex
     const equipment = explicitEquipment(text)
     if (equipment) return { patch: { equipment }, clear: [], evidence: { equipment: message }, clarification: null }
   }
+  if (context?.fields.length === 1 && context.fields[0] === 'limitations'
+    && /(?:^|\s)(?:бол\p{L}*|травм\p{L}*|ограничен\p{L}*|дискомфорт\p{L}*)/u.test(text)) {
+    return { patch: { limitations: 'present', limitationsText: message }, clear: [],
+      evidence: { limitations: message, limitationsText: message }, clarification: null }
+  }
   if (context?.fields.length === 1 && context.fields[0] === 'weekdays'
     && /^(?:да,?\s*)?(?:мне\s+)?(?:все равно|не ?важно|дни не важны|без разницы|любые|в любые(?: дни)?|в любой день)$/u.test(text)) {
     const weekdays = evenlySpacedWeekdays(brief?.frequency)

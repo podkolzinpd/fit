@@ -97,13 +97,17 @@ describe('private generator load contract', () => {
   it('generates a draft with stated limitations and passes adaptations to the model', async () => {
     const body = request()
     body.brief.limitations = 'present'
-    body.brief.limitationsText = 'Дискомфорт при жимах над головой'
-    body.brief.limitationAdjustments = 'Исключить жимы над головой'
-    body.brief.excludedRefs = ['overhead-press', 'vital-standing-dumbbell-press']
+    body.brief.limitationsText = 'Боли в спине и коленях'
+    body.brief.limitationAdjustments = 'Исключить приседания и тяжёлые наклоны'
+    body.brief.excludedRefs = ['barbell-squat', 'romanian-deadlift']
     const result = await handler({ httpMethod: 'POST', body })
     expect(result.statusCode).toBe(200)
-    expect(vi.mocked(programModelJson).mock.calls[0]![0].data).toMatchObject({ brief: { limitations: 'present', limitationAdjustments: 'Исключить жимы над головой' } })
-    expect(JSON.stringify(vi.mocked(programModelJson).mock.calls[0]![0].schema)).not.toContain('vital-standing-dumbbell-press')
+    expect(vi.mocked(programModelJson).mock.calls[0]![0].data).toMatchObject({ brief: {
+      limitations: 'present', limitationsText: 'Боли в спине и коленях', limitationAdjustments: 'Исключить приседания и тяжёлые наклоны',
+    } })
+    expect(vi.mocked(programModelJson).mock.calls[0]![0].instruction).toContain('обязательные условия подбора')
+    expect(JSON.stringify(vi.mocked(programModelJson).mock.calls[0]![0].schema)).not.toContain('barbell-squat')
+    expect(JSON.stringify(vi.mocked(programModelJson).mock.calls[0]![0].schema)).not.toContain('romanian-deadlift')
   })
   it('keeps other trainers outside the pilot', async () => {
     vi.mocked(isProgramEnabled).mockReturnValue(false)
