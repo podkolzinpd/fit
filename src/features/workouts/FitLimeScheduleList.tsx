@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Workout } from '../../shared/domain'
 import { formatLocalDate, type LocalDate } from '../../shared/local-date'
 import { workoutStatusPresentation } from '../../data/repositories/workout-rules'
+import { isIndependentScheduleWorkout } from './schedule-filters'
 
 export function FitLimeScheduleList({ workouts, today, returnTo, onOpenDay }: {
   workouts: Workout[]
@@ -19,7 +20,7 @@ export function FitLimeScheduleList({ workouts, today, returnTo, onOpenDay }: {
       const untimed = items.filter((item) => !item.startTime)
       const row = (item: Workout) => <Link key={item.id} className="fit-lime-history-row" to={`/workouts/${item.id}`} state={{ returnTo }}>
         <time>{item.startTime?.slice(0, 5) ?? '—'}</time>
-        <span><strong>{item.clientName}</strong><small>{item.title || item.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') || 'Без упражнений'}</small><small>{item.status === 'done' ? `Проведена${workoutStatusPresentation(item, today).tone === 'partial' ? ' · план выполнен частично' : ''}` : item.status === 'cancelled' ? 'Отменена' : workoutStatusPresentation(item, today).label}</small></span>
+        <span><strong>{item.clientName}</strong><small>{item.title || item.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') || 'Без упражнений'}</small><small>{isIndependentScheduleWorkout(item) && 'Самостоятельно · '}{item.status === 'done' ? `Проведена${workoutStatusPresentation(item, today).tone === 'partial' ? ' · план выполнен частично' : ''}` : item.status === 'cancelled' ? 'Отменена' : workoutStatusPresentation(item, today).label}</small></span>
       </Link>
       return <section key={date} aria-label={formatLocalDate(date)}>
         <h2><button type="button" className="link" onClick={() => onOpenDay(date)}>{formatLocalDate(date)}</button></h2>

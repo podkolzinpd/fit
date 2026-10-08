@@ -359,6 +359,16 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 
 ## Workout chronicle acceptance contract
 
+- Lime trainer schedule distinguishes creator and training format: default only
+  actor-created with_trainer; an actor-scoped default-off checkbox adds own self
+  plans without occupying trainer timeline. Athlete-created sessions never enter
+  schedule, but remain in athlete card/history/calendar. Legacy null author is
+  own only with matching trainerId; missing format keeps the existing self
+  fallback. Mono calendar, shared repository, execution and finance unchanged.
+  Acceptance: schedule-filters/use-independent-schedule unit tests and
+  `Lime schedule ownership` Yandex contract route matrix. Release is gated after
+  both global Lime rollouts; preparation is not production delivery.
+
 - Тренерский экран «Тренировки клиента» отдельно загружает и показывает
   planned/in_progress на сегодня и будущее в «Предстоит», независимо от
   пагинации и режима истории. После завершения запись остаётся в истории;
