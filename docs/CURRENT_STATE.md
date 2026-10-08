@@ -1,5 +1,11 @@
 # Fit — текущее состояние проекта
 
+## Клиентский Lime: часть6 утверждённых доработок — 2026-10-08
+
+Свежая база послеPR#1530: main387944bd. WebKit6/6 полей/подготовки и12/12 редактора (клиент390/430 light/dark, trainer/Mono390/430/1440) прошли. Полныйcheck2563frontend/1269API+136DBskip/build exit0. Fixture не превращает отсутствие подготовки в0: настоящийAPI ожидаетabsence/null, продуктовая механика не менялась. PR#1529 опубликован37856829386; public13/13, native207/207, browser27/28 иточныйповторtrainerconnectiontimeout1/1 passed, исходныйрезультат сохранён. PR#1530 слит387944bd послеCI37854575582 success; mainCI37858422636 идёт.
+
+Поля даты/времени и подготовки client Lime имеют контракт Field:16px/radius16/min48 и стандартные рамку/фокус. Native select appearance:none/chevron взяты из профиля. Название, подсказка, варианты, обработчики, native picker и хранение прежние. WebKit6/6 (обе темы390/430, planned/completed,empty/filled/focus,gap,prep10/reload/Live); full check exit0. CI/merge/deploy/свежая native сборка впереди; production-закрытие ID не заявлено. План: design/CLIENT_LIME_REMEDIATION_20261008.md. Физический iPhone и реальные системные окна/диктовка не проверены.
+
 ## Клиентский Lime: часть5 утверждённых доработок — 2026-10-08
 
 ПослеPR#1529 свежая база86e8936e: форма/голос/рост/очисткаWebKit32/32 (8уникальныхсценариев в4профилях); полныйcheck2563frontend/1269API+136DBskip/build exit0. ОбаYS-лица явно загружаются перед сравнением геометрии; пользовательский код и assertions не ослаблены. PR#1528 опубликован37852644502: public13/13, native207/207, браузеры14/14. PR#1529 слит86e8936e; mainCI37854021587/публикация идут. Серверныефлаги read-only37851501663/37851505730: client/trainer/schedule=all, revision2, VITE_CLIENT_LIME_ENABLED=true; флаги не менялись.
