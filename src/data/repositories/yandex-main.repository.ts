@@ -1403,13 +1403,8 @@ export function createYandexMainRepository(
         invalidate()
         return payload.stage.id
       },
-      async deleteStage(stageId) {
-        const current = await Promise.all((await clients()).map((item) => readJson(
-          queries, `/v1/clients/${item.id}/progress`, progressBundleSchema,
-        )))
-        const stage = current.flatMap((bundle) => bundle.goal?.stages ?? []).find((item) => item.id === stageId)
-        if (!stage) throw new RepositoryError('PT404', 'Этап не найден.')
-        await writeEmpty(queries, `/v1/goal-stages/${stageId}`, 'DELETE', { expectedVersion: stage.version })
+      async deleteStage(stage) {
+        await writeEmpty(queries, `/v1/goal-stages/${stage.id}`, 'DELETE', { expectedVersion: stage.version })
         invalidate()
       },
     },

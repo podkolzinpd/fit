@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { z } from 'zod'
 
 if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
   for (const name of [
@@ -117,6 +118,102 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(({ page }) => {
   expect(legacyRequestCounts.get(page), 'Yandex-only auth must not call local Supabase').toBe(0)
 })
+
+for (const role of ['trainer', 'client'] as const) {
+  test(`Yandex goal stage deletion uses the selected version without other client progress (${role})`, async ({ page }, testInfo) => {
+    test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true', 'Requires the Yandex auth lane.')
+    const actorId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+    const clientId = '1a0c5295-0a0f-4ccb-a39a-e58090967245'
+    const otherClientId = '209cb508-16e2-4399-8dd0-bcadfd58818f'
+    const goalId = 'a1013343-1267-49dc-8c4d-9ad99b709035'
+    const stageId = 'cf07db27-7d46-401f-9412-70c929fb55be'
+    const versions: number[] = []
+    let progressReads = 0
+    let otherProgressReads = 0
+    let deleted = false
+    let version = 7
+    let releaseDelete: (() => void) | undefined
+    await page.route('https://stage.example.test/health', (route) => route.fulfill({
+      headers: { 'x-fit-request-id': 'synthetic-health', 'access-control-expose-headers': 'x-fit-request-id' }, json: { status: 'ok' },
+    }))
+    await page.route('https://stage.example.test/v1/**', async (route) => {
+      const path = new URL(route.request().url()).pathname
+      if (path === '/v1/auth/yandex/session') return route.fulfill({ json: {
+        accessMode: 'read_write', profile: { id: actorId, firstName: 'Synthetic trainer',
+          lastName: null, timezone: 'Europe/Moscow', accountRole: role,
+          ...(role === 'client' ? { client: { id: clientId, trainerId: actorId, fullName: 'Synthetic client' } } : {}),
+        },
+      } })
+      if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
+      if (path === '/v1/clients') return route.fulfill({ json: { clients: [clientId, otherClientId].map((id) => ({
+        id, canArchive: true, hasAccount: false, fullName: 'Synthetic client', canonicalFullName: 'Synthetic client',
+        gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+        currentWeightKg: null, lastActivityAt: '2026-10-01T00:00:00Z', archivedAt: null, version: 1, membershipVersion: 1,
+      })) } })
+      if (path === `/v1/clients/${clientId}/progress`) {
+        progressReads += 1
+        return route.fulfill({ json: { entries: [], customMetrics: [], goal: {
+          id: goalId, clientId, title: 'Синтетическая цель', targetDate: null, status: 'active', version: 1, criteria: [],
+          stages: deleted ? [] : [{ id: stageId, goalId, title: 'Первый этап', startsOn: '2026-10-01',
+            endsOn: '2026-10-31', position: 0, version }],
+        } } })
+      }
+      if (path === `/v1/clients/${otherClientId}/progress`) otherProgressReads += 1
+      if (path === `/v1/goal-stages/${stageId}` && route.request().method() === 'DELETE') {
+        const body = z.object({ expectedVersion: z.number().int().positive() }).parse(route.request().postDataJSON())
+        versions.push(body.expectedVersion)
+        await new Promise<void>((resolve) => { releaseDelete = resolve })
+        if (body.expectedVersion !== version) return route.fulfill({ status: 409, json: { error: 'stage_conflict' } })
+        deleted = true
+        return route.fulfill({ json: { stage: { id: stageId, deleted: true } } })
+      }
+      return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    })
+    await page.addInitScript(() => {
+      localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
+    })
+    await page.goto(role === 'client' ? '/me/goal' : `/clients/${clientId}/goal`)
+    const stage = page.locator('.stage-row').filter({ hasText: 'Первый этап' })
+    await expect(stage).toBeVisible()
+    for (const width of role === 'client' ? [390, 430] : [390, 430, 1440]) {
+      await page.setViewportSize({ width, height: 932 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`goal-stage-${width}.png`), fullPage: true })
+    }
+    await page.evaluate(() => {
+      localStorage.setItem('fit.appTheme', 'dark')
+      window.dispatchEvent(new Event('fit-theme-change'))
+    })
+    await page.setViewportSize({ width: 390, height: 932 })
+    await page.screenshot({ path: testInfo.outputPath('goal-stage-dark-390.png'), fullPage: true })
+    const confirm = page.getByRole('alertdialog', { name: 'Удалить этап?' })
+    await stage.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(confirm).toBeVisible()
+    await confirm.getByRole('button', { name: 'Отмена' }).click()
+    expect(versions).toEqual([])
+    const readsBeforeDelete = progressReads
+    await stage.getByRole('button', { name: 'Удалить', exact: true }).click()
+    version = 8
+    await confirm.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect.poll(() => versions).toEqual([7])
+    await expect(stage.getByRole('button', { name: 'Удалить', exact: true })).toBeDisabled()
+    releaseDelete?.()
+    await expect(stage.getByText('Данные уже изменились. Обновите страницу и повторите.')).toBeVisible()
+    expect(deleted).toBe(false)
+    expect(progressReads).toBe(readsBeforeDelete)
+    expect(otherProgressReads).toBe(0)
+    await page.reload()
+    await expect(stage).toBeVisible()
+    await stage.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await confirm.getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect.poll(() => versions).toEqual([7, 8])
+    releaseDelete?.()
+    await expect(page.getByText('Этапов пока нет')).toBeVisible()
+    expect(otherProgressReads).toBe(0)
+  })
+}
 
 test('Yandex workout completion reads personal records once without paginated Progress', async ({ page }) => {
   test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'

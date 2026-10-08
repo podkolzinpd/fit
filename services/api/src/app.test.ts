@@ -2680,12 +2680,14 @@ function buildProgressData(): {
   saveProgress: ReturnType<typeof vi.fn>
   readWorkoutRecords: ReturnType<typeof vi.fn>
   readExercise: ReturnType<typeof vi.fn>
+  deleteStage: ReturnType<typeof vi.fn>
 } {
   const readBundle = vi.fn().mockResolvedValue({ entries: [], customMetrics: [], goal: null })
   const saveProgress = vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 })
   const readWorkoutRecords = vi.fn().mockResolvedValue([])
   const readExercise = vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 })
-  return { readBundle, saveProgress, readWorkoutRecords, readExercise, pilotProgressData: {
+  const deleteStage = vi.fn().mockResolvedValue(undefined)
+  return { readBundle, saveProgress, readWorkoutRecords, readExercise, deleteStage, pilotProgressData: {
     readBundle,
     readRegularity: vi.fn().mockResolvedValue([]),
     readRunning: vi.fn().mockResolvedValue([]),
@@ -2699,7 +2701,7 @@ function buildProgressData(): {
     saveGoal: vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 }),
     archiveGoal: vi.fn().mockResolvedValue(2),
     saveStage: vi.fn().mockResolvedValue({ id: WORKOUT_ID, version: 1 }),
-    deleteStage: vi.fn().mockResolvedValue(undefined),
+    deleteStage,
   } }
 }
 
@@ -4247,6 +4249,50 @@ describe('read-only pilot training data endpoint', () => {
 describe('pilot progress and goals endpoints', () => {
   const sessionToken = 's'.repeat(43)
   const clientId = CLIENTS_RESPONSE.clients[0]!.id
+
+  it('deletes a goal stage using the server session and supplied version without reading bundles', async () => {
+    const progress = buildProgressData()
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'DELETE', url: `/v1/goal-stages/${WORKOUT_ID}`,
+      headers: { 'x-fit-session': sessionToken }, payload: { expectedVersion: 7 } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ stage: { id: WORKOUT_ID, deleted: true } })
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(progress.deleteStage).toHaveBeenCalledExactlyOnceWith(
+      { accessMode: 'read_write', token: sessionToken }, WORKOUT_ID, 7)
+    expect(progress.readBundle).not.toHaveBeenCalled()
+  })
+
+  it('rejects unauthenticated and invalid goal stage deletion before the database', async () => {
+    const progress = buildProgressData()
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    expect((await app.inject({ method: 'DELETE', url: `/v1/goal-stages/${WORKOUT_ID}`,
+      payload: { expectedVersion: 7 } })).statusCode).toBe(401)
+    for (const expectedVersion of [undefined, 0, -1, 1.5, '7']) {
+      expect((await app.inject({ method: 'DELETE', url: `/v1/goal-stages/${WORKOUT_ID}`,
+        headers: { 'x-fit-session': sessionToken }, payload: { expectedVersion } })).statusCode).toBe(400)
+    }
+    expect((await app.inject({ method: 'DELETE', url: '/v1/goal-stages/invalid',
+      headers: { 'x-fit-session': sessionToken }, payload: { expectedVersion: 7 } })).statusCode).toBe(400)
+    expect(progress.deleteStage).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['conflict', 409], ['forbidden', 403], ['not_found', 404],
+  ] as const)('preserves goal stage deletion %s without false success', async (code, status) => {
+    const progress = buildProgressData()
+    progress.deleteStage.mockRejectedValue(new PilotDomainCommandError(code))
+    const app = buildApp({ pilotProgressData: progress.pilotProgressData, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'DELETE', url: `/v1/goal-stages/${WORKOUT_ID}`,
+      headers: { 'x-fit-session': sessionToken }, payload: { expectedVersion: 7 } })
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).not.toHaveProperty('stage')
+    expect(progress.deleteStage).toHaveBeenCalledTimes(1)
+    expect(progress.readBundle).not.toHaveBeenCalled()
+  })
 
   it('reads workout records with the server session and no-store response', async () => {
     const progress = buildProgressData()
