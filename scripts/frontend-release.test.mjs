@@ -35,10 +35,14 @@ test('webfonts have explicit gateway routes and font MIME, not the SPA fallback'
   await mkdir(join(dir, 'assets'))
   await mkdir(join(dir, 'fonts'))
   const fontKey = 'fonts/ys-geo-regular-916b7f4a.woff2'
+  const dotoKey = 'assets/Doto-12345678.ttf'
+  const dotoBytes = await readFile(new URL('../src/assets/fonts/doto/Doto.ttf', import.meta.url))
+  assert.equal(createHash('sha256').update(dotoBytes).digest('hex'), '6f4fe7d37853b91df3698daa84cde2dbe1c9695d88c986e6510134910337d426')
   for (const [key, bytes] of Object.entries({
     'index.html': '<html>fixture</html>', 'sw.js': '// sw', 'asset-recovery.js': '// recovery',
     'site.webmanifest': '{}', 'assets/app-12345678.js': '// app',
     [fontKey]: 'wOF2 synthetic routing fixture; not a licensed font',
+    [dotoKey]: dotoBytes,
   })) await writeFile(join(dir, key), bytes)
   const bundle = await packageRelease(dir, commit, supportedRouting)
   const plan = gatewayPlan(bundle, [], { bucket: 'fit-frontend-candidate', reader: 'a'.repeat(20) })
@@ -48,6 +52,10 @@ test('webfonts have explicit gateway routes and font MIME, not the SPA fallback'
   assert.equal(route.get['x-yc-apigateway-integration'].object, file.object)
   assert.deepEqual(route.get, route.head)
   assert.notEqual(file.object, plan.specification.paths['/{path+}'].get['x-yc-apigateway-integration'].object)
+  const doto = plan.objects.find((entry) => entry.key === dotoKey)
+  assert.equal(doto.contentType, 'font/ttf')
+  assert.equal(plan.specification.paths[`/${dotoKey}`].get['x-yc-apigateway-integration'].object, doto.object)
+  assert.notEqual(doto.object, plan.specification.paths['/{path+}'].get['x-yc-apigateway-integration'].object)
 })
 
 test('large immutable JS upload uses verified gzip bytes without changing its URL', () => {
