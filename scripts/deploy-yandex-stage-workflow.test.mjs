@@ -25,6 +25,7 @@ const availabilityVerifier = readFileSync(
   join(import.meta.dirname, 'verify-yandex-api-availability.mjs'),
   'utf8',
 )
+const smokeVerifier = readFileSync(join(import.meta.dirname, 'yandex-stage-smoke.mjs'), 'utf8')
 
 test('configures a fresh ephemeral Yandex CLI profile after every OIDC exchange', () => {
   assert.match(oidcExchangeScript, /if command -v yc >\/dev\/null 2>&1/)
@@ -499,17 +500,18 @@ test('probes the fit_api identity privately before changing the API revision', (
   assert.match(workflow, /curl_exit=\$connections_curl_exit/)
   assert.match(workflow, /x-fit-error-category:/)
   assert.match(workflow, /x-fit-error-code:/)
-  assert.match(workflow, /x-fit-release-id:/)
+  assert.match(smokeVerifier, /x-fit-release-id/)
   assert.match(workflow, /toupper\(\$1\) ~ \/\^HTTP\\\//)
   assert.match(workflow, /candidate_streak=0/)
   assert.match(workflow, /candidate_streak=\$\(\( candidate_streak \+ 1 \)\)/)
   assert.match(workflow, /test "\$candidate_streak" -ge 5/)
   assert.match(workflow, /stage_smoke_headers=stage-smoke-last-headers\.txt/)
-  assert.match(workflow, /command curl --dump-header "\$stage_smoke_headers" "\$@"/)
+  assert.match(workflow, /yandex-stage-smoke\.mjs request[\s\S]*?--dump-header "\$stage_smoke_headers" "\$@"/)
   assert.match(workflow, /trap report_stage_smoke_failure ERR/)
-  assert.match(workflow, /Stage smoke failed: check=\$\{stage_smoke_check:-unknown\}/)
-  assert.match(workflow, /command_exit=\$command_exit/)
-  assert.match(workflow, /expected_release=\$API_IMAGE_TAG/)
+  assert.match(workflow, /yandex-stage-smoke\.mjs report "\$\{stage_smoke_check:-unknown\}" "\$command_exit"/)
+  assert.match(smokeVerifier, /Stage smoke failed: check=/)
+  assert.match(smokeVerifier, /command_exit=/)
+  assert.match(smokeVerifier, /expected_release=/)
   for (const check of [
     'training-data',
     'progress-bundle',
@@ -534,8 +536,8 @@ test('probes the fit_api identity privately before changing the API revision', (
     assert.match(workflow, new RegExp(`stage_smoke_check=${check}`))
   }
   assert.match(workflow, /The API revision was not changed/)
-  assert.match(workflow, /x-fit-request-id:/)
-  assert.match(workflow, /HTTP=\$\{http_status:-000\}/)
+  assert.match(smokeVerifier, /x-fit-request-id/)
+  assert.match(smokeVerifier, /HTTP=\$\{meta.http/)
   assert.match(
     workflow,
     /-target=yandex_lockbox_secret_iam_member\.migration_api_connection_secret_reader/,
@@ -548,6 +550,26 @@ test('probes the fit_api identity privately before changing the API revision', (
     databaseTerraform,
     /resource "yandex_lockbox_secret_iam_member" "migration_api_connection_secret_reader"/,
   )
+})
+
+test('refreshes only synthetic fixture sessions after bootstrap and bounds the entire product smoke', () => {
+  const start = workflow.indexOf('- name: Verify API health and readiness')
+  const end = workflow.indexOf('- name: Roll back the API revision when readiness or product smoke fails')
+  const smoke = workflow.slice(start, end)
+  const bootstrap = smoke.indexOf('test "$candidate_streak" -ge 5')
+  const refresh = smoke.indexOf('/stage/fixtures/workout-read-model')
+  const validation = smoke.indexOf('yandex-stage-smoke.mjs verify-fixture')
+  const wrapper = smoke.indexOf('curl() {')
+  const clients = smoke.indexOf('/v1/clients')
+  assert.ok(bootstrap > 0 && refresh > bootstrap)
+  assert.ok(validation > refresh && wrapper > validation && clients > wrapper)
+  assert.match(smoke, /--connect-timeout 5 --max-time 60/)
+  assert.match(smoke, /FIT_STAGE_SMOKE_DEADLINE_MS=.*Date.now\(\) \+ 600000/)
+  assert.match(smoke, /chmod 600 stage-workout-fixture-response\.json/)
+  assert.match(smoke, /yandex-stage-smoke\.mjs verify-deadline/)
+  assert.match(workflow, /steps\.smoke\.outcome == 'failure' && steps\.previous\.outputs\.revision_id != ''/)
+  assert.match(workflow, /failed health\/readiness or product smoke/)
+  assert.match(workflow, /'scripts\/yandex-stage-smoke\.mjs'/)
 })
 
 test('loads synthetic fixtures and verifies every read model through the runtime API', () => {
