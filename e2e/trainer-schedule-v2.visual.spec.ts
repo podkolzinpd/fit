@@ -15,6 +15,53 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+for (const width of [390, 430, 1440]) for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark']] as const) {
+  test(`Finance due date client cards ${width} lime=${fitLime} ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    const rows = [
+      { id: clientId, fullName: 'Один абонемент', amount: 250000, date: '2026-10-08', count: 1 },
+      { id: newWorkoutId, fullName: 'Александра Константинопольская-Оченьдлиннаяфамилия', amount: 123456789, date: '2026-10-09', count: 2 },
+      { id: customExerciseId, fullName: 'Без срока', amount: 200000, date: null, count: 1 },
+      { id: conversationId, fullName: 'Оплачено', amount: 0, date: null, count: 0 },
+    ]
+    await mockPilot(page, { fitLime, clientRecords: rows.map((row) => ({ id: row.id, fullName: row.fullName, archivedAt: null, version: 1 })) })
+    await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
+    let overviewReads = 0, clientFinanceReads = 0
+    page.on('request', (request) => { if (/\/clients\/[^/]+\/finance$/.test(new URL(request.url()).pathname)) clientFinanceReads++ })
+    await page.route('**/v1/finance/overview*', (route) => {
+      overviewReads++
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ overview: {
+        month: new URL(route.request().url()).searchParams.get('month'), receivedCents: 0, dueCents: 123906789, attentionCount: 0,
+        clients: rows.map((row) => ({ clientId: row.id, fullName: row.fullName, archivedAt: null, receivedCents: 0,
+          dueCents: row.amount, nearestPaymentDueOn: row.date, unpaidPackageCount: row.count,
+          activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 5, overdue: false,
+          lowSessions: false, unassignedSessions: 0, needsAttention: false })),
+      } }) })
+    })
+    await page.goto('/clients')
+    const single = page.locator(`[data-client-swipe-id="${clientId}"] .client-finance-state`)
+    await expect(single).toContainText(/К оплате 2.*500.*₽/)
+    const tip = page.getByRole('status').filter({ hasText: 'В архив одним свайпом' })
+    if (await tip.isVisible()) await tip.getByRole('button', { name: 'Понятно' }).click()
+    await expect(single).toContainText('· до 08.10')
+    await expect(page.locator(`[data-client-swipe-id="${newWorkoutId}"] .client-finance-state`)).toContainText('Ближайший срок — 09.10')
+    const textLayout = await page.locator('.client-finance-state').evaluateAll((items) => items.map((item) => ({ width: item.clientWidth, scroll: item.scrollWidth, size: getComputedStyle(item).fontSize })))
+    expect(textLayout.every((item) => item.scroll <= item.width && item.size === '12px')).toBe(true)
+    await expect(page.locator(`[data-client-swipe-id="${customExerciseId}"] .client-finance-state`)).not.toContainText(/до|срок/)
+    await expect(page.locator(`[data-client-swipe-id="${conversationId}"] .client-finance-state`)).not.toContainText(/до|срок/)
+    expect(overviewReads).toBe(1)
+    expect(clientFinanceReads).toBe(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.evaluate(() => document.fonts.ready)
+    await page.screenshot({ path: info.outputPath('client-due-date.png'), fullPage: true })
+    await page.goto('/finance')
+    await expect(page.locator('.finance-overview-client').first()).toBeVisible()
+    await expect(page.locator('.finance-overview-client').filter({ hasText: 'Один абонемент' })).toContainText('· до 08.10')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('overview-due-date.png'), fullPage: true })
+  })
+}
+
 async function expectContainedButtonText(button: Locator) {
   const geometry = await button.evaluate((element) => {
     const bounds = element.getBoundingClientRect()

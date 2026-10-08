@@ -3,7 +3,8 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { TrainerFinanceOverviewPage } from './TrainerFinanceOverviewPage'
+import type { TrainerFinanceOverviewClient } from '../../data/repositories/trainer-finance.repository'
+import { TrainerFinanceOverviewPage, trainerFinanceClientLabel } from './TrainerFinanceOverviewPage'
 
 const listOverview = vi.hoisted(() => vi.fn())
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { role: 'trainer', userId: 'trainer-1', timezone: 'Europe/Moscow' } }) }))
@@ -26,14 +27,41 @@ function FinanceTarget() {
   return <p>Финансы клиента · возврат {financeBackTo}</p>
 }
 
+describe('trainerFinanceClientLabel deadlines', () => {
+  const client: TrainerFinanceOverviewClient = {
+    clientId: 'client', fullName: 'Клиент', archivedAt: null, receivedCents: 0, dueCents: 250000,
+    nearestPaymentDueOn: '2026-10-08', unpaidPackageCount: 1, activePackageCount: 1, upcomingPackageCount: 0,
+    sessionsRemaining: 5, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false,
+  }
+  it('shows one calendar deadline next to the debt', () => {
+    expect(trainerFinanceClientLabel(client)).toMatch(/^К оплате 2\s500\s₽ · до 08\.10$/)
+  })
+  it('keeps the aggregate debt separate from the nearest deadline of multiple packages', () => {
+    expect(trainerFinanceClientLabel({ ...client, unpaidPackageCount: 2 })).toMatch(/^К оплате 2\s500\s₽\nБлижайший срок — 08\.10$/)
+  })
+  it('does not invent a date when the deadline or additive API fields are missing', () => {
+    expect(trainerFinanceClientLabel({ ...client, nearestPaymentDueOn: null })).not.toMatch(/до|срок/)
+    expect(trainerFinanceClientLabel({ ...client, unpaidPackageCount: 0 })).not.toMatch(/до|срок/)
+  })
+  it('does not show an obsolete deadline for a paid client', () => {
+    expect(trainerFinanceClientLabel({ ...client, dueCents: 0 })).not.toMatch(/до|срок/)
+  })
+  it('preserves the overdue state and deadline', () => {
+    expect(trainerFinanceClientLabel({ ...client, overdue: true })).toMatch(/^Просрочено .* · до 08\.10$/)
+  })
+  it('preserves the unassigned-session priority without hiding the nearest deadline', () => {
+    expect(trainerFinanceClientLabel({ ...client, unassignedSessions: 2 })).toBe('Не привязано: 2\nБлижайший срок — 08.10')
+  })
+})
+
 describe('TrainerFinanceOverviewPage', () => {
   beforeEach(() => {
     listOverview.mockReset().mockResolvedValue({
       month: '2026-09', receivedCents: 2500000, dueCents: 500000, attentionCount: 1,
       clients: [
-        { clientId: '1a0c5295-0a0f-4ccb-a39a-e58090967245', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true },
-        { clientId: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b', fullName: 'Борис Иванов', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 0, upcomingPackageCount: 0, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
-        { clientId: '3fe240f2-6d78-4b02-a807-1b93194596d7', fullName: 'Вера Петрова', archivedAt: null, receivedCents: 0, dueCents: 0, activePackageCount: 0, upcomingPackageCount: 1, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
+        { clientId: '1a0c5295-0a0f-4ccb-a39a-e58090967245', fullName: 'Анна Смирнова', archivedAt: null, receivedCents: 2500000, dueCents: 500000, nearestPaymentDueOn: null, unpaidPackageCount: 0, activePackageCount: 1, upcomingPackageCount: 0, sessionsRemaining: 2, overdue: true, lowSessions: true, unassignedSessions: 0, needsAttention: true },
+        { clientId: 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b', fullName: 'Борис Иванов', archivedAt: null, receivedCents: 0, dueCents: 0, nearestPaymentDueOn: null, unpaidPackageCount: 0, activePackageCount: 0, upcomingPackageCount: 0, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
+        { clientId: '3fe240f2-6d78-4b02-a807-1b93194596d7', fullName: 'Вера Петрова', archivedAt: null, receivedCents: 0, dueCents: 0, nearestPaymentDueOn: null, unpaidPackageCount: 0, activePackageCount: 0, upcomingPackageCount: 1, sessionsRemaining: null, overdue: false, lowSessions: false, unassignedSessions: 0, needsAttention: false },
       ],
     })
   })

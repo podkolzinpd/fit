@@ -68,6 +68,8 @@ export interface TrainerFinanceOverviewClient {
   archivedAt: string | null
   receivedCents: number
   dueCents: number
+  nearestPaymentDueOn: string | null
+  unpaidPackageCount: number
   activePackageCount: number
   upcomingPackageCount: number
   sessionsRemaining: number | null

@@ -3002,6 +3002,55 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('aggregates payment deadlines only from unpaid open services of the current trainer', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const owner = ownerPool, runtime = runtimePool
+      const cleanup = async () => {
+        for (const table of ['trainer_finance_events', 'trainer_finance_payments', 'trainer_finance_sessions', 'trainer_finance_packages']) {
+          await owner.query(`delete from public.${table} where client_id = $1`, [CLIENT_ID])
+        }
+      }
+      const command = (actor: string, sql: string, args: unknown[]) => withActorTransaction(runtime, actor,
+        (client) => client.query<JsonResultRow>(sql, args))
+      const create = async (actor: string, price: number, paid: number, deadline: string | null, kind = 'session_pack') => {
+        const result = await command(actor, `select public.create_trainer_finance_service(
+          $1, $2, 'Тест срока', $6, 0, $3, $4, date '2026-09-01', date '2030-12-31', $5::date, null
+        ) as result`, [CLIENT_ID, kind, price, paid, deadline, kind === 'session_pack' ? 10 : 0])
+        return (result[0]!.result as { id: string }).id
+      }
+      const overview = async (actor = ACTOR_ID) => {
+        const result = await command(actor, "select public.list_trainer_finance_overview_v2(date '2026-10-01') as result", [])
+        const clients = (result[0]!.result as { clients: Array<{ clientId: string; dueCents: number; nearestPaymentDueOn: string | null; unpaidPackageCount: number }> }).clients
+        return clients.find((client) => client.clientId === CLIENT_ID)
+      }
+      const pay = (id: string, amount: number) => command(ACTOR_ID,
+        "select public.add_trainer_finance_payment($1, $2, date '2026-10-08', null) as result", [id, amount])
+      await cleanup()
+      try {
+        await create(MEMBER_TRAINER_ID, 100000, 0, '2001-01-01')
+        const closed = await create(ACTOR_ID, 100000, 0, '2002-01-01')
+        await owner.query('update public.trainer_finance_packages set closed_at = now() where id = $1', [closed])
+        await create(ACTOR_ID, 100000, 100000, '2003-01-01')
+        expect(await overview()).toMatchObject({ dueCents: 0, nearestPaymentDueOn: null, unpaidPackageCount: 0 })
+        const first = await create(ACTOR_ID, 200000, 0, '2030-10-08')
+        expect(await overview()).toMatchObject({ dueCents: 200000, nearestPaymentDueOn: '2030-10-08', unpaidPackageCount: 1 })
+        await pay(first, 50000)
+        expect(await overview()).toMatchObject({ dueCents: 150000, nearestPaymentDueOn: '2030-10-08', unpaidPackageCount: 1 })
+        const second = await create(ACTOR_ID, 300000, 0, '2030-10-10', 'online_coaching')
+        expect(await overview()).toMatchObject({ dueCents: 450000, nearestPaymentDueOn: '2030-10-08', unpaidPackageCount: 2 })
+        const undated = await create(ACTOR_ID, 50000, 0, null)
+        expect(await overview()).toMatchObject({ dueCents: 500000, nearestPaymentDueOn: '2030-10-08', unpaidPackageCount: 3 })
+        await pay(first, 150000)
+        expect(await overview()).toMatchObject({ dueCents: 350000, nearestPaymentDueOn: '2030-10-10', unpaidPackageCount: 2 })
+        await pay(second, 300000)
+        expect(await overview()).toMatchObject({ dueCents: 50000, nearestPaymentDueOn: null, unpaidPackageCount: 1 })
+        await pay(undated, 50000)
+        expect(await overview()).toMatchObject({ dueCents: 0, nearestPaymentDueOn: null, unpaidPackageCount: 0 })
+        expect(await overview(MEMBER_TRAINER_ID)).toMatchObject({ dueCents: 100000, nearestPaymentDueOn: '2001-01-01', unpaidPackageCount: 1 })
+        await expect(overview(OTHER_ACTOR_ID)).rejects.toThrow('trainer_finance_forbidden')
+      } finally { await cleanup() }
+    })
+
     it('isolates trainer finance and derives balances from active payments', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
