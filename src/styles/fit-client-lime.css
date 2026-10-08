@@ -180,7 +180,7 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
 }
-.phone-frame.fit-client-lime :is(.today-date-field input, .planned-set-input, .planned-set-rpe,
+.phone-frame.fit-client-lime :is(.today-date-field input, .today-date-field select, .planned-set-input, .planned-set-rpe,
   .workout-composer-card textarea, .exercise-plan-rest-field input) {
   border: 1px solid var(--lime-divider);
   border-radius: 16px;
@@ -255,4 +255,43 @@ html.fit-client-lime-document .sheet-overlay .modal-dialog {
   border-color: var(--lime-divider);
   background: var(--lime-surface-raised);
   color: var(--lime-text);
+}
+
+/* Client date/time and preparation reuse the existing Lime field contract. */
+.phone-frame.fit-client-lime.workout-create-edit-identity :is(.today-date-field input, .today-date-field select) {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.phone-frame.fit-client-lime .workout-prep-select { position: relative; display: block; min-width: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .workout-prep-select select {
+  appearance: none;
+  min-height: 48px;
+  padding-right: 36px;
+  border-radius: 16px;
+  font-size: 16px;
+}
+.phone-frame.fit-client-lime .workout-prep-select::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  background: var(--lime-text-secondary);
+  mask: url('../../docs/design/figma-20261002/assets/arrow-right.svg') center / contain no-repeat;
+  transform: translateY(-50%) rotate(90deg);
+  pointer-events: none;
+}
+.phone-frame.fit-client-lime .today-date-field :is(input[type='date'], input[type='time']) {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
 }
