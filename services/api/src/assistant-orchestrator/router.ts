@@ -13,6 +13,20 @@ const changeClientControls = ['Сменить клиента', 'Другой к�
 const isChangeClientControl = (message: string) => changeClientControls.some((control) => control.toLocaleLowerCase('ru') === message.trim().toLocaleLowerCase('ru'))
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === 'object' && !Array.isArray(value) }
 
+/** A bare number is unambiguous only when the questionnaire asks for duration. */
+function isDurationBriefAnswer(message: string, active: AssistantAction): boolean {
+  if (active.tool !== 'create_program_draft' || active.payload.step !== 'brief') return false
+  const askedFields = active.payload.askedFields
+  if (!Array.isArray(askedFields) || askedFields.length !== 1 || askedFields[0] !== 'durationMin') return false
+  const match = message.trim().toLocaleLowerCase('ru').replace(/[.!]+$/u, '')
+    .match(/^(\d{1,3})(?:\s*[-–—]\s*(\d{1,3}))?(?:\s*(?:мин|минута|минуты|минут))?$/u)
+  if (!match) return false
+  return [match[1], match[2]].filter((value): value is string => value !== undefined).every((value) => {
+    const minutes = Number(value)
+    return Number.isInteger(minutes) && minutes >= 15 && minutes <= 120
+  })
+}
+
 /**
  * Ordinary questions should not depend on the action router.  The router is a
  * guard for mutations and program drafting; sending a fitness question through
@@ -67,6 +81,7 @@ function controlRoute(message: string, active: AssistantAction | null): Assistan
   const text = message.trim()
   if (active.tool === 'create_program_draft' && active.payload.resumePreviousProgram === true) return { tool: active.tool, mode: 'continue', reply: '' }
   if (explicitCancellation(text, active)) return { tool: active.tool as RoutedTool, mode: 'cancel', reply: '' }
+  if (isDurationBriefAnswer(message, active)) return { tool: active.tool as RoutedTool, mode: 'continue', reply: '' }
   if (active.payload.step === 'client' && /^(?:выбрать\s+)?\d{1,2}$/iu.test(text)) return { tool: active.tool as RoutedTool, mode: 'continue', reply: '' }
   if (active.payload.step === 'client' && Array.isArray(active.payload.candidates)) {
     const prefix = active.tool === 'create_program_draft' ? 'Подготовить программу для ' : 'Записать тренировку для '

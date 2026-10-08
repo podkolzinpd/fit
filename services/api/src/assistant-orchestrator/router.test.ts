@@ -40,6 +40,19 @@ describe('model assistant router', () => {
     expect(await chooseAssistantRoute(CONFIRM_PROGRAM_BRIEF, [], draft('create_program_draft'), 'turn')).toMatchObject({ tool: 'create_program_draft', mode: 'continue' })
     expect(programModelJson).not.toHaveBeenCalled()
   })
+  it.each(['45 минут', '45', '40–60 минут'])('continues a valid duration answer without asking the model to route it: %s', async (message) => {
+    const active = draft('create_program_draft')
+    active.payload.askedFields = ['durationMin']
+    expect(await chooseAssistantRoute(message, [], active, 'turn')).toEqual({ tool: 'create_program_draft', mode: 'continue', reply: '' })
+    expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it('does not reinterpret a bare number outside the explicit duration question', async () => {
+    const active = draft('create_program_draft')
+    active.payload.askedFields = ['frequency']
+    vi.mocked(programModelJson).mockResolvedValue({ tool: null, mode: 'chat', reply: 'Уточните, пожалуйста.' })
+    await expect(chooseAssistantRoute('45', [], active, 'turn')).resolves.toMatchObject({ mode: 'chat' })
+    expect(programModelJson).toHaveBeenCalledOnce()
+  })
   it('continues a restored previous course without a paid routing guess', async () => {
     const active = draft('create_program_draft')
     active.payload.resumePreviousProgram = true
