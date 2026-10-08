@@ -77,6 +77,9 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
   background: var(--lime-nav);
   transform: translateX(-50%);
 }
+.phone-frame.fit-client-lime.keyboard-open .client-tab-bar {
+  display: none;
+}
 .phone-frame.fit-client-lime .client-tab-bar a {
   min-width: 0;
   min-height: 56px;
