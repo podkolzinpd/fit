@@ -28,12 +28,13 @@ function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
 }
 
 test('Live rest legacy negative countdown without preparation', async ({ page }) => {
-  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  // Keep Date fixed across reload while letting loading/render timers run.
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout()] })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.live-rest-trigger')).toContainText('Отдых')
-  await page.clock.fastForward(4_000)
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:04Z'))
   await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
   await page.reload()
   await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
