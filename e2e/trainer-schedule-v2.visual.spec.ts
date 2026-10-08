@@ -5051,7 +5051,11 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       else await page.getByRole('link', { name: 'Добавить', exact: true }).click()
       const input = page.getByLabel('Тренировка', { exact: true })
       await expect(input).toBeVisible()
-      await page.evaluate(() => document.fonts.ready)
+      await page.evaluate(async () => {
+        await document.fonts.load('400 16px "YS Geo"', 'Тренировка')
+        await document.fonts.load('500 18px "YS Geo"', 'Новая тренировка')
+        await document.fonts.ready
+      })
       await expect(input).toHaveCSS('font-family', /YS Geo/)
       await expect(input).toHaveCSS('font-size', '16px')
       await expect(input).toHaveCSS('font-weight', '400')
