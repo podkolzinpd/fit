@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { VoiceNoteField } from '../voice-input'
 
+export const CLIENT_LIME_WORKOUT_EXAMPLE = 'Жим штанги лёжа 3×10 50 кг\nЖим гантелей сидя 3×10 30 кг\nПланка 3×1 мин'
+
 interface WorkoutComposerProps {
   name: string
   source: string

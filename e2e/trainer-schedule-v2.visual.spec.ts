@@ -5147,6 +5147,48 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime composer is identical from home and workout list ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    const sizes: number[] = []
+    for (const entry of ['home', 'list']) {
+      await page.goto(entry === 'home' ? '/me' : '/me/workouts')
+      if (entry === 'home') await page.getByRole('button', { name: 'Ввести текстом', exact: true }).click()
+      else await page.getByRole('link', { name: 'Добавить', exact: true }).click()
+      const input = page.getByLabel('Тренировка', { exact: true })
+      await expect(input).toBeVisible()
+      await page.evaluate(async () => {
+        await document.fonts.load('400 16px "YS Geo"', 'Тренировка')
+        await document.fonts.load('500 18px "YS Geo"', 'Новая тренировка')
+        await document.fonts.ready
+      })
+      await expect(input).toHaveCSS('font-family', /YS Geo/)
+      await expect(input).toHaveCSS('font-size', '16px')
+      await expect(input).toHaveCSS('font-weight', '400')
+      sizes.push((await page.locator('.today-text-fallback').boundingBox())!.height)
+      await expect(input).toHaveAttribute('placeholder', 'Жим штанги лёжа 3×10 50 кг\nЖим гантелей сидя 3×10 30 кг\nПланка 3×1 мин')
+      await expect(input).toHaveValue('')
+      const voice = page.getByRole('button', { name: 'Надиктовать тренировку', exact: true })
+      expect((await voice.boundingBox())!.y).toBeGreaterThanOrEqual((await input.boundingBox())!.y + (await input.boundingBox())!.height)
+      await input.fill(Array.from({ length: 18 }, () => 'Жим гантелей сидя 3×10 30 кг').join('\n'))
+      await expect(input).toHaveCSS('overflow-y', 'auto')
+      expect((await input.boundingBox())!.height).toBe(264)
+      await input.focus()
+      await expect(input).toBeFocused()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.getByRole('button', { name: 'Очистить', exact: true }).click()
+      await expect(input).toHaveValue('')
+      expect((await input.boundingBox())!.height).toBe(144)
+
+      await page.screenshot({ path: info.outputPath(`composer-${entry}.png`), fullPage: true })
+      await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
+    }
+    expect(sizes[0]).toBe(sizes[1])
+  })
+}
+
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) for (const hasWorkouts of [false, true]) {
   test(`Client Lime add workout opens compact composer ${theme} ${width} filled=${hasWorkouts}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
