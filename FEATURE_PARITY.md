@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+Удаление этапа цели: общий контракт принимает выбранные ID/версию; Yandex
+отправляет один DELETE без fan-out прогресса клиентов, сохраняя server
+ownership/version и существующий конфликт. Legacy ID-only RPC не расширяется.
+Приёмка: `docs/design/DATABASE_GOAL_STAGE_DELETE_20261007.md`.
+
 Имя подключённого тренера у клиента: Yandex connections и chat используют общий
 resolver published profile → account name → «Тренер», без чтения draft.
 Повторный вход не нужен: список обновляется при открытии раздела. Обе оболочки
