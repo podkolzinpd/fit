@@ -58,6 +58,7 @@ import type {
 import { RepositoryError } from './error'
 import { collectPages } from './collect-pages'
 import { roundMetric } from './progress.repository'
+import { DEFAULT_REST_BETWEEN_SETS } from './workout-rules'
 import { recognizeInBody } from '../queries/inbody-recognition'
 import {
   publishedTrainingSummaryFromRow,
@@ -684,7 +685,7 @@ function workoutExerciseDraftsPayload(exercises: readonly WorkoutExerciseDraft[]
     blockRounds: exercise.blockRounds ?? 1,
     restBetweenExercisesSec: exercise.restBetweenExercisesSec ?? 0,
     restBetweenRoundsSec: exercise.restBetweenRoundsSec ?? 0,
-    restBetweenSetsSec: exercise.restBetweenSetsSec ?? 0,
+    restBetweenSetsSec: exercise.restBetweenSetsSec ?? DEFAULT_REST_BETWEEN_SETS,
     trainerComment: exercise.trainerComment ?? null,
     sets: exercise.sets.map((set) => ({
       sourceSetId: set.sourceSetId ?? null,

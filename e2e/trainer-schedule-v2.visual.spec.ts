@@ -206,6 +206,40 @@ function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
   return { ...workout, status: 'in_progress', startedAt: '2026-10-08T09:00:00Z', ...(prepSeconds > 0 ? { prepSeconds } : {}), exercises: [exercise] }
 }
 
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime saved plan retains default rest from first set ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+    await page.addInitScript(({ clientId, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${clientId}`, theme)
+      localStorage.setItem(`fit.today-draft.${clientId}.plan.client-rest-contract`, JSON.stringify({
+        screen: 'save', text: 'Жим гантелей сидя 2×10 — 30 кг', choices: {}, clientId,
+        items: [{ line: 'Жим гантелей сидя 2×10 — 30 кг', exercise: { source: 'system', ref: 'dumbbell-shoulder-press', name: 'Жим гантелей сидя', muscleGroup: 'shoulders', inputKind: 'strength' },
+          sets: [{ position: 0, weightKg: 30, reps: 10 }, { position: 1, weightKg: 30, reps: 10 }], hasValues: true }],
+        recordMode: 'planned', workoutDate: '2026-10-08', startTime: '', prepSeconds: 0,
+      }))
+    }, { clientId, theme })
+    await page.goto('/me?draft=rest-contract&view=save')
+    const request = page.waitForRequest((request) => new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST')
+    await page.getByRole('button', { name: 'Запланировать тренировку', exact: true }).click()
+    const payload = (await request).postDataJSON() as { exercises: { restBetweenSetsSec: number }[] }
+    expect(payload.exercises[0]!.restBetweenSetsSec).toBe(90)
+    await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
+    await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:30')
+    await page.screenshot({ path: info.outputPath('first-rest.png') })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:31Z'))
+    await expect(page.locator('.live-rest-trigger')).toContainText('−0:01')
+    await page.reload()
+    await expect(page.locator('.live-rest-trigger')).toContainText('−0:01')
+    await page.screenshot({ path: info.outputPath('negative-rest.png') })
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+  })
+}
+
 test('Live rest legacy negative countdown without preparation', async ({ page }) => {
   // Keep Date fixed across reload while letting loading/render timers run.
   await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
