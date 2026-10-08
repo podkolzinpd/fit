@@ -512,6 +512,50 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.reload()
     await expect(forms).toHaveCount(1)
   })
+  test(`Client Lime status pills and detail actions share approved geometry ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = { ...restTimerWorkout(), status: 'planned' as const, createdBy: clientId, workoutDate: '2026-10-08' }
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    const start = page.locator('.workout-detail-primary-actions .workout-cta')
+    await expect(start).toHaveCSS('border-radius', '999px')
+    await expect(start).toHaveCSS('font-family', /YS Geo/)
+    await expect(start).toHaveCSS('font-size', '16px'); await expect(start).toHaveCSS('font-weight', '500')
+    expect((await start.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+    await start.focus(); await expect(start).toBeFocused()
+    await page.screenshot({ path: info.outputPath('planned-action.png') })
+    let finishStart = () => {}
+    const startGate = new Promise<void>((resolve) => { finishStart = resolve })
+    await page.route('**/v1/workouts/*/start', async (route) => { await startGate; await route.fallback() })
+    await start.click()
+    try {
+      await expect(start).toBeDisabled(); await expect(start).toHaveCSS('border-radius', '999px')
+      await page.screenshot({ path: info.outputPath('pending-action.png') })
+    } finally { finishStart() }
+    await expect(page).toHaveURL(/\/live$/)
+    await expect(page.locator('.live-session-header .workout-status')).toHaveCSS('border-radius', '999px')
+    await page.goto('/me/workouts')
+    await expect(page.locator('.client-workout-card .workout-status').first()).toHaveCSS('border-radius', '999px')
+    const completed = { ...source, status: 'done' as const, completedAt: '2026-10-08T10:00:00Z', sessionRpe: 6, wellbeing: 'good' as const, discomfort: false }
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [completed] })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.locator('.workout-feedback').getByRole('button', { name: 'Изменить', exact: true }).click()
+    const feedback = page.getByRole('button', { name: 'Сохранить итоги', exact: true })
+    await expect(feedback).toHaveCSS('border-radius', '999px')
+    await expect(feedback).toHaveCSS('font-family', /YS Geo/)
+    await page.screenshot({ path: info.outputPath('review-action.png'), fullPage: true })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...source, workoutDate: '2026-10-07' }] })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.locator('.workout-detail-primary-actions .workout-cta').click()
+    const sheet = page.getByRole('dialog', { name: 'Действия с планом' })
+    await expect(sheet.getByRole('button', { name: 'Записать результат', exact: true })).toHaveCSS('border-radius', '999px')
+    await sheet.getByRole('button', { name: 'Перенести тренировку', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Перенести', exact: true })).toHaveCSS('border-radius', '999px')
+    await page.screenshot({ path: info.outputPath('decision-action.png') })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
 }
 
 test('Live rest legacy negative countdown without preparation', async ({ page }) => {
@@ -1104,7 +1148,7 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat'> & { createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort'> & { sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
 async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
@@ -6395,3 +6439,27 @@ for (const role of ['client', 'trainer'] as const) test(`Lime rollout honors ser
   await page.reload()
   await expect(page.locator('.phone-frame')).not.toHaveClass(new RegExp(scope))
 })
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime nested coachmark action follows the primary control geometry ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId }] })
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      const key = `fit.coachmarks-seen.${id}`
+      const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+      localStorage.setItem(key, JSON.stringify(seen.filter((item) => item !== 'missed-workout-actions-2026-08')))
+    }, { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    const notice = page.locator('.coachmark-bubble').filter({ hasText: 'План можно закрыть спокойно' })
+    const action = notice.getByRole('button', { name: 'Понятно', exact: true })
+    await expect(action).toHaveCSS('border-radius', '999px')
+    await expect(action).toHaveCSS('min-height', '48px')
+    await expect(action).toHaveCSS('font-size', '16px')
+    await expect(action).toHaveCSS('font-weight', '500')
+    await page.screenshot({ path: info.outputPath('client-coachmark-action.png') })
+    await action.click()
+    await expect(notice).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
