@@ -30,6 +30,7 @@ import type {
   WorkoutPersonalRecord,
   WorkoutSetDraft,
   WorkoutSummary,
+  WorkoutHomeSummary,
   WorkoutTemplate,
 } from '../../shared/domain'
 import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
@@ -70,6 +71,11 @@ import {
 } from '../../shared/legal'
 
 const uuid = z.uuid()
+const workoutSummarySchema = z.object({ id: uuid, workoutDate: z.iso.date(),
+  status: z.enum(['planned', 'in_progress', 'done', 'cancelled']) })
+const workoutHomeSchema = workoutSummarySchema.extend({ clientId: uuid, clientName: z.string(),
+  startTime: z.string().nullable(), exerciseCount: z.number().int().nonnegative(),
+  exerciseNames: z.array(z.string()).max(2) })
 const yandexDateTimeSchema = z.iso.datetime({ offset: true })
 const vitalMediaBatchSchema = z.object({
   signedUrls: z.array(z.object({ path: z.string(), signedUrl: z.url() })),
@@ -1438,6 +1444,11 @@ export function createYandexMainRepository(
       },
       listPage: listWorkoutPage,
       list: listWorkouts,
+      async home(today): Promise<WorkoutHomeSummary[]> {
+        const payload = await readJson(queries, `/v1/workouts/home?${new URLSearchParams({ today })}`,
+          z.object({ workouts: z.array(workoutHomeSchema) }))
+        return payload.workouts.map((item) => ({ ...item, workoutDate: localDate(item.workoutDate) }))
+      },
       async clientStats(clientId, today) {
         const payload = await readJson(queries,
           `/v1/clients/${clientId}/workout-stats?${new URLSearchParams({ today })}`,
@@ -1455,7 +1466,9 @@ export function createYandexMainRepository(
         return (await this.list(undefined, undefined, clientId)).map((item): WorkoutSummary => ({ id: item.id, workoutDate: item.workoutDate, status: item.status }))
       },
       async findActive(clientId) {
-        return (await this.listSummaries(clientId)).find((item) => item.status === 'in_progress') ?? null
+        const payload = await readJson(queries, `/v1/clients/${clientId}/active-workout`,
+          z.object({ workout: workoutSummarySchema.extend({ status: z.literal('in_progress') }).nullable() }))
+        return payload.workout === null ? null : { ...payload.workout, workoutDate: localDate(payload.workout.workoutDate) }
       },
       async quickStart(clientId, operationId, trainingFormat) {
         const payload = await writeJson(queries, '/v1/workouts/quick-start', 'POST',

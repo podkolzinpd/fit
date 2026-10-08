@@ -4,7 +4,7 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
 import { Coachmark } from '../../shared/ui'
 import { BackIcon, CloseIcon } from '../../shared/icons'
-import { type LocalDate } from '../../shared/local-date'
+import { todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { FitLimePlanComposer } from './FitLimePlanComposer'
 import { QuickStartWorkout } from './QuickStartWorkout'
 
@@ -21,7 +21,8 @@ export function FitLimeWorkoutEntry({ date, returnTo, onClose }: {
   const [choosingClient, setChoosingClient] = useState(false)
   const dialog = useRef<HTMLDialogElement>(null)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
-  const workouts = useQuery({ queryKey: ['workouts', undefined], queryFn: () => workoutsRepository.list(undefined, undefined) })
+  const today = todayInTimeZone(actor?.timezone)
+  const workouts = useQuery({ queryKey: ['workout-home', today], queryFn: () => workoutsRepository.home(today) })
   useEffect(() => { if (!planning) { dialog.current?.showModal(); dialog.current?.focus({ preventScroll: true }) } }, [planning])
   if (planning) return <FitLimePlanComposer date={date} returnTo={returnTo} onClose={onClose} onBack={() => setPlanning(false)} />
   return <dialog ref={dialog} tabIndex={-1} className="fit-lime-plan-dialog fit-lime-workout-entry" aria-label="Новая тренировка"

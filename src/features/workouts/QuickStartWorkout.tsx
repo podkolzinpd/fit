@@ -12,7 +12,7 @@ interface QuickStartWorkoutProps {
   role: 'client' | 'trainer'
   clientId?: string
   clients?: Client[]
-  workouts?: Workout[]
+  workouts?: readonly Pick<Workout, 'id' | 'clientId' | 'status'>[]
   loading?: boolean
   error?: Error | null
   onRetry?: () => void
@@ -115,7 +115,7 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
   </section>
 }
 
-export function TrainerActiveWorkouts({ workouts, returnTo }: { workouts?: Workout[]; returnTo: string }) {
+export function TrainerActiveWorkouts({ workouts, returnTo }: { workouts?: readonly Pick<Workout, 'id' | 'clientName' | 'status'>[]; returnTo: string }) {
   const active = workouts?.filter((workout) => workout.status === 'in_progress') ?? []
   if (!active.length) return null
   return <section className="trainer-active-workouts" aria-label="Активные тренировки">

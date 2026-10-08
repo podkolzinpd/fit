@@ -65,6 +65,7 @@ import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { DatabasePilotProgressData } from '../progress-data.js'
 import { readAccessibleTrainingData } from '../training-data.js'
 import { readClientWorkoutStats } from '../client-workout-stats.js'
+import { readActiveWorkout, readWorkoutHome } from '../workout-home-reader.js'
 import type { MediaObjectStorage } from '../object-storage-media.js'
 import { DatabasePilotTrainerProfiles, type TrainerProfileDraft } from '../trainer-profile.js'
 import type { YandexActorSession } from '../yandex-actor-session.js'
@@ -3698,6 +3699,110 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           "update app_private.profile_rollout_assignments set access_mode = 'read_only' where profile_id = $1",
           [ACTOR_ID],
         )
+      }
+    })
+
+    it('reads bounded home roots and an old active session beyond 100 history rows', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const db = runtimePool
+      const target = 'c8100000-0000-4000-8000-000000000001'
+      const active = 'c8100000-0000-4000-8000-000000000002'
+      await ownerPool.query(`insert into public.clients (id, trainer_id, full_name)
+        values ($1, $2, 'Home fixture')`, [target, ACTOR_ID])
+      await ownerPool.query('insert into public.client_trainers (client_id, trainer_id) values ($1, $2)', [target, ACTOR_ID])
+      try {
+        expect(await withActorTransaction(db, ACTOR_ID, (client) => readActiveWorkout(client, target))).toBeNull()
+        await ownerPool.query(`insert into public.workouts (trainer_id, client_id, created_by, workout_date, status, completed_at)
+          select $1,$2,$1,date '2026-09-01' + i,'done', '2026-09-01T10:00:00Z'::timestamptz + i * interval '1 day'
+          from generate_series(0,120) i`, [ACTOR_ID, target])
+        await ownerPool.query(`insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, status, started_at)
+          values ($1,$2,$3,$2,'2025-01-01','in_progress','2025-01-01T10:00:00Z')`, [active, ACTOR_ID, target])
+        await ownerPool.query(`insert into public.workout_exercises (workout_id, trainer_id, client_id, position,
+          exercise_source, exercise_ref, exercise_name, muscle_group, input_kind)
+          select $1,$2,$3,i,'system','running','Preview ' || i,'cardio','distance'
+          from generate_series(0,2) i`, [active, ACTOR_ID, target])
+        await ownerPool.query(`insert into public.workouts (trainer_id, client_id, created_by, workout_date, status)
+          values ($1,$2,$1,'2026-10-07','planned'),($1,$2,$1,'2026-10-08','planned'),
+            ($1,$2,$1,'2026-10-08','planned'),($1,$2,$1,'2026-10-09','planned'),
+            ($1,$2,$1,'2026-10-10','planned'),($1,$2,$1,'2027-01-01','cancelled')`, [ACTOR_ID, target])
+        const statements: string[] = []
+        const read = await withActorTransaction(db, ACTOR_ID, (client) => readWorkoutHome({
+          query(text, values) { statements.push(text); return client.query(text, values) },
+        }, '2026-10-08'))
+        const home = read.filter((item) => item.clientId === target)
+        expect(home).toHaveLength(6)
+        expect(home.filter((item) => item.status === 'in_progress').map((item) => item.id)).toEqual([active])
+        expect(home.filter((item) => item.status === 'planned').map((item) => item.workoutDate).sort())
+          .toEqual(['2026-10-07', '2026-10-08', '2026-10-08'])
+        expect(home.find((item) => item.status === 'done')?.workoutDate).toBe('2026-12-30')
+        expect(home.find((item) => item.id === active)).toMatchObject({ exerciseCount: 3, exerciseNames: ['Preview 0', 'Preview 1'] })
+        expect(home.filter((item) => item.id !== active).every((item) => item.exerciseCount === 0 && item.exerciseNames.length === 0)).toBe(true)
+        expect(JSON.stringify(home)).not.toMatch(/"sets"|"exercises"/)
+        expect(statements).toHaveLength(1)
+        expect(statements[0]).not.toMatch(/workout_sets|personal_record/)
+        expect(await withActorTransaction(db, ACTOR_ID, (client) => readActiveWorkout(client, target)))
+          .toEqual({ id: active, workoutDate: '2025-01-01', status: 'in_progress' })
+        await ownerPool.query('update public.workouts set deleted_at = now() where id = $1', [active])
+        expect(await withActorTransaction(db, ACTOR_ID, (client) => readActiveWorkout(client, target))).toBeNull()
+        expect((await withActorTransaction(db, OUTSIDE_TRAINER_ID, (client) => readWorkoutHome(client, '2026-10-08')))
+          .filter((item) => item.clientId === target)).toEqual([])
+        await expect(withActorTransaction(db, OUTSIDE_TRAINER_ID, (client) => readActiveWorkout(client, target)))
+          .rejects.toMatchObject({ failure: 'not_found' })
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id = $1', [target])
+        await ownerPool.query('delete from public.client_trainers where client_id = $1', [target])
+        await ownerPool.query('delete from public.clients where id = $1', [target])
+      }
+    })
+
+    it('keeps timed and untimed representatives without changing existing context tie choices', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const db = runtimePool
+      const target = 'c8200000-0000-4000-8000-000000000001'
+      await ownerPool.query(`insert into public.clients (id, trainer_id, full_name) values ($1,$2,'Tie fixture')`, [target, ACTOR_ID])
+      await ownerPool.query('insert into public.client_trainers (client_id, trainer_id) values ($1,$2)', [target, ACTOR_ID])
+      try {
+        await ownerPool.query(`insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, start_time, status, completed_at)
+          values ('10000000-0000-4000-8000-000000000101',$1,$2,$1,'2026-10-07','10:00','done',now()),
+            ('10000000-0000-4000-8000-000000000102',$1,$2,$1,'2026-10-07',null,'done',now()),
+            ('10000000-0000-4000-8000-000000000103',$1,$2,$1,'2026-10-09','10:00','planned',null),
+            ('10000000-0000-4000-8000-000000000104',$1,$2,$1,'2026-10-09',null,'planned',null)`, [ACTOR_ID, target])
+        const roots = await withActorTransaction(db, ACTOR_ID, (client) => client.query<{ id: string; date: string; time: string | null; status: string }>(`
+          select id, workout_date::text date, start_time::text time, status from public.workouts where client_id=$1
+          order by workout_date desc, start_time desc nulls last, created_at desc, id`, [target]))
+        const home = (await withActorTransaction(db, ACTOR_ID, (client) => readWorkoutHome(client, '2026-10-08'))).filter((item) => item.clientId === target)
+        expect(home).toHaveLength(4)
+        const expectedDone = roots.filter((item) => item.status === 'done').sort((a,b) => `${b.date}${b.time ?? ''}${b.id}`.localeCompare(`${a.date}${a.time ?? ''}${a.id}`))[0]?.id
+        const expectedPlan = roots.filter((item) => item.status === 'planned').sort((a,b) => `${a.date}${a.time ?? ''}${a.id}`.localeCompare(`${b.date}${b.time ?? ''}${b.id}`))[0]?.id
+        expect(home.filter((item) => item.status === 'done').sort((a,b) => `${b.workoutDate}${b.startTime ?? ''}${b.id}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}${a.id}`))[0]?.id).toBe(expectedDone)
+        expect(home.filter((item) => item.status === 'planned').sort((a,b) => `${a.workoutDate}${a.startTime ?? ''}${a.id}`.localeCompare(`${b.workoutDate}${b.startTime ?? ''}${b.id}`))[0]?.id).toBe(expectedPlan)
+      } finally {
+        await ownerPool.query('delete from public.workouts where client_id=$1', [target])
+        await ownerPool.query('delete from public.client_trainers where client_id=$1', [target])
+        await ownerPool.query('delete from public.clients where id=$1', [target])
+      }
+    })
+
+    it('keeps home and active reads scoped to client and workout-author RLS for each role', async () => {
+      if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
+      const db = runtimePool
+      for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID, OUTSIDE_TRAINER_ID]) {
+        const roots = await withActorTransaction(db, actorId, (client) => client.query<{ id: string; client_id: string }>(
+          'select id, client_id from public.workouts where deleted_at is null'))
+        const home = await withActorTransaction(db, actorId, (client) => readWorkoutHome(client, '2026-10-08'))
+        expect(home.every((item) => roots.some((root) => root.id === item.id && root.client_id === item.clientId))).toBe(true)
+        const visible = await withActorTransaction(db, actorId, (client) => client.query<{ id: string }>(
+          'select id from public.clients where id = $1', [CLIENT_ID]))
+        if (visible.length === 0) {
+          await expect(withActorTransaction(db, actorId, (client) => readActiveWorkout(client, CLIENT_ID)))
+            .rejects.toMatchObject({ failure: 'not_found' })
+        } else {
+          const active = await withActorTransaction(db, actorId, (client) => readActiveWorkout(client, CLIENT_ID))
+          const expected = await withActorTransaction(db, actorId, (client) => client.query<{ id: string }>(`
+            select id from public.workouts where client_id = $1 and deleted_at is null and status = 'in_progress'
+            order by workout_date desc, start_time desc nulls last, created_at desc, id limit 1`, [CLIENT_ID]))
+          expect(active?.id ?? null).toBe(expected[0]?.id ?? null)
+        }
       }
     })
 

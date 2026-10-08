@@ -1,4 +1,5 @@
 import { buildApp } from './app.js'
+import { DatabaseWorkoutHomeReader } from './workout-home-reader.js'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { YandexOAuthCodeClient } from './auth/yandex-oauth-code.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
@@ -319,6 +320,7 @@ const app = buildApp(
     yandexOnlyAuthEnabled,
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(databasePool === undefined ? {} : { clientWorkoutStatsReader: new DatabaseClientWorkoutStatsReader(databasePool) }),
+    ...(databasePool === undefined ? {} : { workoutHomeReader: new DatabaseWorkoutHomeReader(databasePool) }),
     ...(pilotTrainerWorkspace === undefined ? {} : { pilotTrainerWorkspace }),
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),

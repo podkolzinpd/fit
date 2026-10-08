@@ -98,6 +98,7 @@ import {
 } from './legal-document-versions.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { ClientWorkoutStatsReader } from './client-workout-stats.js'
+import type { WorkoutHomeReader } from './workout-home-reader.js'
 import { TrainerWorkspaceUnavailableError, type PilotTrainerWorkspace } from './pilot-trainer-workspace.js'
 import type { PilotProgressData } from './progress-data.js'
 import type { PilotWorkoutsWriter } from './pilot-workouts-writer.js'
@@ -219,6 +220,7 @@ interface BuildAppOptions {
   pilotSessionIssuer?: PilotSessionIssuer
   pilotTrainingDataReader?: PilotTrainingDataReader
   clientWorkoutStatsReader?: ClientWorkoutStatsReader
+  workoutHomeReader?: WorkoutHomeReader
   pilotTrainerWorkspace?: PilotTrainerWorkspace
   pilotProgressData?: PilotProgressData
   pilotWorkoutsWriter?: PilotWorkoutsWriter
@@ -1907,6 +1909,34 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       return sendSafeDatabaseFailure(reply, error, 'Pilot training data query failed')
     }
+  })
+
+  app.get('/v1/workouts/home', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const { today } = request.query as { today?: unknown }
+    if (!validDate(today)) return reply.code(400).send({ error: 'invalid_request' })
+    const reader = options.workoutHomeReader
+    if (reader === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => reader.home(session, today),
+      (workouts) => reply.header('cache-control', 'no-store').send({ workouts }))
+  })
+
+  app.get('/v1/clients/:clientId/active-workout', {
+    childLoggerFactory(logger, bindings, options) {
+      return logger.child(bindings, { ...options, serializers: { ...options.serializers,
+        req: () => ({ method: 'GET', url: '/v1/clients/:clientId/active-workout' }),
+      } })
+    },
+  }, async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    const { clientId } = request.params as { clientId?: unknown }
+    if (typeof clientId !== 'string' || !uuidPattern.test(clientId)) return reply.code(400).send({ error: 'invalid_request' })
+    const reader = options.workoutHomeReader
+    if (reader === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => reader.active(session, clientId),
+      (workout) => reply.header('cache-control', 'no-store').send({ workout }))
   })
 
   app.get('/v1/clients/:clientId/workout-stats', {

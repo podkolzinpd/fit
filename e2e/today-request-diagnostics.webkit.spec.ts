@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('Today shows the support code for failed Yandex training-data requests', async ({ page }) => {
+test('Today shows the support code for failed Yandex home and metadata requests', async ({ page }) => {
   test.skip(
     process.env.VITE_YANDEX_APP_SESSION_ENABLED !== 'true'
       || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true',
@@ -32,7 +32,7 @@ test('Today shows the support code for failed Yandex training-data requests', as
     status: 500,
     headers: { 'x-fit-request-id': '3f918916-f84c-46c4-a4bb-30b28a6fd9b1' },
   }))
-  await page.route('https://stage.example.test/v1/training-data*', (route) => route.fulfill({
+  await page.route(/^https:\/\/stage\.example\.test\/v1\/(training-data|workouts\/home)(\?|$)/, (route) => route.fulfill({
     status: 500,
     contentType: 'application/json',
     headers: {

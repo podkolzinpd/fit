@@ -8,6 +8,7 @@ import { collectPages, pageFromLookahead } from './collect-pages'
 import { repositoryError } from './error'
 import { workoutQueries } from '../queries/workouts.queries'
 import { EXERCISE_PROGRESS_PAGE_SIZE, exerciseProgressPageFromRows } from './exercise-progress-page'
+import { workoutHomeSummaries } from './workout-home'
 export { canTransition, copyWorkout, completedWorkoutDraft, computeClientStats, exerciseChartPoints, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetOverview, compactPlannedSetSummary, durationLabel, durationSeconds, formatFactVsPlan, factLine, enteredFactLine, previousResultLine, splitClientWorkouts, clientWorkoutStatusLabel, workoutStatusPresentation, workoutDurationLabel, muscleGroupLabels, performedMuscleGroupLabels, workoutFocusTitle, workoutToFavoriteTemplate, favoriteTemplateToWorkoutDraft, truncateFavoriteTitle, exerciseSummary, nextSetDraft, bmiValue, bmiLabel, workoutTonnage, tonnageLabel, groupIntoBlocks, isLastSetOfBlock, blockRoundsView, currentRoundIndex, blockLabel, BLOCK_PRESET_LABELS, PRESET_REST_DEFAULTS, DEFAULT_REST_BETWEEN_SETS, restSecondsAfterSet, applyRunningIntervalPreset, applyRunningActiveRecoveryPreset, createRunningFormatDrafts, ensureBlockIds, groupDraftsIntoBlocks, mergeBlockWithNext, splitBlock, setBlockPreset, setBlockRest, syncBlockRounds, resizeDraftBlockRounds, draftBlockRoundsView, moveBlock, replaceExercise } from './workout-rules'
 export type { ExerciseBlock, DraftBlock, DraftBlockRound, BlockRound, WorkoutStatusPresentation, WorkoutStatusTone } from './workout-rules'
 export type { ExerciseChartPoint } from './workout-rules'
@@ -195,6 +196,9 @@ export const workoutsRepository = {
     return collectPages((offset) => listPage(from, to, clientId, offset))
   },
   listSummaries,
+  async home(today: LocalDate) {
+    return workoutHomeSummaries(await this.list(), today)
+  },
   async clientStats(clientId: string, today: LocalDate) {
     return computeClientStats(await listSummaries(clientId), today)
   },

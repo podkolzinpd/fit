@@ -70,6 +70,7 @@ import {
 import { TrainerScheduleV2ClaimError } from './trainer-schedule-v2-claim.js'
 import type { PilotTrainingDataReader } from './pilot-training-data-reader.js'
 import type { ClientWorkoutStatsReader } from './client-workout-stats.js'
+import type { WorkoutHomeReader } from './workout-home-reader.js'
 import {
   TrainerWorkspaceUnavailableError,
   type PilotTrainerWorkspace,
@@ -95,6 +96,84 @@ const apps: ReturnType<typeof buildApp>[] = []
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('compact workout home API', () => {
+  const id = '10000000-0000-4000-8000-000000000002'
+  const token = 's'.repeat(43)
+  const homeUrl = '/v1/workouts/home?today=2026-10-08'
+  const activeUrl = `/v1/clients/${id}/active-workout`
+  function fixture() {
+    const home = vi.fn<WorkoutHomeReader['home']>().mockResolvedValue([])
+    const active = vi.fn<WorkoutHomeReader['active']>().mockResolvedValue(null)
+    const app = buildApp({ workoutHomeReader: { home, active } })
+    apps.push(app)
+    return { app, home, active }
+  }
+
+  it.each(['x-fit-session', 'x-fit-pilot-session'])('preserves actor session %s and empty response semantics', async (header) => {
+    const { app, home, active } = fixture()
+    const session = header === 'x-fit-session' ? { accessMode: 'read_write', token } : token
+    for (const [url, body] of [[homeUrl, { workouts: [] }], [activeUrl, { workout: null }]] as const) {
+      const response = await app.inject({ method: 'GET', url, headers: { [header]: token } })
+      expect(response.statusCode).toBe(200)
+      expect(response.json()).toEqual(body)
+      expect(response.headers['cache-control']).toBe('no-store')
+    }
+    expect(home).toHaveBeenCalledWith(session, '2026-10-08')
+    expect(active).toHaveBeenCalledWith(session, id)
+  })
+
+  it.each([homeUrl, activeUrl])('rejects missing, ambiguous and expired session for %s', async (url) => {
+    const { app, home, active } = fixture()
+    for (const headers of [{}, { 'x-fit-session': token, 'x-fit-pilot-session': token }]) {
+      expect((await app.inject({ method: 'GET', url, headers })).statusCode).toBe(401)
+    }
+    expect(home).not.toHaveBeenCalled()
+    expect(active).not.toHaveBeenCalled()
+    home.mockRejectedValueOnce(new YandexAppSessionInvalidError())
+    active.mockRejectedValueOnce(new YandexAppSessionInvalidError())
+    expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).statusCode).toBe(401)
+  })
+
+  it.each(['/v1/workouts/home', '/v1/workouts/home?today=2026-02-30',
+    '/v1/workouts/home?today=2026-10-08&today=2026-10-09', '/v1/clients/invalid/active-workout'])('validates %s before reading', async (url) => {
+    const { app, home, active } = fixture()
+    expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).statusCode).toBe(400)
+    expect(home).not.toHaveBeenCalled()
+    expect(active).not.toHaveBeenCalled()
+  })
+
+  it('does not conceal access/database failures as an empty home or absent active workout', async () => {
+    const { app, home, active } = fixture()
+    active.mockRejectedValueOnce(new PilotDomainCommandError('not_found'))
+    expect((await app.inject({ method: 'GET', url: activeUrl, headers: { 'x-fit-session': token } })).statusCode).toBe(404)
+    home.mockRejectedValueOnce(new Error('private-db-detail'))
+    const failed = await app.inject({ method: 'GET', url: homeUrl, headers: { 'x-fit-session': token } })
+    expect(failed.statusCode).toBe(503)
+    expect(failed.body).not.toContain('private-db-detail')
+    expect((await app.inject({ method: 'GET', url: homeUrl, headers: { 'x-fit-session': token } })).statusCode).toBe(200)
+  })
+
+  it('does not log the client ID or session headers of active requests', async () => {
+    const { app } = fixture()
+    const serialized: unknown[] = []
+    const createChild = app.log.child.bind(app.log)
+    const child = vi.spyOn(app.log, 'child').mockImplementation((bindings, options) => {
+      if (options?.serializers?.req) serialized.push(options.serializers.req({}))
+      return createChild(bindings, options)
+    })
+    try {
+      expect((await app.inject({ method: 'GET', url: activeUrl, headers: { 'x-fit-session': token } })).statusCode).toBe(200)
+      expect(serialized).toEqual([{ method: 'GET', url: '/v1/clients/:clientId/active-workout' }])
+    } finally { child.mockRestore() }
+  })
+
+  it('returns unavailable when the reader is not configured', async () => {
+    const app = buildApp()
+    apps.push(app)
+    for (const url of [homeUrl, activeUrl]) expect((await app.inject({ method: 'GET', url, headers: { 'x-fit-session': token } })).statusCode).toBe(503)
+  })
 })
 
 describe('client workout stats API', () => {

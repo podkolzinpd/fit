@@ -143,8 +143,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const today = todayInTimeZone(actor?.timezone)
-  const todayWorkouts = useQuery({ queryKey: ['today-workouts', today], queryFn: () => workoutsRepository.list(today, today), enabled: !clientMode })
-  const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, clientMode ? mine.data!.id : undefined), enabled: !clientMode || Boolean(mine.data) })
+  const trainerHome = useQuery({ queryKey: ['workout-home', today], queryFn: () => workoutsRepository.home(today), enabled: !clientMode })
+  const workouts = useQuery({ queryKey: ['workouts', mine.data?.id], queryFn: () => workoutsRepository.list(undefined, undefined, mine.data!.id), enabled: clientMode && Boolean(mine.data) })
   const trainerAttention = useQuery({
     queryKey: ['trainer-attention', actor?.userId],
     queryFn: () => workoutsRepository.listTrainerAttention(),
@@ -174,7 +174,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState(limePlanning ? entryState?.planClientId ?? '' : '')
   const effectiveClientId = clientMode ? mine.data?.id ?? clientId : clientId
-  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', effectiveClientId], queryFn: () => workoutsRepository.list(undefined, undefined, effectiveClientId), enabled: Boolean(effectiveClientId) })
+  const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', effectiveClientId], queryFn: () => workoutsRepository.list(undefined, undefined, effectiveClientId), enabled: Boolean(effectiveClientId) && pickerOpen })
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [missingCardioTime, setMissingCardioTime] = useState<string | null>(null)
   const [workoutDate, setWorkoutDate] = useState(() => {
@@ -385,7 +385,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     onSuccess: async (id, mode) => {
       const selectedClient = clients.data?.find((client) => client.id === clientId)
       const firstPlanClientState = !clientMode && mode === 'planned' && selectedClient
-        && !(workouts.data ?? []).some((workout) => workout.clientId === clientId)
+        && !(trainerHome.data ?? []).some((workout) => workout.clientId === clientId)
         ? { id: selectedClient.id, fullName: selectedClient.fullName }
         : undefined
       trackGoal(mode === 'planned' ? 'today_plan_saved' : 'today_workout_saved')
@@ -816,21 +816,21 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
     </section>)}
   </Coachmark>
 
-  const plannedWorkouts = todayWorkouts.data?.filter((workout) => workout.status === 'planned').sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
-  function workoutTime(workout: Workout) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
+  const plannedWorkouts = trainerHome.data?.filter((workout) => workout.status === 'planned' && workout.workoutDate === today).sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')) ?? []
+  function workoutTime(workout: Pick<Workout, 'startTime'>) { return workout.startTime?.slice(0, 5) ?? 'Без времени' }
 
   const profileInitial = actor?.firstName?.trim().slice(0, 1).toUpperCase() || (clientMode ? 'К' : 'П')
-  const latestWorkout = workouts.data?.filter((workout) => workout.status === 'done').sort((a, b) => `${b.workoutDate}${b.startTime ?? ''}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}`))[0]
+  const latestWorkout = trainerHome.data?.filter((workout) => workout.status === 'done').sort((a, b) => `${b.workoutDate}${b.startTime ?? ''}`.localeCompare(`${a.workoutDate}${a.startTime ?? ''}`))[0]
   const contextWorkout = plannedWorkouts[0] ?? latestWorkout
   const contextTitle = plannedWorkouts[0] ? 'Ближайшая тренировка' : latestWorkout ? 'Последняя тренировка' : null
-  const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={`/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exercises.length ? contextWorkout.exercises.map((exercise) => exercise.name).slice(0, 2).join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exercises.length} упражнений</small></span><ChevronRightIcon /></Link></section>
-  const actionItems = !clientMode ? trainerActionItems(clients.data ?? [], workouts.data ?? [], trainerAttention.data ?? [], today) : []
+  const contextCard = !clientMode && contextWorkout && contextTitle && <section className="today-context"><p>{contextTitle}</p><Link to={`/workouts/${contextWorkout.id}`}><span><strong>{contextWorkout.clientName}</strong><small>{contextWorkout.workoutDate === today ? `Сегодня, ${workoutTime(contextWorkout)}` : contextWorkout.workoutDate}</small></span><span><strong>{contextWorkout.exerciseCount ? contextWorkout.exerciseNames.join(', ') : 'Тренировка'}</strong><small>{contextWorkout.exerciseCount} упражнений</small></span><ChevronRightIcon /></Link></section>
+  const actionItems = !clientMode ? trainerActionItems(clients.data ?? [], trainerHome.data ?? [], trainerAttention.data ?? [], today) : []
   const actionClientIds = new Set(actionItems.map((item) => item.clientId))
-  const planningItems = !clientMode ? trainerPlanningItems(clients.data ?? [], workouts.data ?? [], attentionPreferences.data ?? [], actionClientIds, today) : []
+  const planningItems = !clientMode ? trainerPlanningItems(clients.data ?? [], trainerHome.data ?? [], attentionPreferences.data ?? [], actionClientIds, today) : []
   const trainerHasNoClients = !clientMode && !clients.isLoading && clients.data?.length === 0
   const onlyTrainerClient = clients.data?.length === 1 ? clients.data[0] : undefined
-  const firstPlanClient = !clientMode && !clients.isLoading && !workouts.isLoading && onlyTrainerClient
-    && !(workouts.data ?? []).some((workout) => workout.clientId === onlyTrainerClient.id)
+  const firstPlanClient = !clientMode && !clients.isLoading && !trainerHome.isLoading && !trainerHome.isError && onlyTrainerClient
+    && !(trainerHome.data ?? []).some((workout) => workout.clientId === onlyTrainerClient.id)
     ? onlyTrainerClient
     : null
   useEffect(() => {
@@ -842,8 +842,8 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const attentionSurface = !clientMode && !trainerHasNoClients && <TrainerAttentionQueue
     actions={actionItems}
     planning={planningItems}
-    loading={clients.isLoading || workouts.isLoading || trainerAttention.isLoading || attentionPreferences.isLoading}
-    error={trainerAttention.error ?? attentionPreferences.error}
+    loading={clients.isLoading || trainerHome.isLoading || trainerAttention.isLoading || attentionPreferences.isLoading}
+    error={trainerHome.error ?? trainerAttention.error ?? attentionPreferences.error}
     snoozingClientId={snoozeAttention.isPending ? snoozeAttention.variables : undefined}
     onSnooze={(targetClientId) => snoozeAttention.mutate(targetClientId)}
     hideEyebrow={attentionHideEyebrow}
@@ -858,7 +858,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   const header = todayHeaderProps(clientMode, actor)
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
-  const supplementalLoadError = catalog.error ?? (!clientMode ? todayWorkouts.error : null)
+  const supplementalLoadError = catalog.error ?? (!clientMode ? trainerHome.error : null)
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && !limePlanning && !(clientLime && requestedClientDraft) && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
@@ -911,7 +911,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
-      {!clientMode && !limePlanning && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={workouts.data} loading={clients.isLoading || workouts.isLoading} error={clients.error ?? workouts.error} onRetry={() => { void clients.refetch(); void workouts.refetch() }} returnTo="/today" />}
+      {!clientMode && !limePlanning && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={trainerHome.data} loading={clients.isLoading || trainerHome.isLoading} error={clients.error ?? trainerHome.error} onRetry={() => { void clients.refetch(); void trainerHome.refetch() }} returnTo="/today" />}
       {!textComposerOpen && <div className="today-voice-hero-compact compose-workout-entry">
         <VoiceInputButton
           variant="hero"
@@ -942,7 +942,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
        {parseError && <WorkoutParseErrorNotice kind={parseError} onRetry={() => void review()} />}
       </WorkoutComposer></div>}
       {voiceRefinement?.state === 'error' && !textComposerOpen && <div className="voice-action-error" role="alert"><strong>{voiceRefinement.message}</strong><button type="button" className="link" onClick={() => setTextComposerOpen(true)}>Редактировать текст</button></div>}
-      {!clientMode && !limePlanning && !textComposerOpen && <TrainerActiveWorkouts workouts={workouts.data} returnTo="/today" />}
+      {!clientMode && !limePlanning && !textComposerOpen && <TrainerActiveWorkouts workouts={trainerHome.data} returnTo="/today" />}
       {!limePlanning && voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>

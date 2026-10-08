@@ -1,12 +1,14 @@
 import type { Workout } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 
-export interface TrainerHomeContext {
-  workout: Workout
+type ContextWorkout = Pick<Workout, 'id' | 'status' | 'workoutDate' | 'startTime' | 'clientName'>
+
+export interface TrainerHomeContext<T extends ContextWorkout = Workout> {
+  workout: T
   title: 'Текущая тренировка' | 'Ближайшая тренировка' | 'Последняя тренировка'
 }
 
-export function trainerHomeContext(workouts: Workout[], today: LocalDate): TrainerHomeContext | null {
+export function trainerHomeContext<T extends ContextWorkout>(workouts: readonly T[], today: LocalDate): TrainerHomeContext<T> | null {
   const current = workouts.find((workout) => workout.status === 'in_progress')
   if (current) return { workout: current, title: 'Текущая тренировка' }
 

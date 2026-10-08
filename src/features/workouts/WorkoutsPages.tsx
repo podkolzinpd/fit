@@ -756,8 +756,8 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     enabled: isDayView || isFitLimeEnabled(actor),
   })
   const homeWorkouts = useQuery({
-    queryKey: ['workouts', undefined],
-    queryFn: () => workoutsRepository.list(undefined, undefined),
+    queryKey: ['workout-home', today],
+    queryFn: () => workoutsRepository.home(today),
     enabled: isDayView,
   })
   const attention = useQuery({

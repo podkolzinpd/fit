@@ -604,6 +604,15 @@ export interface WorkoutSummary {
   status: WorkoutStatus
 }
 
+/** Read-only home preview, never a workout aggregate used by mutations. */
+export interface WorkoutHomeSummary extends WorkoutSummary {
+  clientId: UUID
+  clientName: string
+  startTime: string | null
+  exerciseCount: number
+  exerciseNames: string[]
+}
+
 export type WorkoutPersonalRecordMetric = 'primary' | 'weight' | 'weight_reps'
 
 export interface WorkoutPersonalRecord {

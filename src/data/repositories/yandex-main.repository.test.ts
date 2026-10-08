@@ -87,6 +87,31 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('reads compact home and active roots without collecting workout history pages', async () => {
+    const home = { id: workoutId, clientId, clientName: 'Synthetic client', workoutDate: '2026-10-08',
+      startTime: null, status: 'in_progress', exerciseCount: 9, exerciseNames: ['First', 'Second'] }
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) => {
+      if (url === `${apiBaseUrl}/v1/workouts/home?today=2026-10-08`) return Promise.resolve(jsonResponse({ workouts: [home] }))
+      if (url === `${apiBaseUrl}/v1/clients/${clientId}/active-workout`) return Promise.resolve(jsonResponse({ workout: {
+        id: workoutId, workoutDate: '2025-01-01', status: 'in_progress',
+      } }))
+      throw new Error('History is unavailable')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.workouts.home(localDate('2026-10-08'))).toEqual([home])
+    expect(await repository.workouts.findActive(clientId)).toEqual({ id: workoutId, workoutDate: '2025-01-01', status: 'in_progress' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ headers: { 'x-fit-session': sessionToken } })
+  })
+
+  it('preserves an absent active workout without falling back to history', async () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ workout: null })))
+    expect(await createYandexMainRepository(apiBaseUrl, sessionToken, actor).workouts.findActive(clientId)).toBeNull()
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
   it('deletes only the selected goal stage with its displayed version and no prerequisite reads', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation((url, init) => {
       if (url === `${apiBaseUrl}/health`) return Promise.resolve(jsonResponse({ status: 'ok' }))
@@ -1340,6 +1365,9 @@ function installContractFetch() {
     const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url)
     const method = init?.method ?? 'GET'
     const path = url.pathname
+    if (method === 'GET' && path.endsWith('/active-workout')) return jsonResponse({ workout: {
+      id: plannedWorkoutId, workoutDate: '2026-08-21', status: 'in_progress',
+    } })
     if (method === 'GET' && path.endsWith('/personal-records')) return jsonResponse({ records: [
       { exerciseRef: 'push-up', exerciseName: 'Отжимания', inputKind: 'strength', metric: 'weight', primaryValue: 22, weightKg: 22, reps: 10 },
       { exerciseRef: 'push-up', exerciseName: 'Отжимания', inputKind: 'strength', metric: 'weight_reps', primaryValue: 220, weightKg: 22, reps: 10 },
