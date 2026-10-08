@@ -14,12 +14,13 @@ interface QuickWorkoutEntryProps {
   preferredExerciseRefs?: readonly string[]
   onOpenCatalog?: (search: string, onSelect?: (exercise: ExerciseSnapshot) => void) => void
   compact?: boolean
+  placeholder?: string
   parseWorkout: (text: string, systemCatalog: readonly ExerciseSnapshot[]) => Promise<WorkoutParseResponse>
 }
 
 type ParsedEntry = { id: string; groupId?: string; parsed?: ParsedWorkoutExercise; unmatched?: WorkoutParseUnmatchedView }
 
-export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, parseWorkout }: QuickWorkoutEntryProps) {
+export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], onOpenCatalog, compact = false, placeholder, parseWorkout }: QuickWorkoutEntryProps) {
   const [text, setText] = useState('')
   const [choices, setChoices] = useState<Record<string, ExerciseSnapshot>>({})
   const [expanded, setExpanded] = useState(!compact)
@@ -159,7 +160,7 @@ export function QuickWorkoutEntry({ catalog, onAdd, preferredExerciseRefs = [], 
 
   return <div className={`quick-workout-entry${compact ? ' expanded' : ''}`}>
     {compact && <button type="button" className="link quick-workout-collapse" onClick={() => setExpanded(false)}>Свернуть ввод</button>}
-    <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={changeText} onTranscriptValueChange={changeText} onTranscriptAppended={({ value }) => review(value)} onClear={() => changeText('')} primaryAction={parsedText === text && entries.length > 0
+    <WorkoutComposer name="quick-workout-entry" source="workout_quick_entry" placeholder={placeholder} label="Запись тренировки" voiceLabel="Надиктовать тренировку" value={text} onValueChange={changeText} onTranscriptValueChange={changeText} onTranscriptAppended={({ value }) => review(value)} onClear={() => changeText('')} primaryAction={parsedText === text && entries.length > 0
       ? <button type="button" className="secondary wide quick-workout-add" disabled={!resolved.length || (hasStructure && unresolved.length > 0)} onClick={add}>Добавить в план{resolved.length ? ` (${resolved.length})` : ''}</button>
       : <button type="button" className="secondary wide quick-workout-add" disabled={!text.trim() || parsing} onClick={() => void review()}>{parsing ? 'Разбираю тренировку…' : 'Разобрать тренировку'}</button>} secondaryAction={onOpenCatalog ? <button type="button" className="secondary wide quick-workout-catalog" onClick={() => { trackGoal('exercise_picker_opened'); onOpenCatalog('') }}>Выбрать упражнения</button> : undefined}>
       <p className="workout-composer-hint">Например: присед 3×8 80 кг или бег 30 минут 5 км. Для нового упражнения скажите «затем».</p>
