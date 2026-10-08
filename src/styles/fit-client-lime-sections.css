@@ -206,6 +206,13 @@ html.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fulls
 }
 
 /* Client prepared actions share the pill contract; trainer keeps its variant. */
+.phone-frame.fit-client-lime.assistant-identity .assistant-context-panel-client-program {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .phone-frame.fit-client-lime.assistant-identity :is(.assistant-flow-actions, .assistant-action-card, .assistant-progress-preview) > button:not(.assistant-action-cancel) {
   min-height: 48px;
   border-radius: 999px;
