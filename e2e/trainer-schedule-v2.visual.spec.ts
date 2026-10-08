@@ -487,6 +487,51 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
+
+  test(`Client Lime plan and result expand to the same table width ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    const planned = { ...restTimerWorkout(), status: 'planned' as const, createdBy: clientId }
+    planned.exercises[0]!.name = 'Очень длинное название упражнения с описанием оборудования'
+    planned.exercises[0]!.trainerComment = 'Заметка тренера'
+    const done = { ...planned, id: newWorkoutId, status: 'done' as const, completedAt: '2026-10-08T10:00:00Z',
+      exercises: planned.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.map((set) => ({ ...set, fact: { weightKg: 20, reps: 10 }, confirmedAt: '2026-10-08T09:01:00Z' })) })) }
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [planned, done] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    const tables: Array<{ width: number; height: number }> = []
+    for (const [id, state] of [[workoutId, 'planned'], [newWorkoutId, 'done']]) {
+      await page.goto(`/workouts/${id}`)
+      await page.locator('.workout-detail-exercise-row summary').click()
+      const rows = page.locator('.workout-history-set')
+      await expect(rows).toHaveCount(2)
+      await expect(rows.first()).toHaveCSS('opacity', '1')
+      await expect(rows.first().locator('.workout-history-set-number')).toHaveCSS('border-radius', '0px')
+      await expect(rows.first().locator('.workout-history-set-number')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await expect(rows.first().locator('strong')).toHaveCSS('font-family', /YS Geo/)
+      const box = (await rows.first().boundingBox())!
+      tables.push({ width: box.width, height: box.height })
+      const article = (await page.locator('.workout-detail-exercise-row').boundingBox())!
+      expect(Math.abs(box.x - article.x)).toBeLessThan(1)
+      expect(Math.abs(box.width - article.width)).toBeLessThan(1)
+      if (state === 'planned') {
+        await expect(page.locator('.workout-history-set.missed')).toHaveCount(0)
+        await expect(page.locator('.workout-history-set-status')).toHaveCount(0)
+      } else await expect(page.getByLabel('Выполнен', { exact: true })).toHaveCount(2)
+      await page.getByLabel('Подход 2', { exact: true }).scrollIntoViewIfNeeded()
+      await page.screenshot({ path: info.outputPath(`table-${state}.png`) })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    expect(tables[0]).toEqual(tables[1])
+    const partial = { ...done, exercises: done.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.map((set, i) => i === 0 ? { ...set, fact: { weightKg: 25, reps: 8 } } : { ...set, fact: {}, confirmedAt: null }) })) }
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [partial] })
+    await page.goto(`/workouts/${newWorkoutId}`)
+    await page.locator('.workout-detail-exercise-row summary').click()
+    await expect(page.locator('.workout-history-set.confirmed')).toContainText('25 кг × 8')
+    await expect(page.locator('.workout-history-set.confirmed .plan-note')).toContainText('20 кг')
+    await expect(page.locator('.workout-history-set.missed')).toHaveCSS('opacity', '0.72')
+    await expect(page.locator('.workout-history-set.missed')).toContainText('не выполнено')
+    await page.getByLabel('Подход 2', { exact: true }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath('table-partial.png') })
+  })
 }
 
 test('Live rest legacy negative countdown without preparation', async ({ page }) => {
@@ -6434,5 +6479,52 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await action.click()
     await expect(notice).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
+for (const [theme, width] of [['light', 390], ['dark', 430]] as const) {
+  test(`Client Lime detail single set and superset ${theme} ${width}`, async ({ page }, info) => {
+    const source = restTimerWorkout()
+    const single = { ...source.exercises[0]!, sets: source.exercises[0]!.sets.slice(0, 1) }
+    const other = { ...single, id: '10000000-0000-4000-8000-000000000091', name: 'Планка', ref: 'plank', inputKind: 'duration' as const, position: 1,
+      sets: [{ ...single.sets[0]!, id: '10000000-0000-4000-8000-000000000092', weightKg: undefined, reps: undefined, durationSec: 60 }] }
+    const block = { ...source, status: 'planned' as const, createdBy: clientId, exercises: [single, other].map((item) => ({ ...item, blockType: 'group' as const, blockRounds: 1 })) }
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [block] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    for (const summary of await page.locator('.workout-detail-exercise-row summary').all()) await summary.click()
+    await expect(page.locator('.workout-history-set')).toHaveCount(2)
+    await expect(page.locator('.workout-history-set.missed')).toHaveCount(0)
+    for (const number of await page.locator('.workout-history-set-number').all()) await expect(number).toHaveCSS('border-radius', '0px')
+    await page.locator('.workout-history-set').last().scrollIntoViewIfNeeded()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('detail-one-round-superset.png') })
+  })
+}
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime workout and picker labels use the approved emphasis weight ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    const source = restTimerWorkout()
+    source.exercises[0]!.sets[0]!.fact = { weightKg: 20, reps: 10 }
+    source.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T08:30:00Z'
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...source, status: 'done', completedAt: '2026-10-08T09:00:00Z' }] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me/workouts')
+    const muscleLabel = page.locator('.workout-chronicle-muscles span').first()
+    await expect(muscleLabel).toBeVisible()
+    const muscleWeight = await muscleLabel.evaluate((element) => getComputedStyle(element).fontWeight)
+    await page.screenshot({ path: info.outputPath('workout-muscle-label.png') })
+    await page.goto('/workouts/new')
+    await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await picker.locator('.picker-select-mark').first().click()
+    const selectedLabel = picker.locator('.picker-selection-summary > span')
+    await expect(selectedLabel).toHaveText('Выбрано: 1')
+    const pickerWeight = await selectedLabel.evaluate((element) => getComputedStyle(element).fontWeight)
+    await info.attach('label-weights', { body: JSON.stringify({ muscleWeight, pickerWeight }), contentType: 'application/json' })
+    await page.screenshot({ path: info.outputPath('picker-selection-label.png') })
+    expect([muscleWeight, pickerWeight]).toEqual(['500', '500'])
   })
 }
