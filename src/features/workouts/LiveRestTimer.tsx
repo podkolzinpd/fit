@@ -16,6 +16,15 @@ export function formatRest(seconds: number): string {
   return `${sign}${Math.floor(absolute / 60)}:${String(absolute % 60).padStart(2, '0')}`
 }
 
+export function formatReferenceClock(seconds: number): string {
+  const sign = seconds < 0 ? '−' : ''
+  const absolute = Math.abs(seconds)
+  const hours = Math.floor(absolute / 3600)
+  const minutes = Math.floor((absolute % 3600) / 60)
+  const clock = `${String(minutes).padStart(2, '0')}:${String(absolute % 60).padStart(2, '0')}`
+  return `${sign}${hours ? `${hours}:` : ''}${clock}`
+}
+
 function gongStorageKey(workoutId: string, deadline: number) {
   return `fit:live-rest-gong:${workoutId}:${deadline}`
 }
@@ -39,7 +48,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -51,6 +60,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   onPhaseChange?: (phase: LivePhaseTimer | null) => void
   onPhaseExpire?: (phase: LivePhaseTimer) => void
   onRestExpire?: (deadline: number) => void
+  /** Presentation-only pilot: the existing phase/gong/expiry owner remains this subtree. */
+  referenceStartedAt?: string | null
 }) {
   const [now, setNow] = useState(Date.now)
   const [open, setOpen] = useState(false)
@@ -77,6 +88,15 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   }, [deadline, now])
   const phaseRemaining = phase ? Math.max(0, Math.ceil((phase.endsAt - now) / 1000)) : null
   const tickDeadline = phase?.endsAt ?? deadline
+
+  useEffect(() => {
+    if (referenceStartedAt === undefined || tickDeadline !== null) return
+    const tick = () => setNow(Date.now())
+    const interval = window.setInterval(tick, 1000)
+    document.addEventListener('visibilitychange', tick)
+    tick()
+    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', tick) }
+  }, [referenceStartedAt, tickDeadline])
 
   useEffect(() => {
     if (tickDeadline === null) return
@@ -226,13 +246,22 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     : signedRemaining !== null ? `Отдых ${formatRest(signedRemaining)}` : 'Таймер'
   const sheetTitle = copy?.sheet ?? 'Таймер отдыха'
 
+  const reference = referenceStartedAt !== undefined
+  const elapsed = referenceStartedAt ? Math.max(0, Math.floor((now - Date.parse(referenceStartedAt)) / 1000)) : 0
+  const bigSeconds = phaseRemaining ?? signedRemaining ?? elapsed
+  const bigTime = formatReferenceClock(bigSeconds)
+
   return <>
+    {reference && <div className={`coach-live-clock${deadline !== null && !phase ? ' coach-live-clock-rest' : ''}`}>
+      <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (deadline !== null ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime}</span>
+      {deadline !== null || phase ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
+    </div>}
     <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
       onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
       onClick={onPrimary ? tap : openPicker}>
-      <TimerIcon /><span>{triggerText}</span>
+      <TimerIcon /><span>{reference && !phase ? 'Отдых' : triggerText}</span>
     </button>
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>

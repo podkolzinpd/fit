@@ -12,6 +12,7 @@ import { isClientLimeShellRoute } from './client-lime'
 import { useClientLimeTheme } from './client-lime-theme'
 import { ContestWinnerDialog } from '../features/contest'
 import { FitLimeIconsContext } from '../shared/fit-lime-icons'
+import { isCoachWorkoutRedesignEnabled } from './coach-workout-redesign'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -143,6 +144,7 @@ export function AppLayout() {
     monochromeTrainerSchedule && !trainerScheduleV2Route ? 'trainer-schedule-identity' : '',
     trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
     fitLimeShell ? 'fit-lime-shell fit-lime' : '',
+    isCoachWorkoutRedesignEnabled(actor) ? 'coach-workout-reference' : '',
     clientLimeShell ? 'fit-client-lime' : '',
     clientCompose ? 'client-workout-compose' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',

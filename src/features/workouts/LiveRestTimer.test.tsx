@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { LiveRestTimer, formatRest } from './LiveRestTimer'
+import { LiveRestTimer, formatRest, formatReferenceClock } from './LiveRestTimer'
 import { playGong, prepareGong } from '../../shared/gong'
 import { wasNativeRestTimerNotificationScheduled } from './rest-timer-notification'
 
@@ -15,6 +15,30 @@ afterEach(() => {
 })
 
 describe('Live rest timer', () => {
+  it('formats the reference digits without losing negative time or hours', () => {
+    expect(formatReferenceClock(0)).toBe('00:00')
+    expect(formatReferenceClock(3599)).toBe('59:59')
+    expect(formatReferenceClock(3661)).toBe('1:01:01')
+    expect(formatReferenceClock(-61)).toBe('−01:01')
+  })
+
+  it('keeps a single rest expiry and gong owner in the reference view', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onExpire = vi.fn(), onChange = vi.fn()
+    const view = render(<LiveRestTimer workoutId="reference" deadline={101_000} referenceStartedAt={new Date(0).toISOString()} onChange={onChange} onRestExpire={onExpire} />)
+    expect(screen.getByLabelText('Отдых: 00:01')).toBeVisible()
+    act(() => vi.advanceTimersByTime(2_000))
+    expect(screen.getByLabelText('Отдых: −00:01')).toBeVisible()
+    expect(playGong).toHaveBeenCalledTimes(1)
+    expect(onExpire).toHaveBeenCalledTimes(1)
+    expect(onChange).not.toHaveBeenCalled()
+    view.rerender(<LiveRestTimer workoutId="reference" deadline={null} referenceStartedAt={new Date(0).toISOString()} onChange={onChange} />)
+    expect(screen.getByLabelText('Тренировка: 01:42')).toBeVisible()
+    act(() => vi.advanceTimersByTime(1_000))
+    expect(screen.getByLabelText('Тренировка: 01:43')).toBeVisible()
+  })
+
   it('counts through zero into negative time and plays the gong exactly once', () => {
     vi.useFakeTimers()
     vi.setSystemTime(100_000)
