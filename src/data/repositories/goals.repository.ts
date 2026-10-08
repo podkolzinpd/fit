@@ -75,8 +75,8 @@ export const goalsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data as string
   },
-  async deleteStage(stageId: string): Promise<void> {
-    const result = await goalsQueries.deleteStage(stageId)
+  async deleteStage(stage: Pick<GoalStage, 'id' | 'version'>): Promise<void> {
+    const result = await goalsQueries.deleteStage(stage.id)
     if (result.error) throw repositoryError(result.error)
   },
 }

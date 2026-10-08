@@ -291,7 +291,7 @@ function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; t
   const { goals: goalsRepository } = useDataBackend()
   const [editing, setEditing] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
-  const remove = useMutation({ mutationFn: () => goalsRepository.deleteStage(stage.id), onSuccess: () => void onChanged() })
+  const remove = useMutation({ mutationFn: (selected: Pick<GoalStage, 'id' | 'version'>) => goalsRepository.deleteStage(selected), onSuccess: () => void onChanged() })
   if (editing) return <StageForm goalId={stage.goalId} stage={stage} position={stage.position} targetDate={targetDate}
     defaultStart={localDate(stage.startsOn)} onSaved={async () => { await onChanged(); setEditing(false) }} onCancel={() => setEditing(false)} />
   const status = stageStatus(stage, localDate(today))
@@ -303,7 +303,10 @@ function StageRow({ stage, today, targetDate, onChanged }: { stage: GoalStage; t
     <div className="stage-actions">
       <button type="button" className="link" onClick={() => setEditing(true)}>Изменить</button>
       <button type="button" className="link danger" disabled={remove.isPending}
-        onClick={async () => { if (await confirm({ message: 'Удалить этап?', confirmLabel: 'Удалить', danger: true })) remove.mutate() }}>Удалить</button>
+        onClick={async () => {
+          const selected = { id: stage.id, version: stage.version }
+          if (await confirm({ message: 'Удалить этап?', confirmLabel: 'Удалить', danger: true })) remove.mutate(selected)
+        }}>Удалить</button>
     </div>
     {remove.error && <p className="error">{remove.error.message}</p>}
     {confirmDialog}
