@@ -110,6 +110,7 @@ interface ExercisePickerProps {
   selectionDraft?: readonly ExerciseSnapshot[]
   onSelectionDraftChange?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
+  showEmptySelection?: boolean
   initialSearch?: string
   initialMode?: ExercisePickerMode
   techniqueActionLabel?: string
@@ -144,7 +145,7 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
   )
@@ -166,6 +167,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [localSelected, setLocalSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
   const [addingSelected, setAddingSelected] = useState(false)
+  const [selectionError, setSelectionError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [group, setGroup] = useState<MuscleGroup | null>(null)
@@ -314,6 +316,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     setCreating(true)
   }
   function pick(exercise: ExerciseSnapshot) {
+    if (showEmptySelection && addingSelected) return
+    setSelectionError(null)
     if (!multiple) {
       recordRecent(exercise)
       onPick(exercise)
@@ -336,10 +340,15 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     const exercises = [...selected.values()]
     if (!exercises.length || !onPickMany || addingSelected) return
     setAddingSelected(true)
+    setSelectionError(null)
     try {
       await onPickMany(exercises)
       exercises.forEach(recordRecent)
       clearSelection()
+    } catch {
+      setSelectionError(showEmptySelection
+        ? 'Не удалось добавить все упражнения. Уже добавленные убраны из выбора — повторите добавление остальных.'
+        : 'Не удалось добавить упражнения. Выбор сохранён — попробуйте ещё раз.')
     } finally {
       setAddingSelected(false)
     }
@@ -484,7 +493,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       <header className={`picker-header${previewExercise ? ' picker-technique-header' : ''}`}>
         {previewExercise && <button type="button" className="picker-close picker-back" aria-label="Назад к выбору" onClick={closeTechnique}><BackIcon /></button>}
         <h1>{previewExercise ? 'Техника' : creating ? 'Своё упражнение' : 'Выберите упражнения'}</h1>
-        <button type="button" className="picker-close" aria-label="Закрыть" onClick={creating ? closeCreate : onClose}><CloseIcon /></button>
+        <button type="button" className="picker-close" aria-label="Закрыть" disabled={showEmptySelection && addingSelected} onClick={creating ? closeCreate : onClose}><CloseIcon /></button>
       </header>
       {previewExercise ? <div className="picker-technique-view">
         <ExerciseTechniqueContent exercise={previewExercise} beforeFacts={<CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />} />
@@ -561,7 +570,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
             <div>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить фильтры</button>}{search.trim() && <button type="button" className="link" onClick={openCreate}>{`Создать «${search.trim()}»`}</button>}</div>
           </div>}
         </>}
-        {multiple && selected.size > 0 && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
+        {selectionError && <p className="error" role="alert">{selectionError}</p>}
+        {multiple && (selected.size > 0 || showEmptySelection) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
       </>}
     </section>
   </div>

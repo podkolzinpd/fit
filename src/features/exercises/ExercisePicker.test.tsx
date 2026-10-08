@@ -739,6 +739,27 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('heading', { name: 'Своё упражнение' })).toBeVisible()
   })
 
+  it('keeps Live selection after failure and disables duplicate add while pending', async () => {
+    const user = userEvent.setup()
+    let finish: (() => void) | undefined
+    const onPickMany = vi.fn().mockRejectedValueOnce(new Error('network')).mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve }))
+    const onClose = vi.fn()
+    render(<ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onPickMany={onPickMany} multiple showEmptySelection onClose={onClose} />)
+    expect(screen.getByRole('button', { name: 'Добавить 0' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: 'Добавить 1' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('повторите добавление остальных')
+    expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Добавить 1' }))
+    expect(screen.getByRole('button', { name: 'Добавляем…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Закрыть' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Добавляем…' }))
+    expect(onPickMany).toHaveBeenCalledTimes(2)
+    expect(onClose).not.toHaveBeenCalled()
+    finish!()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Добавить 0' })).toBeDisabled())
+  })
+
   it('selects several exercises and adds them in one action', async () => {
     const user = userEvent.setup()
     const onPickMany = vi.fn()

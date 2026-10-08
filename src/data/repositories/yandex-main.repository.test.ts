@@ -937,6 +937,24 @@ describe('Yandex main repository', () => {
     }
   })
 
+  it('reuses the explicit Live append receipt and original version for uncertain retries', async () => {
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const item = await repository.workouts.get(workoutId)
+    const operationId = 'c94ec52e-dc52-4c84-a61e-e45f11cb6f43'
+    await repository.workouts.appendLiveExercise(item, exerciseSnapshot(), operationId)
+    await repository.workouts.appendLiveExercise(item, exerciseSnapshot(), operationId)
+    const calls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith(`/workouts/${workoutId}/exercises`))
+    expect(calls).toHaveLength(2)
+    expect(calls.map(([, init]) => JSON.parse(String(init?.body)) as { operationId: string; expectedVersion: number })).toEqual([
+      expect.objectContaining({ operationId, expectedVersion: item.version }),
+      expect.objectContaining({ operationId, expectedVersion: item.version }),
+    ])
+    expect(calls[0]![1]?.body).toEqual(calls[1]![1]?.body)
+  })
+
   it('implements the complete workout lifecycle and derived reads', async () => {
     const fetchMock = installContractFetch()
     vi.stubGlobal('fetch', fetchMock)
