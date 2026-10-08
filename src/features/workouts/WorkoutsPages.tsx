@@ -3547,7 +3547,11 @@ export function LiveWorkoutPage() {
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...groupingItems,
       { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
-      ...(removableSet ? [{ label: 'Удалить подход', danger: true, disabled: rootMutationPending, onClick: async () => { if (await askConfirm({ message: 'Удалить этот подход?', confirmLabel: 'Удалить', danger: true })) removeSet.mutate(removableSet.id) } }] : []),
+      ...(removableSet ? [{ label: clientLime ? `Удалить подход ${exercise.sets.indexOf(removableSet) + 1}` : 'Удалить подход', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
+        const setId = removableSet.id
+        const message = clientLime ? `Удалить подход ${exercise.sets.indexOf(removableSet) + 1} упражнения «${exercise.name}»?` : 'Удалить этот подход?'
+        if (await askConfirm({ message, confirmLabel: 'Удалить', danger: true })) removeSet.mutate(setId)
+      } }] : []),
       { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => deleteLiveExercise(exercise) },
     ]} />
   }
@@ -3821,7 +3825,10 @@ export function LiveWorkoutPage() {
             const currentSetIndex = exercise.sets.findIndex((set) => !set.confirmedAt)
             // Все строки доступны для ввода; текущая определяет подсветку и
             // действия меню. При смене строки её черновик сохранён локально.
-            const activeSetId = expandedSetId ?? exercise.sets[currentSetIndex]?.id
+            const selectedSet = exercise.sets.find((set) => set.id === expandedSetId)
+            const activeSetId = selectedSet?.id ?? exercise.sets[currentSetIndex]?.id
+            const removalTarget = clientLime ? selectedSet ?? exercise.sets[currentSetIndex] : exercise.sets[currentSetIndex]
+            const removableSet = exercise.sets.length > 1 && removalTarget && !removalTarget.confirmedAt ? removalTarget : undefined
             const allDone = exercise.sets.every((set) => set.confirmedAt)
             // В live рабочей остаётся только текущая карточка. Завершённые
             // упражнения сжимаются в итог (тап открывает их исключительно для
@@ -3848,14 +3855,14 @@ export function LiveWorkoutPage() {
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               const progressLabel = completedSets > 0 ? `Выполнено ${completedSets} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`
               return swipeLive(exercise, <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined, groupingItems)}{reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{reorder}</>} />
                 <div className="live-upcoming-row"><p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
                   <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={`${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
                 </div>
               </WorkoutExercise>)
             }
             return swipeLive(exercise, <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, currentSetIndex >= 0 && exercise.sets.length > 1 ? exercise.sets[currentSetIndex] : undefined, groupingItems)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{reorder}</>} />
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
