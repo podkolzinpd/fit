@@ -107,7 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e17ed22c860f99f19825bb3c7f93ad4e2ecc235d
+          ref: e02ab402c99da51b2cbbac9f40d6c2f6c28bee45
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -139,8 +139,15 @@ jobs:
           VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
           VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
           VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
-          VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
           VITE_MAINTENANCE_MODE: 'false'
+          VITE_CONTEST_WINNER_ENABLED: ${{ vars.VITE_CONTEST_WINNER_ENABLED || 'true' }}
+          VITE_CONTEST_WINNER_PILOT_USER_IDS: ${{ vars.VITE_CONTEST_WINNER_PILOT_USER_IDS || '092bfc1b-db7c-450d-9f60-aaf9ea4df975,50536f5c-e380-419e-8fa7-410a2c6b249c' }}
+          VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
+          VITE_TRAINER_FINANCE_ENABLED: ${{ vars.VITE_TRAINER_FINANCE_ENABLED || 'true' }}
+          VITE_TRAINER_FINANCE_PILOT_USER_IDS: ${{ vars.VITE_TRAINER_FINANCE_PILOT_USER_IDS || '' }}
+      - name: Set release version
+        run: |
+          sed -i 's/versionCode 1/versionCode 2/; s/versionName "1.0"/versionName "1.0.1"/' android/app/build.gradle
       - run: ./gradlew assembleRelease
         working-directory: android
       - name: Sign and verify release APK
@@ -161,20 +168,20 @@ jobs:
           tools_dir=$(dirname "$signer")
           mkdir -p rustore-release
           "$tools_dir/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/fit-aligned.apk"
-          "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out rustore-release/fit-1.0-release.apk "$RUNNER_TEMP/fit-aligned.apk"
-          "$signer" verify --verbose --print-certs rustore-release/fit-1.0-release.apk | tee rustore-release/signature.txt
-          "$tools_dir/zipalign" -c -P 16 4 rustore-release/fit-1.0-release.apk
-          "$tools_dir/aapt" dump badging rustore-release/fit-1.0-release.apk > rustore-release/package-info.txt
+          "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out rustore-release/fit-1.0.1-release.apk "$RUNNER_TEMP/fit-aligned.apk"
+          "$signer" verify --verbose --print-certs rustore-release/fit-1.0.1-release.apk | tee rustore-release/signature.txt
+          "$tools_dir/zipalign" -c -P 16 4 rustore-release/fit-1.0.1-release.apk
+          "$tools_dir/aapt" dump badging rustore-release/fit-1.0.1-release.apk > rustore-release/package-info.txt
           if grep -q '^application-debuggable' rustore-release/package-info.txt; then
             echo 'Refusing debuggable release APK'
             exit 1
           fi
-          grep -q "package: name='com.coachspace.fit' versionCode='1' versionName='1.0'" rustore-release/package-info.txt
-          sha256sum rustore-release/fit-1.0-release.apk > rustore-release/SHA256SUMS
-          printf '%s\n' 'Source commit: e17ed22c860f99f19825bb3c7f93ad4e2ecc235d' > rustore-release/source.txt
+          grep -q "package: name='com.coachspace.fit' versionCode='2' versionName='1.0.1'" rustore-release/package-info.txt
+          sha256sum rustore-release/fit-1.0.1-release.apk > rustore-release/SHA256SUMS
+          printf '%s\n' 'Source commit: e02ab402c99da51b2cbbac9f40d6c2f6c28bee45' > rustore-release/source.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: fit-rustore-signed-release-1.0
+          name: fit-rustore-signed-release-1.0.1
           path: rustore-release/
           if-no-files-found: error
           retention-days: 30
