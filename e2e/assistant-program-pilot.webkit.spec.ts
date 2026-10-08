@@ -16,9 +16,10 @@ test.beforeAll(async () => {
 })
 
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
+const clientLimeStyles = readFileSync(new URL('../src/styles/fit-client-lime.css', import.meta.url), 'utf8')
 const programQuestions = ['Что составить: одну тренировку или программу на срок от одной до четырёх недель?', 'Какова цель этой тренировки или программы: что хотите улучшить?']
 
-function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') {
+function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer', clientLime = false) {
   const content = renderToString(createElement(ProgramCard, { enabled: true, running: false, showGuidance: false,
     clientMode: role === 'client',
     payload: { step: 'brief', briefStatus: 'needs_answers', clientName: 'Сан Саныч', readyToGenerate: false,
@@ -27,8 +28,8 @@ function collectingShell(theme: string, role: 'trainer' | 'client' = 'trainer') 
       briefSummary: 'Совершеннолетний: да\nОборудование: полностью оборудованный тренажёрный зал\nПожелания: сохранить привычные упражнения и удобное расписание' },
     onApply: async () => {}, onSaved: () => {}, onSuggestion: () => {}, onCancel: () => {},
   }))
-  return `<!doctype html><html class="theme-${theme} ui-identity"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style></head><body><div id="root">
-    <div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity"><div class="content"><main class="assistant-page assistant-program-collecting">
+  return `<!doctype html><html class="theme-${theme} ui-identity${clientLime ? ' fit-client-lime-document' : ''}"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${styles}</style>${clientLime ? `<style>${clientLimeStyles}</style>` : ''}</head><body><div id="root">
+    <div class="phone-frame theme-${theme} assistant-shell ui-identity assistant-identity${clientLime ? ' fit-lime fit-client-lime' : ''}"><div class="content"><main class="assistant-page assistant-program-collecting">
       <section class="assistant-session-switcher"><div class="assistant-session-bar"><strong>Сегодня</strong></div></section>
       <section class="assistant-thread" aria-label="Диалог с ассистентом"><article class="assistant-message assistant-message-user"><p>Подготовить программу для Сан Саныч</p></article>
         <article class="assistant-message assistant-message-assistant"><div class="assistant-message-copy"><p>Подготовлю рекомендованный черновик одной тренировки или программы на 1–4 недели. Занятие может длиться от 15 минут; для многодневной программы сохраняю день отдыха между занятиями.</p><p>Профиль: Сан Саныч. За последние восемь недель вижу 24 завершённые тренировки.</p>${programQuestions.map((question, index) => `<p data-testid="program-question-${index}">${question}</p>`).join('')}</div></article></section>
@@ -122,6 +123,22 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
       await page.screenshot({ path: testInfo.outputPath(`client-questions-${viewport.width}-${theme}.png`) })
     })
   }
+}
+
+for (const width of [390, 430]) {
+  test(`client Lime assistant keeps text entry visible above keyboard at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.setContent(collectingShell('light', 'client', true))
+    await page.locator('.phone-frame').evaluate((element) => element.classList.add('keyboard-open'))
+    await page.setViewportSize({ width, height: 480 })
+    await anchorProgramShell(page)
+    const composer = page.getByTestId('composer')
+    await composer.getByRole('textbox', { name: 'Сообщение ассистенту' }).fill('Гири и резинка')
+    await expect(page.getByTestId('tabbar')).toBeHidden()
+    await expectUnclipped(composer)
+    await expect(composer).toBeInViewport()
+    await page.screenshot({ path: testInfo.outputPath('client-lime-assistant-keyboard.png') })
+  })
 }
 
 for (const theme of ['light', 'dark']) {

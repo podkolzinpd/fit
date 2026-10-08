@@ -1800,6 +1800,40 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
 }
 
 for (const width of [390, 430]) {
+  test(`client Lime assistant input stays above iOS keyboard at ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.addInitScript(() => {
+      const viewport = new EventTarget()
+      Object.defineProperties(viewport, {
+        height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? window.innerHeight) },
+        offsetTop: { get: () => 0 },
+      })
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+    })
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true })
+    await page.goto('/assistant')
+    const composer = page.getByRole('textbox', { name: 'Сообщение ассистенту' })
+    await expect(composer).toBeVisible()
+    await composer.fill('Гири и резинка')
+    await page.evaluate(() => {
+      document.documentElement.dataset.testVisibleHeight = '400'
+      window.visualViewport?.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('.phone-frame')).toHaveClass(/keyboard-open/)
+    await expect(page.locator('.client-tab-bar')).toBeHidden()
+    await expect.poll(async () => {
+      const box = await composer.boundingBox()
+      return box ? box.y + box.height : 1000
+    }).toBeLessThanOrEqual(400)
+    await page.screenshot({ path: testInfo.outputPath('client-assistant-keyboard.png') })
+    await composer.blur()
+    await page.evaluate(() => {
+      delete document.documentElement.dataset.testVisibleHeight
+      window.visualViewport?.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('.client-tab-bar')).toBeVisible()
+  })
+
   test(`Lime keyboard visual viewport keeps composer above keyboard at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     // Model Safari's separate layout/visual viewports, not a physical OS keyboard.
