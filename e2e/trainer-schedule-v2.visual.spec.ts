@@ -4654,10 +4654,12 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     const workoutsPage = page.locator('.fit-client-lime.client-workouts-identity')
     await expect(workoutsPage.locator('.client-workouts-page > .page-header .button')).toHaveCSS('border-radius', '999px')
     const toggle = workoutsPage.getByRole('group', { name: 'Вид истории тренировок' })
-    await expect(toggle.getByRole('button', { name: 'Список' })).toHaveCSS('border-radius', '999px')
+    await expect(toggle).toHaveCSS('border-radius', '28px')
+    await expect(toggle.getByRole('button', { name: 'Список' })).toHaveCSS('border-radius', '24px')
     await toggle.getByRole('button', { name: 'Календарь' }).click()
     await expect(workoutsPage.locator('.client-history-calendar')).toBeVisible()
     await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveCSS('border-radius', '24px')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-workout-calendar-${theme}-${width}.png`) })
   })
@@ -5878,6 +5880,68 @@ test('Client progress outside the Lime pilot retains its original surfaces', asy
   await expect(page.locator('.body-progress-modes')).toBeVisible()
   expect(await page.locator('.body-progress-modes').evaluate((element) => getComputedStyle(element, '::before').borderRadius)).toBe('9px')
 })
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime segments keep one geometry and visible body-map selection ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = restTimerWorkout()
+    source.exercises[0]!.sets[0]!.fact = { weightKg: 20, reps: 10 }
+    source.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T08:30:00Z'
+    await mockPilot(page, { role: 'client', profileId: clientId, clientGender: 'male', workouts: [{ ...source, status: 'done', workoutDate: '2026-10-08', completedAt: '2026-10-08T09:00:00Z' }] })
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      localStorage.setItem(`fit.today-draft.${id}.plan.client-segments`, JSON.stringify({ screen: 'save', text: 'Приседания 2×10', choices: {}, clientId: id,
+        items: [{ line: 'Приседания', exercise: { ref: 'squat', name: 'Приседания', inputKind: 'strength' }, sets: [{ position: 0, reps: 10 }], hasValues: true }], recordMode: 'planned', workoutDate: '2026-10-08' }))
+    }, { id: clientId, theme })
+    await page.goto('/me/settings')
+    const options = page.locator('.body-map-appearance-options')
+    await expect(options.getByRole('radio')).toHaveCount(2)
+    for (const name of ['Список', 'Фигура']) {
+      await options.getByRole('radio', { name, exact: true }).click()
+      await page.getByRole('heading').first().click()
+      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+      const metrics = await options.evaluate((element) => {
+        const selected = element.querySelector('[aria-checked="true"]')!
+        return { background: getComputedStyle(element).backgroundColor, selected: getComputedStyle(selected).backgroundColor, outer: getComputedStyle(element).borderRadius, inner: getComputedStyle(selected).borderRadius }
+      })
+      await info.attach(`body-selection-${name}`, { body: JSON.stringify(metrics), contentType: 'application/json' })
+      await page.screenshot({ path: info.outputPath(`body-selection-${name}.png`), fullPage: true })
+      expect(metrics.selected).not.toBe(metrics.background)
+      expect(metrics.outer).toBe('28px'); expect(metrics.inner).toBe('24px')
+      await page.reload()
+      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+      await page.goto('/me/progress')
+      await page.getByRole('tab', { name: 'ПРО', exact: true }).click()
+      await page.locator('.client-body-map-disclosure > summary').click()
+      const panel = page.locator('.client-body-map-disclosure .body-progress-panel')
+      await expect(panel).toBeVisible()
+      if (name === 'Список') await expect(panel).toHaveClass(/is-list/)
+      else await expect(panel.locator('.body-progress-figure-shell')).toBeVisible()
+      await page.goto('/me/settings')
+      await expect(options.getByRole('radio', { name, exact: true })).toHaveAttribute('aria-checked', 'true')
+    }
+    await page.goto('/me/workouts')
+    const history = page.locator('.client-history-view-toggle')
+    await expect(history).toHaveCSS('border-radius', '28px')
+    for (const name of ['Календарь', 'Список']) {
+      const button = history.getByRole('button', { name, exact: true })
+      await button.click(); await expect(button).toHaveAttribute('aria-pressed', 'true')
+      await expect(button).toHaveCSS('border-radius', '24px')
+    }
+    await page.screenshot({ path: info.outputPath('history-segments.png') })
+    await page.goto('/me?draft=segments&view=save')
+    const mode = page.locator('.today-record-mode')
+    await expect(mode).toHaveCSS('border-radius', '28px')
+    for (const name of ['Записать выполненную', 'Запланировать']) {
+      const button = mode.getByRole('button', { name, exact: true })
+      await button.click(); await expect(button).toHaveClass(/active/)
+      await expect(button).toHaveCSS('border-radius', '24px')
+    }
+    await page.screenshot({ path: info.outputPath('save-segments.png') })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
 
 for (const theme of ['light', 'dark']) for (const role of ['client', 'trainer'] as const) {
   if (role === 'trainer' && theme === 'light') continue
