@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDataBackend } from '../../app/data-backend-context'
+import { useAuth } from '../../app/auth-context'
 import { cloneWorkoutTemplate, workoutTemplateFromWorkout } from '../../data/repositories/workout-templates.repository'
 import { replaceExercise } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
-import { AsyncView, EmptyState, Field, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
+import { readWorkoutTemplateDraft, removeWorkoutTemplateDraft, workoutTemplateDraftKey, writeWorkoutTemplateDraft } from './workout-template-draft'
 
 function exerciseWord(count: number) {
   const lastTwo = count % 100
@@ -36,14 +38,29 @@ function templateMeta(exercises: readonly WorkoutExerciseDraft[]) {
 }
 
 export function WorkoutTemplatesPage() {
+  const { actor } = useAuth()
+  if (!actor || actor.role !== 'trainer') return null
+  return <WorkoutTemplates key={actor.userId} />
+}
+
+function WorkoutTemplates() {
   const { workoutTemplates } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [confirm, confirmDialog] = useConfirm()
+  const pendingCopies = useRef(new Map<string, WorkoutTemplateDraft>())
   const query = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list() })
   const duplicate = useMutation({
-    mutationFn: (template: NonNullable<typeof query.data>[number]) => workoutTemplates.save(cloneWorkoutTemplate(template)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-templates'] }),
+    mutationFn: (template: NonNullable<typeof query.data>[number]) => {
+      const key = `${template.id}:${template.version}`
+      const draft = pendingCopies.current.get(key) ?? cloneWorkoutTemplate(template)
+      pendingCopies.current.set(key, draft)
+      return workoutTemplates.save(draft)
+    },
+    onSuccess: (_result, template) => {
+      pendingCopies.current.delete(`${template.id}:${template.version}`)
+      return queryClient.invalidateQueries({ queryKey: ['workout-templates'] })
+    },
   })
   const archive = useMutation({
     mutationFn: (template: NonNullable<typeof query.data>[number]) => workoutTemplates.archive(template),
@@ -69,7 +86,7 @@ export function WorkoutTemplatesPage() {
           <Link className="button secondary" to={`/workouts/new?template=${template.id}`}><ScheduleIcon />Назначить</Link></div>
       </article>)}</div> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
         action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor">Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout"><CopyIcon />Из тренировки</Link></div>} />}
-      {(duplicate.error || archive.error) && <p className="error" role="alert">{(duplicate.error ?? archive.error)?.message}</p>}
+      {(duplicate.error || archive.error) && <InlineRequestError error={(duplicate.error ?? archive.error)!} />}
     </AsyncView>
     {confirmDialog}
   </Page>
@@ -106,41 +123,75 @@ function blankExercise(exercise: ExerciseSnapshot, position: number): WorkoutExe
 }
 
 export function WorkoutTemplateEditorPage() {
-  const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
+  const { actor } = useAuth()
   const { templateId } = useParams()
   const [params] = useSearchParams()
   const sourceWorkoutId = params.get('sourceWorkout') ?? ''
+  if (!actor || actor.role !== 'trainer') return null
+  const draftKey = workoutTemplateDraftKey(actor.userId, templateId, sourceWorkoutId)
+  return <WorkoutTemplateEditor key={draftKey} templateId={templateId} sourceWorkoutId={sourceWorkoutId} draftKey={draftKey} />
+}
+
+function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { templateId?: string; sourceWorkoutId: string; draftKey: string }) {
+  const { exercises: exercisesRepository, workoutTemplates, workouts } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const catalog = useExerciseCatalog()
   const templateQuery = useQuery({ queryKey: ['workout-template', templateId], queryFn: () => workoutTemplates.get(templateId!), enabled: Boolean(templateId) })
   const sourceQuery = useQuery({ queryKey: ['workout', sourceWorkoutId], queryFn: () => workouts.get(sourceWorkoutId), enabled: Boolean(sourceWorkoutId) })
+  const [storedDraft] = useState(() => {
+    const draft = readWorkoutTemplateDraft(draftKey)
+    return templateId && draft?.id !== templateId ? null : draft
+  })
   const [name, setName] = useState('')
   const [notes, setNotes] = useState('')
   const [exercises, setExercises] = useState<WorkoutExerciseDraft[]>([])
+  const [newTemplateId] = useState(() => storedDraft?.id ?? crypto.randomUUID())
+  const [baseVersion, setBaseVersion] = useState<number | undefined>()
+  const [draftStorageError, setDraftStorageError] = useState(false)
+  const finished = useRef(false)
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => { active.current = false }
+  }, [])
   const [ready, setReady] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerSearch, setPickerSearch] = useState('')
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   useEffect(() => {
-    if (ready || templateQuery.isLoading || sourceQuery.isLoading) return
-    const initial = templateQuery.data ?? (sourceQuery.data ? workoutTemplateFromWorkout(sourceQuery.data) : null)
+    if (ready || templateQuery.isLoading || sourceQuery.isLoading || templateQuery.error || sourceQuery.error) return
+    const initial = storedDraft ?? templateQuery.data ?? (sourceQuery.data ? workoutTemplateFromWorkout(sourceQuery.data) : null)
     if (initial) { setName(initial.name); setNotes(initial.notes ?? ''); setExercises(initial.exercises) }
-    setDirty(false)
+    setBaseVersion(initial?.version)
+    setDirty(Boolean(storedDraft))
     setReady(true)
-  }, [ready, sourceQuery.data, sourceQuery.isLoading, templateQuery.data, templateQuery.isLoading])
+  }, [ready, storedDraft, sourceQuery.data, sourceQuery.isLoading, sourceQuery.error, templateQuery.data, templateQuery.isLoading, templateQuery.error])
+  useEffect(() => {
+    if (!ready || !dirty || finished.current) return
+    setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }))
+  }, [ready, dirty, draftKey, templateId, newTemplateId, name, notes, exercises, baseVersion])
   const save = useMutation({
     mutationFn: (draft: WorkoutTemplateDraft) => workoutTemplates.save(draft),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['workout-templates'] }); navigate('/schedule/templates', { replace: true }) },
+    onSuccess: async () => {
+      finished.current = true
+      removeWorkoutTemplateDraft(draftKey)
+      if (!active.current) return
+      await queryClient.invalidateQueries({ queryKey: ['workout-templates'] })
+      if (active.current) navigate('/schedule/templates', { replace: true })
+    },
   })
   function closePicker() { setPickerOpen(false); setPickerSearch(''); setReplaceIndex(null) }
   const [confirmLeave, confirmLeaveDialog] = useConfirm()
   async function leaveForm() {
+    if (save.isPending) return
     if (dirty) {
       const shouldLeave = await confirmLeave({ message: 'Выйти из шаблона? Несохранённые изменения будут удалены.', confirmLabel: 'Выйти', danger: true })
       if (!shouldLeave) return
     }
+    finished.current = true
+    removeWorkoutTemplateDraft(draftKey)
     navigate('/schedule/templates')
   }
   function pick(selected: ExerciseSnapshot) {
@@ -165,15 +216,17 @@ export function WorkoutTemplateEditorPage() {
   }
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (!name.trim() || !exercises.length) return
-    save.mutate({ id: templateQuery.data?.id ?? crypto.randomUUID(), name: name.trim(), notes: notes.trim() || undefined, exercises, version: templateQuery.data?.version })
+    if (save.isPending || !name.trim() || !exercises.length) return
+    setDirty(true)
+    setDraftStorageError(!writeWorkoutTemplateDraft(draftKey, { id: templateId ?? newTemplateId, name, notes, exercises, version: baseVersion }))
+    save.mutate({ id: templateId ?? newTemplateId, name: name.trim(), notes: notes.trim() || undefined, exercises, version: baseVersion })
   }
   const error = templateQuery.error ?? sourceQuery.error
   const pageTitle = templateId ? 'Редактировать шаблон' : 'Новый шаблон'
   const headerMeta = exercises.length > 0 ? templateMeta(exercises) : 'Сначала добавьте упражнения'
   return <Page className="workout-template-editor-page workout-form-page workout-focused-page" title={pageTitle} hideTitle back={-1} onBack={() => void leaveForm()}>
     <WorkoutHeader eyebrow="ШАБЛОН ТРЕНИРОВКИ" title={pageTitle} meta={headerMeta} state="planned" showStatus={false} />
-    <AsyncView loading={!ready} error={error} onRetry={() => { void templateQuery.refetch(); void sourceQuery.refetch() }}>
+    <AsyncView loading={!ready && !error} error={error} onRetry={() => { if (templateId) void templateQuery.refetch(); if (sourceWorkoutId) void sourceQuery.refetch() }}>
       <form className="stack workout-form workout-template-form" onSubmit={submit}>
         <section className="workout-form-section template-basics"><Field label="Название шаблона"><input value={name} onChange={(event) => { setName(event.target.value); setDirty(true) }} placeholder="Например, Силовая · всё тело" maxLength={80} required /></Field>
           <details className="workout-notes" open={Boolean(notes)}>
@@ -186,7 +239,8 @@ export function WorkoutTemplateEditorPage() {
           {!exercises.length && <p className="workout-empty-hint">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
           <WorkoutExerciseEditor exercises={exercises} onChange={(next) => { setExercises(next); setDirty(true) }} onOpenPicker={() => setPickerOpen(true)} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} hideEmptyAddAction collapseInitialExercises={Boolean(templateId || sourceWorkoutId)} initialExercisesReady={ready} />
         </section>
-        {save.error && <p className="error" role="alert">{save.error.message}</p>}
+        {save.error && <InlineRequestError error={save.error} />}
+        {draftStorageError && <p className="error" role="alert">Не удалось сохранить черновик на устройстве. Не закрывайте экран до сохранения шаблона.</p>}
         <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!name.trim() || !exercises.length}>Сохранить шаблон</WorkoutCta></div>
       </form>
       {pickerOpen && <ExercisePicker catalog={catalog} initialSearch={pickerSearch} multiple={replaceIndex === null} onPick={pick} onPickMany={pickMany} onClose={closePicker} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} />}

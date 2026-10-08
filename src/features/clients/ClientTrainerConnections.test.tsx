@@ -36,6 +36,14 @@ describe('ClientTrainerConnections safe disconnect', () => {
     repository.listTrainers.mockResolvedValue([connectedTrainer])
   })
 
+  it('uses the server public name and initials even when the account name is empty', async () => {
+    repository.listTrainers.mockResolvedValue([{ ...connectedTrainer, firstName: null, lastName: null, displayName: 'Татьяна Александровна' }])
+    renderConnections()
+    expect(await screen.findByText('Татьяна Александровна')).toBeVisible()
+    expect(screen.getByText('ТА')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Действия с тренером Татьяна Александровна' })).toBeVisible()
+  })
+
   it('disconnects the current trainer only after a clear confirmation and keeps the client data message', async () => {
     const user = userEvent.setup()
     repository.listTrainers.mockResolvedValueOnce([connectedTrainer]).mockResolvedValue([])

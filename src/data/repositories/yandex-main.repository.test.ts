@@ -87,6 +87,88 @@ describe('Yandex main repository', () => {
     push.unsubscribe.mockReset()
   })
 
+  it('deletes only the selected goal stage with its displayed version and no prerequisite reads', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url, init) => {
+      if (url === `${apiBaseUrl}/health`) return Promise.resolve(jsonResponse({ status: 'ok' }))
+      if (url === `${apiBaseUrl}/v1/goal-stages/${stageId}` && init?.method === 'DELETE') return Promise.resolve(emptyResponse())
+      throw new Error('Client overview and unrelated client progress are unavailable')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await repository.goals.deleteStage({ id: stageId, version: 7 })
+    const writes = fetchMock.mock.calls.filter(([url]) => url !== `${apiBaseUrl}/health`)
+    expect(writes).toHaveLength(1)
+    expect(writes[0]?.[1]).toMatchObject({
+      method: 'DELETE', body: JSON.stringify({ expectedVersion: 7 }),
+      headers: { 'x-fit-session': sessionToken },
+    })
+  })
+
+  it.each([
+    [409, 'stage_conflict', 'PT409'],
+    [403, 'forbidden', 'PT403'],
+    [404, 'not_found', 'PT404'],
+  ])('propagates stage deletion HTTP %i without refreshing or retrying the version', async (status, error, code) => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) => Promise.resolve(
+      url === `${apiBaseUrl}/health` ? jsonResponse({ status: 'ok' }) : jsonResponse({ error }, status),
+    ))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.goals.deleteStage({ id: stageId, version: 7 })).rejects.toMatchObject({ code })
+    const writes = fetchMock.mock.calls.filter(([url]) => url !== `${apiBaseUrl}/health`)
+    expect(writes).toHaveLength(1)
+    expect(writes[0]?.[0]).toBe(`${apiBaseUrl}/v1/goal-stages/${stageId}`)
+    expect(writes[0]?.[1]?.body).toBe(JSON.stringify({ expectedVersion: 7 }))
+  })
+
+  it('refreshes trainer names on later reads while sharing simultaneous connections requests', async () => {
+    let displayName = 'Татьяна'
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(jsonResponse({
+      memberships: [{ clientId, trainerId: actor.userId, firstName: null, lastName: null, displayName,
+        joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [],
+    })))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const [trainers] = await Promise.all([repository.invitations.listTrainers(clientId), repository.invitations.list(clientId)])
+    expect(trainers[0]?.displayName).toBe('Татьяна')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    displayName = 'Татьяна Александровна'
+    expect((await repository.invitations.listTrainers(clientId))[0]?.displayName).toBe(displayName)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403))
+    await expect(repository.invitations.listTrainers(clientId)).rejects.toThrow()
+    expect((await repository.invitations.listTrainers(clientId))[0]?.displayName).toBe(displayName)
+  })
+
+  it('reads records of an old workout in one request without the first Progress page', async () => {
+    const records = [{ exerciseRef: 'squat', exerciseName: 'Приседание', inputKind: 'strength',
+      metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 }]
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) => {
+      if (url === `${apiBaseUrl}/v1/workouts/${workoutId}/personal-records`) return Promise.resolve(jsonResponse({ records }))
+      throw new Error('Workout aggregates and paginated exercise history must not be requested')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect(await repository.workouts.personalRecords(workoutId)).toEqual(records)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ 'x-fit-session': sessionToken })
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
+  it('keeps empty records and retries a failed read without cached emptiness or fallback', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403))
+      .mockResolvedValueOnce(jsonResponse({ records: [] }))
+      .mockResolvedValueOnce(jsonResponse({ records: [{ metric: 'invented' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.workouts.personalRecords(workoutId)).rejects.toThrow()
+    expect(await repository.workouts.personalRecords(workoutId)).toEqual([])
+    await expect(repository.workouts.personalRecords(workoutId)).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(pilot.listTrainingData).not.toHaveBeenCalled()
+  })
+
   it('reads client stats once without loading workout aggregates', async () => {
     const stats = { doneCount: 123, completionPercent: 75, lastWorkoutDate: '2026-10-01', daysInWork: 300, needsAttention: false }
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ stats }))
@@ -788,7 +870,7 @@ describe('Yandex main repository', () => {
     await repository.goals.archive(goalId, 1)
     await repository.goals.saveStage(stageDraft())
     await repository.goals.saveStage({ ...stageDraft(), id: stageId, version: 1 })
-    await repository.goals.deleteStage(stageId)
+    await repository.goals.deleteStage({ id: stageId, version: 1 })
 
     expect(fetchMock).toHaveBeenCalled()
   })
@@ -806,7 +888,7 @@ describe('Yandex main repository', () => {
     expect(await repository.workouts.list('2026-08-01', '2026-08-31', clientId)).toHaveLength(2)
     expect(await repository.workouts.listSummaries(clientId)).toHaveLength(2)
     expect((await repository.workouts.findActive(clientId))?.id).toBe(plannedWorkoutId)
-    expect(await repository.workouts.personalRecords(workoutId)).toHaveLength(3)
+    expect(await repository.workouts.personalRecords(workoutId)).toHaveLength(2)
     expect((await repository.workouts.latestExerciseResults(clientId, ['push-up'])).get('push-up')?.sets).toHaveLength(1)
     expect((await repository.workouts.exerciseProgressPage(clientId, 'push-up', {
       completedAt: '2026-08-20T10:00:00.000000+00:00', workoutId,
@@ -867,6 +949,22 @@ describe('Yandex main repository', () => {
     await repository.workouts.replaceLiveExercise(item, exerciseId, exerciseSnapshot())
     await repository.workouts.finish(item)
     await repository.workouts.remove(item)
+  })
+
+  it('sends the prep countdown only when the form owns it', async () => {
+    const fetchMock = installContractFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    expect((await repository.workouts.get(workoutId)).prepSeconds).toBeNull()
+    await repository.workouts.save({ ...workoutDraft(), prepSeconds: 20 })
+    await repository.workouts.save({ ...workoutDraft(), id: workoutId, version: 1 })
+    const bodies = fetchMock.mock.calls
+      .filter(([url, init]) => /\/v1\/workouts(\/[0-9a-f-]{36})?$/.test(String(url)) && (init?.method === 'POST' || init?.method === 'PUT'))
+      .map(([, init]) => JSON.parse(String(init?.body)) as Record<string, unknown>)
+    expect(bodies[0]).toMatchObject({ prepSeconds: 20 })
+    // Старый клиент без поля не сбрасывает сохранённую подготовку.
+    expect(bodies[1]).not.toHaveProperty('prepSeconds')
   })
 
   it('preserves empty optional values across sparse workout and progress contracts', async () => {
@@ -1242,6 +1340,10 @@ function installContractFetch() {
     const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url)
     const method = init?.method ?? 'GET'
     const path = url.pathname
+    if (method === 'GET' && path.endsWith('/personal-records')) return jsonResponse({ records: [
+      { exerciseRef: 'push-up', exerciseName: 'Отжимания', inputKind: 'strength', metric: 'weight', primaryValue: 22, weightKg: 22, reps: 10 },
+      { exerciseRef: 'push-up', exerciseName: 'Отжимания', inputKind: 'strength', metric: 'weight_reps', primaryValue: 220, weightKg: 22, reps: 10 },
+    ] })
     if (method === 'GET' && path === '/v1/clients') return jsonResponse({ clients: url.searchParams.get('archived') === 'true' ? [
       { id: archivedClientId, canArchive: true, hasAccount: false, fullName: 'Архив', canonicalFullName: 'Архив', gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, lastActivityAt: '2026-08-01T00:00:00.000000+00:00', archivedAt: '2026-08-01T00:00:00.000000+00:00', version: 1, membershipVersion: 1 },
     ] : [

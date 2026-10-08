@@ -5,11 +5,12 @@ import { deployFrontendProbe, probeFunctionName, probeTimerName } from './deploy
 
 const folder = 'b1goqho12tlk9dibc3f3'
 const timer = { id: 'timer', name: probeTimerName, status: 'PAUSED', rule: { timer: {
-  cron_expression: '17 * * * ? *', invoke_function: {
+  cron_expression: '17 * * * ? *', invoke_function_with_retry: {
     function_id: 'function', function_tag: 'hourly-probe', service_account_id: 'invoker',
+    retry_settings: { retry_attempts: '1', interval: '10s' },
   } } } }
 function fixture({ existing = false, smoke = { measured: true, status: 'passed', requests: 2 },
-  existingTimer = timer, failInventory = false } = {}) {
+  existingTimer = timer, readbackTimer = { ...timer, status: 'ACTIVE' }, failInventory = false } = {}) {
   const calls = []
   const call = async (args) => {
     calls.push(args)
@@ -20,7 +21,7 @@ function fixture({ existing = false, smoke = { measured: true, status: 'passed',
     }
     if (command === 'iam service-account list') return [{ id: 'invoker', name: 'fit-stage-api-warmer' }]
     if (command === 'serverless function list') return existing ? [{ id: 'function', name: probeFunctionName }] : []
-    if (args[1] === 'trigger' && args[2] === 'get') return { ...timer, status: 'ACTIVE' }
+    if (args[1] === 'trigger' && args[2] === 'get') return readbackTimer
     if (args[2] === 'invoke') return smoke
     return { id: args[2] === 'version' ? 'version' : args[1] === 'function' ? 'function' : 'timer' }
   }
@@ -78,6 +79,40 @@ test('existing timer must match reviewed contract; measured network failure does
   await valid.run()
   assert.ok(valid.calls.some((args) => args[2] === 'resume'))
   assert.ok(!valid.calls.some((args) => args[2] === 'create' && args[1] === 'trigger'))
+})
+
+test('actual YC retry envelope works for creation readback and existing timer reuse', async () => {
+  for (const existing of [false, true]) {
+    const { calls, run } = fixture({ existing })
+    const result = await run()
+    assert.equal(result.status, 'enabled')
+    assert.equal(result.timerId, 'timer')
+    assert.equal(calls.filter((args) => args[1] === 'trigger' && args[2] === 'create').length, existing ? 0 : 1)
+  }
+})
+
+test('unexpected actual timer target, schedule, retries and status fail closed', async () => {
+  const invocation = timer.rule.timer.invoke_function_with_retry
+  const invalidRules = [
+    { ...timer.rule.timer, cron_expression: '* * * * ? *' },
+    ...[{ function_id: 'other' }, { function_tag: '$latest' }, { service_account_id: 'other' },
+      { retry_settings: { retry_attempts: '2', interval: '10s' } },
+      { retry_settings: { retry_attempts: '0', interval: '10s' } },
+      { retry_settings: { retry_attempts: '1', interval: '1s' } },
+      { retry_settings: undefined },
+    ].map((change) => ({ ...timer.rule.timer, invoke_function_with_retry: { ...invocation, ...change } })),
+    { cron_expression: timer.rule.timer.cron_expression, invoke_function: invocation },
+  ]
+  for (const rule of invalidRules) {
+    const unexpected = { ...timer, status: 'ACTIVE', rule: { timer: rule } }
+    const existing = fixture({ existing: true, existingTimer: unexpected })
+    await assert.rejects(existing.run(), /differs/)
+    assert.equal(existing.calls.length, 3)
+    const readback = fixture({ readbackTimer: unexpected })
+    await assert.rejects(readback.run(), /readback failed/)
+  }
+  const paused = fixture({ readbackTimer: timer })
+  await assert.rejects(paused.run(), /readback failed/)
 })
 
 test('disable/inspect work without cost approval and cannot create functions', async () => {

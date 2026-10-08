@@ -6,7 +6,8 @@ import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { FitLimeWorkoutEntry } from './FitLimeWorkoutEntry'
 import { FitLimeScheduleList } from './FitLimeScheduleList'
 import { readScheduleScroll, writeScheduleScroll } from './schedule-scroll'
-import { filterScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
+import { filterScheduleWorkouts, isIndependentScheduleWorkout, trainerScheduleWorkouts, scheduleStatusFilter, SCHEDULE_STATUSES } from './schedule-filters'
+import { useIndependentSchedule } from './use-independent-schedule'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { WorkoutActualDuration, WorkoutActualDurationField } from './WorkoutActualDuration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -20,7 +21,8 @@ import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, rende
 import { readLiveRestOverrides, restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, favoriteTemplateToWorkoutDraft, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage, type PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTemplate, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing } from '../../shared/domain'
-import { LiveRestTimer } from './LiveRestTimer'
+import { formatRest, LiveRestTimer } from './LiveRestTimer'
+import { claimLiveAutostart, elapsedWorkSeconds, formatPrepOption, livePhasePrimaryAction, restoreLivePhase, storeLivePhase, timedSetSeconds, WORKOUT_PREP_OPTIONS, type LivePhaseTimer } from './live-phase'
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import {
   addDays, currentTimeInTimeZone, dayOfMonth, daysBetween, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
@@ -163,6 +165,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const isTwoWeekView = scheduleRange === '2w'
   const isDayView = forceDayView || Boolean(dateParam)
   const lime = pilot && isFitLimeEnabled(actor)
+  const independentPreference = useIndependentSchedule(lime ? actor?.userId : undefined)
   const isListView = lime && !isDayView && params.get('mode') === 'list'
   const clientFilter = lime ? params.get('client') ?? '' : ''
   const statusFilter = lime ? scheduleStatusFilter(params.get('status')) : 'all'
@@ -202,7 +205,8 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     queryKey: ['workouts', 'schedule-overview', isListView ? 'all' : weekStart, isListView ? 'all' : periodEnd],
     queryFn: () => workoutsRepository.list(isListView ? undefined : weekStart, isListView ? undefined : periodEnd),
   })
-  const items = filterScheduleWorkouts(query.data ?? [], clientFilter, statusFilter)
+  const scheduleItems = lime ? trainerScheduleWorkouts(query.data ?? [], actor?.userId, independentPreference.enabled) : query.data ?? []
+  const items = filterScheduleWorkouts(scheduleItems, clientFilter, statusFilter)
   const itemsByDay = new Map<LocalDate, Workout[]>()
   for (const day of overviewDays) itemsByDay.set(day, [])
   for (const workout of items) itemsByDay.get(workout.workoutDate)?.push(workout)
@@ -216,8 +220,10 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   }
   const dayItems = itemsByDay.get(selected) ?? []
   const totalCount = dayItems.length
-  const timed = dayItems.filter((workout) => workout.startTime)
-  const untimed = dayItems.filter((workout) => !workout.startTime)
+  const independent = lime ? dayItems.filter(isIndependentScheduleWorkout) : []
+  const meetings = lime ? dayItems.filter((workout) => !isIndependentScheduleWorkout(workout)) : dayItems
+  const timed = meetings.filter((workout) => workout.startTime)
+  const untimed = meetings.filter((workout) => !workout.startTime)
 
   useEffect(() => {
     if (!lime || !isDayView || query.isLoading) return
@@ -250,7 +256,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     actor, selected, scheduleRange, isTwoWeekView, isDayView, weekStart,
     overviewDayCount, periodEnd, overviewDays, today, scrollRef, openDay,
     showOverview, shiftOverview, query, itemsByDay, dayItems, totalCount,
-    timed, untimed, todayDisabled, isListView, clientFilter, statusFilter, filteredItems: items,
+    timed, untimed, independent, independentPreference, todayDisabled, isListView, clientFilter, statusFilter, filteredItems: items,
   }
 }
 
@@ -694,7 +700,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     actor, selected, isTwoWeekView, isDayView, weekStart, periodEnd,
     overviewDays, today, scrollRef, openDay, showOverview, shiftOverview,
     query, itemsByDay, timed, untimed, todayDisabled,
-    isListView, clientFilter, statusFilter, filteredItems,
+    isListView, clientFilter, statusFilter, filteredItems, independent, independentPreference,
   } = useTrainerScheduleModel(forceDayView, hourHeight)
   const workspace = useTrainerWorkspace(isDayView)
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
@@ -885,7 +891,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
     </div>}
-    {(fitLimeSchedule || (fitLimeToday && (clientFilter || statusFilter !== 'all'))) && <div className="fit-lime-schedule-filters">
+    {(fitLimeSchedule || fitLimeToday) && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
+    {(fitLimeSchedule || fitLimeToday) && <div className="fit-lime-schedule-filters">
+      {(fitLimeSchedule || clientFilter || statusFilter !== 'all') && <>
       <label>Клиент<select aria-label="Фильтр по клиенту" value={clientFilter} onChange={(event) => changeScheduleFilter('client', event.target.value)}>
         <option value="">Все клиенты</option>
         {clientFilter && !homeClients.data?.some((client) => client.id === clientFilter) && <option value={clientFilter}>{query.data?.find((workout) => workout.clientId === clientFilter)?.clientName ?? 'Выбранный клиент'}</option>}
@@ -893,6 +901,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         {[...new Map((query.data ?? []).filter((workout) => workout.clientId !== clientFilter && !homeClients.data?.some((client) => client.id === workout.clientId)).map((workout) => [workout.clientId, workout.clientName])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}
       </select></label>
       <label>Статус<select aria-label="Фильтр по статусу" value={statusFilter} onChange={(event) => changeScheduleFilter('status', event.target.value)}>{SCHEDULE_STATUSES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      </>}
+      <label className="fit-lime-schedule-independent"><input type="checkbox" checked={independentPreference.enabled} onChange={(event) => independentPreference.change(event.target.checked)} />Показывать самостоятельные тренировки</label>
+      {independentPreference.storageError && <p role="alert">Выбор действует до ухода с экрана: не удалось сохранить настройку. <button type="button" className="link" onClick={() => independentPreference.change(independentPreference.enabled)}>Повторить</button></p>}
       {homeClients.isLoading && <p role="status">Загружаем клиентов…</p>}
       {homeClients.isError && <p role="alert">Не удалось загрузить клиентов. <button type="button" className="link" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
     </div>}
@@ -923,13 +934,14 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               <span className="schedule-v2-day-title"><span>{weekdayShort(day)}</span><strong>{dayOfMonth(day)}</strong></span>
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
-                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b><span className="sr-only">{status.label}</span></span>
+                return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
               })}{workouts.length === 0 && <em>Свободный день</em>}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
         </section>
       </> : <>
-        {timelineEvents.length === 0 && untimed.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
+        {timelineEvents.length === 0 && untimed.length === 0 && independent.length === 0 && <p className="schedule-v2-empty-day" role="status">{fitLimeToday ? 'На этот день тренировок нет' : 'Свободный день'}</p>}
+        {independent.length > 0 && <section className="schedule-v2-untimed" aria-label="Самостоятельные тренировки"><strong>Самостоятельно</strong>{independent.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{eventTime(workout) || 'Без времени'} · {scheduleV2WorkoutLine(workout)}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         {untimed.length > 0 && <section className="schedule-v2-untimed" aria-labelledby="schedule-v2-untimed-title"><strong id="schedule-v2-untimed-title">Без времени</strong>{untimed.map((workout) => <Link key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><span className="schedule-v2-avatar">{clientInitials(workout.clientName)}</span><span><b>{workout.clientName}</b><small>{scheduleExerciseLine(exerciseSummary(workout).map((exercise) => exercise.name))}</small></span>{workout.status === 'done' && <CheckIcon />}</Link>)}</section>}
         <div className="day-grid-scroll schedule-v2-timeline" ref={scrollRef}>
           <div className="day-grid" style={{ height: timelineHeight }}>
@@ -1228,6 +1240,8 @@ export function WorkoutFormPage() {
   const [showEndTime, setShowEndTime] = useState(false)
   const [notes, setNotes] = useState('')
   const [title, setTitle] = useState('')
+  // 0 — без подготовки; иначе обратный отсчёт перед первым подходом Live.
+  const [prepSeconds, setPrepSeconds] = useState(0)
   const [clientSelectionError, setClientSelectionError] = useState<string | null>(null)
   const [stageId, setStageId] = useState('')
   const [formDraftReady, setFormDraftReady] = useState(false)
@@ -1298,6 +1312,7 @@ export function WorkoutFormPage() {
       setShowEndTime(Boolean(saved.endTime))
       setNotes(saved.notes)
       setTitle(saved.title ?? '')
+      setPrepSeconds(saved.prepSeconds ?? 0)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
       setTrainingFormat(clientMode ? 'self' : saved.trainingFormat)
@@ -1315,6 +1330,8 @@ export function WorkoutFormPage() {
       setShowEndTime(Boolean(initial.endTime))
       setNotes(initial.notes ?? '')
       setTitle(source.data?.title ?? '')
+      // Подготовка — настройка хода тренировки, копия забирает её вместе с отдыхом.
+      setPrepSeconds(source.data?.prepSeconds ?? 0)
       setStageId(initial.stageId ?? '')
       setTrainingFormat(clientMode ? 'self' : workoutId ? source.data?.trainingFormat ?? 'self' : undefined)
       trainingFormatTouched.current = Boolean(workoutId)
@@ -1331,8 +1348,8 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!formDraftReady || workoutId) return
-    writeWorkoutFormDraft(draftKey, { clientId, requestId: createRequestId.current, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat })
-  }, [actualDurationMinutes, clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, workoutId])
+    writeWorkoutFormDraft(draftKey, { clientId, requestId: createRequestId.current, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat, prepSeconds })
+  }, [actualDurationMinutes, clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, workoutId])
 
   useEffect(() => {
     if (!initial || formDraftReady) return
@@ -1500,7 +1517,7 @@ export function WorkoutFormPage() {
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
-      ...(completedMode ? { actualDurationSec } : {}),
+      ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null }),
       ...(limePlan ? { title: title.trim() || null } : {}),
       notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
@@ -1549,6 +1566,12 @@ export function WorkoutFormPage() {
           : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}><AddActionLabel>Добавить время окончания</AddActionLabel></button>}
         {completedMode && <WorkoutActualDurationField value={actualDurationMinutes} onChange={(value) => { setActualDurationMinutes(value); setDurationError(null) }} disabled={mutation.isPending} />}
         {durationError && <p className="error" role="alert">{durationError}</p>}
+        {!completedMode && <Field label="Подготовка перед стартом">
+          <select name="prepSeconds" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))}>
+            {WORKOUT_PREP_OPTIONS.map((seconds) => <option key={seconds} value={seconds}>{seconds === 0 ? 'Без подготовки' : formatPrepOption(seconds)}</option>)}
+          </select>
+          <small>Обратный отсчёт в Live, чтобы положить телефон и занять положение.</small>
+        </Field>}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
@@ -2653,6 +2676,9 @@ export function LiveWorkoutPage() {
   const [localSetDrafts, setLocalSetDrafts] = useState<Map<string, LiveSetDraft>>(() => new Map())
   const pendingSetDrafts = useRef<Map<string, LiveSetDraft>>(new Map())
   const pendingSetConfirmations = useRef<Set<string>>(new Set())
+  // A confirmation retry/late response must not restart the rest the user
+  // already began, or overwrite a subsequent manual timer adjustment.
+  const confirmationRestSeconds = useRef<Map<string, number>>(new Map())
   const [recoveredSetIds, setRecoveredSetIds] = useState<Set<string>>(() => new Set())
   const [recoveredFormIds, setRecoveredFormIds] = useState<Set<string>>(() => new Set())
   const liveSetForms = useRef<Map<string, HTMLFormElement>>(new Map())
@@ -2823,12 +2849,27 @@ export function LiveWorkoutPage() {
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
   const [restContextExerciseId, setRestContextExerciseId] = useState<string | null>(null)
   const [restPickerSeconds, setRestPickerSeconds] = useState(90)
+  // Подготовка или подход на время. С отдыхом никогда не пересекается: одна
+  // кнопка таймера показывает текущую фазу (docs/design/live-phase-timer.md).
+  const [livePhase, setLivePhaseState] = useState<LivePhaseTimer | null>(null)
+  const livePhaseRef = useRef<LivePhaseTimer | null>(null)
+  const [phaseNotice, setPhaseNotice] = useState<
+    | { kind: 'work-confirmed'; setId: string; exerciseId: string; seconds: number; shownAt: number }
+    | { kind: 'rest-stopped'; restoreRestUntil: number; shownAt: number }
+    | null
+  >(null)
+  // Упражнение последнего засчитанного подхода не сворачивается, пока идёт
+  // отдых после него: именно тогда правят повторы и время.
+  const [recentExerciseId, setRecentExerciseId] = useState<string | null>(null)
+  // После подтверждения без отдыха (суперсет/круг) следующий подход на время
+  // стартует сам, как только данные покажут новый текущий подход.
+  const autoStartNextWork = useRef(false)
   const inactivityReminder = useWorkoutInactivityReminder({
     userId: actor?.userId,
     workoutId,
     status: !query.data ? 'loading' : query.data.status === 'in_progress' ? 'active' : 'inactive',
     enabled: clientMode ? reminderPreference.data?.workoutReminderEnabled ?? null : false,
-    activeUntil: restEndsAt,
+    activeUntil: livePhase?.endsAt ?? restEndsAt,
     onFinishIntent: () => setConfirmFinish(true),
   })
   const restOverrideKey = `fit:live-rest-settings:${actor?.userId ?? ''}:${workoutId}`
@@ -2842,10 +2883,14 @@ export function LiveWorkoutPage() {
     })
   }
   useEffect(() => {
+    confirmationRestSeconds.current.clear()
     const deadline = restoreRestDeadline(workoutId)
     setRestEndsAt(deadline)
     setRestContextExerciseId(null)
     setRestPickerSeconds(90)
+    const phase = restoreLivePhase(workoutId)
+    livePhaseRef.current = phase
+    setLivePhaseState(phase)
   }, [workoutId])
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
@@ -2937,9 +2982,14 @@ export function LiveWorkoutPage() {
   const confirm = useMutation({
     mutationFn: ({ set, draft }: { set: WorkoutSet; draft: LiveSetDraft }) => runLiveSetMutation(set, draft, true, () => liveSets.confirm(set, draft)),
     onMutate: ({ set, draft }) => {
+      const retry = pendingSetConfirmations.current.has(set.id)
       rememberLiveDraft(set.id, draft)
       pendingSetConfirmations.current.add(set.id)
       if (actor?.userId) writePendingLiveSetConfirmation(actor.userId, workoutId, set.id)
+      if (!confirmationRestSeconds.current.has(set.id)) {
+        const seconds = beginSetRest(set, retry && restEndsAt !== null)
+        if (seconds !== undefined) confirmationRestSeconds.current.set(set.id, seconds)
+      }
     },
     onSuccess: (version, { set, draft }) => {
       setValidationErrorSetIds((current) => {
@@ -2957,20 +3007,12 @@ export function LiveWorkoutPage() {
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft, true)
       setExpandedSetId(null)
-      // Отдых берётся из настроек блока (Этап A), не хардкод:
-      // - одиночное упражнение → отдых между подходами;
-      // - группа: между упражнениями внутри круга → restBetweenExercisesSec;
-      //   после последнего упражнения круга → restBetweenRoundsSec.
-      const workout = query.data
-      const exercise = workout?.exercises.find((item) => item.sets.some((s) => s.id === set.id))
-      if (workout && exercise) {
-        const sec = exercise.blockType === 'single'
-          ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
-          : restSecondsAfterSet(workout, exercise, set)
-        setRestContextExerciseId(exercise.blockType === 'single' ? exercise.id : null)
-        if (sec > 0) setRestPickerSeconds(sec)
-        startRestUntil(restDeadline(sec))
-      }
+      const seconds = confirmationRestSeconds.current.get(set.id) ?? beginSetRest(set)
+      confirmationRestSeconds.current.delete(set.id)
+      // The next timed set may start only after the confirmed result is in
+      // the cache; starting rest does not pretend the server saved the fact.
+      autoStartNextWork.current = seconds !== undefined && (seconds <= 0
+        || Boolean(query.data?.prepSeconds && restEndsAt !== null && restEndsAt <= Date.now()))
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -3051,6 +3093,75 @@ export function LiveWorkoutPage() {
   }
   function stopRest() {
     startRestUntil(null)
+  }
+  function beginSetRest(set: WorkoutSet, preserveDeadline = false): number | undefined {
+    const workout = query.data
+    const exercise = workout?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
+    if (!workout || !exercise) return undefined
+    const seconds = exercise.blockType === 'single'
+      ? restOverrides[exercise.id] ?? restSecondsAfterSet(workout, exercise, set)
+      : restSecondsAfterSet(workout, exercise, set)
+    setRestContextExerciseId(exercise.blockType === 'single' ? exercise.id : null)
+    setRecentExerciseId(exercise.id)
+    if (seconds > 0) setRestPickerSeconds(seconds)
+    const phase = livePhaseRef.current
+    if (phase?.kind === 'work' && phase.setId === set.id) setLivePhase(null)
+    if (!preserveDeadline) startRestUntil(restDeadline(seconds))
+    return seconds
+  }
+  function setLivePhase(next: LivePhaseTimer | null) {
+    livePhaseRef.current = next
+    setLivePhaseState(next)
+    storeLivePhase(workoutId, next)
+    inactivityReminder.noteActivity(next?.endsAt ?? null)
+    if (next === null) {
+      void cancelNativeRestTimerNotification(workoutId)
+      return
+    }
+    void scheduleNativeRestTimerNotification(workoutId, next.endsAt, next.kind === 'prep'
+      ? { title: 'Подготовка окончена', body: 'Начинайте подход.' }
+      : { title: 'Время подхода истекло', body: 'Подход засчитан, начинается отдых.' })
+  }
+  function startPrep(seconds: number) {
+    const now = Date.now()
+    if (restEndsAt !== null) startRestUntil(null)
+    setLivePhase({ kind: 'prep', startedAt: now, endsAt: now + seconds * 1000 })
+  }
+  // Запускает таймер подхода на время; false — у подхода нет плановой длительности.
+  function startWorkTimer(set: WorkoutSet | undefined, exercise: WorkoutExerciseModel | undefined): boolean {
+    if (!query.data?.prepSeconds) return false
+    const seconds = set && exercise ? timedSetSeconds(exercise, set) : null
+    if (!set || seconds === null || pendingSetConfirmations.current.has(set.id)) return false
+    const now = Date.now()
+    if (restEndsAt !== null) startRestUntil(null)
+    setLivePhase({ kind: 'work', setId: set.id, startedAt: now, endsAt: now + seconds * 1000 })
+    setExpandedSetId(set.id)
+    trackGoal('live_work_timer_started')
+    return true
+  }
+  // Подтверждает подход по таймеру: раньше нуля — прошедшее время, на нуле — план.
+  // Время измерено таймером, поэтому помечено как введённое, а не плановое.
+  function confirmWorkFromTimer(phase: Extract<LivePhaseTimer, { kind: 'work' }>, at: number) {
+    const located = query.data?.exercises.flatMap((exercise) => exercise.sets.map((set) => ({ exercise, set })))
+      .find(({ set }) => set.id === phase.setId)
+    setLivePhase(null)
+    if (!located || located.set.confirmedAt) return
+    const { exercise, set } = located
+    const seconds = elapsedWorkSeconds(phase, at)
+    const form = liveSetForms.current.get(set.id)
+    const base: LiveSetDraft = form ? draftFrom(form, set) : {
+      weightKg: set.fact.weightKg ?? set.weightKg, reps: set.fact.reps ?? set.reps,
+      distanceKm: set.fact.distanceKm ?? set.distanceKm, rpe: set.fact.rpe,
+    }
+    const draft: LiveSetDraft = {
+      ...base, durationSec: seconds, durationMin: undefined,
+      metricSources: { distance: base.metricSources?.distance ?? 'unknown', rpe: base.metricSources?.rpe ?? 'unknown', duration: 'entered' },
+    }
+    liveSetAutosave.clear(set.id)
+    prepareGong()
+    confirm.mutate({ set, draft })
+    setPhaseNotice({ kind: 'work-confirmed', setId: set.id, exerciseId: exercise.id, seconds, shownAt: Date.now() })
+    trackGoal(at >= phase.endsAt ? 'live_work_timer_completed' : 'live_work_timer_confirmed_early')
   }
   function activateLiveExercise(exercise: WorkoutExerciseModel) {
     const nextSet = exercise.sets.find((set) => !set.confirmedAt)
@@ -3277,6 +3388,7 @@ export function LiveWorkoutPage() {
       clearPendingLiveSetConfirmations(actor.userId, workoutId)
     }
     pendingSetConfirmations.current.clear()
+    setLivePhase(null)
     stopRest()
     if (actor?.userId) clearWorkoutInactivityReminder(actor.userId, workoutId)
     // Освежаем не только саму тренировку, но и статистику клиента и списки
@@ -3462,6 +3574,103 @@ export function LiveWorkoutPage() {
   const activeLiveExercise = selectedLiveBlock && selectedLiveBlock.exercises.length > 1
     ? blockRoundsView(selectedLiveBlock)[currentRoundIndex(blockRoundsView(selectedLiveBlock))]?.items.find(({ set }) => !set.confirmedAt)?.exercise ?? selectedLiveExercise
     : selectedLiveExercise
+  // Текущий подход: в суперсете/круге — первый невыполненный в текущем круге.
+  const currentLiveSet = selectedLiveBlock && selectedLiveBlock.exercises.length > 1
+    ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
+    : activeLiveExercise?.sets.find((set) => !set.confirmedAt)
+  const currentSetTimed = Boolean(activeLiveExercise && currentLiveSet && timedSetSeconds(activeLiveExercise, currentLiveSet) !== null)
+  // Preparation opts the entire workout into the phase timer. Without it,
+  // keep the legacy rest-only flow, including negative overtime.
+  useEffect(() => {
+    const workout = query.data
+    if (!workout || workout.status !== 'in_progress') return
+    if (!workout.prepSeconds) {
+      if (livePhaseRef.current) setLivePhase(null)
+      return
+    }
+    if (workout.exercises.some((exercise) => exercise.sets.some((set) => set.confirmedAt))) return
+    if (livePhaseRef.current || restEndsAt !== null || !claimLiveAutostart(workoutId)) return
+    startPrep(workout.prepSeconds)
+  }, [query.data?.id, query.data?.status, query.data?.prepSeconds])
+  useEffect(() => {
+    const phase = livePhaseRef.current
+    if (phase?.kind === 'work' && query.data) {
+      const set = query.data.exercises.flatMap((exercise) => exercise.sets).find((item) => item.id === phase.setId)
+      if (!set || set.confirmedAt) setLivePhase(null)
+    }
+    if (!autoStartNextWork.current || !query.data) return
+    autoStartNextWork.current = false
+    if (!livePhaseRef.current && (restEndsAt === null || restEndsAt <= Date.now())) {
+      if (!startWorkTimer(currentLiveSet, activeLiveExercise) && query.data.prepSeconds) startRestUntil(null)
+    }
+  }, [query.data])
+  // «Подход засчитан · Исправить» висит весь отдых после подхода (не меньше
+  // 5 секунд): засчитанный по таймеру подход правят как раз на отдыхе.
+  useEffect(() => {
+    if (!phaseNotice) return
+    const until = phaseNotice.kind === 'work-confirmed' && restEndsAt !== null
+      ? Math.max(restEndsAt, phaseNotice.shownAt + 5_000)
+      : phaseNotice.shownAt + 5_000
+    const timer = window.setTimeout(() => setPhaseNotice(null), Math.max(0, until - Date.now()))
+    return () => window.clearTimeout(timer)
+  }, [phaseNotice, restEndsAt])
+  function handlePhaseExpire(phase: LivePhaseTimer) {
+    if (phase.kind === 'prep') {
+      setLivePhase(null)
+      startWorkTimer(currentLiveSet, activeLiveExercise)
+      return
+    }
+    confirmWorkFromTimer(phase, phase.endsAt)
+  }
+  // Only the opted-in phase flow advances at zero. The legacy timer keeps
+  // its deadline and counts negative seconds until the user changes it.
+  function handleRestExpire() {
+    if (!query.data?.prepSeconds) return
+    // An immediate rest can finish before the confirmation reaches the server.
+    // Do not start/confirm the same pending set again; resume after acknowledgement.
+    if (confirm.isPending) return
+    if (livePhaseRef.current) return
+    if (!startWorkTimer(currentLiveSet, activeLiveExercise)) startRestUntil(null)
+  }
+  function handleTimerPrimary(): boolean {
+    if (!query.data?.prepSeconds) return false
+    const phase = livePhaseRef.current
+    const action = livePhasePrimaryAction({ phase, restEndsAt, now: Date.now(), currentSetTimed })
+    if (action === 'skip-prep') {
+      setLivePhase(null)
+      startWorkTimer(currentLiveSet, activeLiveExercise)
+    } else if (action === 'confirm-work' && phase?.kind === 'work') {
+      confirmWorkFromTimer(phase, Date.now())
+    } else if (action === 'stop-rest' && restEndsAt !== null) {
+      const restoreRestUntil = restEndsAt
+      startRestUntil(null)
+      startWorkTimer(currentLiveSet, activeLiveExercise)
+      setPhaseNotice({ kind: 'rest-stopped', restoreRestUntil, shownAt: Date.now() })
+    } else if (action === 'clear-rest') {
+      startRestUntil(null)
+    } else if (action === 'start-work') {
+      startWorkTimer(currentLiveSet, activeLiveExercise)
+    } else return false
+    return true
+  }
+  function undoPhaseNotice() {
+    const notice = phaseNotice
+    setPhaseNotice(null)
+    if (!notice) return
+    if (notice.kind === 'rest-stopped') {
+      if (livePhaseRef.current?.kind === 'work') setLivePhase(null)
+      if (notice.restoreRestUntil > Date.now()) startRestUntil(notice.restoreRestUntil)
+      return
+    }
+    // Отменить подтверждение на сервере нельзя — открываем подход на правку.
+    setExpandedExercises((current) => new Set(current).add(notice.exerciseId))
+    setEditingSets((current) => new Set(current).add(notice.setId))
+    window.requestAnimationFrame(() => {
+      const form = liveSetForms.current.get(notice.setId)
+      form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      form?.querySelector<HTMLInputElement>('input[name="durationSec"], input[name="runDuration"]')?.focus()
+    })
+  }
   const sessionProgress = liveSessionProgress(query.data?.exercises ?? [], activeLiveExercise?.id)
   const currentLiveBlock = groupIntoBlocks(query.data?.exercises ?? [])
     .find((block) => block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id))
@@ -3506,10 +3715,15 @@ export function LiveWorkoutPage() {
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
-            <Coachmark id="live-timer-2026-09" userId={actor?.userId} title="Отдых — в кнопке таймера" description="Нажмите, чтобы запустить отдых, добавить время или остановить его. Подходы можно заполнять прямо в таблице.">
-              <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration} />
+            <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
+              <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
+                phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire} />
             </Coachmark>
           </div>
+          {phaseNotice && <div className="live-phase-notice" role="status">
+            <span>{phaseNotice.kind === 'work-confirmed' ? `Подход засчитан · ${formatRest(phaseNotice.seconds)}` : 'Отдых остановлен'}</span>
+            <button type="button" className="secondary" onClick={undoPhaseNotice}>{phaseNotice.kind === 'work-confirmed' ? 'Исправить' : 'Вернуть'}</button>
+          </div>}
           {activeCircuit && circuitRounds && <div className="circuit-head pinned">
             <span className="block-badge">{blockLabel(activeCircuit.blockType, activeCircuit.blockPreset)}</span>
             <span className="circuit-counter">Круг {circuitRounds[circuitCurrent]?.round ?? 1} из {circuitRounds.length}</span>
@@ -3543,7 +3757,11 @@ export function LiveWorkoutPage() {
             // упражнения сжимаются в итог (тап открывает их исключительно для
             // исправления факта), а будущие не показывают таблицу и RPE раньше
             // времени. Это presentation-only: порядок, факт и RPC не меняются.
-            const collapsed = allDone && !expandedExercises.has(exercise.id)
+            // Только что завершённое упражнение остаётся раскрытым на отдыхе после
+            // него, а начатая правка подхода не схлопывается по концу отдыха.
+            const justCompleted = exercise.id === recentExerciseId && restEndsAt !== null
+            const editing = exercise.sets.some((set) => editingSets.has(set.id))
+            const collapsed = allDone && !expandedExercises.has(exercise.id) && !justCompleted && !editing
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null

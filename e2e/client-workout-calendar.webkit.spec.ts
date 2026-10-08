@@ -415,7 +415,7 @@ test('client: rest picker uses minute and second wheels and keeps overdue time v
   await expect(page.getByRole('button', { name: 'Таймер отдыха', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
 
-  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click()
+  await page.getByRole('button', { name: 'Таймер отдыха', exact: true }).click({ button: 'right' })
   await expect(page.getByRole('listbox', { name: 'минуты' })).toBeVisible()
   await expect(page.getByRole('listbox', { name: 'секунды' })).toBeVisible()
   await expect(page.getByRole('button', { name: '1:30' })).toBeVisible()
@@ -429,17 +429,16 @@ test('client: rest picker uses minute and second wheels and keeps overdue time v
   await page.getByRole('button', { name: 'Начать отдых · 0:01' }).click()
   await page.clock.fastForward(2_100)
 
-  const overdue = page.getByRole('button', { name: 'Отдых превышен на 0:01', exact: true })
-  await expect(overdue).toBeVisible()
-  await expect(overdue).toHaveText(/Отдых −0:01/)
-  await expect(overdue).toHaveClass(/rest-overdue/)
+  // Preparation is disabled: preserve the legacy negative rest countdown,
+  // even when the exercise itself has a planned duration.
+  const trigger = page.locator('.live-rest-trigger')
+  await expect(trigger).toHaveClass(/rest-overdue/)
+  await expect(trigger).toHaveText(/Отдых −0:01/)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 932 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    await page.screenshot({ path: testInfo.outputPath(`client-rest-overdue-${width}.png`), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath(`client-rest-ended-${width}.png`), fullPage: true })
   }
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(overdue).toHaveCSS('animation-name', 'none')
 })
 
 test('client: unfinished Live workout reminds once after twenty minutes of inactivity', async ({ page }, testInfo) => {

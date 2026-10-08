@@ -11,9 +11,9 @@ export const clientLimeThemeKey = (userId: string) => `fit.clientLime.theme.${us
 export function getClientLimeThemePreference(userId: string): ClientLimeThemePreference {
   try {
     const stored = window.localStorage.getItem(clientLimeThemeKey(userId))
-    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'
+    return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark'
   } catch { /* Storage may be unavailable in private webviews. */ }
-  return sessionPreferences.get(userId) ?? 'system'
+  return sessionPreferences.get(userId) ?? 'dark'
 }
 export function setClientLimeThemePreference(userId: string, value: ClientLimeThemePreference) {
   sessionPreferences.set(userId, value)
@@ -32,7 +32,7 @@ function subscribe(onChange: () => void) {
   }
 }
 export function useClientLimeTheme(userId: string) {
-  const preference = useSyncExternalStore(subscribe, () => getClientLimeThemePreference(userId), () => 'system' as const)
+  const preference = useSyncExternalStore(subscribe, () => getClientLimeThemePreference(userId), () => 'dark' as const)
   const systemDark = useSyncExternalStore(subscribe, () => (window.matchMedia?.(mediaQuery).matches ?? false), () => false)
   const theme: AppTheme = preference === 'system' ? (systemDark ? 'dark' : 'light') : preference
   return { preference, theme }

@@ -62,6 +62,7 @@ export interface PilotProgressData {
     limit: number, cursor: ProgressCursor): Promise<unknown>
   readChronicle(session: YandexActorSessionInput, clientId: string, limit: number,
     cursor: ProgressCursor): Promise<unknown>
+  readWorkoutRecords(session: YandexActorSessionInput, workoutId: string): Promise<unknown>
   saveProgress(session: YandexActorSessionInput, draft: ProgressDraft,
     expectedVersion: number | null): Promise<{ id: string; version: number }>
   deleteProgress(session: YandexActorSessionInput, id: string, expectedVersion: number): Promise<number>
@@ -91,6 +92,10 @@ export class DatabasePilotProgressData implements PilotProgressData {
   readRegularity(session: YandexActorSessionInput, clientId: string) {
     return this.withSession(session, (client) =>
       readJson(client, 'select public.get_workout_regularity($1) result', [clientId]))
+  }
+  readWorkoutRecords(session: YandexActorSessionInput, workoutId: string) {
+    return this.withSession(session, (client) =>
+      readJson(client, 'select public.list_workout_personal_records($1) result', [workoutId]))
   }
   readRunning(session: YandexActorSessionInput, clientId: string, from: string, to: string) {
     return this.withSession(session, (client) =>

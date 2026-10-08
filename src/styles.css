@@ -5302,6 +5302,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .trainer-schedule-identity .workout-templates-page .state-panel-action { width:100% }
 .trainer-schedule-identity .template-empty-actions { width:min(100%,320px); display:grid; gap:8px; margin-inline:auto }
 .trainer-schedule-identity .template-empty-actions .button { display:inline-flex; min-height:48px; align-items:center; justify-content:center; gap:7px; border-radius:14px; box-shadow:none }
+.trainer-schedule-identity .template-empty-actions .button svg { width:20px; height:20px; flex:0 0 auto }
 .trainer-schedule-identity .workout-template-source-page > .field { max-width:360px; margin-bottom:14px }
 .trainer-schedule-identity .workout-template-source-page .field > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-schedule-identity .workout-template-source-page :is(input,select,textarea) { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; box-shadow:none }
@@ -6279,6 +6280,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-rest-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .live-rest-trigger svg { width: 20px; height: 20px; flex: none; }
 .live-timer-toolbar .coachmark-anchor, .live-timer-toolbar .live-rest-trigger { width: 100%; }
+.live-timer-toolbar .coachmark-anchor { display: flex; align-items: stretch; }
+.live-identity .live-timer-toolbar button.live-rest-trigger { min-height: 56px; }
 .live-rest-sheet { display: grid; gap: 16px; }
 .live-rest-sheet button { min-height: 48px; }
 .live-rest-sheet .picker-close { width: 48px; height: 48px; }
@@ -6316,6 +6319,13 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
   50% { border-color:var(--danger); background:color-mix(in srgb, var(--danger) 14%, var(--danger-surface)); }
 }
 @media (prefers-reduced-motion:reduce) { .live-rest-trigger.rest-overdue { animation:none; } }
+/* Удержание открывает настройки таймера: без системного меню iOS и выделения текста. */
+.live-rest-trigger { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+/* Фаза видна по цвету издалека и по подписи («Подготовка», «Подход», «Отдых») вблизи. */
+.live-rest-trigger.phase-prep { border-color:var(--accent-strong); background:var(--accent-surface); color:var(--fg); }
+.live-rest-trigger.phase-work { border-color:color-mix(in srgb, var(--success-fg) 45%, var(--border)); background:color-mix(in srgb, var(--success-fg) 14%, var(--surface-raised)); color:var(--success-fg); }
+.live-phase-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; padding:6px 6px 6px 14px; border:1px solid var(--border); border-radius:14px; background:var(--surface-raised); color:var(--fg); font-size:14px; }
+.live-phase-notice button { flex:none; min-height:44px; padding:0 14px; }
 .live-identity .live-workout-page .live-set-table > .live-set,
 .live-identity .live-workout-page .circuit-round .live-set { border:0; }
 .live-identity .live-workout-page .live-set-table > .live-set + .live-set,
@@ -6717,6 +6727,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .request-error-inline .request-diagnostic-code strong { color:var(--fg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.02em; }
 .request-error-inline .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
 .request-error-inline .request-diagnostic-copy svg { width:16px; height:16px; }
+.workout-template-editor-page .request-diagnostic-copy,.workout-templates-page .request-diagnostic-copy { min-height:44px; }
 .request-error-inline .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }
 .today-start-page > .request-error-inline { margin-top:14px; }
 
@@ -6843,7 +6854,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-empty-start .primary { min-height:48px; margin:0; }
 .live-empty-start .live-empty-error { color:var(--danger); font-size:13px; line-height:1.4; }
 .live-identity .live-pinned-empty .live-timer-toolbar .live-timer { min-height:48px; font-size:22px; }
-.live-pinned-empty .live-rest-trigger { min-height:48px; }
+.live-identity .live-pinned-empty .live-timer-toolbar button.live-rest-trigger { min-height:48px; }
 .live-identity .live-bottom-bar-empty { justify-items:end; padding:8px 16px calc(8px + env(safe-area-inset-bottom)); }
 .live-bottom-bar-empty .live-sync-state { width:100%; }
 .live-empty-delete { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border:0; border-radius:14px; background:transparent; color:var(--danger); }

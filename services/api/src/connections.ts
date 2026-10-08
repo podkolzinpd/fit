@@ -1,6 +1,7 @@
 import type { QueryResultRow } from 'pg'
 
 import type { DatabaseClient } from './db/types.js'
+import { readTrainerDisplayNames } from './trainer-display-name.js'
 
 interface MembershipRow extends QueryResultRow {
   client_id: string
@@ -24,6 +25,7 @@ export interface PilotTrainerMembership {
   trainerId: string
   firstName: string | null
   lastName: string | null
+  displayName?: string
   joinedAt: string
   isRoot: boolean
 }
@@ -58,6 +60,10 @@ export async function readAccessibleConnections(
       and expires_at > now()
     order by created_at desc, id
   `)
+  const names = await readTrainerDisplayNames(client, memberships.map((row) => ({
+    trainerId: row.trainer_id,
+    accountName: [row.first_name, row.last_name].filter(Boolean).join(' '),
+  })))
 
   return {
     accessMode: 'read_only',
@@ -66,6 +72,7 @@ export async function readAccessibleConnections(
       trainerId: row.trainer_id,
       firstName: row.first_name,
       lastName: row.last_name,
+      displayName: names.get(row.trainer_id)!,
       joinedAt: row.joined_at.toISOString(),
       isRoot: row.is_root,
     })),
