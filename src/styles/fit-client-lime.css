@@ -154,14 +154,14 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
   border: 1px solid var(--lime-divider);
 }
 .phone-frame.fit-client-lime .today-picker-cta { min-height: 48px; padding: 12px 16px; }
-.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs, .app-feedback-kinds, .body-progress-modes) {
+.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs, .app-feedback-kinds, .body-progress-modes, .client-history-view-toggle, .body-map-appearance-options) {
   padding: 4px;
   gap: 4px;
   border-radius: 28px;
   background: var(--lime-surface-raised);
   border: 1px solid var(--lime-divider);
 }
-.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs, .app-feedback-kinds, .body-progress-modes) button {
+.phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs, .app-feedback-kinds, .body-progress-modes, .client-history-view-toggle, .body-map-appearance-options) button {
   min-height: 44px;
   border-radius: 24px;
   border: 0;
@@ -173,7 +173,10 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
 .phone-frame.fit-client-lime .body-progress-modes::before,
 .phone-frame.fit-client-lime .body-progress-modes button[aria-pressed='true']::before { content: none; }
 .phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs, .app-feedback-kinds) button.active,
-.phone-frame.fit-client-lime .body-progress-modes button[aria-pressed='true'] {
+.phone-frame.fit-client-lime .body-progress-modes button[aria-pressed='true'],
+.phone-frame.fit-client-lime .client-history-view-toggle button[aria-pressed='true'],
+.phone-frame.fit-client-lime .body-map-appearance-options button[aria-checked='true'] {
+  border-radius: 24px;
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
 }
