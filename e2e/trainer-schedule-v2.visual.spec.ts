@@ -6212,3 +6212,27 @@ for (const role of ['client', 'trainer'] as const) test(`Lime rollout honors ser
   await page.reload()
   await expect(page.locator('.phone-frame')).not.toHaveClass(new RegExp(scope))
 })
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime nested coachmark action follows the primary control geometry ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId }] })
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      const key = `fit.coachmarks-seen.${id}`
+      const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+      localStorage.setItem(key, JSON.stringify(seen.filter((item) => item !== 'missed-workout-actions-2026-08')))
+    }, { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    const notice = page.locator('.coachmark-bubble').filter({ hasText: 'План можно закрыть спокойно' })
+    const action = notice.getByRole('button', { name: 'Понятно', exact: true })
+    await expect(action).toHaveCSS('border-radius', '999px')
+    await expect(action).toHaveCSS('min-height', '48px')
+    await expect(action).toHaveCSS('font-size', '16px')
+    await expect(action).toHaveCSS('font-weight', '500')
+    await page.screenshot({ path: info.outputPath('client-coachmark-action.png') })
+    await action.click()
+    await expect(notice).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
