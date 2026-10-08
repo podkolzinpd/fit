@@ -98,7 +98,7 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
 .phone-frame.fit-client-lime .client-tab-bar a svg { width: 24px; height: 24px; transform: none; }
 
 /* Keep the existing action semantics, but use one control geometry. */
-.phone-frame.fit-client-lime :is(.workout-cta, .button, button.primary, button.secondary) {
+.phone-frame.fit-client-lime :is(.workout-cta, .button, button.primary, button.secondary, .coachmark-bubble button) {
   min-height: 48px;
   border-radius: 999px;
   font-size: 16px;
