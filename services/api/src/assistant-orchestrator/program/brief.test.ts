@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decodeQuotedBriefPatch, mergeExtractedBrief, briefSummary, readProgramBrief, missingBriefFields } from './brief.js'
+import { briefSuggestionsFor, decodeQuotedBriefPatch, mergeExtractedBrief, briefSummary, readProgramBrief, missingBriefFields } from './brief.js'
 
 describe('quiz updates', () => {
   it('preserves unrelated answers and invalidates old weekdays when frequency changes', () => {
@@ -36,6 +36,14 @@ describe('quiz updates', () => {
   it('does not accept an overlap acknowledgement invented by the model', () => {
     expect(() => mergeExtractedBrief({}, 'Бег в понедельник', { patch: { activityOverlapConfirmed: true }, clear: [], evidence: { activityOverlapConfirmed: 'Бег' }, clarification: null })).toThrow('brief_activity_confirmation_missing')
   })
+})
+
+it.each([
+  [1, ['Понедельник', 'Дни не важны']],
+  [2, ['Понедельник и четверг', 'Дни не важны']],
+  [3, ['Понедельник, среда и пятница', 'Дни не важны']],
+] as const)('offers only weekday replies compatible with %i sessions', (frequency, suggestions) => {
+  expect(briefSuggestionsFor('weekdays', { frequency })).toEqual(suggestions)
 })
 
 it('keeps quotes adjacent to normalized values in the model contract', () => {

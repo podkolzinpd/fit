@@ -100,6 +100,16 @@ describe('program chat state', () => {
     expect(result?.action?.payload.readyToGenerate).toBe(true)
     expect(result?.reply).not.toContain('В какие дни недели')
   })
+  it('does not offer a two-day schedule after three sessions were selected', async () => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.weekdays
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: ['weekdays'], guidance: 'В какие дни недели удобно тренироваться?' } }
+    deps.extract.mockResolvedValue({ patch: {}, clear: [], evidence: {}, clarification: null })
+    const result = await programPilotTurn('3 занятия', [client], active, deps)
+    expect(result?.action?.payload.answerSuggestions).toEqual(['Понедельник, среда и пятница', 'Дни не важны'])
+  })
   it.each([
     { field: 'durationMin', message: '60', expected: { durationMin: 60 } },
     { field: 'durationMin', message: '40-60', expected: { durationMin: 40 } },
@@ -259,6 +269,19 @@ describe('program chat state', () => {
     const generated = await programPilotTurn(CONFIRM_PROGRAM_BRIEF, [client], ready?.action, deps)
     expect(generated?.action?.status).toBe('proposed')
     expect(generated?.action?.payload.limitationReview).toContain('пока неизвестно')
+  })
+  it('keeps a back-and-knee pain answer and asks which movements need adjustment', async () => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.limitations
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: ['limitations'], guidance: 'Есть ли сейчас боль, травмы или ограничения для упражнений?' } }
+    deps.extract.mockResolvedValue({ patch: { limitations: 'present', limitationsText: 'Боли в спине и коленях' }, clear: [],
+      evidence: { limitations: 'Боли в спине и коленях', limitationsText: 'Боли в спине и коленях' }, clarification: null })
+    const result = await programPilotTurn('Боли в спине и коленях', [client], active, deps)
+    expect(result?.action?.payload.briefState).toMatchObject({ limitations: 'present', limitationsText: 'Боли в спине и коленях' })
+    expect(result?.action?.payload.askedFields).toEqual(['limitationAdjustments'])
+    expect(result?.reply).toContain('Какие движения')
   })
   it('retains old fields and explicitly asks again after a frequency mismatch', async () => {
     const { deps, latest } = setup()

@@ -12,6 +12,7 @@ on:
       - 'scripts/mirror-yandex-legacy-supabase-bridge.mjs'
       - 'scripts/verify-yandex-api-availability.mjs'
       - 'scripts/verify-yandex-stage-access.mjs'
+      - 'scripts/yandex-stage-smoke.mjs'
       - 'scripts/yandex-github-oidc.sh'
   workflow_dispatch:
     inputs:
@@ -729,6 +730,33 @@ jobs:
               sleep 2
             fi
           done
+          # Pre-deployment sessions were issued before IAM/dispatcher/bootstrap.
+          # Reissue only synthetic fixtures immediately before product smoke.
+          migration_url=$(terraform output -raw migration_container_url)
+          fixture_status=$(curl --silent --show-error --connect-timeout 5 --max-time 60 \
+            --output stage-workout-fixture-response.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            "${migration_url%/}/stage/fixtures/workout-read-model")
+          chmod 600 stage-workout-fixture-response.json
+          if test "$fixture_status" != 200; then
+            echo "Product smoke fixture refresh failed: HTTP $fixture_status; candidate will be rolled back." >&2
+            exit 1
+          fi
+          export FIT_STAGE_SMOKE_DEADLINE_MS=$(node -e 'process.stdout.write(String(Date.now() + 600000))')
+          export FIT_STAGE_SMOKE_METADATA=stage-smoke-last-request.json
+          node ../../scripts/yandex-stage-smoke.mjs verify-fixture stage-workout-fixture-response.json
+          stage_smoke_headers=stage-smoke-last-headers.txt
+          stage_smoke_check=clients
+          curl() {
+            : > "$stage_smoke_headers"
+            node ../../scripts/yandex-stage-smoke.mjs request \
+              --dump-header "$stage_smoke_headers" "$@"
+          }
+          report_stage_smoke_failure() {
+            command_exit=$?
+            node ../../scripts/yandex-stage-smoke.mjs report "${stage_smoke_check:-unknown}" "$command_exit"
+          }
+          trap report_stage_smoke_failure ERR
           fixture_token=$(jq -er '.session.token' stage-workout-fixture-response.json)
           fixture_client_id=$(jq -er '.session.clientId' stage-workout-fixture-response.json)
           client_fixture_token=$(jq -er '.clientSession.token' stage-workout-fixture-response.json)
@@ -744,6 +772,7 @@ jobs:
             error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
             error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' clients-response-headers.txt)
             echo "First clients smoke failed: HTTP ${clients_status:-000}; curl_exit=$clients_curl_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            node ../../scripts/yandex-stage-smoke.mjs report "$stage_smoke_check" "$clients_curl_exit"
             exit 1
           fi
           clients=$(cat clients-response.json)
@@ -761,6 +790,7 @@ jobs:
               and (.activity.needsAttention | type) == "boolean"
             ))
           ' <<<"$clients" >/dev/null
+          stage_smoke_check=connections
           connections_curl_exit=0
           connections_status=$(curl --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --output connections-response.json --dump-header connections-response-headers.txt \
@@ -772,6 +802,7 @@ jobs:
             error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
             error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' connections-response-headers.txt)
             echo "Connections smoke failed: HTTP ${connections_status:-000}; curl_exit=$connections_curl_exit; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}." >&2
+            node ../../scripts/yandex-stage-smoke.mjs report "$stage_smoke_check" "$connections_curl_exit"
             exit 1
           fi
           connections=$(cat connections-response.json)
@@ -780,23 +811,7 @@ jobs:
             and (.memberships | any(.isRoot == true))
             and (.invitations | type == "array")
           ' <<<"$connections" >/dev/null
-          stage_smoke_headers=stage-smoke-last-headers.txt
           stage_smoke_check=training-data
-          : > "$stage_smoke_headers"
-          curl() {
-            : > "$stage_smoke_headers"
-            command curl --dump-header "$stage_smoke_headers" "$@"
-          }
-          report_stage_smoke_failure() {
-            command_exit=$?
-            http_status=$(awk 'toupper($1) ~ /^HTTP\// {value=$2} END {print value}' "$stage_smoke_headers")
-            request_id=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-request-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            error_category=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-category:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            error_code=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-error-code:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            observed_release=$(awk 'toupper($1) ~ /^HTTP\// {value=""} tolower($1) == "x-fit-release-id:" {gsub("\\r", "", $2); value=$2} END {print value}' "$stage_smoke_headers")
-            echo "Stage smoke failed: check=${stage_smoke_check:-unknown}; HTTP=${http_status:-000}; command_exit=$command_exit; request_id=${request_id:-unknown}; category=${error_category:-proxy_or_unknown}; code=${error_code:-unknown}; release=${observed_release:-proxy_or_unknown}; expected_release=$API_IMAGE_TAG." >&2
-          }
-          trap report_stage_smoke_failure ERR
           stage_smoke_check=trainer-profile-photo-profile
           trainer_profile=$(curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 2 \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -1289,6 +1304,7 @@ jobs:
                 }]
               }]
             }')
+          stage_smoke_check=planned-workout-create
           created_file=$(mktemp)
           created_status=$(curl --silent --show-error \
             --output "$created_file" --write-out '%{http_code}' \
@@ -1307,6 +1323,7 @@ jobs:
             '.notes = "Синтетическая проверка versioned mutation updated"
               | .expectedVersion = $expected_version' \
             <<<"$create_payload")
+          stage_smoke_check=planned-workout-update
           updated_file=$(mktemp)
           updated_status=$(curl --silent --show-error \
             --output "$updated_file" --write-out '%{http_code}' \
@@ -1319,6 +1336,7 @@ jobs:
           test "$updated_status" = 200
           updated_version=$(jq -er '.workout.version' "$updated_file")
           test "$updated_version" = 2
+          stage_smoke_check=planned-workout-read-after-update
           after_update=$(curl --fail --silent --show-error \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -1333,6 +1351,7 @@ jobs:
               ))
             )
           ' <<<"$after_update" >/dev/null
+          stage_smoke_check=planned-workout-stale-update
           stale_status=$(curl --silent --show-error \
             --output /dev/null --write-out '%{http_code}' \
             --request PUT \
@@ -1342,6 +1361,7 @@ jobs:
             --data "$updated_payload" \
             "${api_url%/}/v1/workouts/$workout_id")
           test "$stale_status" = 409
+          stage_smoke_check=planned-workout-delete
           deleted=$(curl --fail --silent --show-error \
             --request DELETE \
             --header "Authorization: Bearer $YC_TOKEN" \
@@ -1352,6 +1372,7 @@ jobs:
           jq -e --arg workout_id "$workout_id" '
             .workout.id == $workout_id and .workout.version == 3
           ' <<<"$deleted" >/dev/null
+          stage_smoke_check=planned-workout-read-after-delete
           after_delete=$(curl --fail --silent --show-error \
             --header "Authorization: Bearer $YC_TOKEN" \
             --header "X-Fit-Pilot-Session: $fixture_token" \
@@ -1891,7 +1912,8 @@ jobs:
                 ))
             )
           ' <<<"$live_finished_read" >/dev/null
-      - name: Roll back the API revision when readiness fails
+          node ../../scripts/yandex-stage-smoke.mjs verify-deadline
+      - name: Roll back the API revision when readiness or product smoke fails
         if: steps.smoke.outcome == 'failure' && steps.previous.outputs.revision_id != ''
         working-directory: infra/yandex
         run: |
@@ -1903,9 +1925,9 @@ jobs:
         if: steps.smoke.outcome == 'failure'
         run: |
           if test -n '${{ steps.previous.outputs.revision_id }}'; then
-            echo 'The candidate API failed readiness and the previous revision was restored.' >&2
+            echo 'The candidate API failed health/readiness or product smoke and the previous revision was restored. See the failing check above.' >&2
           else
-            echo 'The first API revision failed readiness; there was no previous image to restore.' >&2
+            echo 'The first API revision failed health/readiness or product smoke; there was no previous image to restore. See the failing check above.' >&2
           fi
           exit 1
       - name: Verify provisioned API availability without retries

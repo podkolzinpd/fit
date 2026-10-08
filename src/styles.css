@@ -5303,6 +5303,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .trainer-schedule-identity .workout-templates-page .state-panel-action { width:100% }
 .trainer-schedule-identity .template-empty-actions { width:min(100%,320px); display:grid; gap:8px; margin-inline:auto }
 .trainer-schedule-identity .template-empty-actions .button { display:inline-flex; min-height:48px; align-items:center; justify-content:center; gap:7px; border-radius:14px; box-shadow:none }
+.trainer-schedule-identity .template-empty-actions .button svg { width:20px; height:20px; flex:0 0 auto }
 .trainer-schedule-identity .workout-template-source-page > .field { max-width:360px; margin-bottom:14px }
 .trainer-schedule-identity .workout-template-source-page .field > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-schedule-identity .workout-template-source-page :is(input,select,textarea) { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; box-shadow:none }

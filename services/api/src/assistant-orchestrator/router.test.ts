@@ -20,6 +20,8 @@ function deps(tool: 'record_workout' | 'create_program_draft', mode: 'start' | '
 describe('model assistant router', () => {
   it('sends the pinned recovery question to the chat responder instead of the action router', () => {
     expect(isAssistantChatPrompt('Как лучше восстановиться после силовой тренировки?', null)).toBe(true)
+    expect(isAssistantChatPrompt('Какой тоннаж нужно набирать за тренировку для улучшения силовых показателей и роста мышечной массы!', null)).toBe(true)
+    expect(isAssistantChatPrompt('Сколько подходов оставить на следующую тренировку', null)).toBe(true)
     expect(isAssistantChatPrompt('Составь программу на месяц', null)).toBe(false)
     expect(isAssistantChatPrompt('Как лучше восстановиться после силовой тренировки?', draft('record_workout'))).toBe(false)
   })
@@ -39,6 +41,44 @@ describe('model assistant router', () => {
   it('continues exact active program controls without a second paid routing call', async () => {
     expect(await chooseAssistantRoute(CONFIRM_PROGRAM_BRIEF, [], draft('create_program_draft'), 'turn')).toMatchObject({ tool: 'create_program_draft', mode: 'continue' })
     expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it('continues a concrete answer to the active limitations question without routing it through the model', async () => {
+    const active = draft('create_program_draft')
+    active.payload = {
+      step: 'brief', clientId: client.id, programPilot: true,
+      askedFields: ['limitations'], guidance: 'Есть ли сейчас боль, травмы или ограничения для упражнений?',
+    }
+    expect(await chooseAssistantRoute('Боли в спине и коленях', [], active, 'turn'))
+      .toEqual({ tool: 'create_program_draft', mode: 'continue', reply: '' })
+    expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it('keeps questions and greetings available to the chat responder during a program brief', async () => {
+    const active = draft('create_program_draft')
+    active.payload = { step: 'brief', clientId: client.id, programPilot: true, askedFields: ['limitations'] }
+    vi.mocked(programModelJson).mockResolvedValue({ tool: null, mode: 'chat', reply: 'Я на связи.' })
+    expect(await chooseAssistantRoute('Привет', [], active, 'turn')).toMatchObject({ mode: 'chat' })
+    expect(await chooseAssistantRoute('Что считается ограничением?', [], active, 'turn')).toMatchObject({ mode: 'chat' })
+    expect(programModelJson).toHaveBeenCalledTimes(2)
+  })
+  it('does not treat a new explicit action as a limitations answer', async () => {
+    const active = draft('create_program_draft')
+    active.payload = { step: 'brief', clientId: client.id, programPilot: true, askedFields: ['limitations'] }
+    vi.mocked(programModelJson).mockResolvedValue({ tool: 'record_workout', mode: 'start', reply: '' })
+    expect(await chooseAssistantRoute('Запиши тренировку', [], active, 'turn')).toMatchObject({ tool: 'record_workout', mode: 'start' })
+    expect(programModelJson).toHaveBeenCalledOnce()
+  })
+  it.each(['45 минут', '45', '40–60 минут'])('continues a valid duration answer without asking the model to route it: %s', async (message) => {
+    const active = draft('create_program_draft')
+    active.payload.askedFields = ['durationMin']
+    expect(await chooseAssistantRoute(message, [], active, 'turn')).toEqual({ tool: 'create_program_draft', mode: 'continue', reply: '' })
+    expect(programModelJson).not.toHaveBeenCalled()
+  })
+  it('does not reinterpret a bare number outside the explicit duration question', async () => {
+    const active = draft('create_program_draft')
+    active.payload.askedFields = ['frequency']
+    vi.mocked(programModelJson).mockResolvedValue({ tool: null, mode: 'chat', reply: 'Уточните, пожалуйста.' })
+    await expect(chooseAssistantRoute('45', [], active, 'turn')).resolves.toMatchObject({ mode: 'chat' })
+    expect(programModelJson).toHaveBeenCalledOnce()
   })
   it('continues a restored previous course without a paid routing guess', async () => {
     const active = draft('create_program_draft')

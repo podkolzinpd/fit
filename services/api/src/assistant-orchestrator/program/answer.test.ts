@@ -13,6 +13,12 @@ it.each(['preferences', 'otherActivity', 'limitations'] as const)('scopes a shor
     .toEqual({ [field]: field === 'limitations' ? 'none' : 'нет' })
 })
 
+it('records explicitly reported back-and-knee pain without a model call', () => {
+  const context: BriefAnswerContext = { question: 'Есть ли сейчас боль, травмы или ограничения?', fields: ['limitations'] }
+  expect(mergeExtractedBrief({}, 'Боли в спине и коленях', explicitBriefAnswer('Боли в спине и коленях', context)).brief)
+    .toEqual({ limitations: 'present', limitationsText: 'Боли в спине и коленях' })
+})
+
 it('leaves ambiguous negatives and substantive preferences to the model', () => {
   expect(explicitBriefAnswer('нет')).toBeUndefined()
   expect(explicitBriefAnswer('нет', { question: 'Два вопроса', fields: ['limitations', 'preferences'] })).toBeUndefined()

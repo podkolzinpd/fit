@@ -62,6 +62,88 @@ for (const width of [390, 430, 1440]) for (const [fitLime, theme] of [[false, 'l
   })
 }
 
+async function expectContainedButtonText(button: Locator) {
+  const geometry = await button.evaluate((element) => {
+    const bounds = element.getBoundingClientRect()
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    return { width: bounds.width, height: bounds.height, contained: Array.from(range.getClientRects()).every((rect) =>
+      rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom) }
+  })
+  expect(geometry.width).toBeGreaterThanOrEqual(44)
+  expect(geometry.height).toBeGreaterThanOrEqual(44)
+  expect(geometry.contained).toBe(true)
+}
+
+for (const width of [390, 430, 1440]) for (const fitLime of [false, true]) {
+  test(`Button geometry template empty actions ${width} lime=${fitLime}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    await mockPilot(page, { fitLime })
+    await page.goto('/schedule/templates')
+    const copy = page.getByRole('link', { name: 'Из тренировки', exact: true })
+    await expect(copy).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    await expect(copy.locator('svg')).toHaveCSS('width', '20px')
+    await expect(copy.locator('svg')).toHaveCSS('height', '20px')
+    await expectContainedButtonText(copy)
+    const create = page.getByRole('link', { name: 'Создать с нуля', exact: true })
+    expect((await copy.boundingBox())!.height).toBeLessThanOrEqual(52)
+    expect((await copy.boundingBox())!.height).toBe((await create.boundingBox())!.height)
+    const iconTrigger = page.getByRole('button', { name: 'Создать шаблон', exact: true })
+    expect((await iconTrigger.boundingBox())!.width).toBe(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('template-empty-actions.png'), fullPage: true })
+    await copy.click()
+    await expect(page).toHaveURL(/\/schedule\/templates\/from-workout$/)
+    await page.goto('/schedule/templates')
+    await create.click()
+    await expect(page).toHaveURL(/\/schedule\/templates\/new\/editor$/)
+    await addEditorExercise(page)
+    await checkEditorAction(page, info.outputPath('template-editor-actions.png'))
+  })
+}
+
+async function addEditorExercise(page: Page) {
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  await page.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить 1', exact: true }).click()
+}
+
+async function checkEditorAction(page: Page, screenshotPath: string) {
+  const edit = page.locator('.workout-editor-footer .overflow-trigger')
+  await edit.scrollIntoViewIfNeeded()
+  await page.evaluate(() => document.fonts.ready)
+  await expectContainedButtonText(edit)
+  const add = page.locator('.workout-editor-footer').getByRole('button', { name: /Упражнение$/ })
+  const editBounds = (await edit.boundingBox())!, addBounds = (await add.boundingBox())!
+  expect(Math.abs(editBounds.y + editBounds.height / 2 - addBounds.y - addBounds.height / 2)).toBeLessThanOrEqual(1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: screenshotPath, fullPage: true })
+  await edit.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('menu')).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Сбросить значения', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+}
+
+for (const width of [390, 430, 1440]) for (const variant of ['trainer-mono', 'trainer-lime', 'client-mono', 'client-lime-light', 'client-lime-dark']) {
+  if (width === 1440 && variant.startsWith('client')) continue
+  test(`Button geometry workout editor ${width} ${variant}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 })
+    const role = variant.startsWith('client') ? 'client' : 'trainer'
+    const lime = variant.includes('lime')
+    await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId, clientLime: lime, fitLime: lime })
+    if (role === 'client' && lime) await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    }, { id: clientId, theme: variant.endsWith('light') ? 'light' : 'dark' })
+    await page.goto('/workouts/new?date=2026-10-08')
+    await addEditorExercise(page)
+    await checkEditorAction(page, info.outputPath('workout-editor-actions.png'))
+  })
+}
+
 function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
   const exercise: WorkoutExercise = {
     id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: timed ? 'plank' : 'squat',
