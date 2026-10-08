@@ -844,6 +844,8 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       body = { items: [], totalCount: 0, nextOffset: null }
     } else if (url.pathname === '/v1/me/finance') {
       body = { finance: { trainers: [] } }
+    } else if (url.pathname === '/v1/me/sport-profile') {
+      body = { sport: { sports: [], bio: null } }
     } else if (url.pathname === '/v1/finance/overview') {
       body = { overview: { month: url.searchParams.get('month'), receivedCents: 0, dueCents: 0, attentionCount: 0, clients: [] } }
     } else if (url.pathname === `/v1/clients/${clientId}/finance`) {
