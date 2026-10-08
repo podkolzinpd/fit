@@ -1,5 +1,9 @@
 # Fit — текущее состояние проекта
 
+## Клиентский Lime: часть6 утверждённых доработок — 2026-10-08
+
+Поля даты/времени и подготовки client Lime имеют контракт Field:16px/radius16/min48 и стандартные рамку/фокус. Native select appearance:none/chevron взяты из профиля. Название, подсказка, варианты, обработчики, native picker и хранение прежние. WebKit6/6 (обе темы390/430, planned/completed,empty/filled/focus,gap,prep10/reload/Live); full check exit0. CI/merge/deploy/свежая native сборка впереди; production-закрытие ID не заявлено. План: design/CLIENT_LIME_REMEDIATION_20261008.md. Физический iPhone и реальные системные окна/диктовка не проверены.
+
 ## Клиентский Lime: часть5 утверждённых доработок — 2026-10-08
 
 ПослеPR#1529 свежая база86e8936e: форма/голос/рост/очисткаWebKit32/32 (8уникальныхсценариев в4профилях); полныйcheck2563frontend/1269API+136DBskip/build exit0. ОбаYS-лица явно загружаются перед сравнением геометрии; пользовательский код и assertions не ослаблены. PR#1528 опубликован37852644502: public13/13, native207/207, браузеры14/14. PR#1529 слит86e8936e; mainCI37854021587/публикация идут. Серверныефлаги read-only37851501663/37851505730: client/trainer/schedule=all, revision2, VITE_CLIENT_LIME_ENABLED=true; флаги не менялись.

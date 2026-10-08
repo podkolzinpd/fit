@@ -1025,9 +1025,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {removedItem && <div className="today-undo-remove" role="status"><span>Упражнение удалено</span><button type="button" className="link" onClick={undoRemoveExercise}>Отменить</button></div>}
       {/* Рядом с отдыхом, где настраивают ход тренировки. Для записи выполненной не применяется. */}
       {items.length > 0 && !reordering && <label className="today-date-field today-prep-field"><span>Подготовка перед стартом</span>
-        <select aria-label="Подготовка перед стартом" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))}>
+        <span className="workout-prep-select"><select aria-label="Подготовка перед стартом" value={prepSeconds} onChange={(event) => setPrepSeconds(Number(event.target.value))}>
           {WORKOUT_PREP_OPTIONS.map((seconds) => <option key={seconds} value={seconds}>{seconds === 0 ? 'Без подготовки' : formatPrepOption(seconds)}</option>)}
-        </select>
+        </select></span>
         <small>Обратный отсчёт в Live перед первым подходом, чтобы положить телефон и занять положение.</small>
       </label>}
       {items.length > 0 && !reordering && <WorkoutCta type="button" className="wide today-review-next" onClick={() => { setReordering(false); trackGoal('today_save_step_opened'); setScreen('save') }}>Далее</WorkoutCta>}
