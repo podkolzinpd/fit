@@ -368,7 +368,9 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
   let failThreads = options.failThreads ?? false
   let questionAnswered = false
   let unreadCount = 4
-  let workouts: MockWorkout[] = options.workouts ?? [workout]
+  let workouts: MockWorkout[] = options.workouts ?? [{ ...workout,
+    ...(options.role !== 'client' ? { trainerId: profileId, createdBy: profileId } : {}),
+  }]
   let clientRecords = options.clientRecords ?? [{ id: clientId, fullName: 'Алексей Смирнов', archivedAt: null, version: 1 }]
   let goalRecord: Record<string, unknown> | null = options.withGoal ? {
     id: '10000000-0000-4000-8000-000000000040', clientId, title: 'Подготовка к старту', targetDate: '2026-12-01',
@@ -1140,7 +1142,7 @@ for (const width of [320, 390, 430, 1440]) {
     const plan = buildFitLimeCalendarPlan(profileId, '2026-09-28', '2026-10-03')
     await mockPilot(page, { profileId, fitLime: true,
       clientRecords: plan.clients.map((item) => ({ ...item, archivedAt: null, version: 1 })),
-      workouts: plan.workouts.map((item) => ({ ...workout, ...item, trainerId: profileId,
+      workouts: plan.workouts.map((item) => ({ ...workout, ...item, trainerId: profileId, createdBy: profileId,
         clientName: plan.clients.find((client) => client.id === item.clientId)!.fullName,
         completedAt: item.status === 'done' ? `${item.workoutDate}T12:00:00Z` : null,
       })),
@@ -1273,12 +1275,13 @@ for (const width of [390, 430, 1440]) {
   test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     const otherClient = '10000000-0000-4000-8000-000000000099'
-    await mockPilot(page, { fitLime: true, profileId: width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId, workouts: [
+    const profileId = width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId
+    await mockPilot(page, { fitLime: true, profileId, workouts: [
       { ...workout, status: 'done', completedAt: '2026-09-24T08:00:00.000Z', title: 'Силовая' },
       { ...workout, id: newWorkoutId, clientId: otherClient, clientName: 'Александра Константинопольская-Рождественская', status: 'done', workoutDate: '2026-08-01', startTime: null, endTime: null, completedAt: '2026-08-01T08:00:00.000Z' },
       { ...workout, id: '10000000-0000-4000-8000-000000000080', status: 'cancelled' },
       { ...workout, id: '10000000-0000-4000-8000-000000000081', workoutDate: '2026-10-10' },
-    ] })
+    ].map((item) => ({ ...item, trainerId: profileId, createdBy: profileId })) })
     await page.goto('/schedule?week=2026-09-21')
     await page.getByRole('button', { name: 'Список', exact: true }).click()
     const list = page.getByRole('region', { name: 'Список тренировок' })
@@ -3644,6 +3647,7 @@ test('failed calendar save preserves the form and retry returns to the selected 
   await page.getByLabel('Поиск упражнения').fill('присед со штангой')
   await page.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
   await page.getByRole('button', { name: 'Добавить 1' }).click()
+  await page.getByRole('button', { name: 'С тренером', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page.locator('.workout-form .error')).toBeVisible()
   await expect(page.getByLabel('Дата')).toHaveValue('2026-09-29')
