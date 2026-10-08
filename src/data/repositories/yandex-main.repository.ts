@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { DataBackend } from '../../app/data-backend-context'
+import type { AthleteSportProfile } from '../../shared/sport-interests'
 import type {
   Client,
   ClientGoal,
@@ -1043,6 +1044,30 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    athleteSportProfile: {
+      supportsSportInterests: true,
+      async getMine(): Promise<AthleteSportProfile> {
+        const payload = await readJson(queries, '/v1/me/sport-profile', z.object({ sport: z.object({
+          sports: z.array(z.string()), bio: z.string().nullable(),
+        }) }))
+        return payload.sport
+      },
+      async saveOwn(input) {
+        const payload = await writeJson(queries, '/v1/me/client-profile', 'PUT', {
+          clientId: input.clientId,
+          expectedVersion: input.expectedVersion,
+          draft: { fullName: input.client.fullName, gender: input.client.gender,
+            ageYears: input.client.ageYears, ageUpdatedAt: input.client.ageUpdatedAt,
+            heightCm: input.client.heightCm, goal: input.client.goal ?? null,
+            note: input.client.note ?? null,
+            initialWeightKg: input.client.initialWeightKg ?? null,
+            initialWeightRecordedOn: input.client.initialWeightRecordedOn ?? null },
+          sport: input.sport,
+        }, z.object({ client: z.object({ id: uuid, version: z.number().int().positive() }) }))
+        invalidate()
+        return payload.client.id
+      },
+    },
     clientFinance: {
       async getMine() {
         const payload = await readJson(queries, '/v1/me/finance', z.object({ finance: clientFinanceSchema }))

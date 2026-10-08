@@ -25,6 +25,7 @@ import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import { QuickStartWorkout } from '../workouts/QuickStartWorkout'
 import { InBodyProgressCard } from '../progress'
+import { EMPTY_ATHLETE_SPORT_PROFILE, SPORT_INTEREST_GROUPS, type AthleteSportProfile } from '../../shared/sport-interests'
 
 export function MyClientPage() {
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
@@ -114,10 +115,11 @@ export function ClientFormPage() {
 }
 
 export function MyClientEditPage() {
-  const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
+  const { clients: clientsRepository, progress: progressRepository, athleteSportProfile } = useDataBackend()
   const navigate = useNavigate(); const queryClient = useQueryClient()
   const { actor, refresh } = useAuth()
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
+  const sportQuery = useQuery({ queryKey: ['my-sport-profile'], queryFn: () => athleteSportProfile.getMine() })
   useClientRealtime(query.data?.id)
   const initialFullName = [actor?.firstName, actor?.lastName].filter(Boolean).join(' ').trim()
   // "Начальный вес" — не отдельная колонка, а первая запись в client_progress
@@ -129,14 +131,16 @@ export function MyClientEditPage() {
     enabled: Boolean(query.data),
   })
   const stillResolvingWeightEligibility = Boolean(query.data) && progressEntries.isLoading
-  return <AsyncView loading={query.isLoading || stillResolvingWeightEligibility} error={query.error} onRetry={() => void query.refetch()}>
-    {!query.isLoading && !stillResolvingWeightEligibility && <ClientForm
+  return <AsyncView loading={query.isLoading || sportQuery.isLoading || stillResolvingWeightEligibility} error={query.error ?? sportQuery.error} onRetry={() => { void query.refetch(); void sportQuery.refetch() }}>
+    {!query.isLoading && !sportQuery.isLoading && !stillResolvingWeightEligibility && <ClientForm
       existing={query.data ?? undefined}
+      initialSport={sportQuery.data ?? EMPTY_ATHLETE_SPORT_PROFILE}
       initialFullName={initialFullName}
       createMode="self"
       canRecordInitialWeight={Boolean(query.data) && (progressEntries.data?.length ?? 0) === 0}
       onSaved={async () => {
         await queryClient.invalidateQueries({ queryKey: ['my-client'] })
+        await queryClient.invalidateQueries({ queryKey: ['my-sport-profile'] })
         await queryClient.invalidateQueries({ queryKey: ['progress', query.data?.id] })
         await refresh()
         navigate('/me')
@@ -148,6 +152,7 @@ export function MyClientEditPage() {
 
 function ClientForm({
   existing,
+  initialSport,
   initialFullName,
   createMode = 'trainer',
   canRecordInitialWeight = false,
@@ -156,6 +161,7 @@ function ClientForm({
   onCancel,
 }: {
   existing?: Client
+  initialSport?: AthleteSportProfile
   initialFullName?: string
   createMode?: 'trainer' | 'self'
   canRecordInitialWeight?: boolean
@@ -163,7 +169,7 @@ function ClientForm({
   onSaved: (id: string) => Promise<void>
   onCancel?: () => void
 }) {
-  const { clients: clientsRepository, progress: progressRepository } = useDataBackend()
+  const { clients: clientsRepository, athleteSportProfile } = useDataBackend()
   const { actor } = useAuth()
   const queryClient = useQueryClient()
   const today = todayInTimeZone(actor?.timezone)
@@ -171,6 +177,9 @@ function ClientForm({
     ? existing ? `/clients/${existing.id}` : '/clients'
     : undefined
   const showInitialWeight = !existing || canRecordInitialWeight
+  const [selectedSports, setSelectedSports] = useState<string[]>(initialSport?.sports ?? [])
+  const [sportSearch, setSportSearch] = useState('')
+  const [sportBio, setSportBio] = useState(initialSport?.bio ?? '')
   const form = useForm<ClientProfileValues>({ resolver: zodResolver(clientProfileSchema), defaultValues: existing ? {
     fullName: existing.canonicalFullName, gender: existing.gender ?? undefined, ageYears: existing.ageYears ?? undefined, heightCm: existing.heightCm ?? undefined,
     goal: existing.goal ?? '', note: existing.note ?? '', alias: existing.fullName, privateNote: existing.note ?? '',
@@ -183,10 +192,12 @@ function ClientForm({
         ageUpdatedAt: parsed.ageYears === undefined ? null : existing.ageUpdatedAt ?? today,
         heightCm: parsed.heightCm ?? null, goal: parsed.goal, note: parsed.note }
       if (createMode === 'self') {
-        await clientsRepository.updateOwn(input)
-        if (canRecordInitialWeight && parsed.initialWeightKg !== undefined) {
-          await progressRepository.save({ clientId: existing.id, recordedOn: today, weightKg: parsed.initialWeightKg, customMetrics: [] })
-        }
+        await athleteSportProfile.saveOwn({ clientId: existing.id, expectedVersion: existing.version,
+          client: { fullName: input.fullName, gender: input.gender, ageYears: input.ageYears,
+            ageUpdatedAt: input.ageUpdatedAt, heightCm: input.heightCm, goal: input.goal,
+            note: input.note, initialWeightKg: canRecordInitialWeight ? parsed.initialWeightKg : undefined,
+            initialWeightRecordedOn: canRecordInitialWeight && parsed.initialWeightKg !== undefined ? today : undefined },
+          sport: { sports: selectedSports, bio: sportBio.trim() || null } })
       }
       else {
         const alias = values.alias.trim() === existing.fullName && existing.fullName === existing.canonicalFullName
@@ -214,7 +225,10 @@ function ClientForm({
       heightCm: parsed.heightCm ?? null,
       goal: parsed.goal, note: parsed.note, initialWeightKg: parsed.initialWeightKg,
       initialWeightRecordedOn: parsed.initialWeightKg === undefined ? undefined : today }
-    return createMode === 'self' ? clientsRepository.createOwn(input) : clientsRepository.create(input)
+    return createMode === 'self'
+      ? athleteSportProfile.saveOwn({ clientId: null, expectedVersion: null, client: input,
+        sport: { sports: selectedSports, bio: sportBio.trim() || null } })
+      : clientsRepository.create(input)
   }, onSuccess: (id) => onSaved(id), onError: async (error) => {
     if (!existing || !isRepositoryConflict(error)) return
     await Promise.all([
@@ -240,6 +254,27 @@ function ClientForm({
           render={({ field }) => <VoiceNoteField name={field.name} source="client_form" label="Общий комментарий" value={field.value ?? ''} onValueChange={field.onChange} />}
         />}
       </section>
+      {createMode === 'self' && athleteSportProfile.supportsSportInterests && <section className="client-form-section athlete-sport-edit">
+        <div className="client-form-section-head">
+          <p className="eyebrow">ЛИЧНОЕ</p>
+          <h2>Чем занимаюсь</h2>
+          <p>Выберите любимые виды спорта. Пока они видны только вам.</p>
+        </div>
+        <Field label="Поиск по видам спорта"><input type="search" value={sportSearch} onChange={(event) => setSportSearch(event.target.value)} placeholder="Например, бег или йога" /></Field>
+        {SPORT_INTEREST_GROUPS.map((group) => {
+          const options = group.options.filter(([, label]) => label.toLowerCase().includes(sportSearch.trim().toLowerCase()))
+          return options.length > 0 && <div className="athlete-sport-group" key={group.title}>
+            <h3>{group.title}</h3>
+            <div className="athlete-sport-options">{options.map(([id, label]) => <button key={id} type="button"
+              className={selectedSports.includes(id) ? 'athlete-sport-option selected' : 'athlete-sport-option'}
+              aria-pressed={selectedSports.includes(id)}
+              onClick={() => setSelectedSports((current) => current.includes(id) ? current.filter((sport) => sport !== id) : [...current, id])}>{label}</button>)}</div>
+          </div>
+        })}
+        {SPORT_INTEREST_GROUPS.every((group) => group.options.every(([, label]) => !label.toLowerCase().includes(sportSearch.trim().toLowerCase()))) && <p className="muted">Ничего не найдено</p>}
+        <Field label="О себе в спорте"><textarea value={sportBio} maxLength={160} onChange={(event) => setSportBio(event.target.value)} placeholder="Пару слов о том, что вам нравится" /></Field>
+        <p className="athlete-sport-count">{sportBio.length}/160</p>
+      </section>}
       {existing && createMode === 'trainer' && <section className="client-form-section client-display-settings">
         <div className="client-form-section-head">
           <p className="eyebrow">ТОЛЬКО ДЛЯ ТРЕНЕРА</p>
@@ -254,7 +289,7 @@ function ClientForm({
     </form>
   const title = createMode === 'self' && !existing
     ? 'Профиль спортсмена'
-    : existing ? 'Редактировать клиента' : 'Новый клиент'
+    : existing ? createMode === 'self' ? 'Редактировать профиль' : 'Редактировать клиента' : 'Новый клиент'
   return embedded ? contents : <Page title={title} back={fitLimeBack} className={createMode === 'self' ? 'client-self-edit-page' : undefined}>{contents}</Page>
 }
 

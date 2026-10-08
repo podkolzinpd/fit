@@ -2846,6 +2846,17 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .client-display-settings { border-color: var(--border); background: var(--surface-raised) }
 .client-profile-form .actions { position: static; margin: 0; padding: 2px 0 calc(12px + env(safe-area-inset-bottom)); background: transparent }
 .client-profile-form .actions button:last-child { min-height: 52px; border-radius: 16px; font-size: 17px; font-weight: 800 }
+.athlete-sport-group { display: grid; gap: 8px; min-width: 0 }
+.athlete-sport-group h3, .athlete-sport-card h2 { margin: 0; color: var(--fg-strong); font-size: 15px; font-weight: 700 }
+.athlete-sport-options { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0 }
+.athlete-sport-option, .athlete-sport-tag { display: inline-flex; align-items: center; max-width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-sunken); color: var(--fg); font: inherit; font-size: 14px; line-height: 1.2; text-align: left; white-space: normal }
+.athlete-sport-option.selected { border-color: var(--mono-primary); background: var(--mono-primary); color: var(--mono-on-primary) }
+.athlete-sport-option:focus-visible, .athlete-sport-more:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px }
+.athlete-sport-count { margin: -8px 0 0; color: var(--muted); font-size: 12px; text-align: right }
+.athlete-sport-card { display: grid; align-items: start; gap: 12px; margin: 14px 0 }
+.athlete-sport-card .athlete-sport-tag { min-height: 32px }
+.athlete-sport-card .athlete-sport-bio { color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere }
+.athlete-sport-more { width: fit-content; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; text-decoration: underline }
 /* AI-карточки получают цвета только через семантические токены выше: светлая
    и тёмная темы меняют палитру без специальных селекторов на каждом элементе. */
 .theme-light .page-back { background: var(--surface-raised) }

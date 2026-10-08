@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Client, ProgressEntry, SessionActor } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { MyClientEditPage } from './ClientsPages'
+import type { SaveOwnAthleteProfileInput } from '../../data/repositories/athlete-sport-profile.repository'
+import type { AthleteSportProfile } from '../../shared/sport-interests'
 
 const repository = vi.hoisted(() => ({
   getMine: vi.fn(),
@@ -19,6 +21,11 @@ const progress = vi.hoisted(() => ({
 const realtime = vi.hoisted(() => ({
   subscribeToClientChanges: vi.fn(() => () => undefined),
 }))
+const athleteSportProfile = vi.hoisted(() => ({
+  supportsSportInterests: true,
+  getMine: vi.fn<() => Promise<AthleteSportProfile>>(),
+  saveOwn: vi.fn<(input: SaveOwnAthleteProfileInput) => Promise<string>>(),
+}))
 
 vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({
@@ -27,7 +34,7 @@ vi.mock('../../app/auth-context', () => ({
   }),
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ clients: repository, progress, realtime }),
+  useDataBackend: () => ({ source: 'yandex', clients: repository, progress, realtime, athleteSportProfile }),
 }))
 
 const client: Client = {
@@ -48,6 +55,8 @@ describe('MyClientEditPage', () => {
     repository.createOwn.mockReset()
     progress.list.mockReset()
     progress.save.mockReset().mockResolvedValue('progress-1')
+    athleteSportProfile.getMine.mockReset().mockResolvedValue({ sports: [], bio: null })
+    athleteSportProfile.saveOwn.mockReset().mockResolvedValue('client-1')
   })
 
   it('offers the initial weight field when the client has no measurements yet, and records it as a progress entry', async () => {
@@ -59,10 +68,10 @@ describe('MyClientEditPage', () => {
     await user.type(weightInput, '72.5')
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
 
-    await waitFor(() => expect(repository.updateOwn).toHaveBeenCalledTimes(1))
-    expect(progress.save).toHaveBeenCalledWith(expect.objectContaining({
-      clientId: 'client-1', weightKg: 72.5, customMetrics: [],
-    }))
+    await waitFor(() => expect(athleteSportProfile.saveOwn).toHaveBeenCalledOnce())
+    expect(athleteSportProfile.saveOwn.mock.calls[0]?.[0]).toMatchObject({
+      clientId: 'client-1', client: { initialWeightKg: 72.5 },
+    })
   })
 
   it('hides the initial weight field once the client already has a measurement', async () => {
@@ -75,8 +84,8 @@ describe('MyClientEditPage', () => {
     expect(screen.queryByLabelText('Начальный вес, кг')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
-    await waitFor(() => expect(repository.updateOwn).toHaveBeenCalledTimes(1))
-    expect(progress.save).not.toHaveBeenCalled()
+    await waitFor(() => expect(athleteSportProfile.saveOwn).toHaveBeenCalledOnce())
+    expect(athleteSportProfile.saveOwn.mock.calls[0]?.[0].client.initialWeightKg).toBeUndefined()
   })
 
   it('still offers the initial weight field for a brand-new self-service profile', async () => {
@@ -86,5 +95,29 @@ describe('MyClientEditPage', () => {
 
     expect(await screen.findByLabelText('Начальный вес, кг')).toBeVisible()
     expect(progress.list).not.toHaveBeenCalled()
+  })
+
+  it('edits only the athlete profile with unlimited sport choices and a private bio', async () => {
+    progress.list.mockResolvedValue([])
+    athleteSportProfile.getMine.mockResolvedValue({ sports: ['running'], bio: 'Бегаю по утрам' })
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Редактировать профиль' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Бег' })).toHaveAttribute('aria-pressed', 'true')
+    await user.type(screen.getByLabelText('Поиск по видам спорта'), 'йога')
+    await user.click(screen.getByRole('button', { name: 'Йога' }))
+    await user.clear(screen.getByLabelText('Поиск по видам спорта'))
+    await user.click(screen.getByRole('button', { name: 'Плавание' }))
+    await user.click(screen.getByRole('button', { name: 'Бокс' }))
+    await user.click(screen.getByRole('button', { name: 'Футбол' }))
+    await user.click(screen.getByRole('button', { name: 'Походы' }))
+    await user.click(screen.getByRole('button', { name: 'Танцы' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+    await waitFor(() => expect(athleteSportProfile.saveOwn).toHaveBeenCalledOnce())
+    expect(athleteSportProfile.saveOwn.mock.calls[0]?.[0].sport).toEqual({
+      sports: ['running', 'yoga', 'swimming', 'boxing', 'football', 'hiking', 'dance'], bio: 'Бегаю по утрам',
+    })
   })
 })

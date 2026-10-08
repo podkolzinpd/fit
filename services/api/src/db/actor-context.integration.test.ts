@@ -104,6 +104,7 @@ import {
   cancelEmptyLiveWorkout,
 } from '../workout-commands.js'
 import { withActorTransaction } from './actor-transaction.js'
+import { getOwnAthleteSportProfile, saveOwnAthleteSportProfile } from '../athlete-sport-profile.js'
 import { PgDatabasePool } from './pg-pool.js'
 import {
   DatabaseStageWorkoutFixtureLoader,
@@ -874,6 +875,34 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await runtimePool?.end()
       await enrollmentPool?.end()
       await ownerPool?.end()
+    })
+
+    it('keeps athlete sport interests private from other clients and trainers', async () => {
+      if (!runtimePool || !ownerPool) throw new Error('Database is not ready')
+      await ownerPool.query('delete from public.athlete_sport_profiles where profile_id = $1', [OTHER_ACTOR_ID])
+      try {
+        const initial = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, getOwnAthleteSportProfile)
+        expect(initial).toEqual({ sports: [], bio: null })
+        await withActorTransaction(runtimePool, OTHER_ACTOR_ID, (client) =>
+          saveOwnAthleteSportProfile(client, { sports: ['running', 'yoga'], bio: 'Тестовый спортивный профиль' }))
+        const own = await withActorTransaction(runtimePool, OTHER_ACTOR_ID, getOwnAthleteSportProfile)
+        expect(own).toEqual({ sports: ['running', 'yoga'], bio: 'Тестовый спортивный профиль' })
+        for (const actor of [LINK_ACTOR_ID, ACTOR_ID]) {
+          const hidden = await withActorTransaction(runtimePool, actor, (client) =>
+            client.query('select sports, bio from public.athlete_sport_profiles where profile_id = $1', [OTHER_ACTOR_ID]))
+          expect(hidden).toEqual([])
+          await expect(withActorTransaction(runtimePool, actor, (client) =>
+            client.query('update public.athlete_sport_profiles set bio = $1 where profile_id = $2',
+              ['Чужая правка', OTHER_ACTOR_ID]))).resolves.toEqual([])
+        }
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, getOwnAthleteSportProfile))
+          .rejects.toThrow('forbidden')
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
+          client.query('insert into public.athlete_sport_profiles (profile_id, sports) values ($1, $2)',
+            [ACTOR_ID, ['running']]))).rejects.toThrow()
+      } finally {
+        await ownerPool.query('delete from public.athlete_sport_profiles where profile_id = $1', [OTHER_ACTOR_ID])
+      }
     })
 
     describe('workout template save replay', () => {

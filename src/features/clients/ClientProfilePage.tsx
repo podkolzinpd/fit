@@ -20,14 +20,20 @@ import { AccountSettingsCard, SettingsSection } from '../profile/SettingsSection
 import { BodyMapAppearanceSetting } from '../progress/BodyMapAppearanceSetting'
 import { ClientTrainerConnections } from './ClientTrainerConnections'
 import { ClientFinanceHomeCard } from '../finance'
+import { SPORT_INTEREST_LABELS } from '../../shared/sport-interests'
 
 export function ClientProfilePage() {
   const { actor } = useAuth()
-  const { clients: clientsRepository } = useDataBackend()
+  const { clients: clientsRepository, athleteSportProfile } = useDataBackend()
+  const [showAllSports, setShowAllSports] = useState(false)
   const client = useQuery({
     queryKey: ['my-client'],
     queryFn: () => clientsRepository.getMine(),
     enabled: actor?.role === 'client',
+  })
+  const sport = useQuery({
+    queryKey: ['my-sport-profile'], queryFn: () => athleteSportProfile.getMine(),
+    enabled: actor?.role === 'client' && athleteSportProfile.supportsSportInterests,
   })
   if (!actor || actor.role !== 'client') return null
 
@@ -43,6 +49,18 @@ export function ClientProfilePage() {
           </div>
           <Link className="client-profile-edit" to="/me/edit">Изменить данные <ChevronRightIcon /></Link>
         </section>
+        {athleteSportProfile.supportsSportInterests && <section className="client-profile-card athlete-sport-card">
+          <h2>Мой спорт</h2>
+          <AsyncView loading={sport.isLoading} error={sport.error} onRetry={() => void sport.refetch()}>
+            {sport.data && (sport.data.sports.length > 0 || sport.data.bio) ? <>
+              {sport.data.sports.length > 0 && <>
+                <div className="athlete-sport-options">{(showAllSports ? sport.data.sports : sport.data.sports.slice(0, 6)).map((id) => <span className="athlete-sport-tag" key={id}>{SPORT_INTEREST_LABELS[id] ?? id}</span>)}</div>
+                {sport.data.sports.length > 6 && <button type="button" className="athlete-sport-more" aria-expanded={showAllSports} onClick={() => setShowAllSports((value) => !value)}>{showAllSports ? 'Свернуть' : `Показать ещё ${sport.data.sports.length - 6}`}</button>}
+              </>}
+              {sport.data.bio && <p className="athlete-sport-bio">{sport.data.bio}</p>}
+            </> : <p>Расскажите, каким спортом занимаетесь. Это видно только вам.</p>}
+          </AsyncView>
+        </section>}
         <ClientTrainerConnections clientId={client.data.id} finance={<ClientFinanceHomeCard />} />
       </>}
     </AsyncView>

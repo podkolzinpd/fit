@@ -16,6 +16,13 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => useAuth() }))
 
 const getMine = vi.hoisted(() => vi.fn<() => Promise<Client | null>>())
 vi.mock('../../data/repositories/clients.repository', () => ({ clientsRepository: { getMine } }))
+const getOwnSport = vi.hoisted(() => vi.fn())
+vi.mock('../../data/repositories/athlete-sport-profile.repository', () => ({
+  athleteSportProfileRepository: { supportsSportInterests: true, getMine: getOwnSport, saveOwn: vi.fn() },
+}))
+vi.mock('../../app/data-backend-context', () => ({
+  useDataBackend: () => ({ source: 'yandex', clients: { getMine }, athleteSportProfile: { supportsSportInterests: true, getMine: getOwnSport } }),
+}))
 
 vi.mock('./ClientTrainerConnections', () => ({ ClientTrainerConnections: ({ finance }: { finance?: ReactNode }) => <div>{finance}</div> }))
 vi.mock('../finance', () => ({ ClientFinanceHomeCard: () => <section aria-label="Абонементы клиента">Абонементы</section> }))
@@ -52,6 +59,7 @@ describe('ClientProfilePage', () => {
     notificationsStatus.mockReset()
     useAuth.mockReturnValue({ actor: { role: 'client', userId: 'client-user-1', email: 'client@test.com' } })
     getMine.mockResolvedValue(client)
+    getOwnSport.mockReset().mockResolvedValue({ sports: [], bio: null })
     notificationsStatus.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
   })
 
@@ -61,6 +69,20 @@ describe('ClientProfilePage', () => {
     expect(screen.getByText('Настройки')).toBeVisible()
     expect(screen.queryByText('Уведомления')).not.toBeInTheDocument()
     expect(await screen.findByRole('region', { name: 'Абонементы клиента' })).toBeVisible()
+  })
+
+  it('shows only the owner their selected sports and collapses a long list', async () => {
+    getOwnSport.mockResolvedValue({
+      sports: ['running', 'yoga', 'swimming', 'boxing', 'football', 'hiking', 'dance'],
+      bio: 'Тренируюсь по утрам',
+    })
+    const user = userEvent.setup()
+    render(<ClientProfilePage />, { wrapper: wrapper() })
+    expect(await screen.findByText('Тренируюсь по утрам')).toBeVisible()
+    expect(screen.getByText('Бег')).toBeVisible()
+    expect(screen.queryByText('Танцы')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Показать ещё 1' }))
+    expect(screen.getByText('Танцы')).toBeVisible()
   })
 
   it('renders notification controls on the client settings page', async () => {

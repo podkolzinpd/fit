@@ -2825,6 +2825,8 @@ function buildConnectionsWriter(error?: Error): {
 function buildDomainWriter(error?: Error): {
   pilotDomainWriter: PilotDomainWriter
   updateProfile: ReturnType<typeof vi.fn>
+  getOwnAthleteSportProfile: ReturnType<typeof vi.fn>
+  saveOwnAthleteProfile: ReturnType<typeof vi.fn>
   createClient: ReturnType<typeof vi.fn>
   createQuickOwnClient: ReturnType<typeof vi.fn>
   createCustomExercise: ReturnType<typeof vi.fn>
@@ -2860,6 +2862,8 @@ function buildDomainWriter(error?: Error): {
   }))
   const updateClient = vi.fn(() => result(2))
   const updateProfile = vi.fn(() => result(undefined))
+  const getOwnAthleteSportProfile = vi.fn(() => result({ sports: [], bio: null }))
+  const saveOwnAthleteProfile = vi.fn(() => result({ id: 'a18efab5-0530-4660-9798-79901fcddfeb', version: 2 }))
   const setClientArchived = vi.fn(() => result(3))
   const updateClientPreferences = vi.fn(() => result(2))
   const createCustomExercise = vi.fn(() => result(customExercise))
@@ -2872,6 +2876,8 @@ function buildDomainWriter(error?: Error): {
   return {
     pilotDomainWriter: {
       updateProfile,
+      getOwnAthleteSportProfile,
+      saveOwnAthleteProfile,
       createClient,
       createQuickOwnClient,
       createCustomExercise,
@@ -2882,6 +2888,8 @@ function buildDomainWriter(error?: Error): {
       updateCustomExercise,
     },
     updateProfile,
+    getOwnAthleteSportProfile,
+    saveOwnAthleteProfile,
     createClient,
     createQuickOwnClient,
     createCustomExercise,
@@ -4890,6 +4898,35 @@ describe('pilot client and custom exercise domain commands', () => {
     equipment: 'Сани',
     description: 'Держите корпус устойчиво.',
   }
+
+  it('keeps sport profile endpoints read-write and validates every selected sport', async () => {
+    const writer = buildDomainWriter()
+    const app = buildApp({ pilotDomainWriter: writer.pilotDomainWriter, logger: false })
+    apps.push(app)
+    const readOnly = await app.inject({ method: 'GET', url: '/v1/me/sport-profile',
+      headers: { 'x-fit-pilot-session': sessionToken } })
+    const own = await app.inject({ method: 'GET', url: '/v1/me/sport-profile',
+      headers: { 'x-fit-session': 'a'.repeat(43) } })
+    const invalid = await app.inject({ method: 'PUT', url: '/v1/me/client-profile',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { clientId: null, expectedVersion: null, draft: clientDraft,
+        sport: { sports: ['unknown_sport'], bio: null } } })
+    const saved = await app.inject({ method: 'PUT', url: '/v1/me/client-profile',
+      headers: { 'x-fit-session': 'a'.repeat(43) },
+      payload: { clientId: null, expectedVersion: null, draft: clientDraft,
+        sport: { sports: ['running', 'yoga', 'hiking', 'boxing'], bio: 'Мой спорт' } } })
+    expect(readOnly.statusCode).toBe(403)
+    expect(own.statusCode).toBe(200)
+    expect(own.json()).toEqual({ sport: { sports: [], bio: null } })
+    expect(invalid.statusCode).toBe(400)
+    expect(saved.statusCode).toBe(200)
+    expect(writer.saveOwnAthleteProfile).toHaveBeenCalledTimes(1)
+    expect(writer.saveOwnAthleteProfile).toHaveBeenCalledWith(
+      { accessMode: 'read_write', token: 'a'.repeat(43) }, null, null,
+      { ...clientDraft, initialWeightKg: null, initialWeightRecordedOn: null },
+      { sports: ['running', 'yoga', 'hiking', 'boxing'], bio: 'Мой спорт' },
+    )
+  })
 
   it('creates, updates and archives a client with separate private preferences', async () => {
     const writer = buildDomainWriter()
