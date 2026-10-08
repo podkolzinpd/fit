@@ -3,7 +3,7 @@ import { editableProgramCatalog, editProgram } from './edit.js'
 import { programGenerationKey } from './job.js'
 import { aiStudioUsage, reportAiStudioMetric } from '../../ai-studio-usage-metrics.js'
 import type { AssistantAction, AssistantTurnResponse } from '../index.js'
-import { briefAnswerSuggestions, briefExtractionSchema, briefProperties, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
+import { briefExtractionSchema, briefProperties, briefSuggestionsFor, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
 import { PROGRAM_CATALOG, PROGRAM_EQUIPMENT } from './catalog.js'
 import { addDays, materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
 import { programIamToken, programModelJson } from './model.js'
@@ -85,7 +85,7 @@ function collectState(client: ProgramClient, brief: ProgramBrief, today: string,
   const nextField = ready || blocked || brief.adult === false || issues.length ? undefined : missing[0]
   return action(reply, { step: 'brief', clientId: client.id, clientName: client.fullName, goal: client.goal,
     sourceSummary: basis?.summary, hasHistory: basis?.hasHistory, briefState: brief, briefSummary: briefSummary(brief), readyToGenerate: ready, briefAnswerVersion: 2,
-    askedFields: nextField ? [nextField] : [], answerSuggestions: nextField ? briefAnswerSuggestions[nextField] ?? [] : [],
+    askedFields: nextField ? [nextField] : [], answerSuggestions: nextField ? briefSuggestionsFor(nextField, brief) : [],
     briefStatus: ready ? 'ready' : blocked || issues.length || brief.adult === false ? 'needs_clarification' : 'needs_answers',
     clarification: blocked ? extra ?? guidance : null,
     missing: missing.map((key) => briefQuestions[key]),

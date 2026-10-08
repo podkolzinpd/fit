@@ -85,6 +85,16 @@ describe('program chat state', () => {
     expect(result?.action?.payload.readyToGenerate).toBe(true)
     expect(result?.reply).not.toContain('В какие дни недели')
   })
+  it('does not offer a two-day schedule after three sessions were selected', async () => {
+    const { deps, latest } = setup()
+    const brief = { ...latest.payload.briefState }
+    delete brief.weekdays
+    const active = { payload: { ...latest.payload, briefState: brief, readyToGenerate: false,
+      askedFields: ['weekdays'], guidance: 'В какие дни недели удобно тренироваться?' } }
+    deps.extract.mockResolvedValue({ patch: {}, clear: [], evidence: {}, clarification: null })
+    const result = await programPilotTurn('3 занятия', [client], active, deps)
+    expect(result?.action?.payload.answerSuggestions).toEqual(['Понедельник, среда и пятница', 'Дни не важны'])
+  })
   it.each([
     { field: 'durationMin', message: '60', expected: { durationMin: 60 } },
     { field: 'durationMin', message: '40-60', expected: { durationMin: 40 } },
