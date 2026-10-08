@@ -5302,6 +5302,7 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .trainer-schedule-identity .workout-templates-page .state-panel-action { width:100% }
 .trainer-schedule-identity .template-empty-actions { width:min(100%,320px); display:grid; gap:8px; margin-inline:auto }
 .trainer-schedule-identity .template-empty-actions .button { display:inline-flex; min-height:48px; align-items:center; justify-content:center; gap:7px; border-radius:14px; box-shadow:none }
+.trainer-schedule-identity .template-empty-actions .button svg { width:20px; height:20px; flex:0 0 auto }
 .trainer-schedule-identity .workout-template-source-page > .field { max-width:360px; margin-bottom:14px }
 .trainer-schedule-identity .workout-template-source-page .field > span { color:var(--secondary-label-fg); font-size:12px; font-weight:500 }
 .trainer-schedule-identity .workout-template-source-page :is(input,select,textarea) { min-height:48px; border:1px solid var(--border); border-radius:14px; background:var(--surface-sunken); color:var(--fg); font-size:16px; box-shadow:none }
@@ -6726,6 +6727,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .request-error-inline .request-diagnostic-code strong { color:var(--fg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.02em; }
 .request-error-inline .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
 .request-error-inline .request-diagnostic-copy svg { width:16px; height:16px; }
+.workout-template-editor-page .request-diagnostic-copy,.workout-templates-page .request-diagnostic-copy { min-height:44px; }
 .request-error-inline .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }
 .today-start-page > .request-error-inline { margin-top:14px; }
 

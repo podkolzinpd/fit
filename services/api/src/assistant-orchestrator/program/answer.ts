@@ -43,6 +43,15 @@ function explicitEquipment(text: string): Equipment[] | undefined {
 /** Explicit absence is an answer, not a request to delete a field. */
 export function explicitBriefAnswer(message: string, context?: BriefAnswerContext, today?: string, brief?: ProgramBrief): unknown {
   const text = message.toLocaleLowerCase('ru').replace(/ё/g, 'е').trim().replace(/[.!]$/, '')
+  if (context?.fields.length === 1 && context.fields[0] === 'otherActivity'
+    && /^(?:бег\s+)?(?:2|два|дважды)\s*раз(?:а)?(?:\s+(?:в|за)\s+недел[юи])?\s*[:,—–-]?\s*(?:во?\s+)?вторник(?:ам|и)?\s*(?:и|,)\s*(?:в|по\s+)?суббот(?:а|у|ы|ам|ами)?$/u.test(text)) {
+    return {
+      patch: { otherActivity: message, otherActivities: [{ kind: 'бег', frequency: 2, weekdays: [2, 6] }] },
+      clear: [],
+      evidence: { otherActivity: message, otherActivities: message },
+      clarification: null,
+    }
+  }
   if (context?.fields.length === 1 && context.fields[0] === 'continuationPlan') {
     if (/^(?:продолжаем|продолжить)(?:\s+(?:без изменений|как есть|тот же курс|прежний курс|тот же подход))?$/u.test(text)) {
       return { patch: { continuationPlan: message }, clear: [], evidence: { continuationPlan: message }, clarification: null }
@@ -91,6 +100,11 @@ export function explicitBriefAnswer(message: string, context?: BriefAnswerContex
   if (context?.fields.length === 1 && context.fields[0] === 'equipment') {
     const equipment = explicitEquipment(text)
     if (equipment) return { patch: { equipment }, clear: [], evidence: { equipment: message }, clarification: null }
+  }
+  if (context?.fields.length === 1 && context.fields[0] === 'limitations'
+    && /(?:^|\s)(?:бол\p{L}*|травм\p{L}*|ограничен\p{L}*|дискомфорт\p{L}*)/u.test(text)) {
+    return { patch: { limitations: 'present', limitationsText: message }, clear: [],
+      evidence: { limitations: message, limitationsText: message }, clarification: null }
   }
   if (context?.fields.length === 1 && context.fields[0] === 'weekdays'
     && /^(?:да,?\s*)?(?:мне\s+)?(?:все равно|не ?важно|дни не важны|без разницы|любые|в любые(?: дни)?|в любой день)$/u.test(text)) {

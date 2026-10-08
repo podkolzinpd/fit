@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+Удаление этапа цели: общий контракт принимает выбранные ID/версию; Yandex
+отправляет один DELETE без fan-out прогресса клиентов, сохраняя server
+ownership/version и существующий конфликт. Legacy ID-only RPC не расширяется.
+Приёмка: `docs/design/DATABASE_GOAL_STAGE_DELETE_20261007.md`.
+
 Имя подключённого тренера у клиента: Yandex connections и chat используют общий
 resolver published profile → account name → «Тренер», без чтения draft.
 Повторный вход не нужен: список обновляется при открытии раздела. Обе оболочки
@@ -10,6 +15,9 @@ resolver published profile → account name → «Тренер», без чте�
 ID при повторе, Yandex migration134 принимает только точный повтор последнего
 сохранения без обхода версии; черновик изолирован по аккаунту/шаблону/основе.
 План и ограничения остальных проверок: `docs/design/FUNCTIONAL_PARITY_RELIABILITY_20261007.md`.
+Медленное соединение перед записью: до5s/probe в общем10s бюджете,
+без автоматического повторения mutation; template error/retry показывает
+существующую request-диагностику. Приёмка: `docs/design/TEMPLATE_SLOW_CONNECTION_20261008.md`.
 
 Выбранный тренер: Yandex migration135 переносит прежний targeted disconnect
 контракт — закрывает active relationship и membership атомарно, сохраняя

@@ -145,6 +145,7 @@ html.fit-lime-document,
   color: var(--lime-text);
 }
 .fit-lime .overflow-list { border-color: var(--lime-divider); border-radius: 18px; background: var(--lime-surface-raised) }
+.fit-lime .overflow-trigger-text { width: auto; white-space: nowrap }
 .fit-lime .overflow-item { min-height: 44px; border-radius: 12px; color: var(--lime-text) }
 .fit-lime .overflow-item:hover { background: #303034 }
 .fit-lime .overflow-item.danger { color: var(--danger) }

@@ -231,6 +231,17 @@ The automatic workflow verifies:
 5. the API has only the reviewed public invoker binding; the migration runner
    remains private.
 
+After health/readiness succeeds, the private fixture endpoint issues fresh
+synthetic sessions for product smoke. All four 15-minute sessions must outlive
+the shared 10-minute smoke deadline by at least 60 seconds. Each product request
+has a 5-second connection timeout and a 30-second total timeout, clamped to the
+remaining suite budget, with no automatic retries. Expected conflict responses
+remain explicitly asserted. Safe failure diagnostics identify the product
+subcheck, method, redacted route, HTTP status, request ID and release; they do not
+publish payloads, session tokens, signed URLs or query strings. Health/readiness
+or product-smoke failure still restores the prior API revision and blocks the
+frontend release. User session TTLs and runtime authorization are unchanged.
+
 The Yandex ID browser pilot remains default-off and its workout UI remains
 read-only; stage mutation endpoints are exercised only by automated smoke until
 a separate repository adapter and UI rollout are reviewed. The only shared

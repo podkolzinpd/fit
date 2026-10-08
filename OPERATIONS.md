@@ -117,6 +117,21 @@ PostgreSQL Monitoring connections по runtime-пользователю/host и 
 после пятиминутного окна применения scaling policy, отдельный verifier выполняет
 последовательные запросы `/health` строго без retry.
 
+Перед продуктовым smoke workflow повторно вызывает существующий приватный
+fixture runner: только синтетические тестовые сессии выдаются после успешного
+bootstrap, а не переиспользуются после IAM/dispatcher/deployment. Их TTL остаётся
+15 минут; TTL пользовательских сессий и авторизация не меняются. Для всех четырёх
+сессий проверяется запас на общий 10-минутный бюджет и ещё 60 секунд.
+`scripts/yandex-stage-smoke.mjs` ограничивает connect timeout до 5 секунд,
+каждый запрос до 30 секунд и остатка общего бюджета; все продуктовые запросы
+выполняются без автоматического retry, включая mutation и 401. Ожидаемые 409
+по-прежнему проверяются как часть контракта, а не транспортный отказ.
+Диагностика содержит этап, метод, обезличенный маршрут, HTTP, технический
+request ID, безопасный код и release; payload, token, подписанный URL и query
+не публикуются. Любой провал проверки сохраняет откат API и блокировку frontend.
+Сообщение об откате различает health/readiness и продуктовый smoke; оно не
+доказывает, что отказ был именно в `/ready`.
+
 Обычный push в `main` выполняет 50 запросов. Для длительного наблюдения используйте
 отдельный ручной workflow `.github/workflows/verify-yandex-stage-availability.yml`.
 Он не выполняет `terraform plan/apply`, не создаёт новую ревизию и не меняет IAM:
@@ -732,8 +747,10 @@ approved enable, an existing Cloud administrator must bootstrap the private
 `fit-frontend-hourly-probe` function and grant the deployer `functions.admin`
 **only on that function**, plus the existing timer identity its scoped invoker
 binding. Do not grant folder-wide Functions admin. The deployment then maintains
-only that function policy. These one-time bindings are pending along with cost
-approval; local/mocked tests do not prove IAM authorization. Role requirements:
+only that function policy. The owner approved the bounded trial on 2026-10-07;
+the private function was bootstrapped with function-scoped deployer admin and
+timer invoker bindings. Local/mocked tests alone do not prove IAM authorization.
+Role requirements:
 [Functions access control](https://yandex.cloud/ru/docs/functions/security/).
 
 The workflow packages only the dependency-free probe modules, creates a
@@ -744,6 +761,17 @@ unchanged. An actual measured HTTP failure is valid experiment data, not a
 failed handler. Unavailable inventories or unexpected existing timer settings
 fail closed instead of creating duplicate resources. Re-enabling explicitly
 starts a new 24-hour window.
+
+YC CLI represents a timer configured with retries as
+`rule.timer.invoke_function_with_retry`, including `retry_settings` (attempts
+may be encoded as a string). Validate the target, tag, invoker and exactly one
+retry with a `10s` interval against this envelope for reuse and readback.
+Run `37652274384` created an ACTIVE timer and passed candidate smoke, but the
+initial readback validator expected the non-retry field and reported failure.
+Owner readback confirmed the reviewed settings: do not rerun `enable` merely
+to make that run green, because it would restart the observation window.
+The first window expires at `2026-10-08T16:30:27.515Z`. GitHub warmup was
+disabled at `2026-10-07T16:28:03Z`; the independent six-hour probe remains on.
 
 Each invocation makes at most two sequential GETs on one resolved Gateway IP:
 `/healthz` then `/auth`, with separate absolute 20-second deadlines and bounded

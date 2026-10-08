@@ -8,7 +8,7 @@ import { replaceExercise } from '../../data/repositories/workouts.repository'
 import type { ExerciseSnapshot, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../../shared/domain'
 import { formatLocalDate } from '../../shared/local-date'
 import { AddIcon, CopyIcon, ScheduleIcon } from '../../shared/icons'
-import { AsyncView, EmptyState, Field, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, EmptyState, Field, InlineRequestError, OverflowMenu, Page, StatePanel, useConfirm } from '../../shared/ui'
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { QuickWorkoutEntry, WorkoutCta, WorkoutExerciseEditor, WorkoutHeader, type ParsedWorkoutExercise } from '../workouts'
 import { VoiceNoteField } from '../voice-input'
@@ -86,7 +86,7 @@ function WorkoutTemplates() {
           <Link className="button secondary" to={`/workouts/new?template=${template.id}`}><ScheduleIcon />Назначить</Link></div>
       </article>)}</div> : <EmptyState title="Создайте первый шаблон" description="Соберите тренировку с нуля или сохраните готовый план клиента."
         action={<div className="template-empty-actions"><Link className="button primary" to="/schedule/templates/new/editor">Создать с нуля</Link><Link className="button secondary" to="/schedule/templates/from-workout"><CopyIcon />Из тренировки</Link></div>} />}
-      {(duplicate.error || archive.error) && <p className="error" role="alert">{(duplicate.error ?? archive.error)?.message}</p>}
+      {(duplicate.error || archive.error) && <InlineRequestError error={(duplicate.error ?? archive.error)!} />}
     </AsyncView>
     {confirmDialog}
   </Page>
@@ -239,7 +239,7 @@ function WorkoutTemplateEditor({ templateId, sourceWorkoutId, draftKey }: { temp
           {!exercises.length && <p className="workout-empty-hint">Добавьте хотя бы одно упражнение — голосом, текстом или из каталога.</p>}
           <WorkoutExerciseEditor exercises={exercises} onChange={(next) => { setExercises(next); setDirty(true) }} onOpenPicker={() => setPickerOpen(true)} onReplaceExercise={(index) => { setReplaceIndex(index); setPickerOpen(true) }} hideEmptyAddAction collapseInitialExercises={Boolean(templateId || sourceWorkoutId)} initialExercisesReady={ready} />
         </section>
-        {save.error && <p className="error" role="alert">{save.error.message}</p>}
+        {save.error && <InlineRequestError error={save.error} />}
         {draftStorageError && <p className="error" role="alert">Не удалось сохранить черновик на устройстве. Не закрывайте экран до сохранения шаблона.</p>}
         <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!name.trim() || !exercises.length}>Сохранить шаблон</WorkoutCta></div>
       </form>
