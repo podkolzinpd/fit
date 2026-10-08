@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { CLIENT_LIME_WORKOUT_EXAMPLE } from './WorkoutComposer'
 import { formatWorkoutText, parseQuickWorkoutEntry, parseStructuredQuickWorkoutEntry, splitWorkoutText, workoutCandidates } from './quick-workout-entry'
 import { rankExerciseSearch } from '../exercises/exercise-search'
 import type { ExerciseSnapshot } from '../../shared/domain'
@@ -12,6 +13,17 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('parseQuickWorkoutEntry', () => {
+  it('разбирает клиентский пример: два жима с весом и минутная планка', () => {
+    const result = parseQuickWorkoutEntry(CLIENT_LIME_WORKOUT_EXAMPLE, SYSTEM_EXERCISE_CATALOG)
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map(({ exercise }) => exercise.name)).toEqual(['Жим штанги лёжа', 'Жим гантелей сидя', 'Планка'])
+    expect(result.parsed.map(({ sets }) => sets)).toEqual([
+      Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 50, reps: 10 })),
+      Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 30, reps: 10 })),
+      Array.from({ length: 3 }, (_, position) => ({ position, durationSec: 60 })),
+    ])
+  })
+
   it('восстанавливает точную тренировку из накопительных финалов записи экрана', () => {
     const result = parseQuickWorkoutEntry([
       'Жим лежат 3 по 10 100 килограмм',
