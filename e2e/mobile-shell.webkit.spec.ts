@@ -2044,7 +2044,8 @@ test('iPhone: одиночный отдых меняется только све
   await dialog.getByRole('button', { name: 'Применить время · 0:02' }).click()
   await expect(page.locator('.live-rest-trigger').filter({ hasText: /Отдых 0:0[12]/ })).toBeVisible()
   await page.waitForTimeout(3_200)
-  await expect(page.locator('.live-rest-trigger')).not.toHaveClass(/resting|rest-overdue/)
+  await expect(page.locator('.live-rest-trigger')).toHaveClass(/rest-overdue/)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых −0:')
 
   const secondSet = page.locator('.live-set').nth(1)
   await secondSet.getByRole('button', { name: 'Готово, отдых' }).click()
@@ -2237,8 +2238,10 @@ test('iPhone: отдых начинается после последнего п
   await expect(page.locator('.live-exercise.done')).toContainText('Присед со штангой')
   await expect(page.locator('.live-exercise.current')).toContainText('Жим штанги лёжа')
   await expectNoHorizontalOverflow(page)
-  // Короткий тап заканчивает отдых — завершённое упражнение сворачивается.
+  // Без подготовки короткий тап открывает прежнюю шторку. Явная остановка
+  // отдыха сворачивает завершённое упражнение, сохраняя следующий подход.
   await page.locator('.live-rest-trigger').click()
+  await page.getByRole('dialog', { name: 'Таймер отдыха' }).getByRole('button', { name: 'Остановить отдых', exact: true }).click()
   await expect(page.locator('.live-exercise-collapsed')).toContainText('Присед со штангой')
   await expect(page.locator('.live-exercise.current')).toContainText('Жим штанги лёжа')
   await expectNoHorizontalOverflow(page)

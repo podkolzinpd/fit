@@ -200,6 +200,7 @@ const membershipSchema = z.object({
   trainerId: uuid,
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
+  displayName: z.string().optional(),
   joinedAt: yandexDateTimeSchema,
   isRoot: z.boolean(),
 })
@@ -1001,9 +1002,9 @@ export function createYandexMainRepository(
   }
   const connections = async () => {
     if (connectionsPromise) return connectionsPromise
-    const nextPromise = readJson(queries, '/v1/connections', connectionsSchema).catch((error: unknown) => {
+    // Share simultaneous reads, not a completed response for the whole session.
+    const nextPromise = readJson(queries, '/v1/connections', connectionsSchema).finally(() => {
       if (connectionsPromise === nextPromise) connectionsPromise = null
-      throw error
     })
     connectionsPromise = nextPromise
     return nextPromise
@@ -1588,6 +1589,7 @@ export function createYandexMainRepository(
             trainerId: item.trainerId,
             firstName: item.firstName,
             lastName: item.lastName,
+            displayName: item.displayName,
             joinedAt: item.joinedAt,
             isRoot: item.isRoot,
           }))

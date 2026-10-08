@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
+import type { DatabaseClient } from './types.js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
@@ -35,6 +36,7 @@ import {
 } from '../push-dispatcher-command.js'
 import { readAccessibleClients } from '../clients.js'
 import { readAccessibleConnections } from '../connections.js'
+import { readAccessibleChatThreads } from '../pilot-chat.js'
 import {
   claimClientInvitation,
   claimClientInvitationLink,
@@ -1316,6 +1318,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('uses published trainer identity consistently in connections and chat without exposing drafts', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const db = await ownerPool.connect()
+      const trainerId = randomUUID()
+      const secondTrainerId = randomUUID()
+      const clientUserId = randomUUID()
+      const clientId = randomUUID()
+      const reader: DatabaseClient = { query: async <Row extends QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+        (await db.query<Row>(sql, values ? [...values] : undefined)).rows }
+      try {
+        await db.query('begin')
+        await db.query(`insert into public.profiles(id, first_name, account_role)
+          values($1,null,'trainer'),($2,'Анна','trainer'),($3,'Synthetic athlete','client')`, [trainerId, secondTrainerId, clientUserId])
+        await db.query('insert into public.trainers(profile_id) values($1),($2)', [trainerId, secondTrainerId])
+        await db.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name)
+          values($1,$2,$3,'Synthetic trainer name test')`, [clientId, trainerId, clientUserId])
+        await db.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [clientId, secondTrainerId])
+        await db.query(`insert into public.trainer_professional_profiles(trainer_id,draft_data,published_data,published_at)
+          values($1,'{"displayName":"Private draft name"}','{"displayName":"Татьяна"}',now()),
+          ($2,'{"displayName":"Private unpublished name"}',null,null)`, [trainerId, secondTrainerId])
+        await db.query('set local role fit_api')
+        const actor = (id: string) => db.query("select set_config('request.jwt.claim.sub',$1,true)", [id])
+        const names = async () => {
+          const connections = await readAccessibleConnections(reader)
+          const threads = await readAccessibleChatThreads(reader)
+          return { card: connections.memberships.find(row => row.trainerId === trainerId)?.displayName,
+            chat: threads.find(row => row.trainerId === trainerId)?.partnerName,
+            secondCard: connections.memberships.find(row => row.trainerId === secondTrainerId)?.displayName,
+            secondChat: threads.find(row => row.trainerId === secondTrainerId)?.partnerName }
+        }
+        await actor(clientUserId)
+        expect(await names()).toEqual({ card: 'Татьяна', chat: 'Татьяна', secondCard: 'Анна', secondChat: 'Анна' })
+        expect((await db.query('select trainer_id from public.trainer_professional_profiles where trainer_id=$1', [secondTrainerId])).rows).toEqual([])
+        await actor(trainerId)
+        await db.query(`update public.trainer_professional_profiles set draft_data='{"displayName":"Changed private name"}' where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect((await names()).card).toBe('Татьяна')
+        await actor(trainerId)
+        await db.query(`update public.trainer_professional_profiles set published_data='{"displayName":"Татьяна Александровна"}' where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect(await names()).toMatchObject({ card: 'Татьяна Александровна', chat: 'Татьяна Александровна' })
+        await actor(trainerId)
+        expect((await readAccessibleChatThreads(reader)).find(row => row.clientId === clientId)?.partnerName).toBe('Synthetic athlete')
+        await db.query(`update public.trainer_professional_profiles set published_data=null, published_at=null where trainer_id=auth.uid()`)
+        await actor(clientUserId)
+        expect(await names()).toMatchObject({ card: 'Тренер', chat: 'Тренер' })
+      } finally {
+        await db.query('rollback')
+        db.release()
+      }
+    })
+
     describe('trainer profile first-write concurrency', () => {
       let photoPool: PgDatabasePool
       let profileId: string
@@ -1574,6 +1628,68 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(await bind('bind_fit_lime_for_yandex_login', subjects[2]!, logins[2]!)).toBe(true)
         expect(await flags(profiles[2]!)).toEqual({ schedule: true, lime: false })
         for (const profile of profiles.slice(0, 2)) expect(await flags(profile)).toEqual({ schedule: true, lime: true })
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+
+    it('keeps Lime pilots on installation and provides role-scoped all/off controls with owner-only rollback', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const connection = await ownerPool.connect()
+      const clientId = randomUUID()
+      const trainerId = randomUUID()
+      const newClientId = randomUUID()
+      const readFlags = async (id: string) => {
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [id])
+        await connection.query('set local role fit_api')
+        const result = (await connection.query<{ client: boolean; trainer: boolean; schedule: boolean }>('select app_private.client_lime_enabled() client, app_private.fit_lime_enabled() trainer, app_private.trainer_schedule_v2_enabled() schedule')).rows[0]
+        await connection.query('reset role')
+        return result
+      }
+      const setMode = async (target: string, mode: string, revision: number) =>
+        (await connection.query<{ client_mode: string; trainer_mode: string; schedule_mode: string; revision: number }>('select * from app_private.set_lime_rollout_mode($1, $2, $3)', [target, mode, revision])).rows[0]
+      try {
+        await connection.query('begin')
+        expect((await connection.query('select client_mode, trainer_mode, schedule_mode, revision from app_private.lime_rollout_controls')).rows[0])
+          .toEqual({ client_mode: 'pilot', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 0 })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client'), ($2, 'trainer')", [clientId, trainerId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        for (const sql of ['select * from app_private.lime_rollout_controls', "select * from app_private.set_lime_rollout_mode('client', 'all', 0)"] ) {
+          await connection.query('savepoint forbidden')
+          await connection.query('set local role fit_api')
+          await expect(connection.query(sql)).rejects.toMatchObject({ code: '42501' })
+          await connection.query('rollback to savepoint forbidden')
+        }
+        expect(await setMode('client', 'all', 0)).toEqual({ client_mode: 'all', trainer_mode: 'pilot', schedule_mode: 'pilot', revision: 1 })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query("insert into public.profiles (id, account_role) values ($1, 'client')", [newClientId])
+        expect(await readFlags(newClientId)).toEqual({ client: true, trainer: false, schedule: false })
+        expect(await readFlags(randomUUID())).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('savepoint stale')
+        await expect(setMode('trainer', 'all', 0)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint stale')
+        expect(await setMode('trainer', 'all', 1)).toEqual({ client_mode: 'all', trainer_mode: 'all', schedule_mode: 'all', revision: 2 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: true, schedule: true })
+        expect(await readFlags(clientId)).toEqual({ client: true, trainer: false, schedule: false })
+        await connection.query('savepoint dependency')
+        await expect(setMode('trainer-schedule', 'off', 2)).rejects.toMatchObject({ code: 'PT409' })
+        await connection.query('rollback to savepoint dependency')
+        expect(await setMode('trainer', 'off', 2)).toEqual({ client_mode: 'all', trainer_mode: 'off', schedule_mode: 'all', revision: 3 })
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: true })
+        await setMode('client', 'off', 3)
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        // Re-entry cannot reset these controls: the login binder never writes this table.
+        await connection.query("select set_config('request.jwt.claim.sub', $1, true)", [clientId])
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
+        await setMode('client', 'pilot', 4)
+        await setMode('trainer', 'pilot', 5)
+        await setMode('trainer-schedule', 'pilot', 6)
+        expect(await readFlags(trainerId)).toEqual({ client: false, trainer: false, schedule: false })
+        await connection.query('delete from app_private.lime_rollout_controls')
+        expect(await readFlags(clientId)).toEqual({ client: false, trainer: false, schedule: false })
       } finally {
         await connection.query('rollback')
         connection.release()

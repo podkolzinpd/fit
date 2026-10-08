@@ -12,6 +12,7 @@ import { DatabaseStageRolloutAssignmentManager } from './db/stage-rollout-assign
 import { DatabaseStageCalorieAuditor } from './db/workout-calorie-audit.js'
 import { DatabaseTrainerScheduleV2PilotManager } from './db/trainer-schedule-v2-pilot.js'
 import { DatabaseFitLimePilotManager } from './db/fit-lime-pilot.js'
+import { DatabaseLimeRolloutManager } from './db/lime-rollout.js'
 import { DatabaseTrainerLimeCohortManager } from './db/trainer-lime-cohort.js'
 import { DatabaseFitLimeCalendarManager } from './db/fit-lime-calendar-fixtures.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
@@ -166,6 +167,8 @@ const app = buildMigrationApp({
           new DatabaseTrainerScheduleV2PilotManager(privateFeaturePool),
         fitLimePilot:
           new DatabaseFitLimePilotManager(privateFeaturePool),
+        limeRollout:
+          new DatabaseLimeRolloutManager(privateFeaturePool),
         trainerLimeCohort:
           new DatabaseTrainerLimeCohortManager(privateFeaturePool),
         fitLimeCalendar:

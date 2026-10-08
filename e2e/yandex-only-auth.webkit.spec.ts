@@ -16,6 +16,97 @@ if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
 
 const legacyRequestCounts = new WeakMap<object, number>()
 
+for (const lime of [false, true]) {
+  test(`Yandex trainer display name refreshes in profile and chat (${lime ? 'lime' : 'mono'})`, async ({ page }, testInfo) => {
+    test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
+      || process.env.VITE_YANDEX_MAIN_ROUTING_ENABLED !== 'true', 'Requires the Yandex auth lane.')
+    const actorId = '22e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
+    const clientId = '33e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
+    const trainerId = '11e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
+    const conversationId = '44e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
+    let displayName = 'Татьяна'
+    let connectionsReads = 0
+    let failConnections = false
+    await page.route('https://stage.example.test/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: {
+      'x-fit-request-id': 'synthetic-health', 'access-control-expose-headers': 'x-fit-request-id',
+    } }))
+    await page.route('https://stage.example.test/v1/**', (route) => {
+      const path = new URL(route.request().url()).pathname
+      if (path === '/v1/auth/yandex/session') return route.fulfill({ json: {
+        accessMode: 'read_write', profile: { id: actorId, firstName: 'Тестовый клиент',
+          lastName: null, timezone: 'Europe/Moscow', accountRole: 'client',
+          client: { id: clientId, trainerId, fullName: 'Тестовый клиент' },
+          experiments: { clientLime: lime, fitLime: false, trainerScheduleV2: false } },
+      } })
+      if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
+      if (path === '/v1/clients') return route.fulfill({ json: { clients: [{
+        id: clientId, canArchive: false, hasAccount: true, fullName: 'Тестовый клиент', canonicalFullName: 'Тестовый клиент',
+        gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+        currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: null,
+      }] } })
+      if (path === '/v1/me/finance') return route.fulfill({ json: { finance: { trainers: [] } } })
+      if (path === '/v1/chat/conversations') return route.fulfill({ json: { conversationId } })
+      if (path === '/v1/connections') {
+        connectionsReads += 1
+        if (failConnections) return route.fulfill({ status: 403, json: { error: 'forbidden' } })
+        return route.fulfill({ json: { memberships: [{ clientId, trainerId, firstName: null, lastName: null,
+          displayName, joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [] } })
+      }
+      if (path === '/v1/chat/threads') return route.fulfill({ json: { threads: [{
+        conversationId, clientId, trainerId, partnerUserId: trainerId, partnerName: displayName,
+        activeConnection: true, lastMessageBody: null, lastMessageAt: null, lastMessageSenderId: null,
+        unreadCount: 0, canMessage: true, blockedByMe: false, blockedByPartner: false,
+      }] } })
+      if (path === `/v1/chat/conversations/${conversationId}/messages`) return route.fulfill({ json: { messages: [], nextCursor: null } })
+      if (path === `/v1/chat/conversations/${conversationId}/connection`) return route.fulfill({ json: { state: {
+        activeConnection: true, invitationPending: false, invitedAt: null, canInvite: false, canAccept: false, trainerSwitchRequired: false,
+      } } })
+      if (path === `/v1/chat/conversations/${conversationId}/unread`) return route.fulfill({ json: { unread: { firstMessageId: null, firstCreatedAt: null, unreadCount: 0 } } })
+      if (path === '/v1/push/status') return route.fulfill({ json: { subscribed: false } })
+      return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    })
+    await page.addInitScript(() => {
+      localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
+    })
+    await page.goto('/me/profile')
+    await expect(page.locator('.client-trainer-connection-card')).toBeVisible()
+    await expect(page.locator('html')).toHaveClass(lime ? /fit-client-lime-document/ : /^(?!.*fit-client-lime-document)/)
+    await page.screenshot({ path: testInfo.outputPath('trainer-name-initial.png'), fullPage: true })
+    await expect(page.locator('.client-trainer-person strong')).toHaveText('Татьяна')
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 932 })
+      await page.screenshot({ path: testInfo.outputPath(`trainer-name-profile-${width}.png`), fullPage: true })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    await page.getByRole('link', { name: 'Настройки профиля' }).click()
+    await expect(page).toHaveURL(/\/me\/settings$/)
+    // URL changes before a cold lazy route commits. Wait until the profile really unmounts.
+    await expect(page.locator('.client-trainer-connection-card')).toHaveCount(0)
+    displayName = 'Татьяна Александровна Длинное Проверочное Имя'
+    await page.goBack()
+    await expect(page).toHaveURL(/\/me\/profile$/)
+    await expect(page.locator('.client-trainer-person strong')).toHaveText(displayName)
+    await page.screenshot({ path: testInfo.outputPath('trainer-name-renamed.png'), fullPage: true })
+    expect(connectionsReads).toBeGreaterThan(1)
+    await page.getByRole('button', { name: 'Написать' }).click()
+    await expect(page.getByRole('heading', { name: displayName, exact: true })).toBeVisible()
+    await expect(page.getByText('Напишите первое сообщение.', { exact: true })).toBeVisible()
+    await expect(page.locator('.chat-conversation-page .error')).toHaveCount(0)
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 932 })
+      await page.screenshot({ path: testInfo.outputPath(`trainer-name-chat-${width}.png`), fullPage: true })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    failConnections = true
+    await page.goBack()
+    await expect(page.locator('.client-home-connections .error')).toBeVisible()
+    failConnections = false
+    await page.locator('.client-home-connections').getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect(page.locator('.client-home-connections .error')).toHaveCount(0)
+    await expect(page.locator('.client-trainer-person strong')).toHaveText(displayName)
+  })
+}
+
 test.beforeEach(async ({ page }) => {
   legacyRequestCounts.set(page, 0)
   await page.route(/^https?:\/\/(?:127\.0\.0\.1|localhost):54321(?:\/|$)/, (route) => {

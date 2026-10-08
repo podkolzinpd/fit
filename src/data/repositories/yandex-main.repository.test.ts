@@ -121,6 +121,25 @@ describe('Yandex main repository', () => {
     expect(writes[0]?.[1]?.body).toBe(JSON.stringify({ expectedVersion: 7 }))
   })
 
+  it('refreshes trainer names on later reads while sharing simultaneous connections requests', async () => {
+    let displayName = 'Татьяна'
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(jsonResponse({
+      memberships: [{ clientId, trainerId: actor.userId, firstName: null, lastName: null, displayName,
+        joinedAt: '2026-10-07T10:00:00Z', isRoot: true }], invitations: [],
+    })))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const [trainers] = await Promise.all([repository.invitations.listTrainers(clientId), repository.invitations.list(clientId)])
+    expect(trainers[0]?.displayName).toBe('Татьяна')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    displayName = 'Татьяна Александровна'
+    expect((await repository.invitations.listTrainers(clientId))[0]?.displayName).toBe(displayName)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403))
+    await expect(repository.invitations.listTrainers(clientId)).rejects.toThrow()
+    expect((await repository.invitations.listTrainers(clientId))[0]?.displayName).toBe(displayName)
+  })
+
   it('reads records of an old workout in one request without the first Progress page', async () => {
     const records = [{ exerciseRef: 'squat', exerciseName: 'Приседание', inputKind: 'strength',
       metric: 'weight_reps', primaryValue: 600, weightKg: 60, reps: 10 }]

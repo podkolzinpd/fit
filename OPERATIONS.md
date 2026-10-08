@@ -732,8 +732,10 @@ approved enable, an existing Cloud administrator must bootstrap the private
 `fit-frontend-hourly-probe` function and grant the deployer `functions.admin`
 **only on that function**, plus the existing timer identity its scoped invoker
 binding. Do not grant folder-wide Functions admin. The deployment then maintains
-only that function policy. These one-time bindings are pending along with cost
-approval; local/mocked tests do not prove IAM authorization. Role requirements:
+only that function policy. The owner approved the bounded trial on 2026-10-07;
+the private function was bootstrapped with function-scoped deployer admin and
+timer invoker bindings. Local/mocked tests alone do not prove IAM authorization.
+Role requirements:
 [Functions access control](https://yandex.cloud/ru/docs/functions/security/).
 
 The workflow packages only the dependency-free probe modules, creates a
@@ -744,6 +746,17 @@ unchanged. An actual measured HTTP failure is valid experiment data, not a
 failed handler. Unavailable inventories or unexpected existing timer settings
 fail closed instead of creating duplicate resources. Re-enabling explicitly
 starts a new 24-hour window.
+
+YC CLI represents a timer configured with retries as
+`rule.timer.invoke_function_with_retry`, including `retry_settings` (attempts
+may be encoded as a string). Validate the target, tag, invoker and exactly one
+retry with a `10s` interval against this envelope for reuse and readback.
+Run `37652274384` created an ACTIVE timer and passed candidate smoke, but the
+initial readback validator expected the non-retry field and reported failure.
+Owner readback confirmed the reviewed settings: do not rerun `enable` merely
+to make that run green, because it would restart the observation window.
+The first window expires at `2026-10-08T16:30:27.515Z`. GitHub warmup was
+disabled at `2026-10-07T16:28:03Z`; the independent six-hour probe remains on.
 
 Each invocation makes at most two sequential GETs on one resolved Gateway IP:
 `/healthz` then `/auth`, with separate absolute 20-second deadlines and bounded
@@ -1362,3 +1375,54 @@ not undo a disabled assignment. Data ownership and RLS remain unchanged.
 Stages 1–4 remain off. Stage 5 deploys the API/migration first, verifies its
 release, then enables the frontend switch and redeploys the green main.
 Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
+
+## Independent Lime rollout controls (prepared, activation requires owner approval)
+
+The Yandex-only `app_private.lime_rollout_controls` singleton starts at
+`client_mode=pilot`, `trainer_mode=pilot`, `schedule_mode=pilot`, revision 0.
+Installing or redeploying it preserves the reviewed cohorts. Never change this
+seed to `all`; never reset controls in login binders. The client frontend build
+switch `VITE_CLIENT_LIME_ENABLED=true` remains an additional prerequisite.
+
+The existing IAM-protected migration owner container exposes
+`POST /stage/experiments/lime-rollout` only when private rollout management is
+configured. The public runtime has neither direct table access nor permission
+to execute the setter. Inspect: `{target:"client",mode:"inspect"}`. Mutations
+require target (`client`, `trainer`, `trainer-schedule`), mode (`pilot`, `all`,
+`off`), the inspected `expectedRevision`, and the exact confirmation
+`SET_<TARGET>_LIME_<MODE>` (upper case, hyphen replaced with underscore).
+Use the prepared main-only manual workflows, never production Dashboard SQL.
+
+Trainer `all` atomically sets schedule `all`, preserving its existing shell
+requirement. Disabling trainer presentation does not reset the calendar:
+rollback schedule separately after leaving trainer `all`. Existing title/date
+gates now apply to trainers admitted by `all`, using their unchanged algorithms.
+No product records are rewritten by activation. Client changes never change
+trainer/schedule modes. Revision conflict is HTTP409: inspect and obtain a fresh
+explicit decision; never retry a stale mutation. If a request times out, inspect
+before retrying: an unknown outcome is not evidence of failure.
+
+Settings survive logins and deployments. An open client picks up flags on
+existing actor refresh, page reload or a new login; this mechanism does not
+promise a live broadcast. Read back the expected modes/revision after every
+operation. Test public `/profile` role-specific experiments separately; private
+configuration readback alone does not prove real OAuth/device acceptance.
+
+Owner instruction 2026-10-07: no activation or cohort expansion without a new
+explicit OK. Production remains in the existing pilot until then.
+
+Client operation: Actions → Manage client Lime rollout. First run `inspect`
+with empty confirmation/revision. After an explicit new human OK only, run
+`all` with the reported revision and `SET_CLIENT_LIME_ALL`. Rollback uses `off`
+(`SET_CLIENT_LIME_OFF`) or `pilot` (`SET_CLIENT_LIME_PILOT`) and a freshly
+inspected revision. Never automatically replay a failed/unknown operation.
+Merge or frontend deployment alone does not dispatch this workflow.
+
+Trainer operation: Actions → Manage trainer Lime rollout, target=trainer.
+Use inspect first. Only after a new human OK, `all` with the inspected revision
+and `SET_TRAINER_LIME_ALL` atomically enables trainer presentation + Schedule V2.
+`SET_TRAINER_LIME_OFF`/`SET_TRAINER_LIME_PILOT` restores presentation separately.
+If calendar rollback is also requested, leave trainer all first, then inspect
+and choose target=trainer-schedule with mode=pilot and
+`SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
+The trainer workflow rejects client targets. No operation has been dispatched.

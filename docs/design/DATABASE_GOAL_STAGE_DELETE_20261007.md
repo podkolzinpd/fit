@@ -45,6 +45,14 @@ API, Supabase migration, экранов, CSS и прав.
 без пересечения с этой задачей. Повторный полный API-набор1211/1211 passed;
 миграции и frontend task diff не менялись. CI запускается на объединённом head.
 
+2026-10-08: конфликты PR#1503 разрешены от main `b7710c43`. Сохранены оба
+repository-набора (удаление этапа и обновление имени тренера), parity и snapshot.
+После объединения repository/component57/57, WebKit trainer/client2/2 и clean
+Podman PostgreSQL17 chain через000137/actor131/131 passed. Полный `npm run check`
+passed: frontend2534/API1238, lint/typecheck/coverage/policy/hosting/build/startup.
+Migration safety относительно origin/main:0; diff-check passed. Новая проверка
+CI запускается после push; merge и production этим исправлением не выполняются.
+
 Схема БД и API не менялись: новая migration/local:verify не требуются.
 Изолированная тестовая БД удалена; общая legacy БД не сбрасывалась.
 Production, реальный OAuth и физические mobile устройства не проверены.

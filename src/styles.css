@@ -6279,6 +6279,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-rest-trigger { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 56px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .live-rest-trigger svg { width: 20px; height: 20px; flex: none; }
 .live-timer-toolbar .coachmark-anchor, .live-timer-toolbar .live-rest-trigger { width: 100%; }
+.live-timer-toolbar .coachmark-anchor { display: flex; align-items: stretch; }
+.live-identity .live-timer-toolbar button.live-rest-trigger { min-height: 56px; }
 .live-rest-sheet { display: grid; gap: 16px; }
 .live-rest-sheet button { min-height: 48px; }
 .live-rest-sheet .picker-close { width: 48px; height: 48px; }
@@ -6850,7 +6852,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-empty-start .primary { min-height:48px; margin:0; }
 .live-empty-start .live-empty-error { color:var(--danger); font-size:13px; line-height:1.4; }
 .live-identity .live-pinned-empty .live-timer-toolbar .live-timer { min-height:48px; font-size:22px; }
-.live-pinned-empty .live-rest-trigger { min-height:48px; }
+.live-identity .live-pinned-empty .live-timer-toolbar button.live-rest-trigger { min-height:48px; }
 .live-identity .live-bottom-bar-empty { justify-items:end; padding:8px 16px calc(8px + env(safe-area-inset-bottom)); }
 .live-bottom-bar-empty .live-sync-state { width:100%; }
 .live-empty-delete { display:grid; place-items:center; width:48px; min-height:48px; padding:0; border:0; border-radius:14px; background:transparent; color:var(--danger); }
