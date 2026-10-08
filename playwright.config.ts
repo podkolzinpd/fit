@@ -9,7 +9,10 @@ export default defineConfig({
   use: { baseURL: `http://127.0.0.1:${testPort}`, trace: 'on-first-retry' },
   // Проверяем тот же Today-старт, который получают пользователи по умолчанию.
   // Устаревший rollout-флаг здесь маскировал регрессии нового основного сценария.
-  webServer: { command: `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI },
+  webServer: { command: `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI,
+    // Synthetic fixture identities only; never used in a production build.
+    env: { VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002' },
+  },
   projects: [
     { name: 'lime-acceptance-webkit', testMatch: /trainer-schedule-v2\.visual\.spec\.ts/, use: { ...devices['iPhone 13'] } },
     { name: 'lime-figma-webkit', testMatch: /trainer-schedule-v2\.visual\.spec\.ts/, grep: /Figma (foundation|calendar|workout|trainer routes)/, use: { ...devices['iPhone 13'] } },

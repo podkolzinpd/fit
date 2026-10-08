@@ -15,6 +15,7 @@ import { DatabaseFitLimePilotManager } from './db/fit-lime-pilot.js'
 import { DatabaseLimeRolloutManager } from './db/lime-rollout.js'
 import { DatabaseTrainerLimeCohortManager } from './db/trainer-lime-cohort.js'
 import { DatabaseFitLimeCalendarManager } from './db/fit-lime-calendar-fixtures.js'
+import { inspectCoachWorkoutPilot } from './db/coach-workout-pilot.js'
 import { DatabaseStageWorkoutFixtureLoader } from './db/stage-workout-fixture.js'
 import { DatabaseYandexIdentityUnlinkManager } from './db/yandex-identity-unlink.js'
 import { DatabasePilotEnroller } from './db/yandex-pilot-enrollment.js'
@@ -173,6 +174,7 @@ const app = buildMigrationApp({
           new DatabaseTrainerLimeCohortManager(privateFeaturePool),
         fitLimeCalendar:
           new DatabaseFitLimeCalendarManager(privateFeaturePool),
+        coachWorkoutPilot: () => inspectCoachWorkoutPilot(privateFeaturePool),
       }),
   ...(privateFeaturePool === undefined || !yandexIdentityUnlinkEnabled
     ? {}

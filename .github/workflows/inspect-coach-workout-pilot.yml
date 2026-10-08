@@ -1,0 +1,57 @@
+name: Inspect coach workout pilot
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+  AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require current main operation
+        run: test "$GITHUB_REF" = refs/heads/main
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - name: Exchange GitHub OIDC for short-lived IAM
+        run: scripts/yandex-github-oidc.sh
+      - name: Read existing private runner address
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Read only the fixed two-trainer UUID cohort
+        run: |
+          set -euo pipefail
+          umask 077
+          migration_url=$(terraform -chdir=infra/yandex output -raw migration_container_url)
+          for response in coach-workout-pilot.json coach-workout-readback.json; do
+            status=$(curl --silent --show-error --max-time 120 \
+              --output "$response" --write-out '%{http_code}' \
+              --header "Authorization: Bearer $YC_TOKEN" \
+              "${migration_url%/}/stage/experiments/coach-workout-pilot")
+            test "$status" = 200
+            jq -e '.status == "coach_workout_pilot_ready" and (.profileIds | length == 2) and (.profileIds | unique | length == 2)' "$response" >/dev/null
+          done
+          diff <(jq -S '.profileIds' coach-workout-pilot.json) <(jq -S '.profileIds' coach-workout-readback.json)
+          echo 'Verified exactly two pre-approved trainer UUIDs; no data changes.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coach-workout-pilot-ids
+          path: coach-workout-pilot.json
+          retention-days: 1

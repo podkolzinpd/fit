@@ -16,6 +16,55 @@ const newWorkoutId = '10000000-0000-4000-8000-000000000006'
 const customExerciseId = '10000000-0000-4000-8000-000000000070'
 const sessionToken = 's'.repeat(43)
 
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference Live geometry and rest ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    await page.clock.install({ time: new Date('2026-10-08T08:59:00Z') })
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true,
+      workouts: [{ ...restTimerWorkout(), startedAt: '2026-10-08T08:00:00Z' }] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.coach-workout-reference')).toBeVisible()
+    await page.clock.pauseAt(new Date('2026-10-08T09:00:00Z'))
+    await expect(page.locator('.coach-live-digits')).toHaveText('1:00:00')
+    await page.evaluate(() => document.fonts.ready)
+    expect(await page.evaluate(() => document.fonts.check('700 96px Doto'))).toBe(true)
+    await page.screenshot({ path: info.outputPath('coach-reference-active.png'), fullPage: true })
+    const sizes = await page.locator('.live-set-input, .live-set-check').evaluateAll((fields) => fields.map((field) => ({
+      height: field.getBoundingClientRect().height, font: getComputedStyle(field).fontSize,
+    })))
+    expect(sizes.length).toBeGreaterThan(0)
+    expect(sizes.every((field) => field.height === 48)).toBe(true)
+    expect(await page.locator('.coach-live-digits').evaluate((field) => getComputedStyle(field).fontFamily)).toContain('Doto')
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
+    await page.clock.fastForward(4_000)
+    await expect(page.locator('.coach-live-digits')).toHaveText('−00:02')
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+    await expect(page.locator('.coach-live-status')).toHaveText('Отдых')
+    await expect(page.locator('.live-rest-trigger')).toHaveCSS('background-color', 'rgba(248, 176, 33, 0.2)')
+    await expect(page.locator('.live-rest-trigger')).toHaveCSS('animation-name', 'none')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('coach-reference-live.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).first().click()
+    await expect(page.locator('.finish-confirm')).toBeVisible()
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    await expect(page.locator('.coach-live-digits')).toBeVisible()
+  })
+}
+for (const [role, profileId, expected] of [
+  ['trainer', 'c0ac0000-6010-4000-8000-000000000002', true],
+  ['trainer', trainerId, false],
+  ['client', 'c0ac0000-6010-4000-8000-000000000001', false],
+] as const) {
+  test(`Figma workout Coach reference direct route boundary ${role} ${profileId}`, async ({ page }) => {
+    await mockPilot(page, { role, profileId, fitLime: true, workouts: [restTimerWorkout()] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-rest-trigger')).toBeVisible()
+    await expect(page.locator('.coach-live-digits')).toHaveCount(expected ? 1 : 0)
+    await expect(page.locator('.coach-workout-reference')).toHaveCount(expected ? 1 : 0)
+  })
+}
+
 for (const width of [390, 430, 1440]) for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark']] as const) {
   test(`Finance due date client cards ${width} lime=${fitLime} ${theme}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })

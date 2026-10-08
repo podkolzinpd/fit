@@ -1,5 +1,6 @@
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { isClientLimeEnabled } from '../../app/client-lime'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { WhistleIcon } from '../../shared/icons'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
@@ -2571,6 +2572,7 @@ export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const clientLime = isClientLimeEnabled(actor)
+  const coachReference = isCoachWorkoutRedesignEnabled(actor)
   const { keyboardOpen } = useAppViewport()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
@@ -3687,14 +3689,19 @@ export function LiveWorkoutPage() {
     setRestPickerSeconds(seconds)
     if (contextualSingleExercise) setExerciseRest(contextualSingleExercise.id, seconds)
   }
+  const liveHeader = query.data && <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" showStatus={query.data.exercises.length > 0} className="live-session-header" meta={<><span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{sessionProgress.setCount > 0 ? <div className="live-session-progress">
+    <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
+    <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
+  </div> : null}</>} />
   // Back returns to the entry screen without finishing. A direct Live link
   // falls back to its workout detail because the tab bar is hidden here.
-  return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}>
+  return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}
+    action={coachReference && query.data ? <>
+      <span className={`coach-live-status${restEndsAt !== null && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : restEndsAt !== null ? 'Отдых' : 'Live'}</span>
+      <button type="button" className="coach-live-finish" aria-label="Завершить тренировку" disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}><CheckIcon /></button>
+    </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
-      <WorkoutHeader eyebrow="LIVE" title={query.data.clientName} state="current" showStatus={query.data.exercises.length > 0} className="live-session-header" meta={<><span>{workoutTrainingFormatLabel(query.data.trainingFormat ?? 'self')}</span>{sessionProgress.setCount > 0 ? <div className="live-session-progress">
-        <span className="live-session-progress-copy"><span>{sessionProgress.complete ? 'Все упражнения выполнены' : activeLiveExercise ? `Сейчас: ${activeLiveExercise.name} · подход ${sessionProgress.activeSetNumber} из ${sessionProgress.activeExerciseSetCount}` : 'Выберите упражнение'}</span><strong>Готово {sessionProgress.completedSetCount} из {sessionProgress.setCount}</strong></span>
-        <span className="live-session-progress-track" role="progressbar" aria-label="Выполненные подходы" aria-valuemin={0} aria-valuemax={sessionProgress.setCount} aria-valuenow={sessionProgress.completedSetCount}><span style={{ width: `${sessionProgress.percent}%` }} /></span>
-      </div> : null}</>} />
+      {!coachReference && liveHeader}
       {inactivityReminder.visible && <section className="live-inactivity-reminder" role="alert" aria-labelledby="live-inactivity-reminder-title">
         <div><strong id="live-inactivity-reminder-title">Тренировка ещё идёт</strong><span>Продолжить или завершить её?</span></div>
         <div className="actions">
@@ -3713,11 +3720,12 @@ export function LiveWorkoutPage() {
         const circuitCurrent = circuitRounds ? currentRoundIndex(circuitRounds) : 0
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
-        <div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
-          <div className="live-timer-toolbar"><WorkoutTimer startedAt={query.data.startedAt ?? null} />
+        <><div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
+          <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} />}
             <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
-                phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire} />
+                phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
+                referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} />
             </Coachmark>
           </div>
           {phaseNotice && <div className="live-phase-notice" role="status">
@@ -3729,7 +3737,7 @@ export function LiveWorkoutPage() {
             <span className="circuit-counter">Круг {circuitRounds[circuitCurrent]?.round ?? 1} из {circuitRounds.length}</span>
             <span className="circuit-dots" aria-hidden="true">{circuitRounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === circuitCurrent ? 'current' : ''}`} />)}</span>
           </div>}
-        </div>)
+        </div>{coachReference && liveHeader}</>)
       })()}
       {reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);

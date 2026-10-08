@@ -5,6 +5,14 @@ export function isMaintenanceModeEnabled(): boolean {
   return import.meta.env.VITE_MAINTENANCE_MODE === 'true'
 }
 
+// Independent, default-off UI pilot. An empty/misconfigured cohort never means all.
+export function isCoachWorkoutRedesignPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_COACH_WORKOUT_REDESIGN_ENABLED !== 'true') return false
+  const ids = String(import.meta.env.VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS ?? '')
+    .split(',').map((id) => id.trim()).filter(Boolean)
+  return ids.length === 2 && new Set(ids).size === 2 && ids.includes(userId)
+}
+
 // Флаг позволяет включать новый стартовый путь постепенно и мгновенно
 // возвращать прежнее поведение без изменения роутинга. По умолчанию новый
 // экран включён; для отката в окружении сборки задаётся "false".

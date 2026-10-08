@@ -13,6 +13,19 @@ const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+test('coach workout identity inspection is manual, read-only and fixed-cohort', () => {
+  const source = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'inspect-coach-workout-pilot.yml'), 'utf8')
+  assert.match(source, /workflow_dispatch:/)
+  assert.match(source, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(source, /\/stage\/experiments\/coach-workout-pilot/)
+  assert.match(source, /profileIds \| length == 2/)
+  assert.match(source, /profileIds \| unique \| length == 2/)
+  assert.match(source, /coach-workout-readback\.json/)
+  assert.doesNotMatch(source, /--request POST|--data|terraform apply|TARGET_EMAIL|SUPABASE|psql/)
+  const frontend = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-frontend.yml'), 'utf8')
+  assert.match(frontend, /VITE_COACH_WORKOUT_REDESIGN_ENABLED:.*\|\| 'false'/)
+  assert.match(frontend, /VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS:.*\|\| ''/)
+})
 const trainerSchedulePilotWorkflow = readFileSync(
   join(
     import.meta.dirname,

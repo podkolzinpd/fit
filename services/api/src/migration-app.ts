@@ -77,6 +77,7 @@ interface BuildMigrationAppOptions {
   limeRollout?: LimeRolloutManager
   trainerLimeCohort?: TrainerLimeCohortManager
   fitLimeCalendar?: FitLimeCalendarManager
+  coachWorkoutPilot?: () => Promise<string[]>
   runMigrations: () => Promise<readonly string[]>
   runtimeDatabaseReadiness?: (
     sessionToken: string,
@@ -624,6 +625,15 @@ export function buildMigrationApp(
 
   // Exposed only on the existing IAM-protected migration runner, never the
   // public application API. Targets are fixed server-side, not request IDs.
+  if (options.coachWorkoutPilot !== undefined) {
+    const inspect = options.coachWorkoutPilot
+    app.get('/stage/experiments/coach-workout-pilot', async (request, reply) => {
+      if (Object.keys(request.query as object).length) return reply.code(400).send({ status: 'invalid_request' })
+      try { return { status: 'coach_workout_pilot_ready', profileIds: await inspect() } }
+      catch { return reply.code(409).send({ status: 'coach_workout_pilot_not_ready' }) }
+    })
+  }
+
   if (options.fitLimeCalendar !== undefined) {
     const calendar = options.fitLimeCalendar
     app.post('/stage/experiments/fit-lime-calendar', async (request, reply) => {

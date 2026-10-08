@@ -1,0 +1,32 @@
+/* YAFIT-601. Independent two-trainer pilot; never restyle the global Lime cohort. */
+@font-face {
+  font-family: 'Doto';
+  src: url('../assets/fonts/doto/Doto.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+.coach-workout-reference.live-identity .live-workout-page { padding-inline: 16px }
+.coach-workout-reference.live-identity { --bg: #000; --lime-bg: #000 }
+.coach-workout-reference.live-identity .live-pinned { position: static }
+/* Keep the reference clock out of the keyboard's working area. No new animation. */
+.coach-workout-reference.live-identity.keyboard-open .coach-live-clock { min-height: 64px; margin-block: 4px 8px }
+.coach-workout-reference.live-identity.keyboard-open .coach-live-digits { font-size: 48px; line-height: 56px }
+.coach-workout-reference.live-identity .live-workout-page > .page-header { position: relative; min-height: 44px; margin-bottom: 20px }
+.coach-workout-reference.live-identity .page-back { border: 0; background: transparent; border-radius: 99px }
+.coach-workout-reference.live-identity .coach-live-finish { margin-left: auto; width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; border-radius: 99px; color: #fff; background: #1a1a1c }
+.coach-workout-reference.live-identity .coach-live-status { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; color: #b6ef4d; font-size: 16px; font-weight: 400; line-height: 16px; pointer-events: none }
+.coach-workout-reference.live-identity .coach-live-status > span { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 5px rgb(182 239 77 / 20%) }
+.coach-workout-reference.live-identity .coach-live-status.resting { color: #f8b021 }
+.coach-workout-reference.live-identity .coach-live-status.resting > span { box-shadow: 0 0 0 5px rgb(248 176 33 / 20%) }
+.coach-workout-reference.live-identity .live-timer-toolbar { display: block }
+.coach-workout-reference.live-identity .live-timer-toolbar .coachmark-anchor { display: block; width: 100% }
+.coach-workout-reference.live-identity .coach-live-clock { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 128px; margin: 16px 0 32px; color: #b6ef4d }
+.coach-workout-reference.live-identity .coach-live-clock-rest { color: #f8b021 }
+.coach-workout-reference.live-identity .coach-live-digits { font-family: 'Doto', monospace; font-variation-settings: 'ROND' 0, 'wght' 700; font-weight: 700; font-size: clamp(72px, 24vw, 96px); line-height: 104px; letter-spacing: -2px; font-variant-numeric: tabular-nums; white-space: nowrap }
+.coach-workout-reference.live-identity .coach-live-digits-long { font-size: clamp(48px, 16vw, 64px); letter-spacing: -1px }
+.coach-workout-reference.live-identity .coach-live-elapsed { margin-top: 8px; color: var(--lime-text-secondary); font-size: 12px; line-height: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger { width: 100%; height: 60px; min-height: 60px; border: 0; border-radius: 20px; background: rgb(248 176 33 / 20%); color: #f8b021; font-size: 14px; font-weight: 400; justify-content: center; animation: none }
+.coach-workout-reference.live-identity .live-rest-trigger svg { width: 16px; height: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger.phase-prep,
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger.phase-work { color: var(--lime-accent); background: var(--lime-surface-raised) }
+/* Input geometry deliberately remains the existing 48px / 16px contract. */
