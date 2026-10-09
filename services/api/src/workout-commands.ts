@@ -637,6 +637,15 @@ export function reorderLiveBlock(
   )
 }
 
+export function moveLiveBlock(
+  client: DatabaseClient, workoutId: string, blockId: string, targetIndex: number,
+  expectedVersion: number, operationId: string,
+): Promise<PilotLiveStructureResult> {
+  return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.move_live_block($1, $2, $3, $4, $5)',
+    [workoutId, blockId, targetIndex, expectedVersion, operationId])
+}
+
 export function mergeLiveBlockWithNext(
   client: DatabaseClient,
   workoutId: string,

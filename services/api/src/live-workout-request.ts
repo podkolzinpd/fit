@@ -233,6 +233,12 @@ export function readLiveReorderRequest(
   return { ...operation, direction: input.direction }
 }
 
+export function readLiveMoveRequest(body: unknown): (LiveOperationRequest & { targetIndex: number }) | undefined {
+  const operation = readLiveOperationRequest(body)
+  const targetIndex = integer(record(body)?.targetIndex, 0, 199)
+  return operation === undefined || targetIndex === undefined ? undefined : { ...operation, targetIndex }
+}
+
 export function readLiveMergeBlockRequest(body: unknown): LiveMergeBlockRequest | undefined {
   const operation = readLiveOperationRequest(body)
   const input = record(body)

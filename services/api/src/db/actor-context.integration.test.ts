@@ -85,6 +85,7 @@ import {
   splitLiveSuperset,
   removeLiveExercise,
   reorderLiveBlock,
+  moveLiveBlock,
   rescheduleWorkout,
   replaceLiveExercise,
   saveCompletedWorkout,
@@ -449,6 +450,41 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let ownerPool: Pool | undefined
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
+
+    it('atomically drags complete Live blocks without changing set facts; exact retry and actor/version checks', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not initialized')
+      const id = randomUUID(), blockA = randomUUID(), blockB = randomUUID(), blockC = randomUUID(), op = randomUUID()
+      const exercises = [randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+      await ownerPool.query(`insert into public.workouts (id, trainer_id, client_id, created_by, workout_date, status, started_at)
+        values ($1,$2,$3,$2,current_date,'in_progress',now())`, [id, ACTOR_ID, CLIENT_ID])
+      try {
+        for (const [position, exerciseId] of exercises.entries()) {
+          await ownerPool.query(`insert into public.workout_exercises
+            (id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds)
+            values ($1,$2,$3,$4,$5,'system','push-up','Отжимания','chest','reps',$6,$7,'set',1)`,
+          [exerciseId,id,ACTOR_ID,CLIENT_ID,position,position < 2 ? blockA : position === 2 ? blockB : blockC, position < 2 ? 'group' : 'single'])
+          await ownerPool.query(`insert into public.workout_sets (workout_exercise_id,trainer_id,client_id,position,plan_reps,fact_reps,confirmed_at)
+            values ($1,$2,$3,0,10,12,now())`, [exerciseId, ACTOR_ID, CLIENT_ID])
+        }
+        const before = (await ownerPool.query('select * from public.workout_sets where workout_exercise_id = any($1::uuid[]) order by id', [exercises])).rows
+        const call = (actor: string, target: number, version = 1, receipt = op) => withActorTransaction(runtimePool!, actor,
+          (client) => moveLiveBlock(client, id, blockA, target, version, receipt))
+        await expect(call(MEMBER_TRAINER_ID, 2)).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(call(ACTOR_ID, 3)).rejects.toMatchObject({ failure: 'invalid' })
+        await expect(call(ACTOR_ID, 2)).resolves.toEqual({ resourceId: blockA, version: 2, replayed: false })
+        expect((await ownerPool.query<{ id: string }>('select id from public.workout_exercises where workout_id=$1 order by position', [id])).rows.map((row) => row.id))
+          .toEqual([exercises[2], exercises[3], exercises[0], exercises[1]])
+        expect((await ownerPool.query('select * from public.workout_sets where workout_exercise_id = any($1::uuid[]) order by id', [exercises])).rows).toEqual(before)
+        await expect(call(ACTOR_ID, 2)).resolves.toEqual({ resourceId: blockA, version: 2, replayed: true })
+        await expect(call(ACTOR_ID, 0)).rejects.toMatchObject({ failure: 'invalid' })
+        await expect(call(ACTOR_ID, 0, 1, randomUUID())).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(call(OTHER_ACTOR_ID, 0, 2, randomUUID())).resolves.toMatchObject({ version: 3, replayed: false })
+        expect((await ownerPool.query<{ id: string }>('select id from public.workout_exercises where workout_id=$1 order by position', [id])).rows.map((row) => row.id)).toEqual(exercises)
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=$1', [id])
+        await ownerPool.query('delete from app_private.live_workout_operations where resource_id = any($1::uuid[])', [[blockA, blockB, blockC]])
+      }
+    })
 
     beforeAll(async () => {
       const ownerUrl = requireLocalTestDatabaseUrl()

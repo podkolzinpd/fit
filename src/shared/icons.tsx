@@ -93,6 +93,11 @@ export function MoreIcon(props: IconProps) {
   return <Icon data-icon="more" {...props}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></Icon>
 }
 
+/** A labeled drag handle, shared by the planned and live workout editors. */
+export function GripIcon(props: IconProps) {
+  return <Icon data-icon="grip" {...props}>{[8, 16].flatMap((x) => [6, 12, 18].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1" fill="currentColor" stroke="none" />))}</Icon>
+}
+
 export function AddIcon(props: IconProps) {
   return <Icon data-icon="add" {...props}><path d="M12 5v14M5 12h14" /></Icon>
 }
