@@ -7,9 +7,10 @@
 }
 .coach-workout-reference.live-identity .live-workout-page { padding-inline: 16px }
 .coach-workout-reference.live-identity { --bg: #000; --lime-bg: #000 }
-.coach-workout-reference.live-identity .live-pinned { position: static }
+.coach-workout-reference.live-identity .live-pinned { --coach-clock-space: 176px; position: sticky; top: calc(-1 * var(--coach-clock-space)) }
 /* Keep the reference clock out of the keyboard's working area. No new animation. */
-.coach-workout-reference.live-identity.keyboard-open .coach-live-clock { min-height: 64px; margin-block: 4px 8px }
+.coach-workout-reference.live-identity.keyboard-open .live-pinned { --coach-clock-space: 92px }
+.coach-workout-reference.live-identity.keyboard-open .coach-live-clock { min-height: 80px; margin-block: 4px 8px }
 .coach-workout-reference.live-identity.keyboard-open .coach-live-digits { font-size: 48px; line-height: 56px }
 .coach-workout-reference.live-identity .live-workout-page > .page-header { position: relative; min-height: 44px; margin-bottom: 20px }
 .coach-workout-reference.live-identity .page-back { border: 0; background: transparent; border-radius: 99px }
@@ -30,6 +31,19 @@
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger.phase-prep,
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger.phase-work { color: var(--lime-accent); background: var(--lime-surface-raised) }
 /* Input geometry deliberately remains the existing 48px / 16px contract. */
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid { background: transparent; border-color: transparent; border-radius: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid > :not(:first-child) { border-left-color: transparent }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity :is(.live-set-input, .live-set-rpe) { height: 48px; min-height: 48px; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number'] { appearance: textfield }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number']::-webkit-inner-spin-button,
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity :is(.live-set-check, .live-set-save) { height: 48px; min-height: 48px; border-radius: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.confirmed .live-set-grid { box-shadow: none }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.confirmed :is(.live-set-input, .live-set-rpe, .live-set-check.done) { background: color-mix(in srgb, var(--success) 12%, #3b3b40) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.invalid .live-set-grid { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.editing .live-set-grid { border-color: var(--lime-accent) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-add-set { width: max-content; max-width: 100%; min-height: 44px; padding: 10px 16px; margin-block: 8px 4px; border: 0; border-radius: 16px; white-space: nowrap; font-size: 14px; font-weight: 400 }
+.coach-workout-reference.live-identity .live-add-set .fit-lime-add-label { justify-content: center; white-space: nowrap }
 .coach-workout-reference .workout-gesture-list { display: grid; gap: 12px }
 .coach-workout-reference .workout-drag-block { position: relative; min-width: 0 }
 .coach-workout-reference .workout-drag-block.dragging { opacity: .65 }
@@ -40,6 +54,12 @@
 .coach-workout-reference button.workout-drag-handle { min-width: 44px; min-height: 44px; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--lime-text-secondary); font-size: 24px; cursor: grab; touch-action: none }
 .coach-workout-reference button.workout-drag-handle[aria-pressed='true'] { color: var(--lime-accent); cursor: grabbing }
 .coach-workout-reference button.workout-drag-handle svg { width: 24px; height: 24px }
+.coach-workout-reference button.workout-drag-handle { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }
+.coach-workout-reference .workout-drag-preview { position: fixed; z-index: 30; left: 50%; transform: translate(-50%, -50%); width: min(calc(100% - 32px), 360px); display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--lime-accent); border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); pointer-events: none }
+.coach-workout-reference .workout-drag-preview > svg { flex: 0 0 24px; color: var(--lime-accent) }
+.coach-workout-reference .workout-drag-preview > span { display: grid; gap: 4px; min-width: 0 }
+.coach-workout-reference .workout-drag-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500 }
+.coach-workout-reference .workout-drag-preview small { font-size: 12px; line-height: 16px; color: var(--lime-text-secondary) }
 .coach-workout-reference .workout-swipe { position: relative; overflow: hidden; border-radius: 24px; touch-action: pan-y; min-width: 0 }
 .coach-workout-reference .workout-swipe-content { position: relative; min-width: 0 }
 .coach-workout-reference button.workout-swipe-action { position: absolute; inset-block: 0; width: 96px; border: 0; border-radius: 20px; font-size: 14px; padding: 8px }

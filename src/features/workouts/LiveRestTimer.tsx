@@ -261,7 +261,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
       onClick={onPrimary ? tap : openPicker}>
-      <TimerIcon /><span>{reference && !phase ? 'Отдых' : triggerText}</span>
+      <TimerIcon /><span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>

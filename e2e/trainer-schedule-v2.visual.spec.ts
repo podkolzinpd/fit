@@ -398,6 +398,75 @@ test('Figma workout Coach reference grouped drag retry has one unchanged receipt
   await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-exercise-head`).filter({ hasText: 'Жим' }).first()).toBeVisible()
 })
 
+test('Figma workout Coach reference touch drag autoscrolls and preserves draft', async ({ page, browserName }, info) => {
+  test.skip(browserName !== 'chromium', 'Trusted touch dispatch is exposed by Chromium CDP, not mobile WebKit.')
+  await page.setViewportSize({ width: 390, height: 844 })
+  const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
+  first.ref = 'vital-gym-pro-r007-0017'
+  first.name = 'Жим гантелей над головой'
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  const moves: unknown[] = []
+  page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-technique')).toBeVisible()
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
+  const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input:not(:disabled)`).first()
+  await field.fill('27.5'); await field.blur()
+  const handle = page.getByRole('button', { name: `Переместить: ${first.name}`, exact: true })
+  await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded()
+  const box = (await handle.boundingBox())!
+  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  const cdp = await page.context().newCDPSession(page)
+  try {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+    await expect(handle).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.workout-drag-preview')).toContainText(first.name)
+    for (let step = 1; step <= 12; step += 1) await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: [{ x: point.x, y: point.y + (820 - point.y) * step / 12 }],
+    })
+    await expect.poll(() => page.locator('.workout-gesture-list > [role="status"]').textContent()).not.toBe('Перенос: позиция 1 из 8')
+    expect(moves).toHaveLength(0)
+    await page.screenshot({ path: info.outputPath('coach-live-touch-drag.png') })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect.poll(() => moves.length).toBe(1)
+    await expect(page.locator('[data-workout-block]').first()).not.toHaveAttribute('data-workout-block', first.blockId)
+    await expect(field).toHaveValue('27.5')
+    await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-set.confirmed`)).toHaveCount(1)
+    await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
+    await expect(page.locator('.live-session-progress-copy')).toContainText(`Сейчас: ${first.name}`)
+  } finally { await cdp.detach() }
+})
+
+test('Figma workout Coach reference rest and fields stay usable in the reduced keyboard viewport', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    const viewport = new EventTarget()
+    Object.defineProperties(viewport, { height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? innerHeight) }, offsetTop: { get: () => 0 } })
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  })
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [coachGestureWorkout(false, 8)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  const field = page.locator('.live-set-input:not(:disabled)').first()
+  await expect(page.getByRole('button', { name: 'Переместить: Приседания', exact: true })).toBeEnabled()
+  await field.focus()
+  await expect(field).toBeFocused()
+  await page.evaluate(() => { document.documentElement.dataset.testVisibleHeight = '400'; window.visualViewport?.dispatchEvent(new Event('resize')) })
+  await expect(page.locator('.phone-frame')).toHaveClass(/keyboard-open/)
+  await expect(field).toBeFocused()
+  await page.screenshot({ path: info.outputPath('coach-live-keyboard-before.png') })
+  await expect.poll(() => field.evaluate(element => {
+    const rect = element.getBoundingClientRect(), rest = document.querySelector('.live-rest-trigger')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
+    return rect.top >= rest.bottom && rect.bottom <= content.bottom && content.bottom <= 400 && rect.height === 48
+  })).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-live-keyboard.png') })
+  await field.fill('27.5')
+  await field.blur()
+  await page.evaluate(() => { delete document.documentElement.dataset.testVisibleHeight; window.visualViewport?.dispatchEvent(new Event('resize')) })
+  await expect(field).toHaveValue('27.5')
+})
+
 test('Figma workout Coach reference pointer drag autoscrolls and preserves draft', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
@@ -428,6 +497,32 @@ test('Figma workout Coach reference pointer drag autoscrolls and preserves draft
 })
 
 for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference Live scrolled rest and field styling ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    const source = coachGestureWorkout(false, 8)
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-set-input').first()).toBeVisible()
+    await page.screenshot({ path: info.outputPath('coach-live-top.png'), fullPage: true })
+    const add = page.locator('.live-add-set').first()
+    expect(await add.evaluate(button => {
+      const label = button.querySelector('.fit-lime-add-label')!.getBoundingClientRect(), rect = button.getBoundingClientRect()
+      return label.left >= rect.left + 8 && label.right <= rect.right - 8 && label.top >= rect.top && label.bottom <= rect.bottom
+    })).toBe(true)
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
+    await page.locator('.content').evaluate(element => { element.scrollTop = 700 })
+    await expect.poll(() => page.locator('.live-rest-trigger').evaluate(button => {
+      const rect = button.getBoundingClientRect(), content = button.closest('.content')!.getBoundingClientRect()
+      return rect.top >= content.top && rect.bottom < content.top + 110
+    })).toBe(true)
+    await page.screenshot({ path: info.outputPath('coach-live-scrolled-rest.png'), fullPage: true })
+    await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
+    const fields = page.locator('.live-set-input, .live-set-check')
+    expect(await fields.evaluateAll(elements => elements.every(element => element.getBoundingClientRect().height === 48))).toBe(true)
+    await expect(page.locator('.live-set-input:not(:disabled)').first()).toHaveCSS('border-radius', '16px')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
   test(`Figma workout Coach reference Live geometry and rest ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
     await page.clock.install({ time: new Date('2026-10-08T08:59:00Z') })
