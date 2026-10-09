@@ -557,6 +557,39 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.coach-live-digits')).toBeVisible()
   })
 }
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference top completion ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = { ...coachGestureWorkout(), startedAt: '2026-10-08T08:59:00Z', title: 'На всё тело — тренировка с длинным названием' }
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.evaluate(() => document.fonts.ready)
+    const header = page.locator('.live-session-header')
+    await expect(header.getByRole('heading')).toHaveText(source.title)
+    await expect(header.locator('.workout-header-eyebrow')).toHaveText('3 упражнения')
+    await expect(header.locator('.coach-live-client')).toHaveText(source.clientName)
+    await expect(header.locator('.coach-live-exercise-markers > span')).toHaveCount(3)
+    await expect(header.locator('.coach-live-exercise-markers > .current')).toHaveCount(1)
+    await expect(header.locator('.workout-status')).toHaveCount(0)
+    const clock = page.locator('.coach-live-clock')
+    await expect(clock.locator('.coach-live-digits')).toHaveText('01:00')
+    await expect(clock.locator('.coach-live-colon')).toHaveCount(1)
+    expect(await clock.evaluate((node) => getComputedStyle(node, '::before').backgroundImage)).toContain('radial-gradient')
+    expect(await clock.locator('.coach-live-colon').evaluate((node) => getComputedStyle(node, '::before').width)).not.toBe('0px')
+    await expect(header.getByRole('heading')).toHaveCSS('text-align', 'center')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('coach-live-top-completion.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(clock).toHaveClass(/coach-live-clock-rest/)
+    await expect(page.locator('.coach-live-status')).toHaveText('Отдых')
+    await page.reload()
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых')
+    await expect(page.locator('.coach-live-clock')).toHaveClass(/coach-live-clock-rest/)
+    await expect(page.getByRole('button', { name: 'Пауза', exact: true })).toHaveCount(0)
+    await page.screenshot({ path: info.outputPath('coach-live-rest-completion.png') })
+  })
+}
 for (const [role, profileId, expected] of [
   ['trainer', 'c0ac0000-6010-4000-8000-000000000002', true],
   ['trainer', trainerId, false],

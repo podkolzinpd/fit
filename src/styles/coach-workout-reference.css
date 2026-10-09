@@ -25,6 +25,28 @@
 .coach-workout-reference.live-identity .coach-live-clock-rest { color: #f8b021 }
 .coach-workout-reference.live-identity .coach-live-digits { font-family: 'Doto', monospace; font-variation-settings: 'ROND' 0, 'wght' 700; font-weight: 700; font-size: clamp(72px, 24vw, 96px); line-height: 104px; letter-spacing: -2px; font-variant-numeric: tabular-nums; white-space: nowrap }
 .coach-workout-reference.live-identity .coach-live-digits-long { font-size: clamp(48px, 16vw, 64px); letter-spacing: -1px }
+/* Reference separators are two square pixels, not Doto's clustered colon glyph. */
+.coach-workout-reference.live-identity .coach-live-digits,
+.coach-workout-reference.live-identity .coach-live-digit-group { display: inline-flex; align-items: center }
+.coach-workout-reference.live-identity .coach-live-colon { position: relative; display: inline-block; width: .28em; color: transparent; letter-spacing: 0 }
+.coach-workout-reference.live-identity .coach-live-colon::before { content: ''; position: absolute; width: .075em; height: .075em; top: 34%; left: 50%; transform: translateX(-50%); background: var(--lime-accent); box-shadow: 0 .28em 0 var(--lime-accent) }
+.coach-workout-reference.live-identity .coach-live-clock-rest .coach-live-colon::before { background: #f8b021; box-shadow: 0 .28em 0 #f8b021 }
+.coach-workout-reference.live-identity .coach-live-clock { position: relative; isolation: isolate }
+.coach-workout-reference.live-identity .coach-live-clock::before { content: ''; position: absolute; z-index: -1; inset: -100px -16px -24px; pointer-events: none; background: radial-gradient(ellipse at 50% 15%, rgb(182 239 77 / 20%), transparent 65%) }
+.coach-workout-reference.live-identity .coach-live-clock-rest::before { background: radial-gradient(ellipse at 50% 15%, rgb(248 176 33 / 24%), transparent 65%) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-session-header { display: block; margin: 24px 0; padding: 12px 0; border: 0; text-align: center }
+.coach-workout-reference.live-identity .live-session-header .workout-header-copy { align-items: center; gap: 8px; min-width: 0 }
+.coach-workout-reference.live-identity .live-session-header .workout-header-eyebrow { color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0; text-transform: none }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-session-header h2 { margin: 0; padding: 0; font-size: 24px; line-height: 28px; font-weight: 500; letter-spacing: -.48px; overflow-wrap: anywhere }
+.coach-workout-reference.live-identity .live-session-header .workout-header-meta { justify-content: center; font-size: 13px; line-height: 18px; gap: 4px 8px }
+.coach-workout-reference.live-identity .coach-live-client { color: var(--lime-text); overflow-wrap: anywhere }
+.coach-workout-reference.live-identity .coach-live-exercise-markers { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%; margin-block: 8px }
+.coach-workout-reference.live-identity .coach-live-exercise-markers > span { width: 8px; height: 8px; background: #3b3b40 }
+.coach-workout-reference.live-identity .coach-live-exercise-markers > .current { outline: 1px solid var(--lime-accent); outline-offset: 2px }
+.coach-workout-reference.live-identity .coach-live-exercise-markers > .done { background: var(--lime-accent) }
+.coach-workout-reference.live-identity .live-session-progress { width: 100%; max-width: 480px; margin: 4px auto 0 }
+.coach-workout-reference.live-identity .live-session-progress-copy { display: flex; flex-wrap: wrap; justify-content: center; font-size: 13px; line-height: 18px; font-weight: 400 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-session-progress-track { height: 3px }
 .coach-workout-reference.live-identity .coach-live-elapsed { margin-top: 8px; color: var(--lime-text-secondary); font-size: 12px; line-height: 16px }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity button.live-rest-trigger { width: 100%; height: 60px; min-height: 60px; border: 0; border-radius: 20px; background: rgb(248 176 33 / 20%); color: #f8b021; font-size: 14px; font-weight: 400; justify-content: center; animation: none }
 .coach-workout-reference.live-identity .live-rest-trigger svg { width: 16px; height: 16px }
