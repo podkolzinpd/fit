@@ -682,6 +682,40 @@ for (const width of [375, 390, 430, 1440]) {
     await page.screenshot({ path: info.outputPath('coach-live-field-completion.png'), fullPage: true })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
+  test(`Figma workout Coach reference deletion conflict preserves newly confirmed fact ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    const source = restTimerWorkout(), exercise = source.exercises[0]!, target = exercise.sets[1]!
+    const backend = await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+    let attempts = 0
+    await page.route('**/v1/workout-sets/*', async route => {
+      if (route.request().method() !== 'DELETE') return route.fallback()
+      attempts += 1
+      // Another device confirms the set before the rejected request is retried.
+      const current = backend.getWorkouts().find(item => item.id === workoutId)!
+      const confirmedElsewhere = current.exercises.flatMap(item => item.sets).find(set => set.id === target.id)!
+      current.version += 1
+      confirmedElsewhere.version += 1
+      confirmedElsewhere.confirmedAt = '2026-10-10T09:00:00Z'
+      confirmedElsewhere.fact = { weightKg: 42.5, reps: 8 }
+      await route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"workout_conflict"}' })
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const row = page.locator(`[data-live-set-id="${target.id}"]`)
+    await row.locator('.coach-live-remove-set').click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(row.locator('.coach-live-remove-set')).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Повторить удаление подхода', exact: true })).toBeDisabled()
+    await expect(page.getByRole('status').filter({ hasText: 'чтобы сохранить результат' })).toBeVisible()
+    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('42.5')
+    expect(attempts).toBe(1)
+    await page.getByRole('status').filter({ hasText: 'чтобы сохранить результат' }).scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath('coach-live-deletion-conflict-preserved.png'), fullPage: true })
+    await page.reload()
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('42.5')
+    expect(attempts).toBe(1)
+  })
   for (const [kind, ref] of [['reps', 'squat'], ['duration', 'plank'], ['distance', 'running'], ['distance', 'rowing-machine'], ['distance', 'farmer-carry'], ['duration', 'vital-stair-climber']] as const) {
     test(`Figma workout Coach reference metric completion ${ref} ${width}`, async ({ page }, info) => {
       await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })

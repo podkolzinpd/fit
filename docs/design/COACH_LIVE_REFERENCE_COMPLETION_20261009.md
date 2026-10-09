@@ -76,7 +76,7 @@ COACH_WORKOUT_REFERENCE_PILOT_20261008.md; source card — ранее перед
 | PR | Видимый результат | Проверка | Статус |
 |---|---|---|---|
 | 1 | Верх/таймер/компактный контекст, sticky отдых | mobile375/390/430, desktop1440, фазы/reload/negative, fixed2/вне пилота | WebKit15/15, Chromium15/15, unit23/23; снимки просмотрены; full check exit0; CI/merge впереди |
-| 2 | Номер/название/сводка/техника, следующие и завершённые | длинный текст, одинаковые/разные подходы, группы, раскрытие | unit17/17; browser41/41 +1 явный WebKit-CDP skip; снимок390 просмотрен; full check exit0; CI/merge впереди |
+| 2 | Номер/название/сводка/техника, следующие и завершённые | длинный текст, одинаковые/разные подходы, группы, раскрытие | unit17/17; browser41/41 +1 явный WebKit-CDP skip; снимок390 просмотрен; full check exit0; CI37993097785 success, #1545 merged: a461e93c |
 | 3 | Поля48/зазоры/единицы/состояния/удаление | все типы ввода, pending/error/retry, confirmed/edit/draft/reload | unit36/36; browser80/80, включая границы единиц и targets; финальные снимки390 просмотрены; full check exit0 (frontend2604/API1272+137standardlocalDBskip/build); CI/merge впереди |
 | 4 | Добавление/доступное завершение/отсутствие перекрытий | touch/reorder/swipe, клавиатура/safe-area, complete/partial finish, full loop | Ожидает PR3 |
 
@@ -96,4 +96,20 @@ PostgreSQL17 service использует [официальное ECR-зерка
 с закреплённым linux/amd64 digest: он совпал с текущим Docker Hub postgres:17
 при отдельном read-only сравнении manifest. Версия БД, health-check, migrations,
 RLS, auth, E2E, обязательные gates и пороги не ослаблены; production БД не меняется.
-Targeted workflow unit15/15; новый full check и повтор CI обязательны.
+Targeted workflow unit15/15; новый full check и повтор CI passed. Один
+visual-trainer runner не отвечал на cancel, завершён штатным force-cancel;
+его лог не сохранён, причины тестовой ошибки не заявляются. Повтор этого job
+и зависимых gates на том же9cf7c5cf прошёл; весь CI37993097785 success.
+
+### Дополнительная проверка защиты результата, 10.10
+
+Обнаружен риск в новом retry удаления: после409/refetch подход мог уже быть
+подтверждён другим устройством, а старый retry отправлял DELETE с новой версией.
+В рамках PR3 добавлен guard актуального кэша непосредственно перед отправкой
+существующей команды, а также disabled retry с понятным объяснением. API,
+БД, обычное подтверждение и непилотное поведение не меняются.
+Unit6/6; оба браузера375/390/430/1440 —16/16 ordinary retry +conflict,
+отдельные финальные visual390 —2/2, снимок просмотрен. Новый full check exit0:
+frontend2610, API1272 +137standardlocalDBskip, build. Первый локальный check
+остановила песочница на тестовом listen127.0.0.1; полный повтор с доступом
+к изолированному локальному серверу прошёл без изменения assertions.

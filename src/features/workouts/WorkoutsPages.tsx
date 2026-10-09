@@ -1,5 +1,6 @@
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
+import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
@@ -3275,7 +3276,13 @@ export function LiveWorkoutPage() {
       (workout) => workoutsRepository.removeLastLiveRound(workout, blockId, position, crypto.randomUUID())),
     onSuccess: async () => { setLastAddedRound(null); await query.refetch() },
   })
-  const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => workoutsRepository.removeLiveSet(workout, setId)), onSuccess: async () => { await query.refetch() } })
+  const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => {
+    if (coachReference) {
+      const reason = coachLiveSetRemovalError(queryClient.getQueryData<Workout>(['workout', workoutId]) ?? workout, setId)
+      if (reason) return Promise.reject(new Error(reason))
+    }
+    return workoutsRepository.removeLiveSet(workout, setId)
+  }), onSuccess: async () => { await query.refetch() } })
   useEffect(() => {
     if (!query.data) return
     for (const [blockId, pending] of pendingRoundOperations.current) {
@@ -3548,6 +3555,7 @@ export function LiveWorkoutPage() {
   }
   const liveSyncError = save.error ?? confirm.error
   const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? moveLiveBlock.error ?? mergeBlock.error ?? splitSuperset.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const removalRetryReason = coachReference && removeSet.isError && removeSet.variables ? coachLiveSetRemovalError(query.data, removeSet.variables) : null
   const gestureDisabled = rootMutationPending || save.isPending || confirm.isPending || Boolean(pendingMove.current)
   async function deleteLiveExercise(exercise: WorkoutExerciseModel) {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
@@ -4001,7 +4009,10 @@ export function LiveWorkoutPage() {
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>Ещё упражнение</AddActionLabel></button>)}
       {error && <p className="error">{error.message}</p>}
-      {coachReference && removeSet.isError && removeSet.variables && <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>}
+      {coachReference && removeSet.isError && removeSet.variables && <>
+        {removalRetryReason && <p role="status">{removalRetryReason}</p>}
+        <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending || Boolean(removalRetryReason)} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>
+      </>}
       {coachReference && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
