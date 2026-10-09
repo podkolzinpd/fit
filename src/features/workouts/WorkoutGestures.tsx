@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { GripIcon } from '../../shared/icons'
 
-type Drag = { id: string; target: number; keyboard: boolean; pointerId?: number }
+type Drag = { id: string; target: number; keyboard: boolean; pointerId?: number; label: string }
 type GestureContext = {
   blocks: string[]; disabled: boolean; drag: Drag | null;
   open: { id: string; side: 'delete' | 'replace' } | null;
@@ -27,6 +27,7 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
   const [open, setOpen] = useState<GestureContext['open']>(null)
   const frame = useRef<number | null>(null)
   const pointerY = useRef(0)
+  const preview = useRef<HTMLDivElement>(null)
   const setCurrent = (value: Drag | null) => { dragRef.current = value; setDrag(value) }
   const cancel = () => {
     if (frame.current !== null) cancelAnimationFrame(frame.current)
@@ -43,7 +44,13 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
     if (!current || current.keyboard || !root.current) return
     const elements = [...root.current.querySelectorAll<HTMLElement>('[data-workout-block]')]
       .filter((element) => element.dataset.workoutBlock !== current.id)
-    const target = elements.filter((element) => pointerY.current > element.getBoundingClientRect().top + element.getBoundingClientRect().height / 2).length
+    // A tall expanded exercise may extend below the viewport. Its header,
+    // rather than its offscreen body midpoint, is the reachable drop anchor.
+    const target = elements.filter((element) => {
+      const rect = (element.querySelector<HTMLElement>('.workout-drag-handle') ?? element).getBoundingClientRect()
+      return pointerY.current > rect.top + rect.height / 2
+    }).length
+    if (preview.current) preview.current.style.top = `${Math.max(100, Math.min(innerHeight - 140, pointerY.current))}px`
     if (target !== current.target) setCurrent({ ...current, target })
   }
   function scrollFrame() {
@@ -74,7 +81,8 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
       event?.preventDefault()
       event?.currentTarget.setPointerCapture(event.pointerId)
       setOpen(null)
-      setCurrent({ id, target: blocks.indexOf(id), keyboard: !event, pointerId: event?.pointerId })
+      const label = event?.currentTarget.getAttribute('aria-label')?.replace(/^Переместить: /, '') ?? ''
+      setCurrent({ id, target: blocks.indexOf(id), keyboard: !event, pointerId: event?.pointerId, label })
       if (event) { pointerY.current = event.clientY; frame.current = requestAnimationFrame(scrollFrame) }
     },
     keyboard(id, key) {
@@ -99,6 +107,9 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
     onPointerUp={(event) => { if (dragRef.current && !dragRef.current.keyboard && dragRef.current.pointerId === event.pointerId) drop() }}
     onPointerCancel={(event) => { if (dragRef.current && !dragRef.current.keyboard && dragRef.current.pointerId === event.pointerId) cancel() }}>
     {children}
+    {drag && !drag.keyboard && <div ref={preview} className="workout-drag-preview" aria-hidden="true" style={{ top: Math.max(100, Math.min(innerHeight - 140, pointerY.current)) }}>
+      <GripIcon /><span><strong>{drag.label}</strong><small>Позиция {drag.target + 1} из {blocks.length} · отпустите, чтобы переместить</small></span>
+    </div>}
     <span className="sr-only" role="status">{drag ? `Перенос: позиция ${drag.target + 1} из ${blocks.length}` : ''}</span>
   </div></Context.Provider>
 }
@@ -118,10 +129,11 @@ export function WorkoutDragHandle({ id, label, children }: { id: string; label: 
     aria-describedby={`workout-drag-help-${id}`} aria-pressed={context.drag?.id === id}
     disabled={context.disabled || context.blocks.length < 2}
     onPointerDown={(event) => { if (event.button === 0) context.start(id, event) }}
+    onLostPointerCapture={(event) => { if (context.drag?.pointerId === event.pointerId && !context.drag.keyboard) context.cancel() }}
     onKeyDown={(event) => { if (context.keyboard(id, event.key)) event.preventDefault() }}
     onBlur={() => { if (context.drag?.keyboard) context.cancel() }}>
     {children ?? <GripIcon />}
-    <span id={`workout-drag-help-${id}`} className="sr-only">Пробел — взять, стрелки — выбрать позицию, Enter — сохранить, Escape — отменить.</span>
+    <span id={`workout-drag-help-${id}`} className="sr-only">Перетаскивайте за точки и отпустите на нужной позиции. Пробел — взять, стрелки — выбрать позицию, Enter — сохранить, Escape — отменить.</span>
   </button>
 }
 
