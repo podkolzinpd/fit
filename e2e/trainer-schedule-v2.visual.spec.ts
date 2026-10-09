@@ -408,13 +408,20 @@ test('Figma workout Coach reference touch drag autoscrolls and preserves draft',
   const moves: unknown[] = []
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-technique')).toHaveCount(0)
+  await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
   await expect(page.locator('.live-technique')).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
   const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input:not(:disabled)`).first()
   await field.fill('27.5'); await field.blur()
   const handle = page.getByRole('button', { name: `Переместить: ${first.name}`, exact: true })
-  await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded()
+  await expect(handle).toBeEnabled()
+  await handle.evaluate(element => element.scrollIntoView({ block: 'center' }))
+  await expect.poll(() => handle.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
+  })).toBe(true)
   const box = (await handle.boundingBox())!
   const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
   const cdp = await page.context().newCDPSession(page)
@@ -590,6 +597,45 @@ for (const width of [375, 390, 430, 1440]) {
     await page.screenshot({ path: info.outputPath('coach-live-rest-completion.png') })
   })
 }
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference card completion ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    const source = coachGestureWorkout(), first = source.exercises[0]!
+    first.name = 'Жим гантелей над головой с длинным названием упражнения'
+    first.ref = 'vital-gym-pro-r007-0017'
+    first.sets[1]!.weightKg = 25
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const card = page.locator(`[data-workout-block="${first.blockId}"] .workout-exercise-contract`), head = card.locator('.live-exercise-head')
+    await expect(card).toHaveCSS('background-color', 'rgb(37, 37, 41)')
+    await expect(head.locator('h2')).toHaveText(first.name)
+    await expect(head.locator('h2')).toHaveCSS('text-align', 'center')
+    await expect(head.locator('.coach-live-exercise-number')).toHaveText('1')
+    await expect(head.locator('.workout-exercise-header-summary')).toHaveText(`План: ${first.sets.length} подхода · разные параметры`)
+    await expect(head.locator('.overflow-trigger')).toHaveCSS('min-height', '44px')
+    await expect(page.locator('.live-exercise-upcoming')).toHaveCount(2)
+    await expect(page.locator('.live-technique')).toHaveCount(0)
+    await card.getByRole('button', { name: /Показать анимацию:/ }).click()
+    await expect(card.locator('.live-technique')).toBeVisible()
+    await card.getByRole('button', { name: /Свернуть анимацию:/ }).click()
+    await expect(card.locator('.live-technique')).toHaveCount(0)
+    await page.screenshot({ path: info.outputPath('coach-live-card-completion.png'), fullPage: true })
+    for (const set of first.sets) {
+      const row = card.locator(`[data-live-set-id="${set.id}"]`)
+      await row.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill(String(set.weightKg))
+      await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+      await expect(row).toHaveClass(/confirmed/)
+    }
+    await expect(card.locator('.workout-exercise-header-summary')).toContainText(`Результат: ${first.sets.length} подхода · разные параметры`)
+    await page.reload()
+    await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
+    await expect(page.locator('.live-exercise-collapsed .coach-live-exercise-number')).toHaveText('1')
+    await page.getByRole('button', { name: `Исправить: ${first.name}`, exact: true }).click()
+    await expect(page.locator('.live-exercise.done .live-set')).toHaveCount(first.sets.length)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
+
 for (const [role, profileId, expected] of [
   ['trainer', 'c0ac0000-6010-4000-8000-000000000002', true],
   ['trainer', trainerId, false],
@@ -1628,6 +1674,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'live-timer-2026-09',
       'live-phase-timer-2026-10',
       'coach-workout-gestures-2026-10',
+      'coach-live-number-gestures-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',
       'lime-day-workspace-2026-10',
