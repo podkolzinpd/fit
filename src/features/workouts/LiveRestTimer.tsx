@@ -253,7 +253,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
 
   return <>
     {reference && <div className={`coach-live-clock${deadline !== null && !phase ? ' coach-live-clock-rest' : ''}`}>
-      <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (deadline !== null ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime}</span>
+      <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (deadline !== null ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime.split(':').map((part, index) => <span className="coach-live-digit-group" key={index}>{index > 0 && <span className="coach-live-colon" aria-hidden="true">:</span>}{part}</span>)}</span>
       {deadline !== null || phase ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
     </div>}
     <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
