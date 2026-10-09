@@ -312,3 +312,21 @@
 .phone-frame.fit-client-lime .workout-composer-actions > button { min-height: 48px; }
 .phone-frame.fit-client-lime .today-text-fallback-head strong { font-size: 18px; }
 .phone-frame.fit-client-lime .today-text-fallback-head small { font-size: 12px; }
+
+/* Planned and completed sets share the approved compact result geometry. */
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-history-set-number {
+  width: 24px;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-history-set.workout-set-row {
+  min-height: 42px;
+  padding: 4px 0;
+}
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-exercise-row { --client-detail-actions-width: 44px; }
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-exercise-row:has(.overflow-trigger) { --client-detail-actions-width: 88px; }
+.phone-frame.fit-client-lime.workout-detail-history-identity .workout-history-sets {
+  width: calc(100% + var(--client-detail-actions-width) + 64px);
+  margin-left: -56px;
+}

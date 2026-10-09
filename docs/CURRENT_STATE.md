@@ -1,4 +1,11 @@
 # Fit — текущее состояние проекта
+
+Клиентский выпуск09.10: PR1–6 опубликованы иприняты отдельно; последний#1531/main79f27008, officialdeploy37863922536, public13/13/207files, native207/207 иWebKit/Chromium12/12. PR7 обновляется после более раннего#1532 наmaina9a5b0f7; полныйcheck2574frontend/1272API+137DBskip/build иWebKit22/22 прошли; новыйCI/публикация впереди. PR8 ещё ожидает своейочереди. Все12activeID иисключённыйID08 описаны вdesign/CLIENT_LIME_REMEDIATION_20261008.md.
+
+## Клиентский Lime: часть7 утверждённых доработок — 2026-10-08
+
+Раскрытые план и факт client Lime используют одинаковую геометрию таблиц, номера без овалов. План не помечается пропущенным; подтверждённый факт и реальные пропуски сохраняют семантику, значения/note/data/права прежние. WebKit4/4 plan/done/partial light/dark390/430 +2/2 one-round/superset;10/10 existing list/Live/trainer geometry regression. Full check exit0 на mainc81556f1. CI/merge/deploy/native впереди. План: design/CLIENT_LIME_REMEDIATION_20261008.md; ID10 пока не объявлен доставленным.
+
 ## Клиентский Lime: часть6 утверждённых доработок — 2026-10-08
 Свежая база послеPR#1530: main387944bd. WebKit6/6 полей/подготовки и12/12 редактора (клиент390/430 light/dark, trainer/Mono390/430/1440) прошли. Полныйcheck2563frontend/1269API+136DBskip/build exit0. Fixture не превращает отсутствие подготовки в0: настоящийAPI ожидаетabsence/null, продуктовая механика не менялась. PR#1529 опубликован37856829386; public13/13, native207/207, browser27/28 иточныйповторtrainerconnectiontimeout1/1 passed, исходныйрезультат сохранён. PR#1530 слит387944bd послеCI37854575582 success; mainCI37858422636 идёт.
 Поля даты/времени и подготовки client Lime имеют контракт Field:16px/radius16/min48 и стандартные рамку/фокус. Native select appearance:none/chevron взяты из профиля. Название, подсказка, варианты, обработчики, native picker и хранение прежние. WebKit6/6 (обе темы390/430, planned/completed,empty/filled/focus,gap,prep10/reload/Live); full check exit0. CI/merge/deploy/свежая native сборка впереди; production-закрытие ID не заявлено. План: design/CLIENT_LIME_REMEDIATION_20261008.md. Физический iPhone и реальные системные окна/диктовка не проверены.
@@ -116,3 +123,5 @@ SpeechKit transcript устраняет финальные повторы, со�
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover.
 - Android: добавлен Capacitor-проект и команда локальной debug-сборки для будущей публикации в RuStore. Android origin закреплён как `https://localhost` и включён в API CORS allowlist deployment workflow. Внешний браузер Yandex ID не может вернуть OAuth-код на `https://localhost` в WebView, поэтому Android использует deep link `com.coachspace.fit://auth/yandex/callback` с PKCE state-проверкой. Этот Redirect URI зарегистрирован в Yandex OAuth 2 октября; прежние URI сохранены. Работающий вход ещё не подтверждён: нужна проверка на устройстве. Ручной GitHub Actions job собирает production-configured debug APK для проверки входа; это не release-сборка. Подпись release и публикация не выполнялись.
+
+09.10.2026, client Lime PR7: в общей font-проверке учтён symbols-only fallback; подтверждены локальные веса600 у «Мышцы»/«Выбрано». Две роли включены в существующийclient-only500; WebKit4/4 после воспроизведения600/600. ActualYSGeo-Medium уже был корректен, шрифты/размеры/цвета иtrainer/Mono сохранены. ФинальныйCI/public впереди.

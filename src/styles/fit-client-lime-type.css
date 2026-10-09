@@ -30,7 +30,8 @@ html.fit-client-lime-document .fit-lime-chat-sheet {
     .period-comparison-facts dt, .period-comparison-facts dt span, .period-comparison-facts dd,
     .save-status, .trainer-specialty-option-all span, .workout-feedback-fieldset legend,
     .workout-set-table-head > span, .workout-history-set-number, .workout-set-number,
-    .workout-history-set-status, .block-badge, .circuit-round-toggle span:first-child,
+    .workout-history-set-status, .workout-chronicle-muscles span, .picker-selection-summary,
+    .block-badge, .circuit-round-toggle span:first-child,
     .recharts-line-dots text, .rest-time-wheel [role='option'].selected, .rest-time-separator):not(.request-diagnostic-code *) {
   font-weight: 500;
 }
