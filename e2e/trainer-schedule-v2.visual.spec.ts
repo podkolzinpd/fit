@@ -491,6 +491,9 @@ test('Figma workout Coach reference pointer drag autoscrolls and preserves draft
   await expect(handle).toHaveAttribute('aria-pressed', 'true')
   await page.mouse.move(box.x + box.width / 2, 820, { steps: 12 })
   await expect.poll(() => page.locator('.content').evaluate((element) => element.scrollTop)).toBeGreaterThan(before + 100)
+  // Wait for an actual insertion target, not merely the first scroll frame:
+  // the expanded card can still occupy the whole viewport after 100px.
+  await expect(page.locator('.workout-drag-preview')).toContainText(/Позиция [2-8] из 8/)
   expect(moves).toHaveLength(0)
   await page.locator('.workout-gesture-list').dispatchEvent('pointerup', { pointerId: 999, isPrimary: false, pointerType: 'touch' })
   await page.locator('.workout-gesture-list').dispatchEvent('pointercancel', { pointerId: 999, isPrimary: false, pointerType: 'touch' })
@@ -520,8 +523,8 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
     await page.locator('.content').evaluate(element => { element.scrollTop = 700 })
     await expect.poll(() => page.locator('.live-rest-trigger').evaluate(button => {
-      const rect = button.getBoundingClientRect(), content = button.closest('.content')!.getBoundingClientRect()
-      return rect.top >= content.top && rect.bottom < content.top + 110
+      const rect = button.getBoundingClientRect(), header = document.querySelector('.page-header')!.getBoundingClientRect()
+      return rect.top >= header.bottom && rect.bottom <= header.bottom + 66
     })).toBe(true)
     await page.screenshot({ path: info.outputPath('coach-live-scrolled-rest.png'), fullPage: true })
     await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
@@ -614,6 +617,11 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(head.locator('.workout-exercise-header-summary')).toHaveText(`План: ${first.sets.length} подхода · разные параметры`)
     await expect(head.locator('.overflow-trigger')).toHaveCSS('min-height', '44px')
     await expect(page.locator('.live-exercise-upcoming')).toHaveCount(2)
+    const blocks = page.locator('.workout-gesture-list > .workout-drag-block')
+    await expect(blocks).toHaveCount(3)
+    await expect(card).toHaveCSS('margin', '0px')
+    expect(await blocks.evaluateAll(items => items.slice(1).every((item, i) =>
+      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - 4) < .5))).toBe(true)
     await expect(page.locator('.live-technique')).toHaveCount(0)
     await card.getByRole('button', { name: /Показать анимацию:/ }).click()
     await expect(card.locator('.live-technique')).toBeVisible()
@@ -630,6 +638,9 @@ for (const width of [375, 390, 430, 1440]) {
     await page.reload()
     await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
     await expect(page.locator('.live-exercise-collapsed .coach-live-exercise-number')).toHaveText('1')
+    await expect(card).toHaveCSS('margin', '0px')
+    expect(await blocks.evaluateAll(items => items.slice(1).every((item, i) =>
+      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - 4) < .5))).toBe(true)
     await page.getByRole('button', { name: `Исправить: ${first.name}`, exact: true }).click()
     await expect(page.locator('.live-exercise.done .live-set')).toHaveCount(first.sets.length)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -651,6 +662,11 @@ for (const width of [375, 390, 430, 1440]) {
     await page.goto(`/workouts/${workoutId}/live`)
     const first = page.locator(`[data-live-set-id="${exercise.sets[0]!.id}"]`), second = page.locator(`[data-live-set-id="${exercise.sets[1]!.id}"]`)
     await expect(first.locator('.coach-live-field-unit')).toHaveText(['кг', 'повт.'])
+    const removeIcon = second.locator('.coach-live-remove-set svg[data-original-icon="close"]')
+    await expect(removeIcon).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.6)')
+    await expect(removeIcon.locator('image')).toHaveCSS('opacity', '0')
+    expect(await removeIcon.evaluate(icon => decodeURIComponent(getComputedStyle(icon).maskImage)))
+      .toContain('M10.5841 12.0002L4 5.41598')
     await expect(page.locator('.live-set-table-head')).not.toBeVisible()
     expect(await first.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(await second.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor))
     expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll(elements => {
@@ -742,6 +758,119 @@ for (const width of [375, 390, 430, 1440]) {
     })
   }
 }
+
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference actions completion partial retry ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    let finishes = 0, releaseFailure = () => {}
+    const gate = new Promise<void>(resolve => { releaseFailure = resolve })
+    await page.route('**/workouts/*/finish', async route => {
+      finishes++
+      if (finishes === 1) { await gate; await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"service_unavailable"}' }) }
+      else await route.fallback()
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).first().fill('27.5')
+    await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator('.live-set.confirmed')).toHaveCount(1)
+    const addSet = page.locator('.live-add-set').first()
+    await expect(addSet).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(addSet.locator('svg')).toHaveCSS('color', 'rgb(182, 239, 77)')
+    const originalPlus = addSet.locator('svg[data-original-icon="plus"]')
+    await expect(originalPlus).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    // Vite embeds this tiny original SVG in CSS; verify the silhouette, not a file URL.
+    expect(await originalPlus.evaluate(icon => decodeURIComponent(getComputedStyle(icon).maskImage)))
+      .toContain('M11 6V11H6V13H11V18H13V13H18V11H13V6H11Z')
+    await expect(originalPlus.locator('image')).toHaveCSS('opacity', '0')
+    const addExercise = page.getByRole('button', { name: 'Упражнение', exact: true })
+    await addExercise.scrollIntoViewIfNeeded()
+    await expect(addExercise).toHaveCSS('min-height', '80px')
+    await expect(addExercise).toHaveCSS('background-color', 'rgb(59, 59, 64)')
+    const finish = page.getByRole('button', { name: 'Завершить тренировку', exact: true })
+    await expect(finish).toHaveCount(1)
+    await expect(page.locator('.live-bottom-bar')).toHaveCount(0)
+    expect(await finish.evaluate(button => {
+      const rect = button.getBoundingClientRect(), content = button.closest('.content')!.getBoundingClientRect()
+      return rect.top >= content.top && rect.bottom <= content.top + 44 && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest('button') === button
+    })).toBe(true)
+    expect(await page.locator('.live-rest-trigger').evaluate(button => button.getBoundingClientRect().top >= document.querySelector('.page-header')!.getBoundingClientRect().bottom)).toBe(true)
+    await page.screenshot({ path: info.outputPath('coach-live-actions-scrolled.png') })
+    await addExercise.click()
+    await expect(page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })).toBeVisible()
+    await page.getByRole('dialog', { name: 'Добавить упражнение', exact: true }).getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await finish.click()
+    await expect(page.locator('.finish-confirm')).toContainText('Есть незавершённые подходы')
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(finishes).toBe(0)
+    await finish.click()
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Завершаем тренировку', exact: true })).toHaveAttribute('aria-busy', 'true')
+    releaseFailure()
+    await expect(page.locator('p.error')).toBeVisible()
+    await expect(finish).toBeEnabled()
+    await page.reload()
+    await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-set.confirmed input[name="weightKg"]`)).toHaveValue('27.5')
+    await finish.click()
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click()
+    await expect(page).not.toHaveURL(/\/live$/)
+    expect(finishes).toBe(2)
+  })
+  test(`Figma workout Coach reference actions completion full lifecycle ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = restTimerWorkout()
+    source.exercises[0]!.restBetweenSetsSec = 90
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+    let finishes = 0
+    page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/finish')) finishes++ })
+    await page.goto(`/workouts/${workoutId}/live`)
+    for (const [index, set] of source.exercises[0]!.sets.entries()) {
+      const row = page.locator(`[data-live-set-id="${set.id}"]`)
+      await row.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill('27.5')
+      await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+      await expect(page.locator('.live-session-progress-copy')).toContainText(`Готово ${index + 1} из 2`)
+      if (index === 0) {
+        await expect(row).toHaveClass(/confirmed/)
+        await expect(page.locator('.live-rest-trigger')).toContainText('1:30')
+      }
+    }
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+    await expect(page.locator('.workout-exercise-header-summary')).toContainText('Результат: 2 подхода · 27.5 кг')
+    expect(await page.locator('.live-exercise-collapsed').evaluate(card => {
+      const header = card.querySelector('.live-exercise-head')!.getBoundingClientRect(), action = card.querySelector('.live-exercise-start')!.getBoundingClientRect()
+      return header.width >= card.getBoundingClientRect().width - 32 && action.top >= header.bottom
+    })).toBe(true)
+    await expect.poll(() => page.locator('.live-session-progress-track').evaluate(track => track.firstElementChild!.getBoundingClientRect().width / track.getBoundingClientRect().width)).toBe(1)
+    await page.screenshot({ path: info.outputPath('coach-live-actions-complete.png'), fullPage: true })
+    await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+    await expect(page).not.toHaveURL(/\/live$/)
+    expect(finishes).toBe(1)
+    await expect(page.locator('.finish-confirm')).toHaveCount(0)
+  })
+}
+test('Figma workout Coach reference actions completion retains cardio warning', async ({ page }) => {
+  const source = restTimerWorkout(), exercise = source.exercises[0]!
+  exercise.inputKind = 'distance'; exercise.ref = 'running'; exercise.muscleGroup = 'cardio'; exercise.name = 'Бег'
+  exercise.sets = [ { ...exercise.sets[0]!, confirmedAt: '2026-10-08T09:01:00Z', fact: { distanceKm: 1 }, distanceKm: 1 } ]
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+  let finishes = 0
+  page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/finish')) finishes++ })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await expect(page.locator('.finish-confirm')).toContainText('нет фактического времени')
+  await page.getByRole('button', { name: 'Внести время', exact: true }).click()
+  await expect(page.locator('.finish-confirm')).toHaveCount(0)
+  await expect(page.locator('.live-set.editing')).toBeVisible()
+  expect(finishes).toBe(0)
+  await page.reload()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await page.getByRole('button', { name: 'Завершить без оценки', exact: true }).click()
+  await expect(page).not.toHaveURL(/\/live$/)
+  expect(finishes).toBe(1)
+})
 
 for (const [role, profileId, expected] of [
   ['trainer', 'c0ac0000-6010-4000-8000-000000000002', true],
@@ -1782,6 +1911,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'live-phase-timer-2026-10',
       'coach-workout-gestures-2026-10',
       'coach-live-number-gestures-2026-10',
+      'coach-live-finish-top-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',
       'lime-day-workspace-2026-10',
