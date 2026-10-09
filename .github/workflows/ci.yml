@@ -128,10 +128,10 @@ jobs:
           # Pin to the version used by package-lock.json. Resolving `latest`
           # hits GitHub's unauthenticated release API and can be rate-limited.
           version: 2.116.0
-      # GHCR throttles shared hosted runners even with an authenticated token.
-      # The official Docker Hub mirror uses the runner's preconfigured pull auth.
-      - name: Use Docker Hub for Supabase images
-        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
+      # CLI2.116 supports ECR -> GHCR -> Docker Hub fallback. setup-cli exports
+      # an override; clear it so a throttled shared registry is not the only path.
+      - name: Allow official Supabase registry fallbacks
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "$GITHUB_ENV"
       # pgTAP runs directly against PostgreSQL. Starting the local API, auth,
       # realtime, storage and observability services only adds image pulls.
       - run: supabase start --exclude "$SUPABASE_DATABASE_EXCLUDE"
@@ -142,7 +142,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17
+        # Official Docker image mirrored by ECR, identical linux/amd64 digest
+        # verified against docker.io/library/postgres:17 on 2026-10-09.
+        image: public.ecr.aws/docker/library/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
         env:
           POSTGRES_DB: fit_actor_test
           POSTGRES_PASSWORD: postgres
@@ -283,8 +285,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
-      - name: Use Docker Hub for Supabase images
-        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
+      - name: Allow official Supabase registry fallbacks
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "$GITHUB_ENV"
       # E2E authenticates through the local API and observes Realtime. Keep
       # those services, but skip unrelated mail, storage and admin containers.
       - run: supabase start --exclude "$SUPABASE_E2E_EXCLUDE"
@@ -343,8 +345,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
-      - name: Use Docker Hub for Supabase images
-        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
+      - name: Allow official Supabase registry fallbacks
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "$GITHUB_ENV"
       - run: supabase start --exclude "$SUPABASE_E2E_EXCLUDE"
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs
@@ -405,8 +407,8 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
-      - name: Use Docker Hub for Supabase images
-        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io' >> "$GITHUB_ENV"
+      - name: Allow official Supabase registry fallbacks
+        run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "$GITHUB_ENV"
       - run: supabase start --exclude "$SUPABASE_E2E_EXCLUDE"
       - run: supabase db reset --local
       - run: node scripts/wait-for-local-auth.mjs

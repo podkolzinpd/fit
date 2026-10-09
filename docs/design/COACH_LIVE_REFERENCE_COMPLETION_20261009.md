@@ -84,3 +84,16 @@ COACH_WORKOUT_REFERENCE_PILOT_20261008.md; source card — ранее перед
 пустая тренировка не показывает вымышленные данные. Pending блокирует
 конфликтующие действия, disabled сохраняет подпись, ошибки не теряют ввод.
 Физический iPhone не подменяется WebKit/Chromium touch или simulator.
+
+### Внешний сбой проверки, 09.10
+
+CI #1545/#1546 остановил часть jobs до тестов: Docker Hub `toomanyrequests`,
+включая PostgreSQL17 service и Supabase start. Это не падение Live-сценария.
+В PR2 включено восстановление штатной загрузки тестовых образов: пустой
+registry override сохраняет [официальный fallback CLI2.116](https://github.com/supabase/cli/blob/v2.116.0/apps/cli/src/legacy/shared/legacy-docker-registry.ts)
+ECR → GHCR → Docker Hub, вместо единственного принудительного Docker Hub.
+PostgreSQL17 service использует [официальное ECR-зеркало](https://gallery.ecr.aws/docker/library/postgres)
+с закреплённым linux/amd64 digest: он совпал с текущим Docker Hub postgres:17
+при отдельном read-only сравнении manifest. Версия БД, health-check, migrations,
+RLS, auth, E2E, обязательные gates и пороги не ослаблены; production БД не меняется.
+Targeted workflow unit15/15; новый full check и повтор CI обязательны.

@@ -157,7 +157,7 @@ test('does not start Supabase services that CI scenarios do not use', () => {
   }
 })
 
-test('uses the Docker Hub mirror before Supabase image pulls in every database-backed CI job', () => {
+test('clears the setup-cli override to retain official registry fallback in every database-backed CI job', () => {
   for (const job of ['database', 'e2e-visual', 'e2e-chromium', 'e2e-webkit']) {
     const start = workflow.indexOf(`  ${job}:\n`)
     assert.notEqual(start, -1, `${job} job is missing`)
@@ -165,13 +165,23 @@ test('uses the Docker Hub mirror before Supabase image pulls in every database-b
 
     assert.match(
       body,
-      /name: Use Docker Hub for Supabase images\n\s+run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=docker\.io' >> "\$GITHUB_ENV"/,
+      /name: Allow official Supabase registry fallbacks\n\s+run: echo 'SUPABASE_INTERNAL_IMAGE_REGISTRY=' >> "\$GITHUB_ENV"/,
     )
     assert.ok(
-      body.indexOf('Use Docker Hub for Supabase images') < body.indexOf('supabase start --exclude'),
-      `${job} must select the mirror before pulling Supabase images`,
+      body.indexOf('Allow official Supabase registry fallbacks') < body.indexOf('supabase start --exclude'),
+      `${job} must retain fallback before pulling Supabase images`,
     )
+    assert.doesNotMatch(body, /SUPABASE_INTERNAL_IMAGE_REGISTRY=docker\.io/)
   }
+})
+
+test('uses the identical pinned PostgreSQL17 image without changing health or migration checks', () => {
+  const body = workflow.slice(workflow.indexOf('  yandex-database:\n'), workflow.indexOf('  e2e-scope:\n'))
+  assert.match(body, /image: public\.ecr\.aws\/docker\/library\/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3/)
+  assert.match(body, /--health-cmd "pg_isready -U postgres -d fit_actor_test"/)
+  assert.match(body, /npm --prefix services\/api run test:db/)
+  assert.match(body, /npm --prefix services\/api run db:migrate/)
+  assert.doesNotMatch(body, /continue-on-error|always\(\)|allowFailure/)
 })
 
 test('runs the complete Yandex API check independently from browser E2E', () => {
