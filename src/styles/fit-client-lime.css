@@ -120,7 +120,11 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
 .fit-client-lime .state-panel-mark { color: var(--lime-accent-ink); }
 .fit-client-lime .overflow-item:hover { background: var(--lime-surface-high); }
 .fit-client-lime :where(button:disabled, .button[aria-disabled='true'], .overflow-item:disabled) { opacity: 1; color: var(--lime-text-secondary); background: var(--lime-surface-raised); border-color: var(--lime-divider); }
-.fit-client-lime.theme-light .modal-dialog .actions .danger { color: var(--lime-surface); }
+.fit-client-lime.theme-light .modal-dialog .actions .danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--lime-surface);
+}
 .fit-client-lime .profile-settings .field { width: 100%; }
 .fit-client-lime .profile-settings select { width: 100%; min-height: 48px; padding: 10px 12px; border: 1px solid var(--lime-divider); border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font-size: 16px; }
 .fit-client-lime .profile-settings > .field { padding: 16px; box-sizing: border-box; }

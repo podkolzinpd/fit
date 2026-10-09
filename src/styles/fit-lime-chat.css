@@ -112,7 +112,7 @@
 .fit-lime-shell .chat-composer-context { border-left-color: var(--lime-accent); background: var(--lime-surface-raised) }
 .fit-lime-shell .chat-attach { width: 48px; height: 48px; border: 1px solid var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text) }
 .fit-lime-shell .chat-send { width: 48px; height: 48px; background: var(--lime-accent); color: var(--lime-text-on-accent) }
-.fit-lime-shell .chat-send:disabled { opacity: .48 }
+.fit-lime-shell .chat-send:disabled { opacity: 1; border-color: var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text-secondary) }
 .fit-lime-chat-sheet { background: rgba(0, 0, 0, .72) }
 .fit-lime-chat-sheet .chat-action-sheet {
   border-color: var(--lime-divider);

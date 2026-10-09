@@ -44,7 +44,7 @@
   --accent-ring:color-mix(in srgb, #f1ede6 36%, transparent);
   --accent-soft:#26272b;
   --on-accent:#171719;
-  --selection:color-mix(in srgb, #f1ede6 28%, transparent);
+  --selection:var(--mono-primary);
   --overlay:color-mix(in srgb, #111214 76%, transparent);
   --card-fill:#1d1e21;
   --frame-bg:#111214;
@@ -211,7 +211,7 @@
   --accent-ring:color-mix(in srgb, #242426 28%, transparent);
   --accent-soft:#efede8;
   --on-accent:#f6f2ea;
-  --selection:color-mix(in srgb, #242426 20%, transparent);
+  --selection:var(--mono-primary);
   --overlay:color-mix(in srgb, #242426 28%, transparent);
   --card-fill:#efede8;
   --frame-bg:#fbfaf7;
@@ -292,7 +292,7 @@
 }
 * { box-sizing: border-box }
 body { margin: 0; min-height: 100dvh; background: var(--bg); }
-::selection { color: white; background: var(--selection) }
+::selection { color: var(--mono-on-primary); background: var(--selection) }
 button, input, textarea, select { font: inherit }
 /* Кнопка по умолчанию — нейтральное действие. Коралл зарезервирован для одной
    явной primary-кнопки текущего экрана/состояния: это не даёт служебным,
@@ -3153,6 +3153,8 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .ui-identity .modal-dialog .actions { gap:8px }
 .ui-identity .modal-dialog .actions button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
 .ui-identity .modal-dialog .actions .danger { border-color:var(--danger); background:var(--surface-elevated); color:var(--danger) }
+.ui-identity button:disabled,
+.ui-identity .button[aria-disabled='true'] { opacity:1; border-color:var(--border); background:var(--surface-sunken); color:var(--secondary-label-fg); cursor:not-allowed }
 .contest-winner-dialog { width:min(100%, 380px) }
 .contest-winner-dialog:focus { outline:none }
 .contest-winner-body { display:flex; flex-direction:column; gap:12px; margin:0 }

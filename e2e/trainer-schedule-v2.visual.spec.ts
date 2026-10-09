@@ -3914,7 +3914,10 @@ for (const [account, profileId] of [
     await expect(page.getByRole('button', { name: 'Назад' })).toBeInViewport()
     await expect(page.getByRole('button', { name: 'Назад' })).toHaveCSS('opacity', '1')
     await expect(page.locator('.chat-message.partner')).toHaveCSS('background-color', 'rgb(26, 26, 28)')
-    await expect(page.getByRole('button', { name: 'Отправить' })).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+    const send = page.getByRole('button', { name: 'Отправить' })
+    await expect(send).toBeDisabled()
+    await expect(send).toHaveCSS('background-color', 'rgb(37, 37, 41)')
+    await expect(send).toHaveCSS('opacity', '1')
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-conversation.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
