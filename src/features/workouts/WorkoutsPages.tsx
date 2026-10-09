@@ -1,4 +1,5 @@
 import { AddActionLabel } from '../../shared/AddActionLabel'
+import { coachLiveSetSummary } from './coach-live-summary'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
@@ -2769,15 +2770,20 @@ export function LiveWorkoutPage() {
     const key = `${exercise.id}:${exercise.source}:${exercise.ref}`
     return <LiveExerciseTechnique
       exercise={meta}
-      collapsed={collapsedLiveTechniques.has(key)}
+      collapsed={coachReference ? !collapsedLiveTechniques.has(key) : collapsedLiveTechniques.has(key)}
       onCollapsedChange={(collapsed) => setCollapsedLiveTechniques((current) => {
         const next = new Set(current)
-        if (collapsed) next.add(key)
+        if (coachReference ? !collapsed : collapsed) next.add(key)
         else next.delete(key)
         return next
       })}
       onOpenTechnique={() => setTechniqueExercise(meta)}
     />
+  }
+  function referenceLiveSummary(exercise: WorkoutExerciseModel) {
+    const values = exercise.sets.map((set) => set.confirmedAt ? factLine(set, false, exercise.ref) : planLine(exercise.inputKind, set, exercise.ref))
+    const provenance = exercise.sets.every((set) => set.confirmedAt) ? 'Результат' : exercise.sets.some((set) => set.confirmedAt) ? 'План и факт' : 'План'
+    return `${provenance}: ${coachLiveSetSummary(values)}`
   }
   useEffect(() => {
     if (!actor?.userId || !query.data) return
@@ -3851,7 +3857,8 @@ export function LiveWorkoutPage() {
         // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1
-        const reorder = canReorder ? coachReference ? <WorkoutDragHandle id={block.blockId} label={block.exercises.map((exercise) => exercise.name).join(', ')} /> : liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        const reorder = canReorder ? coachReference ? <WorkoutDragHandle id={block.blockId} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{block.exercises.length === 1 ? <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((exercise) => exercise.id === block.exercises[0]!.id) + 1}</span> : undefined}</WorkoutDragHandle> : liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        const referenceNumber = (exercise: WorkoutExerciseModel) => block.exercises.length === 1 && reorder ? reorder : <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((item) => item.id === exercise.id) + 1}</span>
         const blockDone = block.exercises.every((exercise) => exercise.sets.every((set) => set.confirmedAt))
         const blockStatus = blockDone ? 'done' : block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id) ? 'current' : 'upcoming'
         // Одиночное упражнение (или блок из одного) — как раньше, по подходам.
@@ -3878,9 +3885,9 @@ export function LiveWorkoutPage() {
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
-              return swipeLive(exercise, coachReference ? <div className="live-completed-gesture-head">{reorder}<WorkoutExerciseCompact state="completed" className="live-exercise-collapsed" title={exercise.name}
-                leading={liveHeaderThumbnail(exercise)} meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
-                action={<button type="button" className="secondary" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button>} />{exerciseMenu(exercise)}</div> : <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
+              return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise)} />
+                <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
                 leading={liveHeaderThumbnail(exercise)}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
                 onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />)
@@ -3891,14 +3898,14 @@ export function LiveWorkoutPage() {
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               const progressLabel = completedSets > 0 ? `Выполнено ${completedSets} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`
               return swipeLive(exercise, <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{reorder}</>} />
-                <div className="live-upcoming-row"><p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise)} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
+                <div className="live-upcoming-row">{!coachReference && <p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>}
                   <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={`${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
                 </div>
               </WorkoutExercise>)
             }
             return swipeLive(exercise, <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise, blockStatus === 'current')} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
               {liveTechniqueFor(exercise, blockStatus === 'current')}
               {clientMode && exercise.trainerComment && <p className="live-trainer-cue">Тренер: {exercise.trainerComment}</p>}
               {(() => { const result = previousExerciseResults.data?.get(exercise.ref); const line = result && previousResultLine(result.sets, exercise.ref); return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null })()}
@@ -3964,7 +3971,8 @@ export function LiveWorkoutPage() {
               const showNote = isCurrent || (blockDone && roundIndex === 0)
               return swipeLive(exercise, <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
-                leading={roundIndex === 0 ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
+                leading={coachReference ? referenceNumber(exercise) : roundIndex === 0 ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
+                summary={coachReference ? referenceLiveSummary({ ...exercise, sets: [set] }) : undefined}
                 onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0
                   ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])
                   : undefined} />
@@ -3979,7 +3987,7 @@ export function LiveWorkoutPage() {
         const content = renderBlock()
         return coachReference ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
       })
-        return coachReference ? <><Coachmark id="coach-workout-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark><WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
+        return coachReference ? <><Coachmark id="coach-live-number-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте упражнение за номер, суперсет — за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark><WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
