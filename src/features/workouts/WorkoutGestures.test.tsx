@@ -13,6 +13,7 @@ function setup(disabled = false) {
     {['a', 'b', 'c'].map((id) => <WorkoutDragBlock key={id} id={id}>
       <WorkoutSwipe id={id} disabled={false} onDelete={() => { remove(id) }} onReplace={() => { replace(id) }}>
         <WorkoutDragHandle id={id} label={id} /><p data-testid={id}>Упражнение {id}</p><input aria-label={`Вес ${id}`} defaultValue="25" />
+        <button type="button" aria-label={`Настройки ${id}`}>Настройки</button>
       </WorkoutSwipe>
     </WorkoutDragBlock>)}
   </WorkoutGestureList>)
@@ -25,10 +26,28 @@ function swipe(id: string, dx: number, dy = 0) {
   fireEvent.pointerUp(item)
 }
 function pointer(target: Element, type: string, pointerId: number, isPrimary = true, clientY = 100, clientX = 160) {
-  const event = new MouseEvent(type, { bubbles: true, button: 0, clientX, clientY })
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX, clientY })
   Object.defineProperties(event, { pointerId: { value: pointerId }, isPrimary: { value: isPrimary } })
   fireEvent(target, event)
+  return event
 }
+it('swipe surface prevents native text drag without stealing editable controls', () => {
+  setup()
+  const item = screen.getByTestId('a')
+  expect(pointer(item, 'pointerdown', 11).defaultPrevented).toBe(true)
+  pointer(item, 'pointercancel', 11)
+  expect(pointer(screen.getByRole('textbox', { name: 'Вес a' }), 'pointerdown', 12).defaultPrevented).toBe(false)
+  expect(pointer(screen.getByRole('button', { name: 'Настройки a' }), 'pointerdown', 13).defaultPrevented).toBe(false)
+  pointer(item, 'pointerdown', 14)
+  pointer(item, 'pointermove', 14, true, 100, 60)
+  pointer(item, 'pointerup', 14)
+  expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible()
+})
+it('disabled swipe leaves native pointer behavior untouched', () => {
+  setup(true)
+  expect(pointer(screen.getByTestId('a'), 'pointerdown', 11).defaultPrevented).toBe(false)
+  expect(screen.queryByRole('button', { name: 'Удалить' })).not.toBeInTheDocument()
+})
 it('another pointer cannot commit or cancel the active block drag', () => {
   const { move } = setup()
   const handle = screen.getByRole('button', { name: 'Переместить: a' })

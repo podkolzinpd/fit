@@ -146,6 +146,9 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children }: {
   return <div data-workout-swipe={id} className="workout-swipe"
     onPointerDown={(event) => {
       if (inactive || start.current || event.isPrimary === false || event.button !== 0 || (event.target as Element).closest('button,input,textarea,select,a,video,[role="button"],[contenteditable="true"]')) return
+      // Native text selection can turn the next swipe into HTML drag-and-drop
+      // and cancel its pointer stream. Editable controls are excluded above.
+      event.preventDefault()
       start.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, horizontal: false, side }; suppressClick.current = false
     }}
     onPointerMove={(event) => {

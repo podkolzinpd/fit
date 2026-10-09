@@ -112,6 +112,10 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
     }, { x: start, y })).toBe(true)
     await page.mouse.move(start, y); await page.mouse.down()
     await page.mouse.move(start + (right ? 100 : -100), y, { steps: 8 }); await page.mouse.up()
+    expect(await item.evaluate(element => {
+      const selection = window.getSelection()
+      return selection?.anchorNode && element.contains(selection.anchorNode) ? selection.toString() : ''
+    })).toBe('')
   }
   await swipe(swipes.last(), true)
   await swipes.last().getByRole('button', { name: 'Заменить', exact: true }).click()
@@ -137,6 +141,61 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await expect(page.getByLabel('Вес, подход 1')).toHaveValue('27.5')
   await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Проверка жестов плана')
   await expect(page.locator('.live-set-confirm')).toHaveCount(0)
+  expect(writes).toEqual([])
+})
+
+test('Figma workout Coach reference swipe keeps vertical scrolling and field focus', async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const source = { ...coachGestureWorkout(false, 8), status: 'planned', startedAt: null }
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  const writes: string[] = []
+  page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/v1/workouts')) writes.push(request.url()) })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  const swipe = page.locator('[data-workout-swipe]').first()
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeEnabled()
+  await expect(page.locator('.planned-exercise')).toHaveCount(8)
+  await expect(swipe.getByRole('button', { name: 'Переместить: Приседания', exact: true })).toBeEnabled()
+  await expect(swipe.getByLabel('Вес, подход 1')).toHaveValue('20')
+  const stableCard = await swipe.elementHandle()
+  await page.getByRole('textbox', { name: 'Название тренировки' }).fill('План со стабильными карточками')
+  expect(await stableCard!.evaluate(element => element.isConnected)).toBe(true)
+  await swipe.scrollIntoViewIfNeeded()
+  await expect(swipe).toHaveCSS('touch-action', 'pan-y')
+  const box = (await swipe.boundingBox())!
+  const from = { x: box.x + 12, y: box.y + box.height / 2 }
+  expect(await swipe.evaluate((element, point) => {
+    const target = document.elementFromPoint(point.x, point.y)
+    return !!target && element.contains(target) && !target.closest('button,input,textarea,select,a,[role="button"]')
+  }, from)).toBe(true)
+  const before = await page.locator('.content').evaluate(element => element.scrollTop)
+  if (browserName === 'chromium') {
+    const cdp = await page.context().newCDPSession(page)
+    try {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
+      for (let step = 1; step <= 8; step += 1) await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove', touchPoints: [{ x: from.x, y: from.y - 180 * step / 8 }],
+      })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    } finally { await cdp.detach() }
+  } else {
+    // Mobile WebKit exposes neither trusted touch pan nor wheel here.
+    // Check pointer routing and scrollability, not physical iPhone touch.
+    await swipe.dispatchEvent('pointerdown', { pointerId: 61, pointerType: 'touch', isPrimary: true, button: 0, clientX: from.x, clientY: from.y })
+    await swipe.dispatchEvent('pointermove', { pointerId: 61, pointerType: 'touch', isPrimary: true, clientX: from.x, clientY: from.y - 180 })
+    await swipe.dispatchEvent('pointercancel', { pointerId: 61, pointerType: 'touch', isPrimary: true })
+    await page.locator('.content').evaluate(element => { element.scrollTop += 180 })
+  }
+  await expect.poll(() => page.locator('.content').evaluate(element => element.scrollTop)).toBeGreaterThan(before + 40)
+  await expect(page.locator('.workout-swipe-action')).toHaveCount(0)
+  const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1')
+  await weight.click(); await weight.fill('27.5')
+  await expect(weight).toBeFocused()
+  await expect(weight).toHaveValue('27.5')
+  await expect(weight).toHaveCSS('height', '48px')
+  await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Обновлённый план со стабильными карточками')
+  await expect(weight).toHaveValue('27.5')
+  await weight.focus()
+  await expect(weight).toBeFocused()
   expect(writes).toEqual([])
 })
 
