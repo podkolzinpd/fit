@@ -289,7 +289,9 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
-  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot): Promise<number> {
+  async appendLiveExercise(workout: Workout, exercise: ExerciseSnapshot, _operationId?: string): Promise<number> {
+    // Legacy RPC has no receipt parameter; its existing transport stays unchanged.
+    void _operationId
     const result = await workoutQueries.appendLiveExercise(workout.id, exercise, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data

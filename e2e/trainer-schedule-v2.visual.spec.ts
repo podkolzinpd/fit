@@ -1245,7 +1245,7 @@ const workout = {
 
 type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort'> & { sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -1261,6 +1261,9 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
   let workouts: MockWorkout[] = options.workouts ?? [{ ...workout,
     ...(options.role !== 'client' ? { trainerId: profileId, createdBy: profileId } : {}),
   }]
+  const appendCommands: Array<{ exercise: { source: string; ref: string; name: string; muscleGroup: WorkoutExercise['muscleGroup']; inputKind: WorkoutExercise['inputKind'] }; operationId: string; expectedVersion: number }> = []
+  const appendReceipts = new Map<string, number>()
+  let appendCount = 0
   let clientRecords = options.clientRecords ?? [{ id: clientId, fullName: 'Алексей Смирнов', archivedAt: null, version: 1 }]
   let goalRecord: Record<string, unknown> | null = options.withGoal ? {
     id: '10000000-0000-4000-8000-000000000040', clientId, title: 'Подготовка к старту', targetDate: '2026-12-01',
@@ -1310,6 +1313,7 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'lime-day-workspace-2026-10',
       'lime-schedule-history-2026-10',
       'lime-schedule-ownership-2026-10',
+      'client-live-multiple-exercises-2026-10',
     ]))
   }, { token: sessionToken, profileId })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
@@ -1584,6 +1588,29 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     } else if (url.pathname === '/v1/workouts/quick-start' && route.request().method() === 'POST') {
       workouts = [{ ...workout, id: newWorkoutId, status: 'in_progress' }]
       body = { workout: { id: newWorkoutId, resumed: false } }
+    } else if (/^\/v1\/workouts\/[0-9a-f-]+\/exercises$/.test(url.pathname) && route.request().method() === 'POST') {
+      const id = url.pathname.split('/')[3]
+      const command = route.request().postDataJSON() as (typeof appendCommands)[number]
+      appendCommands.push(command)
+      const receipt = appendReceipts.get(command.operationId)
+      if (receipt) { body = { workout: { version: receipt } } }
+      else {
+        const current = workouts.find((item) => item.id === id)!
+        if (current.version !== command.expectedVersion) { await route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":"conflict"}' }); return }
+        appendCount++
+        const exercise: WorkoutExercise = { ...command.exercise, source: command.exercise.source as 'system',
+          id: `10000000-0000-4000-8000-${String(500 + appendCount).padStart(12, '0')}`,
+          blockId: `10000000-0000-4000-8000-${String(600 + appendCount).padStart(12, '0')}`,
+          position: current.exercises.length, blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenSetsSec: 90, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0,
+          sets: [{ id: `10000000-0000-4000-8000-${String(700 + appendCount).padStart(12, '0')}`, position: 0, fact: {}, confirmedAt: null, version: 1 }],
+        }
+        const version = current.version + 1
+        workouts = workouts.map((item) => item.id === id ? { ...item, version, exercises: [...item.exercises, exercise] } : item)
+        appendReceipts.set(command.operationId, version)
+        if (appendCount === options.failAppendAfterCommitAt) { await route.abort('failed'); return }
+        body = { workout: { version } }
+      }
     } else if (/^\/v1\/workouts\/[0-9a-f-]+\/duration$/.test(url.pathname) && route.request().method() === 'PUT') {
       const id = url.pathname.split('/')[3]
       const command = route.request().postDataJSON() as { actualDurationSec: number | null; expectedVersion: number }
@@ -1705,6 +1732,8 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
   })
   return {
+    getAppendCommands() { return appendCommands },
+    getWorkouts() { return workouts },
     setClientsFailure(value: boolean) { failClients = value },
     setTrainingDataFailure(value: boolean) { failTrainingData = value },
     setConnectionsFailure(value: boolean) { failConnections = value },
@@ -6599,6 +6628,82 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(notice).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
+
+  test(`Client Lime Live batch selection retry ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    const original = restTimerWorkout()
+    original.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
+    original.exercises[0]!.sets[0]!.fact = { weightKg: 40, reps: 12 }
+    const pilot = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [original], failAppendAfterCommitAt: 2 })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.getByRole('button', { name: 'Ещё упражнение', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await expect(picker.getByRole('button', { name: 'Добавить 0' })).toBeDisabled()
+    for (const name of ['Жим гантелей сидя', 'Планка', 'Присед со штангой']) {
+      await picker.getByLabel('Поиск упражнения').fill(name)
+      await picker.getByRole('button', { name: `Выбрать: ${name}`, exact: true }).click()
+    }
+    await expect(picker).toContainText('Выбрано: 3')
+    expect(pilot.getAppendCommands()).toHaveLength(0)
+    await picker.getByRole('button', { name: 'Добавить 3', exact: true }).click()
+    await expect(picker.getByRole('alert')).toContainText('повторите добавление остальных')
+    await expect(picker).toContainText('Выбрано: 2')
+    expect(pilot.getWorkouts()[0]!.exercises).toHaveLength(3)
+    const before = pilot.getAppendCommands()[1]
+    await page.screenshot({ path: info.outputPath('live-batch-partial.png') })
+    await picker.getByRole('button', { name: 'Добавить 2', exact: true }).click()
+    await expect(picker).not.toBeVisible()
+    const commands = pilot.getAppendCommands()
+    expect(commands).toHaveLength(4)
+    expect(commands[2]).toEqual(before)
+    expect(commands.map((item) => item.exercise.name)).toEqual(['Жим гантелей сидя', 'Планка', 'Планка', 'Присед со штангой'])
+    expect(pilot.getWorkouts()[0]!.exercises).toHaveLength(4)
+    expect(pilot.getWorkouts()[0]!.exercises[0]!.sets[0]!).toMatchObject({ confirmedAt: '2026-10-08T09:00:00Z', fact: { weightKg: 40, reps: 12 } })
+    expect(pilot.getWorkouts()[0]!.exercises.slice(1).map((item) => item.name)).toEqual(['Жим гантелей сидя', 'Планка', 'Присед со штангой'])
+    await page.reload()
+    await expect(page.locator('.live-workout-page article:has(.live-exercise-head)')).toHaveCount(4)
+    await page.getByRole('button', { name: 'Ещё упражнение', exact: true }).click()
+    await picker.getByLabel('Поиск упражнения').fill('Отжимания')
+    await picker.getByRole('button', { name: /Выбрать: Отжимания/ }).first().click()
+    await picker.getByRole('button', { name: 'Закрыть', exact: true }).click()
+    expect(pilot.getAppendCommands()).toHaveLength(4)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('live-batch-result.png') })
+  })
+}
+
+for (const [role, lime, width] of [['client', true, 390], ['client', true, 430], ['client', false, 390], ['trainer', true, 1440]] as const) {
+  test(`Live quick start picker keeps role contract ${role} lime=${lime} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    const pilot = await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId, clientLime: lime, fitLime: lime, workouts: [] })
+    if (role === 'client') {
+      await page.goto('/me')
+      await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+      await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}/live`))
+    } else {
+      await mockPilot(page, { role, profileId: trainerId, fitLime: true, workouts: [{ ...workout, id: newWorkoutId, status: 'in_progress' }] })
+      await page.goto(`/workouts/${newWorkoutId}/live`)
+    }
+    await page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).click()
+    const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+    await picker.getByLabel('Поиск упражнения').fill('Жим гантелей сидя')
+    await picker.getByRole('button', { name: `${role === 'client' && lime ? 'Выбрать' : 'Добавить'}: Жим гантелей сидя`, exact: true }).click()
+    if (role === 'client' && lime) {
+      expect(pilot.getAppendCommands()).toHaveLength(0)
+      await expect(picker.getByRole('button', { name: 'Добавить 1', exact: true })).toBeVisible()
+      await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
+      await expect(picker).toContainText('Выбрано: 1')
+      await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
+      await picker.getByRole('button', { name: 'Убрать: Жим гантелей сидя', exact: true }).click()
+      await expect(picker.getByRole('button', { name: 'Добавить 0', exact: true })).toBeDisabled()
+      await picker.getByRole('button', { name: 'Выбрать: Жим гантелей сидя', exact: true }).click()
+      await picker.getByRole('button', { name: 'Добавить 1', exact: true }).click()
+    }
+    await expect(picker).not.toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Жим гантелей сидя', exact: true })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('quick-start-picker-result.png') })
+  })
 }
 
 for (const [theme, width] of [['light', 390], ['dark', 430]] as const) {
@@ -6647,3 +6752,21 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     expect([muscleWeight, pickerWeight]).toEqual(['500', '500'])
   })
 }
+
+ test('Client Lime Live multiple-selection notice is shown once', async ({ page }, info) => {
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+  await page.goto('/me')
+  await page.evaluate((id) => {
+    const key = `fit.coachmarks-seen.${id}`
+    const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+    localStorage.setItem(key, JSON.stringify(seen.filter((item) => item !== 'client-live-multiple-exercises-2026-10')))
+  }, clientId)
+  await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
+  const notice = page.locator('.coachmark-bubble').filter({ hasText: 'Добавляйте несколько упражнений' })
+  await expect(notice).toContainText('Выберите упражнения в каталоге и нажмите «Добавить».')
+  await page.screenshot({ path: info.outputPath('client-live-selection-notice.png') })
+  await notice.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await page.reload()
+  await expect(page.locator('.live-empty-start')).toBeVisible()
+  await expect(notice).toHaveCount(0)
+ })
