@@ -47,3 +47,48 @@
 .coach-workout-reference button.workout-swipe-action.replace { left: 0; background: var(--lime-surface-raised); color: var(--lime-accent) }
 .coach-workout-reference .live-completed-gesture-head { display: flex; align-items: center; gap: 4px }
 .coach-workout-reference .live-completed-gesture-head .workout-exercise-compact { flex: 1; min-width: 0 }
+
+/* PR3: approved quick-plan / client / calendar references. Extra existing
+   controls remain in a secondary disclosure, rather than being deleted. */
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-composer { width: min(calc(100% - 16px), 359px); border-radius: 32px; background: #252529 }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-composer { padding: 16px 20px 0 }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-composer > input { min-height: 44px; padding: 8px 44px 8px 0; font-size: 24px; line-height: 24px; font-weight: 500; letter-spacing: -.48px }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-composer > input::placeholder { color: rgb(255 255 255 / 40%) }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-close { top: 12px; right: 8px; background: transparent }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 8px; margin-block: 16px; align-items: center }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-controls > :is(.fit-lime-plan-chip, .schedule-v2-calendar) { min-height: 44px; min-width: 0; max-width: 100%; width: auto; padding: 8px 12px 8px 8px; gap: 6px; border: 1px solid #3b3b40; border-radius: 99px; line-height: 14px; font-weight: 500 }
+.coach-workout-reference .coach-reference-composer .schedule-v2-calendar { color: var(--lime-accent) }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-controls > :is(.fit-lime-plan-send, .fit-lime-plan-mic) { width: 44px; height: 44px; padding: 10px; border-radius: 99px; flex: 0 0 44px; margin-left: auto }
+.coach-workout-reference .coach-reference-composer .fit-lime-plan-exercises { min-height: 56px; margin: 0 -20px; width: calc(100% + 40px); border-color: #3b3b40; font-weight: 500; line-height: 14px }
+.coach-workout-reference .coach-reference-composer .coach-plan-options { border-top: 1px solid #3b3b40; margin-inline: -20px; padding-inline: 20px; font-size: 14px }
+.coach-workout-reference .coach-plan-options > summary { min-height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--lime-text-secondary) }
+.coach-workout-reference .coach-plan-options > summary:focus-visible { outline: 2px solid var(--lime-accent); outline-offset: -4px }
+.coach-workout-reference .coach-plan-options .fit-lime-plan-back { display: flex; align-items: center; gap: 8px; margin-block: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-sheet { width: min(calc(100% - 24px), 375px); height: min(752px, calc(var(--app-visible-height, 100dvh) - 24px)); max-height: calc(var(--app-visible-height, 100dvh) - 24px); padding: 0; border-radius: 40px; background: #1a1a1c; color: #fff; overflow-y: auto }
+.phone-frame.fit-lime-shell.coach-workout-reference .client-picker.coach-reference-sheet { width: min(100%, 375px); display: flex; flex-direction: column }
+.coach-workout-reference .coach-reference-sheet .coach-reference-sheet-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 88px; padding: 22px 20px; margin: 0; border-bottom: 1px solid #252529; background: #1a1a1c; position: sticky; top: 0; z-index: 2; flex-shrink: 0 }
+.coach-workout-reference .coach-reference-sheet-header > :is(h1, h2) { grid-column: 2; grid-row: 1; margin: 0; font-size: 16px; line-height: 16px; text-align: center; font-weight: 500 }
+.coach-workout-reference .coach-reference-sheet-header > button { width: 44px; height: 44px; min-height: 44px; padding: 10px; background: transparent; border: 0; border-radius: 99px; grid-column: 1; grid-row: 1 }
+.coach-workout-reference .coach-reference-sheet-header > button.coach-sheet-confirm { grid-column: 3; background: #3b3b40 }
+.phone-frame.fit-lime-shell.coach-workout-reference .client-picker.coach-reference-sheet .picker-close { background: transparent }
+.coach-workout-reference .coach-reference-sheet .picker-search { width: calc(100% - 40px); margin: 16px 20px 0; min-height: 44px }
+.coach-workout-reference .coach-reference-sheet .client-picker-list { padding: 20px; flex: 1; overflow-y: auto }
+.coach-workout-reference .coach-reference-sheet .picker-section-label { margin: 0 0 12px; font-size: 14px; font-weight: 400; color: rgb(255 255 255 / 60%) }
+.coach-workout-reference .coach-reference-sheet .client-picker-item { width: 100%; padding: 4px 0; margin-bottom: 12px; gap: 16px; border: 0; background: transparent; line-height: 20px }
+.coach-workout-reference .coach-reference-sheet .client-picker-avatar { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50% }
+.coach-workout-reference .coach-reference-sheet .client-picker-item > span:nth-child(2) { flex: 1; text-align: left }
+.coach-workout-reference .coach-client-surname { display: inline; color: rgb(255 255 255 / 60%) }
+.coach-workout-reference .coach-reference-sheet .client-picker-item[aria-pressed='true'] { color: var(--lime-accent) }
+.coach-workout-reference .coach-reference-sheet > .state,
+.coach-workout-reference .coach-reference-sheet .client-picker-create { padding: 16px 20px }
+.coach-workout-reference .coach-reference-sheet .client-picker-create-action { width: calc(100% - 40px); margin: 0 20px 20px }
+.coach-workout-reference .coach-reference-sheet .fit-lime-date-selected { display: flex; align-items: center; gap: 16px; padding: 20px; margin: 0; font-size: 14px; line-height: 20px; font-weight: 500; color: #f8b021 }
+.coach-workout-reference .coach-reference-sheet .fit-lime-date-selected svg { width: 24px; height: 24px; flex: 0 0 24px }
+.coach-workout-reference .coach-reference-sheet .fit-lime-month-navigation { margin-inline: 20px }
+.coach-workout-reference .coach-reference-sheet > section { padding: 16px 20px }
+.coach-workout-reference .coach-reference-sheet .fit-lime-month-grid { gap: 0; grid-template-columns: repeat(7, minmax(0, 1fr)) }
+.coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button { min-width: 44px; min-height: 44px; padding: 4px; font-size: 14px; line-height: 14px }
+.coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50% }
+.coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button[aria-pressed='true'] { background: transparent }
+.coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button[aria-pressed='true'] > span { background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.coach-workout-reference .coach-reference-sheet .fit-lime-date-times { position: sticky; bottom: 0; padding: 16px 20px; margin: 0; border-top: 1px solid #252529; background: #1a1a1c }

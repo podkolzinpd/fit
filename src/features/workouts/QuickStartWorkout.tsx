@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { useAuth } from '../../app/auth-context'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { useDataBackend } from '../../app/data-backend-context'
 import type { Client, Workout } from '../../shared/domain'
 import { trackGoal } from '../../shared/yandex-metrika'
@@ -111,7 +112,7 @@ export function QuickStartWorkout({ role, clientId, clients = [], workouts, load
     {start.error && <p className="quick-start-status" role="alert">{start.error instanceof Error && 'code' in start.error && start.error.code === 'active_workout_exists'
       ? 'У клиента уже есть активная тренировка другого тренера.'
       : 'Не удалось начать тренировку. Данные не потеряны.'} {!formatOpen && <button type="button" onClick={() => begin(targetClientId)}>Повторить</button>}</p>}
-    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients} selectedId="" onChange={chooseClient} loading={loading} error={error} onRetry={onRetry} autoFocusSearch={!startOnClientSelection} initialOpen hideTrigger onDismiss={() => { setPickerOpen(false); if (!choosing.current) onPickerCancel?.() }} label="Для кого тренировка" />}
+    {pickerOpen && <ClientPicker userId={actor?.userId} clients={clients} selectedId="" onChange={chooseClient} loading={loading} error={error} onRetry={onRetry} autoFocusSearch={!startOnClientSelection} reference={isCoachWorkoutRedesignEnabled(actor)} immediateSelection initialOpen hideTrigger onDismiss={() => { setPickerOpen(false); if (!choosing.current) onPickerCancel?.() }} label="Для кого тренировка" />}
   </section>
 }
 

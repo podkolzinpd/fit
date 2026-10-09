@@ -110,6 +110,10 @@ export function CheckIcon(props: IconProps) {
   return <Icon data-icon="check" {...props}><path d="m5 12.5 4.2 4.2L19 7" /></Icon>
 }
 
+export function CheckSmallIcon(props: IconProps) {
+  return <Icon data-icon="check-small" {...props}><path d="m5 12.5 4.2 4.2L19 7" /></Icon>
+}
+
 export function PlayIcon(props: IconProps) {
   return <Icon data-icon="play" {...props}><path d="m9 7 8 5-8 5V7Z" fill="currentColor" stroke="none" /></Icon>
 }
