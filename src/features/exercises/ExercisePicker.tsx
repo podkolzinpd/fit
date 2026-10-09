@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEve
 import { useAppViewport } from '../../app/app-viewport'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import type { PreparedImage } from '../../shared/image-prep'
-import { AddIcon, BackIcon, CheckIcon, ChevronRightIcon, CloseIcon, PhotoIcon, PlayIcon } from '../../shared/icons'
+import { AddIcon, BackIcon, CheckIcon, CheckSmallIcon, ChevronRightIcon, CloseIcon, PhotoIcon, PlayIcon } from '../../shared/icons'
+import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { ExerciseImage } from './ExerciseImage'
 import { prepareExerciseImage } from './exercise-image'
 import { CONTINUOUS_RUNNING_FORMATS, INTERVAL_RUNNING_FORMATS, type RunningFormat } from '../../shared/running-formats'
@@ -114,6 +115,7 @@ interface ExercisePickerProps {
   initialSearch?: string
   initialMode?: ExercisePickerMode
   techniqueActionLabel?: string
+  reference?: boolean
   onClose: () => void
 }
 
@@ -145,7 +147,7 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
   )
@@ -156,6 +158,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [purpose, setPurpose] = useState<ExercisePurpose | null>(null)
   const [search, setSearch] = useState(initialSearch)
   const searchRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLElement>(null)
   const filterButtonRef = useRef<HTMLButtonElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const savedScrollTop = useRef(0)
@@ -293,6 +296,30 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   )
 
   useEffect(() => {
+    if (!reference) return
+    const previous = document.activeElement
+    dialogRef.current?.focus()
+    return () => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus() }
+  }, [reference])
+
+  function handleDialogKey(event: KeyboardEvent<HTMLElement>) {
+    if (!reference || event.defaultPrevented) return
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      if (addingSelected) return
+      if (previewExercise) closeTechnique()
+      else if (creating) closeCreate()
+      else if (filtersOpen) closeFilters(true)
+      else onClose()
+    }
+    if (event.key !== 'Tab') return
+    const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled):not([hidden]), select:not(:disabled), textarea:not(:disabled), a[href], summary') ?? []).filter((node) => node.getClientRects().length > 0)
+    const first = controls[0], last = controls.at(-1)
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { event.preventDefault(); last?.focus() }
+    else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) { event.preventDefault(); first?.focus() }
+  }
+
+  useEffect(() => {
     setVisibleCount(PICKER_BATCH_SIZE)
     setPlayingExerciseKey(null)
     if (listRef.current) listRef.current.scrollTop = 0
@@ -307,7 +334,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   }
   function applyFilter(change: () => void) {
     change()
-    closeFilters()
+    if (!reference) closeFilters()
   }
 
   function openCreate() {
@@ -316,7 +343,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     setCreating(true)
   }
   function pick(exercise: ExerciseSnapshot) {
-    if (showEmptySelection && addingSelected) return
+    if (addingSelected) return
     setSelectionError(null)
     if (!multiple) {
       recordRecent(exercise)
@@ -345,10 +372,10 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       await onPickMany(exercises)
       exercises.forEach(recordRecent)
       clearSelection()
-    } catch {
+    } catch (error) {
       setSelectionError(showEmptySelection
         ? 'Не удалось добавить все упражнения. Уже добавленные убраны из выбора — повторите добавление остальных.'
-        : 'Не удалось добавить упражнения. Выбор сохранён — попробуйте ещё раз.')
+        : reference && error instanceof Error ? error.message : 'Не удалось добавить упражнения. Выбор сохранён — попробуйте ещё раз.')
     } finally {
       setAddingSelected(false)
     }
@@ -420,8 +447,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     }
     return <article className={`picker-item${checked ? ' selected' : ''}${playing ? ' playing' : ''}`} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`}>
       <button type="button" className={`picker-item-technique${hasTechniqueMedia ? '' : ' without-media'}`} aria-label={`${playing ? 'Открыть технику' : hasTechniqueVideo ? 'Проиграть технику' : hasTechniqueMedia ? 'Открыть технику' : 'Посмотреть технику'}: ${exercise.name}`} aria-pressed={hasTechniqueVideo ? playing : undefined} onClick={showTechnique}>
-        {hasTechniqueMedia && <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} customPhotoPath={exercise.imagePath} alt={exercise.name} variant="picker" playVideo={playing} />{hasTechniqueVideo && !playing && <span className="picker-item-play" aria-hidden="true"><PlayIcon /></span>}</span>}
-        <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small>{playing && <small className="picker-item-playing-note">Нажмите ещё раз, чтобы открыть технику</small>}</span>
+        {hasTechniqueMedia && <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} customPhotoPath={exercise.imagePath} alt={exercise.name} variant="picker" playVideo={playing} />{hasTechniqueVideo && !playing && <span className="picker-item-play" aria-hidden="true">{reference ? <img src={coachWorkoutReferenceAssets.play} alt="" /> : <PlayIcon />}</span>}</span>}
+        <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small>{reference && exercise.source === 'custom' && <small className="coach-catalog-own">Моё</small>}{playing && <small className="picker-item-playing-note">Нажмите ещё раз, чтобы открыть технику</small>}</span>
       </button>
       <button type="button" className="picker-select-mark" aria-label={checked ? `Убрать: ${exercise.name}` : multiple ? `Выбрать: ${exercise.name}` : `Добавить: ${exercise.name}`} aria-pressed={multiple ? checked : undefined} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} onClick={() => pick(exercise)}>{checked ? <CheckIcon /> : <AddIcon />}</button>
     </article>
@@ -488,13 +515,18 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     }
   }
 
-  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onClick={onClose}>
-    <section className={`exercise-picker${selected.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
-      <header className={`picker-header${previewExercise ? ' picker-technique-header' : ''}`}>
+  const referenceList = reference && !previewExercise && !creating
+  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onClick={() => { if (!addingSelected) onClose() }}>
+    <section ref={dialogRef} tabIndex={reference ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${reference ? ' coach-reference-sheet coach-reference-catalog' : ''}${selected.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
+      {referenceList ? <header className="picker-header coach-reference-sheet-header">
+        <button type="button" className="picker-close" disabled={addingSelected} aria-label={filtersOpen ? 'Назад к упражнениям' : 'Закрыть'} onClick={filtersOpen ? () => closeFilters(true) : onClose}>{filtersOpen ? <BackIcon /> : <CloseIcon />}</button>
+        <h1>{filtersOpen ? 'Фильтры' : 'Добавить упражнение'}</h1>
+        {(filtersOpen || multiple) && <button type="button" className="coach-sheet-confirm" aria-label={filtersOpen ? 'Применить фильтры' : 'Добавить выбранные упражнения'} disabled={!filtersOpen && (addingSelected || selected.size === 0)} onClick={filtersOpen ? () => closeFilters(true) : () => void addSelected()}><CheckSmallIcon /></button>}
+      </header> : <header className={`picker-header${previewExercise ? ' picker-technique-header' : ''}`}>
         {previewExercise && <button type="button" className="picker-close picker-back" aria-label="Назад к выбору" onClick={closeTechnique}><BackIcon /></button>}
         <h1>{previewExercise ? 'Техника' : creating ? 'Своё упражнение' : 'Выберите упражнения'}</h1>
         <button type="button" className="picker-close" aria-label="Закрыть" disabled={showEmptySelection && addingSelected} onClick={creating ? closeCreate : onClose}><CloseIcon /></button>
-      </header>
+      </header>}
       {previewExercise ? <div className="picker-technique-view">
         <ExerciseTechniqueContent exercise={previewExercise} beforeFacts={<CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />} />
         <button type="button" className="primary picker-technique-action" onClick={() => techniqueAction(previewExercise)}>{multiple && selected.has(exerciseKey(previewExercise)) ? 'Убрать из выбранных' : multiple ? 'Добавить к выбранным' : techniqueActionLabel}</button>
@@ -512,16 +544,18 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         {catalog.error && <p className="error">{catalog.error.message}</p>}
         <button type="button" className="primary" disabled={catalog.saving || photoBusy || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
       </div> : <>
-        <div className="picker-search-control"><input ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => setFiltersOpen(false)} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div>
+        {(!reference || !filtersOpen) && <><div className="picker-search-control"><input ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => setFiltersOpen(false)} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div>
         <div className="picker-toolbar">
-          <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>Фильтры{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}</button>
-          <button type="button" className="secondary picker-create-action" onClick={openCreate}>Создать упражнение</button>
+          {reference && <span className="coach-catalog-count">{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>}
+          <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>{reference ? 'Фильтровать' : 'Фильтры'}{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}{reference && <img src={coachWorkoutReferenceAssets.filter} width="16" height="16" alt="" />}</button>
+          <button type="button" className={`secondary picker-create-action${reference && !selected.size ? ' coach-catalog-create-floating' : ''}`} disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}>{reference && !selected.size ? <img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /> : 'Создать упражнение'}</button>
         </div>
         {activeFilterChips.length > 0 && <div className="picker-active-filters" role="group" aria-label="Выбранные фильтры">
           {activeFilterChips.map((chip) => <button type="button" key={chip.key} aria-label={`Убрать фильтр: ${chip.label}`} onClick={() => { chip.remove(); requestAnimationFrame(() => filterButtonRef.current?.focus()) }}><span>{chip.label}</span><CloseIcon /></button>)}
-        </div>}
+        </div>}</>}
         {filtersOpen ? <div id="picker-filter-panel" className="picker-filter-panel" role="region" aria-label="Фильтры упражнений" onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); closeFilters(true) } }}>
-          <div className="picker-filter-panel-heading"><h2>Фильтры</h2>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>
+          <div className="picker-filter-panel-heading">{!reference && <h2>Фильтры</h2>}{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>
+          {reference && <div className="picker-filter-strip"><button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button></div>}
           <p className="picker-filter-label">Группа мышц</p>
           <div className="picker-filter-strip" role="group" aria-label="Группа мышц">
             {PICKER_MUSCLE_GROUPS.map((item) => <button type="button" key={item} aria-pressed={category === item} className={category === item ? 'active' : ''} disabled={category !== item && !groupOptions.includes(item)} onClick={() => applyFilter(() => selectGroup(item))}>{pickerMuscleGroupLabel(item)}</button>)}
@@ -530,7 +564,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           <div className="picker-filter-strip picker-quick-filter-strip" role="group" aria-label="Тип упражнения">
             <button type="button" aria-pressed={activeMode === 'running'} className={activeMode === 'running' ? 'active' : ''} onClick={() => applyFilter(selectRunningMode)}>Бег</button>
             {EXERCISE_PURPOSES.map((item) => <button type="button" key={item} aria-pressed={purpose === item} className={purpose === item ? 'active' : ''} disabled={purpose !== item && !purposeOptions.includes(item)} onClick={() => applyFilter(() => selectPurpose(item))}>{item === 'mobility' ? 'Растяжка' : EXERCISE_PURPOSE_LABELS[item]}</button>)}
-            <button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button>
+            {!reference && <button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button>}
           </div>
           {category !== 'all' && muscles.length > 1 && <><p className="picker-filter-label">Мышца</p><div className="picker-filter-strip picker-muscle-filter-strip" role="group" aria-label="Мышца">
             {muscles.map((item) => <button type="button" key={item} aria-pressed={muscle === item} className={muscle === item ? 'active' : ''} onClick={() => applyFilter(() => selectMuscle(muscle === item ? null : item))}>{item}</button>)}
@@ -555,7 +589,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           </>}
           {!runningExercise && !catalog.loading && <p className="state">Базовое упражнение «Бег» не найдено</p>}
         </div> : <>
-          {hasVisibleExercises && <div className="picker-list-meta"><span>{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>}
+          {!reference && hasVisibleExercises && <div className="picker-list-meta"><span>{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>}
           {catalog.loading && <p className="state">Загрузка…</p>}
           {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
           {!catalog.loading && !catalog.error && hasVisibleExercises && <div ref={listRef} className="picker-list">
@@ -571,7 +605,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           </div>}
         </>}
         {selectionError && <p className="error" role="alert">{selectionError}</p>}
-        {multiple && (selected.size > 0 || showEmptySelection) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
+        {multiple && (selected.size > 0 || showEmptySelection) && (!reference || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
       </>}
     </section>
   </div>
