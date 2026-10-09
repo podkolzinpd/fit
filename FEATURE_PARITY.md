@@ -569,3 +569,17 @@ PR4: Lime hour collision до/после часа, соседние заняти
 - Client Lime Live: planned/current/completed отображаются раздельно; до успешного confirm нет галочки/роста счётчика; retry и точный incomplete count.
 
 - Client Lime completion: отдельные zero/partial/full тексты; нейтральный нулевой итог; краткие сведения о калориях; сквозная voice → review/edit/reload → plan → Live → completion приёмка.
+
+## YAFIT-601 — независимый тренерский workout-reference pilot
+
+Только две подтверждённые тренерские identities, default-off; не общий Lime rollout.
+План и исходная нумерация — `docs/design/COACH_WORKOUT_REFERENCE_PILOT_20261008.md`.
+Локально реализованы Live/reference clock, атомарные Live block gestures,
+quick-plan/client/date sheets, catalog/multiselect/filters и full-plan editor.
+Полный редактор: 48px поля, source32px cards, title24px/YS Geo; прежние prep,
+format/stage/template/comment/technique/duration/distance/RPE сохранены.
+План не подтверждает факты. Whole-block draft drag сохраняет подходы/настройки;
+удаление подтверждается, сохранённые факты защищены. Error/retry сохраняет draft
+и request ID. Browser18/18 Chromium/WebKit375/390/430/1440; прежний ClientLime
+light/dark390/430 и непилотный trainer1440 WebKit5/5. CI, последовательный merge,
+финальное включение и production/native acceptance остаются отдельными гейтами.

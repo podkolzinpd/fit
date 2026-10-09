@@ -96,7 +96,7 @@ const ACTION_VARIANT_CLASSES: Record<WorkoutActionVariant, string> = {
 
 export function WorkoutCta({ pending, pendingLabel, variant = 'primary', className = '', children, ...props }: PropsWithChildren<{
   pending?: boolean
-  pendingLabel?: string
+  pendingLabel?: ReactNode
   variant?: WorkoutActionVariant
   className?: string
 } & ButtonHTMLAttributes<HTMLButtonElement>>) {

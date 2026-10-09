@@ -256,6 +256,43 @@ PR1 #1526 слит в mainb2f439a0 после всех зелёных CI-про�
 
 PR5 source preflight: точная форма331:5405 уже сохранена; новый запрос карточки365:10647 отклонён лимитом View seat Figma. Недостающие параметры не придумываются; запрос экспорта отправлен пользователю, доступная форма и механика продолжаются. Пункт5 не закрыт и production-пилот не включается до полной готовности.
 
+### Проверено локально — PR5, источник получен 2026-10-09
+
+Владелец предоставил два одинаковых оригинальных SVG5860×4215 (SHA256
+0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078).
+Они отрендерены локально; прежний блокер чтения карточки закрыт прямым источником,
+не угадыванием. Полные макеты/примерные лица и коммерческий шрифт не публикуются.
+Форма331:5405 использует high-fidelity контекст; карточка365:10647 сверена с
+оригинальным SVG: source371×327/r32/#252529, поля54px в источнике.
+В продукте высота остаётся48px по прямому требованию владельца.
+Title24Medium/YS Geo, строки16Regular, summary14Regular; header-save44px.
+Три дополнительные исходные SVG24px сохраняют SHA/геометрию: slots и размеры
+в figma-20261008/source-context.json, тест проверяет все6 исходных exports.
+
+Галочка шапки сохраняет план, не Live и не факт. Настройки подготовки, формат,
+этап цели, шаблоны, заметки, техника и RPE остаются доступны. Number-circle —
+ручка whole-block drag; свайп/меню подтверждают удаление, значения/порядок
+сохраняются при reload. Поля блокируются на время сохранения; error/retry
+повторяет тот же request ID. Видимые стрелки не возвращаются.
+Надиктовать раскрывает прежний composer, исходный текст сохраняется при сворачивании;
+parser/SpeechKit не менялись. Статус карты плана не имитирует подтверждённый факт.
+
+Проверки: targeted62/62 (editor/composer/CTA/source assets); полный
+check2583frontend/1272API/build exit0. Browser18/18 Chromium/WebKit375/390/430/1440:
+клиент/date/time validation, prep/format, multiselect, 27.5кг, keyboard drag,
+reload,503/retry-identical payload, non-pilot fallback, catalog/filters.
+Прежние client light/dark390/430 и непилотный trainer1440 — WebKit5/5.
+Реальный WebKit390 и исходный SVG просмотрены. CI/merge/production/native
+не подменяются этими локальными доказательствами.
+
+| Пункт PR5 | Видимый результат | Проверка | Статус |
+|---|---|---|---|
+| Полная форма | Компактная шапка/сохранение, title/client/date/time/notes | source SVG + browser18/18 | реализовано локально |
+| Карточки | Номер/title/summary/menu/sets/add,48px, время/дистанция/RPE | unit62 + browser375/390/430/1440 | реализовано локально |
+| Жесты плана | Свайпы с confirm, whole-block drag, без стрелок | editor unit + reload/fractional browser | реализовано локально |
+| Прежние настройки | Prep/format/stage/templates/comments/technique, legacy fallback | unit + WebKit legacy5/5 | реализовано локально |
+| Ошибка и сохранение | Форма blocked/pending; draft+requestID retained |503/retry в двух браузерах | реализовано локально |
+
 - [ ] PR1: gate, точный шрифт и оформление Live, регрессии отдыха/фактов/48px.
 - [ ] PR2: свайпы и drag блоков Live, сохранение выбранного упражнения/черновиков/таймера.
 - [ ] PR3: планирование и client/date/time sheets, быстрый старт без промежуточной формы.
@@ -269,9 +306,21 @@ PR5 source preflight: точная форма331:5405 уже сохранена;
 
 Включён main `f1eade18` с клиентским удалением выбранного подхода (#1527): сохранены его цель, явное подтверждение и блокировка pending, а также тренерские swipe/drag. Полный `npm run check` exit0: frontend2568/2568, API1272/1272, build. Chromium/WebKit26/26 по тренерскому референсу; отдельно WebKit8/8 по клиентскому selected-delete и default90/первому отдыху light/dark390/430. Обновлённый Live WebKit390 снимок просмотрен. PR1#1526 слит, API37839403454 success; private inspector37841723133 подтвердил ровно два trainer UUID без изменения данных. Флаг ещё OFF. PR2#1532 ожидает новый exact-head CI и раннюю очередь; PR3#1534, PR4#1536, PR5#1537 реализованы в отдельных зависимых ветках, не слиты и не выкачены.
 
+### Объединённая цепочка PR2–5 — 2026-10-09
+
+Изменения mainf1eade18 перенесены во все зависимые ветки. Общий `npm run check` exit0: frontend2583/2583, API1272/1272, build; Chromium/WebKit56/56 охватывают full editor/catalog/planning/live/gestures/role boundaries на375/390/430/1440. Выбор клиента «Начать сейчас» сразу вызывает старт; полный editor сохраняет только план. Все прежде проверенные настройки/48px/fact/rest сохранены. Флаг ещё OFF; fresh-main CI, последовательное слияние, APImigration140 и итоговый frontend/native/readback остаются обязательными гейтами.
+
+### Повторная проверка после main0d1004df — 2026-10-09
+
+Все зависимые ветки включают #1528, не отменяя клиентские segment-контракты. Общий check2583frontend/1272API/build exit0; Chromium/WebKit58/58. Добавлен явный pointer-сценарий editor: перестановка, замена свайпом, сохранение27.5кг/10повторов, отмена/подтверждение удаления и reload; план не отправляет ни одного POST фактов тренировки. Lint exit0. Remote CI PR2 на прежнем head7c32426d success, но не считается приёмкой нового main; устаревшие прогоны PR3–5 отменены перед обязательным свежим CI. Ранние активные #1529–1531 выпускаются другой задачей; наша очередь/границы двух тренеров и выключенный флаг сохранены. Разрешение владельца повторно подтверждено: все пять PR сливаются и выкатываются самостоятельно без дополнительных согласований, только после обязательных проверок.
+
 ### PR2 после main86e8936e — 2026-10-09
 
 Включён #1529, обе стороны rolling snapshot сохранены. WebKit21/21: тренерский референс/жесты/границы13, клиентские status pills/CTA и coachmark8 (light/dark390/430). Новые Live/rest/swipe390 снимки просмотрены;48px, отрицательный отдых и ввод сохранены. Remote CI37848168791 на прежнем7c32426d success, но не подменяет будущий свежий exact-head CI. Ранние активные #1530–1531 ещё впереди; флаг остаётся OFF. Владелец повторно подтвердил самостоятельное слияние и выкатку всех пяти PR без дополнительных разрешений; обязательные проверки и порядок выпуска не обходятся.
+
+### Все экраны после main86e8936e — 2026-10-09
+
+main#1529 перенесён во все четыре зависимые ветки без конфликтов рабочего кода. Chromium/WebKit74/74: coach-reference58 и client status/CTA/coachmark16. Прежняя полная проверка2583frontend/1272API/build относится к main0d1004df; новым browser-проходом она не подменяется. Перед слиянием каждой части обязательны окончательная свежая база и удалённый CI. Production-флаг всё ещё OFF, состав пилота не расширен.
 
 ### PR2 после main387944bd — 2026-10-09
 
@@ -285,15 +334,29 @@ PR5 source preflight: точная форма331:5405 уже сохранена;
 
 В локальной ветке PR5 сохранены оба изменения общего ввода: клиентский placeholder-пример и trainer reference/disabled. Chromium/WebKit74/74: coach58 + client composer16. Полный редактор WebKit390 визуально просмотрен, значения27.5кг/10повторов и прежняя48px геометрия сохранены. Lint изменённых компонентов exit0; full check этой конкретной цепочки после #1531 ещё впереди. Флаг OFF, все четыре оставшихся PR не слиты.
 
+### Полная цепочка с предварительным head87c7d525 — 2026-10-09
+
+Все четыре зависимые ветки включают текущий head раннего #1531 без конфликта продуктового кода. В ветке PR5 npm run check exit0: frontend2584/2584, API1272/1272+137 DB skipped, build. Chromium/WebKit90/90: coach reference58, client prep/date/time8, legacy trainer/client/Mono/Lime editor24. Исходные изображения/шрифты/48px и механики сохранены. Это предварительная совместимость, не объявление #1531 слитым: после его merge включается окончательный main и обязательный удалённый CI. Флаг OFF, production/readback/native ещё впереди.
+
 ### PR2 на окончательном main79f27008 — 2026-10-09
 
 Ранний #1531 слит после CI37859046729 success. В PR2 включён окончательный main79f27008: diff рабочего кода относительно предварительно проверенного кандидата отсутствует, единственный конфликт — пустые строки snapshot, обе стороны фактов сохранены. Повторный npm run check exit0 (frontend2569/2569, API1272/1272+137 DB skipped, build) и WebKit29/29 (coach13+client prep/date/time4+legacy editor12). PR2#1532 первый в активной очереди; далее клиентский#1533 → PR3#1534 → клиентский#1535 → PR4#1536 → PR5#1537. Свежий remote CI/merge/API140 ещё обязательны; флаг OFF.
+
+### CI PR2: временная недоступность оригинальных шрифтов — 2026-10-09
+
+Remote6bd0535c/CI37861973615 attempt1: все остальные задания success; оба Lime-задания завершились ДО браузерных тестов при загрузке YS Geo HTTP503. Публичные /auth и fonts возвращали503, XML Object Storage SlowDown; причина нагрузки не доказана. Согласно [официальному справочнику](https://yandex.cloud/en/docs/storage/s3/api-ref/response-codes), частота запросов снижена, инфраструктура/публикация не менялись. После восстановления оба публичных файла проверены исходным WOFF2/SHA256 валидатором2/2; штатно повторены только failed jobs на том же head. В attempt2 оба этапа подготовки шрифтов success, сами браузерные проверки ещё выполняются. Файлы, URL, SHA, сроки, assertions и гейты не ослаблялись. PR2 не слит, новый пилот OFF. Факт записан в YAFIT-601 с readback, тикет inProgress.
 
 ### PR2: принадлежность жеста исходному указателю — 2026-10-09
 
 До merge отдельный unit воспроизвёл ошибку: pointerup второго указателя завершал перенос первого и отправлял move. Drag и swipe теперь принимают move/up/cancel только от начавшего жест pointerId; второе касание не запускает и не подменяет активный жест. Исходный cancel позволяет начать новый жест без записи. Добавлено пять regression unit, все gesture11/11 passed; Chromium/WebKit26/26 passed, включая вторичные up/cancel во время настоящего drag с автопрокруткой. Значения27.5кг, целый блок, текущая карточка,48px и таймер сохранены. Внешний вид/источники SVG/API/parser не менялись. Устаревший CI37861973615 на6bd0535c отменён штатно; для исправленного head обязательна новая полная проверка. Пилот OFF, production acceptance не заявлен. Владелец повторно разрешил самостоятельно слить все пять PR без дополнительных разрешений, обязательные gates остаются.
 
 Полный npm run check исправленного варианта exit0: frontend2574/2574, API1272/1272+137 DB skipped, build, infra/hosting и остальные стадии. Первый sandbox-прогон прошёл frontend2574, но остановился на listen EPERM localhost; весь штатный check повторён с разрешённым localhost, assertions не менялись. Новые WebKit390 Live/rest и свайп-снимки просмотрены.
+
+### Полная цепочка с исправлением pointer ownership — 2026-10-09
+
+Исправленный PR2 head1d9bf3a6 опубликован; новый CI37864778974 выполняется, обе подготовки исходных шрифтов success. Локально исправление включено в PR3→PR4→PR5; конфликтов кода нет, обе стороны исторических proof/status сохранены. На объединённом5c1b6934 штатный npm run check exit0: frontend2589/2589, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit58/58: вся тренерская цепочка (375/390/430/1440), editor replace/delete/reload без записи фактов, immediate-start после выбора клиента, catalog/filter/multiselect, независимые границы пилота и вторичные pointer events. Полный редактор WebKit390 визуально просмотрен. Это локальный proof, не объявление PR2–5 слитыми/опубликованными. Флаг OFF; fresh-main/CI/merge/API140/frontend/readback/native ещё обязательны.
+
+Дополнительно на той же цепочке Chromium/WebKit32/32: legacy workout editor24 (trainer/client/Mono/Lime390/430/1440) + client prep/native date/time8 (light/dark390/430). Клиентские механики и прежняя геометрия сохранены; это отдельный прогон после58/58, не подмена ещё выполняющегося CI.
 
 ### PR3 после исправления pointer ownership — 2026-10-09
 
@@ -311,6 +374,12 @@ CI37864778974 на exact head1d9bf3a6 success24/24, Android37864778967 success. 
 
 Ранний#1533 обновлён после нашего merge/a9a5b0f7 и проходит CI37867183393; локально его head9114fc17 включён в PR3 без конфликтов продуктового кода. Тренерский флаг, 48px, Live и client-only план/результат сохранены. Штатный npm run check на552ef52e exit0: frontend2579/2579, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit46/46 (coach38+client plan/result8) и отдельный regression36/36 (legacy editor24+prep/native8+single/superset4). Snapshot127→120 уплотнён только переносами трёх старых разделов, нормализованный текст совпал; чужие факты не удалены. Это предварительный локальный proof, а не объявление#1533 слитым: обязательны реальный свежий main и собственный CI перед PR3 merge. Независимый пилот OFF.
 
+### API140 выпущен; полная цепочка совместима с head9114fc17 — 2026-10-09
+
+Официальный Deploy Yandex stage37866541344, event push/main на merge#1532/a9a5b0f7, success: private migration/candidate, health/readiness/product smoke и non-retried provisioned availability gate пройдены штатно. Пауза300s, count50 по умолчанию, требования доступности и откат не менялись. Android current main37866541378 success; факт записан в YAFIT-601 с readback, inProgress. Независимый пилот OFF.
+
+Предварительный head#1533/9114fc17 включён в локальные PR3→4→5 без конфликтов кода. На полной цепочке66385157 npm run check exit0: frontend2589/2589, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit102/102: coach58, client plan/result8, single/superset4, legacy editor24, prep/native8; новый editor390 визуально просмотрен. Source assets/font/48px/таймеры/факты/немедленный старт сохранены. Это локальный proof; реальный#1533/main, свежие собственные CI/merge PR3–5, current-main CI/frontend/readback/native ещё обязательны.
+
 ### PR3 на фактическом main308472df после#1533 — 2026-10-09
 
 Ранний#1533 слит308472df после exact-head9114fc17/CI37867183393 success. Включён реальный main: конфликтов нет; diff рабочего кода/тестов к проверенному4e33c897 пустой, snapshot120 строк. API14037866541344, mainCI PR2/a9a5b0f7/37866541333 и Android37866541378 success. Предварительные check2579/1272/build, browser46+36 сохранены; свежий полный локальный прогон и собственный exact-head CI выполняются перед PR3 merge. #1534 первый активный, затем#1535→#1536→#1537. Source assets/font/48px/механики и независимые границы прежние. Пилот OFF до всех пяти PR/проверенного frontend/readback/native.
@@ -325,6 +394,39 @@ PR4/8b74965c включает фактический main#1534/d05a2912 и пр�
 
 Дополнительный повтор inspect workflow отклонён auto-review из-за экспорта двух технических UUID в GitHub Actions artifact. Workflow не запущен, обход не предпринимался. Запрошено отдельное необязательное согласие именно на такой экспорт; обычные merge/deploy задачи не останавливаются и опираются на ранее подтверждённую фиксированную пару профилей. Значения ID не опубликованы в коде/документах, флаг OFF. Это не отказ пользователя от обычных выкаток и не отмена его разрешения на все пять PR.
 
+### Полная цепочка совместима с head#1535/7601bc68 — 2026-10-09
+
+Локальный PR5/a152786e включает проверенный PR4/38ce8523 и предварительный окончательный head раннего клиентского#1535/7601bc68. Штатный npm run check exit0: frontend2591/2591, API1272/1272+137 standard local DB skipped, build/infra/hosting. Chromium/WebKit118/118: coach58, client plan/result8, single/superset4, legacy editor24, prep/native8, batch8 и role quick-start8. Свежий WebKit full editor390 просмотрен; исходные SVG/шрифты,48px ввод, таймеры, факты и немедленный старт после выбора клиента сохранены. First198 lines утверждённого плана неизменны; snapshot120. Это предварительная совместимость, а не выпуск: фактический main после#1535, собственные CI/merge PR4/5, финальный frontend/readback/native обязательны. Пилот OFF. Владелец повторно разрешил самостоятельно слить все пять PR без новых обычных запросов разрешения; gates не ослабляются.
+
 ### PR4 на фактическом mainf9f77cb8 после#1535 — 2026-10-09
 
 Ранний#1535 MERGED/f9f77cb8 после CI37872706181 и Android37872706180 success. Фактический main включён в PR4/6b493a69: повторные конфликты общего picker/Live разрешены ровно как в уже проверенном кандидате8b74965c; diff всего продукта/тестов/scripts/package/workflows к нему пустой. Нет дублированных browser/unit cases; snapshot120. Прежние проверенные unit59/59, полный check2584/1272/build и Chromium/WebKit62/62 относятся к идентичному рабочему коду. Собственный exact-head CI и Android обязательны перед обычным merge, #1536 первый активный. Пилот OFF до всего пакета/публикации/readback/native.
+
+### PR4 слит; последний редактор на фактическом main9d95c67a — 2026-10-09
+
+PR4#1536 MERGED/9d95c67a,03:09:10 UTC, штатный squash с match-head72dcf81c без bypass. Непосредственно перед merge подтверждены свежий mainf9f77cb8, первый active#1536, CLEAN, required app/e2e pass и штатный legacy DB skip. Exact CI37875339480 success23 jobs, обязательный Yandex DB success; Android37875339552 success. Автоматически отменённый ранний CI при смене base не используется как proof. Предыдущая официальная публикация mainf9f77cb8/37877394649 завершилась success до смены main.
+
+В PR5/7bff948e включён фактический main9d95c67a. Его полное дерево совпадает с уже включённым родителем72dcf81c; сохранены добавочные блоки PR5 и расширенный original-assets registry6 вместо subset3. После разрешения повторных squash-конфликтов весь source/test/scripts/package/workflows diff к проверенномуe21ea97f/a152786e пустой, дублированных тестов нет. Полный check2591/1272/build и Chromium/WebKit118/118 относятся к идентичному коду. Исходные198 строк плана сохранены. Остаются собственный fresh exact-head CI/Android и merge PR5, current-main CI, официальный fixed2 frontend/readback и свежий native build/install/launch; итоговый статус выкладки фиксируется в YAFIT-601 и описании PR, а не объявляется заранее.
+
+Подготовленная приёмка опубликованных байтов не использует реальную OAuth-сессию: только product-document GET/HEAD и файлы официального manifest разрешены к сети; все API, записи, sockets и service workers заблокированы либо заменены локальными fixture. Offline guard проверен на7 разрешённых страницах/5 запрещённых API-путях. Подменяются только два actor ID, синтетические exercise/block/set IDs остаются тестовыми; повторного экспорта UUID в Actions artifact не было. Production UI/native ещё не объявлены пройденными.
+
+### Диагностика CI последнего редактора — 2026-10-09
+
+Exact-head adee2c4a/CI37878173310 failed: только Chromium `editor swipe replacement and deletion preserve the plan`, повторный свайп после отмены удаления, все три стандартные попытки. Android37878173329 success; остальные CI gates, включая полный Lime WebKit, green. Локальный точный CI-env сценарий последовательно прошёл1/1, поэтому CI вслепую не повторён. В trace после отмены dialog отсутствует, drag enabled, transform0; жест стартовал у скруглённого угла bounding box (x378/y184), на кадре выделен текст. Test helper перенесён в свободный боковой отступ на середине header: проверяет настоящий elementFromPoint, принадлежность карточке и отсутствие интерактивного control. Заголовок остаётся рабочей toggle-кнопкой, сам продукт не изменён. После отмены явно ждёт исчезновения alertdialog и доступности жестов. Все исходные assertions отмены/повторного удаления/27.5/reload/отсутствия API-записей сохранены; force-click, sleeps, увеличение timeout, ослабление gates/retries не применялись.
+
+Стабильность: пять последовательных повторов каждого браузера, Chromium/WebKit10/10 passed за47.3s, retries0, trace всех проходов сохранён локально. Исследованный неудачный промежуточный helper на заголовке прекращён после обнаружения toggle-кнопки и не публикуется; окончательный helper использует некликабельный padding с hit-test. Новые full check/browser и fresh exact-head CI ещё обязательны. Официальная публикация main9d95c67a/37880148475 success с прежним OFF-флагом; она не заменяет окончательную fixed2 выкатку всех пяти PR.
+
+Окончательный локальный proof после исправления: штатный npm run check exit0 — frontend2591/2591, API1272/1272+137 standard local DB skipped, все lint/typecheck/infra/hosting и build. Chromium/WebKit118/118 passed1.9m без retries с точным CI-env Assistant/nav/program: coach58, client plan/result8, single/superset4, legacy editor24, prep/native8, batch8 и role quick-start8. Новый full-editor WebKit390 просмотрен. Дополнительно10/10 повторных свайпов; исходные198 строк плана и120 строк snapshot сохранены. Для merge требуется новый exact-head CI/Android, затем current-main/frontend/readback/native; старый failedCI не обходится.
+
+
+### Уточнённая причина повторного свайпа и устойчивость сохранённого плана — 2026-10-09
+
+Следующий exact-head2b199e0b/CI37884223766 снова failed только на Chromium repeat swipe; перенос точки helper не устранил продуктовую причину. Android37884223761, обязательный Yandex DB и полный Lime WebKit success. Изолированная Linux ARM64-среда с тем же Playwright1.61.1 воспроизвела отказ без retries: текст выбран первым жестом, при следующем pointerdown на некликабельном ARTICLE браузер создаёт dragstart, затем pointercancel. Это диагностическая точная последовательность, а не предположение о скруглении. Минимальный preventDefault на свободной поверхности WorkoutSwipe предотвращает native text drag; ранние исключения input/button/select/link/video/contenteditable, disabled/secondary pointer прежние. Тот же Linux-сценарий после правки1/1 прошёл с пустой selection и без dragstart/pointercancel; unit13/13 проверяет исключения controls/disabled/cancel, прежние assertions повторной замены/отмены/удаления/27.5/reload/no-write сохранены.
+
+Дополнительная регрессия сохранённого плана обнаружила генерацию новых blockId функцией copyWorkout при unrelated form/query render. Начальный draft закреплён в существующей инициализации только при coachReference: старые роли/редакторы не меняются. Тест ждёт фактическую готовность формы и проверяет сохранение DOM-карточки при изменении названия до правок подходов, затем прокрутку,27.5/48px/focus и отсутствие API-записи. Chromium использует trusted touch CDP; mobile WebKit не предоставляет trusted touch pan/wheel в публичном API runner, поэтому проверяет pointer routing и scrollability, без заявления о физическом iPhone.
+
+Окончательные последовательные повторы: Mac Chromium/WebKit20/20 за1.3m, Linux Chromium10/10 за3.0m, retries0. Полная browser regression120/120 за2.8m (coach60+прежние client60), финальный дополнительный title/focus2/2 за27.9s; свежий WebKit editor390 визуально просмотрен. Неудачные промежуточные прогоны сохранены: unsupported mobile WebKit wheel заменён честным ограниченным контрактом; race до загрузки формы исправлен semantic-ready; параллельные Linux browsers с page crashes/Killed остановлены и окончательный isolated run passed; пересечение локальных browser-серверов дало Could not connect, после отдельного старта full120 passed. Ни один отказ не скрыт, gates/retries/timeouts не ослаблены.
+
+Первый полный check с новым предотвращением native drag passed2593frontend/1272API+137standardlocalDBskip/build. После добавления stable initial draft полный check при конкурентной нагрузке failed10/2593 (timeouts5000ms в пяти соседних файлах и последующие assertions); он не является proof. Окончательный штатный npm run check выполняется с поддержанным самим Vitest локальным VITEST_MAX_WORKERS=2, без изменения состава тестов, coverage, timeout или CI. Флаг OFF; перед merge нужен свежий green CI/Android нового head, затем current-main CI, fixed2 official frontend/public readback и fresh native. Исходные198 строк acceptance и snapshot120 сохранены, продуктовый rollout ограничен прежней парой trainer+FitLime.
+
+Окончательный полный прогон после стабилизации diff: `VITEST_MAX_WORKERS=2 npm run check` exit0, frontend2593/2593 (297 файлов), API1272/1272+137standardlocalDBskip, lint/typecheck/coverage/DB-types/iOS-permissions/infra/hosting/build passed. Локально изменена только параллельность, все gates/coverage/timeouts/CI прежние. Browser120/120, дополнительные20/20 Mac и10/10 Linux, final title/focus2/2 passed без retries, source editor390 просмотрен. Это окончательный локальный proof перед fresh exact-head CI/Android, не объявление production/native выполненными.
