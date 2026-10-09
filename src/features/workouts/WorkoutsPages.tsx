@@ -3821,7 +3821,9 @@ export function LiveWorkoutPage() {
   return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}
     action={coachReference && query.data ? <>
       <span className={`coach-live-status${restEndsAt !== null && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : restEndsAt !== null ? 'Отдых' : 'Live'}</span>
-      <button type="button" className="coach-live-finish" aria-label="Завершить тренировку" disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}><CheckIcon /></button>
+      <Coachmark id="coach-live-finish-top-2026-10" userId={actor?.userId} title="Завершение — вверху" description="Галочка справа закреплена при прокрутке. Если остались незавершённые подходы, сначала попросим подтверждение.">
+        <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}><CheckIcon /></button>
+      </Coachmark>
     </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       {!coachReference && liveHeader}
@@ -4007,7 +4009,7 @@ export function LiveWorkoutPage() {
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
-      {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>Ещё упражнение</AddActionLabel></button>)}
+      {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
       {error && <p className="error">{error.message}</p>}
       {coachReference && removeSet.isError && removeSet.variables && <>
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}
@@ -4019,7 +4021,7 @@ export function LiveWorkoutPage() {
           конкурировать с primary-подтверждением подхода в карточке.
           Подтверждение частичного завершения — inline (не нативный confirm,
           который не работает в WKWebView и блокировал выход). */}
-      <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
+      {(!coachReference || query.data.exercises.length === 0 || liveSyncError || recoveredSetIds.size > 0 || confirmFinish) && <div className={`live-bottom-bar${query.data.exercises.length === 0 ? ' live-bottom-bar-empty' : ''}`}>
         {query.data.exercises.length === 0 && <button type="button" className="live-empty-delete" aria-label={cancelEmpty.isPending ? 'Удаляем тренировку' : 'Удалить тренировку'} title="Удалить тренировку" aria-busy={cancelEmpty.isPending} disabled={cancelEmpty.isPending} onClick={async () => {
           if (await askConfirm({ message: 'Удалить эту пустую тренировку?', confirmLabel: 'Удалить', danger: true })) cancelEmpty.mutate()
         }}><TrashIcon /></button>}
@@ -4042,8 +4044,8 @@ export function LiveWorkoutPage() {
                 <WorkoutCta variant={cardioSetMissingTime ? 'secondary' : 'primary'} pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>{cardioSetMissingTime ? 'Завершить без оценки' : 'Завершить'}</WorkoutCta>
               </div>
             </div>
-          : <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
-      </div>
+          : !coachReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
+      </div>}
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker reference={coachReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
