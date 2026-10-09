@@ -636,6 +636,79 @@ for (const width of [375, 390, 430, 1440]) {
   })
 }
 
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference field completion ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    const source = restTimerWorkout(), exercise = source.exercises[0]!
+    await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    let attempts = 0
+    await page.route('**/v1/workout-sets/*', async route => {
+      if (route.request().method() !== 'DELETE') { await route.fallback(); return }
+      attempts += 1
+      if (attempts === 1) await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+      else await route.fallback()
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const first = page.locator(`[data-live-set-id="${exercise.sets[0]!.id}"]`), second = page.locator(`[data-live-set-id="${exercise.sets[1]!.id}"]`)
+    await expect(first.locator('.coach-live-field-unit')).toHaveText(['кг', 'повт.'])
+    await expect(page.locator('.live-set-table-head')).not.toBeVisible()
+    expect(await first.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(await second.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor))
+    expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll(elements => {
+      const boxes = elements.map(el => el.getBoundingClientRect())
+      return boxes.every(box => box.height === 48) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + 4)
+    })).toBe(true)
+    await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
+    await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
+    await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '48px')
+    await first.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill('27.5')
+    await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect(first).toHaveClass(/confirmed/)
+    await expect(first.locator('.coach-live-remove-set')).toBeDisabled()
+    await second.locator('.coach-live-remove-set').click()
+    await expect(page.getByRole('alertdialog')).toContainText('Введённые значения')
+    await page.getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(attempts).toBe(0)
+    await second.locator('.coach-live-remove-set').click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Повторить удаление подхода', exact: true })).toBeVisible()
+    await expect(second).toBeVisible()
+    await page.getByRole('button', { name: 'Повторить удаление подхода', exact: true }).click()
+    await expect(second).toHaveCount(0)
+    expect(attempts).toBe(2)
+    await page.reload()
+    await page.getByRole('button', { name: `Исправить: ${exercise.name}`, exact: true }).click()
+    await expect(first.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('27.5')
+    await expect(first.locator('.coach-live-remove-set')).toBeDisabled()
+    await page.screenshot({ path: info.outputPath('coach-live-field-completion.png'), fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+  for (const [kind, ref] of [['reps', 'squat'], ['duration', 'plank'], ['distance', 'running'], ['distance', 'rowing-machine'], ['distance', 'farmer-carry'], ['duration', 'vital-stair-climber']] as const) {
+    test(`Figma workout Coach reference metric completion ${ref} ${width}`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+      const source = restTimerWorkout(), exercise = source.exercises[0]!
+      exercise.inputKind = kind; exercise.ref = ref; exercise.name = `Проверка ${ref}`
+      exercise.sets = exercise.sets.map(set => ({ ...set, weightKg: 20, reps: 12, durationSec: 90, distanceKm: 0.05 }))
+      await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+      await page.goto(`/workouts/${workoutId}/live`)
+      await expect(page.locator('.coach-live-field-unit').first()).toBeVisible()
+      const row = page.locator('.live-set').first()
+      const fields = row.locator('.live-set-input, .live-set-check')
+      expect(await fields.evaluateAll(elements => elements.every(el => el.getBoundingClientRect().height === 48))).toBe(true)
+      expect(await row.evaluate(el => { const box = el.getBoundingClientRect(); return [...el.querySelectorAll('.live-set-grid > *:not(input[type="hidden"])')].every(child => { const rect = child.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right }) })).toBe(true)
+      await expect(row.locator('.coach-live-field-unit').filter({ hasText: 'мин:с' })).toBeVisible()
+      expect(await row.locator('.coach-live-field-unit').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(), parent = el.parentElement!.getBoundingClientRect(); return rect.top >= parent.top && rect.bottom <= parent.bottom && rect.left >= parent.left && rect.right <= parent.right }))).toBe(true)
+      if (kind === 'distance' || ref === 'vital-stair-climber') {
+        await expect(row.getByRole('combobox', { name: 'Единица фактической дистанции', exact: true })).toBeVisible()
+        await expect(row.getByRole('textbox', { name: 'Фактическая дистанция', exact: true })).toBeVisible()
+        expect(await row.locator('.run-distance-control :is(input,select)').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(); return rect.height === 48 && rect.width >= 44 }))).toBe(true)
+      }
+      await row.evaluate(el => el.scrollIntoView({ block: 'center' }))
+      await page.screenshot({ path: info.outputPath(`coach-live-${ref}-completion.png`), fullPage: true })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    })
+  }
+}
+
 for (const [role, profileId, expected] of [
   ['trainer', 'c0ac0000-6010-4000-8000-000000000002', true],
   ['trainer', trainerId, false],

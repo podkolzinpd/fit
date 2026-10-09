@@ -10,6 +10,7 @@ import {
 import { WorkoutDurationField } from './WorkoutDurationField'
 
 interface RunMetricsFieldsProps {
+  reference?: boolean
   loadField?: ReactNode
   idPrefix: string
   durationSec?: number
@@ -34,6 +35,7 @@ interface RunMetricsFieldsProps {
 }
 
 export function RunMetricsFields({
+  reference = false,
   loadField,
   idPrefix,
   durationSec,
@@ -114,9 +116,10 @@ export function RunMetricsFields({
     window.requestAnimationFrame(() => form?.dispatchEvent(new Event('input', { bubbles: true })))
   }
 
+  const durationControl = <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} compact={compactDuration} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
   const durationField = <div className={loadField ? 'run-duration-field loaded-distance-time' : 'run-duration-field'}>
       {loadField && <span>Время (необязательно)</span>}
-      <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} compact={compactDuration} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
+      {reference ? <div className="coach-live-metric">{durationControl}<span className="coach-live-field-unit" aria-hidden="true">мин:с</span></div> : durationControl}
     </div>
   return <>
     {loadField ?? durationField}
