@@ -51,7 +51,7 @@ html.fit-lime-document,
   --accent-ring: color-mix(in srgb, var(--lime-accent) 38%, transparent);
   --accent-soft: var(--lime-accent-muted);
   --on-accent: var(--lime-text-on-accent);
-  --selection: color-mix(in srgb, var(--lime-accent) 28%, transparent);
+  --selection: var(--lime-accent);
   --overlay: color-mix(in srgb, var(--lime-bg) 78%, transparent);
   --card-fill: var(--lime-surface);
   --frame-bg: var(--lime-bg);
@@ -84,7 +84,10 @@ html.fit-lime-document,
 }
 .fit-lime button:disabled,
 .fit-lime .button[aria-disabled='true'] {
-  opacity: .58;
+  opacity: 1;
+  border-color: var(--lime-divider);
+  background: var(--lime-surface-raised);
+  color: var(--lime-text-secondary);
   cursor: not-allowed;
 }
 .fit-lime :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex='-1'])):focus-visible {
@@ -149,7 +152,7 @@ html.fit-lime-document,
 .fit-lime .overflow-item { min-height: 44px; border-radius: 12px; color: var(--lime-text) }
 .fit-lime .overflow-item:hover { background: #303034 }
 .fit-lime .overflow-item.danger { color: var(--danger) }
-.fit-lime .overflow-item:disabled { opacity: .58 }
+.fit-lime .overflow-item:disabled { opacity: 1; border-color: var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text-secondary) }
 .fit-lime .sheet-overlay,
 .fit-lime .modal-overlay { background: var(--overlay) }
 .fit-lime .client-picker,

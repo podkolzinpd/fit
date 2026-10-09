@@ -106,7 +106,7 @@
   color: var(--lime-text);
 }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-page .page-actions > .danger { color: var(--danger) }
-.fit-lime-shell.trainer-client-detail-identity .client-detail-page button:disabled { opacity: .58 }
+.fit-lime-shell.trainer-client-detail-identity .client-detail-page button:disabled { opacity: 1; border-color: var(--lime-divider); background: var(--lime-surface-raised); color: var(--lime-text-secondary) }
 .fit-lime-shell.trainer-client-detail-identity .client-detail-source-state {
   display: flex;
   align-items: center;
