@@ -1,5 +1,6 @@
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
+import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
@@ -2511,7 +2512,7 @@ function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, 
   />
 }
 
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan' }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string }) {
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean }) {
   // После подтверждения показываем зафиксированный результат (факт, иначе план)
   // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
   // Правка по карандашику временно разблокирует поля (editing).
@@ -2532,33 +2533,35 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
   const distanceCapable = !allowsDurationWeight({ source, ref: exerciseRef ?? '', inputKind }) && (inputKind === 'distance' || allowsOptionalDistance({ source, ref: exerciseRef ?? '', inputKind }) || (inputKind === 'duration' && (set.distanceKm !== undefined || set.fact.distanceKm !== undefined)))
-  const rpeField = showRpe ? <select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
+  const metric = (control: ReactNode, unit: string) => reference ? <span className={`coach-live-metric${unit === 'RPE' ? ' coach-live-rpe-metric' : ''}`}>{control}<span className="coach-live-field-unit" aria-hidden="true">{unit}</span></span> : control
+  const rpeField = showRpe ? metric(<select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
     <option value="">—</option>
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
-  </select> : null
+  </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
-  const weightField = <LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />
+  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
     {weightField}
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />
-    <LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />
+    {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'duration' && !distanceCapable) return <>
     {allowsDurationWeight(measurements) && <input type="hidden" name="distanceKm" value={value(set.fact.distanceKm, set.distanceKm) ?? ''} />}
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="reps" value={value(set.fact.reps, set.reps) ?? ''} />}
     {allowsDurationWeight(measurements) && weightField}
-    <WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />
+    {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
     {!allowsDurationWeight(measurements) && <span className="live-set-empty" aria-hidden="true" />}
     {rpeField}
   </>
   return <>
     <RunMetricsFields
+      reference={reference}
       loadField={isLoadedDistance(measurements) ? weightField : undefined}
       idPrefix={`live-run-${set.id}-${k}`}
       rowing={isRowingExerciseRef(exerciseRef)}
@@ -3273,7 +3276,13 @@ export function LiveWorkoutPage() {
       (workout) => workoutsRepository.removeLastLiveRound(workout, blockId, position, crypto.randomUUID())),
     onSuccess: async () => { setLastAddedRound(null); await query.refetch() },
   })
-  const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => workoutsRepository.removeLiveSet(workout, setId)), onSuccess: async () => { await query.refetch() } })
+  const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => {
+    if (coachReference) {
+      const reason = coachLiveSetRemovalError(queryClient.getQueryData<Workout>(['workout', workoutId]) ?? workout, setId)
+      if (reason) return Promise.reject(new Error(reason))
+    }
+    return workoutsRepository.removeLiveSet(workout, setId)
+  }), onSuccess: async () => { await query.refetch() } })
   useEffect(() => {
     if (!query.data) return
     for (const [blockId, pending] of pendingRoundOperations.current) {
@@ -3546,6 +3555,7 @@ export function LiveWorkoutPage() {
   }
   const liveSyncError = save.error ?? confirm.error
   const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? moveLiveBlock.error ?? mergeBlock.error ?? splitSuperset.error ?? replaceLive.error ?? commentLive.error ?? finish.error
+  const removalRetryReason = coachReference && removeSet.isError && removeSet.variables ? coachLiveSetRemovalError(query.data, removeSet.variables) : null
   const gestureDisabled = rootMutationPending || save.isPending || confirm.isPending || Boolean(pendingMove.current)
   async function deleteLiveExercise(exercise: WorkoutExerciseModel) {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
@@ -3595,6 +3605,11 @@ export function LiveWorkoutPage() {
       { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => deleteLiveExercise(exercise) },
     ]} />
   }
+  async function requestRemoveLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet) {
+    if (set.confirmedAt || exercise.sets.length <= 1 || rootMutationPending || save.isPending || confirm.isPending) return
+    const number = exercise.sets.findIndex((item) => item.id === set.id) + 1
+    if (await askConfirm({ message: `Удалить подход ${number} упражнения «${exercise.name}»? Введённые значения этого подхода будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeSet.mutate(set.id)
+  }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
     if (!canManageLiveStructure || !reordering) return null
@@ -3642,15 +3657,15 @@ export function LiveWorkoutPage() {
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
-      <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : clientLime && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
+      <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}><span aria-hidden="true">✓</span></button>
-            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
+            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => {
@@ -3668,6 +3683,7 @@ export function LiveWorkoutPage() {
                   skipBlurForSet.current = null
                 }}><span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span></button>}
         </div>
+        {coachReference && canManageLiveStructure && <button type="button" className="coach-live-remove-set" aria-label={`Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`} title={set.confirmedAt ? 'Выполненный подход нельзя удалить здесь' : exercise.blockType !== 'single' ? 'Подходы суперсета изменяются целым кругом' : exercise.sets.length <= 1 ? 'Оставьте хотя бы один подход' : 'Удалить подход'} disabled={Boolean(set.confirmedAt) || exercise.blockType !== 'single' || exercise.sets.length <= 1 || rootMutationPending || save.isPending || confirm.isPending} onClick={() => void requestRemoveLiveSet(exercise, set)}><CloseIcon /></button>}
       </WorkoutSetRow>
       <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>
       {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
@@ -3993,6 +4009,10 @@ export function LiveWorkoutPage() {
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>Ещё упражнение</AddActionLabel></button>)}
       {error && <p className="error">{error.message}</p>}
+      {coachReference && removeSet.isError && removeSet.variables && <>
+        {removalRetryReason && <p role="status">{removalRetryReason}</p>}
+        <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending || Boolean(removalRetryReason)} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>
+      </>}
       {coachReference && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
