@@ -298,3 +298,7 @@ PR5 source preflight: точная форма331:5405 уже сохранена;
 ### PR3 после исправления pointer ownership — 2026-10-09
 
 Локальный head2c160beb включает текущий PR2/1d9bf3a6. Отдельный штатный npm run check exit0: frontend2579/2579, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit38/38: планирование/client/date/time375/390/430/1440, lost response/retry без дублирования, немедленный Live после выбора клиента, advanced draft при editor handoff, тренерские жесты/48px/таймеры и независимые границы пилота. Это предварительная локальная проверка; PR2 ещё проходит CI, перед выпуском PR3 нужны окончательный main, ранний#1533 и собственный fresh-head CI. Флаг OFF, production acceptance не заявлен.
+
+### PR4 после исправления pointer ownership — 2026-10-09
+
+Локальный head0b42931e включает PR3/e8d634ce с текущим PR2/1d9bf3a6. Отдельный штатный npm run check exit0: frontend2582/2582, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit46/46: каталог/фильтры/поиск/мультивыбор375/390/430/1440, окна планирования и immediate-start, жесты/факты/таймеры/48px и границы двух тренеров/outsider/client. Это предварительный локальный proof; CI PR2 ещё завершается, окончательные fresh-main/ранняя очередь/собственный CI PR4/merge/frontend/readback/native обязательны. Флаг OFF.
