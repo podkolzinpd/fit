@@ -1912,7 +1912,7 @@ export function WorkoutDetailPage() {
               <span className="workout-detail-exercise-result">{detailSummary}</span>
             </summary>
             <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
-              {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} showRpe={showRpe} exerciseRef={exercise.ref} />)}
+              {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} clientLime={isClientLimeEnabled(actor)} showRpe={showRpe} exerciseRef={exercise.ref} />)}
             </WorkoutSetTable>
           </details>
           <div className="workout-detail-exercise-actions">
@@ -2391,11 +2391,11 @@ function formatSet(set: WorkoutSet, showRpe: boolean, exerciseRef?: string) {
   return pace && plan ? `${plan} · темп ${pace}` : plan || 'Подход без плана'
 }
 
-function WorkoutHistorySet({ set, index, done, showRpe, exerciseRef }: { set: WorkoutSet; index: number; done: boolean; showRpe: boolean; exerciseRef?: string }) {
+function WorkoutHistorySet({ set, index, done, clientLime, showRpe, exerciseRef }: { set: WorkoutSet; index: number; done: boolean; clientLime: boolean; showRpe: boolean; exerciseRef?: string }) {
   const confirmed = Boolean(set.confirmedAt)
   const { fact, planNote } = formatFactVsPlan(set, showRpe, exerciseRef)
   const result = done ? fact : formatSet(set, showRpe, exerciseRef)
-  return <WorkoutSetRow state={done ? (confirmed ? 'completed' : 'skipped') : 'planned'} className={`workout-history-set ${confirmed ? 'confirmed' : 'missed'}`}>
+  return <WorkoutSetRow state={done ? (confirmed ? 'completed' : 'skipped') : 'planned'} className={`workout-history-set ${confirmed ? 'confirmed' : done || !clientLime ? 'missed' : 'planned'}`}>
     <span className="workout-set-number workout-history-set-number" aria-label={`Подход ${index + 1}`}>{index + 1}</span>
     <span className="workout-history-set-result"><strong>{result}</strong>
       {done && !confirmed && <span className="plan-note">не выполнено</span>}
