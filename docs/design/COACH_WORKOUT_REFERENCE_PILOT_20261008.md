@@ -373,3 +373,9 @@ CI37864778974 на exact head1d9bf3a6 success24/24, Android37864778967 success. 
 ### Предварительная совместимость PR3 с head9114fc17 раннего#1533 — 2026-10-09
 
 Ранний#1533 обновлён после нашего merge/a9a5b0f7 и проходит CI37867183393; локально его head9114fc17 включён в PR3 без конфликтов продуктового кода. Тренерский флаг, 48px, Live и client-only план/результат сохранены. Штатный npm run check на552ef52e exit0: frontend2579/2579, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit46/46 (coach38+client plan/result8) и отдельный regression36/36 (legacy editor24+prep/native8+single/superset4). Snapshot127→120 уплотнён только переносами трёх старых разделов, нормализованный текст совпал; чужие факты не удалены. Это предварительный локальный proof, а не объявление#1533 слитым: обязательны реальный свежий main и собственный CI перед PR3 merge. Независимый пилот OFF.
+
+### API140 выпущен; полная цепочка совместима с head9114fc17 — 2026-10-09
+
+Официальный Deploy Yandex stage37866541344, event push/main на merge#1532/a9a5b0f7, success: private migration/candidate, health/readiness/product smoke и non-retried provisioned availability gate пройдены штатно. Пауза300s, count50 по умолчанию, требования доступности и откат не менялись. Android current main37866541378 success; факт записан в YAFIT-601 с readback, inProgress. Независимый пилот OFF.
+
+Предварительный head#1533/9114fc17 включён в локальные PR3→4→5 без конфликтов кода. На полной цепочке66385157 npm run check exit0: frontend2589/2589, API1272/1272+137 DB skipped, build/infra/hosting. Chromium/WebKit102/102: coach58, client plan/result8, single/superset4, legacy editor24, prep/native8; новый editor390 визуально просмотрен. Source assets/font/48px/таймеры/факты/немедленный старт сохранены. Это локальный proof; реальный#1533/main, свежие собственные CI/merge PR3–5, current-main CI/frontend/readback/native ещё обязательны.
