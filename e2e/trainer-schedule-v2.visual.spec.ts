@@ -98,11 +98,20 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await handle.focus(); await handle.press('Space'); await handle.press('End'); await handle.press('Enter')
   const swipes = page.locator('[data-workout-swipe]')
   async function swipe(item: Locator, right: boolean) {
-    await item.scrollIntoViewIfNeeded()
-    const box = (await item.boundingBox())!
-    const start = right ? box.x + 10 : box.x + box.width - 10
-    await page.mouse.move(start, box.y + 10); await page.mouse.down()
-    await page.mouse.move(start + (right ? 100 : -100), box.y + 10, { steps: 8 }); await page.mouse.up()
+    // The rounded corner is not a reliable hit target. Use the inert card
+    // padding at header mid-height; the title itself is a toggle button.
+    const header = item.locator('.compact-editor-exercise-head')
+    await header.scrollIntoViewIfNeeded()
+    await expect(item.getByRole('button', { name: /^Переместить: / })).toBeEnabled()
+    const box = (await item.boundingBox())!, head = (await header.boundingBox())!
+    const start = right ? box.x + 12 : box.x + box.width - 12, y = head.y + head.height / 2
+    expect(await item.evaluate((element, point) => {
+      const target = document.elementFromPoint(point.x, point.y)
+      return !!target && element.contains(target)
+        && !target.closest('button,input,textarea,select,a,video,[role="button"],[contenteditable="true"]')
+    }, { x: start, y })).toBe(true)
+    await page.mouse.move(start, y); await page.mouse.down()
+    await page.mouse.move(start + (right ? 100 : -100), y, { steps: 8 }); await page.mouse.up()
   }
   await swipe(swipes.last(), true)
   await swipes.last().getByRole('button', { name: 'Заменить', exact: true }).click()
@@ -117,6 +126,7 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await swipe(swipes.first(), false)
   await swipes.first().getByRole('button', { name: 'Удалить', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(page.getByRole('alertdialog')).not.toBeVisible()
   await expect(page.locator('.planned-exercise')).toHaveCount(2)
   await swipe(swipes.first(), false)
   await swipes.first().getByRole('button', { name: 'Удалить', exact: true }).click()
