@@ -3539,7 +3539,8 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .client-home-identity .voice-action-recording-controls { grid-area:controls; width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:center; margin-top:10px }
 .client-home-identity .voice-action-recording-controls .wide { min-height:48px; border:1px solid var(--mono-on-primary); border-radius:14px; background:var(--mono-on-primary); color:var(--mono-primary); font-size:14px; font-weight:500 }
 .client-home-identity .voice-action-recording-controls .link { min-height:44px; color:var(--mono-on-primary); font-size:14px; font-weight:500 }
-.client-home-identity .voice-action-error { grid-area:error; margin-top:10px; border-color:var(--mono-on-primary); background:transparent; color:var(--mono-on-primary); font-size:12px }
+.client-home-identity .voice-action-error { margin-top:10px; border-color:var(--mono-on-primary); background:transparent; color:var(--mono-on-primary); font-size:12px }
+.client-home-identity .voice-action > .voice-action-error { grid-area:error }
 
 .client-home-identity .today-text-toggle { justify-self:stretch; min-height:48px; padding:0 16px; border:1px solid var(--border); border-radius:14px; background:transparent; color:var(--fg); font-size:14px; font-weight:500 }
 .client-home-identity button, .client-home-identity .button { min-height:48px; border-radius:14px; font-size:14px; font-weight:500 }
