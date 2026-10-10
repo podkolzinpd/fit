@@ -36,9 +36,11 @@
 - HTTP route: 9/no pain, 10/no pain, 10/pain с пустой заметкой —3/3 passed. Обязательные диапазон/длина/роль/version не ослаблены.
 - WebKit: исходный before screenshot; затем9/9 с regression существующих detail actions; окончательные6/6 после загрузки обоих лицензированных YS Geo (SHA2/2), включая one-time Coachmark/dismiss/reload. Снимки light/dark390/430, note, Mono430 и trainer1440 просмотрены. Фото физического iPhone и настоящий пользовательский production mutation не выполнялись.
 - local:verify остановился на прежнем drift общей локальной Yandex БД: migration000112 append_live_round уже существует. Общая БД не сбрасывалась; изменение проверено отдельной чистой цепочкой.
-- Дополнительные legacy UI проверки сначала остановились на локальном auth waitForURL/load; отдельный синтетический WebKit login200/domcontentloaded пройден, повтор после fullcheck также остановился на входе/регистрации до формы. Эти legacy UI сценарии локально не засчитаны; обязательный CI проверяет их на отдельном окружении.
+- Дополнительные legacy UI проверки на host сначала остановились на auth до формы. В отдельном Podman Playwright Linux после ожидания/закрытия Coachmark оба сценария passed2/2: trainer review/client feedback ownership и нейтральный результат с тренером/без него. Auth200 также проверен отдельно. Общая Supabase-цепочка не менялась.
 - CI, очередь1555/1556/1557, merge, API migration/frontend deployment и fresh native — впереди.
 
 ## Уточнение по CI visual
 
 Первый CI указал на one-time Coachmark поверх completion baseline. В test он теперь закрывается реальным нажатием; отдельная приёмка проверяет сам Coachmark. Изолированный Podman Playwright Linux: completion/detail/history390/430 —2/2 passed. Обновлён только completion430 baseline: вместо сетки виден компактный slider. Несвязанные снимки не перенесены.
+
+Финальная дополнительная legacy WebKit regression:2/2 passed (34s). Всплывающий совет ожидается по наличию DOM (включая первоначальную скрытую позицию) и закрывается реальным нажатием перед взаимодействием.
