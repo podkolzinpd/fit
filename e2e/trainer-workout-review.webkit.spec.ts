@@ -75,9 +75,14 @@ for (const role of ['trainer', 'client'] as const) {
 }
 
 async function setRpe(page: Page, value: number) {
-  const option = page.getByRole('radio', { name: new RegExp(`^${value} —`) })
-  await option.click()
-  await expect(option).toHaveAttribute('aria-checked', 'true')
+  const slider = page.getByRole('slider', { name: 'Нагрузка по шкале RPE' })
+  await expect(slider).toBeVisible()
+  const notice = page.getByRole('status', { includeHidden: true }).filter({ hasText: 'Итоги стали компактнее' })
+  if (await notice.count()) await notice.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await slider.focus()
+  await slider.press('Home')
+  for (let index = 1; index < value; index += 1) await slider.press('ArrowRight')
+  await expect(slider).toHaveValue(String(value))
 }
 
 async function expectActionTextVerticallyCentered(action: Locator) {
@@ -195,12 +200,12 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(feedbackCard.getByRole('heading', { name: 'Как прошла тренировка?' })).toBeVisible()
   const submitFeedback = feedbackCard.getByRole('button', { name: 'Сохранить итоги', exact: true })
   await expect(submitFeedback).toHaveAttribute('data-control-state', 'disabled')
-  const rpeOption = feedbackCard.getByRole('radio', { name: '8 — Очень тяжело' })
+  const rpeOption = feedbackCard.getByRole('slider', { name: 'Нагрузка по шкале RPE' })
   const rpeOptionBox = await rpeOption.boundingBox()
   expect(rpeOptionBox?.height).toBeGreaterThanOrEqual(44)
   await expect(feedbackCard.locator('.workout-feedback-rpe')).toHaveCount(0)
   await setRpe(page, 8)
-  await expect(rpeOption).toHaveAttribute('aria-checked', 'true')
+  await expect(rpeOption).toHaveAttribute('aria-valuetext', '8 из 10 — Очень тяжело')
   const hardWellbeing = feedbackCard.getByRole('button', { name: 'Плохо', exact: true })
   await hardWellbeing.click()
   await expect(hardWellbeing).toHaveAttribute('data-control-state', 'selected')

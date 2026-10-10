@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, PropsWithChildren, ReactNode } from 'react'
 
 export type WorkoutUiState = 'planned' | 'current' | 'upcoming' | 'completed' | 'partial' | 'decision' | 'cancelled' | 'skipped' | 'history'
 export type WorkoutUiTone = 'accent' | 'success' | 'warning' | 'neutral'
@@ -132,15 +132,23 @@ export function WorkoutRpeScale({ value, onChange, disabled = false, 'aria-label
   disabled?: boolean
   'aria-label'?: string
 }) {
-  return <div className="workout-rpe-scale" data-control-state={disabled ? 'disabled' : value === undefined ? 'idle' : 'selected'}>
+  const selected = value !== undefined
+  const sliderValue = value ?? 1
+  return <div className="workout-rpe-scale" data-control-state={disabled ? 'disabled' : selected ? 'selected' : 'idle'}>
     <div className="workout-rpe-scale-value" aria-live="polite">
-      {value === undefined ? <><strong>Выберите нагрузку</strong><span>1 — легко, 10 — максимум</span></> : <><strong>RPE {value}</strong><span>{RPE_LABELS[value]}</span></>}
+      <span>Нагрузка</span>
+      <strong>{selected ? `${value} / 10 · ${RPE_LABELS[value]}` : 'Выберите нагрузку'}</strong>
     </div>
-    <div className="workout-rpe-options" role="radiogroup" aria-label={ariaLabel}>
-      {Object.keys(RPE_LABELS).map(Number).map((option) => <button key={option} type="button" role="radio"
-        aria-checked={value === option} aria-label={`${option} — ${RPE_LABELS[option]}`} disabled={disabled}
-        className="workout-rpe-option" data-control-state={value === option ? 'selected' : 'idle'}
-        onClick={() => onChange(option)}>{option}</button>)}
-    </div>
+    <input className="workout-rpe-slider" type="range" min={1} max={10} step={1}
+      aria-label={ariaLabel} aria-valuetext={selected ? `${value} из 10 — ${RPE_LABELS[value]}` : 'Нагрузка не выбрана'}
+      value={sliderValue} disabled={disabled}
+      style={{ '--rpe-fill': `${(sliderValue - 1) / 9 * 100}%` } as CSSProperties}
+      onChange={(event) => onChange(Number(event.currentTarget.value))}
+      onPointerUp={(event) => { if (!selected) onChange(Number(event.currentTarget.value)) }}
+      onKeyUp={(event) => {
+        if (!selected && ['Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) onChange(Number(event.currentTarget.value))
+      }} />
+    <div className="workout-rpe-ticks" aria-hidden="true">{Object.keys(RPE_LABELS).map((option) => <span key={option} />)}</div>
+    <div className="workout-rpe-endpoints" aria-hidden="true"><span>1 — легко</span><span>10 — максимум</span></div>
   </div>
 }

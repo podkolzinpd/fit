@@ -451,6 +451,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
+    it('saves maximum effort and discomfort without a note, with exact retry and actor/version validation', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not initialized')
+      const id = randomUUID()
+      await ownerPool.query(`insert into public.workouts
+        (id, trainer_id, client_id, created_by, workout_date, status, completed_at)
+        values ($1,$2,$3,$2,current_date,'done',now())`, [id, ACTOR_ID, CLIENT_ID])
+      const call = (actor: string, sessionRpe: number, discomfort: boolean, expectedVersion: number, comment = '') =>
+        withActorTransaction(runtimePool!, actor, (client) => submitWorkoutFeedback(client, id,
+          { sessionRpe, wellbeing: 'good', discomfort, comment, expectedVersion }))
+      try {
+        await expect(call(ACTOR_ID, 9, false, 1)).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(call(DOMAIN_CLIENT_ACTOR_ID, 9, false, 1)).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(call(OTHER_ACTOR_ID, 9, false, 1)).resolves.toBe(2)
+        await expect(call(OTHER_ACTOR_ID, 9, false, 1)).resolves.toBe(2)
+        await expect(call(OTHER_ACTOR_ID, 10, false, 2)).resolves.toBe(3)
+        await expect(call(OTHER_ACTOR_ID, 10, true, 3, '  ')).resolves.toBe(4)
+        await expect(call(OTHER_ACTOR_ID, 10, true, 3, '  ')).resolves.toBe(4)
+        const stored = (await ownerPool.query<{ session_rpe: number; discomfort: boolean; client_comment: string | null; version: string }>(
+          'select session_rpe, discomfort, client_comment, version from public.workouts where id=$1', [id])).rows[0]
+        expect(stored).toMatchObject({ session_rpe: 10, discomfort: true, client_comment: null })
+        await expect(call(OTHER_ACTOR_ID, 8, false, 3)).rejects.toMatchObject({ failure: 'conflict' })
+        await expect(call(OTHER_ACTOR_ID, 11, false, 4)).rejects.toMatchObject({ failure: 'invalid' })
+        await expect(call(OTHER_ACTOR_ID, 8, false, 4, 'x'.repeat(501))).rejects.toMatchObject({ failure: 'invalid' })
+        await expect(call(OTHER_ACTOR_ID, 8, false, 4, 'По плану')).resolves.toBe(5)
+        await ownerPool.query("update public.workouts set status='planned', completed_at=null where id=$1", [id])
+        await expect(call(OTHER_ACTOR_ID, 8, false, 5)).rejects.toMatchObject({ failure: 'invalid' })
+      } finally { await ownerPool.query('delete from public.workouts where id=$1', [id]) }
+    })
+
     it('atomically drags complete Live blocks without changing set facts; exact retry and actor/version checks', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not initialized')
       const id = randomUUID(), blockA = randomUUID(), blockB = randomUUID(), blockC = randomUUID(), op = randomUUID()

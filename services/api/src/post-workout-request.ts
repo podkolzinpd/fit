@@ -65,7 +65,6 @@ export function readWorkoutFeedbackRequest(
     || typeof input.discomfort !== 'boolean'
     || comment === undefined
     || comment.length > 500
-    || (input.discomfort && comment.length === 0)
   ) return undefined
   return {
     sessionRpe: input.sessionRpe,
