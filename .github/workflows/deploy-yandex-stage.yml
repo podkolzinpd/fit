@@ -977,11 +977,12 @@ jobs:
             | select(.notes == "Синтетическая проверка переноса Yandex stage")
             | .id
           ' <<<"$training")
+          # YAFIT-607: maximum effort and discomfort must save without a note.
           post_feedback_payload='{
-            "sessionRpe":8,
+            "sessionRpe":10,
             "wellbeing":"normal",
             "discomfort":true,
-            "comment":"Тянуло плечо",
+            "comment":"",
             "expectedVersion":1
           }'
           post_feedback=$(curl --fail --silent --show-error \
@@ -1029,10 +1030,10 @@ jobs:
           jq -e --arg workout_id "$post_workout_id" '
             (.workouts | any(
               .id == $workout_id
-              and .sessionRpe == 8
+              and .sessionRpe == 10
               and .wellbeing == "normal"
               and .discomfort == true
-              and .clientComment == "Тянуло плечо"
+              and .clientComment == null
               and .clientQuestion == "Можно заменить упражнение?"
               and .clientQuestionResolvedAt == null
               and .version == 3
@@ -1110,10 +1111,10 @@ jobs:
           jq -e --arg workout_id "$post_workout_id" --arg client_id "$client_id" '
             (.workouts | any(
               .id == $workout_id
-              and .sessionRpe == 8
+              and .sessionRpe == 10
               and .wellbeing == "normal"
               and .discomfort == true
-              and .clientComment == "Тянуло плечо"
+              and .clientComment == null
               and .trainerReaction == "strong"
               and .trainerReview == "Снизим нагрузку на плечо"
               and .clientQuestion == "Можно заменить упражнение?"

@@ -46,3 +46,5 @@
 Финальная дополнительная legacy WebKit regression:2/2 passed (34s). Всплывающий совет ожидается по наличию DOM (включая первоначальную скрытую позицию) и закрывается реальным нажатием перед взаимодействием.
 
 Строгая финальная Linux visual regression (без update-snapshots): completion/detail/history/share390/430 —2/2 passed,39.4s. Изображения actual/diff просмотрены; допускаемые пороги не повышались, проверки не отключались.
+
+Штатный API rollout smoke использует существующую изолированную synthetic fixture:10/10 + discomfort=true + пустая заметка, exact replay, последующий trainer readback sessionRpe10/clientCommentnull. Новые реальные аккаунты/данные не затрагиваются.
