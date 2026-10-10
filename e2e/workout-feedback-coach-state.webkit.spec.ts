@@ -27,6 +27,8 @@ async function logout(page: Page, role: 'trainer' | 'client') {
 }
 
 async function setRpe(page: Page, value: number) {
+  const notice = page.getByRole('status').filter({ hasText: 'Итоги стали компактнее' })
+  if (await notice.isVisible()) await notice.getByRole('button', { name: 'Понятно', exact: true }).click()
   const slider = page.getByRole('slider', { name: 'Нагрузка по шкале RPE' })
   await slider.focus()
   await slider.press('Home')
