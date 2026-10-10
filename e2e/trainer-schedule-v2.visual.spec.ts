@@ -620,9 +620,20 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     page.on('request', request => { if (/\/workout-sets\/[\w-]+\/confirm$/.test(request.url())) confirmations++ })
     const source = restTimerWorkout(), set = source.exercises[0]!.sets[0]!
     await mockPilot(page, { profileId, fitLime: true, workouts: [source], failFirstSetConfirm: true })
+    // Reproduce a blur autosave completing after the user requested confirmation.
+    let releaseSave = () => {}
+    const saveGate = new Promise<void>(resolve => { releaseSave = resolve })
+    await page.route('**/v1/workout-sets/*/draft', async route => { await saveGate; await route.fallback() })
     await page.goto(`/workouts/${workoutId}/live`)
     const row = page.locator(`[data-live-set-id="${set.id}"]`)
-    await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    const saveRequest = page.waitForRequest(request => request.url().endsWith(`/workout-sets/${set.id}/draft`))
+    const weight = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+    await weight.focus()
+    await weight.evaluate(element => element.blur())
+    await saveRequest
+    try {
+      await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    } finally { releaseSave() }
     await expect(page.locator('.live-sync-state[role="alert"]')).toContainText('Не удалось отправить')
     await expect(row).not.toHaveClass(/invalid/)
     await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('20')

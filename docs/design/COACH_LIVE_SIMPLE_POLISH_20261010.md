@@ -80,5 +80,12 @@ PR2 локально: SVG-галочки во всех состояниях, п�
 Снимок просмотрен; full check exit0: frontend2615/API1272+137 штатных skip/build.
 PR2 #1553 повторно проверен после переноса на main33db986d: full check exit0,
 WebKit/Chromium18/18 (поля, обе pilot identities, network retry, negative boundary).
+CI38070884019 выявил потерю draft при blur-save → confirm503: успешный autosave
+мог очищать ожидающее подтверждение. Детерминированный regression с удержанным
+draft-response воспроизвёл ошибку4/4 в WebKit/Chromium до исправления.
+Только coachReference сохраняет draft до подтверждения; прежняя кнопка retry,
+серверный контракт и остальные роли не меняются. После защиты WebKit/Chromium22/22
+(обе identities, поля375/390/430/1440, client retry и negative boundary).
+Повторный full check и свежий обязательный CI выполняются.
 PR3–5 не выполнены. Подключённый KB search недоступен из-за отсутствия PyYAML;
 использованы утверждённый план, текущий код и прежние design-документы.

@@ -2863,6 +2863,9 @@ export function LiveWorkoutPage() {
   function acknowledgeLiveDraft(setId: string, savedDraft?: LiveSetDraft, confirmationComplete = false) {
     const pendingDraft = pendingSetDrafts.current.get(setId)
     if (savedDraft && pendingDraft && !sameLiveSetDraft(pendingDraft, savedDraft)) return
+    // A blur autosave is not an acknowledgement of the requested confirmation.
+    // Keep the pilot's draft available for the existing network retry until confirmed.
+    if (coachReference && !confirmationComplete && pendingSetConfirmations.current.has(setId)) return
     pendingSetDrafts.current.delete(setId)
     if (actor?.userId) {
       removePendingLiveSetDraft(actor.userId, workoutId, setId)
