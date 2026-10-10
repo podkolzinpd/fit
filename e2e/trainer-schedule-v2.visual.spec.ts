@@ -569,7 +569,76 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.coach-live-digits')).toBeVisible()
   })
 }
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference simple fields ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const source = restTimerWorkout(), set = source.exercises[0]!.sets[0]!
+    set.weightKg = undefined; set.reps = undefined
+    await mockPilot(page, { profileId: width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const row = page.locator(`[data-live-set-id="${set.id}"]`)
+    const weight = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+    const reps = row.getByRole('spinbutton', { name: 'Фактические повторы', exact: true })
+    const check = row.locator('.live-set-check')
+    await expect(check.locator('svg[data-original-icon="check"]')).toHaveCount(1)
+    await expect(check.locator('svg')).toHaveCSS('width', '24px')
+    await expect(check.locator('svg')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    expect(await check.locator('svg').evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none')
+    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '10px')
+    await expect(weight).toHaveCSS('font-size', '16px')
+    await expect(weight).toHaveCSS('padding-top', '0px')
+    await expect(weight).toHaveCSS('padding-bottom', '0px')
+    expect(await row.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 48))).toBe(true)
+    await check.click()
+    await expect(row).toHaveClass(/invalid/)
+    await expect(weight).toHaveCSS('outline-width', '1px')
+    await expect(weight).toHaveCSS('outline-color', 'rgb(240, 160, 160)')
+    await expect(row.locator('.live-set-grid')).toHaveCSS('box-shadow', 'none')
+    await weight.fill('27.5'); await reps.fill('10')
+    await check.click()
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+    await check.click()
+    await expect(row.locator('.live-set-save svg[data-original-icon="check"]')).toHaveCount(1)
+    await weight.fill('28')
+    await row.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+    await expect(weight).toHaveValue('28')
+    await page.screenshot({ path: info.outputPath('coach-live-simple-fields.png'), fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
 for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
+  test(`Figma workout Coach reference quiet fields retain network retry ${profileId}`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    // This fixture injects an HTTP 503, not an offline browser. Keep the
+    // online precondition explicit instead of relying on the runner's OS.
+    await page.addInitScript(() => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true }))
+    let confirmations = 0
+    page.on('request', request => { if (/\/workout-sets\/[\w-]+\/confirm$/.test(request.url())) confirmations++ })
+    const source = restTimerWorkout(), set = source.exercises[0]!.sets[0]!
+    await mockPilot(page, { profileId, fitLime: true, workouts: [source], failFirstSetConfirm: true })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const row = page.locator(`[data-live-set-id="${set.id}"]`)
+    await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    await expect(page.locator('.live-sync-state[role="alert"]')).toContainText('Не удалось отправить')
+    await expect(row).not.toHaveClass(/invalid/)
+    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('20')
+    expect(await page.evaluate(() => navigator.onLine)).toBe(true)
+    await expect.poll(() => confirmations).toBe(1)
+    await expect.poll(() => page.evaluate(({ profileId, workoutId, setId }) => {
+      const draft = JSON.parse(localStorage.getItem(`fit.live-set-drafts.${profileId}.${workoutId}`) ?? '{}') as Record<string, unknown>
+      const pending = JSON.parse(localStorage.getItem(`fit.live-set-confirmations.${profileId}.${workoutId}`) ?? '[]') as string[]
+      return Boolean(draft[setId] && pending.includes(setId))
+    }, { profileId, workoutId, setId: set.id })).toBe(true)
+    await page.locator('.live-sync-state').getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect.poll(() => confirmations).toBe(2)
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(page.locator('.live-sync-state')).toHaveCount(0)
+    await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+  })
   test(`Figma workout Coach reference expiry keeps rest when deleting future exercise ${profileId}`, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))

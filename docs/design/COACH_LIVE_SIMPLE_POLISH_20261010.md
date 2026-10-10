@@ -72,6 +72,13 @@ PR1 реализован локально: unit19/19, WebKit11/11 отдельн
 (375/390/430/1440, обе pilot identities, reload и legacy negative).
 Chromium12/12, включая непилотного тренера. Снимки просмотрены;
 full check exit0: frontend2615/API1272+137 штатных DB skip/build.
-CI/merge/production впереди.
-PR2–5 не выполнены. Подключённый KB search недоступен из-за отсутствия PyYAML;
+PR1 #1552: CI38067123106 success, самостоятельно слит в main33db986d.
+Production всего набора ещё не подтверждён.
+PR2 локально: SVG-галочки во всех состояниях, поля48px/цифры16px/units10px,
+одна рамка focus/error без saving/saved. WebKit/Chromium30/30 отдельными
+проходами, включая прежний клиентский и обе пилотные network retry.
+Снимок просмотрен; full check exit0: frontend2615/API1272+137 штатных skip/build.
+PR2 #1553 повторно проверен после переноса на main33db986d: full check exit0,
+WebKit/Chromium18/18 (поля, обе pilot identities, network retry, negative boundary).
+PR3–5 не выполнены. Подключённый KB search недоступен из-за отсутствия PyYAML;
 использованы утверждённый план, текущий код и прежние design-документы.

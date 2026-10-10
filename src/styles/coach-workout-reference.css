@@ -80,16 +80,21 @@
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity :is(.live-set-check, .live-set-save) { height: 48px; min-height: 48px; border-radius: 16px }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.confirmed .live-set-grid { box-shadow: none }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.confirmed :is(.live-set-input, .live-set-rpe, .live-set-check.done) { background: color-mix(in srgb, var(--success) 12%, #3b3b40) }
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.invalid .live-set-grid { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger) }
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.editing .live-set-grid { border-color: var(--lime-accent) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set:is(.invalid, .editing) .live-set-grid { border: 0; box-shadow: none }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.invalid .coach-live-metric :is(.live-set-input, .live-set-rpe) { outline: 1px solid var(--danger); outline-offset: -1px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-metric :is(.live-set-input, .live-set-rpe):focus { box-shadow: none }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-metric :is(.live-set-input, .live-set-rpe):focus-visible { outline: 1px solid var(--lime-accent); outline-offset: -1px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.invalid .coach-live-metric :is(.live-set-input, .live-set-rpe):focus-visible { outline-color: var(--danger) }
 /* Units live inside the original 48px fields; RPE stays on a secondary row. */
 .coach-workout-reference.live-identity .live-set-table-head { display: none }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid,
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.rpe-visible .live-set-grid { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 48px 44px; gap: 4px; border: 0; overflow: visible }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid > :not(:first-child) { border-left: 0 }
 .coach-workout-reference.live-identity .coach-live-metric { position: relative; display: block; min-width: 0; height: 48px }
-.coach-workout-reference.live-identity .coach-live-field-unit { position: absolute; right: 8px; bottom: 4px; font-size: 13px; line-height: 14px; font-weight: 400; color: var(--lime-text-secondary); pointer-events: none }
-.coach-workout-reference.live-identity .coach-live-metric :is(.live-set-input, .live-set-rpe) { width: 100%; padding: 4px 5px 14px }
+.coach-workout-reference.live-identity .coach-live-field-unit { position: absolute; right: 6px; bottom: 3px; font-size: 10px; line-height: 12px; font-weight: 400; color: var(--lime-text-secondary); pointer-events: none }
+.coach-workout-reference.live-identity .coach-live-metric :is(.live-set-input, .live-set-rpe) { width: 100%; padding: 0 5px; text-align: center }
+.coach-workout-reference.live-identity :is(.live-set-check, .live-set-save) svg[data-original-icon='check'] { width: 24px; height: 24px; background-color: currentColor; mask: url('../../docs/design/figma-20261002/assets/check.svg') center / contain no-repeat }
+.coach-workout-reference.live-identity :is(.live-set-check, .live-set-save) svg[data-original-icon='check'] > image { opacity: 0 }
 .coach-workout-reference.live-identity .coach-live-rpe-metric { grid-column: 2 / 4; order: 9 }
 .coach-workout-reference.live-identity .live-set-grid > .live-set-number { grid-column: 1; grid-row: 1; color: var(--lime-text); font-size: 13px }
 .coach-workout-reference.live-identity .live-set-grid > .live-set-confirm { grid-column: 4; grid-row: 1 }
@@ -103,7 +108,7 @@
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.confirmed :is(.live-set-input, .live-set-rpe, .live-set-check.done) { background: #3b3b40; color: #fff }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.confirmed .live-set-check.done { color: var(--success-fg) }
 .coach-workout-reference.live-identity .run-duration-field { position: relative }
-.coach-workout-reference.live-identity .run-duration-field .workout-duration-trigger { padding-bottom: 14px }
+.coach-workout-reference.live-identity .run-duration-field .workout-duration-trigger { padding: 0 5px }
 .coach-workout-reference.live-identity .loaded-distance-time { grid-column: 2 / 4 }
 .coach-workout-reference.live-identity .run-distance-control { grid-template-columns: minmax(44px, 1fr) 44px; gap: 0; height: 48px; border-radius: 16px; background: #3b3b40; overflow: hidden }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .run-distance-control input { width: 100%; border-radius: 0; padding: 4px 2px; background: transparent }
