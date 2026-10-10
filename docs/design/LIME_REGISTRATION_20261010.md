@@ -32,8 +32,10 @@
 | 5 | Реальные YS Geo400/500 загружены из проверенных WOFF2, одна разметка dark/light; WebKit+Chromium390/430/1440 | Локально проверено |
 | 6 | Existing-profile recovery и success сохранены в unit28/28; приглашение client-only проверено обоими браузерами; транспорт/схема вне diff | Локально проверено |
 | 7 | Пустое/короткое/120символов, обе роли, pending/edit/back disabled, API503, retry(unit), back, fallback; 6/6WebKit и6/6Chromium | Локально проверено |
-| 8 | Полный npm run check exit0: frontend2617/2617, API1272/1272 (137 DB skipped без изменения схемы); CI/merge/официальный выпуск впереди | Не завершено |
+| 8 | Полный npm run check exit0: frontend2617/2617, API1272/1272 (137 DB skipped без изменения схемы); CI38072897640 на2db8ae74 success; обновление от main40b5ae57, свежий CI/merge/официальный выпуск впереди | Не завершено |
 
 Основные screenshots: [dark390](registration-20261010/dark-390.png), [light390](registration-20261010/light-390.png), [error-dark430](registration-20261010/error-dark-430.png), [invitation-light430](registration-20261010/invitation-light-430.png).
 
 Проверка клавиатуры — фокус имени + viewport420px и прокрутка к CTA, не физическая клавиатура iPhone. Реальный внешний Yandex OAuth/новый production-аккаунт/физический iPhone не проверены. Все сетевые ответы тестов изолированы, реальные данные не изменялись.
+
+Уточнение порядка выпуска10.10: после сообщения о зелёном PR и вопроса о выпуске раньше тренерских PR владелец ответил «выкатывай». Это разрешение выпустить #1557 раньше оставшихся #1555–1556; проверки и границы экрана не изменяются.

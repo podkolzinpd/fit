@@ -569,7 +569,87 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.coach-live-digits')).toBeVisible()
   })
 }
+for (const width of [375, 390, 430, 1440]) {
+  test(`Figma workout Coach reference simple fields ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const source = restTimerWorkout(), set = source.exercises[0]!.sets[0]!
+    set.weightKg = undefined; set.reps = undefined
+    await mockPilot(page, { profileId: width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const row = page.locator(`[data-live-set-id="${set.id}"]`)
+    const weight = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+    const reps = row.getByRole('spinbutton', { name: 'Фактические повторы', exact: true })
+    const check = row.locator('.live-set-check')
+    await expect(check.locator('svg[data-original-icon="check"]')).toHaveCount(1)
+    await expect(check.locator('svg')).toHaveCSS('width', '24px')
+    await expect(check.locator('svg')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    expect(await check.locator('svg').evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none')
+    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '10px')
+    await expect(weight).toHaveCSS('font-size', '16px')
+    await expect(weight).toHaveCSS('padding-top', '0px')
+    await expect(weight).toHaveCSS('padding-bottom', '0px')
+    expect(await row.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 48))).toBe(true)
+    await check.click()
+    await expect(row).toHaveClass(/invalid/)
+    await expect(weight).toHaveCSS('outline-width', '1px')
+    await expect(weight).toHaveCSS('outline-color', 'rgb(240, 160, 160)')
+    await expect(row.locator('.live-set-grid')).toHaveCSS('box-shadow', 'none')
+    await weight.fill('27.5'); await reps.fill('10')
+    await check.click()
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+    await check.click()
+    await expect(row.locator('.live-set-save svg[data-original-icon="check"]')).toHaveCount(1)
+    await weight.fill('28')
+    await row.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+    await expect(weight).toHaveValue('28')
+    await page.screenshot({ path: info.outputPath('coach-live-simple-fields.png'), fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}
 for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
+  test(`Figma workout Coach reference quiet fields retain network retry ${profileId}`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    // This fixture injects an HTTP 503, not an offline browser. Keep the
+    // online precondition explicit instead of relying on the runner's OS.
+    await page.addInitScript(() => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true }))
+    let confirmations = 0
+    page.on('request', request => { if (/\/workout-sets\/[\w-]+\/confirm$/.test(request.url())) confirmations++ })
+    const source = restTimerWorkout(), set = source.exercises[0]!.sets[0]!
+    await mockPilot(page, { profileId, fitLime: true, workouts: [source], failFirstSetConfirm: true })
+    // Reproduce a blur autosave completing after the user requested confirmation.
+    let releaseSave = () => {}
+    const saveGate = new Promise<void>(resolve => { releaseSave = resolve })
+    await page.route('**/v1/workout-sets/*/draft', async route => { await saveGate; await route.fallback() })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const row = page.locator(`[data-live-set-id="${set.id}"]`)
+    const saveRequest = page.waitForRequest(request => request.url().endsWith(`/workout-sets/${set.id}/draft`))
+    const weight = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+    await weight.focus()
+    await weight.evaluate(element => element.blur())
+    await saveRequest
+    try {
+      await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+    } finally { releaseSave() }
+    await expect(page.locator('.live-sync-state[role="alert"]')).toContainText('Не удалось отправить')
+    await expect(row).not.toHaveClass(/invalid/)
+    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('20')
+    expect(await page.evaluate(() => navigator.onLine)).toBe(true)
+    await expect.poll(() => confirmations).toBe(1)
+    await expect.poll(() => page.evaluate(({ profileId, workoutId, setId }) => {
+      const draft = JSON.parse(localStorage.getItem(`fit.live-set-drafts.${profileId}.${workoutId}`) ?? '{}') as Record<string, unknown>
+      const pending = JSON.parse(localStorage.getItem(`fit.live-set-confirmations.${profileId}.${workoutId}`) ?? '[]') as string[]
+      return Boolean(draft[setId] && pending.includes(setId))
+    }, { profileId, workoutId, setId: set.id })).toBe(true)
+    await page.locator('.live-sync-state').getByRole('button', { name: 'Повторить', exact: true }).click()
+    await expect.poll(() => confirmations).toBe(2)
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(page.locator('.live-sync-state')).toHaveCount(0)
+    await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+  })
   test(`Figma workout Coach reference expiry keeps rest when deleting future exercise ${profileId}`, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
@@ -689,6 +769,58 @@ for (const width of [375, 390, 430, 1440]) {
   })
 }
 
+async function revealCoachSetDelete(page: Page, row: Locator) {
+  const number = row.locator('.live-set-number')
+  await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
+  await expect.poll(() => number.evaluate(element => {
+    const box = element.getBoundingClientRect()
+    return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+  })).toBe(true)
+  const box = (await number.boundingBox())!
+  const x = box.x + box.width / 2, y = box.y + box.height / 2
+  await page.mouse.move(x, y); await page.mouse.down()
+  await page.mouse.move(Math.max(1, x - 36), y, { steps: 6 }); await page.mouse.up()
+}
+for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
+  test(`Figma workout Coach reference set touch swipe ${profileId}`, async ({ page, browserName }, info) => {
+    test.skip(browserName !== 'chromium', 'Trusted touch dispatch is exposed by Chromium CDP, not mobile WebKit.')
+    await page.setViewportSize({ width: 390, height: 844 })
+    const source = restTimerWorkout(), exercise = source.exercises[0]!
+    await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+    await page.goto(`/workouts/${workoutId}/live`)
+    const row = page.locator(`[data-live-set-id="${exercise.sets[1]!.id}"]`)
+    const number = row.locator('.live-set-number')
+    await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
+    const box = (await number.boundingBox())!, point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    const cdp = await page.context().newCDPSession(page)
+    try {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+      for (let step = 1; step <= 6; step++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x - step * 6, y: point.y }] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect(row.getByRole('button', { name: /Удалить подход 2:/ })).toBeVisible()
+      await expect(page.locator('[data-workout-swipe]').getByRole('button', { name: 'Удалить', exact: true })).toHaveCount(0)
+      await expect(page.getByRole('alertdialog')).toHaveCount(0)
+      await page.screenshot({ path: info.outputPath('coach-live-set-swipe.png') })
+      await row.getByRole('button', { name: /Удалить подход 2:/ }).tap()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
+      const input = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+      await input.tap(); await expect(input).toBeFocused(); await input.fill('31')
+      await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
+      await input.blur()
+      await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
+      const startScroll = await page.locator('.content').evaluate(element => element.scrollTop)
+      const verticalBox = (await number.boundingBox())!
+      const vertical = { x: verticalBox.x + verticalBox.width / 2, y: verticalBox.y + 10 }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [vertical] })
+      for (let step = 1; step <= 8; step++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: vertical.x, y: vertical.y + step * 12 }] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect.poll(() => page.locator('.content').evaluate(element => element.scrollTop)).toBeLessThan(startScroll)
+      await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
+      await expect(input).toHaveValue('31')
+    } finally { await cdp.detach() }
+  })
+}
 for (const width of [375, 390, 430, 1440]) {
   test(`Figma workout Coach reference field completion ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
@@ -704,11 +836,7 @@ for (const width of [375, 390, 430, 1440]) {
     await page.goto(`/workouts/${workoutId}/live`)
     const first = page.locator(`[data-live-set-id="${exercise.sets[0]!.id}"]`), second = page.locator(`[data-live-set-id="${exercise.sets[1]!.id}"]`)
     await expect(first.locator('.coach-live-field-unit')).toHaveText(['кг', 'повт.'])
-    const removeIcon = second.locator('.coach-live-remove-set svg[data-original-icon="close"]')
-    await expect(removeIcon).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.6)')
-    await expect(removeIcon.locator('image')).toHaveCSS('opacity', '0')
-    expect(await removeIcon.evaluate(icon => decodeURIComponent(getComputedStyle(icon).maskImage)))
-      .toContain('M10.5841 12.0002L4 5.41598')
+    await expect(page.locator('.coach-live-remove-set')).toHaveCount(0)
     await expect(page.locator('.live-set-table-head')).not.toBeVisible()
     expect(await first.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(await second.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor))
     expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll(elements => {
@@ -721,12 +849,15 @@ for (const width of [375, 390, 430, 1440]) {
     await first.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill('27.5')
     await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect(first).toHaveClass(/confirmed/)
-    await expect(first.locator('.coach-live-remove-set')).toBeDisabled()
-    await second.locator('.coach-live-remove-set').click()
+    await revealCoachSetDelete(page, first)
+    await expect(first.locator('.workout-swipe-action')).toHaveCount(0)
+    await revealCoachSetDelete(page, second)
+    await second.getByRole('button', { name: /Удалить подход 2:/ }).click()
     await expect(page.getByRole('alertdialog')).toContainText('Введённые значения')
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     expect(attempts).toBe(0)
-    await second.locator('.coach-live-remove-set').click()
+    await revealCoachSetDelete(page, second)
+    await second.getByRole('button', { name: /Удалить подход 2:/ }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Повторить удаление подхода', exact: true })).toBeVisible()
     await expect(second).toBeVisible()
@@ -736,7 +867,8 @@ for (const width of [375, 390, 430, 1440]) {
     await page.reload()
     await page.getByRole('button', { name: `Исправить: ${exercise.name}`, exact: true }).click()
     await expect(first.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('27.5')
-    await expect(first.locator('.coach-live-remove-set')).toBeDisabled()
+    await revealCoachSetDelete(page, first)
+    await expect(first.locator('.workout-swipe-action')).toHaveCount(0)
     await page.screenshot({ path: info.outputPath('coach-live-field-completion.png'), fullPage: true })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
@@ -759,10 +891,12 @@ for (const width of [375, 390, 430, 1440]) {
     })
     await page.goto(`/workouts/${workoutId}/live`)
     const row = page.locator(`[data-live-set-id="${target.id}"]`)
-    await row.locator('.coach-live-remove-set').click()
+    await revealCoachSetDelete(page, row)
+    await row.getByRole('button', { name: /Удалить подход 2:/ }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
     await expect(row).toHaveClass(/confirmed/)
-    await expect(row.locator('.coach-live-remove-set')).toBeDisabled()
+    await revealCoachSetDelete(page, row)
+    await expect(row.locator('.workout-swipe-action:not(:disabled)')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Повторить удаление подхода', exact: true })).toBeDisabled()
     await expect(page.getByRole('status').filter({ hasText: 'чтобы сохранить результат' })).toBeVisible()
     await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('42.5')
