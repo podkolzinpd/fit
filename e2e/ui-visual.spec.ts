@@ -2385,6 +2385,8 @@ test('workout detail, completion and exercise history keep their visual baseline
     await expect(page.locator('.workout-completion-count-line strong')).toHaveText('100%')
     await expect(page.getByRole('form', { name: 'Как прошла тренировка?' })).toBeVisible()
     await expect(page.locator('.workout-feedback')).toHaveCount(1)
+    const feedbackNotice = page.getByRole('status').filter({ hasText: 'Итоги стали компактнее' })
+    if (await feedbackNotice.isVisible()) await feedbackNotice.getByRole('button', { name: 'Понятно', exact: true }).click()
     await expect(page.getByText('Не завершено')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Поделиться', exact: true })).toBeVisible()
     await expect(page.locator('.workout-completion-recorded')).not.toHaveAttribute('open')
