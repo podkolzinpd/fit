@@ -5933,7 +5933,7 @@ for (const theme of ['light', 'dark']) {
     backend.setTrainingDataFailure(false)
     await page.getByRole('button', { name: 'Повторить', exact: true }).click()
     await expect(page.locator('.state-panel-error')).toHaveCount(0)
-    await expect(page.locator('.state-panel-empty')).toBeVisible()
+    await expect(page.locator('#workouts-current-panel .state-panel-empty')).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('empty.png') })
     await page.goto('/me/progress')
     await page.getByRole('button', { name: 'Добавить замер', exact: true }).click()
