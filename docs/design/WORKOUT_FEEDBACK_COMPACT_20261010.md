@@ -41,6 +41,8 @@
 
 ## Уточнение по CI visual
 
-Первый CI указал на one-time Coachmark поверх completion baseline. В test он теперь закрывается реальным нажатием; отдельная приёмка проверяет сам Coachmark. Изолированный Podman Playwright Linux: completion/detail/history390/430 —2/2 passed. Обновлён только completion430 baseline: вместо сетки виден компактный slider. Несвязанные снимки не перенесены.
+Первый CI указал на one-time Coachmark поверх completion baseline. В test он теперь закрывается реальным нажатием; отдельная приёмка проверяет сам Coachmark. Изолированный Podman Playwright Linux: completion/detail/history390/430 —2/2 passed. На первом шаге обновлён completion430 baseline: вместо сетки виден компактный slider. После просмотра остальных diff обновлены также dark completion/detail430 и light390/dark390/430 share picker: компактная форма видна под затемнением окна. Dark completion430 эталон также не содержал уже существующий до задачи контрол длительности; его текущая реализация сохранена без изменений. Другие экраны и бизнес-поведение не менялись.
 
 Финальная дополнительная legacy WebKit regression:2/2 passed (34s). Всплывающий совет ожидается по наличию DOM (включая первоначальную скрытую позицию) и закрывается реальным нажатием перед взаимодействием.
+
+Строгая финальная Linux visual regression (без update-snapshots): completion/detail/history/share390/430 —2/2 passed,39.4s. Изображения actual/diff просмотрены; допускаемые пороги не повышались, проверки не отключались.
