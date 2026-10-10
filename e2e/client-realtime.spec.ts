@@ -145,9 +145,9 @@ test('client and trainer receive progress and workout changes without reload', a
     await expect(client.getByText('вес 62,2 кг', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     await client.goto('/me/workouts')
-    await expect(client.getByRole('link', { name: 'Добавить тренировку' })).toHaveCount(1)
+    await expect(client.getByRole('link', { name: 'Добавить', exact: true })).toHaveCount(1)
     await expect(client.getByText('БЛИЖАЙШЕЕ')).toHaveCount(0)
-    await expect(client.getByText('РЕЗУЛЬТАТЫ')).toHaveCount(0)
+    await expect(client.locator('#workouts-history-panel .workout-chronicle-card')).toHaveCount(0)
     await client.waitForTimeout(500)
     await trainer.goto(`/workouts/new?client=${clientId}`)
     await trainer.getByRole('button', { name: 'Выбрать упражнения' }).click()

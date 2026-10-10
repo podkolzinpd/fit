@@ -6,7 +6,7 @@ import { isClientLimeEnabled } from '../../app/client-lime'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { splitClientWorkouts } from '../../data/repositories/workouts.repository'
-import type { CustomMetric, InBodyRecognitionResult, ProgressEntry } from '../../shared/domain'
+import type { CustomMetric, InBodyRecognitionResult, ProgressEntry, Workout } from '../../shared/domain'
 import { CloseIcon, ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
@@ -17,7 +17,7 @@ import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicl
 import { clientWorkoutCardLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
 import { AthleteAchievementPreview } from '../achievements/AthleteAchievements'
-import { useWorkoutHistoryCalendar } from './use-workout-history-calendar'
+import { useWorkoutHistoryCalendar, useWorkoutPlannedCalendar } from './use-workout-history-calendar'
 
 function favoriteExerciseCountLabel(count: number): string {
   const lastTwo = count % 100
@@ -42,17 +42,21 @@ export function MyWorkoutsPage() {
   const queryClient = useQueryClient()
   const [confirmRemoveFavorite, confirmRemoveFavoriteDialog] = useConfirm()
   const [searchParams, setSearchParams] = useSearchParams()
-  const workoutsView: 'current' | 'presets' = searchParams.get('tab') === 'presets' ? 'presets' : 'current'
-  const setWorkoutsView = (next: 'current' | 'presets') => {
+  const requestedTab = searchParams.get('tab')
+  const workoutsView: 'current' | 'history' | 'presets' = requestedTab === 'presets' ? 'presets'
+    : requestedTab === 'history' || (!requestedTab && searchParams.get('view') === 'calendar') ? 'history' : 'current'
+  const setWorkoutsView = (next: 'current' | 'history' | 'presets') => {
     const params = new URLSearchParams(searchParams)
-    if (next === 'presets') params.set('tab', 'presets')
+    if (next !== 'current' || params.get('view') === 'calendar') params.set('tab', next)
     else params.delete('tab')
     setSearchParams(params, { replace: true })
   }
   const mine = useMine()
   const today = todayInTimeZone(actor?.timezone)
   const calendar = useWorkoutHistoryCalendar(today)
+  const plannedCalendar = useWorkoutPlannedCalendar(today)
   const { state: calendarState, range: calendarRange } = calendar
+  const { state: plannedCalendarState, range: plannedCalendarRange } = plannedCalendar
   const trainers = useQuery({ queryKey: ['client-trainers', mine.data?.id], queryFn: () => invitationsRepository.listTrainers(mine.data!.id), enabled: Boolean(mine.data) })
   const favorites = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkoutsRepository.list(), enabled: Boolean(mine.data) })
   const removeFavorite = useMutation({
@@ -77,31 +81,68 @@ export function MyWorkoutsPage() {
   const calendarHistory = useQuery({
     queryKey: ['workouts', mine.data?.id, 'history-calendar', calendarRange.from, calendarRange.to],
     queryFn: () => workoutsRepository.list(calendarRange.from, calendarRange.to, mine.data!.id),
-    enabled: Boolean(mine.data) && calendarState.view === 'calendar',
+    enabled: Boolean(mine.data) && workoutsView === 'history' && calendarState.view === 'calendar',
+  })
+  const plannedMonth = useQuery({
+    queryKey: ['workouts', mine.data?.id, 'planned-calendar', plannedCalendarRange.from, plannedCalendarRange.to],
+    queryFn: () => workoutsRepository.list(plannedCalendarRange.from, plannedCalendarRange.to, mine.data!.id),
+    enabled: Boolean(mine.data) && workoutsView === 'current' && plannedCalendarState.view === 'calendar',
   })
   const upcomingItems = upcoming.data ? splitClientWorkouts(upcoming.data, today).upcoming : []
   const pastItems = splitClientWorkouts(history.data?.pages.flatMap((page) => page.items) ?? [], today)
   const historyItems = pastItems.history
   const calendarHistoryItems = splitClientWorkouts(calendarHistory.data ?? [], today).history
-  const hasWorkouts = upcomingItems.length > 0 || pastItems.needsDecision.length > 0 || historyItems.length > 0
-  const showHistorySection = historyItems.length > 0 || calendarState.view === 'calendar'
+  const plannedCalendarSplit = splitClientWorkouts(plannedMonth.data ?? [], today)
+  const plannedCalendarItems = [...plannedCalendarSplit.upcoming, ...plannedCalendarSplit.needsDecision]
+  const hasCurrentWorkouts = upcomingItems.length > 0 || pastItems.needsDecision.length > 0
 
-  const showHistoryList = calendar.showList
   const showHistoryCalendar = () => calendar.showCalendar(historyItems[0]?.workoutDate)
   const calendarReturnTo = `/me/workouts${calendar.search}`
-  return <><Page className="client-workouts-page" title="Мои тренировки" action={mine.data && hasWorkouts && <Link className="button" to="/me?entry=workout">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
+  const plannedReturnTo = `/me/workouts${plannedCalendar.search}`
+  const renderPlannedCard = (workout: Workout, returnTo: string) => workout.status === 'planned' && workout.workoutDate < today
+    ? <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={returnTo} />
+    : <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`} state={{ returnTo }}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>
+  const renderViewToggle = (scope: 'current' | 'history') => {
+    const current = scope === 'current' ? plannedCalendar : calendar
+    return <div className="client-history-view-toggle client-workouts-view-toggle" role="group" aria-label={scope === 'current' ? 'Вид актуальных тренировок' : 'Вид истории тренировок'}><button type="button" aria-pressed={current.state.view === 'list'} onClick={current.showList}>Список</button><button type="button" aria-pressed={current.state.view === 'calendar'} onClick={() => scope === 'current' ? current.showCalendar(today) : showHistoryCalendar()}><ScheduleIcon />Календарь</button></div>
+  }
+  return <><Page className="client-workouts-page" title="Мои тренировки" action={mine.data && <Link className="button" to="/me?entry=workout">Добавить</Link>}><AsyncView loading={mine.isLoading || upcoming.isLoading || history.isLoading || trainers.isLoading} error={mine.error ?? upcoming.error ?? history.error ?? trainers.error} empty={!mine.data} onRetry={() => { void mine.refetch(); void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}
     emptyTitle="Заполните профиль спортсмена" emptyDescription="Он нужен, чтобы добавлять самостоятельные тренировки и получать назначения тренера." emptyAction={<Link className="button primary" to="/me/edit">Заполнить профиль</Link>}>
     {mine.data && <>
       <div className="progress-view-tabs" role="tablist" aria-label="Режим тренировок">
         <button id="workouts-current-tab" type="button" role="tab" aria-selected={workoutsView === 'current'} aria-controls="workouts-current-panel" className={workoutsView === 'current' ? 'active' : ''} onClick={() => setWorkoutsView('current')}>Актуальное</button>
-        <button id="workouts-presets-tab" type="button" role="tab" aria-selected={workoutsView === 'presets'} aria-controls="workouts-presets-panel" className={workoutsView === 'presets' ? 'active' : ''} onClick={() => setWorkoutsView('presets')}>Готовые тренировки</button>
+        <button id="workouts-history-tab" type="button" role="tab" aria-selected={workoutsView === 'history'} aria-controls="workouts-history-panel" className={workoutsView === 'history' ? 'active' : ''} onClick={() => setWorkoutsView('history')}>История</button>
+        <button id="workouts-presets-tab" type="button" role="tab" aria-label="Готовые тренировки" aria-selected={workoutsView === 'presets'} aria-controls="workouts-presets-panel" className={workoutsView === 'presets' ? 'active' : ''} onClick={() => setWorkoutsView('presets')}>Готовые</button>
       </div>
       <div id="workouts-current-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-current-tab" hidden={workoutsView !== 'current'}>
-        {hasWorkouts || calendarState.view === 'calendar' ? <div className="client-workouts-stack">
-          {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => <Link className="card client-workout-card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}</strong><p className="muted">{clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}</p><WorkoutExercisesSummary workout={workout} maxItems={2} /></div><WorkoutStatusBadge workout={workout} /></Link>)}</div></section>}
-          {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => <PastWorkoutPlanCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo="/me/workouts" />)}</div></section>}
-          {showHistorySection && <section className="client-workout-section client-history-section"><div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div><div className="client-history-view-toggle" role="group" aria-label="Вид истории тренировок"><button type="button" aria-pressed={calendarState.view === 'list'} onClick={showHistoryList}>Список</button><button type="button" aria-pressed={calendarState.view === 'calendar'} onClick={showHistoryCalendar}><ScheduleIcon />Календарь</button></div></div>{calendarState.view === 'list'
-            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
+        {renderViewToggle('current')}
+        {plannedCalendarState.view === 'list' ? hasCurrentWorkouts ? <div className="client-workouts-stack">
+          {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => renderPlannedCard(workout, plannedReturnTo))}</div></section>}
+          {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => renderPlannedCard(workout, plannedReturnTo))}</div></section>}
+        </div> : <EmptyState title="Новая тренировка" description="Добавьте упражнения голосом, текстом или из каталога." />
+          : <ClientWorkoutHistoryCalendar
+              scope="planned"
+              month={plannedCalendarState.month}
+              today={today}
+              workouts={plannedCalendarItems}
+              selectedDate={plannedCalendarState.selectedDate}
+              loading={plannedMonth.isLoading}
+              error={plannedMonth.error}
+              returnTo={plannedReturnTo}
+              contextLabel={(workout) => clientWorkoutCardLabel(workout, actor?.userId, trainers.data)}
+              renderSelectedWorkout={(workout) => renderPlannedCard(workout, plannedReturnTo)}
+              onRetry={() => void plannedMonth.refetch()}
+              onMonthChange={plannedCalendar.shiftMonth}
+              onDateSelect={plannedCalendar.selectDate}
+            />}
+      </div>
+      <div id="workouts-history-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-history-tab" hidden={workoutsView !== 'history'}>
+        {renderViewToggle('history')}
+        <section className="client-workout-section client-history-section">
+          <div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div></div>
+          {calendarState.view === 'list' ? historyItems.length > 0
+            ? <><div className="cards client-workout-cards workout-chronicle-list">{historyItems.map((workout) => <WorkoutChronicleCard key={workout.id} workout={workout} contextLabel={clientWorkoutCardLabel(workout, actor?.userId, trainers.data)} returnTo={calendarReturnTo} historyListActions />)}</div><LoadMoreButton hasMore={history.hasNextPage} loading={history.isFetchingNextPage} onLoadMore={() => void history.fetchNextPage()} /></>
+            : <EmptyState title="Пока нет результатов" description="Завершённые тренировки появятся здесь." />
             : <ClientWorkoutHistoryCalendar
                 month={calendarState.month}
                 today={today}
@@ -114,12 +155,8 @@ export function MyWorkoutsPage() {
                 onRetry={() => void calendarHistory.refetch()}
                 onMonthChange={calendar.shiftMonth}
                 onDateSelect={calendar.selectDate}
-              />}</section>}
-        </div> : <EmptyState
-          title="Новая тренировка"
-          description="Добавьте упражнения голосом, текстом или из каталога."
-          action={<Link className="button secondary" to="/me?entry=workout">Добавить тренировку</Link>}
-        />}
+              />}
+        </section>
       </div>
       <div id="workouts-presets-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-presets-tab" hidden={workoutsView !== 'presets'}>
         <section className="client-workout-section favorite-workouts-section">

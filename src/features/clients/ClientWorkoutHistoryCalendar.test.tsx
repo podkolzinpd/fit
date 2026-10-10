@@ -112,4 +112,22 @@ describe('ClientWorkoutHistoryCalendar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(retry).toHaveBeenCalledOnce()
   })
+
+  it('lets planned workouts be selected on future dates and keeps their card action', () => {
+    const onDateSelect = vi.fn()
+    renderCalendar({
+      scope: 'planned',
+      month: localDate('2026-10-01'),
+      workouts: [workout('future-plan', localDate('2026-10-11'))],
+      selectedDate: localDate('2026-10-11'),
+      onDateSelect,
+      renderSelectedWorkout: (item) => <a href={`/workouts/${item.id}`}>Открыть план</a>,
+    })
+
+    expect(screen.getByRole('grid', { name: 'Актуальные тренировки за Октябрь 2026' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: '11 октября 2026 г., 1 тренировка' }))
+    expect(onDateSelect).toHaveBeenCalledWith('2026-10-11')
+    expect(screen.getByRole('link', { name: 'Открыть план' })).toHaveAttribute('href', '/workouts/future-plan')
+    expect(screen.getByRole('button', { name: 'Следующий месяц' })).toBeEnabled()
+  })
 })

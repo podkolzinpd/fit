@@ -142,8 +142,9 @@ a second primitive family.
 
 - Acceptance widths are 390 and 430 px.
 - Home remains voice-first with one dominant next action.
-- Workouts separate upcoming plans from confirmed history. The history header
-  may use the accepted 44 px neutral segmented control for `Список / Календарь`.
+- Client Workouts separate upcoming plans from confirmed history with root tabs;
+  both tabs use the same 44 px segmented `Список / Календарь` control directly
+  beneath the tabs. The trainer's client-history control stays in its header.
   The month calendar is one 18 px neutral surface with Monday-first seven-column
   geometry, quiet out-of-month dates, an outlined today state and a
   graphite/milk selected state. Workout presence is communicated by a compact
