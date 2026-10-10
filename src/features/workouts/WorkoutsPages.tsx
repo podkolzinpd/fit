@@ -2171,7 +2171,7 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave, comple
       // тот же submit, а RPC безопасно дедуплицирует потерянный ответ.
     }
   }}>
-    <Coachmark id="workout-feedback-compact-2026-10" userId={actor?.userId} title="Итоги стали компактнее" description="Выберите нагрузку ползунком. Заметка необязательна даже при максимальной нагрузке."><div className="workout-review-head"><div><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div></Coachmark>
+    <Coachmark id="workout-feedback-compact-2026-10" userId={actor?.userId} title="Итоги стали компактнее" description="Нагрузка теперь выбирается ползунком, а заметка необязательна даже при 10/10."><div className="workout-review-head"><div><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div></Coachmark>
     <fieldset className="workout-feedback-fieldset">
       <legend className="sr-only">Нагрузка</legend>
       <WorkoutRpeScale aria-label="Нагрузка по шкале RPE" value={sessionRpe} disabled={saving} onChange={setSessionRpe} />
