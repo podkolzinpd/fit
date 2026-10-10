@@ -63,6 +63,8 @@ import { DatabaseTrainerScheduleV2AutoActivator } from './trainer-schedule-v2-au
 import { DatabaseFitLimeAutoActivator } from './fit-lime-auto-activation.js'
 import { DatabaseAssistantFeatureLinksAutoActivator } from './assistant-feature-links-auto-activation.js'
 import { DatabasePilotTrainerFinance } from './trainer-finance.js'
+import { DatabaseNutritionDiary, readNutritionPilot } from './nutrition-diary.js'
+import { VkusvillNutritionCatalog } from './nutrition-catalog.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -77,6 +79,11 @@ function parsePort(value: string | undefined): number {
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
 const databasePool =
   databaseConfig === undefined ? undefined : new PgDatabasePool(databaseConfig, 'api')
+const nutritionDiary = databasePool === undefined ? undefined : new DatabaseNutritionDiary(
+  databasePool, new VkusvillNutritionCatalog(), readNutritionPilot(
+    process.env.NUTRITION_ENABLED, process.env.NUTRITION_CLIENT_USER_IDS, process.env.NUTRITION_TRAINER_USER_IDS,
+  ),
+)
 const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
     ? undefined
@@ -283,6 +290,7 @@ const app = buildApp(
       ? {}
       : { releaseId: process.env.FIT_RELEASE_ID }),
     ...(databasePool === undefined ? {} : { databasePool }),
+    ...(nutritionDiary === undefined ? {} : { nutritionDiary }),
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
     ...(pilotAppFeedbackWriter === undefined ? {} : { pilotAppFeedbackWriter }),

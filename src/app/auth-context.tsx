@@ -5,6 +5,7 @@ import { authRepository } from '../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
 import { isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useOptionalYandexAppSession } from './yandex-app-session-context'
+import { clearNutritionForms } from '../features/nutrition'
 
 interface AuthUser {
   id: string
@@ -212,6 +213,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // Если локальная сессия действительно осталась активной, repository
     // пробросит ошибку и данные текущего пользователя не исчезнут из UI.
     queryClient.clear()
+    clearNutritionForms()
   }, [queryClient, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
   const updateProfile = useCallback(async (input: { firstName: string | null; lastName: string | null; timezone: string; scheduleDensity?: ScheduleDensity }) => {

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   isClientLimePilotEnabled,
+  isNutritionPilotEnabled,
   getYandexIdPilotConfig,
   getYandexAppSessionEntryConfig,
   getYandexNativeRegistrationConfig,
@@ -23,6 +24,28 @@ import {
 } from './feature-flags'
 
 afterEach(() => vi.unstubAllEnvs())
+
+describe('closed nutrition pilot', () => {
+  const ids = Array.from({ length: 5 }, (_, index) => `f00d0000-6010-4000-8000-00000000000${index + 1}`)
+  it('requires the independent flag and exactly five valid distinct identities', () => {
+    vi.stubEnv('VITE_NUTRITION_ENABLED', 'true')
+    vi.stubEnv('VITE_NUTRITION_PILOT_USER_IDS', ` ${ids.join(', ')}, `)
+    ids.forEach((id) => expect(isNutritionPilotEnabled(id)).toBe(true))
+    expect(isNutritionPilotEnabled('f00d0000-6010-4000-8000-000000000006')).toBe(false)
+    for (const value of ['', ids.slice(0, 4).join(','), [...ids, ids[0]].join(','), [...ids.slice(0, 4), 'invalid'].join(','), [...ids.slice(0, 4), ids[0]].join(',')]) {
+      vi.stubEnv('VITE_NUTRITION_PILOT_USER_IDS', value)
+      expect(isNutritionPilotEnabled(ids[0]!)).toBe(false)
+    }
+  })
+  it('cannot inherit any other pilot or implicit production enablement', () => {
+    vi.stubEnv('VITE_NUTRITION_PILOT_USER_IDS', ids.join(','))
+    vi.stubEnv('PROD', true)
+    for (const value of ['', 'false', 'TRUE', '1']) {
+      vi.stubEnv('VITE_NUTRITION_ENABLED', value)
+      expect(isNutritionPilotEnabled(ids[0]!)).toBe(false)
+    }
+  })
+})
 
 describe('today start redesign flag', () => {
   it('enables the new start path by default', () => {

@@ -53,6 +53,7 @@ export function createYandexMainQueries(
           : { ...sessionHeaders, 'content-type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       }
+      if (/^\/v1\/me\/nutrition\//.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Nutrition request timed out')
       if (!isLiveWorkoutWrite(path)) return request(endpoint(apiBaseUrl, path), init)
       const timedFetch: typeof fetch = (input, requestInit) => fetchWithTimeout(
         globalThis.fetch,

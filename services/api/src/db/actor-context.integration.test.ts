@@ -1,4 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto'
+import { DatabaseNutritionDiary, type NutritionDraft } from '../nutrition-diary.js'
+import { parseCatalogFood, type NutritionCatalog } from '../nutrition-catalog.js'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -9831,6 +9833,106 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         row_fast: '7.30', bike: '6.80', bike_rpe: '7.34',
         recovery: '2.30', custom: '4.00',
       })
+    })
+    it('nutrition: migration down/up restores RLS and least-privilege grants without changing committed test data', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool not ready')
+      const migrationUrl = new URL('../../db/migrations/000141_nutrition_diary.sql', import.meta.url)
+      const [up, down] = (await readFile(migrationUrl, 'utf8')).split('-- Down Migration')
+      if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+      const connection = await ownerPool.connect()
+      try {
+        await connection.query('begin')
+        await connection.query(down)
+        expect((await connection.query("select to_regclass('public.nutrition_entries') entries")).rows).toEqual([{ entries: null }])
+        await connection.query(up)
+        expect((await connection.query(`select
+          (select bool_and(relrowsecurity) from pg_class where oid in
+            ('public.nutrition_entries'::regclass, 'public.nutrition_consents'::regclass, 'app_private.nutrition_food_catalog'::regclass)) rls,
+          has_table_privilege('fit_api', 'public.nutrition_entries', 'DELETE') hard_delete,
+          has_column_privilege('fit_api', 'public.nutrition_entries', 'owner_id', 'UPDATE') change_owner,
+          has_column_privilege('fit_api', 'public.nutrition_entries', 'calories', 'UPDATE') edit_values,
+          has_table_privilege('fit_api', 'app_private.nutrition_food_catalog', 'UPDATE,DELETE') change_catalog`)).rows)
+          .toEqual([{ rls: true, hard_delete: false, change_owner: false, edit_values: true, change_catalog: false }])
+      } finally {
+        await connection.query('rollback')
+        connection.release()
+      }
+    })
+    it('nutrition: snapshots, replay, cross-role RLS, per-connection consent and independent pilot', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools not ready')
+      const ids = Array.from({ length: 6 }, () => randomUUID())
+      const ownerId = ids[0]!, trainerId = ids[3]!, secondTrainerId = ids[4]!
+      const clientId = randomUUID()
+      const tokens = ids.map(() => randomBytes(32).toString('base64url'))
+      const session = (index: number): YandexActorSession => ({ accessMode: 'read_write', token: tokens[index]! })
+      const food = parseCatalogFood({ id: 120063, name: 'Курица с рисом', properties: [{
+        name: 'Пищевая и энергетическая ценность в 100 г', value: 'белки 9.8 г, жиры 4.2 г, углеводы 18.8 г; 152.2 ккал',
+      }] })!
+      const catalog: NutritionCatalog = { search: vi.fn().mockResolvedValue({ foods: [food], hasMore: false }), details: vi.fn().mockResolvedValue(food) }
+      const diary = new DatabaseNutritionDiary(runtimePool, catalog, { clients: ids.slice(0, 3), trainers: ids.slice(3, 5) })
+      const draft: NutritionDraft = { id: randomUUID(), expectedVersion: 0, day: '2026-10-10', meal: 'lunch', grams: 150,
+        food: { kind: 'catalog', id: food.id } }
+      try {
+        for (const [index, id] of ids.entries()) {
+          const role = index === 3 || index === 4 ? 'trainer' : 'client'
+          await ownerPool.query('insert into public.profiles (id, first_name, account_role) values ($1, $2, $3)', [id, 'Nutrition synthetic', role])
+          if (role === 'trainer') await ownerPool.query('insert into public.trainers (profile_id) values ($1)', [id])
+          await ownerPool.query("insert into app_private.profile_rollout_assignments (profile_id, target_backend, access_mode, enabled) values ($1, 'yandex', 'read_write', true)", [id])
+          await ownerPool.query("insert into app_private.yandex_app_sessions (token_sha256, profile_id, expires_at) values ($1, $2, now() + interval '1 hour')", [hashPilotSessionToken(tokens[index]!), id])
+        }
+        await diary.search(session(0), 'курица', 1)
+        const saved = await diary.save(session(0), draft)
+        expect(saved.entry.totals).toEqual({ calories: 228.3, protein: 14.7, fat: 6.3, carbs: 28.2 })
+        expect((await diary.save(session(0), draft)).entry).toEqual(saved.entry)
+        expect((await diary.day(session(0), draft.day)).entries).toHaveLength(1)
+        expect((await diary.day(session(0), '2026-10-11')).lastRecordedDay).toBe(draft.day)
+        expect((await diary.day(session(1), draft.day)).entries).toEqual([])
+        expect((await diary.day(session(1), draft.day)).lastRecordedDay).toBeNull()
+        await expect(diary.save(session(1), { ...draft, id: randomUUID(), food: { kind: 'recent', entryId: draft.id } })).rejects.toThrow('not_found')
+        await expect(diary.save(session(3), draft)).rejects.toThrow('forbidden')
+        await expect(diary.recent(session(5))).rejects.toThrow('forbidden')
+        await expect(new DatabaseNutritionDiary(runtimePool, catalog, null).recent(session(0))).rejects.toThrow('forbidden')
+        await expect(diary.save(session(0), { ...draft, grams: 200 })).rejects.toThrow('conflict')
+        const edited = await diary.save(session(0), { ...draft, expectedVersion: saved.entry.version, grams: 200 })
+        expect(edited.entry.totals.calories).toBe(304.4)
+        const removed = await diary.setDeleted(session(0), draft.id, edited.entry.version, true)
+        expect((await diary.day(session(0), draft.day)).entries).toEqual([])
+        await diary.setDeleted(session(0), draft.id, removed.entry.version, false)
+        await ownerPool.query('insert into public.clients (id, trainer_id, auth_user_id, full_name) values ($1, $2, $2, $3)', [clientId, ownerId, 'Nutrition synthetic'])
+        await ownerPool.query("insert into public.client_trainer_relationships (client_id, trainer_id, connected_by, connected_at) values ($1, $2, $3, '2026-10-09T10:00Z')", [clientId, trainerId, ownerId])
+        await ownerPool.query("insert into public.client_trainers (client_id, trainer_id, joined_at) values ($1, $2, '2026-10-09T10:00Z'), ($1, $3, '2026-10-09T10:00Z')", [clientId, trainerId, secondTrainerId])
+        expect((await diary.day(session(3), draft.day, clientId)).access).toBe('locked')
+        const connections = await diary.consents(session(0))
+        const connection = connections.connections.find((item) => item.trainerId === trainerId)!
+        expect(connection.granted).toBe(false)
+        await diary.setConsent(session(0), clientId, trainerId, connection.connectionStartedAt, true)
+        expect((await diary.day(session(3), draft.day, clientId)).entries).toHaveLength(1)
+        expect((await diary.day(session(4), draft.day, clientId)).access).toBe('locked')
+        await expect(diary.setConsent(session(3), clientId, trainerId, connection.connectionStartedAt, true)).rejects.toThrow('forbidden')
+        await withYandexAppSessionTransaction(runtimePool, hashPilotSessionToken(tokens[3]!)!, async (client) => {
+          expect(await client.query('select id from public.nutrition_entries where id=$1', [draft.id])).toHaveLength(1)
+          expect(await client.query('update public.nutrition_entries set calories=999 where id=$1 returning id', [draft.id])).toEqual([])
+        })
+        await diary.setConsent(session(0), clientId, trainerId, connection.connectionStartedAt, false)
+        expect((await diary.day(session(3), draft.day, clientId)).access).toBe('locked')
+        await diary.setConsent(session(0), clientId, trainerId, connection.connectionStartedAt, true)
+        await ownerPool.query("update public.client_trainer_relationships set status='disconnected', disconnected_at=now(), disconnected_by=$2 where client_id=$1 and trainer_id=$3", [clientId, ownerId, trainerId])
+        await ownerPool.query('delete from public.client_trainers where client_id=$1 and trainer_id=$2', [clientId, trainerId])
+        await withYandexAppSessionTransaction(runtimePool, hashPilotSessionToken(tokens[3]!)!, async (client) => {
+          expect(await client.query('select id from public.nutrition_entries where id=$1', [draft.id])).toEqual([])
+        })
+        await ownerPool.query('insert into public.client_trainer_relationships (client_id, trainer_id, connected_by) values ($1, $2, $3)', [clientId, trainerId, ownerId])
+        await ownerPool.query('insert into public.client_trainers (client_id, trainer_id) values ($1, $2)', [clientId, trainerId])
+        expect((await diary.day(session(3), draft.day, clientId)).access).toBe('locked')
+        await expect(diary.setConsent(session(0), clientId, trainerId, connection.connectionStartedAt, true)).rejects.toThrow('conflict')
+      } finally {
+        await ownerPool.query('delete from public.nutrition_consents where owner_id = $1', [ownerId])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [clientId])
+        await ownerPool.query('delete from public.clients where id=$1', [clientId])
+        await ownerPool.query('delete from public.nutrition_entries where owner_id=any($1::uuid[])', [ids])
+        await ownerPool.query('delete from public.trainers where profile_id=any($1::uuid[])', [ids])
+        await ownerPool.query('delete from public.profiles where id=any($1::uuid[])', [ids])
+      }
     })
   },
 )

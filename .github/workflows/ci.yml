@@ -220,7 +220,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Run Yandex-only auth without Supabase services
+      - name: Prepare approved public Fit fonts for nutrition UX checks
+        run: node scripts/prepare-fit-lime-ci-fonts.mjs
+      - name: Run Yandex-only auth and nutrition without Supabase services
         run: |
           docker run --rm --init --ipc=host --network host \
             --env CI=true \
@@ -237,7 +239,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            npx playwright test e2e/yandex-only-auth.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests
+            npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
