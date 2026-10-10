@@ -1,0 +1,34 @@
+/* Registration reuses the existing standalone Lime scope before an actor exists.
+   No auth, trainer, Mono or global token overrides. */
+.fit-client-lime .lime-registration {
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  color: var(--lime-text);
+  font-family: 'YS Geo', 'Onest Variable', sans-serif;
+  font-synthesis: none;
+}
+.lime-registration-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.lime-registration-header .brand { width: 74px; height: 40px; border: 0; border-radius: 0; background: transparent; }
+.lime-registration-header .brand { filter: brightness(0) invert(1); }
+.theme-light .lime-registration-header .brand { filter: brightness(0); }
+.lime-registration-photo { display: block; width: 100%; height: 160px; margin-bottom: 16px; object-fit: cover; object-position: 50% 31%; border-radius: var(--lime-radius-card); }
+.lime-registration-photo[hidden] { display: none; }
+.lime-registration:has(input[name='firstName']:focus) .lime-registration-photo { height: 84px; }
+.lime-registration-form { display: grid; gap: 16px; }
+.lime-registration-verified { display: flex; gap: 8px; align-items: center; margin: 0; color: var(--success-fg); font-size: 12px; line-height: 16px; font-weight: 500; }
+.lime-registration-verified svg { width: 16px; height: 16px; }
+.lime-registration-roles { min-width: 0; margin: 0; padding: 0; border: 0; }
+.lime-registration-roles legend { margin-bottom: 8px; padding: 0; font-size: 14px; line-height: 20px; font-weight: 500; }
+.lime-registration-role-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lime-registration-role { display: flex; gap: 8px; align-items: center; min-height: 48px; padding: 12px; border: 1px solid var(--lime-surface-high); border-radius: 16px; background: var(--lime-surface-raised); font-size: 14px; line-height: 20px; font-weight: 500; cursor: pointer; }
+.lime-registration-role:has(input:checked) { border-color: var(--lime-accent-ink); }
+.lime-registration-role:has(input:disabled) { color: var(--lime-text-secondary); cursor: not-allowed; }
+.lime-registration-role input[type='radio'] { width: 18px; height: 18px; min-height: 0; margin: 0; flex: 0 0 18px; accent-color: var(--lime-accent-ink); }
+.fit-client-lime .lime-registration .field { font-size: 14px; line-height: 20px; font-weight: 500; }
+.fit-client-lime .lime-registration .field input { width: 100%; height: 48px; line-height: 20px; font-weight: 400; }
+.fit-client-lime .lime-registration button.primary { width: 100%; }
+.lime-registration-consent { margin: 0; color: var(--lime-text-secondary); font-size: 12px; line-height: 18px; font-weight: 400; }
+.lime-registration-consent a { color: var(--lime-text); text-decoration: underline; text-underline-offset: 2px; }
+.lime-registration .error { margin: 0; font-size: 14px; line-height: 20px; font-weight: 400; }

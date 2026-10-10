@@ -569,6 +569,70 @@ describe('Yandex app session auth flow', () => {
     )
   })
 
+  it('keeps invitation registration client-only and allows error retry without losing name', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+    saveInvitationAuthReturn('/join?code=AB12CD34EF56')
+    repository.exchangeCodeForAppSession.mockRejectedValueOnce(new YandexAccountSetupRequiredError({
+      token: 'h'.repeat(43), expiresAt: '2099-09-19T12:10:00.000Z',
+    }))
+    repository.completeYandexRegistration.mockRejectedValueOnce(new Error('Не удалось сохранить. Попробуйте ещё раз.'))
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}><Routes>
+      <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+      <Route path="/auth/yandex/session" element={<p>new session</p>} />
+    </Routes></MemoryRouter>)
+    await screen.findByRole('heading', { name: 'У вас уже был аккаунт FIT?' })
+    fireEvent.click(screen.getByRole('button', { name: 'Нет, создать новый' }))
+    expect(screen.getByRole('radio', { name: 'Я спортсмен' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Я тренер' })).toBeDisabled()
+    expect(document.documentElement).toHaveClass('fit-client-lime-document')
+    expect(screen.queryByText(/Создадим|Yandex Cloud/)).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Тестовый спортсмен' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Попробуйте ещё раз')
+    expect(screen.getByLabelText('Имя')).toHaveValue('Тестовый спортсмен')
+    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+    expect(await screen.findByText('new session')).toBeVisible()
+    expect(repository.completeYandexRegistration).toHaveBeenLastCalledWith('https://stage.example.test', expect.objectContaining({ accountRole: 'client', firstName: 'Тестовый спортсмен' }))
+    expect(readInvitationAuthReturn()).toBe('/join?code=AB12CD34EF56')
+  })
+
+  it('keeps both roles visible, restores the form after back, and disables editing while creating', async () => {
+    vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
+    vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
+    repository.exchangeCodeForAppSession.mockRejectedValueOnce(new YandexAccountSetupRequiredError({
+      token: 'h'.repeat(43), expiresAt: '2099-09-19T12:10:00.000Z',
+    }))
+    let finish!: (value: typeof session) => void
+    repository.completeYandexRegistration.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    window.history.replaceState(null, '', `/auth/yandex/callback${await appCallbackSearch()}`)
+    render(<MemoryRouter initialEntries={['/auth/yandex/callback']}><Routes>
+      <Route path="/auth/yandex/callback" element={<YandexPilotCallbackPage />} />
+      <Route path="/auth/yandex/session" element={<p>new session</p>} />
+    </Routes></MemoryRouter>)
+    await screen.findByRole('heading', { name: 'У вас уже был аккаунт FIT?' })
+    fireEvent.click(screen.getByRole('button', { name: 'Нет, создать новый' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Я спортсмен' }))
+    fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Проверочное имя' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Назад' }))
+    expect(document.documentElement).not.toHaveClass('fit-client-lime-document')
+    fireEvent.click(screen.getByRole('button', { name: 'Нет, создать новый' }))
+    expect(screen.getByRole('radio', { name: 'Я спортсмен' })).toBeChecked()
+    expect(screen.getByLabelText('Имя')).toHaveValue('Проверочное имя')
+    fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
+    expect(screen.getByRole('button', { name: 'Создаём…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Назад' })).toBeDisabled()
+    expect(screen.getByLabelText('Имя')).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Я тренер' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Создаём…' }))
+    expect(repository.completeYandexRegistration).toHaveBeenCalledTimes(1)
+    finish(session)
+    expect(await screen.findByText('new session')).toBeVisible()
+  })
+
   it('returns a linked Yandex account to the pending invitation', async () => {
     const token = `AB12CD34EF56.${'a'.repeat(64)}`
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')

@@ -46,6 +46,7 @@ import { yandexAuthorizationRedirectUri } from './yandex-redirect-uri'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
+import { YandexRegistrationForm } from './YandexRegistrationForm'
 import { hasPendingInvitationLink } from './invitation-link-continuation'
 import {
   consumeInvitationAuthReturn,
@@ -510,18 +511,21 @@ function YandexAppSessionCallbackPage() {
   }
 
   if (config === null) return <Navigate to="/auth" replace />
+  if (handoff !== null && setupMode === 'new') return <YandexRegistrationForm
+    role={role} onRoleChange={setRole} invitationRequiresClient={invitationRequiresClient}
+    firstName={firstName} onNameChange={setFirstName} busy={setupBusy} error={setupError}
+    onSubmit={registerNew} onBack={() => { setSetupMode('choice'); setSetupError(null) }}
+  />
   if (handoff !== null) return <AuthIdentityScreen>
     <header className="auth-entry-head">
       <FitLogo />
       <p className="eyebrow">YANDEX ID ПОДТВЕРЖДЁН</p>
       <h1>{setupMode === 'choice'
         ? 'У вас уже был аккаунт FIT?'
-        : setupMode === 'existing' ? 'Найдём прежний аккаунт' : 'Создадим новый аккаунт'}</h1>
+        : 'Найдём прежний аккаунт'}</h1>
       <p className="muted">{setupMode === 'choice'
         ? 'Свяжем Yandex ID с перенесёнными тренировками или начнём с чистого профиля.'
-        : setupMode === 'existing'
-          ? 'Введите данные, которыми вы раньше входили в FIT. Они нужны один раз и не сохраняются.'
-          : 'Новый профиль будет создан сразу в Yandex Cloud.'}</p>
+        : 'Введите данные, которыми вы раньше входили в FIT. Они нужны один раз и не сохраняются.'}</p>
     </header>
     {setupMode === 'choice' && <div className="stack auth-setup-actions">
       <button className="primary" type="button" onClick={() => setSetupMode('existing')}>Да, был аккаунт</button>
@@ -534,16 +538,6 @@ function YandexAppSessionCallbackPage() {
       <button className="primary" disabled={setupBusy} aria-busy={setupBusy}>{setupBusy ? 'Проверяем…' : 'Связать и продолжить'}</button>
       <button className="link" type="button" disabled={setupBusy} onClick={() => { setSetupMode('choice'); setSetupError(null) }}>Назад</button>
     </form>}
-    {setupMode === 'new' && <form className="stack auth-form" onSubmit={registerNew}>
-      <Field label="Тип аккаунта"><select value={role} disabled={invitationRequiresClient} onChange={(event) => setRole(event.target.value as AccountRole)}>
-        <option value="trainer">Я тренер</option><option value="client">Я клиент</option>
-      </select></Field>
-      <Field label="Имя"><input minLength={2} maxLength={120} autoComplete="given-name" required value={firstName} onChange={(event) => setFirstName(event.target.value)} /></Field>
-      {setupError && <p className="error" role="alert">{setupError}</p>}
-      <button className="primary" disabled={setupBusy} aria-busy={setupBusy}>{setupBusy ? 'Создаём…' : 'Создать аккаунт'}</button>
-      <button className="link" type="button" disabled={setupBusy} onClick={() => { setSetupMode('choice'); setSetupError(null) }}>Назад</button>
-    </form>}
-    {setupMode === 'new' && <p className="auth-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>}
   </AuthIdentityScreen>
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
