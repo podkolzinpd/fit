@@ -48,7 +48,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -62,6 +62,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   onRestExpire?: (deadline: number) => void
   /** Presentation-only pilot: the existing phase/gong/expiry owner remains this subtree. */
   referenceStartedAt?: string | null
+  /** Updates the pilot header only at the rest boundary, not on every tick. */
+  onReferenceRestActiveChange?: (active: boolean) => void
 }) {
   const [now, setNow] = useState(Date.now)
   const [open, setOpen] = useState(false)
@@ -164,6 +166,9 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const valid = selectedDuration > 0 && selectedDuration <= 3600
   const active = deadline !== null && now < deadline
   const overdue = deadline !== null && now >= deadline
+  useEffect(() => {
+    if (referenceStartedAt !== undefined) onReferenceRestActiveChange?.(active && !phase)
+  }, [active, phase, referenceStartedAt, onReferenceRestActiveChange])
 
   function setDuration(duration: number) {
     const normalized = Math.min(3600, Math.max(1, Math.round(duration)))
@@ -248,13 +253,13 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
 
   const reference = referenceStartedAt !== undefined
   const elapsed = referenceStartedAt ? Math.max(0, Math.floor((now - Date.parse(referenceStartedAt)) / 1000)) : 0
-  const bigSeconds = phaseRemaining ?? signedRemaining ?? elapsed
+  const bigSeconds = phaseRemaining ?? (active ? signedRemaining : null) ?? elapsed
   const bigTime = formatReferenceClock(bigSeconds)
 
   return <>
-    {reference && <div className={`coach-live-clock${deadline !== null && !phase ? ' coach-live-clock-rest' : ''}`}>
-      <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (deadline !== null ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime.split(':').map((part, index) => <span className="coach-live-digit-group" key={index}>{index > 0 && <span className="coach-live-colon" aria-hidden="true">:</span>}{part}</span>)}</span>
-      {deadline !== null || phase ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
+    {reference && <div className={`coach-live-clock${active && !phase ? ' coach-live-clock-rest' : ''}`}>
+      <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (active ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime.split(':').map((part, index) => <span className="coach-live-digit-group" key={index}>{index > 0 && <span className="coach-live-colon" aria-hidden="true">:</span>}{part}</span>)}</span>
+      {active || phase ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
     </div>}
     <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}

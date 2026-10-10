@@ -30,7 +30,8 @@ describe('Live rest timer', () => {
     expect(screen.getByLabelText('Отдых: 00:01')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Таймер отдыха: 0:01' })).toHaveTextContent('Отдых 0:01')
     act(() => vi.advanceTimersByTime(2_000))
-    expect(screen.getByLabelText('Отдых: −00:01')).toBeVisible()
+    expect(screen.getByLabelText('Тренировка: 01:42')).toBeVisible()
+    expect(document.querySelector('.coach-live-clock')).not.toHaveClass('coach-live-clock-rest')
     expect(screen.getByRole('button', { name: 'Отдых превышен на 0:01' })).toHaveTextContent('Отдых −0:01')
     expect(playGong).toHaveBeenCalledTimes(1)
     expect(onExpire).toHaveBeenCalledTimes(1)
@@ -56,6 +57,39 @@ describe('Live rest timer', () => {
     act(() => vi.advanceTimersByTime(1_000))
     expect(screen.getByRole('button', { name: 'Отдых превышен на 0:01' })).toHaveTextContent('Отдых −0:01')
     expect(playGong).toHaveBeenCalledTimes(1)
+  })
+
+  it('switches the reference clock and header at zero while the button keeps its deadline', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onChange = vi.fn(), onActive = vi.fn()
+    const view = render(<LiveRestTimer workoutId="reference-boundary" deadline={101_000}
+      referenceStartedAt={new Date(0).toISOString()} onChange={onChange} onReferenceRestActiveChange={onActive} />)
+    expect(onActive).toHaveBeenLastCalledWith(true)
+    act(() => vi.advanceTimersByTime(1_000))
+    expect(screen.getByLabelText('Тренировка: 01:41')).toBeVisible()
+    expect(onActive).toHaveBeenLastCalledWith(false)
+    act(() => vi.advanceTimersByTime(15_000))
+    expect(screen.getByLabelText('Тренировка: 01:56')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Отдых превышен на 0:15' })).toHaveTextContent('Отдых −0:15')
+    expect(onActive).toHaveBeenCalledTimes(2)
+    expect(onChange).not.toHaveBeenCalled()
+    expect(playGong).toHaveBeenCalledTimes(1)
+    view.rerender(<LiveRestTimer workoutId="reference-boundary" deadline={121_000}
+      referenceStartedAt={new Date(0).toISOString()} onChange={onChange} onReferenceRestActiveChange={onActive} />)
+    expect(screen.getByLabelText('Отдых: 00:05')).toBeVisible()
+    expect(onActive).toHaveBeenLastCalledWith(true)
+  })
+
+  it('mounts an overdue reference deadline as workout time without dropping the negative button', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(120_000)
+    const onChange = vi.fn()
+    render(<LiveRestTimer workoutId="reference-reload" deadline={101_000}
+      referenceStartedAt={new Date(0).toISOString()} onChange={onChange} />)
+    expect(screen.getByLabelText('Тренировка: 02:00')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Отдых превышен на 0:19' })).toHaveTextContent('Отдых −0:19')
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('opens two time wheels, keeps quick presets and accepts exact seconds', () => {
