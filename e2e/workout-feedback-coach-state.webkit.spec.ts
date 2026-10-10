@@ -27,7 +27,11 @@ async function logout(page: Page, role: 'trainer' | 'client') {
 }
 
 async function setRpe(page: Page, value: number) {
-  await page.getByRole('radio', { name: new RegExp(`^${value} —`) }).click()
+  const slider = page.getByRole('slider', { name: 'Нагрузка по шкале RPE' })
+  await slider.focus()
+  await slider.press('Home')
+  for (let index = 1; index < value; index += 1) await slider.press('ArrowRight')
+  await expect(slider).toHaveValue(String(value))
 }
 
 async function saveFeedback(page: Page, wellbeing: 'Хорошо' | 'Нормально' | 'Плохо') {

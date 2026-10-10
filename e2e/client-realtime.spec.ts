@@ -30,9 +30,11 @@ function dateOffset(days: number) {
 }
 
 async function setRpe(page: Page, value: number) {
-  const option = page.getByRole('radio', { name: new RegExp(`^${value} —`) })
-  await option.click()
-  await expect(option).toHaveAttribute('aria-checked', 'true')
+  const slider = page.getByRole('slider', { name: 'Нагрузка по шкале RPE' })
+  await slider.focus()
+  await slider.press('Home')
+  for (let index = 1; index < value; index += 1) await slider.press('ArrowRight')
+  await expect(slider).toHaveValue(String(value))
 }
 
 async function loginDemo(page: Page, email: string, destination: RegExp) {

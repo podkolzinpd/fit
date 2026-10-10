@@ -5380,6 +5380,18 @@ describe('pilot post-workout commands', () => {
     await app.close()
   })
 
+  it.each([[9, false], [10, false], [10, true]] as const)('accepts effort %s and discomfort %s without a note through the HTTP route', async (sessionRpe, discomfort) => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger:false })
+    apps.push(app)
+    const response = await app.inject({ method:'PUT', url:`/v1/workouts/${WORKOUT_ID}/feedback`,
+      headers:{ 'x-fit-pilot-session':sessionToken },
+      payload:{ sessionRpe, wellbeing:'good', discomfort, comment:'  ', expectedVersion:1 } })
+    expect(response.statusCode).toBe(200)
+    expect(writer.submitFeedback).toHaveBeenCalledWith(sessionToken, WORKOUT_ID,
+      { sessionRpe, wellbeing:'good', discomfort, comment:'', expectedVersion:1 })
+  })
+
   it('validates and forwards feedback, responses, questions and snooze', async () => {
     const writer = buildWorkoutsWriter()
     const app = buildApp({
