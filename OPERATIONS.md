@@ -1391,6 +1391,39 @@ Stages 1–4 remain off. Stage 5 deploys the API/migration first, verifies its
 release, then enables the frontend switch and redeploys the green main.
 Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
 
+## Independent nutrition diary pilot — prepared, not activated
+
+YAFIT-608 is a separate default-off feature, unrelated to the Lime rollout.
+Its schema lives only in numbered Yandex migration141. The API uses native
+app-session/actor transactions and RLS. The public food adapter reads only
+search/details facts; no shopping OAuth, orders, prices or store URLs enter UI.
+Do not import the whole catalog. Confirm source reuse/storage terms and exact
+rate limits before activation; an accessible public MCP is not a database license.
+
+Before inclusion, verify the exact five owner-approved profiles against the
+requested identities and roles, without publishing their emails or credentials.
+Configure GitHub repository variables `FIT_NUTRITION_ENABLED=true`,
+`FIT_NUTRITION_CLIENT_USER_IDS` as a JSON array of exactly three verified profile
+UUIDs, and `FIT_NUTRITION_TRAINER_USER_IDS` as two distinct trainer UUIDs. These
+become API environment `NUTRITION_ENABLED`, `NUTRITION_CLIENT_USER_IDS` and
+`NUTRITION_TRAINER_USER_IDS` through Terraform. Missing/invalid/overlapping
+configuration fails closed; the server checks membership and role on every call.
+
+Deploy the green main API and its migrations through the existing Yandex stage
+workflow first. Verify release and schema. Then set `VITE_NUTRITION_ENABLED=true`
+and `VITE_NUTRITION_PILOT_USER_IDS` to the same five verified UUIDs as a CSV,
+and redeploy the Yandex frontend. No other cohort, Lime or AI variables change.
+UUIDs are public UI identifiers, not authorization; the server is authoritative.
+Verify the published bundle and fresh native main build before closing the task.
+
+Client routes: `/me/nutrition?date=YYYY-MM-DD`; trainer route:
+`/clients/:clientId/nutrition?date=YYYY-MM-DD`. Consent defaults closed and belongs
+to the exact current client/trainer connection timestamp. Enablement never gives
+consent, creates a connection, sends messages or changes other features.
+Rollback: set both independent enabled variables to false, redeploy API/frontend
+and verify fail-closed behavior. Preserve diary data; do not roll back migration
+141 on production with existing records. Enabling again does not reset consent.
+
 ## Independent Lime rollout controls (prepared, activation requires owner approval)
 
 The Yandex-only `app_private.lime_rollout_controls` singleton starts at

@@ -20,6 +20,7 @@ import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canoni
 import { ChatConversationPage, ChatListPage } from '../features/chat'
 import { AthleteAchievementsPage } from '../features/achievements/AthleteAchievements'
 import { ClientFinancePage, TrainerFinanceOverviewPage, TrainerFinancePage } from '../features/finance'
+import { NutritionPage } from '../features/nutrition'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 
 function Protected() {
@@ -106,6 +107,7 @@ const router = createBrowserRouter([
       { path: '/me/achievements', element: <AthleteAchievementsPage /> },
       { path: '/me/goal', element: <MyGoalPage /> },
       { path: '/me/finance', element: <ClientFinancePage /> },
+      { path: '/me/nutrition', element: <NutritionPage /> },
       { path: '/me/profile', element: <ClientProfilePage /> },
       { path: '/me/settings', element: <ClientProfileSettingsPage /> },
       { path: '/me/trainers', element: <TrainerCatalogPage /> },
@@ -133,6 +135,7 @@ const router = createBrowserRouter([
         { path: '/clients/:clientId/goal', element: <GoalPage /> },
         { path: '/clients/:clientId/edit', element: <ClientFormPage /> },
         { path: '/clients/:clientId/workouts', element: <ClientWorkoutsPage /> },
+        { path: '/clients/:clientId/nutrition', element: <NutritionPage /> },
         { element: <TrainerFinancePilotOnly />, children: [
           { path: '/clients/:clientId/finance', element: <TrainerFinancePage /> },
         ] },

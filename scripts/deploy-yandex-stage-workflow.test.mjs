@@ -13,6 +13,18 @@ const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+test('nutrition deployment defaults off and has independent three-client/two-trainer configuration', () => {
+  assert.match(workflow, /TF_VAR_nutrition_enabled:.*FIT_NUTRITION_ENABLED.*\|\| 'false'/)
+  assert.match(workflow, /TF_VAR_nutrition_client_user_ids:.*FIT_NUTRITION_CLIENT_USER_IDS.*\|\| '\[\]'/)
+  assert.match(workflow, /TF_VAR_nutrition_trainer_user_ids:.*FIT_NUTRITION_TRAINER_USER_IDS.*\|\| '\[\]'/)
+  const frontend = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-frontend.yml'), 'utf8')
+  assert.match(frontend, /VITE_NUTRITION_ENABLED:.*\|\| 'false'/)
+  assert.match(frontend, /VITE_NUTRITION_PILOT_USER_IDS:.*\|\| ''/)
+  const container = readFileSync(join(import.meta.dirname, '..', 'infra', 'yandex', 'container.tf'), 'utf8')
+  assert.match(container, /NUTRITION_ENABLED\s*= var\.nutrition_enabled \? "true" : "false"/)
+  assert.match(container, /NUTRITION_CLIENT_USER_IDS\s*= join\(",", var\.nutrition_client_user_ids\)/)
+  assert.match(container, /NUTRITION_TRAINER_USER_IDS\s*= join\(",", var\.nutrition_trainer_user_ids\)/)
+})
 test('coach workout identity inspection is manual, read-only and fixed-cohort', () => {
   const source = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'inspect-coach-workout-pilot.yml'), 'utf8')
   assert.match(source, /workflow_dispatch:/)

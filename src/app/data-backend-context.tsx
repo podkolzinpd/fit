@@ -17,6 +17,7 @@ import { trainerWorkspaceRepository } from '../data/repositories/trainer-workspa
 import { trainerFinanceRepository } from '../data/repositories/trainer-finance.repository'
 import { clientFinanceRepository } from '../data/repositories/client-finance.repository'
 import { athleteSportProfileRepository } from '../data/repositories/athlete-sport-profile.repository'
+import { unsupportedNutritionRepository, type NutritionRepository } from '../data/repositories/nutrition.repository'
 import { workoutsRepository } from '../data/repositories/workouts.repository'
 import { workoutTemplatesRepository } from '../data/repositories/workout-templates.repository'
 import { createYandexMainRepository } from '../data/repositories/yandex-main.repository'
@@ -43,6 +44,7 @@ export interface DataBackend {
   trainerFinance: typeof trainerFinanceRepository
   clientFinance: typeof clientFinanceRepository
   athleteSportProfile: typeof athleteSportProfileRepository
+  nutrition: NutritionRepository
   appFeedback: typeof appFeedbackRepository
   pushNotifications: typeof pushNotificationsRepository
   realtime: typeof realtimeRepository
@@ -67,6 +69,7 @@ const supabaseDataBackend: DataBackend = {
   trainerFinance: trainerFinanceRepository,
   clientFinance: clientFinanceRepository,
   athleteSportProfile: athleteSportProfileRepository,
+  nutrition: unsupportedNutritionRepository,
   appFeedback: appFeedbackRepository,
   pushNotifications: pushNotificationsRepository,
   realtime: realtimeRepository,

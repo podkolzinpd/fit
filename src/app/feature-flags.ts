@@ -5,6 +5,16 @@ export function isMaintenanceModeEnabled(): boolean {
   return import.meta.env.VITE_MAINTENANCE_MODE === 'true'
 }
 
+// Independent closed five-person pilot. Invalid or incomplete configuration
+// never means a public rollout; server checks its own role-specific cohort.
+export function isNutritionPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_NUTRITION_ENABLED !== 'true') return false
+  const ids = String(import.meta.env.VITE_NUTRITION_PILOT_USER_IDS ?? '').split(',').map((id) => id.trim().toLowerCase()).filter(Boolean)
+  return ids.length === 5 && new Set(ids).size === 5
+    && ids.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id))
+    && ids.includes(userId.toLowerCase())
+}
+
 // Independent, default-off UI pilot. An empty/misconfigured cohort never means all.
 export function isCoachWorkoutRedesignPilotEnabled(userId: string): boolean {
   if (import.meta.env.VITE_COACH_WORKOUT_REDESIGN_ENABLED !== 'true') return false
