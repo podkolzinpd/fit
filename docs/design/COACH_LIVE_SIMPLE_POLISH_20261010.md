@@ -94,7 +94,16 @@ PR3 локально: свайп строки вместо X, explicit confirm, 
 подхода, input/vertical-scroll/nested guards. Unit19/19; свежая мобильная
 матрица Chromium/WebKit37 passed/3 явных CDP-only WebKit skip, обе identities;
 снимки просмотрены. Full check exit0: frontend2619/API1272+137 штатных skip/build.
-PR3 #1554 перенесён на main2ecadce9 с сохранением исправления PR2;
-свежие full check/E2E/CI впереди. PR4–5 реализованы в следующих ветках.
+PR3 #1554 повторно проверен на main2ecadce9: full check exit0,
+WebKit/Chromium55 passed/3 явных CDP-only skip; снимок просмотрен.
+CI38075674138 success, самостоятельно слит в main40b5ae57.
+PR4 локально: точное название объединения со следующим; прежняя eligibility,
+round/rest/split семантика. WebKit/Chromium4/4 — обе identities, два факта,
+отдых1:30, разделение/reload без потери фактов. Проверен штатно свёрнутый
+неактивный single, а не ошибочное ожидание всех форм в DOM.
+PR4 full check exit0: frontend2619/API1272+137 штатных skip/build;
+WebKit390 снимок просмотрен. PR4 перенесён на main40b5ae57;
+свежие проверки/CI впереди. PR5 реализован в следующей ветке.
+Production всего набора ещё не подтверждён.
 Подключённый KB search недоступен из-за отсутствия PyYAML;
 использованы утверждённый план, текущий код и прежние design-документы.

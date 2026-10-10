@@ -3587,7 +3587,7 @@ export function LiveWorkoutPage() {
       ? [{ label: 'Добавить следующее в суперсет', disabled,
           onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) }]
       : [
-          { label: 'Создать суперсет со следующим', disabled,
+          { label: coachReference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled,
             onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
         ]
   }
