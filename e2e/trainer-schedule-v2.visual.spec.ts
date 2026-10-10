@@ -2375,7 +2375,18 @@ for (const width of [390, 430, 1440]) {
       await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
       await mockPilot(page, { fitLime: true, workouts: scheduleVisibilityRows() })
       await page.goto('/schedule?week=2026-09-21')
-      await expect(page.locator('html')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+      // Coach Lime intentionally overrides both base preferences with the
+      // source dark palette. Wait for the authenticated shell before checking
+      // it: the pre-auth monochrome light frame is only a transient state.
+      const assertCoachLimeTheme = async () => {
+        await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
+        await expect(page.locator('html')).toHaveClass(/fit-lime-document/)
+        await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+        await expect(page.locator('.phone-frame')).not.toHaveClass(/theme-light/)
+        await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#000000')
+        expect(await page.evaluate(() => localStorage.getItem('fit.appTheme'))).toBe(theme)
+      }
+      await assertCoachLimeTheme()
       const toggle = page.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })
       await expect(toggle).not.toBeChecked()
       await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(2)
@@ -2410,6 +2421,7 @@ for (const width of [390, 430, 1440]) {
       await page.reload()
       await expect(toggle).toBeChecked()
       await expect(independent.locator('a')).toHaveCount(2)
+      await assertCoachLimeTheme()
       await toggle.uncheck()
       await expect(independent).toHaveCount(0)
       await expect(page.locator('.schedule-v2-event')).toHaveCount(2)

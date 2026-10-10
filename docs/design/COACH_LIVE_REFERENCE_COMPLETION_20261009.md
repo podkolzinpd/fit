@@ -147,3 +147,29 @@ CI38002633589 предыдущего head8b5d9e69 отменён намерен�
 должно пройти новые полные обязательные проверки на окончательном head.
 Общий check после исправления spacing также exit0:2610frontend,
 1272API +137standardlocalDBskip, build и postbuild.
+
+### Итоговый main: дополнительный QA, 10.10
+
+Все4 product PR1544–1547 merged, main cb41f63a. Final PR CI38003841724
+и Android38003841709 success; main Android38006555749 также success.
+Main CI38006556034 WebKit114076627882 остановлен штатным35m лимитом:
+install --with-deps занял11m28s против37s в предыдущем successful PR run.
+До остановки Chromium и остальные jobs passed. В журнале также обнаружены
+промежуточные ошибки двух старых сценариев — тема календаря и восстановление
+плана. Они не объявляются отсутствующими только из-за последующей отмены job.
+Отдельный WebKit probe на том же main, retries0/repeat3: план3/3 passed;
+theme430light failed2/3. Причина theme oracle подтверждена AppLayout и его
+unit contract: тренерский Lime всегда dark, base preference light сохраняется,
+но класс theme-light убирается после auth. Старый assertion ждал промежуточную
+pre-auth light тему и иногда успевал пройти до применения Lime shell.
+Добавлен только QA follow-up: дождаться authenticated shell и проверить dark
+html/frame, black meta theme-color, сохранённую base preference до и после
+reload. Runtime, дизайн, API, cohort, CI thresholds и механизм планов не меняются.
+Исходный product план из4 PR остаётся неизменным; QA не является пятой
+функциональной частью. Свежий CI/merge/main/release/acceptance/native обязательны.
+Усиленный oracle и восстановление плана:48/48 passed в WebKit/Chromium,
+repeat3/retries0,390/430/1440 и обе base preferences. После reload повторно
+проверяются dark shell/root/meta и сохранённая исходная preference. Application
+и CSS diff отсутствуют; ни тесты, ни утверждения о фактах не пропускаются.
+Снимок390 inspected; новый full check после QA exit0:2610frontend,
+1272API +137standardlocalDBskip, build/postbuild. CI/release/native впереди.
