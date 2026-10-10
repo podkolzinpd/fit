@@ -2903,6 +2903,7 @@ export function LiveWorkoutPage() {
   // используем встроенный диалог в панели вместо нативного confirm.
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
+  const [referenceRestActive, setReferenceRestActive] = useState(false)
   const [restContextExerciseId, setRestContextExerciseId] = useState<string | null>(null)
   const [restPickerSeconds, setRestPickerSeconds] = useState(90)
   // Подготовка или подход на время. С отдыхом никогда не пересекается: одна
@@ -3068,7 +3069,7 @@ export function LiveWorkoutPage() {
       // The next timed set may start only after the confirmed result is in
       // the cache; starting rest does not pretend the server saved the fact.
       autoStartNextWork.current = seconds !== undefined && (seconds <= 0
-        || Boolean(query.data?.prepSeconds && restEndsAt !== null && restEndsAt <= Date.now()))
+        || Boolean(!coachReference && query.data?.prepSeconds && restEndsAt !== null && restEndsAt <= Date.now()))
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -3304,7 +3305,7 @@ export function LiveWorkoutPage() {
     onSuccess: async (_version, exercise) => {
       for (const set of exercise.sets) acknowledgeLiveDraft(set.id, undefined, true)
       setExpandedSetId(null)
-      stopRest()
+      if (!coachReference || exercise.id === restContextExerciseId || exercise.id === recentExerciseId) stopRest()
       await query.refetch()
       void invalidateWorkoutResults(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -3748,7 +3749,7 @@ export function LiveWorkoutPage() {
   // Only the opted-in phase flow advances at zero. The legacy timer keeps
   // its deadline and counts negative seconds until the user changes it.
   function handleRestExpire() {
-    if (!query.data?.prepSeconds) return
+    if (coachReference || !query.data?.prepSeconds) return
     // An immediate rest can finish before the confirmation reaches the server.
     // Do not start/confirm the same pending set again; resume after acknowledgement.
     if (confirm.isPending) return
@@ -3820,7 +3821,7 @@ export function LiveWorkoutPage() {
   // falls back to its workout detail because the tab bar is hidden here.
   return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}
     action={coachReference && query.data ? <>
-      <span className={`coach-live-status${restEndsAt !== null && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : restEndsAt !== null ? 'Отдых' : 'Live'}</span>
+      <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
       <Coachmark id="coach-live-finish-top-2026-10" userId={actor?.userId} title="Завершение — вверху" description="Галочка справа закреплена при прокрутке. Если остались незавершённые подходы, сначала попросим подтверждение.">
         <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}><CheckIcon /></button>
       </Coachmark>
@@ -3850,7 +3851,7 @@ export function LiveWorkoutPage() {
             <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} />
+                referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} onReferenceRestActiveChange={coachReference ? setReferenceRestActive : undefined} />
             </Coachmark>
           </div>
           {phaseNotice && <div className="live-phase-notice" role="status">

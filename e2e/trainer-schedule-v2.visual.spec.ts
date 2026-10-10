@@ -554,9 +554,11 @@ for (const width of [375, 390, 430, 1440]) {
     await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
     await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
     await page.clock.fastForward(4_000)
-    await expect(page.locator('.coach-live-digits')).toHaveText('−00:02')
+    await expect(page.locator('.coach-live-digits')).toHaveText('1:00:04')
+    await expect(page.locator('.coach-live-clock')).not.toHaveClass(/coach-live-clock-rest/)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых −0:02')
     await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
-    await expect(page.locator('.coach-live-status')).toHaveText('Отдых')
+    await expect(page.locator('.coach-live-status')).toHaveText('Live')
     await expect(page.locator('.live-rest-trigger')).toHaveCSS('background-color', 'rgba(248, 176, 33, 0.2)')
     await expect(page.locator('.live-rest-trigger')).toHaveCSS('animation-name', 'none')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -565,6 +567,46 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.finish-confirm')).toBeVisible()
     await page.getByRole('button', { name: 'Отмена', exact: true }).click()
     await expect(page.locator('.coach-live-digits')).toBeVisible()
+  })
+}
+for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
+  test(`Figma workout Coach reference expiry keeps rest when deleting future exercise ${profileId}`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+    const source = coachGestureWorkout(), future = source.exercises[2]!
+    source.startedAt = '2026-10-08T08:59:00Z'
+    source.prepSeconds = 10
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+    await page.route(`**/v1/workouts/${workoutId}/exercises/${future.id}`, async route => {
+      expect(route.request().method()).toBe('DELETE')
+      const current = backend.getWorkouts().find(item => item.id === workoutId)!
+      current.exercises = current.exercises.filter(item => item.id !== future.id)
+      current.version++
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout: { version: current.version } }) })
+    })
+    // Restore a saved rest, so preparation does not create another scenario.
+    await page.addInitScript(({ id, endsAt }) => {
+      const key = `fit:live-rest-until:${id}`
+      if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, String(endsAt))
+    },
+      { id: workoutId, endsAt: new Date('2026-10-08T09:01:30Z').getTime() })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:30')
+    await page.locator(`[data-workout-block="${future.blockId}"] .overflow-trigger`).click()
+    await page.getByRole('menuitem', { name: 'Удалить упражнение', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+    await expect(page.locator(`[data-workout-block="${future.blockId}"]`)).toHaveCount(0)
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 1:30')
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:45Z'))
+    await expect(page.locator('.coach-live-status')).toHaveText('Live')
+    await expect(page.locator('.coach-live-digits')).toHaveText('02:45')
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых −0:15')
+    await expect(page.getByRole('button', { name: 'Начать', exact: true })).toHaveCount(0)
+    await page.screenshot({ path: info.outputPath('coach-live-simple-expiry.png'), fullPage: true })
+    // Init script must not overwrite the stored deadline during reload.
+    await page.reload()
+    await expect(page.locator('.coach-live-status')).toHaveText('Live')
+    await expect(page.locator('.live-rest-trigger')).toContainText('Отдых −0:15')
   })
 }
 for (const width of [375, 390, 430, 1440]) {
