@@ -35,6 +35,7 @@ import './styles/fit-client-lime.css'
 import './styles/fit-client-lime-workouts.css'
 import './styles/fit-client-lime-sections.css'
 import './styles/fit-client-lime-type.css'
+import './styles/fit-lime-registration.css'
 
 declare global {
   interface Window {

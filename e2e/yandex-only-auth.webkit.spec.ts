@@ -458,3 +458,87 @@ for (const path of ['/', '/auth', '/auth/yandex/session']) {
     }
   })
 }
+
+for (const theme of ['dark', 'light']) {
+  for (const width of [390, 430, 1440]) {
+    test(`Lime registration ${theme} ${width}: role, validation, pending, error and back`, async ({ page }, testInfo) => {
+      test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires Yandex auth lane.')
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+      let registrations = 0
+      let release!: () => void
+      const pending = new Promise<void>((resolve) => { release = resolve })
+      await page.route('https://stage.example.test/v1/auth/yandex/session', (route) => route.fulfill({ status: 409, json: {
+        error: 'yandex_identity_unlinked', handoff: { token: 'h'.repeat(43), expiresAt: '2099-09-19T12:10:00.000Z' },
+      } }))
+      await page.route('https://stage.example.test/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: { 'x-fit-request-id': 'synthetic-registration-health', 'access-control-expose-headers': 'x-fit-request-id' } }))
+      await page.route('https://stage.example.test/v1/auth/yandex/complete-registration', async (route) => {
+        registrations += 1
+        expect(route.request().postDataJSON()).toMatchObject({ accountRole: 'client', firstName: 'Тестовый спортсмен' })
+        await pending
+        await route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+      })
+      await page.addInitScript((appearance) => {
+        localStorage.setItem('fit.clientLime.theme.', appearance)
+        sessionStorage.setItem('fit.yandexIdPilot.oauthState', 'test-state')
+        sessionStorage.setItem('fit.yandexIdPilot.oauthVerifier', 'v'.repeat(64))
+        sessionStorage.setItem('fit.yandexIdPilot.oauthIntent', 'app')
+      }, theme)
+      await page.goto('/auth/yandex/callback?code=test-code&state=test-state')
+      await page.getByRole('button', { name: 'Нет, создать новый' }).click()
+      const form = page.getByRole('main', { name: 'Регистрация' })
+      await expect(form).toBeVisible()
+      await expect(form.getByRole('radio', { name: 'Я тренер' })).toBeChecked()
+      await expect(page.locator('html')).toHaveClass(/fit-client-lime-document/)
+      await expect(page.locator('html')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+      const image = form.locator('.lime-registration-photo')
+      await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(940)
+      if (process.env.FIT_LIME_FONTS_REQUIRED === 'true') {
+        await page.evaluate(async () => { await document.fonts.load('400 16px "YS Geo"'); await document.fonts.load('500 16px "YS Geo"') })
+        expect(await page.evaluate(() => document.fonts.check('500 16px "YS Geo"'))).toBe(true)
+      }
+      await page.screenshot({ path: testInfo.outputPath(`registration-${theme}-${width}.png`), fullPage: true })
+      await form.getByRole('radio', { name: 'Я спортсмен' }).click()
+      await form.getByRole('button', { name: 'Создать аккаунт' }).click()
+      expect(registrations).toBe(0)
+      const name = form.getByRole('textbox', { name: 'Имя' })
+      await name.fill('А')
+      expect(await name.evaluate((el: HTMLInputElement) => el.checkValidity())).toBe(false)
+      await name.fill('А'.repeat(120))
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await name.fill('Тестовый спортсмен')
+      await expect(image).toHaveCSS('height', '84px')
+      await page.setViewportSize({ width, height: 420 })
+      await form.getByRole('button', { name: 'Создать аккаунт' }).scrollIntoViewIfNeeded()
+      await expect(form.getByRole('button', { name: 'Создать аккаунт' })).toBeInViewport()
+      await page.setViewportSize({ width, height: 844 })
+      await form.getByRole('button', { name: 'Назад' }).click()
+      await expect(page.locator('html')).not.toHaveClass(/fit-client-lime-document/)
+      await page.getByRole('button', { name: 'Нет, создать новый' }).click()
+      await expect(form.getByRole('radio', { name: 'Я спортсмен' })).toBeChecked()
+      await expect(form.getByRole('textbox', { name: 'Имя' })).toHaveValue('Тестовый спортсмен')
+      await form.getByRole('button', { name: 'Создать аккаунт' }).click()
+      await expect(form.getByRole('button', { name: 'Создаём…' })).toBeDisabled()
+      await expect(form.getByRole('button', { name: 'Назад' })).toBeDisabled()
+      release()
+      await expect(form.getByRole('alert')).toBeVisible()
+      await expect(form.getByRole('button', { name: 'Создать аккаунт' })).toBeEnabled()
+      expect(registrations).toBe(1)
+      const metrics = await name.evaluate((el) => { const style = getComputedStyle(el); return { font: style.fontFamily, weight: style.fontWeight, size: style.fontSize, height: el.getBoundingClientRect().height, radius: style.borderRadius } })
+      expect(metrics).toMatchObject({ font: expect.stringContaining('YS Geo'), weight: '400', size: '16px', height: 48, radius: '16px' })
+      await expect(form.getByRole('button', { name: 'Создать аккаунт' })).toHaveCSS('border-radius', '999px')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await expect(form.getByRole('link', { name: 'Условия использования' })).toHaveAttribute('href', '/legal/terms')
+      await expect(form.getByRole('link', { name: 'Политику конфиденциальности' })).toHaveAttribute('href', '/legal/privacy')
+      await page.screenshot({ path: testInfo.outputPath(`registration-error-${theme}-${width}.png`), fullPage: true })
+      await image.evaluate((el: HTMLImageElement) => el.dispatchEvent(new Event('error')))
+      await expect(image).toBeHidden()
+      await expect(form.getByRole('textbox', { name: 'Имя' })).toBeVisible()
+      await page.addInitScript(() => sessionStorage.setItem('fit.auth.invitationReturn.v1', JSON.stringify({ path: '/join?code=AB12CD34EF56', savedAt: Date.now() })))
+      await page.goto('/auth/yandex/callback?code=test-code&state=test-state')
+      await page.getByRole('button', { name: 'Нет, создать новый' }).click()
+      await expect(form.getByRole('radio', { name: 'Я спортсмен' })).toBeChecked()
+      await expect(form.getByRole('radio', { name: 'Я тренер' })).toBeDisabled()
+      await page.screenshot({ path: testInfo.outputPath(`registration-invitation-${theme}-${width}.png`), fullPage: true })
+    })
+  }
+}
