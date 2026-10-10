@@ -137,8 +137,9 @@ export function WorkoutDragHandle({ id, label, children }: { id: string; label: 
   </button>
 }
 
-export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children }: {
-  id: string; disabled: boolean; onDelete: () => void; onReplace: () => void; children: ReactNode
+export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, variant = 'exercise', actionLabel }: {
+  id: string; disabled: boolean; onDelete: () => void; onReplace?: () => void; children: ReactNode
+  variant?: 'exercise' | 'set'; actionLabel?: string
 }) {
   const context = useWorkoutGestures()
   const start = useRef<{ x: number; y: number; pointerId: number; horizontal: boolean; side: 'delete' | 'replace' | null } | null>(null)
@@ -147,21 +148,28 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children }: {
   const suppressClick = useRef(false)
   const side = context.open?.id === id ? context.open.side : null
   const inactive = disabled || context.disabled || !!context.drag
+  const threshold = variant === 'set' ? 24 : 48
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (!start.current || start.current.pointerId !== event.pointerId) return
     if (start.current.horizontal && !inactive) {
       const reverse = start.current.side === 'delete' && offsetRef.current > 16 || start.current.side === 'replace' && offsetRef.current < -16
-      context.setOpen(reverse ? null : offsetRef.current < -48 ? { id, side: 'delete' } : offsetRef.current > 48 ? { id, side: 'replace' } : null)
+      context.setOpen(reverse ? null : offsetRef.current < -threshold ? { id, side: 'delete' } : onReplace && offsetRef.current > threshold ? { id, side: 'replace' } : null)
     }
     start.current = null; offsetRef.current = 0; setOffset(0)
   }
-  return <div data-workout-swipe={id} className="workout-swipe"
+  return <div data-workout-swipe={id} className={`workout-swipe${variant === 'set' ? ' workout-set-swipe' : ''}`}
     onPointerDown={(event) => {
+      suppressClick.current = false
+      // A set row owns its pointer stream; the exercise must not also swipe.
+      if ((event.target as Element).closest('[data-workout-swipe]') !== event.currentTarget) return
       if (inactive || start.current || event.isPrimary === false || event.button !== 0 || (event.target as Element).closest('button,input,textarea,select,a,video,[role="button"],[contenteditable="true"]')) return
       // Native text selection can turn the next swipe into HTML drag-and-drop
       // and cancel its pointer stream. Editable controls are excluded above.
       event.preventDefault()
       start.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, horizontal: false, side }; suppressClick.current = false
+      // The narrow set-number gutter ends before the horizontal threshold.
+      // Keep its stream until direction is known; pan-y still permits native scrolling.
+      if (variant === 'set') event.currentTarget.setPointerCapture(event.pointerId)
     }}
     onPointerMove={(event) => {
       const origin = start.current
@@ -171,11 +179,12 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children }: {
       if (!origin.horizontal && Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.4) {
         origin.horizontal = true; suppressClick.current = true; event.currentTarget.setPointerCapture(event.pointerId)
       }
-      if (origin.horizontal) { event.preventDefault(); offsetRef.current = Math.max(-96, Math.min(96, dx)); setOffset(offsetRef.current) }
+      if (origin.horizontal) { event.preventDefault(); offsetRef.current = Math.max(-96, Math.min(onReplace || origin.side === 'delete' ? 96 : 0, dx)); setOffset(offsetRef.current) }
     }} onPointerUp={finish} onPointerCancel={(event) => { if (start.current?.pointerId === event.pointerId) { start.current = null; offsetRef.current = 0; setOffset(0) } }}
     onClickCapture={(event) => { if (suppressClick.current && !(event.target as Element).closest('.workout-swipe-action')) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false } }}>
     {side && <button type="button" className={`workout-swipe-action ${side}`} disabled={inactive}
-      onClick={() => { context.setOpen(null); if (side === 'delete') onDelete(); else onReplace() }}>{side === 'delete' ? 'Удалить' : 'Заменить'}</button>}
+      aria-label={side === 'delete' ? actionLabel : undefined}
+      onClick={() => { context.setOpen(null); if (side === 'delete') onDelete(); else onReplace?.() }}>{side === 'delete' ? 'Удалить' : 'Заменить'}</button>}
     <div className="workout-swipe-content" style={{ transform: `translateX(${offset || (side === 'delete' ? -96 : side === 'replace' ? 96 : 0)}px)` }}>{children}</div>
   </div>
 }
