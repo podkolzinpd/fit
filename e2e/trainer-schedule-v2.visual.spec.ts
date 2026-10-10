@@ -6220,6 +6220,111 @@ test('Client Lime compact voice permission denial preserves typed text', async (
   await expect(input).toHaveValue('Жим лёжа 40 кг')
 })
 
+for (const lime of [true, false]) for (const theme of ['light', 'dark']) for (const width of lime ? [375, 390, 430] : [390, 430]) {
+  test(`Client home partial voice warning stays full width lime=${lime} ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 932 })
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: lime })
+    const unknown = 'Упражнение с необычным названием десять раз'
+    await mockClientStreamingVoice(page, `Жим лёжа три подхода по десять 40 килограммов\n${unknown}`)
+    await page.addInitScript(({ id, theme, seedDraft }) => {
+      localStorage.setItem('fit.appTheme', theme)
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      const seen = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]') as string[]
+      localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify([...seen, 'client-drafts-2026-10']))
+      if (seedDraft) localStorage.setItem(`fit.today-draft.${id}`, JSON.stringify({ screen: 'compose', text: 'Старый черновик: планка', choices: {}, items: [], clientId: id }))
+    }, { id: clientId, theme, seedDraft: lime && width === 430 })
+    let release: (() => void) | undefined
+    const pending = new Promise<void>(resolve => { release = resolve })
+    const parserTexts: string[] = []
+    const workoutWrites: string[] = []
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') workoutWrites.push(request.url())
+    })
+    await page.route('**/v1/assistant/yandex/parse-workout', async route => {
+      parserTexts.push((route.request().postDataJSON() as { text: string }).text)
+      await pending
+      await route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, contentType: 'application/json', body: JSON.stringify({ items: [], unmatched: [{ sourceText: unknown, reason: 'Не нашли в каталоге', suggestedExerciseRefs: [] }] }) })
+    })
+    await page.goto('/me')
+    const home = page.locator('.client-home-self-training.primary')
+    await expect(home).toBeVisible()
+    await expect(page.locator('.phone-frame')).toHaveClass(lime ? /fit-client-lime/ : /client-home-identity/)
+    await expect(page.locator('.phone-frame')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+    await page.evaluate(() => document.fonts.ready)
+    if (lime && width !== 430) await expect(page.getByRole('region', { name: 'Черновик плана' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
+    await page.getByRole('button', { name: 'Готово', exact: true }).click()
+    await expect.poll(() => parserTexts.length).toBe(1)
+    if (lime) await expect(page.getByRole('status').filter({ hasText: 'Разбираю диктовку' })).toBeVisible()
+    release?.()
+    const input = page.getByLabel('Тренировка', { exact: true })
+    await expect(input).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Не нашли упражнение' })).toBeVisible()
+    await expect(page.locator('.today-recognized')).toContainText('Жим')
+    const formatted = await input.inputValue()
+    expect(formatted).toContain(unknown)
+    expect(parserTexts).toHaveLength(1)
+    await page.getByRole('button', { name: 'Скрыть', exact: true }).click()
+    await expect(home).toBeVisible()
+    const warning = home.locator(':scope > .voice-action-error')
+    await expect(warning).toContainText('одно или несколько нужно уточнить')
+    await expect(warning.getByRole('button', { name: 'Редактировать текст' })).toBeVisible()
+    if (lime) await expect(page.getByRole('region', { name: 'Черновик плана' })).toHaveCount(width === 430 ? 2 : 1)
+    await page.screenshot({ path: info.outputPath('home-partial-voice-warning.png'), fullPage: true })
+    const parent = (await home.boundingBox())!
+    for (const card of [home.locator(':scope > .quick-start-workout'), home.locator(':scope > .compose-workout-entry'), warning]) {
+      const box = (await card.boundingBox())!
+      expect(Math.abs(box.x - parent.x)).toBeLessThan(1)
+      expect(Math.abs(box.width - parent.width)).toBeLessThan(1)
+    }
+    const copy = (await home.locator('.voice-action-copy').boundingBox())!
+    const buttons = (await home.locator('.voice-action-buttons').boundingBox())!
+    expect(copy.x + copy.width <= buttons.x || copy.y + copy.height <= buttons.y || buttons.y + buttons.height <= copy.y).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect(workoutWrites).toEqual([])
+    await warning.getByRole('button', { name: 'Редактировать текст' }).click()
+    await expect(input).toHaveValue(formatted)
+    await expect(page.getByRole('region', { name: 'Не нашли упражнение' })).toBeVisible()
+    await page.reload()
+    if (lime) await page.getByRole('button', { name: 'Продолжить черновик' }).first().click()
+    else await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
+    await expect(input).toHaveValue(formatted)
+    expect(workoutWrites).toEqual([])
+  })
+}
+
+for (const lime of [true, false]) for (const theme of ['light', 'dark']) {
+  test(`Client home microphone error keeps its own grid lime=${lime} ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, clientLime: lime })
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem('fit.appTheme', theme)
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')) } })
+    }, { id: clientId, theme })
+    await page.goto('/me')
+    await expect(page.locator('.phone-frame')).toHaveClass(lime ? /fit-client-lime/ : /client-home-identity/)
+    await expect(page.locator('.phone-frame')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+    await page.evaluate(() => document.fonts.ready)
+    await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+    const error = page.locator('.voice-action > .voice-action-error')
+    await expect(error).toContainText('Нет доступа к микрофону')
+    // Lime starts a separate draft route even when permission is denied;
+    // only the home identity uses named grid areas. The draft keeps auto flow.
+    await expect.poll(() => error.evaluate(element => ({
+      actual: getComputedStyle(element).gridArea,
+      expected: element.closest('.client-home-identity') ? 'error' : 'auto',
+    }))).toEqual(lime ? { actual: 'auto', expected: 'auto' } : { actual: 'error', expected: 'error' })
+    const card = (await error.locator('..').boundingBox())!
+    const box = (await error.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(card.x)
+    expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('home-microphone-error.png'), fullPage: true })
+  })
+}
+
 test('Client Lime voice parsing exposes progress and retains failed transcript', async ({ page }) => {
   await mockPilot(page, { role: 'client', profileId: clientId })
   await page.goto('/me')
