@@ -9,10 +9,12 @@ import { ClientLimeStandaloneThemeContext } from './client-lime-standalone-conte
 
 // Public routes stay public. Visual scope is assigned only after the same
 // server-confirmed client gate used by AppLayout; no email/storage inference.
-export function ClientLimeStandaloneLayout({ children }: PropsWithChildren) {
+export function ClientLimeStandaloneLayout({ children, registration = false }: PropsWithChildren<{ registration?: boolean }>) {
   const { actor } = useAuth()
   const inherited = useContext(ClientLimeStandaloneThemeContext) !== null
-  const enabled = isClientLimeEnabled(actor)
+  // The approved new-account screen precedes the actor/experiment response.
+  // Other public routes continue to require the server-confirmed client gate.
+  const enabled = registration || isClientLimeEnabled(actor)
   const baseTheme = useAppTheme()
   const { theme } = useClientLimeTheme(actor?.userId ?? '')
 
