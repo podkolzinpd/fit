@@ -39,23 +39,8 @@ test('client workout month calendar stays usable in iPhone WebKit', async ({ pag
       && (!body.p_to || historyRow.workout_date <= body.p_to)
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(visible ? [historyRow] : []) })
   })
-  await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Тестовый клиент')
-  await page.getByLabel('Email').fill(`workout-calendar-${randomUUID()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/me$/, { timeout: 20_000 })
-  await page.goto('/me/edit')
-  await page.getByLabel('Пол').selectOption('female')
-  await page.getByLabel('Возраст').fill('30')
-  await page.getByLabel('Рост, см').fill('170')
-  await page.getByRole('button', { name: 'Сохранить профиль' }).click()
-  await expect(page).toHaveURL(/\/me$/)
-
-  await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
-  await page.goto('/me/workouts')
+  await loginForHistory(page, 'client')
+  await page.goto('/me/workouts?tab=history')
   await page.getByRole('button', { name: 'Календарь' }).click()
   await expect(page.getByRole('grid', { name: 'История тренировок за Август 2026' })).toBeVisible()
   const day = page.getByRole('button', { name: '10 августа 2026 г., 1 тренировка' })
@@ -278,7 +263,12 @@ test(`${role}: current and future plans remain visible beside history`, async ({
   await expect(upcoming.locator('.client-workout-card').first()).toContainText('16 августа 2026 г.')
   await expect(upcoming.locator('.client-workout-card').last()).toContainText('20 августа 2026 г.')
   await expect(page.locator('.past-workout-plan-card')).toHaveCount(1)
-  await expect(page.locator('.workout-chronicle-card')).toHaveCount(1)
+  if (role === 'trainer') await expect(page.locator('.workout-chronicle-card')).toHaveCount(1)
+  else {
+    await page.getByRole('tab', { name: 'История' }).click()
+    await expect(page.locator('.workout-chronicle-card')).toBeVisible()
+    await page.getByRole('tab', { name: 'Актуальное' }).click()
+  }
   for (const width of [390, 430, ...(role === 'trainer' ? [1440] : [])]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -291,16 +281,83 @@ test(`${role}: current and future plans remain visible beside history`, async ({
     }
     await page.screenshot({ path: testInfo.outputPath(`${role}-upcoming-${width}.png`), fullPage: true })
   }
-  await page.getByRole('button', { name: 'Календарь', exact: true }).click()
-  await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
-  const source = page.url()
-  await upcoming.locator(`a[href="${detailPath}"]`).click()
-  await expect(page).toHaveURL(detailPath)
-  await page.getByRole('button', { name: 'Назад', exact: true }).click()
-  await expect(page).toHaveURL(source)
-  await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
+  if (role === 'trainer') {
+    await page.getByRole('button', { name: 'Календарь', exact: true }).click()
+    await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
+    const source = page.url()
+    await upcoming.locator(`a[href="${detailPath}"]`).click()
+    await expect(page).toHaveURL(detailPath)
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(source)
+    await expect(upcoming.locator('.client-workout-card')).toHaveCount(3)
+  } else {
+    await page.getByRole('group', { name: 'Вид актуальных тренировок' }).getByRole('button', { name: 'Календарь' }).click()
+    await expect(page.getByRole('grid', { name: 'Актуальные тренировки за Август 2026' })).toBeVisible()
+    await page.getByRole('button', { name: '16 августа 2026 г., 2 тренировки' }).click()
+    const source = page.url()
+    await page.locator('.client-history-calendar-selection').locator(`a[href="${detailPath}"]`).click()
+    await expect(page).toHaveURL(detailPath)
+    await page.getByRole('button', { name: 'Назад', exact: true }).click()
+    await expect(page).toHaveURL(source)
+    await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()
+  }
 })
 }
+
+test('client: many plans do not push list/calendar below the first screen and both tabs retain their view', async ({ page }, testInfo) => {
+  await mockNavigationWorkouts(page)
+  const rows = [
+    ...Array.from({ length: 12 }, (_, index) => ({ ...historyRow,
+      id: `c1000000-0000-4000-8000-${String(index + 20).padStart(12, '0')}`,
+      workout_date: `2026-08-${String(index + 17).padStart(2, '0')}`, status: 'planned',
+    })),
+    { ...historyRow, id: 'c1000000-0000-4000-8000-000000000099', workout_date: '2026-10-11', status: 'planned' },
+    { ...historyRow, id: 'c1000000-0000-4000-8000-000000000098', workout_date: '2026-08-15', status: 'planned' },
+    historyRow,
+  ]
+  await page.route('**/rest/v1/rpc/list_workouts', async (route) => {
+    const body = route.request().postDataJSON() as { p_from?: string; p_to?: string; p_offset?: number; p_limit?: number }
+    const visible = rows.filter((row) => (!body.p_from || row.workout_date >= body.p_from) && (!body.p_to || row.workout_date <= body.p_to))
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(visible.slice(body.p_offset ?? 0, (body.p_offset ?? 0) + (body.p_limit ?? 100))) })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginForHistory(page, 'client')
+  await page.goto('/me/workouts')
+  const currentToggle = page.getByRole('group', { name: 'Вид актуальных тренировок' })
+  await expect(page.getByRole('tab', { name: 'Актуальное' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#workouts-current-panel .client-workout-card')).toHaveCount(13)
+  await expect(page.locator('#workouts-current-panel .past-workout-plan-card')).toHaveCount(1)
+  const currentBounds = await currentToggle.boundingBox()
+  expect(currentBounds).not.toBeNull()
+  expect(currentBounds!.y + currentBounds!.height).toBeLessThan(360)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('client-many-plans-390.png') })
+
+  await currentToggle.getByRole('button', { name: 'Календарь' }).click()
+  await expect(page.getByRole('grid', { name: 'Актуальные тренировки за Август 2026' })).toBeVisible()
+  await page.getByRole('button', { name: 'Следующий месяц' }).click()
+  await expect(page.getByText('В этом месяце актуальных тренировок нет.')).toBeVisible()
+  await page.getByRole('button', { name: 'Следующий месяц' }).click()
+  await page.getByRole('button', { name: '11 октября 2026 г., 1 тренировка' }).click()
+  await expect(page.locator('.client-history-calendar-selection .client-workout-card')).toContainText('11 октября 2026 г.')
+
+  await page.getByRole('tab', { name: 'История' }).click()
+  const historyToggle = page.getByRole('group', { name: 'Вид истории тренировок' })
+  const historyBounds = await historyToggle.boundingBox()
+  expect(historyBounds).not.toBeNull()
+  expect(Math.abs(historyBounds!.y - currentBounds!.y)).toBeLessThan(4)
+  await expect(historyToggle.getByRole('button', { name: 'Список' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('#workouts-history-panel .workout-chronicle-card')).toHaveCount(1)
+  await historyToggle.getByRole('button', { name: 'Календарь' }).click()
+  await expect(page.getByRole('grid', { name: 'История тренировок за Август 2026' })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Актуальное' }).click()
+  await expect(currentToggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('grid', { name: 'Актуальные тренировки за Октябрь 2026' })).toBeVisible()
+  await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expect(historyToggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
+})
 
 test('trainer: a plan stays visible through Live and completion from the client list', async ({ page }) => {
   const state = await mockNavigationWorkouts(page)
@@ -370,7 +427,7 @@ for (const role of ['trainer', 'client'] as const) {
   test(`${role}: history list shows performed muscles and opens a copy from its own action`, async ({ page }, testInfo) => {
     await mockNavigationWorkouts(page)
     await loginForHistory(page, role)
-    const path = role === 'trainer' ? clientHistoryPath : '/me/workouts'
+    const path = role === 'trainer' ? clientHistoryPath : '/me/workouts?tab=history'
     await page.goto(path)
     await dismissCalendarHint(page)
 

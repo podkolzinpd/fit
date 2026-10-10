@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { Workout } from '../../shared/domain'
 import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { formatLocalDate, formatMonth, startOfMonth, type LocalDate } from '../../shared/local-date'
@@ -19,6 +19,8 @@ export function ClientWorkoutHistoryCalendar({
   onRetry,
   onMonthChange,
   onDateSelect,
+  scope = 'history',
+  renderSelectedWorkout,
 }: {
   month: LocalDate
   today: LocalDate
@@ -31,7 +33,10 @@ export function ClientWorkoutHistoryCalendar({
   onRetry: () => void
   onMonthChange: (direction: -1 | 1) => void
   onDateSelect: (date: LocalDate) => void
+  scope?: 'history' | 'planned'
+  renderSelectedWorkout?: (workout: Workout) => ReactNode
 }) {
+  const allowFuture = scope === 'planned'
   const days = useMemo(
     () => clientWorkoutHistoryCalendarDays(month, today, workouts),
     [month, today, workouts],
@@ -46,18 +51,18 @@ export function ClientWorkoutHistoryCalendar({
     <div className="client-history-calendar-toolbar">
       <button type="button" className="client-history-calendar-arrow" aria-label="Предыдущий месяц" onClick={() => onMonthChange(-1)}><BackIcon /></button>
       <h3 aria-live="polite">{monthLabel}</h3>
-      <button type="button" className="client-history-calendar-arrow" aria-label="Следующий месяц" disabled={month >= currentMonth} onClick={() => onMonthChange(1)}><ChevronRightIcon /></button>
+      <button type="button" className="client-history-calendar-arrow" aria-label="Следующий месяц" disabled={!allowFuture && month >= currentMonth} onClick={() => onMonthChange(1)}><ChevronRightIcon /></button>
     </div>
-    <div className="client-history-calendar-grid" role="grid" aria-label={`История тренировок за ${monthLabel}`}>
+    <div className="client-history-calendar-grid" role="grid" aria-label={`${allowFuture ? 'Актуальные тренировки' : 'История тренировок'} за ${monthLabel}`}>
       {WEEKDAY_LABELS.map((label) => <span className="client-history-calendar-weekday" role="columnheader" key={label}>{label}</span>)}
       {days.map((day) => {
-        const selectable = day.inMonth && !day.future && day.workouts.length > 0
+        const selectable = day.inMonth && (allowFuture || !day.future) && day.workouts.length > 0
         const selected = selectable && day.date === selectedDate
         const todayDate = day.date === today
         const classes = [
           'client-history-calendar-day',
           day.inMonth ? '' : 'outside',
-          day.future ? 'future' : '',
+          day.future && !allowFuture ? 'future' : '',
           selectable ? 'has-workout' : '',
           selected ? 'selected' : '',
           todayDate ? 'today' : '',
@@ -80,20 +85,22 @@ export function ClientWorkoutHistoryCalendar({
       })}
     </div>
     {loading && <p className="client-history-calendar-state" role="status">Загружаем месяц…</p>}
-    {!loading && error && <div className="client-history-calendar-state" role="alert"><p>Не удалось загрузить историю за месяц.</p><button type="button" className="secondary" onClick={onRetry}>Повторить</button></div>}
-    {!loading && !error && workouts.length === 0 && <p className="client-history-calendar-state">В этом месяце тренировок нет.</p>}
+    {!loading && error && <div className="client-history-calendar-state" role="alert"><p>{allowFuture ? 'Не удалось загрузить планы за месяц.' : 'Не удалось загрузить историю за месяц.'}</p><button type="button" className="secondary" onClick={onRetry}>Повторить</button></div>}
+    {!loading && !error && workouts.length === 0 && <p className="client-history-calendar-state">{allowFuture ? 'В этом месяце актуальных тренировок нет.' : 'В этом месяце тренировок нет.'}</p>}
     {!loading && !error && selectedDate && selectedWorkouts.length > 0 && <section className="client-history-calendar-selection" aria-labelledby="client-history-calendar-selection-title">
       <div className="client-history-calendar-selection-head">
         <h4 id="client-history-calendar-selection-title">{formatLocalDate(selectedDate)}</h4>
         <span>{workoutCountLabel(selectedWorkouts.length)}</span>
       </div>
       <div className="cards client-workout-cards workout-chronicle-list">
-        {selectedWorkouts.map((workout) => <WorkoutChronicleCard
-          key={workout.id}
-          workout={workout}
-          contextLabel={contextLabel(workout)}
-          returnTo={returnTo}
-        />)}
+        {selectedWorkouts.map((workout) => renderSelectedWorkout
+          ? <div key={workout.id}>{renderSelectedWorkout(workout)}</div>
+          : <WorkoutChronicleCard
+              key={workout.id}
+              workout={workout}
+              contextLabel={contextLabel(workout)}
+              returnTo={returnTo}
+            />)}
       </div>
     </section>}
   </div>

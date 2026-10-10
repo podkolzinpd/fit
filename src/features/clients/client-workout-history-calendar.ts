@@ -52,38 +52,40 @@ export function clientWorkoutHistoryMonthParam(value: LocalDate): string {
 export function parseClientWorkoutHistoryCalendarState(
   params: URLSearchParams,
   today: LocalDate,
+  allowFuture = false,
 ): ClientWorkoutHistoryCalendarState {
   const view = params.get('view') === 'calendar' ? 'calendar' : 'list'
   const currentMonth = startOfMonth(today)
   const requestedMonth = monthFromParam(params.get('month')) ?? currentMonth
-  const month = requestedMonth > currentMonth ? currentMonth : requestedMonth
+  const month = !allowFuture && requestedMonth > currentMonth ? currentMonth : requestedMonth
   const requestedDate = dateFromParam(params.get('date'))
   const selectedDate = requestedDate
     && startOfMonth(requestedDate) === month
-    && requestedDate <= today
+    && (allowFuture || requestedDate <= today)
     ? requestedDate
     : undefined
   return { view, month, selectedDate }
 }
 
-export function clientWorkoutHistoryMonthRange(month: LocalDate, today: LocalDate): {
+export function clientWorkoutHistoryMonthRange(month: LocalDate, today: LocalDate, allowFuture = false): {
   from: LocalDate
   to: LocalDate
 } {
   const currentMonth = startOfMonth(today)
-  const from = startOfMonth(month) > currentMonth ? currentMonth : startOfMonth(month)
+  const from = !allowFuture && startOfMonth(month) > currentMonth ? currentMonth : startOfMonth(month)
   const monthEnd = endOfMonth(from)
-  return { from, to: monthEnd < today ? monthEnd : today }
+  return { from, to: allowFuture || monthEnd < today ? monthEnd : today }
 }
 
 export function shiftClientWorkoutHistoryMonth(
   month: LocalDate,
   direction: -1 | 1,
   today: LocalDate,
+  allowFuture = false,
 ): LocalDate {
   const shifted = startOfMonth(addMonths(month, direction))
   const currentMonth = startOfMonth(today)
-  return shifted > currentMonth ? currentMonth : shifted
+  return !allowFuture && shifted > currentMonth ? currentMonth : shifted
 }
 
 function mondayGridStart(month: LocalDate): LocalDate {

@@ -49,7 +49,7 @@ test('client opens the same compact workout entry from history as from home', as
   await createClientAccount(page, `workouts-compact-entry-${testInfo.workerIndex}-${Date.now()}@fit.local`)
   await page.goto('/me/workouts')
 
-  await expect(page.getByRole('link', { name: 'Добавить тренировку' })).toHaveAttribute('href', '/me?entry=workout')
+  await expect(page.getByRole('link', { name: 'Добавить', exact: true })).toHaveAttribute('href', '/me?entry=workout')
 
   await createCompletedWorkout(page)
   await page.goto('/workouts/new')
@@ -83,6 +83,7 @@ test('client always has a preset workout tab on My Workouts, before and after th
   await page.goto('/me/workouts')
 
   await expect(page.getByRole('tab', { name: 'Актуальное' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: 'История' })).toBeVisible()
   await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
   await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
   await page.getByRole('article').filter({ hasText: 'Всё тело без инвентаря' }).getByRole('button', { name: 'Выбрать' }).click()
@@ -96,6 +97,7 @@ test('client always has a preset workout tab on My Workouts, before and after th
   await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
 
   await page.goto('/me/workouts')
+  await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.getByRole('heading', { name: 'История' })).toBeVisible()
   await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
   await expect(page.getByText('Всё тело без инвентаря')).toBeVisible()
@@ -107,8 +109,9 @@ test('client switches workout history to a month calendar and returns to the sel
   await createCompletedWorkout(page)
   await page.goto('/me/workouts')
 
-  await page.getByRole('button', { name: 'Календарь' }).click()
-  await expect(page).toHaveURL(/\/me\/workouts\?view=calendar&month=\d{4}-\d{2}$/)
+  await page.getByRole('tab', { name: 'История' }).click()
+  await page.getByRole('group', { name: 'Вид истории тренировок' }).getByRole('button', { name: 'Календарь' }).click()
+  await expect(page).toHaveURL(/\/me\/workouts\?tab=history&view=calendar&month=\d{4}-\d{2}$/)
   await expect(page.getByRole('grid', { name: /История тренировок за/ })).toBeVisible()
 
   const workoutDate = page.locator('.client-history-calendar-day.has-workout button').first()
@@ -122,7 +125,7 @@ test('client switches workout history to a month calendar and returns to the sel
   await expect(page).toHaveURL(/\/workouts\/[^/?]+$/)
 
   await page.getByRole('button', { name: 'Назад' }).click()
-  await expect(page).toHaveURL(/\/me\/workouts\?view=calendar&month=\d{4}-\d{2}&date=\d{4}-\d{2}-\d{2}$/)
+  await expect(page).toHaveURL(/\/me\/workouts\?tab=history&view=calendar&month=\d{4}-\d{2}&date=\d{4}-\d{2}-\d{2}$/)
   await expect(page.locator('.client-history-calendar-day.selected')).toBeVisible()
 })
 

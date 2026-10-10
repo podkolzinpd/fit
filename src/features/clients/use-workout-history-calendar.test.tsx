@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { localDate } from '../../shared/local-date'
-import { useWorkoutHistoryCalendar } from './use-workout-history-calendar'
+import { useWorkoutHistoryCalendar, useWorkoutPlannedCalendar } from './use-workout-history-calendar'
 
 function CalendarControls() {
   const calendar = useWorkoutHistoryCalendar(localDate('2026-09-03'))
@@ -35,5 +35,38 @@ describe('history calendar URL state', () => {
     expect(screen.getByRole('status')).toHaveTextContent(`${path}?context=keep`)
     fireEvent.click(screen.getByText('Назад'))
     await waitFor(() => expect(screen.getByText('Исходный экран')).toBeVisible())
+  })
+})
+
+function BothCalendarControls() {
+  const history = useWorkoutHistoryCalendar(localDate('2026-09-03'))
+  const planned = useWorkoutPlannedCalendar(localDate('2026-09-03'))
+  const [params, setParams] = useSearchParams()
+  return <>
+    <output>{params.toString()}</output>
+    <button onClick={() => planned.showCalendar(localDate('2026-10-11'))}>Планы календарём</button>
+    <button onClick={() => planned.selectDate(localDate('2026-10-11'))}>Выбрать план</button>
+    <button onClick={() => history.showCalendar(localDate('2026-08-10'))}>История календарём</button>
+    <button onClick={() => setParams((current) => { const next = new URLSearchParams(current); next.set('tab', 'history'); return next }, { replace: true })}>История</button>
+    <span>Планы: {planned.state.view}, {planned.state.month}, {planned.state.selectedDate}</span>
+    <span>История: {history.state.view}, {history.state.month}</span>
+  </>
+}
+
+describe('client planned and history calendar state', () => {
+  it('preserves independent view, future month and selected date across tabs', () => {
+    render(<MemoryRouter initialEntries={['/me/workouts?tab=current']}><Routes>
+      <Route path="/me/workouts" element={<BothCalendarControls />} />
+    </Routes></MemoryRouter>)
+
+    fireEvent.click(screen.getByText('Планы календарём'))
+    fireEvent.click(screen.getByText('Выбрать план'))
+    fireEvent.click(screen.getByText('История календарём'))
+    fireEvent.click(screen.getByText('История', { selector: 'button' }))
+
+    expect(screen.getByText(/Планы: calendar, 2026-10-01, 2026-10-11/)).toBeVisible()
+    expect(screen.getByText(/История: calendar, 2026-08-01/)).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('plannedDate=2026-10-11')
+    expect(screen.getByRole('status')).toHaveTextContent('tab=history')
   })
 })

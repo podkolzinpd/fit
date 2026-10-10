@@ -2870,7 +2870,9 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .client-workouts-page .page-header, .client-progress-page .page-header, .client-profile-page .page-header { margin-bottom: 20px; }
 .client-workouts-page .page-header h1, .client-progress-page .page-header h1, .client-profile-page .page-header h1 { font-size: var(--type-display-fluid); }
 .client-workouts-page .page-header .button { min-height: var(--control-height-standard); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
-.client-workouts-page .progress-view-tabs { margin-bottom: var(--section-gap); }
+.client-workouts-page .progress-view-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:12px; }
+.client-workouts-page .progress-view-tabs button { min-width:0; padding-inline:4px; white-space:nowrap; }
+.client-workouts-identity .client-workouts-view-toggle { width:100%; min-width:0; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .client-workouts-stack, .client-progress-stack { gap: var(--section-gap); }
 .client-workout-section, .client-progress-form, .client-progress-history { gap: 8px; }
 .client-workout-section-head, .client-progress-section-head { gap: 1px; }

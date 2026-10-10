@@ -64,4 +64,16 @@ describe('client workout history calendar', () => {
     expect(shiftClientWorkoutHistoryMonth(localDate('2026-08-01'), -1, TODAY)).toBe('2026-07-01')
     expect(clientWorkoutHistoryMonthParam(localDate('2026-07-19'))).toBe('2026-07')
   })
+
+  it('allows future months and selected dates for the planned tab without changing history limits', () => {
+    const params = new URLSearchParams('view=calendar&month=2026-10&date=2026-10-11')
+    expect(parseClientWorkoutHistoryCalendarState(params, TODAY, true)).toEqual({
+      view: 'calendar', month: localDate('2026-10-01'), selectedDate: localDate('2026-10-11'),
+    })
+    expect(clientWorkoutHistoryMonthRange(localDate('2026-10-01'), TODAY, true)).toEqual({
+      from: localDate('2026-10-01'), to: localDate('2026-10-31'),
+    })
+    expect(shiftClientWorkoutHistoryMonth(localDate('2026-10-01'), 1, TODAY, true)).toBe('2026-11-01')
+    expect(parseClientWorkoutHistoryCalendarState(params, TODAY).month).toBe('2026-08-01')
+  })
 })
