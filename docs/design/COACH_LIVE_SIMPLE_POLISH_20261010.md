@@ -86,6 +86,15 @@ draft-response воспроизвёл ошибку4/4 в WebKit/Chromium до и
 Только coachReference сохраняет draft до подтверждения; прежняя кнопка retry,
 серверный контракт и остальные роли не меняются. После защиты WebKit/Chromium22/22
 (обе identities, поля375/390/430/1440, client retry и negative boundary).
-Повторный full check и свежий обязательный CI выполняются.
-PR3–5 не выполнены. Подключённый KB search недоступен из-за отсутствия PyYAML;
+Повторный full check exit0: frontend2615/API1272+137skip/build;
+CI38073216164 success. PR2 #1553 самостоятельно слит в main2ecadce9.
+PR1 production: CI38069058045/deploy38071488101 success; public207/207 exact,
+изолированные browser boundary8/8. Это не реальная OAuth-сессия.
+PR3 локально: свайп строки вместо X, explicit confirm, защита факта/последнего
+подхода, input/vertical-scroll/nested guards. Unit19/19; свежая мобильная
+матрица Chromium/WebKit37 passed/3 явных CDP-only WebKit skip, обе identities;
+снимки просмотрены. Full check exit0: frontend2619/API1272+137 штатных skip/build.
+PR3 #1554 перенесён на main2ecadce9 с сохранением исправления PR2;
+свежие full check/E2E/CI впереди. PR4–5 реализованы в следующих ветках.
+Подключённый KB search недоступен из-за отсутствия PyYAML;
 использованы утверждённый план, текущий код и прежние design-документы.

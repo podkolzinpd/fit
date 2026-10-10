@@ -3647,6 +3647,12 @@ export function LiveWorkoutPage() {
     // восстановленные defaultValue.
     const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
     const validationError = validationErrorSetIds.has(set.id)
+    const swipeSet = (content: ReactNode) => coachReference && canManageLiveStructure
+      ? <WorkoutSwipe id={`set:${set.id}`} variant="set"
+          disabled={Boolean(set.confirmedAt) || exercise.blockType !== 'single' || exercise.sets.length <= 1 || gestureDisabled}
+          actionLabel={`Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`}
+          onDelete={() => void requestRemoveLiveSet(exercise, set)}>{content}</WorkoutSwipe>
+      : content
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
@@ -3661,7 +3667,7 @@ export function LiveWorkoutPage() {
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
-      <WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
+      {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
         <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} />
         <div className="live-set-confirm">
@@ -3687,8 +3693,7 @@ export function LiveWorkoutPage() {
                   skipBlurForSet.current = null
                 }}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span>}</button>}
         </div>
-        {coachReference && canManageLiveStructure && <button type="button" className="coach-live-remove-set" aria-label={`Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`} title={set.confirmedAt ? 'Выполненный подход нельзя удалить здесь' : exercise.blockType !== 'single' ? 'Подходы суперсета изменяются целым кругом' : exercise.sets.length <= 1 ? 'Оставьте хотя бы один подход' : 'Удалить подход'} disabled={Boolean(set.confirmedAt) || exercise.blockType !== 'single' || exercise.sets.length <= 1 || rootMutationPending || save.isPending || confirm.isPending} onClick={() => void requestRemoveLiveSet(exercise, set)}><CloseIcon /></button>}
-      </WorkoutSetRow>
+      </WorkoutSetRow>)}
       {(!coachReference || saveStatus === 'error') && <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>}
       {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
       {(showPlan || (clientLime && !set.confirmedAt)) && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
