@@ -48,3 +48,5 @@
 Строгая финальная Linux visual regression (без update-snapshots): completion/detail/history/share390/430 —2/2 passed,39.4s. Изображения actual/diff просмотрены; допускаемые пороги не повышались, проверки не отключались.
 
 Штатный API rollout smoke использует существующую изолированную synthetic fixture:10/10 + discomfort=true + пустая заметка, exact replay, последующий trainer readback sessionRpe10/clientCommentnull. Новые реальные аккаунты/данные не затрагиваются.
+
+Финальная база: maine793cb38 после последовательных merges1555/1556/1557; конфликты только rolling docs разрешены с сохранением чужих записей. Первый полный CI продукта прошёл все code/API/actor/browser gates (включая оба полных Lime engines); visual390/430 потребовал новые эталоны, исправленные и строго проверенные выше. Финальный CI запускается на свежем main с этими эталонами. Контракт rollout45/45 passed.
