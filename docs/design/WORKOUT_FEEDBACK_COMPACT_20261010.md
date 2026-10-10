@@ -38,3 +38,7 @@
 - local:verify остановился на прежнем drift общей локальной Yandex БД: migration000112 append_live_round уже существует. Общая БД не сбрасывалась; изменение проверено отдельной чистой цепочкой.
 - Дополнительные legacy UI проверки сначала остановились на локальном auth waitForURL/load; отдельный синтетический WebKit login200/domcontentloaded пройден, повтор после fullcheck также остановился на входе/регистрации до формы. Эти legacy UI сценарии локально не засчитаны; обязательный CI проверяет их на отдельном окружении.
 - CI, очередь1555/1556/1557, merge, API migration/frontend deployment и fresh native — впереди.
+
+## Уточнение по CI visual
+
+Первый CI указал на one-time Coachmark поверх completion baseline. В test он теперь закрывается реальным нажатием; отдельная приёмка проверяет сам Coachmark. Изолированный Podman Playwright Linux: completion/detail/history390/430 —2/2 passed. Обновлён только completion430 baseline: вместо сетки виден компактный slider. Несвязанные снимки не перенесены.
