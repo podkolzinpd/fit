@@ -339,6 +339,65 @@ function coachGestureWorkout(grouped = false, count = grouped ? 4 : 3): MockWork
   }))
   return source
 }
+for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
+  test(`Figma workout Coach reference adjacent superset ${profileId}`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const source = coachGestureWorkout(), first = source.exercises[0]!, second = source.exercises[1]!
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+    const commands: string[] = []
+    await page.route('**/blocks/*/merge-next', async route => {
+      const command = route.request().postDataJSON() as { preset: string; expectedVersion: number }
+      const current = backend.getWorkouts()[0]!
+      expect(command).toMatchObject({ preset: 'set', expectedVersion: current.version })
+      expect(route.request().url()).toContain(`/blocks/${first.blockId}/merge-next`)
+      commands.push('merge')
+      for (const exercise of current.exercises.slice(0, 2)) {
+        exercise.blockId = first.blockId; exercise.blockType = 'group'; exercise.blockPreset = 'set'; exercise.blockRounds = 2
+        exercise.restBetweenExercisesSec = 0; exercise.restBetweenRoundsSec = 90
+      }
+      current.version++
+      await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+    })
+    await page.route('**/blocks/*/split', async route => {
+      commands.push('split')
+      const current = backend.getWorkouts()[0]!
+      current.exercises.slice(0, 2).forEach((exercise, index) => {
+        exercise.blockType = 'single'; exercise.blockId = source.exercises[index]!.id; exercise.blockRounds = 1
+      })
+      current.version++
+      await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+    })
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.locator(`[data-workout-block="${first.blockId}"]`).getByRole('button', { name: 'Ещё действия', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Объединить со следующим в суперсет', exact: true }).click()
+    await expect(page.locator('.exercise-block.live')).toHaveCount(1)
+    await expect(page.locator('.circuit-round')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Круг', exact: true })).toBeVisible()
+    const group = page.locator('.exercise-block.live')
+    await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator(`[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+    await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    // The completed round intentionally collapses after its final member.
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(exercise => exercise.id === second.id)!.sets[0]!.confirmedAt).not.toBeNull()
+    await expect(group.locator('.circuit-round-toggle').first()).toContainText('2 из 2 выполнено')
+    await expect(page.locator('.live-rest-trigger')).toContainText('1:30')
+    await group.locator('.circuit-head').getByRole('button', { name: 'Ещё действия', exact: true }).click()
+    await expect(page.getByRole('menuitem', { name: /следующее.*суперсет/ })).toHaveCount(0)
+    await page.getByRole('menuitem', { name: 'Разделить суперсет', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить', exact: true }).click()
+    await expect(page.locator('.exercise-block.live')).toHaveCount(0)
+    // Only the active single exercise is expanded after splitting.
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises.flatMap(exercise => exercise.sets).filter(set => set.confirmedAt).length).toBe(2)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 6')
+    await expect(page.locator('.live-rest-trigger')).toContainText('1:30')
+    expect(commands).toEqual(['merge', 'split'])
+    await page.reload()
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 6')
+    await expect(page.locator('.live-rest-trigger')).toContainText('1:30')
+    await page.screenshot({ path: info.outputPath('coach-live-superset-split.png') })
+  })
+}
 for (const width of [375, 390, 430, 1440]) {
   test(`Figma workout Coach reference gestures preserve active fact/rest ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
