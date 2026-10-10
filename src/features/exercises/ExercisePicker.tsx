@@ -548,7 +548,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         <div className="picker-toolbar">
           {reference && <span className="coach-catalog-count">{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>}
           <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>{reference ? 'Фильтровать' : 'Фильтры'}{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}{reference && <img src={coachWorkoutReferenceAssets.filter} width="16" height="16" alt="" />}</button>
-          <button type="button" className={`secondary picker-create-action${reference && !selected.size ? ' coach-catalog-create-floating' : ''}`} disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}>{reference && !selected.size ? <img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /> : 'Создать упражнение'}</button>
+          {(!reference || selected.size > 0) && <button type="button" className="secondary picker-create-action" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}>Создать упражнение</button>}
         </div>
         {activeFilterChips.length > 0 && <div className="picker-active-filters" role="group" aria-label="Выбранные фильтры">
           {activeFilterChips.map((chip) => <button type="button" key={chip.key} aria-label={`Убрать фильтр: ${chip.label}`} onClick={() => { chip.remove(); requestAnimationFrame(() => filterButtonRef.current?.focus()) }}><span>{chip.label}</span><CloseIcon /></button>)}
@@ -605,6 +605,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           </div>}
         </>}
         {selectionError && <p className="error" role="alert">{selectionError}</p>}
+        {reference && !filtersOpen && selected.size === 0 && <div className="coach-catalog-create-bar"><button type="button" className="secondary picker-create-action coach-catalog-create-floating" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}><img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /></button></div>}
         {multiple && (selected.size > 0 || showEmptySelection) && (!reference || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
       </>}
     </section>

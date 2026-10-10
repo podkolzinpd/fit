@@ -102,8 +102,23 @@ round/rest/split семантика. WebKit/Chromium4/4 — обе identities, �
 отдых1:30, разделение/reload без потери фактов. Проверен штатно свёрнутый
 неактивный single, а не ошибочное ожидание всех форм в DOM.
 PR4 full check exit0: frontend2619/API1272+137 штатных skip/build;
-WebKit390 снимок просмотрен. PR4 перенесён на main40b5ae57;
-свежие проверки/CI впереди. PR5 реализован в следующей ветке.
-Production всего набора ещё не подтверждён.
+WebKit390 снимок просмотрен. PR4 повторно проверен на main40b5ae57:
+свежие full check exit0, WebKit/Chromium4/4 и просмотр снимка.
+CI38078270786 success; PR4 #1555 самостоятельно слит в main2c5cdc1a.
+PR2 production: deploy38077834808 success/public207/207 exact;
+browser19/20, точный повтор WebKit page.goto-timeout1/1 passed.
+PR3 production: mainCI38078238562/deploy38080195254 success;
+public readback ещё не выполнен.
+PR5 локально: плюс в собственном footer, список не уходит под него;
+filters/list min-height0, компактная шапка только при max-height480px.
+Окно отдыха ограничено видимой высотой и прокручивает содержимое без
+перекрытия колёс sticky-кнопкой. Механика времени/фильтров/добавления прежняя.
+WebKit/Chromium22/22: 320×430 обе identities, 375/390/430/1440,
+reduced keyboard viewport и trainer/client negative. Снимки просмотрены.
+До изменения воспроизведено перекрытие каталога WebKit2/2.
+PR5 full check exit0: frontend2619/API1272+137 штатных skip/build.
+PR5 #1556 перенесён на main2c5cdc1a с сохранением защиты retry PR2;
+свежие check/E2E/CI впереди. Production всего набора и финальная native
+проверка ещё не подтверждены; окончательный факт фиксируется в YAFIT-605.
 Подключённый KB search недоступен из-за отсутствия PyYAML;
 использованы утверждённый план, текущий код и прежние design-документы.
