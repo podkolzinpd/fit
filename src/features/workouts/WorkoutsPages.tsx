@@ -2863,6 +2863,9 @@ export function LiveWorkoutPage() {
   function acknowledgeLiveDraft(setId: string, savedDraft?: LiveSetDraft, confirmationComplete = false) {
     const pendingDraft = pendingSetDrafts.current.get(setId)
     if (savedDraft && pendingDraft && !sameLiveSetDraft(pendingDraft, savedDraft)) return
+    // A blur autosave is not an acknowledgement of the requested confirmation.
+    // Keep the pilot's draft available for the existing network retry until confirmed.
+    if (coachReference && !confirmationComplete && pendingSetConfirmations.current.has(setId)) return
     pendingSetDrafts.current.delete(setId)
     if (actor?.userId) {
       removePendingLiveSetDraft(actor.userId, workoutId, setId)
@@ -3626,7 +3629,7 @@ export function LiveWorkoutPage() {
     const isEditing = editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
-    const confirmationPending = clientLime && confirm.isPending && confirm.variables?.set.id === set.id
+    const confirmationPending = (clientLime || coachReference) && confirm.isPending && confirm.variables?.set.id === set.id
     const confirmationFailed = clientLime && confirm.isError && confirm.variables?.set.id === set.id
     const saveStatus = confirmationPending ? 'saving' : confirmationFailed ? 'error' : savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
     const setNumber = label?.match(/\d+/)?.[0]
@@ -3665,8 +3668,8 @@ export function LiveWorkoutPage() {
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
-                onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}><span aria-hidden="true">✓</span></button>
-            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}><span aria-hidden="true">✓</span></button>
+                onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
+            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
                 onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => {
@@ -3682,11 +3685,11 @@ export function LiveWorkoutPage() {
                     } else confirm.mutate({ set, draft })
                   }
                   skipBlurForSet.current = null
-                }}><span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span></button>}
+                }}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span>}</button>}
         </div>
         {coachReference && canManageLiveStructure && <button type="button" className="coach-live-remove-set" aria-label={`Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`} title={set.confirmedAt ? 'Выполненный подход нельзя удалить здесь' : exercise.blockType !== 'single' ? 'Подходы суперсета изменяются целым кругом' : exercise.sets.length <= 1 ? 'Оставьте хотя бы один подход' : 'Удалить подход'} disabled={Boolean(set.confirmedAt) || exercise.blockType !== 'single' || exercise.sets.length <= 1 || rootMutationPending || save.isPending || confirm.isPending} onClick={() => void requestRemoveLiveSet(exercise, set)}><CloseIcon /></button>}
       </WorkoutSetRow>
-      <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>
+      {(!coachReference || saveStatus === 'error') && <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>}
       {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
       {(showPlan || (clientLime && !set.confirmedAt)) && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
