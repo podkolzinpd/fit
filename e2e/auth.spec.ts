@@ -544,8 +544,9 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
 
   await page.goto('/me/workouts')
-  await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
   await expect(page.locator(`a[href="${new URL(workoutUrl).pathname}"]`)).toBeVisible()
+  await page.getByRole('tab', { name: 'История' }).click()
+  await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
 
   await page.getByRole('link', { name: 'Добавить' }).click()
   await expect(page.getByLabel('Клиент')).toHaveCount(0)
@@ -809,6 +810,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
   await page.goto('/me/workouts')
-  await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
+  await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.locator(`a[href="${sentPlanPath}"]`)).toBeVisible()
+  await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
 })

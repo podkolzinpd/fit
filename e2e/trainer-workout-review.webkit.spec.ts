@@ -235,6 +235,7 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await expect(feedbackCard).toContainText(clientComment)
   await page.goto('/me/workouts')
   await expectActionTextVerticallyCentered(page.getByRole('link', { name: 'Добавить', exact: true }))
+  await page.getByRole('tab', { name: 'История' }).click()
   const clientChronicleCard = page.locator('.workout-chronicle-card').filter({ hasText: review }).first()
   await expect(clientChronicleCard).toBeVisible()
   await expect(clientChronicleCard).toContainText('RPE 8/10')

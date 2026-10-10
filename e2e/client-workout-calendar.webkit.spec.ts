@@ -632,7 +632,7 @@ for (const role of ['trainer', 'client'] as const) {
   test(`${role}: calendar and list Back preserve the source without duplicate screens`, async ({ page }, testInfo) => {
     await mockNavigationWorkouts(page)
     await loginForHistory(page, role)
-    const path = role === 'trainer' ? clientHistoryPath : '/me/workouts'
+    const path = role === 'trainer' ? clientHistoryPath : '/me/workouts?tab=history'
     await page.goto(path)
     await dismissCalendarHint(page)
     await page.locator('.workout-chronicle-card').first().click()
