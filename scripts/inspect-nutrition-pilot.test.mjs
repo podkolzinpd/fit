@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { nativeNutritionKey, prepareNativeNutritionCohort } from './prepare-nutrition-native-cohort.mjs'
 import { readNutritionAccounts, resolveNutritionProfiles, verifyNutritionProfiles, readNutritionInspectionConfiguration,
   readNutritionRegistryMatches, summarizeNutritionRegistryMatches } from './inspect-nutrition-pilot.mjs'
 
@@ -9,6 +10,31 @@ const accounts = Array.from({ length: 5 }, (_, i) => ({ email: `synthetic-${i}@e
 const digest = a => createHash('sha256').update(a.map(x => `${x.role}:${x.email}`).sort().join('\n')).digest('hex')
 const users = accounts.map((a, i) => ({ email: a.email, id: `10000000-0000-4000-8000-00000000000${i}` }))
 const profiles = resolveNutritionProfiles(accounts, users)
+test('native cohort is derived only from the exact owner-approved private input, never registry or UUID guesses', () => {
+  const result = JSON.parse(prepareNativeNutritionCohort(JSON.stringify(accounts), digest(accounts)))
+  assert.equal(result.clients.length, 3)
+  assert.equal(result.trainers.length, 2)
+  assert.equal(new Set([...result.clients, ...result.trainers]).size, 5)
+  assert.match(result.clients[0], /^[0-9a-f]{64}$/)
+  assert.doesNotMatch(JSON.stringify(result), /email|example|synthetic|profile|subject/)
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(accounts)), /Unapproved/)
+  assert.equal(nativeNutritionKey('sample.name@yandex.ru'), nativeNutritionKey('sample-name'))
+  assert.notEqual(nativeNutritionKey('sample.name@example.test'), nativeNutritionKey('sample-name@example.test'))
+  assert.notEqual(nativeNutritionKey('sample@example.test'), nativeNutritionKey('sample'))
+})
+test('native release keeps trusted main, exact fingerprint, private server hashes and default-off public decisions', () => {
+  const stage = readFileSync(new URL('../.github/workflows/deploy-yandex-stage.yml', import.meta.url), 'utf8')
+  assert.equal(stage.split('run: node scripts/prepare-nutrition-native-cohort.mjs').length - 1, 2)
+  const prepare = readFileSync(new URL('./prepare-nutrition-native-cohort.mjs', import.meta.url), 'utf8')
+  assert.match(prepare, /GITHUB_REF !== 'refs\/heads\/main'/)
+  assert.match(prepare, /GITHUB_REPOSITORY !== 'podkolzinpd\/fit'/)
+  assert.doesNotMatch(prepare, /resolveNutritionProfiles|SUPABASE_ACCESS_TOKEN|nutrition-pilot-ids/)
+  for (const workflow of ['deploy-yandex-frontend', 'android-build']) {
+    const text = readFileSync(new URL(`../.github/workflows/${workflow}.yml`, import.meta.url), 'utf8')
+    assert.match(text, /VITE_NUTRITION_NATIVE_COHORT: \$\{\{ vars\.VITE_NUTRITION_NATIVE_COHORT \|\| 'false' \}\}/)
+    assert.doesNotMatch(text, /FIT_NUTRITION_ACCOUNT_COHORT/)
+  }
+})
 test('private inspection accepts the official root URL with or without a trailing slash, never another origin or path', () => {
   const ready = { SUPABASE_PROJECT_ID: 'abcdefghijklmnopqrst', MIGRATION_URL: 'https://synthetic123.containers.yandexcloud.net', YC_TOKEN: 'synthetic-iam-test-only' }
   for (const suffix of ['', '/']) {

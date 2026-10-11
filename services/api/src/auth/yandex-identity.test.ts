@@ -36,6 +36,8 @@ describe('YandexIdentityClient', () => {
         '4f10b35249b40fa95e6d9299e88d6a92990bc5bcf62ab0cb2b19f3a348145095',
       loginHash:
         '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71',
+      nutritionLoginHash:
+        '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71',
     })
     expect(fetchImplementation).toHaveBeenCalledWith(
       'https://login.yandex.ru/info?format=json',

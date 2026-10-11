@@ -3,6 +3,8 @@ import type { DatabaseClient, DatabasePool } from './db/types.js'
 import { withYandexActorSession, type YandexActorSession } from './yandex-actor-session.js'
 import { PilotDomainCommandError } from './domain-commands.js'
 import { publicNutritionFood, type NutritionCatalog, type NutritionValues } from './nutrition-catalog.js'
+import { nutritionProfileAllowed, type NutritionPilot } from './nutrition-pilot.js'
+export type { NutritionPilot } from './nutrition-pilot.js'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
@@ -39,7 +41,6 @@ interface FoodRow extends QueryResultRow {
   name: string; basis: FoodBasis; calories: string; protein: string | null; fat: string | null; carbs: string | null
 }
 interface ActorRow extends QueryResultRow { id: string; account_role: 'client' | 'trainer' }
-export interface NutritionPilot { clients: readonly string[]; trainers: readonly string[] }
 
 export function readNutritionPilot(enabled: string | undefined, clients: string | undefined, trainers: string | undefined): NutritionPilot | null {
   const parse = (input: string | undefined, count: number) => {
@@ -110,7 +111,7 @@ export class DatabaseNutritionDiary {
     const rows = await client.query<ActorRow>('select id, account_role from public.profiles where id = auth.uid()')
     const actor = rows[0]
     if (actor === undefined || (role !== undefined && actor.account_role !== role)
-      || !(actor.account_role === 'client' ? this.pilot.clients : this.pilot.trainers).includes(actor.id)) {
+      || !await nutritionProfileAllowed(client, this.pilot, actor.id, actor.account_role)) {
       throw new PilotDomainCommandError('forbidden')
     }
     return actor
@@ -142,7 +143,7 @@ export class DatabaseNutritionDiary {
         const clients = await client.query<{ auth_user_id: string }>(
           'select auth_user_id from public.clients where id = $1 and archived_at is null and merged_into_client_id is null', [clientId])
         const target = clients[0]?.auth_user_id
-        if (target === undefined || !this.pilot?.clients.includes(target)) throw new PilotDomainCommandError('forbidden')
+        if (target === undefined || !await nutritionProfileAllowed(client, this.pilot, target, 'client')) throw new PilotDomainCommandError('forbidden')
         owner = target
         const access = await client.query<{ allowed: boolean }>('select public.can_read_nutrition($1) allowed', [owner])
         if (access[0]?.allowed !== true) return { access: 'locked' as const, entries: [], totals: null }
@@ -228,15 +229,18 @@ export class DatabaseNutritionDiary {
         join public.clients c on c.id = connection.client_id and c.auth_user_id = auth.uid()
         left join public.nutrition_consents consent on consent.owner_id = auth.uid()
           and consent.client_id = connection.client_id and consent.trainer_id = connection.trainer_id
-          and consent.connection_started_at = connection.joined_at
-        where connection.trainer_id = any($1::uuid[])`, [this.pilot?.trainers ?? []])
-      return { connections: rows.map((row) => ({ clientId: row.client_id, trainerId: row.trainer_id,
+          and consent.connection_started_at = connection.joined_at`)
+      const allowed = []
+      for (const row of rows) {
+        if (await nutritionProfileAllowed(client, this.pilot, row.trainer_id, 'trainer')) allowed.push(row)
+      }
+      return { connections: allowed.map((row) => ({ clientId: row.client_id, trainerId: row.trainer_id,
         name: row.name || 'Тренер', connectionStartedAt: row.joined_at.toISOString(), granted: row.granted })) }
     }, 'client')
   }
   setConsent(session: YandexActorSession, clientId: string, trainerId: string, startedAt: string, granted: boolean) {
     return this.withActor(session, async (client) => {
-      if (!this.pilot?.trainers.includes(trainerId)) throw new PilotDomainCommandError('forbidden')
+      if (!await nutritionProfileAllowed(client, this.pilot, trainerId, 'trainer')) throw new PilotDomainCommandError('forbidden')
       const connections = await client.query(`select 1 from public.list_accessible_client_trainers() connection
         join public.clients c on c.id = connection.client_id and c.auth_user_id = auth.uid()
         where connection.client_id = $1 and connection.trainer_id = $2 and connection.joined_at = $3::timestamptz`,

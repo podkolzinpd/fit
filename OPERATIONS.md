@@ -1394,7 +1394,7 @@ Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
 ## Independent nutrition diary pilot — prepared, not activated
 
 YAFIT-608 is a separate default-off feature, unrelated to the Lime rollout.
-Its schema lives only in numbered Yandex migration142. The API uses native
+Its schema lives only in numbered Yandex migrations142/143. The API uses native
 app-session/actor transactions and RLS. The public food adapter reads only
 search/details facts; no shopping OAuth, orders, prices or store URLs enter UI.
 Do not import the whole catalog. The owner confirmed on-demand use of the open
@@ -1403,36 +1403,37 @@ responses in a filesystem (https://habr.com/ru/companies/vkusvill/articles/98186
 Only selected food facts are snapshotted in the diary. No bulk database license
 or undocumented anonymous quota is claimed; retain bounded requests/timeouts.
 
-Before inclusion, verify the exact five owner-approved profiles against the
-requested identities and roles, without publishing their emails or credentials.
-The manual main-only `inspect-nutrition-pilot.yml` resolves the exact five emails
-from a private `FIT_NUTRITION_ACCOUNT_COHORT` JSON array of `{email, role}` and
-checks its fixed approved fingerprint. It reads the existing legacy identity
-registry, then uses only `action=inspect` on the private IAM Yandex rollout route
-twice to validate current roles, domain roots and identity bindings. It never
-changes users, sessions, assignments or consent. The one-day output contains
-only the three client and two trainer UUID lists, no email correspondence.
-On 11 October, automatic security review rejected storing that email input in
-a new GitHub secret without explicit owner approval for that storage. No input
-was uploaded at that point. The owner subsequently explicitly approved this
-exact private storage; the five-account secret was stored and its presence
-verified without printing values. This is not proof of identity mapping.
-Publish the green implementation default-off first so the new main-only
-inspection workflow becomes available. Run it on main and verify its bounded
-five-profile result before setting either enabled flag. Keep both flags off if
-inspection fails; never infer profiles from another feature's cohort.
-Configure GitHub repository variables `FIT_NUTRITION_ENABLED=true`,
-`FIT_NUTRITION_CLIENT_USER_IDS` as a JSON array of exactly three verified profile
-UUIDs, and `FIT_NUTRITION_TRAINER_USER_IDS` as two distinct trainer UUIDs. These
-become API environment `NUTRITION_ENABLED`, `NUTRITION_CLIENT_USER_IDS` and
-`NUTRITION_TRAINER_USER_IDS` through Terraform. Missing/invalid/overlapping
-configuration fails closed; the server checks membership and role on every call.
+The owner confirmed that all five addresses identify CURRENT Yandex logins,
+not the legacy email registry. Do not retry the old registry inspection or
+derive native UUIDs from names, prefixes or another experiment's assignments.
+The exact approved `FIT_NUTRITION_ACCOUNT_COHORT` private secret is already
+authorized and stored. Trusted main's `prepare-nutrition-native-cohort.mjs`
+checks the original fixed fingerprint and derives exactly3 client/2 trainer
+login hashes. Yandex.ru accounts use native login equivalence (case, dot/hyphen);
+external email logins retain their entire address/domain. No new OAuth scopes.
+Set only `FIT_NUTRITION_ENABLED=true`; plan/apply derive the sensitive
+`nutrition_login_cohort` Terraform input themselves. The server independently
+validates the complete distinct3/2 shape. Never use stale legacy UUID variables
+for this release, never print contacts/hashes or export this input to frontend.
+
+After the user's NORMAL provider-verified OAuth login, the independent feature
+binder matches the exact approved hash to the EXISTING Yandex subject/profile.
+It requires the specified current role, domain root and active read-write
+rollout. Unique immutable subject/login/profile bindings and database3/2 caps
+reject alias collisions, role mismatch or profile reassignment. The binder
+never creates an account, changes identity/role/other pilots, or grants consent.
+Every diary API call rechecks the current protected binding against the private
+configured cohort. Disabled/revoked identities and changed roles fail closed.
 
 Deploy the green main API and its migrations through the existing Yandex stage
 workflow first. Verify release and schema. Then set `VITE_NUTRITION_ENABLED=true`
-and `VITE_NUTRITION_PILOT_USER_IDS` to the same five verified UUIDs as a CSV,
-and redeploy the Yandex frontend. No other cohort, Lime or AI variables change.
-UUIDs are public UI identifiers, not authorization; the server is authoritative.
+and `VITE_NUTRITION_NATIVE_COHORT=true`, then redeploy the Yandex frontend.
+The UI requires its independent enabled flag AND an explicit server nutrition
+decision in the native session profile. No decision never means all users;
+native mode never inherits a legacy UUID cohort. No other cohort/Lime/AI flags
+change. Already signed-in users need one normal Yandex sign-in to establish
+their verified feature-only binding; session recovery reads its current state.
+Do not impersonate users or claim that pending bindings are completed logins.
 Verify the published bundle and fresh native main build before closing the task.
 
 Client routes: `/me/nutrition?date=YYYY-MM-DD`; trainer route:

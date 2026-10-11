@@ -5,9 +5,9 @@ const actors = Array.from({ length: 5 }, (_, index) => `f00d0000-6010-4000-8000-
 const clientId = 'f00d0000-6010-4000-8000-000000000011'
 const food = { id: 'f00d0000-6010-4000-8000-000000000012', name: 'Курица с рисом', basis: '100g' as const,
   calories: 152.2, protein: 9.8, fat: 4.2, carbs: 18.8 }
-async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outside?: boolean; theme?: 'light' | 'dark'; lostResponse?: boolean } = {}) {
+async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outside?: boolean; nativeProfile?: boolean; denied?: boolean; theme?: 'light' | 'dark'; lostResponse?: boolean } = {}) {
   await page.clock.install({ time: new Date('2026-10-10T09:00:00Z') })
-  const role = options.role ?? 'client', actorId = options.outside ? 'f00d0000-6010-4000-8000-000000000009' : role === 'client' ? actors[0]! : actors[3]!
+  const role = options.role ?? 'client', actorId = options.outside || options.nativeProfile ? 'f00d0000-6010-4000-8000-000000000009' : role === 'client' ? actors[0]! : actors[3]!
   const state = { entries: [] as NutritionEntry[], granted: false, searchError: false, saved: 0, writes: 0 }
   await page.route('**/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: {
     'x-fit-request-id': 'nutrition-synthetic-health', 'access-control-expose-headers': 'x-fit-request-id',
@@ -18,7 +18,7 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
     if (path === '/v1/auth/yandex/session') return route.fulfill({ json: { accessMode: 'read_write', profile: { id: actorId,
       firstName: role === 'client' ? 'Анна' : 'Тренер', lastName: null, timezone: 'Europe/Moscow', accountRole: role,
       client: role === 'client' ? { id: clientId, trainerId: actors[3], fullName: 'Анна' } : null,
-      experiments: { clientLime: role === 'client', fitLime: role === 'trainer' && options.theme !== 'light', trainerScheduleV2: true } } } })
+      experiments: { nutrition: !options.outside && !options.denied, clientLime: role === 'client', fitLime: role === 'trainer' && options.theme !== 'light', trainerScheduleV2: true } } } })
     if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
     if (path === '/v1/clients') return route.fulfill({ json: { clients: [{ id: clientId, canArchive: false, hasAccount: true,
       fullName: 'Анна', canonicalFullName: 'Анна', gender: 'female', ageYears: 30, ageUpdatedAt: '2026-09-01', heightCm: 170,
@@ -72,6 +72,23 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
   return state
 }
 test.beforeEach(() => test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires isolated Yandex auth lane'))
+
+test('native nutrition accepts a verified profile decision without legacy UUID membership', async ({ page }) => {
+  await fixture(page, { nativeProfile: true })
+  await page.goto('/me/nutrition?date=2026-10-10')
+  await expect(page.getByRole('heading', { name: 'Дневник питания' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Добавить еду', exact: true })).toBeVisible()
+})
+
+test('native nutrition refuses a denied server decision even for a legacy-allowlisted UUID', async ({ page }) => {
+  await fixture(page, { denied: true })
+  const requests: string[] = []
+  page.on('request', request => { if (request.url().includes('/nutrition')) requests.push(request.url()) })
+  await page.goto('/me/nutrition?date=2026-10-10')
+  await expect(page).toHaveURL(/\/me$/)
+  await expect(page.getByRole('heading', { name: 'Дневник питания' })).toHaveCount(0)
+  expect(requests.filter(url => url.includes('/v1/'))).toEqual([])
+})
 
 async function verifiedFonts(page: Page) {
   // Production CSS is deliberately nonblocking. Wait for real declared faces,
