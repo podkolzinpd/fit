@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { readNutritionAccounts, resolveNutritionProfiles, verifyNutritionProfiles, readNutritionInspectionConfiguration } from './inspect-nutrition-pilot.mjs'
+import { readNutritionAccounts, resolveNutritionProfiles, verifyNutritionProfiles, readNutritionInspectionConfiguration,
+  readNutritionRegistryMatches, summarizeNutritionRegistryMatches } from './inspect-nutrition-pilot.mjs'
 
 const accounts = Array.from({ length: 5 }, (_, i) => ({ email: `synthetic-${i}@example.test`, role: i < 3 ? 'client' : 'trainer' }))
 const digest = a => createHash('sha256').update(a.map(x => `${x.role}:${x.email}`).sort().join('\n')).digest('hex')
@@ -42,6 +43,34 @@ test('legacy registry matches exact email, not prefix/name, rejects missing, amb
   assert.throws(() => resolveNutritionProfiles(accounts, [...users, users[0]]), /missing or not unique/)
   assert.throws(() => resolveNutritionProfiles(accounts, users.map(u => ({ ...u, email: u.email.replace('@', '+other@') }))), /missing or not unique/)
   assert.throws(() => resolveNutritionProfiles(accounts, users.map(u => ({ ...u, id: users[0].id }))), /must be distinct/)
+})
+test('bounded registry inspection does not treat short provider-capped pages as complete or retain unrelated users', async () => {
+  const pages = [[users[0], { email: 'unrelated@example.test', id: 'unrelated-private-id', metadata: 'private' }],
+    users.slice(1, 3), users.slice(3), []]
+  const calls = []
+  const matched = await readNutritionRegistryMatches(accounts, async page => {
+    calls.push(page)
+    return { users: pages[page - 1] }
+  })
+  assert.deepEqual(calls, [1, 2, 3, 4])
+  assert.deepEqual(matched, users)
+  assert.doesNotMatch(JSON.stringify(matched), /unrelated|metadata|private/)
+  assert.deepEqual(summarizeNutritionRegistryMatches(accounts, matched), { clients: 3, trainers: 2, missing: 0, ambiguous: 0, invalid: 0 })
+})
+test('registry inspection rejects nonterminal, malformed and oversized pages without relaxing the bound', async () => {
+  let calls = 0
+  await assert.rejects(readNutritionRegistryMatches(accounts, async () => { calls++; return { users: [users[0]] } }), /bounded scope/)
+  assert.equal(calls, 20)
+  for (const invalid of [{}, { users: null }, { users: Array(1001).fill(users[0]) }]) {
+    await assert.rejects(readNutritionRegistryMatches(accounts, async () => invalid), /Invalid identity registry page/)
+  }
+})
+test('unresolved cohort diagnostics contain only counts, never email, profile IDs or user records', () => {
+  const matched = [users[0], users[0], { ...users[1], id: 'invalid-private-id' }, users[3]]
+  const summary = summarizeNutritionRegistryMatches(accounts, matched)
+  assert.deepEqual(summary, { clients: 0, trainers: 1, missing: 2, ambiguous: 1, invalid: 1 })
+  assert.doesNotMatch(JSON.stringify(summary), /email|profile|[a-f0-9]{8}-|synthetic|example|private/)
+  assert.throws(() => resolveNutritionProfiles(accounts, matched), /missing or not unique/)
 })
 test('Yandex verification inspects each immutable profile and exports only role UUID lists, never emails or sessions', async () => {
   const calls = []

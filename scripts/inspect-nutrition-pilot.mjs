@@ -33,6 +33,35 @@ export function resolveNutritionProfiles(accounts, users) {
   return profiles
 }
 
+export async function readNutritionRegistryMatches(accounts, listPage) {
+  const matched = []
+  // A short page may reflect a provider-side cap, not the end of the registry.
+  // Require an empty terminal page within the same bounded 20-page scope.
+  for (let page = 1; page <= 20; page++) {
+    const result = await listPage(page)
+    if (!Array.isArray(result.users) || result.users.length > 1000) throw new Error('Invalid identity registry page')
+    if (result.users.length === 0) return matched
+    for (const user of result.users) {
+      if (typeof user?.email === 'string' && accounts.some(a => a.email === user.email.trim().toLowerCase())) {
+        matched.push({ id: user.id, email: user.email })
+      }
+    }
+  }
+  throw new Error('Identity registry inspection exceeded its bounded scope')
+}
+
+export function summarizeNutritionRegistryMatches(accounts, users) {
+  const summary = { clients: 0, trainers: 0, missing: 0, ambiguous: 0, invalid: 0 }
+  for (const account of accounts) {
+    const matches = users.filter(u => typeof u.email === 'string' && u.email.trim().toLowerCase() === account.email)
+    if (matches.length === 0) summary.missing++
+    else if (matches.length !== 1) summary.ambiguous++
+    else if (!uuid.test(matches[0].id)) summary.invalid++
+    else summary[account.role === 'client' ? 'clients' : 'trainers']++
+  }
+  return summary
+}
+
 export async function verifyNutritionProfiles(profiles, inspect) {
   for (const p of profiles) {
     // Existing private IAM route, action=inspect only: no identity/session
@@ -80,18 +109,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     catch { throw new Error('Legacy identity registry unavailable') }
     const key = keys.find(k => k.name === 'service_role' || k.name === 'secret')?.api_key
     if (typeof key !== 'string' || !key) throw new Error('Legacy identity registry credential unavailable')
-    const matched = []
-    let complete = false
-    for (let page = 1; page <= 20; page++) {
-      const result = await boundedJson(`https://${project}.supabase.co/auth/v1/admin/users?page=${page}&per_page=1000`,
-        { headers: { Authorization: `Bearer ${key}`, apikey: key } })
-      if (!Array.isArray(result.users)) throw new Error('Invalid identity registry page')
-      for (const user of result.users) if (accounts.some(a => a.email === user.email?.trim().toLowerCase())) {
-        matched.push({ id: user.id, email: user.email })
-      }
-      if (result.users.length < 1000) { complete = true; break }
-    }
-    if (!complete) throw new Error('Identity registry inspection exceeded its bounded scope')
+    const matched = await readNutritionRegistryMatches(accounts, page =>
+      boundedJson(`https://${project}.supabase.co/auth/v1/admin/users?page=${page}&per_page=1000`,
+        { headers: { Authorization: `Bearer ${key}`, apikey: key } }))
+    // Counts for the approved cohort only; never contacts, IDs or other users.
+    console.log('Approved cohort registry match counts:', JSON.stringify(summarizeNutritionRegistryMatches(accounts, matched)))
     const profiles = resolveNutritionProfiles(accounts, matched)
     const inspect = body => boundedJson(`${migrationUrl}/stage/rollout-assignments/yandex`, {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.YC_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
