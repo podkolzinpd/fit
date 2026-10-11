@@ -1,4 +1,5 @@
 -- Up Migration
+-- Pending migration renumbered after the earlier workout-feedback release141.
 -- Private normalized source data. The external retailer never enters UI DTOs.
 create table app_private.nutrition_food_catalog (
   id uuid primary key,

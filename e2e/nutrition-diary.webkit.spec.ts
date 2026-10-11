@@ -74,12 +74,14 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
 test.beforeEach(() => test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires isolated Yandex auth lane'))
 
 async function verifiedFonts(page: Page) {
-  const ready = await page.evaluate(async () => {
-    await Promise.all([document.fonts.load('400 16px "YS Geo"'), document.fonts.load('500 16px "YS Geo"')])
+  // Production CSS is deliberately nonblocking. Wait for real declared faces,
+  // not the transient fallback before a stylesheet registers its @font-face.
+  await expect.poll(() => page.evaluate(async () => {
+    const faces = await Promise.all([document.fonts.load('400 16px "YS Geo"'), document.fonts.load('500 16px "YS Geo"')])
     await document.fonts.ready
-    return document.fonts.check('400 16px "YS Geo"') && document.fonts.check('500 16px "YS Geo"')
-  })
-  expect(ready).toBe(true)
+    return faces.every((group) => group.length > 0 && group.every((face) => face.status === 'loaded'))
+      && document.fonts.check('400 16px "YS Geo"') && document.fonts.check('500 16px "YS Geo"')
+  })).toBe(true)
 }
 
 for (const theme of ['light', 'dark'] as const) test(`nutrition client complete diary flow ${theme}`, async ({ page }, info) => {

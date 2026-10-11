@@ -2122,6 +2122,7 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave, comple
   error: Error | null
   onSave: (value: WorkoutFeedbackDraft) => Promise<unknown>
 }) {
+  const { actor } = useAuth()
   const hasFeedback = workout.sessionRpe !== undefined && workout.wellbeing !== undefined && workout.discomfort !== undefined
   const [editing, setEditing] = useState(canEdit && !hasFeedback)
   const [saved, setSaved] = useState(false)
@@ -2141,10 +2142,8 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave, comple
   }, [editing, workout.clientComment, workout.discomfort, workout.id, workout.sessionRpe, workout.wellbeing])
 
   if (!canEdit && !hasFeedback) return null
-  const needsExplanation = discomfort === true || (sessionRpe ?? 0) >= 9
-  const showNote = noteOpen || needsExplanation
+  const showNote = noteOpen || discomfort === true
   const valid = sessionRpe !== undefined && wellbeing !== undefined && discomfort !== undefined
-    && (!needsExplanation || comment.trim().length > 0)
 
   if (!editing) return <section className="workout-review workout-feedback workout-review-readonly" aria-labelledby="workout-feedback-title">
     <div className="workout-review-head">
@@ -2172,31 +2171,31 @@ function WorkoutClientFeedback({ workout, canEdit, saving, error, onSave, comple
       // тот же submit, а RPC безопасно дедуплицирует потерянный ответ.
     }
   }}>
-    <div className="workout-review-head"><div><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div>
+    <Coachmark id="workout-feedback-compact-2026-10" userId={actor?.userId} title="Итоги стали компактнее" description="Нагрузка теперь выбирается ползунком, а заметка необязательна даже при 10/10."><div className="workout-review-head"><div><h2 id="workout-feedback-title">Как прошла тренировка?</h2></div></div></Coachmark>
     <fieldset className="workout-feedback-fieldset">
-      <legend>Нагрузка</legend>
+      <legend className="sr-only">Нагрузка</legend>
       <WorkoutRpeScale aria-label="Нагрузка по шкале RPE" value={sessionRpe} disabled={saving} onChange={setSessionRpe} />
     </fieldset>
     <fieldset className="workout-feedback-fieldset">
       <legend>Самочувствие после</legend>
-      <div className="workout-feedback-options">
+      <div className="workout-feedback-options workout-feedback-segment">
         {(Object.keys(wellbeingLabels) as WorkoutWellbeing[]).map((value) => <WorkoutChoice key={value} className="workout-feedback-option" selected={wellbeing === value} disabled={saving} onClick={() => setWellbeing(value)}>{wellbeingLabels[value]}</WorkoutChoice>)}
       </div>
     </fieldset>
-    <fieldset className="workout-feedback-fieldset">
-      <legend>Боль или дискомфорт?</legend>
-      <div className="workout-feedback-options">
+    <div className="workout-feedback-pain" role="group" aria-labelledby="workout-discomfort-label">
+      <span id="workout-discomfort-label">Боль или дискомфорт?</span>
+      <div className="workout-feedback-options workout-feedback-segment">
         <WorkoutChoice className="workout-feedback-option" selected={discomfort === false} disabled={saving} onClick={() => setDiscomfort(false)}>Нет</WorkoutChoice>
         <WorkoutChoice className="workout-feedback-option" selected={discomfort === true} tone="destructive" disabled={saving} onClick={() => setDiscomfort(true)}>Да</WorkoutChoice>
       </div>
-    </fieldset>
-    {!showNote && <button type="button" className="link workout-feedback-note-toggle" disabled={saving} onClick={() => setNoteOpen(true)}>Добавить заметку</button>}
-    {showNote && <Field label={discomfort ? 'Где и насколько сильно?' : (sessionRpe ?? 0) >= 9 ? 'Почему было настолько тяжело?' : 'Заметка'}>
+    </div>
+    {!showNote && <div className="workout-feedback-note-row"><button type="button" className="link workout-feedback-note-toggle" disabled={saving} onClick={() => setNoteOpen(true)}>Добавить заметку</button><span>Необязательно</span></div>}
+    {showNote && <Field label={discomfort ? 'Где и насколько сильно? (необязательно)' : 'Заметка (необязательно)'}>
       <textarea aria-label="Заметка к итогам тренировки" rows={3} maxLength={500}
-        placeholder={discomfort ? 'Например: правое плечо, умеренно, при жиме' : (sessionRpe ?? 0) >= 9 ? 'Например: не восстановился или не выспался' : 'Что важно отметить?'}
-        value={comment} onChange={(event) => setComment(event.target.value)} />
+        placeholder={discomfort ? 'Например: правое плечо, умеренно, при жиме' : 'Что важно отметить?'}
+        disabled={saving} value={comment} onChange={(event) => setComment(event.target.value)} />
     </Field>}
-    {showNote && !needsExplanation && <button type="button" className="link workout-feedback-note-toggle" disabled={saving} onClick={() => { setNoteOpen(false); setComment('') }}>Убрать заметку</button>}
+    {showNote && discomfort !== true && <button type="button" className="link workout-feedback-note-toggle" disabled={saving} onClick={() => { setNoteOpen(false); setComment('') }}>Убрать заметку</button>}
     {error && <p className="error">{error.message}</p>}
     <div className="actions workout-review-actions workout-action-row">
       {hasFeedback && <WorkoutCta type="button" variant="tertiary" disabled={saving} onClick={() => setEditing(false)}>Отмена</WorkoutCta>}

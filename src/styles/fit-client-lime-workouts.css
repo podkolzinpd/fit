@@ -330,3 +330,14 @@
   width: calc(100% + var(--client-detail-actions-width) + 64px);
   margin-left: -56px;
 }
+
+/* Compact feedback retains client Lime tokens and accessible control sizes. */
+.phone-frame.fit-client-lime .workout-rpe-scale { --rpe-accent:var(--lime-accent); --rpe-track:var(--lime-divider); }
+.phone-frame.fit-client-lime .workout-rpe-scale-value > span { font-size:16px; }
+.phone-frame.fit-client-lime .workout-feedback .workout-feedback-segment { gap:0; border-color:var(--lime-divider); border-radius:var(--radius-md); background:var(--lime-surface); }
+.phone-frame.fit-client-lime .workout-feedback .workout-feedback-segment .workout-feedback-option { border-radius:0; }
+.phone-frame.fit-client-lime .workout-feedback .workout-feedback-segment .workout-feedback-option + .workout-feedback-option { border-left-color:var(--lime-divider); }
+.phone-frame.fit-client-lime .workout-feedback-pain > span { font-size:14px; }
+
+.phone-frame.fit-client-lime input.workout-rpe-slider { height:44px; min-height:44px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
+.phone-frame.fit-client-lime form.workout-feedback .workout-cta[data-variant='primary']:not(:disabled) { border-color:var(--lime-text); background:var(--lime-text); color:var(--lime-bg); }

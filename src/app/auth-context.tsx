@@ -5,7 +5,7 @@ import { authRepository } from '../data/repositories/auth.repository'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
 import { isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useOptionalYandexAppSession } from './yandex-app-session-context'
-import { clearNutritionForms } from '../features/nutrition'
+import { clearNutritionForms } from '../shared/nutrition-session'
 
 interface AuthUser {
   id: string

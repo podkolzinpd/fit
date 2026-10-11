@@ -2125,9 +2125,9 @@ const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort'> & { sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort' | 'clientComment' | 'feedbackSubmittedAt'> & { clientComment:string | null; feedbackSubmittedAt:string | null; sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number } = {}) {
+async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number; showFeedbackNotice?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
@@ -2178,12 +2178,14 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
   await page.route('http://127.0.0.1:4100/health', async (route) => {
     await route.fulfill({ status: 200, headers: { 'x-fit-request-id': 'pilot-health-check', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-fit-request-id' }, contentType: 'application/json', body: '{"ok":true}' })
   })
-  await page.addInitScript(({ token, profileId }) => {
+  await page.addInitScript(({ token, profileId, showFeedbackNotice }) => {
     localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
       token,
       expiresAt: '2099-01-01T00:00:00.000Z',
     }))
-    localStorage.setItem(`fit.coachmarks-seen.${profileId}`, JSON.stringify([
+    const coachmarkKey = `fit.coachmarks-seen.${profileId}`
+    const seen = JSON.parse(localStorage.getItem(coachmarkKey) ?? '[]') as string[]
+    localStorage.setItem(coachmarkKey, JSON.stringify([...seen,
       'assistant-all-trainers-2026-09',
       'client-assistant-2026-09',
       'missed-workout-actions-2026-08',
@@ -2198,8 +2200,9 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       'lime-schedule-history-2026-10',
       'lime-schedule-ownership-2026-10',
       'client-live-multiple-exercises-2026-10',
+      ...(showFeedbackNotice ? [] : ['workout-feedback-compact-2026-10']),
     ]))
-  }, { token: sessionToken, profileId })
+  }, { token: sessionToken, profileId, showFeedbackNotice: options.showFeedbackNotice ?? false })
   await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
     const url = new URL(route.request().url())
     let body: unknown
@@ -2469,6 +2472,13 @@ async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; pro
       const finished = url.pathname.endsWith('/finish')
       workouts = workouts.map((item) => item.id === id ? { ...item, status: finished ? 'done' : 'in_progress', completedAt: finished ? '2026-09-24T12:00:00Z' : null, version: item.version + 1 } : item)
       body = { workout: { version: workouts.find((item) => item.id === id)!.version } }
+    } else if (/^\/v1\/workouts\/[^/]+\/feedback$/.test(url.pathname) && route.request().method() === 'PUT') {
+      const draft = route.request().postDataJSON() as { sessionRpe:number; wellbeing:'good' | 'normal' | 'bad'; discomfort:boolean; comment:string; expectedVersion:number }
+      const current = workouts.find((item) => item.id === url.pathname.split('/')[3])!
+      current.sessionRpe = draft.sessionRpe; current.wellbeing = draft.wellbeing; current.discomfort = draft.discomfort
+      current.clientComment = draft.comment.trim() || null; current.feedbackSubmittedAt = '2026-10-10T12:00:00Z'
+      current.version += 1
+      body = { workout: { version:current.version } }
     } else if (url.pathname === '/v1/workouts/quick-start' && route.request().method() === 'POST') {
       workouts = [{ ...workout, id: newWorkoutId, status: 'in_progress' }]
       body = { workout: { id: newWorkoutId, resumed: false } }
@@ -7785,3 +7795,122 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   await expect(page.locator('.live-empty-start')).toBeVisible()
   await expect(notice).toHaveCount(0)
  })
+
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Compact workout feedback saves 9 and 10 without notes ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height:844 })
+    const source: MockWorkout = { ...workout, status:'done', completedAt:'2026-10-10T10:00:00Z', sessionRpe:null, wellbeing:null, discomfort:null, clientComment:null }
+    await mockPilot(page, { role:'client', profileId:clientId, workouts:[source] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`,theme), { id:clientId, theme })
+    await page.goto(`/workouts/${workoutId}`)
+    await page.evaluate(async () => { await Promise.all([document.fonts.load('400 16px "YS Geo"'), document.fonts.load('500 16px "YS Geo"')]) })
+    const card = page.locator('.workout-feedback')
+    const slider = card.getByRole('slider', { name:'Нагрузка по шкале RPE' })
+    const save = card.getByRole('button', { name:'Сохранить итоги', exact:true })
+    await expect(slider).toHaveAttribute('aria-valuetext','Нагрузка не выбрана')
+    await expect(save).toBeDisabled()
+    await expect(card.getByRole('textbox')).toHaveCount(0)
+    await card.getByRole('button', { name:'Хорошо', exact:true }).click()
+    await card.getByRole('button', { name:'Нет', exact:true }).click()
+    await expect(save).toBeDisabled()
+    await slider.scrollIntoViewIfNeeded()
+    const box = (await slider.boundingBox())!
+    expect(box.height).toBeGreaterThanOrEqual(44)
+    await slider.tap({ position:{ x:13, y:box.height/2 } })
+    await expect(slider).toHaveAttribute('aria-valuetext','1 из 10 — Очень легко')
+    await slider.tap({ position:{ x:box.width-13, y:box.height/2 } })
+    await expect(slider).toHaveValue('10')
+    await slider.focus(); await slider.press('Home'); await expect(slider).toHaveValue('1')
+    await slider.press('End'); await expect(slider).toHaveValue('10')
+    await expect(save).toBeEnabled()
+    await expect(card.getByRole('textbox')).toHaveCount(0)
+    await slider.blur()
+    await card.screenshot({ path:info.outputPath('compact-feedback-10.png') })
+    expect((await card.boundingBox())!.height).toBeLessThan(440)
+    expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    let attempts=0
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => { release=resolve })
+    const writes:Array<{ sessionRpe:number; discomfort:boolean; comment:string }> = []
+    await page.route('**/v1/workouts/*/feedback',async (route) => {
+      if (route.request().method() !== 'PUT') return route.fallback()
+      writes.push(route.request().postDataJSON() as typeof writes[number]); attempts += 1
+      if (attempts===1) { await gate; return route.fulfill({ status:503, contentType:'application/json', body:'{"error":"unavailable"}' }) }
+      return route.fallback()
+    })
+    await save.click()
+    try {
+      await expect(slider).toBeDisabled()
+      await expect(card.getByRole('button', { name:'Хорошо', exact:true })).toBeDisabled()
+      await expect(card.getByRole('button', { name:'Сохраняем…', exact:true })).toBeDisabled()
+    } finally { release() }
+    await expect(card.locator('.error')).toBeVisible()
+    await expect(slider).toHaveValue('10'); await expect(save).toBeEnabled()
+    await save.click()
+    await expect(card).toHaveClass(/workout-review-readonly/)
+    expect(writes[0]).toMatchObject({ sessionRpe:10, discomfort:false, comment:'' })
+    expect(writes[1]).toEqual(writes[0])
+    await page.reload(); await expect(card).toContainText('RPE 10/10')
+    await card.getByRole('button', { name:'Изменить', exact:true }).click()
+    await slider.focus(); await slider.press('ArrowLeft'); await expect(slider).toHaveValue('9')
+    await card.getByRole('button', { name:'Да', exact:true }).click()
+    await expect(card.getByRole('textbox', { name:'Заметка к итогам тренировки' })).toBeVisible()
+    await expect(card).toContainText('необязательно')
+    await expect(save).toBeEnabled(); await save.click()
+    await expect(card).toHaveClass(/workout-review-readonly/)
+    expect(writes[2]).toMatchObject({ sessionRpe:9, discomfort:true, comment:'' })
+    await card.getByRole('button', { name:'Изменить', exact:true }).click()
+    await card.getByRole('button', { name:'Нет', exact:true }).click()
+    await card.getByRole('button', { name:'Добавить заметку', exact:true }).click()
+    await card.getByRole('textbox', { name:'Заметка к итогам тренировки' }).fill('Тяжёлая тренировка по плану, всё хорошо.')
+    await card.screenshot({ path:info.outputPath('compact-feedback-note.png') })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await card.getByRole('button', { name:'Убрать заметку', exact:true }).click()
+    await expect(card.getByRole('textbox')).toHaveCount(0)
+    await card.getByRole('button', { name:'Добавить заметку', exact:true }).click()
+    await card.getByRole('textbox', { name:'Заметка к итогам тренировки' }).fill('По плану')
+    await save.click(); await expect(card).toContainText('По плану')
+    await page.reload(); await expect(card).toContainText('По плану')
+  })
+}
+
+test('Compact workout feedback retains Mono controls and trainer read-only results', async ({ page }, info) => {
+  await page.setViewportSize({ width:430,height:932 })
+  await mockPilot(page, { role:'client',profileId:clientId,clientLime:false,workouts:[{ ...workout,status:'done',completedAt:'2026-10-10T10:00:00Z',sessionRpe:null,wellbeing:null,discomfort:null }] })
+  await page.goto(`/workouts/${workoutId}`)
+  const card=page.locator('.workout-feedback')
+  await expect(card.getByRole('slider')).toBeVisible()
+  await card.screenshot({ path:info.outputPath('compact-feedback-mono.png') })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.setViewportSize({ width:1440,height:1000 })
+  await mockPilot(page, { workouts:[{ ...workout,status:'done',completedAt:'2026-10-10T10:00:00Z',sessionRpe:10,wellbeing:'good',discomfort:false,clientComment:null }] })
+  await page.goto(`/workouts/${workoutId}`)
+  await expect(page.getByRole('region', { name:'Итоги тренировки', exact:true })).toBeVisible()
+  await expect(page.getByRole('slider')).toHaveCount(0)
+  await page.screenshot({ path:info.outputPath('trainer-feedback-readonly.png') })
+})
+
+test('Compact workout feedback explains the new control once', async ({ page }, info) => {
+  await page.setViewportSize({ width:390,height:844 })
+  await mockPilot(page, { role:'client',profileId:clientId,showFeedbackNotice:true,workouts:[{ ...workout,status:'done',completedAt:'2026-10-10T10:00:00Z',sessionRpe:null,wellbeing:null,discomfort:null }] })
+  await page.addInitScript((id) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`,'light')
+
+  },clientId)
+  await page.goto(`/workouts/${workoutId}`)
+  await page.evaluate(async () => { await Promise.all([document.fonts.load('400 16px "YS Geo"'), document.fonts.load('500 16px "YS Geo"')]) })
+  const notice=page.locator('.coachmark-bubble').filter({ hasText:'Итоги стали компактнее' })
+  await expect(notice).toBeVisible()
+  await notice.getByRole('button', { name:'Понятно',exact:true }).click()
+  expect(await page.evaluate((id) => JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]') as string[],clientId)).toContain('workout-feedback-compact-2026-10')
+  await page.reload(); await expect(page.locator('.workout-feedback')).toBeVisible(); await expect(notice).toHaveCount(0)
+  const card=page.locator('.workout-feedback')
+  const slider=card.getByRole('slider')
+  await slider.focus(); await slider.press('End')
+  await card.getByRole('button', { name:'Хорошо',exact:true }).click()
+  await card.getByRole('button', { name:'Нет',exact:true }).click()
+  await card.evaluate((element) => element.scrollIntoView({ block:'center' }))
+  await card.screenshot({ path:info.outputPath('compact-feedback-approved-live.png') })
+  await expect(card.getByRole('button', { name:'Сохранить итоги',exact:true })).toBeEnabled()
+})

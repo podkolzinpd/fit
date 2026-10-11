@@ -1394,7 +1394,7 @@ Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
 ## Independent nutrition diary pilot — prepared, not activated
 
 YAFIT-608 is a separate default-off feature, unrelated to the Lime rollout.
-Its schema lives only in numbered Yandex migration141. The API uses native
+Its schema lives only in numbered Yandex migration142. The API uses native
 app-session/actor transactions and RLS. The public food adapter reads only
 search/details facts; no shopping OAuth, orders, prices or store URLs enter UI.
 Do not import the whole catalog. Confirm source reuse/storage terms and exact
