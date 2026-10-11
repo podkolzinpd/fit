@@ -29,7 +29,7 @@
   const animations = new Set();
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
-  const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,2],[0,4],[0,1,2]];
+  const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
   timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
   if(fin124)timeline.splice(timeline.length-1,1,...fin124.stops.map(n=>[...Array(n).keys()]));
   extraSlides.forEach(i=>timeline.splice(i,0,[0]));
@@ -42,7 +42,7 @@
     ['Весь маршрут','Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск клиентов'],
     ['Все возможности','Голосом или текстом','Слова → упражнения','План','Выполнение','Завершение','Было → стало','Карта тела','Все возможности'],
     ['14 сентября','20 сентября','4 октября','Записи тренировок','Итог и методика'],
-    ['Тренеры и клиенты','Яндекс Плюс','Спортивные события','Обучение тренеров','Экосистема Яндекса','Все каналы'],
+    ['Тренеры и клиенты','Яндекс Плюс','Экосистема Яндекса','Обучение тренеров','Спортивные события','Все каналы'],
     ['Мессенджер · Телемост','Pay · Сплит','Бенефит для компаний','Директ · Практикум','Лавка · Еда · Маркет','Все сценарии'],
     ['Подписка','Комиссия','Реклама','Вся модель']
   ];
@@ -191,6 +191,9 @@
   qa('.meeting-growth-bar-row',growth).forEach((el,i)=>phase(el,i));
   phase(q('.meeting-growth-workouts',growth),3);phase(q('.meeting-growth-bottom',growth),4);
   // Distribution, ecosystem, monetisation: controlled emphasis, not new claims.
+  const channelContent=q('.content',scope[7]);
+  const channelRows=[...channelContent.children];
+  [0,1,4,3,2].forEach(i=>channelContent.append(channelRows[i]));
   [7,8].forEach(i=>{scope[i].classList.add('m-editorial');qa('.content>div',scope[i]).forEach((el,j)=>phase(el,j));});
   // Integration status remains in speaker notes, not on the presentation canvas.
   // Practicum already has its own explanation on the acquisition slide.
