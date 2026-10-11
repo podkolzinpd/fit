@@ -1,11 +1,48 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFile } from 'node:child_process'
 
 const resourceId = /^[a-z0-9]{20}$/
 const functionName = 'fit-send-push-notifications'
 const secretName = 'fit-send-push-notifications-secrets'
 const functionsUrl = 'https://serverless-functions.api.cloud.yandex.net/functions/v1/functions'
 const secretsUrl = 'https://lockbox.api.cloud.yandex.net/lockbox/v1/secrets'
+
+// Same official HTTPS GETs and IAM. The hosted reader uses the system HTTP
+// client, with explicit IPv4/HTTP1.1, rather than Node's failing direct socket.
+// No fallback/retry, redirects, payload endpoints or credentials in argv/files.
+export async function curlMetadataFetch(value, options, { execFileImplementation = execFile } = {}) {
+  let url
+  try { url = new URL(value) } catch { throw new Error('Immutable metadata transport configuration invalid') }
+  const permitted = (url.origin === new URL(functionsUrl).origin && url.pathname === '/functions/v1/functions')
+    || (url.origin === new URL(secretsUrl).origin && /^\/lockbox\/v1\/secrets(?:\/[a-z0-9]{20})?$/.test(url.pathname))
+  const authorization = options?.headers?.Authorization
+  if (!permitted || url.username || url.password || url.hash || options?.method !== 'GET'
+    || options?.redirect !== 'error' || options.body !== undefined
+    || typeof authorization !== 'string' || !/^Bearer [A-Za-z0-9._=-]{1,8192}$/.test(authorization)) {
+    throw new Error('Immutable metadata transport configuration invalid')
+  }
+  options.signal?.throwIfAborted()
+  const args = ['--silent', '--ipv4', '--http1.1', '--proto', '=https', '--request', 'GET',
+    '--connect-timeout', '5', '--max-time', '15', '--max-filesize', '1048576',
+    '--write-out', '\n%{http_code}', '--config', '-', '--url', url.href]
+  const stdout = await new Promise((resolveOutput, rejectOutput) => {
+    const child = execFileImplementation('curl', args, { encoding: 'utf8', timeout: 15000,
+      maxBuffer: 1024 * 1024 + 8, ...(options.signal ? { signal: options.signal } : {}) }, (error, output) => {
+      if (error || typeof output !== 'string') rejectOutput(new Error('Immutable metadata transport failure'))
+      else resolveOutput(output)
+    })
+    // Header only over stdin; captured subprocess errors never leave this scope.
+    child.stdin?.on('error', () => rejectOutput(new Error('Immutable metadata transport failure')))
+    if (!child.stdin) rejectOutput(new Error('Immutable metadata transport failure'))
+    else child.stdin.end(`header = "Authorization: ${authorization}"\n`)
+  })
+  const boundary = stdout.lastIndexOf('\n'), status = Number(stdout.slice(boundary + 1))
+  if (boundary < 0 || !/^[1-5][0-9]{2}$/.test(stdout.slice(boundary + 1)) || boundary > 1024 * 1024) {
+    throw new Error('Immutable metadata transport response invalid')
+  }
+  return new Response([204, 205, 304].includes(status) ? null : stdout.slice(0, boundary), { status })
+}
 
 // Official read-only REST metadata methods, same IAM identity and resources as
 // the former CLI lookups. Never invoke a function or read a secret payload.
@@ -89,7 +126,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
     // Captured by command substitution inside the trusted workflow. These are
     // resource/version IDs only: never IAM tokens, payloads or user data.
-    console.log(JSON.stringify(await readImmutablePushMetadata(process.env)))
+    console.log(JSON.stringify(await readImmutablePushMetadata(process.env, { fetchImplementation: curlMetadataFetch })))
   } catch (error) {
     console.error(error.message)
     process.exitCode = 1
