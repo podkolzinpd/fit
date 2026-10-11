@@ -8,11 +8,118 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import { SMOKE_BUDGET_MS, runSmokeRequest, safeRequestMetadata, verifyFixtureBudget } from './yandex-stage-smoke.mjs'
+import { readImmutablePushMetadata } from './deploy-yandex-stage-workflow.mjs'
+
+const metadataEnvironment = { YC_PUSH_FOLDER_ID: 'd'.repeat(20), YC_PUSH_FUNCTION_NAME: 'fit-send-push-notifications',
+  YC_PUSH_LOCKBOX_NAME: 'fit-send-push-notifications-secrets', YC_TOKEN: 'synthetic-iam-test-only' }
+const metadataFunction = { id: 'f'.repeat(20), folderId: metadataEnvironment.YC_PUSH_FOLDER_ID,
+  name: metadataEnvironment.YC_PUSH_FUNCTION_NAME, status: 'ACTIVE' }
+const metadataSecret = { id: 's'.repeat(20), folderId: metadataEnvironment.YC_PUSH_FOLDER_ID,
+  name: metadataEnvironment.YC_PUSH_LOCKBOX_NAME, status: 'ACTIVE',
+  currentVersion: { id: 'v'.repeat(20), secretId: 's'.repeat(20), status: 'ACTIVE' } }
+const metadataJson = value => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
+function metadataFetch(overrides = {}, calls = []) {
+  return async (value, options) => {
+    const url = new URL(value)
+    calls.push({ url, options })
+    if (url.hostname === 'serverless-functions.api.cloud.yandex.net') return metadataJson({ functions: [overrides.fn ?? metadataFunction] })
+    if (url.pathname.endsWith('/secrets')) return metadataJson({ secrets: [metadataSecret] })
+    return metadataJson(overrides.secret ?? metadataSecret)
+  }
+}
+test('immutable push REST reader uses only official GET metadata APIs, exact folder/name, same IAM and no payloads', async () => {
+  const calls = []
+  const result = await readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: metadataFetch({}, calls) })
+  assert.deepEqual(result, { functionId: metadataFunction.id, sourceSecretId: metadataSecret.id, sourceSecretVersionId: metadataSecret.currentVersion.id })
+  assert.equal(calls.length, 3)
+  assert.deepEqual(calls.map(c => c.url.hostname), ['serverless-functions.api.cloud.yandex.net', 'lockbox.api.cloud.yandex.net', 'lockbox.api.cloud.yandex.net'])
+  assert.equal(calls[0].url.searchParams.get('filter'), 'name="fit-send-push-notifications"')
+  for (const { url, options } of calls) {
+    assert.equal(options.method, 'GET')
+    assert.equal(options.redirect, 'error')
+    assert.equal(options.body, undefined)
+    assert.equal(options.headers.Authorization, 'Bearer synthetic-iam-test-only')
+    assert.doesNotMatch(url.href, /payload|invoke|versions|accessBindings/)
+  }
+  assert.doesNotMatch(JSON.stringify(result), /token|secret-value|description|Bearer|synthetic/)
+})
+test('immutable metadata cannot select another folder/name, inactive function or mismatched current secret/version', async () => {
+  for (const env of [{ ...metadataEnvironment, YC_PUSH_FOLDER_ID: 'invalid' },
+    { ...metadataEnvironment, YC_PUSH_FUNCTION_NAME: 'other-function' },
+    { ...metadataEnvironment, YC_PUSH_LOCKBOX_NAME: 'other-secret' }, { ...metadataEnvironment, YC_TOKEN: '' }]) {
+    let calls = 0
+    await assert.rejects(readImmutablePushMetadata(env, { fetchImplementation: async () => { calls++; throw new Error() } }), /configuration invalid/)
+    assert.equal(calls, 0)
+  }
+  for (const fn of [{ ...metadataFunction, id: 'invalid' }, { ...metadataFunction, folderId: 'e'.repeat(20) },
+    { ...metadataFunction, name: 'other-function' }, { ...metadataFunction, status: 'DELETING' }]) {
+    await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: metadataFetch({ fn }) }), /missing or ambiguous|not active/)
+  }
+  for (const secret of [{ ...metadataSecret, id: 'x'.repeat(20) }, { ...metadataSecret, name: 'other-secret' },
+    { ...metadataSecret, folderId: 'e'.repeat(20) }, { ...metadataSecret, status: 'INACTIVE' },
+    { ...metadataSecret, currentVersion: undefined },
+    { ...metadataSecret, currentVersion: { ...metadataSecret.currentVersion, id: 'invalid' } },
+    { ...metadataSecret, currentVersion: { ...metadataSecret.currentVersion, secretId: 'x'.repeat(20) } },
+    { ...metadataSecret, currentVersion: { ...metadataSecret.currentVersion, status: 'DESTROYED' } }]) {
+    await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: metadataFetch({ secret }) }), /secret version invalid/)
+  }
+})
+test('immutable metadata reads complete bounded pagination, ignores unrelated metadata and rejects ambiguity/loops', async () => {
+  const calls = []
+  const fetchImplementation = async (value, options) => {
+    const url = new URL(value)
+    if (url.hostname === 'serverless-functions.api.cloud.yandex.net') return metadataJson({ functions: [metadataFunction] })
+    if (!url.pathname.endsWith('/secrets')) return metadataJson(metadataSecret)
+    calls.push({ url, options })
+    return url.searchParams.has('pageToken') ? metadataJson({ secrets: [metadataSecret] })
+      : metadataJson({ secrets: [{ id: 'unrelated', name: 'unrelated-private-name', description: 'private' }], nextPageToken: 'page2' })
+  }
+  const result = await readImmutablePushMetadata(metadataEnvironment, { fetchImplementation })
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].url.searchParams.get('pageToken'), 'page2')
+  assert.doesNotMatch(JSON.stringify(result), /unrelated|private|description/)
+  await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: async () => metadataJson({ functions: [metadataFunction, metadataFunction] }) }), /missing or ambiguous/)
+  await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: async () => metadataJson({ functions: [metadataFunction], nextPageToken: 'same' }) }), /pagination invalid/)
+  let pages = 0
+  await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: async () => metadataJson({ functions: [], nextPageToken: `page${++pages}` }) }), /pagination exceeded/)
+  assert.equal(pages, 20)
+})
+test('immutable metadata never retries failures or leaks provider bodies/tokens and bounds malformed/oversized responses', async () => {
+  for (const status of [401, 403, 404, 500]) {
+    let calls = 0
+    await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: async () => {
+      calls++; return new Response('secret-value Bearer synthetic-iam-test-only hidden@example.test', { status })
+    } }), error => error.message === `Immutable push metadata HTTP ${status}`)
+    assert.equal(calls, 1)
+  }
+  await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: async () => { throw new Error('secret-value') } }), error => error.message === 'Immutable push metadata network failure')
+  for (const body of ['secret-value', 'x'.repeat(1024 * 1024 + 1)]) {
+    await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { fetchImplementation: async () => new Response(body) }), error => error.message === 'Immutable push metadata response invalid')
+  }
+  let clock = 0
+  let calls = 0
+  await assert.rejects(readImmutablePushMetadata(metadataEnvironment, { now: () => clock, fetchImplementation: async () => {
+    calls++; clock = 60000; return metadataJson({ functions: [metadataFunction] })
+  } }), /deadline exceeded/)
+  assert.equal(calls, 1)
+})
 
 const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-stage.yml'),
   'utf8',
 )
+test('both plan/apply reuse the read-only metadata reader while original payload, IAM and plan checks stay mandatory', () => {
+  assert.equal((workflow.match(/metadata=\$\(node scripts\/deploy-yandex-stage-workflow\.mjs\)/g) ?? []).length, 2)
+  assert.doesNotMatch(workflow, /function_id=\$\(yc serverless function get/)
+  assert.match(workflow, /source_secret_id=\$\(jq -er '\.sourceSecretId'/)
+  assert.match(workflow, /source_secret_version_id=\$\(jq -er '\.sourceSecretVersionId'/)
+  assert.match(workflow, /node scripts\/check-yandex-terraform-plan\.mjs/)
+  assert.match(workflow, /lockbox payload get[\s\S]*?--id "\$source_secret_id"[\s\S]*?--version-id "\$source_secret_version_id"/)
+  const reader = readFileSync(join(import.meta.dirname, 'deploy-yandex-stage-workflow.mjs'), 'utf8')
+  assert.match(reader, /GITHUB_REF !== 'refs\/heads\/main'/)
+  assert.match(reader, /GITHUB_REPOSITORY !== 'podkolzinpd\/fit'/)
+  assert.doesNotMatch(reader, /method: '(POST|PUT|PATCH|DELETE)'|payload\.lockbox|secret.*create|add-access-binding/)
+})
 test('nutrition deployment defaults off and has independent three-client/two-trainer configuration', () => {
   assert.match(workflow, /TF_VAR_nutrition_enabled:.*FIT_NUTRITION_ENABLED.*\|\| 'false'/)
   assert.match(workflow, /TF_VAR_nutrition_client_user_ids:.*FIT_NUTRITION_CLIENT_USER_IDS.*\|\| '\[\]'/)
