@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { nutritionConnectionSchema, nutritionDaySchema, nutritionEntrySchema, nutritionFoodSchema } from '../../shared/nutrition'
 import type { DataBackend } from '../../app/data-backend-context'
 import type { AthleteSportProfile } from '../../shared/sport-interests'
 import type {
@@ -472,6 +473,14 @@ function trainingSummaryErrorForStatus(status: number, code?: string): Error {
   return errorForStatus(status, code)
 }
 
+function nutritionErrorForStatus(status: number, code?: string): Error {
+  if (status === 429) return new RepositoryError('rate_limited', 'Слишком частые запросы. Подождите немного и повторите.')
+  if (status >= 500) return new RepositoryError('service_unavailable', code === 'nutrition_search_unavailable'
+    ? 'Поиск еды временно недоступен. Попробуйте ещё раз или добавьте свою еду.'
+    : 'Не удалось выполнить действие. Ваш ввод сохранён; попробуйте ещё раз.')
+  return errorForStatus(status, code)
+}
+
 function trainerPhotoErrorForStatus(status: number, code?: string): Error {
   if (status === 413) {
     return new RepositoryError('trainer_photo_too_large', 'Фото слишком большое. Выберите другое фото.')
@@ -514,8 +523,9 @@ async function readJson<Schema extends z.ZodType>(
   queries: YandexMainQueries,
   path: string,
   schema: Schema,
+  errorFactory?: ResponseErrorFactory,
 ): Promise<z.output<Schema>> {
-  const result = await response(() => queries.read(path))
+  const result = await response(() => queries.read(path), errorFactory)
   try {
     return schema.parse(await result.json())
   } catch (error) {
@@ -1045,6 +1055,17 @@ export function createYandexMainRepository(
 
   return {
     source: 'yandex',
+    nutrition: {
+      day: (day, clientId) => readJson(queries, `${clientId ? `/v1/clients/${encodeURIComponent(clientId)}` : '/v1/me'}/nutrition?day=${encodeURIComponent(day)}`, nutritionDaySchema, nutritionErrorForStatus),
+      search: (query, page) => readJson(queries, `/v1/nutrition/foods?q=${encodeURIComponent(query)}&page=${page}`, z.object({ foods: z.array(nutritionFoodSchema), hasMore: z.boolean() }), nutritionErrorForStatus),
+      async recent() { return (await readJson(queries, '/v1/me/nutrition/recent', z.object({ entries: z.array(nutritionEntrySchema) }), nutritionErrorForStatus)).entries },
+      async save(draft) { return (await writeJson(queries, '/v1/me/nutrition/entries', 'PUT', draft, z.object({ entry: nutritionEntrySchema }), nutritionErrorForStatus)).entry },
+      async setDeleted(entryId, expectedVersion, deleted) { return (await writeJson(queries, `/v1/me/nutrition/entries/${encodeURIComponent(entryId)}/visibility`, 'PUT', { expectedVersion, deleted }, z.object({ entry: nutritionEntrySchema }), nutritionErrorForStatus)).entry },
+      async consents() { return (await readJson(queries, '/v1/me/nutrition/consents', z.object({ connections: z.array(nutritionConnectionSchema) }), nutritionErrorForStatus)).connections },
+      async setConsent(connection, granted) { await writeJson(queries, '/v1/me/nutrition/consents', 'PUT', {
+        clientId: connection.clientId, trainerId: connection.trainerId, connectionStartedAt: connection.connectionStartedAt, granted,
+      }, z.object({ granted: z.boolean() }), nutritionErrorForStatus) },
+    },
     athleteSportProfile: {
       supportsSportInterests: true,
       async getMine(): Promise<AthleteSportProfile> {

@@ -166,7 +166,7 @@ export function AppLayout() {
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
   if (actor?.role === 'client') return <FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
-    {monochromeClientFinance
+    {monochromeClientFinance || pathname === '/me/nutrition'
       ? <Link to="/me" className="active" aria-current="page"><HomeIcon />Кабинет</Link>
       : <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>}
     <NavLink to="/me/workouts"><ScheduleIcon />Тренировки</NavLink>

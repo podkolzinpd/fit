@@ -1,4 +1,5 @@
 import { AddActionLabel } from '../../shared/AddActionLabel'
+import { NutritionSummary } from '../nutrition'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -908,7 +909,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
         trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
         presetPrompt={<PresetWorkoutPicker onSelect={handlePresetSelected} />}
-      /></> : <>
+      /><NutritionSummary /></> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!clientMode && !limePlanning && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={trainerHome.data} loading={clients.isLoading || trainerHome.isLoading} error={clients.error ?? trainerHome.error} onRetry={() => { void clients.refetch(); void trainerHome.refetch() }} returnTo="/today" />}

@@ -1391,6 +1391,58 @@ Stages 1–4 remain off. Stage 5 deploys the API/migration first, verifies its
 release, then enables the frontend switch and redeploys the green main.
 Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
 
+## Independent nutrition diary pilot — prepared, not activated
+
+YAFIT-608 is a separate default-off feature, unrelated to the Lime rollout.
+Its schema lives only in numbered Yandex migration142. The API uses native
+app-session/actor transactions and RLS. The public food adapter reads only
+search/details facts; no shopping OAuth, orders, prices or store URLs enter UI.
+Do not import the whole catalog. The owner confirmed on-demand use of the open
+official MCP on 11 October; the company's published example explicitly saves
+responses in a filesystem (https://habr.com/ru/companies/vkusvill/articles/981866/).
+Only selected food facts are snapshotted in the diary. No bulk database license
+or undocumented anonymous quota is claimed; retain bounded requests/timeouts.
+
+Before inclusion, verify the exact five owner-approved profiles against the
+requested identities and roles, without publishing their emails or credentials.
+The manual main-only `inspect-nutrition-pilot.yml` resolves the exact five emails
+from a private `FIT_NUTRITION_ACCOUNT_COHORT` JSON array of `{email, role}` and
+checks its fixed approved fingerprint. It reads the existing legacy identity
+registry, then uses only `action=inspect` on the private IAM Yandex rollout route
+twice to validate current roles, domain roots and identity bindings. It never
+changes users, sessions, assignments or consent. The one-day output contains
+only the three client and two trainer UUID lists, no email correspondence.
+On 11 October, automatic security review rejected storing that email input in
+a new GitHub secret without explicit owner approval for that storage. No input
+was uploaded at that point. The owner subsequently explicitly approved this
+exact private storage; the five-account secret was stored and its presence
+verified without printing values. This is not proof of identity mapping.
+Publish the green implementation default-off first so the new main-only
+inspection workflow becomes available. Run it on main and verify its bounded
+five-profile result before setting either enabled flag. Keep both flags off if
+inspection fails; never infer profiles from another feature's cohort.
+Configure GitHub repository variables `FIT_NUTRITION_ENABLED=true`,
+`FIT_NUTRITION_CLIENT_USER_IDS` as a JSON array of exactly three verified profile
+UUIDs, and `FIT_NUTRITION_TRAINER_USER_IDS` as two distinct trainer UUIDs. These
+become API environment `NUTRITION_ENABLED`, `NUTRITION_CLIENT_USER_IDS` and
+`NUTRITION_TRAINER_USER_IDS` through Terraform. Missing/invalid/overlapping
+configuration fails closed; the server checks membership and role on every call.
+
+Deploy the green main API and its migrations through the existing Yandex stage
+workflow first. Verify release and schema. Then set `VITE_NUTRITION_ENABLED=true`
+and `VITE_NUTRITION_PILOT_USER_IDS` to the same five verified UUIDs as a CSV,
+and redeploy the Yandex frontend. No other cohort, Lime or AI variables change.
+UUIDs are public UI identifiers, not authorization; the server is authoritative.
+Verify the published bundle and fresh native main build before closing the task.
+
+Client routes: `/me/nutrition?date=YYYY-MM-DD`; trainer route:
+`/clients/:clientId/nutrition?date=YYYY-MM-DD`. Consent defaults closed and belongs
+to the exact current client/trainer connection timestamp. Enablement never gives
+consent, creates a connection, sends messages or changes other features.
+Rollback: set both independent enabled variables to false, redeploy API/frontend
+and verify fail-closed behavior. Preserve diary data; do not roll back migration
+142 on production with existing records. Enabling again does not reset consent.
+
 ## Independent Lime rollout controls (prepared, activation requires owner approval)
 
 The Yandex-only `app_private.lime_rollout_controls` singleton starts at

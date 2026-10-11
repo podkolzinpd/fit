@@ -172,6 +172,24 @@ variable "postgres_deletion_protection" {
   default     = true
 }
 
+variable "nutrition_enabled" {
+  description = "Independent default-off nutrition diary pilot; runtime validates exactly three clients and two trainers."
+  type        = bool
+  default     = false
+}
+
+variable "nutrition_client_user_ids" {
+  description = "Verified public profile UUIDs for the three approved nutrition clients; never email addresses."
+  type        = list(string)
+  default     = []
+}
+
+variable "nutrition_trainer_user_ids" {
+  description = "Verified public profile UUIDs for the two approved nutrition trainers; never email addresses."
+  type        = list(string)
+  default     = []
+}
+
 variable "api_image_tag" {
   description = "Existing image tag to deploy from the managed Container Registry."
   type        = string

@@ -70,6 +70,7 @@ import type { PilotInvitationLinks } from './pilot-invitation-links.js'
 import type { PilotLegal } from './pilot-legal.js'
 import type { PilotDomainWriter } from './pilot-domain-writer.js'
 import { readAthleteSportProfile } from './athlete-sport-profile.js'
+import { registerNutritionRoutes, type NutritionDiary } from './nutrition-routes.js'
 import type { PilotProfileReader } from './pilot-profile-reader.js'
 import type { PilotSessionIssuer } from './pilot-session.js'
 import type {
@@ -201,6 +202,7 @@ function readCompatibleYandexActorSession(
 }
 
 interface BuildAppOptions {
+  nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
   databasePool?: DatabasePool
   identityProvider?: YandexIdentityProvider
@@ -4540,6 +4542,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       () => reply.code(204).send(),
     )
   })
+
+  registerNutritionRoutes(app, options.nutritionDiary)
 
   if (options.databasePool !== undefined) {
     app.addHook('onClose', async () => options.databasePool?.end())

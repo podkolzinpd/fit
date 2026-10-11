@@ -11,7 +11,8 @@ export default defineConfig({
   // Устаревший rollout-флаг здесь маскировал регрессии нового основного сценария.
   webServer: { command: `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI,
     // Synthetic fixture identities only; never used in a production build.
-    env: { VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002' },
+    env: { VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
+      VITE_NUTRITION_ENABLED: 'true', VITE_NUTRITION_PILOT_USER_IDS: 'f00d0000-6010-4000-8000-000000000001,f00d0000-6010-4000-8000-000000000002,f00d0000-6010-4000-8000-000000000003,f00d0000-6010-4000-8000-000000000004,f00d0000-6010-4000-8000-000000000005' },
   },
   projects: [
     { name: 'lime-acceptance-webkit', testMatch: /trainer-schedule-v2\.visual\.spec\.ts/, use: { ...devices['iPhone 13'] } },

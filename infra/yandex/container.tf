@@ -55,6 +55,9 @@ resource "yandex_serverless_container" "api" {
         YANDEX_NATIVE_REGISTRATION_ENABLED  = var.yandex_native_registration_enabled ? "true" : "false"
         YANDEX_ONLY_AUTH_ENABLED            = var.yandex_only_auth_enabled ? "true" : "false"
         FIT_CALORIE_V2_ROLLOUT_PERCENT      = tostring(var.calorie_v2_rollout_percent)
+        NUTRITION_ENABLED                   = var.nutrition_enabled ? "true" : "false"
+        NUTRITION_CLIENT_USER_IDS           = join(",", var.nutrition_client_user_ids)
+        NUTRITION_TRAINER_USER_IDS          = join(",", var.nutrition_trainer_user_ids)
       },
       var.yandex_oauth_client_id == null ? {} : {
         YANDEX_OAUTH_CLIENT_ID = var.yandex_oauth_client_id

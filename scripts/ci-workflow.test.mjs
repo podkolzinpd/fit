@@ -77,7 +77,7 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
     assert.match(job, new RegExp(`${flag}: 'true'`))
     assert.match(job, new RegExp(`--env ${flag}`))
   }
-  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts --project=iphone-13-webkit --workers=1/)
+  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts e2e\/nutrition-diary\.webkit\.spec\.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests/)
   assert.doesNotMatch(job, /supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
 })
 

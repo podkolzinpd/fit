@@ -25,6 +25,7 @@ import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isTrainerFinancePilotEnabled } from '../../app/feature-flags'
 import { QuickStartWorkout } from '../workouts/QuickStartWorkout'
 import { InBodyProgressCard } from '../progress'
+import { NutritionSummary } from '../nutrition'
 import { EMPTY_ATHLETE_SPORT_PROFILE, SPORT_INTEREST_GROUPS, type AthleteSportProfile } from '../../shared/sport-interests'
 
 export function MyClientPage() {
@@ -87,6 +88,7 @@ export function MyClientPage() {
         <PresetWorkoutPicker onSelect={(presetId) => quickStart.mutate({ mode: 'preset', presetId })} pending={quickStart.isPending} />
       </section>} />
     </AsyncView>
+    <NutritionSummary />
   </Page>
 }
 
@@ -469,6 +471,7 @@ export function ClientDetailPage() {
         </nav>
       </div>
       <ClientGoalBlock client={query.data} />
+      {query.data.hasAccount && !query.data.archivedAt && <NutritionSummary clientId={clientId} />}
       {fitLimePilot && <ClientDetailSourceState label="ближайшие тренировки" loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} />}
       {upcoming.length > 0 && <section className="client-detail-upcoming"><h2>Предстоит</h2><div className="cards">{upcoming.map((workout) => <Link className="card" key={workout.id} to={`/workouts/${workout.id}`}><div><strong>{formatLocalDate(workout.workoutDate)}{workout.startTime ? ` · ${workout.startTime.slice(0, 5)}` : ''}</strong><WorkoutExercisesSummary workout={workout} />{workout.stageTitle && <p className="stage-tag">🎯 {workout.stageTitle}</p>}</div><span className={`badge ${workout.status}`}>{workout.status === 'in_progress' ? 'Идёт' : 'План'}</span></Link>)}</div></section>}
       {fitLimePilot && workouts.isSuccess && upcoming.length === 0 && <p className="client-detail-source-state">Ближайших тренировок нет</p>}

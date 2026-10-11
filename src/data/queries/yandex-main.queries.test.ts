@@ -8,6 +8,23 @@ import {
 import { createYandexMainQueries, YANDEX_MAIN_READ_TIMEOUT_MS } from './yandex-main.queries'
 
 describe('Yandex main query timeout', () => {
+  it('bounds nutrition writes without an automatic retry or a new operation UUID', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      if (String(input) === 'https://nutrition.example/health') return Promise.resolve(new Response('{}', {
+        headers: { 'x-fit-request-id': 'nutrition-health-request' },
+      }))
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    })
+    const request = createYandexMainQueries('https://nutrition.example', 'session').write('/v1/me/nutrition/entries', 'PUT', { id: 'same-operation' })
+    const result = expect(request).rejects.toThrow('Nutrition request timed out')
+    await vi.advanceTimersByTimeAsync(YANDEX_MAIN_READ_TIMEOUT_MS)
+    await result
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/nutrition/entries'))).toHaveLength(1)
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.body).toBe(JSON.stringify({ id: 'same-operation' }))
+  })
   afterEach(() => {
     resetYandexPlatformRequestStateForTests()
     vi.useRealTimers()

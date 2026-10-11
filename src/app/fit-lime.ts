@@ -24,7 +24,7 @@ export function isFitLimeApprovedTrainerRoute(pathname: string, search: string):
     || pathname === '/profile' || pathname === '/profile/settings'
     || pathname === '/profile/trainer') return true
   return /^\/chat\/[^/]+$/.test(pathname)
-    || /^\/clients\/[^/]+(?:\/(?:goal|edit|workouts))?$/.test(pathname)
+    || /^\/clients\/[^/]+(?:\/(?:goal|edit|workouts|nutrition))?$/.test(pathname)
     || /^\/progress\/[^/]+$/.test(pathname)
     || /^\/workouts\/[^/]+\/edit$/.test(pathname)
     || /^\/workouts\/[^/]+$/.test(pathname)
