@@ -27,13 +27,13 @@ function Totals({ values }: { values: NutritionValues }) {
 function useNutritionDay(date: LocalDate, clientId?: string) {
   const { actor } = useAuth(), { nutrition } = useDataBackend()
   return useQuery({ queryKey: [...queryKey(actor?.userId ?? ''), 'day', clientId ?? 'own', date],
-    queryFn: () => nutrition.day(date, clientId), enabled: !!actor && isNutritionPilotEnabled(actor.userId),
+    queryFn: () => nutrition.day(date, clientId), enabled: !!actor && isNutritionPilotEnabled(actor.userId, actor.experiments?.nutrition),
     staleTime: 0, refetchInterval: clientId ? 15_000 : false, retry: false })
 }
 export function NutritionSummary({ clientId }: { clientId?: string }) {
   const { actor } = useAuth(), today = todayInTimeZone(actor?.timezone)
   const day = useNutritionDay(today, clientId)
-  if (!actor || !isNutritionPilotEnabled(actor.userId)) return null
+  if (!actor || !isNutritionPilotEnabled(actor.userId, actor.experiments?.nutrition)) return null
   // A pilot trainer also has clients outside this independent pilot. Their
   // cards must not display a broken nutrition feature or invite activation.
   if (clientId && day.error instanceof RepositoryError && day.error.code === 'PT403') return null
@@ -196,11 +196,11 @@ export function NutritionPage() {
   const today = todayInTimeZone(actor?.timezone), date = selectedDate(params.get('date'), today)
   const path = clientId ? `/clients/${clientId}/nutrition` : '/me/nutrition', day = useNutritionDay(date, clientId)
   const client = useQuery({ queryKey: ['client', clientId], queryFn: () => clients.get(clientId!),
-    enabled: !!clientId && !!actor && isNutritionPilotEnabled(actor.userId), retry: false })
+    enabled: !!clientId && !!actor && isNutritionPilotEnabled(actor.userId, actor.experiments?.nutrition), retry: false })
   const [deleted, setDeleted] = useState<NutritionEntry | null>(null), [confirm, dialog] = useConfirm()
   const mutation = useMutation({ mutationFn: ({ entry, remove }: { entry: NutritionEntry; remove: boolean }) => nutrition.setDeleted(entry.id, entry.version, remove),
     onSuccess: async (entry) => { setDeleted(entry.deletedAt ? entry : null); await cache.invalidateQueries({ queryKey: queryKey(actor?.userId ?? '') }) } })
-  if (!actor || !isNutritionPilotEnabled(actor.userId)) return <Navigate to={actor?.role === 'trainer' ? '/clients' : '/me'} replace />
+  if (!actor || !isNutritionPilotEnabled(actor.userId, actor.experiments?.nutrition)) return <Navigate to={actor?.role === 'trainer' ? '/clients' : '/me'} replace />
   const editingId = params.get('edit'), editing = day.data?.entries.find((entry) => entry.id === editingId)
   if (!clientId && (params.get('action') === 'add' || editing)) return <FoodForm key={editingId ?? 'new'} userId={actor.userId} date={date} existing={editing}
     onBack={() => navigate(`${path}?date=${date}`)} onSaved={(entry) => navigate(`${path}?date=${entry.day}&saved=${entry.id}`, { replace: true })} />

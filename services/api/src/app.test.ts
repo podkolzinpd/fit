@@ -3527,6 +3527,39 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(issue).toHaveBeenCalledWith(SUBJECT_HASH)
   })
 
+  it('binds nutrition only from its provider-verified native hash, never body identity or another pilot hash', async () => {
+    const loginHash = 'd'.repeat(64), nutritionLoginHash = 'e'.repeat(64)
+    const bind = vi.fn().mockResolvedValue({ bound: false })
+    const issue = vi.fn().mockImplementation(() => {
+      expect(bind).toHaveBeenCalledExactlyOnceWith(SUBJECT_HASH, nutritionLoginHash)
+      return Promise.resolve(APP_SESSION_RESPONSE)
+    })
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: { verifyAccessToken: vi.fn().mockResolvedValue({ subjectHash: SUBJECT_HASH, loginHash, nutritionLoginHash }) },
+      nutritionAutoActivator: { bind }, yandexAppSessionIssuer: { issue }, logger: false,
+    })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43), nutritionLoginHash: 'untrusted', profileId: 'untrusted' } })
+    expect(response.statusCode).toBe(200)
+    expect(issue).toHaveBeenCalledWith(SUBJECT_HASH)
+  })
+
+  it('does not infer a nutrition identity from another pilot hash when the provider decision is absent', async () => {
+    const bind = vi.fn().mockResolvedValue({ bound: true })
+    const app = buildApp({
+      oauthCodeProvider: buildOAuthCodeProvider().oauthCodeProvider,
+      identityProvider: { verifyAccessToken: vi.fn().mockResolvedValue({ subjectHash: SUBJECT_HASH, loginHash: 'd'.repeat(64) }) },
+      nutritionAutoActivator: { bind }, yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer, logger: false,
+    })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/auth/yandex/session',
+      payload: { code: 'one-time-code', codeVerifier: 'v'.repeat(43) } })
+    expect(response.statusCode).toBe(200)
+    expect(bind).not.toHaveBeenCalled()
+  })
+
   it('binds assistant feature links only from the verified Yandex login before issuing the session', async () => {
     const loginHash = 'd'.repeat(64)
     const bind = vi.fn().mockResolvedValue({ bound: true })

@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto'
+import { nutritionLoginHash } from '../nutrition-pilot.js'
 
 export interface VerifiedYandexIdentity {
   subjectHash: string
   loginHash?: string
+  nutritionLoginHash?: string
 }
 
 export interface YandexIdentityProvider {
@@ -116,6 +118,7 @@ export class YandexIdentityClient implements YandexIdentityProvider {
     }
 
     return {
+      ...(nutritionLoginHash(identity.login) === undefined ? {} : { nutritionLoginHash: nutritionLoginHash(identity.login)! }),
       subjectHash: createHash('sha256')
         .update(identity.psuid, 'utf8')
         .digest('hex'),
