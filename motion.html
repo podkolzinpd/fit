@@ -10101,4 +10101,15 @@ document.querySelectorAll('.m-cover-base,.m-cover-title').forEach(img => {
  concept.append(system);
 }
 </script>
+<script>
+// Keep the approved channel order in the page itself, including cached motion runtimes.
+{
+ const content=document.querySelector('[data-section="07 · ПРИВЛЕЧЕНИЕ"] > .content');
+ const rows=[...content.children];
+ ['Тренеры и клиенты','Яндекс Плюс','Экосистема Яндекса','Обучение тренеров','Спортивные события'].forEach((title,i)=>{
+   const row=rows.find(el=>el.querySelector('h3')?.textContent.trim()===title);
+   if(row){content.append(row);row.dataset.phase=i;}
+ });
+}
+</script>
 </body></html>
