@@ -179,6 +179,7 @@ const workflow = readFileSync(
   'utf8',
 )
 test('both plan/apply reuse the read-only metadata reader while original payload, IAM and plan checks stay mandatory', () => {
+  assert.match(workflow.split('  workflow_dispatch:', 1)[0], /      - 'scripts\/deploy-yandex-stage-workflow\.mjs'/)
   assert.equal((workflow.match(/metadata=\$\(node scripts\/deploy-yandex-stage-workflow\.mjs\)/g) ?? []).length, 2)
   assert.doesNotMatch(workflow, /function_id=\$\(yc serverless function get/)
   assert.match(workflow, /source_secret_id=\$\(jq -er '\.sourceSecretId'/)
