@@ -56,14 +56,24 @@ async function boundedJson(url, options = {}) {
   try { return JSON.parse(text) } catch { throw new Error('Invalid identity inspection response') }
 }
 
+export function readNutritionInspectionConfiguration(env) {
+  const project = env.SUPABASE_PROJECT_ID?.trim()
+  const migrationUrl = env.MIGRATION_URL?.trim().replace(/\/$/, '')
+  if (!/^[a-z0-9]{20}$/.test(project ?? '')) throw new Error('Official legacy registry project configuration missing')
+  // The provider returns the root invocation link with a trailing slash.
+  // Normalize only that slash; never accept another host, path or redirect.
+  if (!/^https:\/\/[a-z0-9]+\.containers\.yandexcloud\.net$/.test(migrationUrl ?? '')) {
+    throw new Error('Official private runner root configuration missing')
+  }
+  if (!env.YC_TOKEN) throw new Error('Official private inspection IAM configuration missing')
+  return { project, migrationUrl }
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     if (process.env.GITHUB_REF !== 'refs/heads/main') throw new Error('Inspection requires current main')
     const accounts = readNutritionAccounts(process.env.FIT_NUTRITION_ACCOUNT_COHORT)
-    const project = process.env.SUPABASE_PROJECT_ID
-    const migrationUrl = process.env.MIGRATION_URL
-    if (!/^[a-z0-9]{20}$/.test(project ?? '') || !/^https:\/\/[a-z0-9]+\.containers\.yandexcloud\.net$/.test(migrationUrl ?? '')
-      || !process.env.YC_TOKEN) throw new Error('Official private inspection configuration missing')
+    const { project, migrationUrl } = readNutritionInspectionConfiguration(process.env)
     let keys
     try { keys = JSON.parse(execFileSync('supabase', ['projects', 'api-keys', '--project-ref', project, '--output', 'json'],
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60000 })) }
