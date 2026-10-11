@@ -29,7 +29,7 @@
   const animations = new Set();
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
-  const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
+  const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,2],[0,4],[0,1,2]];
   timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
   if(fin124)timeline.splice(timeline.length-1,1,...fin124.stops.map(n=>[...Array(n).keys()]));
   extraSlides.forEach(i=>timeline.splice(i,0,[0]));
@@ -197,6 +197,14 @@
   const direct=qa('.content h3',scope[8]).find(el=>el.textContent.includes('Директ'));
   if(direct)direct.textContent='Директ';
   const acquisition=q('.content>div:first-child p',scope[7]);
+  const eventSlide=scope[7];
+  eventSlide.classList.add('fit-event-slide');
+  const eventProof=document.createElement('div');
+  eventProof.className='fit-event-proof';
+  eventProof.setAttribute('aria-hidden','true');
+  eventProof.innerHTML=`<div class="fit-event-heading"><h3>Спортивные события</h3><p>Свои и партнёрские мероприятия, тренировки и челленджи —<br>участники знакомятся с Fit через спорт.</p></div><div class="fit-event-photos"><figure><img src="assets/events/mass-start.png" alt="Концепция массового старта Яндекс Фит"><figcaption>Встречаемся на спортивном событии</figcaption></figure><figure><img src="assets/events/meet-fit.png" alt="Концепция знакомства участников с приложением ФИТ"><figcaption>Знакомимся с ФИТ на площадке</figcaption></figure></div><div class="fit-event-caption">Концепции мероприятий</div>`;
+  eventSlide.append(eventProof);
+  eventSlide.dataset.notes+=' Фотографии А1 и Б3 — иллюстративные концепции будущих мероприятий, не отчёт о проведённых событиях. Два состояния: исходный список каналов; спортивное событие и знакомство с приложением. Дополнительных остановок нет.';
   acquisition.innerHTML=acquisition.innerHTML.replace('Личные договорённости с клубами и тренерами. Уже есть договорённость со <strong>Spirit — 47 клубов</strong>.','Личные договорённости с клубами и тренерами.<span class="m-spirit-line">Есть договорённость: <strong>Spirit — 47 клубов</strong>.</span>');
   const commission=qa('.fm1-blk',scope[9])[1];
   scope[9].dataset.notes+=' Полное пояснение комиссии: '+q('.fm1-how',commission).textContent;
@@ -250,6 +258,9 @@
     toolbar.hidden=index>=motionCount;
     if(index>=motionCount)return updateToolbar();
     const s=all[index];s.dataset.motionStep=n;
+    const showEvents=s===eventSlide&&!staticMode&&n===1;
+    eventSlide.classList.toggle('fit-events-visible',showEvents);
+    eventProof.setAttribute('aria-hidden',String(!showEvents));
     const scene=timeline[index][n],previousScene=timeline[index][prev];
     const clientStory=clientStories.find(story=>story.slide===s);
     if(clientStory){clientStory.render(scene,motion&&!staticMode,animate,staticMode);return updateToolbar();}

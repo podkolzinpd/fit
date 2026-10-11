@@ -1,0 +1,27 @@
+/* Two approved event concepts, using the existing second acquisition stop. */
+#deck .fit-event-slide > .content {
+  transition: opacity 350ms ease, transform 550ms ease, visibility 350ms;
+}
+#deck .fit-event-slide.fit-events-visible > .content {
+  opacity: 0; transform: translateY(-12px); pointer-events: none;
+  visibility: hidden;
+}
+#deck .fit-event-proof {
+  position:absolute;left:76px;right:76px;top:250px;
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(22px);
+  transition:opacity 450ms ease,transform 650ms cubic-bezier(.2,.75,.25,1),visibility 450ms;
+}
+#deck .fit-events-visible .fit-event-proof {
+  opacity:1;visibility:visible;transform:translateY(0);
+}
+#deck .fit-event-heading {display:grid;grid-template-columns:400px 1fr;gap:42px;align-items:start;margin-bottom:32px;}
+#deck .fit-event-heading h3 {font-size:30px!important;line-height:1.2;color:#d6f500!important;margin:0!important;}
+#deck .fit-event-heading p {font-size:23px;line-height:1.4;color:#b7bcbe;margin:0;}
+#deck .fit-event-photos {display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+#deck .fit-event-photos figure {margin:0;min-width:0;transform:translateY(14px);transition:transform 650ms cubic-bezier(.2,.75,.25,1);}
+#deck .fit-events-visible .fit-event-photos figure {transform:translateY(0);}
+#deck .fit-events-visible .fit-event-photos figure:nth-child(2) {transition-delay:100ms;}
+#deck .fit-event-photos img {display:block;width:100%;height:auto;aspect-ratio:1672 / 941;object-fit:contain;border-radius:6px;}
+#deck .fit-event-photos figcaption {font-size:24px;line-height:1.3;color:#f5f4ef;margin-top:18px;}
+#deck .fit-event-caption {font-size:16px;color:#8d9497;margin-top:22px;}
+@media(prefers-reduced-motion:reduce) {#deck .fit-event-slide * {transition:none!important;}}
