@@ -1414,7 +1414,13 @@ changes users, sessions, assignments or consent. The one-day output contains
 only the three client and two trainer UUID lists, no email correspondence.
 On 11 October, automatic security review rejected storing that email input in
 a new GitHub secret without explicit owner approval for that storage. No input
-was uploaded; do not circumvent this rejection or claim cohort verification.
+was uploaded at that point. The owner subsequently explicitly approved this
+exact private storage; the five-account secret was stored and its presence
+verified without printing values. This is not proof of identity mapping.
+Publish the green implementation default-off first so the new main-only
+inspection workflow becomes available. Run it on main and verify its bounded
+five-profile result before setting either enabled flag. Keep both flags off if
+inspection fails; never infer profiles from another feature's cohort.
 Configure GitHub repository variables `FIT_NUTRITION_ENABLED=true`,
 `FIT_NUTRITION_CLIENT_USER_IDS` as a JSON array of exactly three verified profile
 UUIDs, and `FIT_NUTRITION_TRAINER_USER_IDS` as two distinct trainer UUIDs. These
