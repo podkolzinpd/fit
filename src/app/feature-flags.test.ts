@@ -26,6 +26,16 @@ import {
 afterEach(() => vi.unstubAllEnvs())
 
 describe('closed nutrition pilot', () => {
+  it('native mode requires an explicit verified server decision and cannot inherit UUIDs', () => {
+    vi.stubEnv('VITE_NUTRITION_ENABLED', 'true')
+    vi.stubEnv('VITE_NUTRITION_NATIVE_COHORT', 'true')
+    vi.stubEnv('VITE_NUTRITION_PILOT_USER_IDS', '')
+    expect(isNutritionPilotEnabled('native-profile', true)).toBe(true)
+    expect(isNutritionPilotEnabled('native-profile')).toBe(false)
+    expect(isNutritionPilotEnabled('native-profile', false)).toBe(false)
+    vi.stubEnv('VITE_NUTRITION_ENABLED', 'false')
+    expect(isNutritionPilotEnabled('native-profile', true)).toBe(false)
+  })
   const ids = Array.from({ length: 5 }, (_, index) => `f00d0000-6010-4000-8000-00000000000${index + 1}`)
   it('requires the independent flag and exactly five valid distinct identities', () => {
     vi.stubEnv('VITE_NUTRITION_ENABLED', 'true')

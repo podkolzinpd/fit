@@ -184,6 +184,13 @@ variable "nutrition_client_user_ids" {
   default     = []
 }
 
+variable "nutrition_login_cohort" {
+  description = "Private hashes of the owner-approved native Yandex logins, derived only by trusted main."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "nutrition_trainer_user_ids" {
   description = "Verified public profile UUIDs for the two approved nutrition trainers; never email addresses."
   type        = list(string)

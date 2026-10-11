@@ -91,6 +91,7 @@ jobs:
           VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
           VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
           VITE_NUTRITION_ENABLED: ${{ vars.VITE_NUTRITION_ENABLED || 'false' }}
+          VITE_NUTRITION_NATIVE_COHORT: ${{ vars.VITE_NUTRITION_NATIVE_COHORT || 'false' }}
           VITE_NUTRITION_PILOT_USER_IDS: ${{ vars.VITE_NUTRITION_PILOT_USER_IDS || '' }}
           VITE_MAINTENANCE_MODE: 'false'
       - run: ./gradlew assembleDebug

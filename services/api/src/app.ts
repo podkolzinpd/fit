@@ -202,6 +202,7 @@ function readCompatibleYandexActorSession(
 }
 
 interface BuildAppOptions {
+  nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
   databasePool?: DatabasePool
@@ -1425,6 +1426,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
       if (options.assistantFeatureLinksAutoActivator !== undefined && identity.loginHash !== undefined) {
         await options.assistantFeatureLinksAutoActivator.bind(identity.subjectHash, identity.loginHash)
+      }
+      if (options.nutritionAutoActivator !== undefined && identity.nutritionLoginHash !== undefined) {
+        await options.nutritionAutoActivator.bind(identity.subjectHash, identity.nutritionLoginHash)
       }
       const session = await options.yandexAppSessionIssuer.issue(identity.subjectHash)
       if (session === undefined) {

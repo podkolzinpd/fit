@@ -130,6 +130,13 @@ jobs:
           image_tag=$(git rev-parse 'HEAD:services/api')
           echo "TF_VAR_api_image_tag=$image_tag" >>"$GITHUB_ENV"
           echo "TF_VAR_migration_image_tag=$image_tag" >>"$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare independent native nutrition cohort
+        env:
+          FIT_NUTRITION_ACCOUNT_COHORT: ${{ secrets.FIT_NUTRITION_ACCOUNT_COHORT }}
+        run: node scripts/prepare-nutrition-native-cohort.mjs
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
@@ -283,6 +290,13 @@ jobs:
           echo "TF_VAR_api_image_tag=$image_tag" >>"$GITHUB_ENV"
           echo "TF_VAR_migration_image_tag=$image_tag" >>"$GITHUB_ENV"
           echo "API_IMAGE_TAG=$image_tag" >>"$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare independent native nutrition cohort
+        env:
+          FIT_NUTRITION_ACCOUNT_COHORT: ${{ secrets.FIT_NUTRITION_ACCOUNT_COHORT }}
+        run: node scripts/prepare-nutrition-native-cohort.mjs
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5

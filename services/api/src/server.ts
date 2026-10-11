@@ -63,8 +63,9 @@ import { DatabaseTrainerScheduleV2AutoActivator } from './trainer-schedule-v2-au
 import { DatabaseFitLimeAutoActivator } from './fit-lime-auto-activation.js'
 import { DatabaseAssistantFeatureLinksAutoActivator } from './assistant-feature-links-auto-activation.js'
 import { DatabasePilotTrainerFinance } from './trainer-finance.js'
-import { DatabaseNutritionDiary, readNutritionPilot } from './nutrition-diary.js'
+import { DatabaseNutritionDiary } from './nutrition-diary.js'
 import { VkusvillNutritionCatalog } from './nutrition-catalog.js'
+import { DatabaseNutritionAutoActivator, readNativeNutritionPilot } from './nutrition-pilot.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -79,10 +80,12 @@ function parsePort(value: string | undefined): number {
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
 const databasePool =
   databaseConfig === undefined ? undefined : new PgDatabasePool(databaseConfig, 'api')
+// Production food rollout is native-only; even an empty configuration never
+// falls back to stale legacy UUID variables or another experiment's cohort.
+const nutritionPilot = readNativeNutritionPilot(process.env.NUTRITION_ENABLED, process.env.NUTRITION_LOGIN_COHORT)
+const nutritionAutoActivator = databasePool === undefined ? undefined : new DatabaseNutritionAutoActivator(databasePool, nutritionPilot)
 const nutritionDiary = databasePool === undefined ? undefined : new DatabaseNutritionDiary(
-  databasePool, new VkusvillNutritionCatalog(), readNutritionPilot(
-    process.env.NUTRITION_ENABLED, process.env.NUTRITION_CLIENT_USER_IDS, process.env.NUTRITION_TRAINER_USER_IDS,
-  ),
+  databasePool, new VkusvillNutritionCatalog(), nutritionPilot,
 )
 const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
@@ -105,11 +108,11 @@ const pilotSessionIssuer =
 const yandexAppSessionIssuer =
   databasePool === undefined
     ? undefined
-    : new DatabaseYandexAppSessionIssuer(databasePool)
+    : new DatabaseYandexAppSessionIssuer(databasePool, undefined, nutritionPilot)
 const yandexAppSessionReader =
   databasePool === undefined
     ? undefined
-    : new DatabaseYandexAppSessionReader(databasePool)
+    : new DatabaseYandexAppSessionReader(databasePool, nutritionPilot)
 const yandexAppSessionRevoker =
   databasePool === undefined
     ? undefined
@@ -291,6 +294,7 @@ const app = buildApp(
       : { releaseId: process.env.FIT_RELEASE_ID }),
     ...(databasePool === undefined ? {} : { databasePool }),
     ...(nutritionDiary === undefined ? {} : { nutritionDiary }),
+    ...(nutritionAutoActivator === undefined ? {} : { nutritionAutoActivator }),
     ...(identityProvider === undefined ? {} : { identityProvider }),
     ...(oauthCodeProvider === undefined ? {} : { oauthCodeProvider }),
     ...(pilotAppFeedbackWriter === undefined ? {} : { pilotAppFeedbackWriter }),

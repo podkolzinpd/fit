@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { DatabaseNutritionDiary, type NutritionDraft } from '../nutrition-diary.js'
 import { parseCatalogFood, type NutritionCatalog } from '../nutrition-catalog.js'
+import { DatabaseNutritionAutoActivator, nutritionProfileAllowed, type NutritionPilot } from '../nutrition-pilot.js'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -150,6 +151,7 @@ import {
 } from '../legal.js'
 import {
   DatabaseYandexAppSessionIssuer,
+  DatabaseYandexAppSessionReader,
   DatabaseYandexAppSessionRevoker,
 } from '../yandex-app-session.js'
 import {
@@ -9887,6 +9889,82 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         connection.release()
       }
     })
+    it('nutrition native migration down/up retains protected functions and denies direct binding table privileges', async () => {
+      if (ownerPool === undefined) throw new Error('Database pool not ready')
+      const [up, down] = (await readFile(new URL('../../db/migrations/000143_nutrition_native_cohort.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+      if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+      const client = await ownerPool.connect()
+      try {
+        await client.query('begin')
+        await client.query(down)
+        expect((await client.query("select to_regclass('app_private.nutrition_native_bindings') bindings")).rows).toEqual([{ bindings: null }])
+        await client.query(up)
+        expect((await client.query(`select
+          has_table_privilege('fit_api', 'app_private.nutrition_native_bindings', 'SELECT,INSERT,UPDATE,DELETE') direct,
+          has_function_privilege('fit_api', 'app_private.bind_nutrition_for_yandex_login(text,text,text)', 'EXECUTE') bind,
+          has_function_privilege('fit_api', 'app_private.nutrition_login_for_profile(uuid,text)', 'EXECUTE') decision,
+          has_function_privilege('public', 'app_private.bind_nutrition_for_yandex_login(text,text,text)', 'EXECUTE') public_bind`)).rows)
+          .toEqual([{ direct: false, bind: true, decision: true, public_bind: false }])
+      } finally { await client.query('rollback'); client.release() }
+    })
+
+    it('nutrition native bindings: verified subject, immutable role, exact five bounds, no consent or identity mutations', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools not ready')
+      const ids = Array.from({ length: 7 }, () => randomUUID())
+      const subjects = ids.map(() => randomBytes(32).toString('hex'))
+      const logins = ids.map(() => randomBytes(32).toString('hex'))
+      const clientCards = ids.map(() => randomUUID())
+      const pilot: NutritionPilot = { clients: logins.slice(0, 3), trainers: logins.slice(3, 5), native: true }
+      const binder = new DatabaseNutritionAutoActivator(runtimePool, pilot)
+      const token = randomBytes(32).toString('base64url')
+      try {
+        for (const [index, id] of ids.entries()) {
+          const role = index === 3 || index === 4 || index === 6 ? 'trainer' : 'client'
+          await ownerPool.query('insert into public.profiles (id, first_name, account_role) values ($1, $2, $3)', [id, 'Nutrition native synthetic', role])
+          if (role === 'trainer') await ownerPool.query('insert into public.trainers (profile_id) values ($1)', [id])
+          else await ownerPool.query('insert into public.clients (id, trainer_id, auth_user_id, full_name) values ($1, $2, $2, $3)', [clientCards[index], id, 'Nutrition native synthetic'])
+          await ownerPool.query("insert into app_private.auth_identities (provider, provider_subject_sha256, profile_id) values ('yandex', $1, $2)", [subjects[index], id])
+          await ownerPool.query("insert into app_private.profile_rollout_assignments (profile_id, target_backend, access_mode, enabled) values ($1, 'yandex', 'read_write', true)", [id])
+        }
+        expect(await binder.bind(subjects[6]!, logins[0]!)).toEqual({ bound: false })
+        expect(await binder.bind(subjects[0]!, logins[3]!)).toEqual({ bound: false })
+        expect(await binder.bind(subjects[5]!, logins[5]!)).toEqual({ bound: false })
+        for (let i = 0; i < 5; i++) expect(await binder.bind(subjects[i]!, logins[i]!)).toEqual({ bound: true })
+        expect(await binder.bind(subjects[0]!, logins[0]!)).toEqual({ bound: true })
+        expect(await binder.bind(subjects[1]!, logins[0]!)).toEqual({ bound: false })
+        expect(await binder.bind(subjects[0]!, logins[1]!)).toEqual({ bound: false })
+        const connection = await runtimePool.connect()
+        try {
+          expect(await connection.query('select app_private.bind_nutrition_for_yandex_login($1, $2, $3) bound',
+            [subjects[5], logins[5], 'client'])).toEqual([{ bound: false }])
+          expect(await connection.query('select app_private.bind_nutrition_for_yandex_login($1, $2, $3) bound',
+            [subjects[6], logins[6], 'trainer'])).toEqual([{ bound: false }])
+          await expect(connection.query('select * from app_private.nutrition_native_bindings')).rejects.toThrow(/permission denied/)
+        } finally { connection.release() }
+        expect((await ownerPool.query('select count(*)::int count from app_private.nutrition_native_bindings where profile_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 5 }])
+        expect((await ownerPool.query('select count(*)::int count from public.nutrition_consents where owner_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 0 }])
+        expect((await ownerPool.query("select count(*)::int count from app_private.auth_identities where profile_id=any($1::uuid[]) and provider='yandex'", [ids])).rows).toEqual([{ count: 7 }])
+        const issued = await new DatabaseYandexAppSessionIssuer(runtimePool, undefined, pilot).issue(subjects[0]!)
+        expect(issued?.profile.experiments.nutrition).toBe(true)
+        if (issued === undefined) throw new Error('Synthetic native session was not issued')
+        expect((await new DatabaseYandexAppSessionReader(runtimePool, pilot).read(issued.session.token)).profile.experiments.nutrition).toBe(true)
+        expect((await new DatabaseYandexAppSessionReader(runtimePool).read(issued.session.token)).profile.experiments.nutrition).toBeUndefined()
+        await ownerPool.query("insert into app_private.yandex_app_sessions (token_sha256, profile_id, expires_at) values ($1, $2, now() + interval '1 hour')", [hashPilotSessionToken(token), ids[0]])
+        await withYandexAppSessionTransaction(runtimePool, hashPilotSessionToken(token)!, async client => {
+          expect(await nutritionProfileAllowed(client, pilot, ids[0]!, 'client')).toBe(true)
+          expect(await nutritionProfileAllowed(client, pilot, ids[0]!, 'trainer')).toBe(false)
+          expect(await nutritionProfileAllowed(client, null, ids[0]!, 'client')).toBe(false)
+        })
+        await ownerPool.query('delete from app_private.auth_identities where profile_id=$1', [ids[0]])
+        const check = await ownerPool.query('select app_private.nutrition_login_for_profile($1, $2) login_hash', [ids[0], 'client'])
+        expect(check.rows).toEqual([{ login_hash: null }])
+      } finally {
+        await ownerPool.query('delete from public.clients where id=any($1::uuid[])', [clientCards])
+        await ownerPool.query('delete from public.trainers where profile_id=any($1::uuid[])', [ids])
+        await ownerPool.query('delete from public.profiles where id=any($1::uuid[])', [ids])
+      }
+    })
+
     it('nutrition: snapshots, replay, cross-role RLS, per-connection consent and independent pilot', async () => {
       if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools not ready')
       const ids = Array.from({ length: 6 }, () => randomUUID())

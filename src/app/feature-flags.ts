@@ -7,8 +7,11 @@ export function isMaintenanceModeEnabled(): boolean {
 
 // Independent closed five-person pilot. Invalid or incomplete configuration
 // never means a public rollout; server checks its own role-specific cohort.
-export function isNutritionPilotEnabled(userId: string): boolean {
+export function isNutritionPilotEnabled(userId: string, serverDecision?: boolean): boolean {
   if (import.meta.env.VITE_NUTRITION_ENABLED !== 'true') return false
+  // Native mode exposes only the verified server decision, not contact data.
+  // An absent decision remains closed; empty UUID configuration is never all.
+  if (import.meta.env.VITE_NUTRITION_NATIVE_COHORT === 'true') return serverDecision === true
   const ids = String(import.meta.env.VITE_NUTRITION_PILOT_USER_IDS ?? '').split(',').map((id) => id.trim().toLowerCase()).filter(Boolean)
   return ids.length === 5 && new Set(ids).size === 5
     && ids.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id))
