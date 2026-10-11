@@ -8,7 +8,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { promisify } from 'node:util'
 import { SMOKE_BUDGET_MS, runSmokeRequest, safeRequestMetadata, verifyFixtureBudget } from './yandex-stage-smoke.mjs'
-import { readImmutablePushMetadata } from './deploy-yandex-stage-workflow.mjs'
+import { readImmutablePushMetadata, curlMetadataFetch } from './deploy-yandex-stage-workflow.mjs'
 
 const metadataEnvironment = { YC_PUSH_FOLDER_ID: 'd'.repeat(20), YC_PUSH_FUNCTION_NAME: 'fit-send-push-notifications',
   YC_PUSH_LOCKBOX_NAME: 'fit-send-push-notifications-secrets', YC_TOKEN: 'synthetic-iam-test-only' }
@@ -18,6 +18,76 @@ const metadataSecret = { id: 's'.repeat(20), folderId: metadataEnvironment.YC_PU
   name: metadataEnvironment.YC_PUSH_LOCKBOX_NAME, status: 'ACTIVE',
   currentVersion: { id: 'v'.repeat(20), secretId: 's'.repeat(20), status: 'ACTIVE' } }
 const metadataJson = value => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
+function fakeMetadataCurl(output, error = null, calls = []) {
+  return (command, args, options, callback) => {
+    const call = { command, args, options, input: '' }
+    calls.push(call)
+    return { stdin: { on: () => {}, end: input => { call.input = input; queueMicrotask(() => callback(error, output)) } } }
+  }
+}
+test('hosted metadata transport keeps HTTPS verification, bounded single GETs and IAM only over stdin', async () => {
+  const calls = []
+  const options = { method: 'GET', redirect: 'error', headers: { Authorization: 'Bearer synthetic-iam-test-only' }, signal: AbortSignal.timeout(1000) }
+  const response = await curlMetadataFetch('https://serverless-functions.api.cloud.yandex.net/functions/v1/functions?folderId='+metadataEnvironment.YC_PUSH_FOLDER_ID,
+    options, { execFileImplementation: fakeMetadataCurl('{"functions":[]}\n200', null, calls) })
+  assert.equal(response.status, 200)
+  assert.deepEqual(await response.json(), { functions: [] })
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].command, 'curl')
+  for (const flag of ['--silent', '--ipv4', '--http1.1', '--proto', '--max-time', '--max-filesize', '--connect-timeout', '--config']) assert.ok(calls[0].args.includes(flag))
+  assert.equal(calls[0].options.timeout, 15000)
+  assert.equal(calls[0].options.maxBuffer, 1024*1024+8)
+  assert.equal(calls[0].options.signal, options.signal)
+  assert.equal(calls[0].input, 'header = "Authorization: Bearer synthetic-iam-test-only"\n')
+  assert.doesNotMatch(JSON.stringify(calls[0].args), /synthetic-iam|Bearer|retry|location|verbose|insecure|trace|payload|invoke/)
+})
+test('hosted metadata transport rejects unexpected hosts, payloads, methods, redirects and injected headers before a process', async () => {
+  const calls = [], run = fakeMetadataCurl('{}\n200', null, calls)
+  const options = { method: 'GET', redirect: 'error', headers: { Authorization: 'Bearer synthetic-iam-test-only' } }
+  for (const url of ['https://example.test/functions/v1/functions', 'http://serverless-functions.api.cloud.yandex.net/functions/v1/functions',
+    'https://lockbox.api.cloud.yandex.net/lockbox/v1/secrets/synthetic/payload', 'https://payload.lockbox.api.cloud.yandex.net/lockbox/v1/secrets',
+    'https://user@lockbox.api.cloud.yandex.net/lockbox/v1/secrets', 'https://lockbox.api.cloud.yandex.net/lockbox/v1/secrets#fragment']) {
+    await assert.rejects(curlMetadataFetch(url, options, { execFileImplementation: run }), /configuration invalid/)
+  }
+  const url = 'https://lockbox.api.cloud.yandex.net/lockbox/v1/secrets'
+  for (const patch of [{ method: 'POST' }, { redirect: 'follow' }, { body: 'private' },
+    { headers: { Authorization: 'Bearer value"\nurl = "https://example.test' } }]) {
+    await assert.rejects(curlMetadataFetch(url, { ...options, ...patch }, { execFileImplementation: run }), /configuration invalid/)
+  }
+  assert.equal(calls.length, 0)
+})
+test('hosted metadata transport preserves HTTP failures without retries or raw error/token disclosure', async () => {
+  const options = { method: 'GET', redirect: 'error', headers: { Authorization: 'Bearer synthetic-iam-test-only' } }
+  const url = 'https://lockbox.api.cloud.yandex.net/lockbox/v1/secrets'
+  for (const status of [401, 403, 404, 500]) {
+    const calls = []
+    const response = await curlMetadataFetch(url, options, { execFileImplementation: fakeMetadataCurl(`private\n${status}`, null, calls) })
+    assert.equal(response.status, status)
+    assert.equal(calls.length, 1)
+  }
+  const calls = []
+  await assert.rejects(curlMetadataFetch(url, options, { execFileImplementation: fakeMetadataCurl('', new Error('private Bearer synthetic-iam-test-only'), calls) }),
+    error => error.message === 'Immutable metadata transport failure')
+  assert.equal(calls.length, 1)
+  for (const output of ['private', '{}\n000', '{}\nsecret', 'x'.repeat(1024*1024+1)+'\n200']) {
+    await assert.rejects(curlMetadataFetch(url, options, { execFileImplementation: fakeMetadataCurl(output) }), /transport response invalid/)
+  }
+})
+test('hosted metadata transport composes with the unchanged exact-resource/ACTIVE/pinned-version reader', async () => {
+  const calls = []
+  const fake = (command, args, options, callback) => {
+    const url = new URL(args.at(-1))
+    const payload = url.hostname === 'serverless-functions.api.cloud.yandex.net' ? { functions: [metadataFunction] }
+      : url.pathname.endsWith('/secrets') ? { secrets: [metadataSecret] } : metadataSecret
+    return fakeMetadataCurl(JSON.stringify(payload)+'\n200', null, calls)(command, args, options, callback)
+  }
+  const result = await readImmutablePushMetadata(metadataEnvironment, {
+    fetchImplementation: (url, options) => curlMetadataFetch(url, options, { execFileImplementation: fake }),
+  })
+  assert.deepEqual(result, { functionId: metadataFunction.id, sourceSecretId: metadataSecret.id, sourceSecretVersionId: metadataSecret.currentVersion.id })
+  assert.equal(calls.length, 3)
+  assert.doesNotMatch(JSON.stringify(result), /Bearer|synthetic|private|token/)
+})
 function metadataFetch(overrides = {}, calls = []) {
   return async (value, options) => {
     const url = new URL(value)
@@ -109,6 +179,7 @@ const workflow = readFileSync(
   'utf8',
 )
 test('both plan/apply reuse the read-only metadata reader while original payload, IAM and plan checks stay mandatory', () => {
+  assert.match(workflow.split('  workflow_dispatch:', 1)[0], /      - 'scripts\/deploy-yandex-stage-workflow\.mjs'/)
   assert.equal((workflow.match(/metadata=\$\(node scripts\/deploy-yandex-stage-workflow\.mjs\)/g) ?? []).length, 2)
   assert.doesNotMatch(workflow, /function_id=\$\(yc serverless function get/)
   assert.match(workflow, /source_secret_id=\$\(jq -er '\.sourceSecretId'/)
