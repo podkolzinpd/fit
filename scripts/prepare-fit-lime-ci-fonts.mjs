@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { limeFonts, prepareFitLimeFonts } from './prepare-fit-lime-fonts.mjs'
 import { setTimeout as delay } from 'node:timers/promises'
+import { prepareFitLimePublishedFonts } from './prepare-fit-lime-published-fonts.mjs'
 
 async function downloadFont(font, fetchAsset, wait) {
   const url = `https://fit-training.ru/fonts/${font.name}`
@@ -35,6 +36,14 @@ export async function prepareFitLimeCiFonts({ directory = 'public/fonts', fetchA
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const names = await prepareFitLimeCiFonts()
+  let names
+  try { names = await prepareFitLimeCiFonts() }
+  catch (error) {
+    // A network outage is not permission to use fallback bytes. The exact
+    // immutable hashes must still match a completed official public release.
+    if (!['TimeoutError', 'TypeError'].includes(error?.name)
+      && !/font download failed:.*\((429|5\d\d)\)/.test(error?.message ?? '')) throw error
+    names = prepareFitLimePublishedFonts()
+  }
   console.log(`Verified public Fit Lime webfonts: ${names.length}/${limeFonts.length}`)
 }

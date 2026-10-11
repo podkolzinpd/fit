@@ -198,6 +198,9 @@ jobs:
   # Production auth uses Yandex. Keep this browser gate independent from the
   # frozen local Supabase stack still needed by the remaining legacy specs.
   e2e-yandex-auth:
+    permissions:
+      contents: read
+      actions: read
     needs: e2e-scope
     if: needs.e2e-scope.outputs.required == 'true'
     runs-on: ubuntu-latest
@@ -222,6 +225,8 @@ jobs:
       - run: npm ci
       - name: Prepare approved public Fit fonts for nutrition UX checks
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Run Yandex-only auth and nutrition without Supabase services
         run: |
           docker run --rm --init --ipc=host --network host \
@@ -457,6 +462,9 @@ jobs:
   # sessions/data or licensed font secrets enter untrusted PR jobs. Exact-font
   # rendering is separately verified locally and in the trusted release build.
   e2e-fit-lime:
+    permissions:
+      contents: read
+      actions: read
     needs: e2e-scope
     if: needs.e2e-scope.outputs.required == 'true'
     runs-on: ubuntu-24.04
@@ -495,6 +503,8 @@ jobs:
       # no production credentials or proprietary assets in the repository.
       - name: Prepare verified public Lime fonts for browser acceptance
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.

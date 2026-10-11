@@ -1397,11 +1397,24 @@ YAFIT-608 is a separate default-off feature, unrelated to the Lime rollout.
 Its schema lives only in numbered Yandex migration142. The API uses native
 app-session/actor transactions and RLS. The public food adapter reads only
 search/details facts; no shopping OAuth, orders, prices or store URLs enter UI.
-Do not import the whole catalog. Confirm source reuse/storage terms and exact
-rate limits before activation; an accessible public MCP is not a database license.
+Do not import the whole catalog. The owner confirmed on-demand use of the open
+official MCP on 11 October; the company's published example explicitly saves
+responses in a filesystem (https://habr.com/ru/companies/vkusvill/articles/981866/).
+Only selected food facts are snapshotted in the diary. No bulk database license
+or undocumented anonymous quota is claimed; retain bounded requests/timeouts.
 
 Before inclusion, verify the exact five owner-approved profiles against the
 requested identities and roles, without publishing their emails or credentials.
+The manual main-only `inspect-nutrition-pilot.yml` resolves the exact five emails
+from a private `FIT_NUTRITION_ACCOUNT_COHORT` JSON array of `{email, role}` and
+checks its fixed approved fingerprint. It reads the existing legacy identity
+registry, then uses only `action=inspect` on the private IAM Yandex rollout route
+twice to validate current roles, domain roots and identity bindings. It never
+changes users, sessions, assignments or consent. The one-day output contains
+only the three client and two trainer UUID lists, no email correspondence.
+On 11 October, automatic security review rejected storing that email input in
+a new GitHub secret without explicit owner approval for that storage. No input
+was uploaded; do not circumvent this rejection or claim cohort verification.
 Configure GitHub repository variables `FIT_NUTRITION_ENABLED=true`,
 `FIT_NUTRITION_CLIENT_USER_IDS` as a JSON array of exactly three verified profile
 UUIDs, and `FIT_NUTRITION_TRAINER_USER_IDS` as two distinct trainer UUIDs. These
@@ -1422,7 +1435,7 @@ to the exact current client/trainer connection timestamp. Enablement never gives
 consent, creates a connection, sends messages or changes other features.
 Rollback: set both independent enabled variables to false, redeploy API/frontend
 and verify fail-closed behavior. Preserve diary data; do not roll back migration
-141 on production with existing records. Enabling again does not reset consent.
+142 on production with existing records. Enabling again does not reset consent.
 
 ## Independent Lime rollout controls (prepared, activation requires owner approval)
 
