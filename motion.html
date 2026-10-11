@@ -9889,6 +9889,8 @@ DataLens: https://datalens.ru/wnvsw21o9r7af-svodnye-metriki-prilozheniya?tab=Y3.
 <script src="client-stories-v2-734554b.js"></script>
 <link rel="stylesheet" href="progress-month-v1.css">
 <script src="progress-month-v1.js"></script>
+<link rel="stylesheet" href="iphone-nutrition-v1.css">
+<script src="nutrition-v1.js"></script>
 <script>
 document.querySelector('.idea-polished .foot').style.display = 'none';
 const cover = document.querySelector('#deck > .slide');
@@ -10073,9 +10075,16 @@ show(current, false)
 <link rel="stylesheet" href="closing-goals.css?v=20261004-1">
 <script src="closing-goals.js?v=20261009-129"></script>
 <link rel="stylesheet" href="trainer-clear-v1.css">
-<script src="trainer-clear-v1.js"></script>
+<script src="trainer-clear-iphone-v1.js"></script>
 <link rel="stylesheet" href="events-proof.css?v=20261011-1">
 <script src="motion-progress-polish.js?v=20261011-events-order"></script>
+<script>
+// Identical status chrome on every product device, including trainer thumbnails.
+(() => {
+  const status=document.querySelector('.ca-phone-status');
+  if(status)document.querySelectorAll('.cs-status,.fit-device-status').forEach(el=>{el.innerHTML=status.innerHTML;el.setAttribute('aria-hidden','true');});
+})();
+</script>
 <script>
 // Update both cover layers together without changing the existing title reveal.
 document.querySelectorAll('.m-cover-base,.m-cover-title').forEach(img => {
