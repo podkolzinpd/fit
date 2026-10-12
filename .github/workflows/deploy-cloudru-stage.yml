@@ -1,0 +1,122 @@
+name: Deploy Cloud.ru stage VM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-cloudru-stage.yml'
+      - 'services/api/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare VM and build API image
+    if: github.event_name == 'workflow_dispatch' || vars.CLOUDRU_STAGE_AUTODEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DEPLOY_HOST: ${{ vars.CLOUDRU_STAGE_HOST }}
+      DEPLOY_USER: ${{ vars.CLOUDRU_STAGE_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.CLOUDRU_STAGE_SSH_PRIVATE_KEY }}
+    steps:
+      - name: Check out the requested revision
+        uses: actions/checkout@v4
+
+      - name: Validate deployment settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$SSH_PRIVATE_KEY"
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/cloudru-stage"
+          chmod 600 "$HOME/.ssh/cloudru-stage"
+          cat > "$HOME/.ssh/config" <<EOF
+          Host cloudru-stage
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile $HOME/.ssh/cloudru-stage
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+            ServerAliveInterval 15
+            ServerAliveCountMax 3
+          EOF
+          chmod 600 "$HOME/.ssh/config"
+
+      - name: Print runner IPv4 for the temporary firewall rule
+        id: runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_ip="$(curl --fail --silent --show-error --ipv4 https://api.ipify.org)"
+          [[ "$runner_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]
+          echo "ipv4=$runner_ip" >> "$GITHUB_OUTPUT"
+          echo "RUNNER_IPV4=$runner_ip"
+          echo "Temporarily allow TCP/22 from ${runner_ip}/32 in the Cloud.ru security group."
+
+      - name: Wait for the temporary SSH rule
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 120); do
+            if ssh -o ConnectTimeout=5 cloudru-stage true 2>/dev/null; then
+              echo "SSH is reachable."
+              exit 0
+            fi
+            echo "Waiting for TCP/22 from ${{ steps.runner.outputs.ipv4 }}/32 (attempt ${attempt}/120)..."
+            sleep 10
+          done
+          echo "SSH did not become reachable within 20 minutes." >&2
+          exit 1
+
+      - name: Package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz --output="$RUNNER_TEMP/fit-source.tgz" "$GITHUB_SHA"
+
+      - name: Install VM runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh cloudru-stage \
+            'sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl jq nginx podman postgresql-client'
+
+      - name: Upload source and build API image
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp "$RUNNER_TEMP/fit-source.tgz" cloudru-stage:/tmp/fit-source.tgz
+          ssh cloudru-stage "DEPLOY_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+          release_dir="/opt/fit/releases/$DEPLOY_SHA"
+          sudo install -d -m 755 "$release_dir"
+          sudo tar -xzf /tmp/fit-source.tgz -C "$release_dir"
+          rm -f /tmp/fit-source.tgz
+          sudo podman build --pull=always -t "localhost/fit-api:$DEPLOY_SHA" "$release_dir/services/api"
+          sudo ln -sfn "$release_dir" /opt/fit/current
+          printf '%s\n' "$DEPLOY_SHA" | sudo tee /opt/fit/DEPLOYED_SHA >/dev/null
+          sudo podman image exists "localhost/fit-api:$DEPLOY_SHA"
+          REMOTE
+
+      - name: Report prepared revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_sha="$(ssh cloudru-stage 'cat /opt/fit/DEPLOYED_SHA')"
+          test "$remote_sha" = "$GITHUB_SHA"
+          echo "Prepared Cloud.ru VM revision: $remote_sha"
+          echo "The API container is built but intentionally not started until runtime secrets and the migration dry-run are verified."
