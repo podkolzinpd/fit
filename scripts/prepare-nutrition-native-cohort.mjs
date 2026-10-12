@@ -4,6 +4,10 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readNutritionAccounts } from './inspect-nutrition-pilot.mjs'
 
+// Owner-approved addition on 12.10.2026: four clients, same two trainers.
+// Contacts remain in the private candidate; no production secret update here.
+const expandedApprovedCohort = 'a75b87f06157423993065b3968a3e25c64a27373169ea82d036de299e92e0bd4'
+
 export function nativeNutritionKey(value) {
   let key = value.trim().toLowerCase()
   if (key.endsWith('@yandex.ru')) key = key.slice(0, -10)
@@ -15,10 +19,13 @@ export function nativeNutritionKey(value) {
 }
 
 export function prepareNativeNutritionCohort(raw, expected) {
-  const accounts = readNutritionAccounts(raw, expected)
+  let value
+  try { value = JSON.parse(raw) } catch { throw new Error('Invalid private cohort') }
+  const clientCount = Array.isArray(value) && value.length === 6 ? 4 : 3
+  const accounts = readNutritionAccounts(raw, expected ?? (clientCount === 4 ? expandedApprovedCohort : undefined), clientCount)
   const result = { clients: accounts.filter(x => x.role === 'client').map(x => nativeNutritionKey(x.email)),
     trainers: accounts.filter(x => x.role === 'trainer').map(x => nativeNutritionKey(x.email)) }
-  if (new Set([...result.clients, ...result.trainers]).size !== 5) throw new Error('Native cohort identities must be distinct')
+  if (new Set([...result.clients, ...result.trainers]).size !== accounts.length) throw new Error('Native cohort identities must be distinct')
   return JSON.stringify(result)
 }
 
@@ -31,7 +38,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       // GitHub masks the private derived configuration before any later step.
       process.stdout.write(`::add-mask::${value}\n`)
       appendFileSync(process.env.GITHUB_ENV, `TF_VAR_nutrition_login_cohort=${value}\n`)
-      process.stdout.write('Prepared the approved native three-client/two-trainer cohort; no identities or access changed.\n')
+      process.stdout.write('Prepared the exact approved native cohort; no identities or access changed.\n')
     } else {
       appendFileSync(process.env.GITHUB_ENV, 'TF_VAR_nutrition_login_cohort=\n')
       process.stdout.write('Nutrition remains disabled.\n')

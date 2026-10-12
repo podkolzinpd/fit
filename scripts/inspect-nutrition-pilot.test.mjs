@@ -35,6 +35,31 @@ test('native release keeps trusted main, exact fingerprint, private server hashe
     assert.doesNotMatch(text, /FIT_NUTRITION_ACCOUNT_COHORT/)
   }
 })
+test('expanded native preparation accepts exactly four clients/two trainers and rejects unauthorized additions or role swaps', () => {
+  const expanded = [...accounts, { email: 'fourth-client@example.test', role: 'client' }]
+  const result = JSON.parse(prepareNativeNutritionCohort(JSON.stringify(expanded), digest(expanded)))
+  assert.equal(result.clients.length, 4)
+  assert.equal(result.trainers.length, 2)
+  assert.equal(new Set([...result.clients, ...result.trainers]).size, 6)
+  assert.deepEqual(result.trainers, JSON.parse(prepareNativeNutritionCohort(JSON.stringify(accounts), digest(accounts))).trainers)
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(expanded)), /Unapproved/)
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(expanded), digest(accounts)), /Unapproved/)
+  const wrongRole = expanded.map((x, i) => i === 5 ? { ...x, role: 'trainer' } : x)
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(wrongRole), digest(wrongRole)), /Invalid/)
+  const extra = [...expanded, { email: 'fifth-client@example.test', role: 'client' }]
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(extra), digest(extra)), /Invalid/)
+  assert.throws(() => readNutritionAccounts(JSON.stringify(expanded), digest(expanded)), /Invalid/)
+})
+test('fourth-client migration preserves all prior identity/role/consent/grants guards and restores admission without deleting bindings', () => {
+  const prior = readFileSync(new URL('../services/api/db/migrations/000143_nutrition_native_cohort.sql', import.meta.url), 'utf8')
+  const migration = readFileSync(new URL('../services/api/db/migrations/000144_nutrition_fourth_client.sql', import.meta.url), 'utf8')
+  const start = prior.indexOf('create function app_private.bind_nutrition_for_yandex_login')
+  const original = prior.slice(start, prior.indexOf('$$;', start) + 3).replace('create function', 'create or replace function')
+  const [up, down] = migration.split('-- Down Migration')
+  assert.equal(up.slice(up.indexOf('create or replace function')).trim(), original.replace('then 3 else 2 end', 'then 4 else 2 end'))
+  assert.equal(down.slice(down.indexOf('create or replace function')).trim(), original)
+  assert.doesNotMatch(migration, /delete from|update public\.|insert into public\.|grant |drop table/i)
+})
 test('private inspection accepts the official root URL with or without a trailing slash, never another origin or path', () => {
   const ready = { SUPABASE_PROJECT_ID: 'abcdefghijklmnopqrst', MIGRATION_URL: 'https://synthetic123.containers.yandexcloud.net', YC_TOKEN: 'synthetic-iam-test-only' }
   for (const suffix of ['', '/']) {

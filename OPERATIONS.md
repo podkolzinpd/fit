@@ -1394,7 +1394,7 @@ Rollback: `VITE_CLIENT_LIME_ENABLED=false` plus a new frontend deployment.
 ## Independent nutrition diary pilot — prepared, not activated
 
 YAFIT-608 is a separate default-off feature, unrelated to the Lime rollout.
-Its schema lives only in numbered Yandex migrations142/143. The API uses native
+Its schema lives only in numbered Yandex migrations142–144. The API uses native
 app-session/actor transactions and RLS. The public food adapter reads only
 search/details facts; no shopping OAuth, orders, prices or store URLs enter UI.
 Do not import the whole catalog. The owner confirmed on-demand use of the open
@@ -1403,25 +1403,32 @@ responses in a filesystem (https://habr.com/ru/companies/vkusvill/articles/98186
 Only selected food facts are snapshotted in the diary. No bulk database license
 or undocumented anonymous quota is claimed; retain bounded requests/timeouts.
 
-The owner confirmed that all five addresses identify CURRENT Yandex logins,
+The owner confirmed that the original five addresses identify CURRENT Yandex logins,
 not the legacy email registry. Do not retry the old registry inspection or
 derive native UUIDs from names, prefixes or another experiment's assignments.
 The exact approved `FIT_NUTRITION_ACCOUNT_COHORT` private secret is already
 authorized and stored. Trusted main's `prepare-nutrition-native-cohort.mjs`
-checks the original fixed fingerprint and derives exactly3 client/2 trainer
+checks a fixed approved fingerprint and derives exactly3 or4 client/2 trainer
 login hashes. Yandex.ru accounts use native login equivalence (case, dot/hyphen);
 external email logins retain their entire address/domain. No new OAuth scopes.
 Set only `FIT_NUTRITION_ENABLED=true`; plan/apply derive the sensitive
 `nutrition_login_cohort` Terraform input themselves. The server independently
-validates the complete distinct3/2 shape. Never use stale legacy UUID variables
+validates the complete distinct3/2 or4/2 shape. Never use stale legacy UUID variables
 for this release, never print contacts/hashes or export this input to frontend.
 
 After the user's NORMAL provider-verified OAuth login, the independent feature
 binder matches the exact approved hash to the EXISTING Yandex subject/profile.
 It requires the specified current role, domain root and active read-write
-rollout. Unique immutable subject/login/profile bindings and database3/2 caps
+rollout. Unique immutable subject/login/profile bindings and database4/2 caps
 reject alias collisions, role mismatch or profile reassignment. The binder
 never creates an account, changes identity/role/other pilots, or grants consent.
+The fourth client was explicitly approved on12 October, with NO rollout.
+The expanded exact-six input is a private local candidate, not a replaced
+GitHub secret. The original approved-five secret/configuration remains valid;
+the extra database admission slot alone cannot grant access to another login.
+Migration144 preserves existing bindings/grants and raises only client
+admission3→4. Its Down restores3 without deleting bindings. Do not apply it,
+update the cohort secret or enable flags until a separately authorized release.
 Every diary API call rechecks the current protected binding against the private
 configured cohort. Disabled/revoked identities and changed roles fail closed.
 

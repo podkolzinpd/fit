@@ -27,9 +27,9 @@ export function readNativeNutritionPilot(enabled: string | undefined, raw: strin
   const clients: unknown = input.clients, trainers: unknown = input.trainers
   if (Object.keys(input).sort().join(',') !== 'clients,trainers'
     || !Array.isArray(clients) || !Array.isArray(trainers)
-    || clients.length !== 3 || trainers.length !== 2
+    || ![3, 4].includes(clients.length) || trainers.length !== 2
     || (clients as unknown[]).concat(trainers as unknown[]).some(x => typeof x !== 'string' || !hashPattern.test(x))
-    || new Set((clients as unknown[]).concat(trainers as unknown[])).size !== 5) return null
+    || new Set((clients as unknown[]).concat(trainers as unknown[])).size !== clients.length + trainers.length) return null
   return { clients: clients as string[], trainers: trainers as string[], native: true }
 }
 
