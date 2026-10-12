@@ -6,6 +6,10 @@ import {
   YandexIdentityUnavailableError,
 } from './auth/yandex-identity.js'
 import {
+  CloudDatabaseTransferError,
+  type CloudDatabaseExportService,
+} from './cloud-database-transfer.js'
+import {
   PilotEnrollmentConflictError,
   type PilotAccountRole,
   type PilotEnroller,
@@ -67,6 +71,7 @@ interface PilotEnrollmentOptions {
 
 interface BuildMigrationAppOptions {
   calorieAudit?: StageCalorieAuditor
+  cloudDatabaseExport?: CloudDatabaseExportService
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   domainChangeAnnouncement?: DomainChangeAnnouncementManager
   logger?: boolean
@@ -105,6 +110,8 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
+const CLOUD_DATABASE_EXPORT_CONFIRMATION = 'EXPORT_YANDEX_STAGE_TO_CLOUDRU'
+const CLOUD_DATABASE_EXPORT_CLEANUP_CONFIRMATION = 'DELETE_YANDEX_STAGE_EXPORT'
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SAFE_DATABASE_ERROR_CODE_PATTERN = /^[A-Z0-9]{5}$/i
 const SAFE_MIGRATION_ERROR_MESSAGE_PATTERN = /^[\p{L}\p{N}\s._:(),'"-]{1,500}$/u
@@ -303,6 +310,57 @@ export function buildMigrationApp(
   const app = Fastify({ logger: options.logger ?? true })
 
   app.get('/health', () => ({ status: 'ok' }))
+
+  if (options.cloudDatabaseExport !== undefined) {
+    const databaseExport = options.cloudDatabaseExport
+    app.post('/stage/cloudru/database-export', async (request, reply) => {
+      const passphrase = readTenantMigrationPassphrase(
+        request.headers['x-fit-database-export-passphrase'],
+      )
+      if (passphrase === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+      if (
+        request.headers['x-fit-database-export-confirmation']
+          !== CLOUD_DATABASE_EXPORT_CONFIRMATION
+      ) return reply.code(403).send({ status: 'export_not_confirmed' })
+      try {
+        return {
+          status: 'database_export_ready',
+          ...(await databaseExport.create(passphrase)),
+        }
+      } catch (error) {
+        const code = error instanceof CloudDatabaseTransferError
+          ? error.code
+          : 'database_export_failed'
+        return reply.code(500).send({ status: 'database_export_failed', code })
+      }
+    })
+
+    app.post('/stage/cloudru/database-export/cleanup', async (request, reply) => {
+      if (
+        request.headers['x-fit-database-export-confirmation']
+          !== CLOUD_DATABASE_EXPORT_CLEANUP_CONFIRMATION
+      ) return reply.code(403).send({ status: 'cleanup_not_confirmed' })
+      if (
+        typeof request.body !== 'object'
+        || request.body === null
+        || !('exportId' in request.body)
+        || !('versionId' in request.body)
+        || typeof request.body.exportId !== 'string'
+        || typeof request.body.versionId !== 'string'
+      ) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        await databaseExport.remove(request.body.exportId, request.body.versionId)
+        return { status: 'database_export_deleted' }
+      } catch (error) {
+        const code = error instanceof CloudDatabaseTransferError
+          ? error.code
+          : 'database_export_cleanup_failed'
+        return reply.code(500).send({ status: 'database_export_cleanup_failed', code })
+      }
+    })
+  }
 
   if (options.calorieAudit !== undefined) {
     const calorieAudit = options.calorieAudit

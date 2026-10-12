@@ -3,6 +3,10 @@ import { fileURLToPath } from 'node:url'
 import { runner } from 'node-pg-migrate'
 
 import { YandexIdentityClient } from './auth/yandex-identity.js'
+import {
+  readDatabaseTransferConnection,
+  YandexCloudDatabaseExport,
+} from './cloud-database-transfer.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
@@ -138,8 +142,16 @@ const vitalMediaDeployment = mediaStorageConfig === undefined
   || !vitalMediaDeploymentEnabled
   ? undefined
   : new YandexVitalMediaDeployment(mediaStorageConfig)
+const cloudDatabaseExport = mediaStorageConfig === undefined
+  || !stageTenantMigrationEnabled
+  ? undefined
+  : new YandexCloudDatabaseExport(
+      readDatabaseTransferConnection(process.env, 'MIGRATION_DATABASE'),
+      mediaStorageConfig,
+    )
 
 const app = buildMigrationApp({
+  ...(cloudDatabaseExport === undefined ? {} : { cloudDatabaseExport }),
   ...(privateFeaturePool === undefined || !stageRolloutAssignmentsEnabled
     ? {} : { calorieAudit: new DatabaseStageCalorieAuditor(privateFeaturePool) }),
   ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled

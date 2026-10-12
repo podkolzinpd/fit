@@ -5,6 +5,7 @@ import {
   YandexIdentityUnavailableError,
   type YandexIdentityProvider,
 } from './auth/yandex-identity.js'
+import type { CloudDatabaseExportService } from './cloud-database-transfer.js'
 import {
   PilotEnrollmentConflictError,
   type PilotEnroller,
@@ -49,6 +50,92 @@ const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('Cloud.ru database export', () => {
+  const result = {
+    bytes: 123,
+    exportId: '0123456789abcdef0123456789abcdef',
+    sha256: 'a'.repeat(64),
+    url: 'https://storage.example/signed',
+    versionId: 'version-1',
+  }
+
+  it('is unavailable unless explicitly configured', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/cloudru/database-export',
+    })
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('requires both a passphrase and the exact export confirmation', async () => {
+    const create = vi.fn<CloudDatabaseExportService['create']>()
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create, remove: () => Promise.resolve() },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const response = await app.inject({
+      headers: { 'x-fit-database-export-passphrase': 'p'.repeat(32) },
+      method: 'POST',
+      url: '/stage/cloudru/database-export',
+    })
+    expect(response.statusCode).toBe(403)
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('returns only bounded transfer metadata', async () => {
+    const create = vi.fn<CloudDatabaseExportService['create']>()
+      .mockResolvedValue(result)
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create, remove: () => Promise.resolve() },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const response = await app.inject({
+      headers: {
+        'x-fit-database-export-confirmation': 'EXPORT_YANDEX_STAGE_TO_CLOUDRU',
+        'x-fit-database-export-passphrase': 'p'.repeat(32),
+      },
+      method: 'POST',
+      url: '/stage/cloudru/database-export',
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'database_export_ready', ...result })
+    expect(create).toHaveBeenCalledWith('p'.repeat(32))
+  })
+
+  it('requires exact cleanup confirmation and removes the exact version', async () => {
+    const remove = vi.fn<CloudDatabaseExportService['remove']>()
+      .mockResolvedValue(undefined)
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create: () => Promise.resolve(result), remove },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST',
+      payload: { exportId: result.exportId, versionId: result.versionId },
+      url: '/stage/cloudru/database-export/cleanup',
+    })
+    expect(rejected.statusCode).toBe(403)
+    const accepted = await app.inject({
+      headers: {
+        'x-fit-database-export-confirmation': 'DELETE_YANDEX_STAGE_EXPORT',
+      },
+      method: 'POST',
+      payload: { exportId: result.exportId, versionId: result.versionId },
+      url: '/stage/cloudru/database-export/cleanup',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(remove).toHaveBeenCalledWith(result.exportId, result.versionId)
+  })
 })
 
 describe('stage calorie audit', () => {

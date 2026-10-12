@@ -1,0 +1,294 @@
+name: Migrate Yandex database to Cloud.ru
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Verify target TLS/roles only, or perform the guarded snapshot restore'
+        required: true
+        type: choice
+        default: preflight
+        options:
+          - preflight
+          - migrate
+      migration_confirmation:
+        description: 'For migrate: MIGRATE_YANDEX_STAGE_DATABASE_TO_CLOUDRU'
+        required: false
+        type: string
+      backup_confirmation:
+        description: 'For migrate: initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Guarded database migration and loopback API smoke
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 45
+    env:
+      CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+      YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - name: Verify trusted stage runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "podkolzinpd/fit"
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(hostname)" = "fit-stage-app"
+          sudo systemctl is-active --quiet \
+            actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
+
+      - name: Check out the exact main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Load and mask the target database contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDRU_DATABASE_CONFIG_JSON"
+          expected_keys='["DATABASE_HOST","DATABASE_NAME","DATABASE_PASSWORD","DATABASE_PORT","DATABASE_USER","MIGRATION_DATABASE_HOST","MIGRATION_DATABASE_NAME","MIGRATION_DATABASE_PASSWORD","MIGRATION_DATABASE_PORT","MIGRATION_DATABASE_USER"]'
+          actual_keys=$(jq -cer 'keys | sort' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+          test "$actual_keys" = "$expected_keys"
+          for name in DATABASE_HOST DATABASE_PORT DATABASE_NAME DATABASE_USER DATABASE_PASSWORD MIGRATION_DATABASE_HOST MIGRATION_DATABASE_PORT MIGRATION_DATABASE_NAME MIGRATION_DATABASE_USER MIGRATION_DATABASE_PASSWORD; do
+            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+            echo "::add-mask::$value"
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done
+          test "$(jq -r '.DATABASE_HOST' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = "10.70.10.67"
+          test "$(jq -r '.MIGRATION_DATABASE_HOST' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = "10.70.10.67"
+          test "$(jq -r '.DATABASE_NAME' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit
+          test "$(jq -r '.MIGRATION_DATABASE_NAME' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit
+          test "$(jq -r '.DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_api
+          test "$(jq -r '.MIGRATION_DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_owner
+
+      - name: Verify target TLS and database identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          ca=/etc/ssl/certs/ca-certificates.crt
+          test -s "$ca"
+          tls_output=$(mktemp)
+          trap 'rm -f "$tls_output"' EXIT
+          openssl s_client -starttls postgres \
+            -connect "$MIGRATION_DATABASE_HOST:$MIGRATION_DATABASE_PORT" \
+            -CAfile "$ca" -verify_return_error </dev/null >"$tls_output" 2>&1
+          grep -q 'Verify return code: 0 (ok)' "$tls_output"
+          ssl_used=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$MIGRATION_DATABASE_HOST" \
+              --port "$MIGRATION_DATABASE_PORT" \
+              --username "$MIGRATION_DATABASE_USER" \
+              --dbname "$MIGRATION_DATABASE_NAME" \
+              --command "select ssl from pg_stat_ssl where pid = pg_backend_pid()")
+          test "$ssl_used" = t
+          owner_identity=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$MIGRATION_DATABASE_HOST" \
+              --port "$MIGRATION_DATABASE_PORT" \
+              --username "$MIGRATION_DATABASE_USER" \
+              --dbname "$MIGRATION_DATABASE_NAME" \
+              --command 'select current_user')
+          runtime_identity=$(PGPASSWORD="$DATABASE_PASSWORD" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$DATABASE_HOST" \
+              --port "$DATABASE_PORT" \
+              --username "$DATABASE_USER" \
+              --dbname "$DATABASE_NAME" \
+              --command 'select current_user')
+          test "$owner_identity" = fit_owner
+          test "$runtime_identity" = fit_api
+          echo 'Cloud.ru PostgreSQL TLS and role identities verified.'
+
+      - name: Stop after read-only preflight
+        if: inputs.mode == 'preflight'
+        shell: bash
+        run: echo 'Preflight completed; source and target data were not changed.'
+
+      - name: Validate destructive restore gates
+        if: inputs.mode == 'migrate'
+        shell: bash
+        env:
+          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
+          MIGRATION_CONFIRMATION: ${{ inputs.migration_confirmation }}
+        run: |
+          set -euo pipefail
+          test "$MIGRATION_CONFIRMATION" = MIGRATE_YANDEX_STAGE_DATABASE_TO_CLOUDRU
+          test "$BACKUP_CONFIRMATION" = initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready
+          test -z "$(sudo podman ps -a --filter name='^fit-api-stage$' --format '{{.Names}}')"
+
+      - name: Install Yandex Cloud CLI
+        if: inputs.mode == 'migrate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output "$RUNNER_TEMP/install-yc.sh"
+          bash "$RUNNER_TEMP/install-yc.sh" -i "$RUNNER_TEMP/yandex-cloud" -n
+          echo "$RUNNER_TEMP/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Exchange GitHub OIDC for the bounded Yandex deploy identity
+        if: inputs.mode == 'migrate'
+        shell: bash
+        run: scripts/yandex-github-oidc.sh
+
+      - name: Export Yandex snapshot, migrate and restore Cloud.ru
+        if: inputs.mode == 'migrate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ca=/etc/ssl/certs/ca-certificates.crt
+          transfer_dir=$(mktemp -d "$RUNNER_TEMP/fit-db-transfer.XXXXXX")
+          response="$transfer_dir/response.json"
+          encrypted="$transfer_dir/source.dump.aes"
+          passphrase=$(openssl rand -base64 48)
+          echo "::add-mask::$passphrase"
+          export_id=
+          version_id=
+          cleanup() {
+            status=$?
+            if [[ -n "$export_id" && -n "$version_id" ]]; then
+              jq -n --arg exportId "$export_id" --arg versionId "$version_id" \
+                '{exportId:$exportId,versionId:$versionId}' \
+                | curl --fail --silent --show-error \
+                    --request POST \
+                    --header "Authorization: Bearer $YC_IAM_TOKEN" \
+                    --header 'Content-Type: application/json' \
+                    --header 'x-fit-database-export-confirmation: DELETE_YANDEX_STAGE_EXPORT' \
+                    --data-binary @- \
+                    "$migration_url/stage/cloudru/database-export/cleanup" >/dev/null
+            fi
+            rm -rf "$transfer_dir"
+            exit "$status"
+          }
+          trap cleanup EXIT
+
+          migration_url=$(yc serverless container get \
+            --name fit-stage-migration \
+            --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $YC_IAM_TOKEN" \
+            --header "x-fit-database-export-passphrase: $passphrase" \
+            --header 'x-fit-database-export-confirmation: EXPORT_YANDEX_STAGE_TO_CLOUDRU' \
+            --output "$response" \
+            "$migration_url/stage/cloudru/database-export"
+          test "$(jq -r '.status' "$response")" = database_export_ready
+          export_id=$(jq -er '.exportId | select(test("^[0-9a-f]{32}$"))' "$response")
+          version_id=$(jq -er '.versionId | select(type == "string" and length > 0)' "$response")
+          expected_sha=$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$response")
+          signed_url=$(jq -er '.url | select(startswith("https://storage.yandexcloud.net/"))' "$response")
+          echo "::add-mask::$signed_url"
+          curl --fail --silent --show-error --location \
+            --output "$encrypted" "$signed_url"
+          test "$(sha256sum "$encrypted" | cut -d' ' -f1)" = "$expected_sha"
+
+          common_database_env=(
+            --env "MIGRATION_DATABASE_HOST=$MIGRATION_DATABASE_HOST"
+            --env "MIGRATION_DATABASE_PORT=$MIGRATION_DATABASE_PORT"
+            --env "MIGRATION_DATABASE_NAME=$MIGRATION_DATABASE_NAME"
+            --env "MIGRATION_DATABASE_USER=$MIGRATION_DATABASE_USER"
+            --env "MIGRATION_DATABASE_PASSWORD=$MIGRATION_DATABASE_PASSWORD"
+            --env "MIGRATION_DATABASE_SSL_ROOT_CERT=$ca"
+          )
+          sudo podman run --rm --network=host \
+            "${common_database_env[@]}" \
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate:dry-run
+          sudo podman run --rm --network=host \
+            "${common_database_env[@]}" \
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate
+          sudo podman run --rm --network=host \
+            "${common_database_env[@]}" \
+            --env 'FIT_DATABASE_EXPORT_PATH=/transfer/source.dump.aes' \
+            --env "FIT_DATABASE_EXPORT_SHA256=$expected_sha" \
+            --env "FIT_DATABASE_EXPORT_PASSPHRASE=$passphrase" \
+            --volume "$encrypted:/transfer/source.dump.aes:ro" \
+            "localhost/fit-api:$GITHUB_SHA" \
+            node dist/cloud-database-restore-cli.js
+
+          profile_count=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$MIGRATION_DATABASE_HOST" \
+              --port "$MIGRATION_DATABASE_PORT" \
+              --username "$MIGRATION_DATABASE_USER" \
+              --dbname "$MIGRATION_DATABASE_NAME" \
+              --command 'select count(*) from public.profiles')
+          test "$profile_count" -gt 0
+          echo "Cloud.ru restore completed; profiles=$profile_count."
+
+      - name: Persist only the runtime database secret
+        if: inputs.mode == 'migrate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo install -d -m 700 /opt/fit/secrets
+          runtime_file=$(mktemp "$RUNNER_TEMP/fit-runtime.XXXXXX")
+          trap 'rm -f "$runtime_file"' EXIT
+          {
+            printf 'DATABASE_HOST=%s\n' "$DATABASE_HOST"
+            printf 'DATABASE_PORT=%s\n' "$DATABASE_PORT"
+            printf 'DATABASE_NAME=%s\n' "$DATABASE_NAME"
+            printf 'DATABASE_USER=%s\n' "$DATABASE_USER"
+            printf 'DATABASE_PASSWORD=%s\n' "$DATABASE_PASSWORD"
+            printf 'DATABASE_SSL_ROOT_CERT=%s\n' /etc/ssl/certs/ca-certificates.crt
+          } >"$runtime_file"
+          chmod 600 "$runtime_file"
+          sudo install -m 600 "$runtime_file" /opt/fit/secrets/api.env
+
+      - name: Start loopback-only API and run smoke checks
+        if: inputs.mode == 'migrate'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup_failed_start() {
+            sudo podman logs --tail 100 fit-api-stage 2>/dev/null || true
+            sudo podman rm --force fit-api-stage >/dev/null 2>&1 || true
+          }
+          trap cleanup_failed_start ERR
+          sudo podman run --detach \
+            --name fit-api-stage \
+            --restart unless-stopped \
+            --publish 127.0.0.1:18080:8080 \
+            --env-file /opt/fit/secrets/api.env \
+            --env APP_ENV=stage \
+            --env FIT_RELEASE_ID="$GITHUB_SHA" \
+            --env PORT=8080 \
+            "localhost/fit-api:$GITHUB_SHA" >/dev/null
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:18080/health >/dev/null; then
+              break
+            fi
+            test "$attempt" -lt 30
+            sleep 1
+          done
+          curl --fail --silent --show-error \
+            http://127.0.0.1:18080/ready >/dev/null
+          status=$(curl --silent --show-error --output "$RUNNER_TEMP/product-smoke.json" \
+            --write-out '%{http_code}' http://127.0.0.1:18080/v1/profile)
+          test "$status" = 401
+          jq -e '.error == "unauthorized"' "$RUNNER_TEMP/product-smoke.json" >/dev/null
+          test "$(sudo podman port fit-api-stage 8080/tcp)" = 127.0.0.1:18080
+          echo 'API is healthy on loopback port 18080; no external proxy or routing was changed.'
+

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout, appViewportMetrics } from './AppLayout'
 
 const authState = vi.hoisted(() => ({
@@ -69,6 +69,7 @@ afterEach(() => {
   authState.fitLime = false
   authState.clientLime = false
   vi.unstubAllEnvs()
+  vi.useRealTimers()
   document.documentElement.className = ''
   document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.remove()
 })
@@ -418,6 +419,11 @@ describe('AppLayout: вкладка ассистента', () => {
 })
 
 describe('AppLayout: объявление победителю конкурса', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-29T12:00:00+03:00'))
+  })
+
   it('показывается только участнику пилота и не перебивает Live', () => {
     vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'true')
     vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', 'user-1')
