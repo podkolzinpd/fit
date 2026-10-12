@@ -6,6 +6,7 @@ const SAFE_WITHOUT_E2E = [
   /^docs\//,
   /^infra\/yandex\//,
   /^services\/api\//,
+  /^\.github\/workflows\/deploy-cloudru-stage\.yml$/,
   /^\.github\/(?:copilot-instructions\.md|pull_request_template\.md)$/,
   /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|manage-yandex-stage-identity-unlink|manage-trainer-schedule-v2-pilot|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
   /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
@@ -38,4 +39,4 @@ function main() {
     : 'Only documentation, backend API or deployment infrastructure changed; browser runtime is unaffected.\n')
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()

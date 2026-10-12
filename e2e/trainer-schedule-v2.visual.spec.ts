@@ -199,7 +199,7 @@ test('Figma workout Coach reference swipe keeps vertical scrolling and field foc
   expect(writes).toEqual([])
 })
 
-test('Figma workout Coach reference full editor is absent for non-pilot trainer', async ({ page }) => {
+test('Figma workout Coach reference full editor is absent for non-pilot trainer', { tag: ["@lime-critical"] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true, workouts: [] })
   await page.goto(`/workouts/new?client=${clientId}&date=2026-09-24`)
   await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toBeVisible()
@@ -1157,7 +1157,7 @@ for (const [role, profileId, expected] of [
   ['trainer', trainerId, false],
   ['client', 'c0ac0000-6010-4000-8000-000000000001', false],
 ] as const) {
-  test(`Figma workout Coach reference direct route boundary ${role} ${profileId}`, async ({ page }) => {
+  test(`Figma workout Coach reference direct route boundary ${role} ${profileId}`, { tag: ["@lime-critical"] }, async ({ page }) => {
     await mockPilot(page, { role, profileId, fitLime: true, workouts: [restTimerWorkout()] })
     await page.goto(`/workouts/${workoutId}/live`)
     await expect(page.locator('.live-rest-trigger')).toBeVisible()
@@ -1167,7 +1167,7 @@ for (const [role, profileId, expected] of [
 }
 
 for (const width of [390, 430, 1440]) for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark']] as const) {
-  test(`Finance due date client cards ${width} lime=${fitLime} ${theme}`, async ({ page }, info) => {
+  test(`Finance due date client cards ${width} lime=${fitLime} ${theme}`, { tag: ["@lime-finance"] }, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
     const rows = [
       { id: clientId, fullName: 'Один абонемент', amount: 250000, date: '2026-10-08', count: 1 },
@@ -1227,7 +1227,7 @@ async function expectContainedButtonText(button: Locator) {
 }
 
 for (const width of [390, 430, 1440]) for (const fitLime of [false, true]) {
-  test(`Button geometry template empty actions ${width} lime=${fitLime}`, async ({ page }, info) => {
+  test(`Button geometry template empty actions ${width} lime=${fitLime}`, { tag: ["@lime-templates"] }, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 })
     await mockPilot(page, { fitLime })
     await page.goto('/schedule/templates')
@@ -1604,7 +1604,7 @@ test('Live rest preparation disabled keeps timed sets manual', async ({ page }) 
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
 })
 
-test('Live rest preparation enabled preserves the automatic phase sequence', async ({ page }) => {
+test('Live rest preparation enabled preserves the automatic phase sequence', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
   await page.goto(`/workouts/${workoutId}/live`)
@@ -1621,7 +1621,7 @@ test('Live rest preparation enabled preserves the automatic phase sequence', asy
   await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
 })
 
-test('Live rest failure and retry preserve the countdown and a manual adjustment', async ({ page }) => {
+test('Live rest failure and retry preserve the countdown and a manual adjustment', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
   const source = restTimerWorkout(); source.exercises[0]!.restBetweenSetsSec = 90
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [source], failFirstSetConfirm: true })
@@ -1681,7 +1681,7 @@ test('Live rest invalid empty result does not start the timer', async ({ page })
 })
 
 for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark']] as const) for (const width of [390, 430, 1440]) {
-  test(`Template slow connection and diagnostic retry ${width} lime=${fitLime} ${theme}`, async ({ page }, info) => {
+  test(`Template slow connection and diagnostic retry ${width} lime=${fitLime} ${theme}`, { tag: ["@lime-templates"] }, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
     await mockPilot(page, { fitLime, workouts: [{ ...restTimerWorkout(), status: 'planned' }] })
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
@@ -1749,7 +1749,7 @@ for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark'
 }
 
 for (const fitLime of [false, true]) {
-  test(`Template preflight unavailable diagnostic and manual retry lime=${fitLime}`, async ({ page }, info) => {
+  test(`Template preflight unavailable diagnostic and manual retry lime=${fitLime}`, { tag: ["@lime-templates"] }, async ({ page }, info) => {
     await mockPilot(page, { fitLime, workouts: [{ ...restTimerWorkout(), status: 'planned' }] })
     const commands: Array<{ draft: WorkoutTemplateDraft; expectedVersion: number | null }> = []
     let available = false
@@ -1788,7 +1788,7 @@ for (const fitLime of [false, true]) {
     expect(commands).toHaveLength(1)
   })
 
-  test(`Template reliability lost response and reload lime=${fitLime}`, async ({ page }, info) => {
+  test(`Template reliability lost response and reload lime=${fitLime}`, { tag: ["@lime-templates","@lime-critical"] }, async ({ page }, info) => {
     const source = { ...workout, exercises: [{
       id: '10000000-0000-4000-8000-000000000080', source: 'system' as const, ref: 'squat', name: 'Приседания', muscleGroup: 'legs' as const, inputKind: 'strength' as const, position: 0,
       blockId: '10000000-0000-4000-8000-000000000081', blockType: 'single' as const, blockRounds: 1,
@@ -1830,7 +1830,7 @@ for (const fitLime of [false, true]) {
     expect(await page.evaluate((key) => localStorage.getItem(key), `fit.workout-template-draft.${trainerId}.source:${workoutId}`)).toBeNull()
     await page.screenshot({ path: info.outputPath('saved-one-template.png'), fullPage: true })
   })
-  test(`Template reliability explicit discard lime=${fitLime}`, async ({ page }) => {
+  test(`Template reliability explicit discard lime=${fitLime}`, { tag: ["@lime-templates"] }, async ({ page }) => {
     await mockPilot(page, { fitLime })
     await page.goto('/schedule/templates/new/editor')
     await page.getByLabel('Название шаблона').fill('Черновик с нуля')
@@ -1850,7 +1850,7 @@ for (const fitLime of [false, true]) {
 }
 
 for (const role of ['client', 'trainer'] as const) for (const width of (role === 'client' ? [390, 430] : [390, 1440])) {
-  test(`Workout actual duration correction ${role} ${width}`, async ({ page }, testInfo) => {
+  test(`Workout actual duration correction ${role} ${width}`, { tag: ["@lime-duration"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 932 })
     await mockPilot(page, { role, profileId: role === 'client' ? clientId : trainerId,
       workouts: [{ ...workout, status: 'done', startedAt: '2026-09-24T23:30:00Z', completedAt: '2026-09-25T00:30:00Z' }] })
@@ -1921,7 +1921,7 @@ for (const role of ['client', 'trainer'] as const) for (const width of (role ===
   })
 }
 
-for (const role of ['client', 'trainer'] as const) test(`Workout actual duration quick entry and draft ${role}`, async ({ page }) => {
+for (const role of ['client', 'trainer'] as const) test(`Workout actual duration quick entry and draft ${role}`, { tag: ["@lime-duration"] }, async ({ page }) => {
   const profileId = role === 'client' ? '10000000-0000-4000-8000-000000000099' : trainerId
   await mockPilot(page, { role, profileId, pilot: false })
   await page.addInitScript(({ profileId, clientId }) => { if (!localStorage.getItem(`fit.today-draft.${profileId}`)) localStorage.setItem(`fit.today-draft.${profileId}`, JSON.stringify({
@@ -1947,7 +1947,7 @@ for (const role of ['client', 'trainer'] as const) test(`Workout actual duration
   await expect(page.locator('.workout-actual-duration')).toContainText('51 мин')
 })
 
-test('Workout actual duration keeps draft through network error and conflict without blind overwrite', async ({ page }) => {
+test('Workout actual duration keeps draft through network error and conflict without blind overwrite', { tag: ["@lime-duration"] }, async ({ page }) => {
   const current: MockWorkout = { ...workout, status: 'done', completedAt: '2026-09-24T12:00:00Z', actualDurationSec: null }
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [current] })
   let attempts = 0
@@ -2819,7 +2819,7 @@ for (const role of ['trainer', 'client'] as const) {
 }
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
-  test(`Lime finance inline errors keep data and allow retry for ${profileId}`, async ({ page }, testInfo) => {
+  test(`Lime finance inline errors keep data and allow retry for ${profileId}`, { tag: ["@lime-finance"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: profileId === trainerId ? 320 : 430, height: 844 })
     await mockPilot(page, { profileId, fitLime: true })
     const commands: unknown[] = []
@@ -2870,7 +2870,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
 }
 
 for (const fitLime of [false, true]) for (const theme of ['light', 'dark']) for (const width of [320, 390, 430, 1440]) {
-  test(`Finance payment lifecycle compact ${fitLime ? 'Lime' : 'Mono'} ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Finance payment lifecycle compact ${fitLime ? 'Lime' : 'Mono'} ${theme} ${width}`, { tag: ["@lime-finance","@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await mockPilot(page, { fitLime })
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
@@ -3085,7 +3085,7 @@ for (const width of [320, 390, 430, 1440]) {
 }
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
-  test(`Lime notification settings separate permission, device connection and retry for ${profileId}`, async ({ page }, testInfo) => {
+  test(`Lime notification settings separate permission, device connection and retry for ${profileId}`, { tag: ["@lime-profile"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await mockPilot(page, { profileId, fitLime: true })
     await page.addInitScript(() => {
@@ -3183,7 +3183,7 @@ test('Lime direct start opens Live immediately after choosing the client', async
   expect(commands[0]).toMatchObject({ clientId, trainingFormat: 'with_trainer' })
 })
 
-test('Lime trainer adds a template directly to a client plan', async ({ page }, testInfo) => {
+test('Lime trainer adds a template directly to a client plan', { tag: ["@lime-templates"] }, async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await mockPilot(page, { fitLime: true, workouts: [] })
   const templateName = 'Силовая тренировка на всё тело с длинным названием'
@@ -3641,7 +3641,7 @@ test('Figma workout second pilot keeps quick-plan guidance and separate complete
 })
 
 for (const width of [390, 430, 1440]) {
-  test(`Figma quick start preserves the finance format choice at ${width}`, async ({ page }, testInfo) => {
+  test(`Figma quick start preserves the finance format choice at ${width}`, { tag: ["@lime-finance"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
     const fullName = 'Александр Константинопольский-Рождественский'
@@ -4004,7 +4004,7 @@ for (const route of [
   `/workouts/${workoutId}/history/fedb-barbell-squat`,
   '/assistant',
 ]) {
-  test(`Fit Lime trainer screens fit a narrow phone without horizontal page clipping: ${route}`, async ({ page }, testInfo) => {
+  test(`Fit Lime trainer screens fit a narrow phone without horizontal page clipping: ${route}`, { tag: ["@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 720 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:30:00+03:00'))
     await mockPilot(page, { fitLime: true })
@@ -4174,7 +4174,7 @@ test('renders the single-trainer schedule and combines questions with messages',
   await expect.poll(() => page.locator('.schedule-v2-timeline').evaluate((element) => element.scrollTop)).toBe(0)
 })
 
-test('trainer switches day-grid density from schedule and profile settings', async ({ page }, testInfo) => {
+test('trainer switches day-grid density from schedule and profile settings', { tag: ["@lime-profile"] }, async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await mockPilot(page)
   await page.goto('/today?date=2026-09-24')
@@ -4242,7 +4242,7 @@ test('monochrome trainer switches day-grid density without Schedule V2', async (
   await expect(grid).toHaveCSS('height', `${24 * 44}px`)
 })
 
-test('inbox messages fail independently and all-messages back returns to the selected day', async ({ page }) => {
+test('inbox messages fail independently and all-messages back returns to the selected day', { tag: ["@lime-chat"] }, async ({ page }) => {
   const backend = await mockPilot(page, { failThreads: true })
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: /5 Вопросы и сообщения/ }).click()
@@ -4258,7 +4258,7 @@ test('inbox messages fail independently and all-messages back returns to the sel
   await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
 })
 
-test('inbox questions fail independently and recover without hiding messages', async ({ page }) => {
+test('inbox questions fail independently and recover without hiding messages', { tag: ["@lime-chat"] }, async ({ page }) => {
   const backend = await mockPilot(page, { failWorkspace: true })
   await page.goto('/today?date=2026-09-24')
   await page.getByRole('button', { name: /Вопросы и сообщения/ }).click()
@@ -4274,7 +4274,7 @@ test('inbox questions fail independently and recover without hiding messages', a
   await expect(page).toHaveURL(/\/today\?date=2026-09-24$/)
 })
 
-test('replying to a trainer question updates the inbox count on return', async ({ page }) => {
+test('replying to a trainer question updates the inbox count on return', { tag: ["@lime-chat"] }, async ({ page }) => {
   await mockPilot(page, { questionWorkout: true })
   await page.goto('/today?date=2026-09-24')
   await expect(page.getByRole('button', { name: '5 Вопросы и сообщения' })).toBeVisible()
@@ -4292,7 +4292,7 @@ test('replying to a trainer question updates the inbox count on return', async (
   await expect(page.getByRole('button', { name: '4 Вопросы и сообщения' })).toBeVisible()
 })
 
-test('reading a chat message updates the inbox count on return', async ({ page }) => {
+test('reading a chat message updates the inbox count on return', { tag: ["@lime-chat"] }, async ({ page }) => {
   const readRequests: string[] = []
   page.on('request', (request) => { if (request.method() === 'PUT' && request.url().includes('/read')) readRequests.push(request.url()) })
   await mockPilot(page)
@@ -4472,7 +4472,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime inbox list keeps questions, dialogs and calendar return`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime inbox list keeps questions, dialogs and calendar return`, { tag: ["@lime-chat"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true, questionWorkout: true })
     await page.goto('/today?date=2026-09-24')
     await page.getByRole('button', { name: /Вопросы и сообщения/ }).click()
@@ -4493,7 +4493,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime questions remain visible when dialogs fail, and dialogs recover independently', async ({ page }) => {
+test('Fit Lime questions remain visible when dialogs fail, and dialogs recover independently', { tag: ["@lime-chat"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, questionWorkout: true, failThreads: true })
   await page.goto('/chat')
   await expect(page.getByText('Можно заменить приседания?')).toBeVisible()
@@ -4504,14 +4504,14 @@ test('Fit Lime questions remain visible when dialogs fail, and dialogs recover i
   await expect(page.getByRole('button', { name: /Алексей Смирнов.*Спасибо/ })).toBeVisible()
 })
 
-test('Fit Lime dialog remains visible when questions fail', async ({ page }) => {
+test('Fit Lime dialog remains visible when questions fail', { tag: ["@lime-chat"] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true, failWorkspace: true })
   await page.goto('/chat')
   await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить вопросы' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Алексей Смирнов.*Спасибо/ })).toBeVisible()
 })
 
-test('trainer without Fit Lime keeps the existing messages list', async ({ page }) => {
+test('trainer without Fit Lime keeps the existing messages list', { tag: ["@lime-chat"] }, async ({ page }) => {
   await mockPilot(page)
   await page.goto('/chat')
   await expect(page.getByRole('heading', { name: 'Сообщения', level: 1 })).toBeVisible()
@@ -4522,7 +4522,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime conversation keeps the calendar path and readable composer`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime conversation keeps the calendar path and readable composer`, { tag: ["@lime-chat"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true })
     await page.goto('/today?date=2026-09-24')
     await page.getByRole('button', { name: /Вопросы и сообщения/ }).click()
@@ -4550,7 +4550,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime conversation retries a failed send without duplicating the message', async ({ page }) => {
+test('Fit Lime conversation retries a failed send without duplicating the message', { tag: ["@lime-chat","@lime-critical"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failFirstChatSend: true })
   await page.goto(`/chat/${conversationId}`)
   await page.getByRole('textbox', { name: 'Сообщение' }).fill('Проверю и отвечу')
@@ -4563,7 +4563,7 @@ test('Fit Lime conversation retries a failed send without duplicating the messag
   expect(backend.getChatSendAttempts()).toBe(2)
 })
 
-test('trainer without Fit Lime keeps the existing conversation styling', async ({ page }) => {
+test('trainer without Fit Lime keeps the existing conversation styling', { tag: ["@lime-chat"] }, async ({ page }) => {
   await mockPilot(page)
   await page.goto(`/chat/${conversationId}`)
   await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
@@ -4645,7 +4645,7 @@ async function expectSwipeActionReadable(row: Locator) {
 
 for (const [fitLime, width, theme] of [
   [false, 390, 'light'], [false, 430, 'dark'], [true, 390, 'dark'], [true, 430, 'dark'], [false, 1440, 'light'],
-] as const) test(`Client full swipe archives without a click and persists ${fitLime ? 'Lime' : theme} ${width}`, async ({ page, browserName }, testInfo) => {
+] as const) test(`Client full swipe archives without a click and persists ${fitLime ? 'Lime' : theme} ${width}`, { tag: ["@lime-clients"] }, async ({ page, browserName }, testInfo) => {
   const row = await openSwipeFixture(page, fitLime, width, theme)
   const commands: Array<{ archived: boolean; expectedVersion: number }> = []
   page.on('request', (request) => { if (new URL(request.url()).pathname === `/v1/clients/${clientId}/archive` && request.method() === 'PUT') commands.push(request.postDataJSON() as { archived: boolean; expectedVersion: number }) })
@@ -4700,7 +4700,7 @@ for (const [fitLime, width, theme] of [
   await page.screenshot({ path: testInfo.outputPath('full-swipe-archive.png') })
 })
 
-for (const fitLime of [false, true]) test(`Client full swipe keeps short reversed vertical and cancelled gestures harmless ${fitLime ? 'Lime' : 'ordinary'}`, async ({ page, browserName }) => {
+for (const fitLime of [false, true]) test(`Client full swipe keeps short reversed vertical and cancelled gestures harmless ${fitLime ? 'Lime' : 'ordinary'}`, { tag: ["@lime-clients"] }, async ({ page, browserName }) => {
   const row = await openSwipeFixture(page, fitLime)
   const commands: string[] = []
   page.on('request', (request) => { if (new URL(request.url()).pathname.endsWith('/archive') && request.method() === 'PUT') commands.push(request.url()) })
@@ -4743,7 +4743,7 @@ for (const fitLime of [false, true]) test(`Client full swipe keeps short reverse
   expect(commands).toHaveLength(0)
 })
 
-for (const fitLime of [false, true]) test(`Client full swipe presentation fits long names with reduced motion ${fitLime ? 'Lime' : 'ordinary'}`, async ({ page, browserName }, testInfo) => {
+for (const fitLime of [false, true]) test(`Client full swipe presentation fits long names with reduced motion ${fitLime ? 'Lime' : 'ordinary'}`, { tag: ["@lime-clients"] }, async ({ page, browserName }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await openSwipeFixture(page, fitLime, 320)
   // Search puts the target card above fixed navigation before trusted input.
@@ -4770,7 +4770,7 @@ for (const fitLime of [false, true]) test(`Client full swipe presentation fits l
   await expect(row).toBeVisible()
 })
 
-test('Client full swipe has pending feedback, single request and a recoverable server error', async ({ page, browserName }, testInfo) => {
+test('Client full swipe has pending feedback, single request and a recoverable server error', { tag: ["@lime-clients"] }, async ({ page, browserName }, testInfo) => {
   const row = await openSwipeFixture(page, true)
   let release: () => void = () => undefined
   const gate = new Promise<void>((done) => { release = done })
@@ -4811,7 +4811,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime client list keeps search, archive and restore`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime client list keeps search, archive and restore`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true, clientRecords: limeClients })
     await page.goto('/clients')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -4841,7 +4841,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime client loading error retries without losing the clients route', async ({ page }) => {
+test('Fit Lime client loading error retries without losing the clients route', { tag: ["@lime-clients"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failClients: true })
   await page.goto('/clients')
   await expect(page.getByRole('alert')).toBeVisible()
@@ -4851,7 +4851,7 @@ test('Fit Lime client loading error retries without losing the clients route', a
   await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
 })
 
-test('trainer without Fit Lime keeps the previous clients list and archive', async ({ page }) => {
+test('trainer without Fit Lime keeps the previous clients list and archive', { tag: ["@lime-clients"] }, async ({ page }) => {
   await mockPilot(page, { clientRecords: limeClients })
   await page.goto('/clients')
   await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible()
@@ -4865,7 +4865,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime client card keeps actions and confirms archive`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime client card keeps actions and confirms archive`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true })
     await page.goto(`/clients/${clientId}`)
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -4896,7 +4896,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime client card isolates secondary data failures and retries', async ({ page }) => {
+test('Fit Lime client card isolates secondary data failures and retries', { tag: ["@lime-clients"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failTrainingData: true, failConnections: true })
   await page.goto(`/clients/${clientId}`)
   await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
@@ -4911,7 +4911,7 @@ test('Fit Lime client card isolates secondary data failures and retries', async 
 })
 
 for (const width of [390, 1440]) {
-  test(`Client card aggregated stats preserve values and independent retry at ${width}`, async ({ page }, testInfo) => {
+  test(`Client card aggregated stats preserve values and independent retry at ${width}`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 })
     await page.clock.setFixedTime(new Date('2026-10-06T10:00:00+03:00'))
     await mockPilot(page, { fitLime: true, workouts: [] })
@@ -4946,7 +4946,7 @@ for (const width of [390, 1440]) {
   })
 }
 
-test('trainer without Fit Lime keeps the existing client card', async ({ page }) => {
+test('trainer without Fit Lime keeps the existing client card', { tag: ["@lime-clients"] }, async ({ page }) => {
   await mockPilot(page)
   await page.goto(`/clients/${clientId}`)
   await expect(page.getByRole('heading', { name: 'Алексей Смирнов' })).toBeVisible()
@@ -4957,7 +4957,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime client creation keeps validation, save and safe return`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime client creation keeps validation, save and safe return`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true })
     await page.goto('/clients/new')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -4982,7 +4982,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime trainer edit and join keep a route back to the client list', async ({ page }) => {
+test('Fit Lime trainer edit and join keep a route back to the client list', { tag: ["@lime-clients"] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true })
   await page.goto(`/clients/${clientId}/edit`)
   await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -4997,7 +4997,7 @@ test('Fit Lime trainer edit and join keep a route back to the client list', asyn
   await expect(page).toHaveURL(/\/clients$/)
 })
 
-test('Fit Lime invitation dialog keeps the existing invite entry and close', async ({ page }, testInfo) => {
+test('Fit Lime invitation dialog keeps the existing invite entry and close', { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/clients')
   const invite = page.getByRole('button', { name: 'Пригласить спортсмена' })
@@ -5018,7 +5018,7 @@ test('Fit Lime invitation dialog keeps the existing invite entry and close', asy
   await expect(invite).toBeFocused()
 })
 
-test('trainer without Fit Lime keeps create, edit and join outside the pilot theme', async ({ page }) => {
+test('trainer without Fit Lime keeps create, edit and join outside the pilot theme', { tag: ["@lime-clients"] }, async ({ page }) => {
   await mockPilot(page)
   for (const route of ['/clients/new', `/clients/${clientId}/edit`, '/join']) {
     await page.goto(route)
@@ -5030,7 +5030,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime goal keeps the current stage and edit actions`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime goal keeps the current stage and edit actions`, { tag: ["@lime-goals"] }, async ({ page }, testInfo) => {
     await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
     await mockPilot(page, { profileId, fitLime: true, withGoal: true })
     await page.goto(`/clients/${clientId}/goal`)
@@ -5053,7 +5053,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime empty goal can be created without automatic criteria', async ({ page }) => {
+test('Fit Lime empty goal can be created without automatic criteria', { tag: ["@lime-goals","@lime-critical"] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true })
   await page.goto(`/clients/${clientId}/goal`)
   await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -5064,7 +5064,7 @@ test('Fit Lime empty goal can be created without automatic criteria', async ({ p
   await expect(page.getByText('Этапов пока нет')).toBeVisible()
 })
 
-test('Fit Lime goal error retries without changing the client route', async ({ page }) => {
+test('Fit Lime goal error retries without changing the client route', { tag: ["@lime-goals"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failProgress: true })
   await page.goto(`/clients/${clientId}/goal`)
   await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 })
@@ -5074,7 +5074,7 @@ test('Fit Lime goal error retries without changing the client route', async ({ p
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}/goal$`))
 })
 
-test('trainer without Fit Lime keeps the original goal surface', async ({ page }) => {
+test('trainer without Fit Lime keeps the original goal surface', { tag: ["@lime-goals"] }, async ({ page }) => {
   await mockPilot(page, { withGoal: true })
   await page.goto(`/clients/${clientId}/goal`)
   await expect(page.getByRole('heading', { name: 'Подготовка к старту' })).toBeVisible()
@@ -5085,7 +5085,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime progress keeps weekly data and the measurements route`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime progress keeps weekly data and the measurements route`, { tag: ["@lime-progress"] }, async ({ page }, testInfo) => {
     await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
     await mockPilot(page, { profileId, fitLime: true, workouts: [] })
     await page.goto(`/progress/${clientId}`)
@@ -5111,7 +5111,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime measurement history confirms destructive removal', async ({ page }) => {
+test('Fit Lime measurement history confirms destructive removal', { tag: ["@lime-progress"] }, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, withMeasurements: true })
   await page.goto(`/progress/${clientId}?view=measurements`)
@@ -5127,7 +5127,7 @@ test('Fit Lime measurement history confirms destructive removal', async ({ page 
   await expect(page.getByText('Замеров пока нет')).toBeVisible()
 })
 
-test('Fit Lime progress source error has a working retry', async ({ page }) => {
+test('Fit Lime progress source error has a working retry', { tag: ["@lime-progress","@lime-critical"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failProgress: true })
   await page.goto(`/progress/${clientId}?view=measurements`)
   await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 })
@@ -5184,7 +5184,7 @@ test('Fit Lime client workout history retains list, calendar and planning exit',
   await expect(page).toHaveURL(new RegExp(`/clients/${clientId}$`))
 })
 
-test('trainer without Fit Lime keeps progress and workout history in the prior theme', async ({ page }) => {
+test('trainer without Fit Lime keeps progress and workout history in the prior theme', { tag: ["@lime-progress"] }, async ({ page }) => {
   await mockPilot(page, { workouts: [{ ...workout, status: 'done' }] })
   for (const route of [`/progress/${clientId}`, `/progress/${clientId}?view=measurements`, `/clients/${clientId}/workouts`]) {
     await page.goto(route)
@@ -5196,7 +5196,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime trainer profile keeps questionnaire, save and settings`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime trainer profile keeps questionnaire, save and settings`, { tag: ["@lime-profile"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true })
     await page.goto('/profile')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -5231,7 +5231,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime trainer profile keeps draft after save failure and retries', async ({ page }) => {
+test('Fit Lime trainer profile keeps draft after save failure and retries', { tag: ["@lime-profile","@lime-critical"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failFirstProfileSave: true })
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Заполнить анкету' }).click()
@@ -5245,7 +5245,7 @@ test('Fit Lime trainer profile keeps draft after save failure and retries', asyn
   expect(backend.getProfileSaveAttempts()).toBe(2)
 })
 
-test('Fit Lime trainer profile reports photo upload failure without losing editor', async ({ page }) => {
+test('Fit Lime trainer profile reports photo upload failure without losing editor', { tag: ["@lime-profile"] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Заполнить анкету' }).click()
@@ -5255,7 +5255,7 @@ test('Fit Lime trainer profile reports photo upload failure without losing edito
   await expect(form.getByRole('button', { name: 'Сохранить' })).toBeEnabled()
 })
 
-test('Fit Lime trainer profile retains publication, confirmation and sign-out', async ({ page }) => {
+test('Fit Lime trainer profile retains publication, confirmation and sign-out', { tag: ["@lime-profile"] }, async ({ page }) => {
   await mockPilot(page, { fitLime: true })
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Опубликовать' }).click()
@@ -5270,7 +5270,7 @@ test('Fit Lime trainer profile retains publication, confirmation and sign-out', 
   await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
 })
 
-test('Fit Lime trainer profile has addressed load retry and non-pilot control', async ({ page }) => {
+test('Fit Lime trainer profile has addressed load retry and non-pilot control', { tag: ["@lime-profile"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failProfile: true })
   await page.goto('/profile')
   await expect(page.getByRole('alert')).toBeVisible()
@@ -5289,7 +5289,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime exercises retain search, technique, own list and profile return`, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime exercises retain search, technique, own list and profile return`, { tag: ["@lime-exercises"] }, async ({ page }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true, withCustomExercise: true })
     await page.goto('/exercises')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -5313,7 +5313,7 @@ for (const [account, profileId] of [
   })
 }
 
-test('Fit Lime custom exercise creation keeps draft after server error', async ({ page }) => {
+test('Fit Lime custom exercise creation keeps draft after server error', { tag: ["@lime-exercises","@lime-critical"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failFirstCustomExerciseSave: true })
   await page.goto('/exercises')
   const form = page.locator('.catalog-custom-form')
@@ -5326,7 +5326,7 @@ test('Fit Lime custom exercise creation keeps draft after server error', async (
   expect(backend.getCustomExerciseSaveAttempts()).toBe(2)
 })
 
-test('Fit Lime custom exercise edit and archive keep confirmation, error and restore', async ({ page }) => {
+test('Fit Lime custom exercise edit and archive keep confirmation, error and restore', { tag: ["@lime-exercises"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, withCustomExercise: true, failArchive: true })
   await page.goto('/exercises')
   const item = page.locator('.catalog-custom-item')
@@ -5352,7 +5352,7 @@ test('Fit Lime custom exercise edit and archive keep confirmation, error and res
   await expect(item).not.toHaveClass(/archived/)
 })
 
-test('Fit Lime exercises retry failed data without changing non-pilot catalog', async ({ page }) => {
+test('Fit Lime exercises retry failed data without changing non-pilot catalog', { tag: ["@lime-exercises"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, failTrainingData: true })
   await page.goto('/exercises')
   await expect(page.locator('.catalog-custom-results').getByRole('alert')).toBeVisible()
@@ -5412,7 +5412,7 @@ test('action and onboarding sheets keep keyboard focus inside and return it on c
   await expect(onboarding).toBeFocused()
 })
 
-test('today keeps workout entry usable while clients fail and recover', async ({ page }) => {
+test('today keeps workout entry usable while clients fail and recover', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-27T12:00:00+03:00'))
   await mockPilot(page)
   let recovered = false
@@ -5516,7 +5516,7 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   })
 }
 
-test('Lime complete lifecycle preserves one plan through start resume and finish', async ({ page }) => {
+test('Lime complete lifecycle preserves one plan through start resume and finish', { tag: ["@lime-critical"] }, async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
   await mockPilot(page, { fitLime: true, workouts: [] })
   const writes: string[] = []
@@ -5853,7 +5853,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const width of [390, 430]) {
-  test(`Client Lime shell themes and account isolation ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime shell themes and account isolation ${width}`, { tag: ["@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.emulateMedia({ colorScheme: 'light' })
     await mockPilot(page, { role: 'client', profileId: clientId })
@@ -5902,7 +5902,7 @@ for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime workout lifecycle ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime workout lifecycle ${theme} ${width}`, { tag: ["@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self', exercises: [{
@@ -6110,7 +6110,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   for (const [section, routes] of [
     ['profile', ['/me/progress', '/me/goal', '/me/profile', '/me/settings', '/me/edit', '/me/finance']],
     ['communication', ['/me/trainers', '/me/achievements', '/chat', `/chat/${conversationId}`, '/assistant', '/join']],
-  ] as const) test(`Client Lime sections ${theme} ${width} ${section}`, async ({ page }, testInfo) => {
+  ] as const) test(`Client Lime sections ${theme} ${width} ${section}`, { tag: ["@lime-finance","@lime-clients","@lime-goals","@lime-progress","@lime-profile","@lime-chat","@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { role: 'client', profileId: clientId, withGoal: true, withMeasurements: true })
@@ -6207,7 +6207,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) {
-  test(`Client Lime loading error retry empty and keyboard ${theme}`, async ({ page }, testInfo) => {
+  test(`Client Lime loading error retry empty and keyboard ${theme}`, { tag: ["@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 })
     const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [], failTrainingData: true })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
@@ -6245,7 +6245,7 @@ for (const theme of ['light', 'dark']) {
   })
 }
 
-test('Client Lime logout resets document scope and return preserves only its own preference', async ({ page }) => {
+test('Client Lime logout resets document scope and return preserves only its own preference', { tag: ["@lime-critical"] }, async ({ page }) => {
   await mockPilot(page, { role: 'client', profileId: clientId })
   await page.goto('/me/settings')
   await page.getByLabel('Тема оформления').selectOption('dark')
@@ -6674,7 +6674,7 @@ for (const theme of ['light', 'dark']) test(`Client Lime confirmation failure re
   await expect(page.getByText('Выполнено 1 из 2 подходов')).toBeVisible()
 })
 
-for (const theme of ['light', 'dark']) test(`Client Lime voice to completion end-to-end ${theme}`, async ({ page }, testInfo) => {
+for (const theme of ['light', 'dark']) test(`Client Lime voice to completion end-to-end ${theme}`, { tag: ["@lime-critical"] }, async ({ page }, testInfo) => {
   await page.setViewportSize({ width: theme === 'light' ? 390 : 430, height: 844 })
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
   await mockPilot(page, { role: 'client', profileId: clientId })
@@ -6791,7 +6791,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime catalog and support nested states ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime catalog and support nested states ${theme} ${width}`, { tag: ["@lime-exercises"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await mockPilot(page, { role: 'client', profileId: clientId })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
@@ -6865,7 +6865,7 @@ async function mockPublicTrainer(page: Page) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime public context and photo portal ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime public context and photo portal ${theme} ${width}`, { tag: ["@lime-profile"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await mockPilot(page, { role: 'client', profileId: clientId })
     await mockPublicTrainer(page)
@@ -6973,7 +6973,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 }
 
 for (const kind of ['anonymous', 'other-client', 'trainer'] as const) {
-  test(`Client Lime public routes exclude ${kind}`, async ({ page }) => {
+  test(`Client Lime public routes exclude ${kind}`, { tag: ["@lime-critical"] }, async ({ page }) => {
     await mockPilot(page, { role: kind === 'trainer' ? 'trainer' : 'client', profileId: kind === 'other-client' ? '10000000-0000-4000-8000-000000000010' : kind === 'trainer' ? trainerId : clientId, fitLime: kind === 'trainer' })
     if (kind === 'anonymous') await page.addInitScript(() => localStorage.removeItem('fit.yandexAppSession.v1'))
     await page.addInitScript((id) => localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark'), clientId)
@@ -6988,7 +6988,7 @@ for (const kind of ['anonymous', 'other-client', 'trainer'] as const) {
 }
 
 for (const withTrainer of [false, true]) for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime first run and trainer connection ${withTrainer ? 'connected' : 'independent'} ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime first run and trainer connection ${withTrainer ? 'connected' : 'independent'} ${theme} ${width}`, { tag: ["@lime-clients","@lime-profile"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await mockPilot(page, { role: 'client', profileId: clientId, clientTrainerId: withTrainer ? trainerId : clientId, workouts: [] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
@@ -7019,7 +7019,7 @@ for (const withTrainer of [false, true]) for (const theme of ['light', 'dark']) 
   })
 }
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime filled finance assistant and chat media ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime filled finance assistant and chat media ${theme} ${width}`, { tag: ["@lime-finance","@lime-chat"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-10-06T12:00:00+03:00'))
     await mockPilot(page, { role: 'client', profileId: clientId })
@@ -7161,7 +7161,7 @@ for (const width of [390, 430]) {
 }
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime filled progress analysis and compact goal ${theme} ${width}`, async ({ page }, testInfo) => {
+  test(`Client Lime filled progress analysis and compact goal ${theme} ${width}`, { tag: ["@lime-goals","@lime-progress"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     const checkedExercise: WorkoutExercise = {
@@ -7324,7 +7324,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   })
 }
 
-test('Client progress outside the Lime pilot retains its original surfaces', async ({ page }) => {
+test('Client progress outside the Lime pilot retains its original surfaces', { tag: ["@lime-progress"] }, async ({ page }) => {
   await mockPilot(page, { role: 'client', profileId: '10000000-0000-4000-8000-000000000009', withGoal: true })
   await page.goto('/me/progress')
   await expect(page.locator('.fit-client-lime')).toHaveCount(0)
@@ -7342,7 +7342,7 @@ test('Client progress outside the Lime pilot retains its original surfaces', asy
 })
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
-  test(`Client Lime segments keep one geometry and visible body-map selection ${theme} ${width}`, async ({ page }, info) => {
+  test(`Client Lime segments keep one geometry and visible body-map selection ${theme} ${width}`, { tag: ["@lime-progress"] }, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 })
     await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
     const source = restTimerWorkout()
@@ -7406,7 +7406,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 
 for (const theme of ['light', 'dark']) for (const role of ['client', 'trainer'] as const) {
   if (role === 'trainer' && theme === 'light') continue
-  test(`Filled body-map modes preserve client and trainer scope ${role} ${theme}`, async ({ page }, testInfo) => {
+  test(`Filled body-map modes preserve client and trainer scope ${role} ${theme}`, { tag: ["@lime-progress"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 430, height: 844 })
     await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     const exercise: WorkoutExercise = {
@@ -7504,7 +7504,7 @@ for(const theme of ['light','dark'])for(const width of [390,430])test(`Client Li
  await page.locator('.client-home-past-plan > a').click();await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`));
 });
 
-for (const theme of ['light', 'dark'] as const) test(`Client Lime exported PNG follows ${theme} identity in every variant`, async ({ page }, testInfo) => {
+for (const theme of ['light', 'dark'] as const) test(`Client Lime exported PNG follows ${theme} identity in every variant`, { tag: ["@lime-progress"] }, async ({ page }, testInfo) => {
   type Paint = { text: string; font: string; left: number; right: number; top: number; bottom: number }
   type ShareAudit = Window & { limeShared?: File; limePaint?: Paint[] }
   await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
@@ -7599,7 +7599,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`Cli
   for (const value of await selected.all()) await expect(value).toHaveCSS('font-weight', '500')
 })
 
-for (const pilot of [true, false]) test(`Client chat portal preserves font scope ${pilot ? 'lime' : 'original'}`, async ({ page }) => {
+for (const pilot of [true, false]) test(`Client chat portal preserves font scope ${pilot ? 'lime' : 'original'}`, { tag: ["@lime-chat"] }, async ({ page }) => {
   await mockPilot(page, { role: 'client', profileId: clientId, clientLime: pilot })
   await page.goto(`/chat/${conversationId}`)
   await page.locator('.chat-message').last().click()
@@ -7615,7 +7615,7 @@ for (const pilot of [true, false]) test(`Client chat portal preserves font scope
 })
 
 // Global admission is assigned by the server, not a hard-coded browser ID list.
-for (const role of ['client', 'trainer'] as const) test(`Lime rollout honors server admission and rollback for a previously non-pilot ${role}`, async ({ page }) => {
+for (const role of ['client', 'trainer'] as const) test(`Lime rollout honors server admission and rollback for a previously non-pilot ${role}`, { tag: ["@lime-critical"] }, async ({ page }) => {
   const profileId = '10000000-0000-4000-8000-000000000099'
   const route = role === 'client' ? '/me' : '/clients'
   const scope = role === 'client' ? 'fit-client-lime' : 'fit-lime-shell'
