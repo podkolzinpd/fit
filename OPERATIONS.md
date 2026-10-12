@@ -15,6 +15,39 @@ Production URL/ключи нельзя копировать в `.env.local`, `.e
 другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
 Supabase baseline, не Yandex PostgreSQL.
 
+## Cloud.ru stage: bootstrap и подготовка API
+
+`.github/workflows/deploy-cloudru-stage.yml` — **Bootstrap Cloud.ru stage runner**,
+только аварийный ручной `workflow_dispatch`. Он может временно использовать
+SSH-ключ и `CLOUDRU_RUNNER_REGISTRATION_TOKEN`; после регистрации runner
+registration secret и временное правило TCP/22 удаляются. Это не обычный deploy.
+
+Обычные обновления готовит **Build Cloud.ru stage API** в
+`.github/workflows/deploy-cloudru-api-stage.yml`: `push` в `main` только для
+`services/api/**` или ручной `workflow_dispatch`. Job использует
+`[self-hosted, cloudru-stage]`, `contents: read` и общий lock
+`cloudru-stage-vm` без отмены выполняющегося задания. Автоматический запуск
+разрешён только при точном `CLOUDRU_STAGE_AUTODEPLOY_ENABLED=true`; отсутствие
+переменной/`false` оставляет только ручной запуск. Первую проверку выполняйте
+вручную на `main` при выключенном флаге; включайте его только после success.
+
+До checkout проверяются repository/main/SHA, hostname `fit-stage-app`, активный
+`actions.runner.podkolzinpd-fit.fit-cloudru-stage.service` и `sudo podman info`.
+Credentials checkout не сохраняются. Только versioned source из `git archive`
+попадает в отдельный каталог `/opt/fit/releases/<SHA>/<run-id>-<attempt>`.
+Образ `localhost/fit-api:<SHA>` собирается на VM через Podman и проверяется
+`podman image exists`. После success отдельно атомарно заменяются ссылка
+`/opt/fit/current` и файл `/opt/fit/DEPLOYED_SHA`; итог сверяется по readback.
+Ошибки preflight/build не меняют прежние SHA/current; старые releases/образы
+этот workflow не удаляет.
+
+В этой фазе **API-контейнер не запускается**, migrations и runtime secrets не
+читаются и не применяются. SHA означает подготовленный образ, не работающий
+runtime и не доступность API. Runtime secrets и migration dry-run остаются
+отдельными гейтами. Новая сборка не меняет Yandex production, frontend или DNS.
+Обычному job не нужны SSH, приватный ключ и registration token: runner получает
+задания через исходящее HTTPS-соединение с GitHub; входящий SSH не открывается.
+
 ## Диагностика пользовательской ошибки
 
 Каждый frontend-запрос к Yandex API отправляет UUID в `x-fit-request-id`. API
