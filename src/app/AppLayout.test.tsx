@@ -69,6 +69,7 @@ afterEach(() => {
   authState.fitLime = false
   authState.clientLime = false
   vi.unstubAllEnvs()
+  vi.useRealTimers()
   document.documentElement.className = ''
   document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.remove()
 })
@@ -421,10 +422,6 @@ describe('AppLayout: объявление победителю конкурса'
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-09-29T12:00:00+03:00'))
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
   })
 
   it('показывается только участнику пилота и не перебивает Live', () => {

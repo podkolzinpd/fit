@@ -224,6 +224,7 @@ test('uses a Supabase CLI version that reloads Kong after db reset', () => {
 
 const cloudruBootstrap = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-stage.yml'), 'utf8')
 const cloudruApi = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-api-stage.yml'), 'utf8')
+const cloudruDatabaseMigration = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'migrate-yandex-database-to-cloudru.yml'), 'utf8')
 
 function inlineShell(workflowSource) {
   return [...workflowSource.matchAll(/run: \|\n((?:          [^\n]*(?:\n|$))+)/g)]
@@ -246,6 +247,21 @@ test('Cloud.ru API builds use only the self-hosted runner with default-off autod
   assert.match(cloudruApi, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(cloudruApi, /concurrency:\n      group: cloudru-stage-vm\n      cancel-in-progress: false/)
   assert.doesNotMatch(cloudruApi, /secrets\.|id-token:|ssh|scp|registration|private.key|podman (?:run|start|create|exec)\b|db:migrate|psql/i)
+})
+
+test('Cloud.ru database migration is manual, confirmed and loopback-only', () => {
+  assert.match(cloudruDatabaseMigration, /^name: Migrate Yandex database to Cloud\.ru\n/)
+  assert.match(cloudruDatabaseMigration, /on:\n  workflow_dispatch:/)
+  assert.doesNotMatch(cloudruDatabaseMigration, /^  (?:push|pull_request|schedule):/m)
+  assert.match(cloudruDatabaseMigration, /runs-on: \[self-hosted, cloudru-stage\]/)
+  assert.match(cloudruDatabaseMigration, /group: cloudru-stage-vm\n  cancel-in-progress: false/)
+  assert.match(cloudruDatabaseMigration, /MIGRATE_YANDEX_STAGE_DATABASE_TO_CLOUDRU/)
+  assert.match(cloudruDatabaseMigration, /initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready/)
+  assert.match(cloudruDatabaseMigration, /PGSSLMODE=verify-full/g)
+  assert.match(cloudruDatabaseMigration, /db:migrate:dry-run/)
+  assert.match(cloudruDatabaseMigration, /cloud-database-restore-cli\.js/)
+  assert.match(cloudruDatabaseMigration, /--publish 127\.0\.0\.1:18080:8080/)
+  assert.doesNotMatch(cloudruDatabaseMigration, /sslmode=(?:disable|require)|--publish 0\.0\.0\.0/)
 })
 
 test('Cloud.ru validates main, hostname, runner service and Podman before touching a release', () => {
@@ -275,8 +291,8 @@ test('Cloud.ru markers advance only after the exact revision image is confirmed'
   assert.match(scripts[2], /test "\$\(cat \/opt\/fit\/DEPLOYED_SHA\)" = "\$GITHUB_SHA"/)
 })
 
-test('both Cloud.ru workflows contain syntactically valid Bash', () => {
-  for (const source of [cloudruBootstrap, cloudruApi]) {
+test('Cloud.ru workflows contain syntactically valid Bash', () => {
+  for (const source of [cloudruBootstrap, cloudruApi, cloudruDatabaseMigration]) {
     for (const script of inlineShell(source)) {
       const result = spawnSync('bash', ['-n'], { input: script, encoding: 'utf8' })
       assert.equal(result.status, 0, result.stderr)
