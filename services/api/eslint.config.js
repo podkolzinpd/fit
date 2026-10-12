@@ -18,4 +18,15 @@ export default tseslint.config(
       '@typescript-eslint/no-misused-promises': 'error'
     },
   },
+  {
+    files: ['src/migrate-yandex-media-to-cloudru.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
 )
