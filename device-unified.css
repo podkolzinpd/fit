@@ -1,0 +1,61 @@
+/* Common physical size, safe areas and chrome. Content remains scene-specific. */
+#deck .fit-unified{box-sizing:border-box!important;width:384px!important;height:808px!important;border:9px solid #030405!important;border-radius:55px!important;outline:1px solid #64686b!important;box-shadow:0 0 0 3px #242729!important;background:#111315!important;font-family:FitUI,Arial,sans-serif;isolation:isolate;overflow:visible!important}
+#deck .client-story .fit-unified,#deck .ca-phone .fit-unified{top:43px;left:980px}
+#deck .cs-coach .fit-unified{left:660px}
+#deck .client-story .fit-unified:before,#deck .ca-phone .fit-unified:before,#deck .fit-trainer-iphone.fit-unified:before{content:'';position:absolute;z-index:10;top:12px;left:calc(50% - 49px);width:98px;height:28px;border-radius:20px;background:#000;box-shadow:inset 0 0 0 1px #141517;pointer-events:none}
+#deck .cs-nutrition .fit-unified:after{display:none}
+#deck .fit-unified .fit-device-island{display:none}
+#deck .fit-unified .cs-status,#deck .fit-unified .ca-phone-status,#deck .fit-unified .fit-device-status{height:51px;padding:20px 23px 0;font:500 14px FitUI,Arial,sans-serif;display:flex;align-items:flex-start;justify-content:space-between;color:#f1f2f3}
+#deck .fit-unified .cs-status svg,#deck .fit-unified .ca-phone-status svg,#deck .fit-unified .fit-device-status svg{width:48px;height:15px}
+#deck .fit-unified .cs-app-head,#deck .fit-unified .ca-app-header{height:46px;margin:0 16px;border-bottom:1px solid #292c2e;font-size:20px;gap:9px}
+#deck .fit-unified .cs-app-head>span,#deck .fit-unified .ca-back{font-size:27px}
+#deck .fit-unified .cs-app-head i,#deck .fit-unified .ca-app-mark{font-size:17px}
+#deck .fit-unified .cs-home,#deck .fit-unified .fit-device-home,#deck .ca-phone .fit-unified:after{content:'';position:absolute;top:auto;bottom:8px;left:calc(50% - 59.5px);width:119px;height:4px;border-radius:99px;background:#f3f3f3}
+.du-hardware{position:absolute;inset:-9px;pointer-events:none;z-index:15}
+.du-hardware i{position:absolute;width:4px;background:#363b3e;border:1px solid #63696d;border-radius:2px;left:-5px}
+.du-hardware .du-mute{top:112px;height:25px}.du-hardware .du-volume-up{top:163px;height:51px}.du-hardware .du-volume-down{top:229px;height:51px}.du-hardware .du-power{left:auto;right:-5px;top:188px;height:79px}
+.du-hardware .du-camera{top:30px;left:calc(50% + 27px);width:9px;height:9px;border:0;border-radius:50%;background:#0b111a;box-shadow:inset 0 0 0 2px #080b11}
+#deck .fit-unified .du-nav{position:absolute;z-index:12;left:12px;right:12px;bottom:33px;height:68px;padding:4px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;border:1px solid #3b3b40;border-radius:34px;background:#1a1a1c;color:#b8b8bd}
+#deck .fit-unified .du-nav>span{min-width:0;min-height:56px;padding:8px 2px;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#deck .fit-unified .du-nav>span.active{color:#b6ef4d;background:#2f2f33}
+#deck .fit-unified .du-nav svg{width:24px!important;height:24px!important;flex-shrink:0}
+#deck .fit-unified .du-nav small{font:400 10px/12px FitUI,Arial,sans-serif;margin:0;white-space:nowrap;color:inherit}
+/* Slightly smaller native UI, not a wider or stretched phone. */
+#deck .fit-unified .cs-phone-body,#deck .fit-unified .ca-screen{top:125px;left:18px;right:18px;bottom:135px;zoom:.88;overflow:hidden}
+#deck .cs-nutrition .fit-unified .cs-phone-body{zoom:1;top:110px;left:16px;right:16px;bottom:119px}
+#deck .cs-nutrition .fn-state{bottom:0}
+#deck .ca-phone .ca-screen{bottom:135px}
+#deck .ca-phone .ca-exercise-hero{height:255px;margin-top:12px}
+#deck .ca-phone .ca-exercise-hero video{height:151px}
+#deck .ca-phone .ca-exercise-row{height:70px;margin-top:9px}
+#deck .ca-phone .ca-exercise-row img{height:54px;width:54px}
+#deck .ca-phone .ca-summary{margin:14px 0}
+#deck .ca-phone .ca-weeks{margin-bottom:14px}
+#deck .ca-phone .ca-day{min-height:86px;padding:12px}
+#deck .ca-phone .ca-context{padding:14px}
+#deck .ca-phone .ca-answer{margin:15px 0}
+#deck .ca-phone .ca-history{margin-top:10px;padding-top:10px}
+#deck .cs-community .cs-feed-window{bottom:0}
+#deck .cs-community .cs-post-photo{height:178px}
+#deck .cs-community .cs-post-copy p{font-size:18px}
+#deck .cs-voice .cs-source{padding:14px}
+#deck .cs-voice .cs-source p{font-size:17px}
+#deck .cs-voice .cs-set-table td{padding:11px 0}
+#deck .pm-awards .pm-hero-badge{width:130px;height:130px}
+#deck .pm-awards .pm-award-hero{padding:18px}
+#deck .pm-awards .pm-other-title{margin:15px 0 12px}
+#deck .pm-awards .pm-other-awards .pm-badge{width:70px;height:70px}
+#deck .progress-month svg.pm-chart{height:135px!important}
+#deck .progress-month .pm-map-row{height:188px}
+#deck .progress-month svg.pm-body-map{height:188px!important;width:94px!important}
+/* Trainer proof and thumbnails reuse the exact same device. */
+#deck .m-trainer-approved .m-trainer-proof,#deck .m-trainer-approved .m-proof-panel,#deck .m-trainer-approved .m-proof-window{width:384px!important;height:808px!important;overflow:visible!important}
+#deck .m-trainer-approved .m-proof-window{border:0!important;border-radius:55px!important}
+#deck .fit-trainer-iphone>.tc-screen{top:51px;left:0;width:414px;height:756px;padding:0 18px;transform:scale(.884);transform-origin:top left;border:0;border-radius:0;background:transparent}
+#deck .fit-trainer-iphone .tc-screen header{height:52px;font-size:23px}
+#deck .fit-trainer-iphone .tc-actions{bottom:48px;height:49px}
+#deck .fit-trainer-iphone .tc-actions .tc-button{height:49px}
+#deck .m-trainer-approved:not(.m-trainer-overview) .m-screen-window{width:84px!important;height:177px!important;overflow:visible!important}
+#deck .m-trainer-overview .m-screen-window{width:184px!important;overflow:visible!important}
+#deck .m-trainer-approved .m-screen-window .fit-unified{outline:1px solid #64686b!important}
+#deck .cs-coach .cs-coach-link{left:1054px;width:96px}

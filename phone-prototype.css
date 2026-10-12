@@ -1,0 +1,34 @@
+/* Approved nutrition layout; shared device chrome is in device-unified.css. */
+#deck .cs-nutrition.client-story .cs-phone{width:384px;height:808px;left:980px;top:43px;border:9px solid #030405;border-radius:55px;outline:1px solid #64686b;box-shadow:0 0 0 3px #242729;background:#111315;font-family:FitUI,Arial,sans-serif;isolation:isolate}
+#deck .cs-nutrition .cs-phone::before{width:98px;height:28px;top:12px;left:calc(50% - 49px);border-radius:20px;background:#000;box-shadow:inset 0 0 0 1px #141517}
+#deck .cs-nutrition .cs-phone::after{content:'';position:absolute;z-index:11;top:21px;left:calc(50% + 27px);width:9px;height:9px;border-radius:50%;background:#0b111a;box-shadow:inset 0 0 0 2px #080b11;pointer-events:none}
+#deck .cs-nutrition .cs-status{height:51px;padding:20px 23px 0;font-size:14px;font-weight:500;align-items:flex-start;color:#f1f2f3}
+#deck .cs-nutrition .cs-status svg{width:48px;height:15px}
+#deck .cs-nutrition .cs-app-head{height:46px;margin:0 16px;border-bottom:1px solid #292c2e;font-size:20px;gap:9px}
+#deck .cs-nutrition .cs-app-head>span{font-size:27px}
+#deck .cs-nutrition .cs-app-head i{font-size:17px}
+#deck .cs-nutrition .cs-phone-body{top:110px;left:16px;right:16px;bottom:33px}
+#deck .cs-nutrition .fn-state{bottom:86px}
+#deck .cs-nutrition .fn-subtitle{font-size:22px;font-weight:500;margin:0 0 14px}
+#deck .cs-nutrition .fn-food:not(.fn-thumb){height:180px;border-radius:17px;background-size:2000px 1125px;background-position:-455px -332px;margin-bottom:14px}
+#deck .cs-nutrition .fn-row{font-size:17px;min-height:57px;padding:12px 13px;margin-bottom:7px;border-radius:14px;background:#202325}
+#deck .cs-nutrition .fn-row small{font-size:14px;margin-left:6px;color:#969da2}
+#deck .cs-nutrition .fn-row b{font-size:15px;color:#d0d4d6}
+#deck .cs-nutrition .fn-row i{font-size:21px;margin-left:4px}
+#deck .cs-nutrition .fn-meal{margin-top:15px;padding:16px 13px;border-radius:14px;font-size:17px;background:#202325}
+#deck .cs-nutrition .fn-meal strong{font-size:21px;font-weight:500}
+#deck .cs-nutrition .fn-action{height:49px;bottom:0;border-radius:25px;font-size:17px;font-weight:500;letter-spacing:0}
+#deck .cs-nutrition .fn-nav{height:68px;padding:4px;bottom:0;left:-4px;right:-4px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid #3b3b40;border-radius:34px;background:#1a1a1c;align-items:stretch}
+#deck .cs-nutrition .fn-nav>span{min-width:0;min-height:56px;padding:8px 2px;border-radius:28px;color:#b8b8bd;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+#deck .cs-nutrition .fn-nav>span.active{color:var(--lime-accent,#b6ef4d);background:#2f2f33}
+#deck .cs-nutrition .fn-nav svg{width:24px;height:24px;flex-shrink:0}
+#deck .cs-nutrition .fn-nav small{font-size:10px;line-height:12px;font-weight:400;margin:0;white-space:nowrap}
+#deck .cs-nutrition .cs-home{bottom:8px;width:119px;left:calc(50% - 59.5px);height:4px;background:#f3f3f3}
+#deck .cs-nutrition .fn-date{font-size:18px;padding:0 4px;margin-bottom:17px}
+#deck .cs-nutrition .fn-total{padding:24px 17px 22px;border-radius:19px;background:#202325;margin-bottom:19px}
+#deck .cs-nutrition .fn-total>span{font-size:15px;color:#a7adb1}
+#deck .cs-nutrition .fn-total strong{font-size:57px;line-height:1.25;font-weight:500;margin:5px 0 2px}
+#deck .cs-nutrition .fn-total b{font-size:17px;font-weight:400}
+#deck .cs-nutrition .fn-day-row{height:64px;border-radius:14px;padding:10px;font-size:17px;gap:10px;background:#202325}
+#deck .cs-nutrition .fn-day-row b{font-size:15px}
+#deck .cs-nutrition .fn-dinner{background:#242d1b;border-color:#83a840}
