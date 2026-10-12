@@ -1,0 +1,75 @@
+name: Build Cloud.ru stage API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/api/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Prepare API revision without starting runtime
+    if: github.event_name == 'workflow_dispatch' || vars.CLOUDRU_STAGE_AUTODEPLOY_ENABLED == 'true'
+    runs-on: [self-hosted, cloudru-stage]
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 30
+    steps:
+      - name: Verify trusted stage runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "podkolzinpd/fit"
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(hostname)" = "fit-stage-app"
+          sudo systemctl is-active --quiet \
+            actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          sudo podman info >/dev/null
+
+      - name: Check out the requested main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Package source and build locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          release_dir="/opt/fit/releases/$GITHUB_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          test ! -e "$release_dir"
+          sudo install -d -m 755 "$release_dir"
+          git archive --format=tar "$GITHUB_SHA" | sudo tar -xf - -C "$release_dir"
+          sudo podman build --pull=always \
+            -t "localhost/fit-api:$GITHUB_SHA" "$release_dir/services/api"
+          sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
+
+      - name: Record the successfully built revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="/opt/fit/releases/$GITHUB_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          test -f "$release_dir/services/api/Dockerfile"
+          sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
+          if [ -e /opt/fit/current ] && [ ! -L /opt/fit/current ]; then
+            echo "Refusing to replace a non-symlink current path." >&2
+            exit 1
+          fi
+          next_link="/opt/fit/.current-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          next_sha="/opt/fit/.DEPLOYED_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          sudo ln -s "$release_dir" "$next_link"
+          printf '%s\n' "$GITHUB_SHA" | sudo tee "$next_sha" >/dev/null
+          sudo chmod 644 "$next_sha"
+          sudo mv -Tf "$next_link" /opt/fit/current
+          sudo mv -Tf "$next_sha" /opt/fit/DEPLOYED_SHA
+          test "$(readlink -f /opt/fit/current)" = "$release_dir"
+          test "$(cat /opt/fit/DEPLOYED_SHA)" = "$GITHUB_SHA"
+          echo "Prepared Cloud.ru API revision: $GITHUB_SHA"
+          echo "API runtime and migrations remain intentionally untouched."
