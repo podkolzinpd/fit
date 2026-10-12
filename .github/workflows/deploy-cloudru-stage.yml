@@ -1,11 +1,6 @@
-name: Deploy Cloud.ru stage VM
+name: Bootstrap Cloud.ru stage runner
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/deploy-cloudru-stage.yml'
-      - 'services/api/**'
   workflow_dispatch:
 
 permissions:
@@ -17,8 +12,7 @@ concurrency:
 
 jobs:
   prepare:
-    name: Prepare VM and build API image
-    if: github.event_name == 'workflow_dispatch' || vars.CLOUDRU_STAGE_AUTODEPLOY_ENABLED == 'true'
+    name: Bootstrap VM and repository runner
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:

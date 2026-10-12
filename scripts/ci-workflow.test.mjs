@@ -1,7 +1,9 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readlinkSync, realpathSync, mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 
 const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'ci.yml'),
@@ -204,4 +206,164 @@ test('uses a Supabase CLI version that reloads Kong after db reset', () => {
     [...new Set(configuredVersions)],
     [supportedSupabaseCliVersion],
   )
+})
+
+const cloudruBootstrap = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-stage.yml'), 'utf8')
+const cloudruApi = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-api-stage.yml'), 'utf8')
+
+function inlineShell(workflowSource) {
+  return [...workflowSource.matchAll(/run: \|\n((?:          [^\n]*(?:\n|$))+)/g)]
+    .map((match) => match[1].replace(/^          /gm, '').replace(/\$\{\{[^}]+\}\}/g, 'fixture'))
+}
+
+test('Cloud.ru bootstrap is manual-only and shares the VM lock with API builds', () => {
+  assert.match(cloudruBootstrap, /^name: Bootstrap Cloud\.ru stage runner\n/)
+  assert.match(cloudruBootstrap, /on:\n  workflow_dispatch:\n/)
+  assert.doesNotMatch(cloudruBootstrap, /^  (?:push|pull_request|schedule):/m)
+  assert.match(cloudruBootstrap, /group: cloudru-stage-vm\n  cancel-in-progress: false/)
+  assert.match(cloudruBootstrap, /secrets\.CLOUDRU_RUNNER_REGISTRATION_TOKEN/)
+  assert.doesNotMatch(cloudruBootstrap, /podman (?:run|start|create|exec)\b/)
+})
+
+test('Cloud.ru API builds use only the self-hosted runner with default-off autodeploy', () => {
+  assert.match(cloudruApi, /push:\n    branches: \[main\]\n    paths:\n      - 'services\/api\/\*\*'\n  workflow_dispatch:/)
+  assert.match(cloudruApi, /permissions:\n  contents: read\n/)
+  assert.match(cloudruApi, /if: github\.event_name == 'workflow_dispatch' \|\| vars\.CLOUDRU_STAGE_AUTODEPLOY_ENABLED == 'true'/)
+  assert.match(cloudruApi, /runs-on: \[self-hosted, cloudru-stage\]/)
+  assert.match(cloudruApi, /concurrency:\n      group: cloudru-stage-vm\n      cancel-in-progress: false/)
+  assert.doesNotMatch(cloudruApi, /secrets\.|id-token:|ssh|scp|registration|private.key|podman (?:run|start|create|exec)\b|db:migrate|psql/i)
+})
+
+test('Cloud.ru validates main, hostname, runner service and Podman before touching a release', () => {
+  const preflight = inlineShell(cloudruApi)[0]
+  for (const required of ['test "$GITHUB_REF" = "refs/heads/main"', 'test "$(hostname)" = "fit-stage-app"',
+    'actions.runner.podkolzinpd-fit.fit-cloudru-stage.service', 'sudo podman info >/dev/null']) {
+    assert.ok(preflight.includes(required), required)
+  }
+  assert.match(cloudruApi, /ref: \$\{\{ github\.sha \}\}\n          persist-credentials: false/)
+  assert.ok(cloudruApi.indexOf('Verify trusted stage runner') < cloudruApi.indexOf('actions/checkout@'))
+  assert.doesNotMatch(preflight, /install|tar|build|tee|\bln\b|\bmv\b/)
+})
+
+test('Cloud.ru markers advance only after the exact revision image is confirmed', () => {
+  const scripts = inlineShell(cloudruApi)
+  assert.equal(scripts.length, 3)
+  assert.match(scripts[1], /test "\$\(git rev-parse HEAD\)" = "\$GITHUB_SHA"/)
+  assert.match(scripts[1], /git archive --format=tar "\$GITHUB_SHA" \| sudo tar/)
+  assert.match(scripts[1], /podman build --pull=always/)
+  assert.match(scripts[1], /podman image exists "localhost\/fit-api:\$GITHUB_SHA"/)
+  assert.doesNotMatch(scripts[1], /tee|\bln\b|\bmv\b/)
+  assert.ok(scripts[2].indexOf('podman image exists') < scripts[2].indexOf('sudo ln'))
+  assert.match(scripts[2], /printf '%s\\n' "\$GITHUB_SHA" \| sudo tee "\$next_sha"/)
+  assert.match(scripts[2], /sudo mv -Tf "\$next_link" \/opt\/fit\/current/)
+  assert.match(scripts[2], /sudo mv -Tf "\$next_sha" \/opt\/fit\/DEPLOYED_SHA/)
+  assert.match(scripts[2], /test "\$\(readlink -f \/opt\/fit\/current\)" = "\$release_dir"/)
+  assert.match(scripts[2], /test "\$\(cat \/opt\/fit\/DEPLOYED_SHA\)" = "\$GITHUB_SHA"/)
+})
+
+test('both Cloud.ru workflows contain syntactically valid Bash', () => {
+  for (const source of [cloudruBootstrap, cloudruApi]) {
+    for (const script of inlineShell(source)) {
+      const result = spawnSync('bash', ['-n'], { input: script, encoding: 'utf8' })
+      assert.equal(result.status, 0, result.stderr)
+    }
+  }
+})
+
+function withCloudruBuildFixture(overrides, verify) {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'fit-cloudru-build-')))
+  const root = join(directory, 'fit')
+  const source = join(directory, 'source')
+  const sha = 'a'.repeat(40)
+  const previous = join(root, 'releases', 'previous')
+  try {
+    mkdirSync(previous, { recursive: true })
+    mkdirSync(join(source, 'services', 'api'), { recursive: true })
+    writeFileSync(join(source, 'services', 'api', 'Dockerfile'), 'FROM scratch\n')
+    symlinkSync(previous, join(root, 'current'))
+    writeFileSync(join(root, 'DEPLOYED_SHA'), 'previous\n')
+    const mocks = `
+      hostname() { printf '%s\\n' "$FIXTURE_HOST"; }
+      readlink() {
+        test "$1" = -f || return 85
+        "$FIXTURE_NODE" --input-type=module -e 'import { realpathSync } from "node:fs"; console.log(realpathSync(process.argv[1]));' "$2"
+      }
+      sudo() {
+        if [ "$1" = systemctl ]; then
+          test "$*" = "systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service" || return 80
+          return "$FIXTURE_SERVICE_EXIT"
+        fi
+        if [ "$1" = podman ]; then
+          shift
+          case "$1" in
+            info) return "$FIXTURE_INFO_EXIT" ;;
+            build) printf '%s\\n' build >> "$FIXTURE_CALLS"; return "$FIXTURE_BUILD_EXIT" ;;
+            image) test "$*" = "image exists localhost/fit-api:$GITHUB_SHA" || return 81; return "$FIXTURE_IMAGE_EXIT" ;;
+            *) return 82 ;;
+          esac
+        elif [ "$1" = mv ]; then
+          test "$2" = -Tf || return 86
+          "$FIXTURE_NODE" --input-type=module -e 'import { renameSync } from "node:fs"; renameSync(process.argv[1], process.argv[2]);' "$3" "$4"
+        else
+          command "$@"
+        fi
+      }
+      git() {
+        case "$1" in
+          rev-parse) printf '%s\\n' "$FIXTURE_CHECKOUT_SHA" ;;
+          archive) test "$*" = "archive --format=tar $GITHUB_SHA" || return 83; command tar -cf - -C "$FIXTURE_SOURCE" . ;;
+          *) return 84 ;;
+        esac
+      }
+    `
+    const script = inlineShell(cloudruApi).join('\n').replaceAll('/opt/fit', root)
+    const result = spawnSync('bash', ['-c', mocks + '\n' + script], {
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_REPOSITORY: 'podkolzinpd/fit', GITHUB_REF: 'refs/heads/main',
+        GITHUB_SHA: sha, GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1', FIXTURE_HOST: 'fit-stage-app',
+        FIXTURE_SERVICE_EXIT: '0', FIXTURE_INFO_EXIT: '0', FIXTURE_BUILD_EXIT: '0', FIXTURE_IMAGE_EXIT: '0',
+        FIXTURE_SOURCE: source, FIXTURE_CALLS: join(directory, 'calls'), FIXTURE_CHECKOUT_SHA: sha,
+        FIXTURE_NODE: process.execPath, ...overrides },
+    })
+    verify({ result, root, previous, sha, calls: join(directory, 'calls') })
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
+test('Cloud.ru successful local build records its exact SHA and isolated versioned source', () => {
+  withCloudruBuildFixture({}, ({ result, root, sha, calls }) => {
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(readFileSync(calls, 'utf8'), 'build\n')
+    assert.equal(readFileSync(join(root, 'DEPLOYED_SHA'), 'utf8'), sha + '\n')
+    assert.equal(readlinkSync(join(root, 'current')), join(root, 'releases', sha, '123-1'))
+    assert.equal(readFileSync(join(root, 'current', 'services', 'api', 'Dockerfile'), 'utf8'), 'FROM scratch\n')
+  })
+})
+
+test('Cloud.ru untrusted or unhealthy runner cannot advance the prepared revision', () => {
+  for (const overrides of [{ GITHUB_REF: 'refs/heads/other' }, { FIXTURE_HOST: 'other-host' },
+    { FIXTURE_SERVICE_EXIT: '3' }, { FIXTURE_INFO_EXIT: '125' }, { FIXTURE_CHECKOUT_SHA: 'b'.repeat(40) }]) {
+    withCloudruBuildFixture(overrides, ({ result, root, previous }) => {
+      assert.notEqual(result.status, 0)
+      assert.equal(readlinkSync(join(root, 'current')), previous)
+      assert.equal(readFileSync(join(root, 'DEPLOYED_SHA'), 'utf8'), 'previous\n')
+    })
+  }
+})
+
+test('Cloud.ru failed Podman build preserves the previous current link and SHA', () => {
+  withCloudruBuildFixture({ FIXTURE_BUILD_EXIT: '125' }, ({ result, root, previous }) => {
+    assert.equal(result.status, 125)
+    assert.equal(readlinkSync(join(root, 'current')), previous)
+    assert.equal(readFileSync(join(root, 'DEPLOYED_SHA'), 'utf8'), 'previous\n')
+  })
+})
+
+test('Cloud.ru missing built image cannot advance current or SHA', () => {
+  withCloudruBuildFixture({ FIXTURE_IMAGE_EXIT: '1' }, ({ result, root, previous }) => {
+    assert.equal(result.status, 1)
+    assert.equal(readlinkSync(join(root, 'current')), previous)
+    assert.equal(readFileSync(join(root, 'DEPLOYED_SHA'), 'utf8'), 'previous\n')
+  })
 })
