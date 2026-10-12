@@ -25,6 +25,7 @@ jobs:
       DEPLOY_HOST: ${{ vars.CLOUDRU_STAGE_HOST }}
       DEPLOY_USER: ${{ vars.CLOUDRU_STAGE_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.CLOUDRU_STAGE_SSH_PRIVATE_KEY }}
+      RUNNER_REGISTRATION_TOKEN: ${{ secrets.CLOUDRU_RUNNER_REGISTRATION_TOKEN }}
     steps:
       - name: Check out the requested revision
         uses: actions/checkout@v4
@@ -36,6 +37,7 @@ jobs:
           test -n "$DEPLOY_HOST"
           test -n "$DEPLOY_USER"
           test -n "$SSH_PRIVATE_KEY"
+          test -n "$RUNNER_REGISTRATION_TOKEN"
 
       - name: Configure SSH
         shell: bash
@@ -88,12 +90,69 @@ jobs:
           set -euo pipefail
           git archive --format=tar.gz --output="$RUNNER_TEMP/fit-source.tgz" "$GITHUB_SHA"
 
-      - name: Install VM runtime dependencies
+      - name: Configure DNS and install VM runtime dependencies
         shell: bash
         run: |
           set -euo pipefail
+          ssh cloudru-stage 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          sudo install -d -m 755 /etc/systemd/resolved.conf.d
+          printf '%s\n' \
+            '[Resolve]' \
+            'DNS=8.8.8.8 8.8.4.4' \
+            'FallbackDNS=1.1.1.1 1.0.0.1' \
+            | sudo tee /etc/systemd/resolved.conf.d/fit-cloudru.conf >/dev/null
+          sudo ln -sfn /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+          sudo systemctl restart systemd-resolved
+          getent ahostsv4 github.com >/dev/null
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ca-certificates curl jq nginx podman postgresql-client
+          REMOTE
+
+      - name: Install the repository self-hosted runner
+        shell: bash
+        env:
+          REPOSITORY_URL: https://github.com/${{ github.repository }}
+        run: |
+          set -euo pipefail
           ssh cloudru-stage \
-            'sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl jq nginx podman postgresql-client'
+            "RUNNER_REGISTRATION_TOKEN='$RUNNER_REGISTRATION_TOKEN' REPOSITORY_URL='$REPOSITORY_URL' bash -s" <<'REMOTE'
+          set -euo pipefail
+          runner_dir=/opt/actions-runner
+          runner_name=fit-cloudru-stage
+          sudo install -d -m 755 -o deploy -g deploy "$runner_dir"
+          cd "$runner_dir"
+
+          if [ ! -x ./config.sh ]; then
+            runner_tag="$(curl --fail --silent --show-error \
+              https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name)"
+            test -n "$runner_tag"
+            test "$runner_tag" != null
+            runner_version="${runner_tag#v}"
+            runner_archive="actions-runner-linux-x64-${runner_version}.tar.gz"
+            curl --fail --location --silent --show-error \
+              --output "/tmp/${runner_archive}" \
+              "https://github.com/actions/runner/releases/download/${runner_tag}/${runner_archive}"
+            tar -xzf "/tmp/${runner_archive}"
+            rm -f "/tmp/${runner_archive}"
+          fi
+
+          if [ ! -f .runner ]; then
+            ./config.sh \
+              --unattended \
+              --replace \
+              --url "$REPOSITORY_URL" \
+              --token "$RUNNER_REGISTRATION_TOKEN" \
+              --name "$runner_name" \
+              --labels cloudru-stage \
+              --work _work
+          fi
+
+          sudo ./svc.sh install deploy || true
+          sudo ./svc.sh start
+          sudo ./svc.sh status
+          REMOTE
 
       - name: Upload source and build API image
         shell: bash
