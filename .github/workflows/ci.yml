@@ -177,6 +177,8 @@ jobs:
     outputs:
       required: ${{ steps.scope.outputs.required }}
       database_required: ${{ steps.database-scope.outputs.required }}
+      lime_mode: ${{ steps.lime-scope.outputs.mode }}
+      lime_tags: ${{ steps.lime-scope.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -190,6 +192,14 @@ jobs:
       - name: Detect legacy database changes
         id: database-scope
         run: node scripts/supabase-database-scope.mjs "$EVENT_NAME" "$BASE_SHA" "$HEAD_SHA"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Select temporary PR Fit Lime acceptance scope
+        id: lime-scope
+        run: node scripts/fit-lime-ci-scope.mjs "$BASE_SHA" "$HEAD_SHA"
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -508,7 +518,12 @@ jobs:
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.
-      - run: npx playwright test e2e/trainer-schedule-v2.visual.spec.ts --project=${{ matrix.project }} --workers=2
+      - name: Run full release or scoped PR Fit Lime acceptance
+        run: node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS"
+        env:
+          LIME_PROJECT: ${{ matrix.project }}
+          LIME_MODE: ${{ needs.e2e-scope.outputs.lime_mode }}
+          LIME_TAGS: ${{ needs.e2e-scope.outputs.lime_tags }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
