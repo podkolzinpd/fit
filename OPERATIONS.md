@@ -1298,6 +1298,27 @@ Frontend redirect для разработки: `http://localhost:5173/auth/callb
 
 ## Release gates
 
+### Временный Fit Lime PR scope (12–25 октября 2026)
+
+По подтверждённому решению владельца только PR с явно известными узкими
+feature-файлами используют `@lime-critical` + tags каждого затронутого раздела
+в обоих прежних браузерах. Неизвестные/shared/CSS/auth/navigation и смешанные
+frontend/API изменения требуют full. Точный allowlist и expiry находятся в
+`scripts/fit-lime-ci-scope.mjs`; с 26.10.2026 00:00 МСК — автоматически full.
+Неверный clock, изменившийся SHA256 проверенного spec или неполный inventory
+также возвращают full либо останавливают job, а не пропускают проверку.
+
+На main и ручном CI выполняется полный Fit Lime набор, когда browser gate
+требует E2E; инфраструктурные/не-browser diffs сохраняют штатный safe skip.
+Production frontend по-прежнему принимает только успешный CI текущего main,
+не сокращённый PR CI. Другие quality/browser/API/DB gates не сокращены.
+Ручной полный прогон: CI → Run workflow, нужная ветка; локально — прежняя
+Playwright команда или `FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-lime-ci.mjs <project> full`
+с подготовленными прежними fixture-env/fonts. Disabled acceptance останавливает
+runner, а не превращает skipped cases в зелёный job.
+Не передавайте пустой grep и не обновляйте digest без повторного аудита tags.
+План/приёмка: `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`.
+
 - GitHub branch protection для `main`: PR only, обязательные `app`, `database`, `e2e`.
 - Зелёный CI и воспроизводимый `supabase db reset`.
 - Закрытые пункты `FEATURE_PARITY.md` и visual comparison с baseline V1.

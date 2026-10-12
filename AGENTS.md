@@ -183,6 +183,12 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 - Не сокращайте lint, typecheck, тесты, WebKit, mobile/visual/e2e и production
   verification ради скорости. Допустимое ускорение — кэширование, точный scope,
   параллельные независимые проверки и устранение повторных запусков.
+- Временное исключение по прямому решению владельца 12.10.2026 — только PR CI
+  Fit Lime: critical + явно затронутые feature tags по
+  `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`. Main/manual release
+  acceptance остаётся полной, локальная приёмка не сокращается. Shared/unknown
+  изменения требуют full; с 26.10.2026 00:00 МСК автоматически full. Изменённый
+  spec выключает сокращение до нового аудита; не обновляйте SHA256 автоматически.
 
 ## Границы архитектуры
 
