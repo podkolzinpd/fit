@@ -96,6 +96,6 @@ jobs:
             exit 0
           fi
           jq -s -r '
-            map(select(.event == "source_access_key_fingerprint" or .event == "target_bucket_bootstrapped" or .event == "target_bootstrap_failed" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
+            map(select(.event == "source_access_key_fingerprint" or .event == "target_access_key_fingerprint" or .event == "target_bucket_bootstrapped" or .event == "target_bootstrap_failed" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
             | "`" + (.event | tostring) + "`: " + (tojson)
           ' "$report" >> "$GITHUB_STEP_SUMMARY"

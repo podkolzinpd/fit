@@ -26,9 +26,11 @@ test('keeps the Yandex to Cloud.ru media transfer manual, bounded and non-deleti
   assert.match(migration, /'chat-media\/',\s*'fit-exercise-media\/',\s*'trainer-profile-media\/'/)
   assert.match(migration, /Prefix: prefix/)
   assert.match(migration, /event: 'source_access_key_fingerprint'/)
+  assert.match(migration, /event: 'target_access_key_fingerprint'/)
   assert.match(migration, /CreateBucketCommand/)
   assert.match(migration, /target_bucket_bootstrapped/)
   assert.match(workflow, /source_access_key_fingerprint/)
+  assert.match(workflow, /target_access_key_fingerprint/)
   assert.doesNotMatch(migration, /DeleteObject|deleteObjects|Remove-Item|rm\s/)
 })
 
