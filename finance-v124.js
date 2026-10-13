@@ -200,6 +200,13 @@
 
   return {go:go,steps:2};
 }}];
+  // Keep the subscription offer together and the slide header concise.
+  defs[0].html = defs[0].html.replace(/<div class="sub">[\s\S]*?<\/div>/, '<div class="sub"><b>3 канала заработка</b></div>');
+  defs[0].html = defs[0].html.replace(
+    /(<div class="tier club">[\s\S]*?<div class="tp">500 ₽<\/div>)(\s*<ul>[\s\S]*?<\/ul>)\s*(<span class="plus">[\s\S]*?<\/span><\/span>)/,
+    '$1\n          $3$2'
+  );
+  defs[0].css += '\n.tier.club .plus{margin-top:0;margin-bottom:8px}\n';
   const find = d => document.querySelector('#deck>[data-section="' + d.section + '"]');
   // заголовки для меню слайдов — до инициализации движка
   defs.forEach(d => { const s = find(d); const h = s && s.querySelector('h2'); if (h && d.title) h.textContent = d.title; });
