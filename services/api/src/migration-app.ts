@@ -72,6 +72,11 @@ interface PilotEnrollmentOptions {
 interface BuildMigrationAppOptions {
   calorieAudit?: StageCalorieAuditor
   cloudDatabaseExport?: CloudDatabaseExportService
+  cloudDatabaseSourceInventory?: () => Promise<readonly {
+    schema: string
+    table: string
+    estimatedRows: number
+  }[]>
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   domainChangeAnnouncement?: DomainChangeAnnouncementManager
   logger?: boolean
@@ -310,6 +315,21 @@ export function buildMigrationApp(
   const app = Fastify({ logger: options.logger ?? true })
 
   app.get('/health', () => ({ status: 'ok' }))
+
+  if (options.cloudDatabaseSourceInventory !== undefined) {
+    app.post('/stage/cloudru/database-source/inventory', async (request, reply) => {
+      if (
+        request.headers['x-fit-database-export-confirmation']
+          !== 'INVENTORY_YANDEX_STAGE_DATABASE'
+      ) return reply.code(403).send({ status: 'inventory_not_confirmed' })
+      try {
+        const tables = await options.cloudDatabaseSourceInventory?.()
+        return { status: 'database_source_inventory_ready', tables }
+      } catch {
+        return reply.code(503).send({ status: 'database_source_inventory_failed' })
+      }
+    })
+  }
 
   if (options.cloudDatabaseExport !== undefined) {
     const databaseExport = options.cloudDatabaseExport

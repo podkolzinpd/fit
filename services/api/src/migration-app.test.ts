@@ -56,6 +56,34 @@ afterEach(async () => {
 })
 
 describe('Cloud.ru database export', () => {
+  it('keeps source inventory private and returns only aggregate table metadata', async () => {
+    const inventory = vi.fn().mockResolvedValue([
+      { schema: 'public', table: 'profiles', estimatedRows: 12 },
+    ])
+    const app = buildMigrationApp({
+      cloudDatabaseSourceInventory: inventory,
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/cloudru/database-source/inventory',
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(inventory).not.toHaveBeenCalled()
+    const accepted = await app.inject({
+      headers: { 'x-fit-database-export-confirmation': 'INVENTORY_YANDEX_STAGE_DATABASE' },
+      method: 'POST',
+      url: '/stage/cloudru/database-source/inventory',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toEqual({
+      status: 'database_source_inventory_ready',
+      tables: [{ schema: 'public', table: 'profiles', estimatedRows: 12 }],
+    })
+  })
+
   const result = {
     bytes: 123,
     exportId: '0123456789abcdef0123456789abcdef',

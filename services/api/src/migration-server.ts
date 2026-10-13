@@ -150,8 +150,31 @@ const cloudDatabaseExport = mediaStorageConfig === undefined
       mediaStorageConfig,
     )
 
+const cloudDatabaseSourceInventory = privateFeaturePool === undefined
+  || !stageTenantMigrationEnabled
+  ? undefined
+  : async () => {
+      const connection = await privateFeaturePool.connect()
+      try {
+        return await connection.query<{
+          schema: string
+          table: string
+          estimatedRows: number
+        }>(`select schemaname as schema,
+            relname as table,
+            n_live_tup::integer as "estimatedRows"
+          from pg_stat_user_tables
+          where schemaname in ('public', 'private', 'app_private')
+          order by schemaname, relname`)
+      } finally {
+        connection.release()
+      }
+    }
+
 const app = buildMigrationApp({
   ...(cloudDatabaseExport === undefined ? {} : { cloudDatabaseExport }),
+  ...(cloudDatabaseSourceInventory === undefined
+    ? {} : { cloudDatabaseSourceInventory }),
   ...(privateFeaturePool === undefined || !stageRolloutAssignmentsEnabled
     ? {} : { calorieAudit: new DatabaseStageCalorieAuditor(privateFeaturePool) }),
   ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
