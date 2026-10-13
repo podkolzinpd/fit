@@ -8,7 +8,7 @@ on:
         required: true
         type: choice
         default: audit
-        options: [audit, apply]
+        options: [audit, apply, bootstrap-target]
       migration_confirmation:
         description: 'For apply: COPY_YANDEX_MEDIA_TO_CLOUDRU'
         required: false
@@ -72,6 +72,8 @@ jobs:
           done
           if test "$FIT_MEDIA_TRANSFER_MODE" = apply; then
             test "${{ inputs.migration_confirmation }}" = COPY_YANDEX_MEDIA_TO_CLOUDRU
+          elif test "$FIT_MEDIA_TRANSFER_MODE" = bootstrap-target; then
+            test "${{ inputs.migration_confirmation }}" = CREATE_CLOUDRU_MEDIA_TARGET_BUCKET
           fi
 
       - run: npm ci --prefix services/api
@@ -94,6 +96,6 @@ jobs:
             exit 0
           fi
           jq -s -r '
-            map(select(.event == "source_access_key_fingerprint" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
+            map(select(.event == "source_access_key_fingerprint" or .event == "target_bucket_bootstrapped" or .event == "target_bootstrap_failed" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
             | "`" + (.event | tostring) + "`: " + (tojson)
           ' "$report" >> "$GITHUB_STEP_SUMMARY"
