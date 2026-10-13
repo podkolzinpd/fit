@@ -142,9 +142,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Official Docker image mirrored by ECR, identical linux/amd64 digest
-        # verified against docker.io/library/postgres:17 on 2026-10-09.
-        image: public.ecr.aws/docker/library/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
+        # Pull the same pinned official image directly: the public ECR mirror
+        # exhausted its shared data limit before this job could start.
+        image: postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
         env:
           POSTGRES_DB: fit_actor_test
           POSTGRES_PASSWORD: postgres

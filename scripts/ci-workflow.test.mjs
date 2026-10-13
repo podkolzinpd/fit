@@ -211,7 +211,7 @@ test('clears the setup-cli override to retain official registry fallback in ever
 
 test('uses the identical pinned PostgreSQL17 image without changing health or migration checks', () => {
   const body = workflow.slice(workflow.indexOf('  yandex-database:\n'), workflow.indexOf('  e2e-scope:\n'))
-  assert.match(body, /image: public\.ecr\.aws\/docker\/library\/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3/)
+  assert.match(body, /image: postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3/)
   assert.match(body, /--health-cmd "pg_isready -U postgres -d fit_actor_test"/)
   assert.match(body, /npm --prefix services\/api run test:db/)
   assert.match(body, /npm --prefix services\/api run db:migrate/)
@@ -242,6 +242,11 @@ test('uses a Supabase CLI version that reloads Kong after db reset', () => {
 
 const cloudruBootstrap = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-stage.yml'), 'utf8')
 const cloudruApi = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-api-stage.yml'), 'utf8')
+const cloudruApiRelease = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'release-cloudru-api-stage.yml'), 'utf8')
+const cloudruFrontend = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'prepare-cloudru-frontend.yml'), 'utf8')
+const cloudruIngress = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'configure-cloudru-public-ingress.yml'), 'utf8')
+const cloudruApiProxy = readFileSync(join(import.meta.dirname, '..', 'infra', 'cloudru', 'nginx-public-api.conf'), 'utf8')
+const cloudruWebProxy = readFileSync(join(import.meta.dirname, '..', 'infra', 'cloudru', 'nginx-public-web.conf'), 'utf8')
 const cloudruDatabaseMigration = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'migrate-yandex-database-to-cloudru.yml'), 'utf8')
 
 function inlineShell(workflowSource) {
@@ -259,12 +264,44 @@ test('Cloud.ru bootstrap is manual-only and shares the VM lock with API builds',
 })
 
 test('Cloud.ru API builds use only the self-hosted runner with default-off autodeploy', () => {
-  assert.match(cloudruApi, /push:\n    branches: \[main\]\n    paths:\n      - 'services\/api\/\*\*'\n  workflow_dispatch:/)
+  assert.match(cloudruApi, /push:\n    branches: \[main\]\n    paths:\n      - 'services\/api\/\*\*'/)
   assert.match(cloudruApi, /permissions:\n  contents: read\n/)
   assert.match(cloudruApi, /if: github\.event_name == 'workflow_dispatch' \|\| vars\.CLOUDRU_STAGE_AUTODEPLOY_ENABLED == 'true'/)
   assert.match(cloudruApi, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(cloudruApi, /concurrency:\n      group: cloudru-stage-vm\n      cancel-in-progress: false/)
   assert.doesNotMatch(cloudruApi, /secrets\.|id-token:|ssh|scp|registration|private.key|podman (?:run|start|create|exec)\b|db:migrate|psql/i)
+})
+
+test('Cloud.ru runtime and frontend releases require successful current-main CI', () => {
+  for (const release of [cloudruApiRelease, cloudruFrontend]) {
+    assert.match(release, /workflow_run:\n    workflows: \[CI\]/)
+    assert.match(release, /\.head_repository\.full_name == \$repo/)
+    assert.match(release, /\.conclusion == "success"/)
+    assert.match(release, /commits\/main" --jq \.sha/)
+    assert.match(release, /group: cloudru-stage-vm/)
+    assert.doesNotMatch(release, /--publish 0\.0\.0\.0/)
+  }
+  assert.match(cloudruApiRelease, /FIT_AI_FUNCTIONS_ENABLED=false/)
+  assert.match(cloudruApiRelease, /FIT_AI_SUMMARY_GENERATION_DISABLED=true/)
+  assert.match(cloudruApiRelease, /--publish 127\.0\.0\.1:18082:8080/)
+  assert.match(cloudruApiRelease, /--publish 127\.0\.0\.1:18080:8080/)
+  assert.match(cloudruApiRelease, /trap rollback ERR/)
+  assert.match(cloudruFrontend, /https:\/\/api\.fit-training\.ru/)
+  assert.match(cloudruFrontend, /listen 127\.0\.0\.1:18081|nginx-frontend-stage\.conf/)
+})
+
+test('Cloud.ru public ingress is manual, CI-gated and proxies only loopback runtimes', () => {
+  assert.match(cloudruIngress, /on:\n  workflow_dispatch:/)
+  assert.doesNotMatch(cloudruIngress, /^  (?:push|pull_request|schedule):/m)
+  assert.match(cloudruIngress, /\.conclusion == "success"/)
+  assert.match(cloudruIngress, /commits\/main" --jq \.sha/)
+  assert.match(cloudruIngress, /group: cloudru-stage-vm/)
+  assert.match(cloudruIngress, /getent ahostsv4/)
+  assert.match(cloudruIngress, /certbot certonly --webroot/)
+  assert.match(cloudruIngress, /trap rollback ERR/)
+  assert.match(cloudruApiProxy, /proxy_pass http:\/\/127\.0\.0\.1:18080/)
+  assert.match(cloudruWebProxy, /proxy_pass http:\/\/127\.0\.0\.1:18081/)
+  assert.doesNotMatch(cloudruApiProxy + cloudruWebProxy, /proxy_pass http:\/\/(?:0\.0\.0\.0|10\.)/)
 })
 
 test('Cloud.ru database migration is manual, confirmed and loopback-only', () => {
@@ -325,7 +362,7 @@ test('Cloud.ru markers advance only after the exact revision image is confirmed'
 })
 
 test('Cloud.ru workflows contain syntactically valid Bash', () => {
-  for (const source of [cloudruBootstrap, cloudruApi, cloudruDatabaseMigration]) {
+  for (const source of [cloudruBootstrap, cloudruApi, cloudruApiRelease, cloudruFrontend, cloudruIngress, cloudruDatabaseMigration]) {
     for (const script of inlineShell(source)) {
       const result = spawnSync('bash', ['-n'], { input: script, encoding: 'utf8' })
       assert.equal(result.status, 0, result.stderr)
