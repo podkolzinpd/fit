@@ -326,7 +326,13 @@ export function buildMigrationApp(
           const code = error instanceof CloudDatabaseTransferError
             ? error.code
             : 'database_export_source_dump_failed'
-          return reply.code(503).send({ status: 'database_export_source_not_ready', code })
+          return reply.code(503).send({
+            status: 'database_export_source_not_ready',
+            code,
+            ...(error instanceof CloudDatabaseTransferError && error.diagnostic
+              ? { diagnostic: error.diagnostic }
+              : {}),
+          })
         }
       })
     }

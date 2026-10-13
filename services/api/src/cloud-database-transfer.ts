@@ -62,7 +62,7 @@ export interface CloudDatabaseExportService {
 }
 
 export class CloudDatabaseTransferError extends Error {
-  constructor(readonly code: string) {
+  constructor(readonly code: string, readonly diagnostic?: string) {
     super(code)
     this.name = 'CloudDatabaseTransferError'
   }
@@ -144,6 +144,16 @@ export function classifyPgDumpFailure(stderr: string): string {
   return 'database_export_source_dump_failed'
 }
 
+export function safePgDumpDiagnostic(stderr: string, password: string | undefined): string | undefined {
+  const lines = stderr.split(/\r?\n/u)
+    .filter((line) => /^(?:pg_dump: error:|connection to server|FATAL:|ERROR:)/iu.test(line))
+    .slice(0, 3)
+  if (lines.length === 0) return undefined
+  let diagnostic = lines.join(' ').replace(/[\x00-\x1f\x7f]/gu, ' ').slice(0, 500)
+  if (password) diagnostic = diagnostic.replaceAll(password, '[REDACTED]')
+  return diagnostic.replace(/\b(password|token|secret)\s*[:=]\s*\S+/giu, '$1=[REDACTED]')
+}
+
 async function runPgDump(
   args: readonly string[],
   environment: NodeJS.ProcessEnv,
@@ -165,7 +175,10 @@ async function runPgDump(
     })
     child.once('exit', (code, signal) => {
       if (code === 0 && signal === null) resolve()
-      else reject(new CloudDatabaseTransferError(classifyPgDumpFailure(stderr)))
+      else reject(new CloudDatabaseTransferError(
+        classifyPgDumpFailure(stderr),
+        safePgDumpDiagnostic(stderr, environment.PGPASSWORD),
+      ))
     })
   })
 }

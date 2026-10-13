@@ -6,6 +6,7 @@ import {
   decryptDatabaseDump,
   encryptDatabaseDump,
   readDatabaseTransferConnection,
+  safePgDumpDiagnostic,
 } from './cloud-database-transfer.js'
 
 describe('cloud database transfer encryption', () => {
@@ -18,6 +19,14 @@ describe('cloud database transfer encryption', () => {
       .toBe('database_export_source_connection_failed')
     expect(classifyPgDumpFailure('unclassified failure'))
       .toBe('database_export_source_dump_failed')
+  })
+
+  it('limits a private pg_dump diagnostic to error lines and redacts credentials', () => {
+    expect(safePgDumpDiagnostic(
+      'pg_dump: error: connection failed password=private123\npg_dump: detail: Query was: select personal_data\n',
+      'private123',
+    )).toBe('pg_dump: error: connection failed password=[REDACTED]')
+    expect(safePgDumpDiagnostic('unrecognized process output', 'private123')).toBeUndefined()
   })
 
   it('round-trips without exposing plaintext in the envelope', async () => {
