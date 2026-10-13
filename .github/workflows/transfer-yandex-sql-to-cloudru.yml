@@ -187,9 +187,9 @@ jobs:
             printf 'FIT_SQL_SNAPSHOT_MODE=%s\n' "${{ inputs.mode }}"
           } > "$secret_file"
           sudo podman run --rm --network=host --env-file "$secret_file" \
-            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate:dry-run
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate:dry-run -- --no-reject-unauthorized
           sudo podman run --rm --network=host --env-file "$secret_file" \
-            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate -- --no-reject-unauthorized
           sudo podman run --rm --network=host --env-file "$secret_file" \
             "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-sql-transfer-cli.js
 
