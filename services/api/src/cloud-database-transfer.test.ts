@@ -2,12 +2,24 @@ import { describe, expect, it } from 'vitest'
 
 import {
   CloudDatabaseTransferError,
+  classifyPgDumpFailure,
   decryptDatabaseDump,
   encryptDatabaseDump,
   readDatabaseTransferConnection,
 } from './cloud-database-transfer.js'
 
 describe('cloud database transfer encryption', () => {
+  it('classifies pg_dump failures without returning raw database error details', () => {
+    expect(classifyPgDumpFailure('ERROR: permission denied for table private_table'))
+      .toBe('database_export_source_permission_denied')
+    expect(classifyPgDumpFailure('SSL error: certificate verify failed'))
+      .toBe('database_export_source_tls_failed')
+    expect(classifyPgDumpFailure('could not connect to server'))
+      .toBe('database_export_source_connection_failed')
+    expect(classifyPgDumpFailure('unclassified failure'))
+      .toBe('database_export_source_dump_failed')
+  })
+
   it('round-trips without exposing plaintext in the envelope', async () => {
     const plaintext = Buffer.from('private database row')
     const encrypted = await encryptDatabaseDump(plaintext, 'p'.repeat(32))
