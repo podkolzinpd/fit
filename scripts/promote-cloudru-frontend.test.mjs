@@ -25,11 +25,13 @@ function fixture(overrides, check) {
       writeFileSync(config, 'previous config')
       writeFileSync(unit, 'previous unit')
     }
+    // Explicit return codes matter in an inherited ERR trap: Bash 5.2 can
+    // interpret a bare return as the original failed command's status.
     const mocks = String.raw`
 node() {
   case "$*" in
-    *--serving) test "$FIXTURE_FAIL" != smoke && test "$FIXTURE_FAIL" != rollback; return ;;
-    *) test "$FIXTURE_FAIL" != probe; return ;;
+    *--serving) test "$FIXTURE_FAIL" != smoke && test "$FIXTURE_FAIL" != rollback; return "$?" ;;
+    *) test "$FIXTURE_FAIL" != probe; return "$?" ;;
   esac
 }
 readlink() {
@@ -39,14 +41,14 @@ sudo() {
   if [ "$1" = systemctl ]; then
     shift
     case "$1" in
-      is-active|is-enabled) test -z "$FIRST_INSTALL"; return ;;
+      is-active|is-enabled) test -z "$FIRST_INSTALL"; return "$?" ;;
       reload)
         if [ "$FIXTURE_FAIL" = reload ] && [ ! -e "$RUNNER_TEMP/failure" ]; then
           touch "$RUNNER_TEMP/failure"; return 1
         fi ;;
       restart)
         printf '%s\n' restored >> "$RUNNER_TEMP/service-calls"
-        test "$FIXTURE_FAIL" != rollback; return ;;
+        test "$FIXTURE_FAIL" != rollback; return "$?" ;;
       *) ;;
     esac
     return 0

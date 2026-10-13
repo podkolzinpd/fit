@@ -50,3 +50,18 @@ Hosted fonts required2/2 без fallback; local build без лицензий н
 Frontend rollback не равен обратному переносу БД/media: после новых writes
 нужны остановка всех writers и reverse-transfer, пока не реализованный/испытанный.
 Старые Yandex ресурсы сохраняются.
+
+## CI correction, 13 октября
+
+PR#1609/head d177c7b5, CI38449414046: app-quality упал на трёх rollback
+fixtures; API/clean-chain/RLS зелёные. Bare return тестового sudo/systemctl mock
+в ERR handler на GNU Bash5.2 возвращал исходный неуспешный статус вместо
+результата mock. Return codes теперь явные; runtime/promotion/guards прежние.
+Real integration переведена на GNU/Linux Node22/bookworm/Bash5.2 и также
+запускает все8 rollback tests. Исправленный набор вместе с Nginx/non-root smoke
+прошёл1/1. Первое GNU-rehearsal не дошло до контейнера: /tmp в локальной Podman
+VM — tmpfs972MiB, VFS image превысил место. Повтор использует только отдельный
+тестовый VFS store /var/tmp на диске; shared storage и production не менялись.
+Полный npm run check после correction exit0:2659frontend/1350API+142standardDB
+skipped/136hosting/253infra/lint/typecheck/build. Hosting136 и workflows29
+повторены отдельно; diff check passed. Новый exact-head CI остаётся гейтом.

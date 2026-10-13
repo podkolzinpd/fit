@@ -12,7 +12,7 @@ test('real isolated Nginx preserves hosting contracts and validates non-root can
   const root = await realpath(await mkdtemp(join(tmpdir(), 'fit-cloudru-nginx-integration-')))
   const connection = process.env.FIT_CLOUDRU_TEST_PODMAN_CONNECTION
   const store = process.env.FIT_CLOUDRU_TEST_PODMAN_STORE
-  if (store && !/^\/tmp\/fit-cloudru-nginx-test-store-[a-z0-9-]+$/.test(store)) {
+  if (store && !/^\/(?:var\/)?tmp\/fit-cloudru-nginx-test-store-[a-z0-9-]+$/.test(store)) {
     throw new Error('Expected a dedicated temporary Podman test store')
   }
   const podmanPrefix = connection ? ['--connection', connection] : []
@@ -57,8 +57,9 @@ console.log('CLOUDRU_NGINX_CONTRACT_PASSED');
   const result = runPodman([
     'run', '--rm', '--name', container, '--volume', `${root}:/fixture:ro`,
     '--volume', `${resolve(import.meta.dirname)}:/scripts:ro`,
-    'docker.io/library/node:22-alpine', 'sh', '-ec', `
-apk add --no-cache nginx >/dev/null
+    'docker.io/library/node:22-bookworm-slim', 'sh', '-ec', `
+apt-get update -qq && apt-get install -y --no-install-recommends nginx >/dev/null
+node --test /scripts/promote-cloudru-frontend.test.mjs
 nginx -t -c /fixture/probe-stage.conf
 nginx -c /fixture/probe-stage.conf -g 'daemon off;' &
 stage_pid=$!
