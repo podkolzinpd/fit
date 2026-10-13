@@ -23,6 +23,8 @@ test('keeps the Yandex to Cloud.ru media transfer manual, bounded and non-deleti
   assert.match(workflow, /secrets\.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET/)
   assert.match(migration, /'chat-media\/',\s*'fit-exercise-media\/',\s*'trainer-profile-media\/'/)
   assert.match(migration, /Prefix: prefix/)
+  assert.match(migration, /event: 'source_access_key_fingerprint'/)
+  assert.match(workflow, /source_access_key_fingerprint/)
   assert.doesNotMatch(migration, /DeleteObject|deleteObjects|Remove-Item|rm\s/)
 })
 

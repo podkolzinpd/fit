@@ -25,11 +25,16 @@ const mediaPrefixes = [
 if (sourceBucket !== 'fit-chat-media-b1gt7dfq') throw new Error('Unexpected source bucket')
 if (targetBucket !== 'fit-cloudru-stage-media-c2ad3760') throw new Error('Unexpected target bucket')
 
+const sourceAccessKeyId = required('YANDEX_MEDIA_ACCESS_KEY_ID')
+const sourceAccessKeyFingerprint = createHash('sha256')
+  .update(sourceAccessKeyId)
+  .digest('hex')
+
 const source = new S3Client({
   endpoint: 'https://storage.yandexcloud.net',
   region: 'ru-central1',
   credentials: {
-    accessKeyId: required('YANDEX_MEDIA_ACCESS_KEY_ID'),
+    accessKeyId: sourceAccessKeyId,
     secretAccessKey: required('YANDEX_MEDIA_SECRET_ACCESS_KEY'),
   },
 })
@@ -111,6 +116,10 @@ const digest = (bytes) => createHash('sha256').update(bytes).digest('hex')
 
 let target
 try {
+  console.log(JSON.stringify({
+    event: 'source_access_key_fingerprint',
+    sha256: sourceAccessKeyFingerprint,
+  }))
   const sourceObjects = await listMediaObjects(source, sourceBucket)
   console.log(JSON.stringify({ event: 'source_inventory', ...inventory(sourceObjects) }))
   target = await connectTarget()
