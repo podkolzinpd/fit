@@ -6,19 +6,13 @@ on:
     paths:
       - 'services/api/**'
   workflow_dispatch:
-    inputs:
-      start_runtime:
-        description: 'Start API on stage VM loopback after building this main revision'
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 jobs:
   deploy:
-    name: Prepare API revision and optionally start loopback runtime
+    name: Prepare API revision without starting runtime
     if: github.event_name == 'workflow_dispatch' || vars.CLOUDRU_STAGE_AUTODEPLOY_ENABLED == 'true'
     runs-on: [self-hosted, cloudru-stage]
     concurrency:
@@ -79,93 +73,3 @@ jobs:
           test "$(cat /opt/fit/DEPLOYED_SHA)" = "$GITHUB_SHA"
           echo "Prepared Cloud.ru API revision: $GITHUB_SHA"
           echo "API runtime and migrations remain intentionally untouched."
-
-      - name: Start stage API on loopback and verify DB and S3
-        if: inputs.start_runtime == true
-        shell: bash
-        env:
-          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
-          CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
-          CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
-          YANDEX_OAUTH_CLIENT_ID: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
-        run: |
-          set -euo pipefail
-          test -n "$CLOUDRU_DATABASE_CONFIG_JSON"
-          test -n "$CLOUDRU_MEDIA_KEY_ID"
-          test -n "$CLOUDRU_MEDIA_KEY_SECRET"
-          test -n "$YANDEX_OAUTH_CLIENT_ID"
-          echo "::add-mask::$CLOUDRU_MEDIA_KEY_ID"
-          echo "::add-mask::$CLOUDRU_MEDIA_KEY_SECRET"
-          test "$(jq -er '.DATABASE_HOST' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 10.70.10.67
-          test "$(jq -er '.DATABASE_PORT' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 5432
-          test "$(jq -er '.DATABASE_NAME' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit
-          sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
-          if sudo podman container exists fit-api-stage; then
-            echo 'Stage API container already exists; refusing to replace it automatically.' >&2
-            exit 1
-          fi
-          umask 077
-          runtime_file=$(mktemp "$RUNNER_TEMP/fit-api-runtime.XXXXXX")
-          trap 'rm -f "$runtime_file"' EXIT
-          for name in DATABASE_HOST DATABASE_PORT DATABASE_NAME DATABASE_USER DATABASE_PASSWORD; do
-            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' \
-              <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
-            test "$value" = "${value//$'\n'/}"
-            printf '%s=%s\n' "$name" "$value" >>"$runtime_file"
-          done
-          {
-            printf 'DATABASE_SSL_MODE=require\n'
-            printf 'FIT_MEDIA_STORAGE_PROVIDER=cloudru\n'
-            printf 'FIT_AI_FUNCTIONS_ENABLED=false\n'
-            printf 'FIT_AI_SUMMARY_GENERATION_DISABLED=true\n'
-            printf 'CLOUDRU_MEDIA_BUCKET=fit-cloudru-stage-media-c2ad3760\n'
-            printf 'CLOUDRU_TENANT_ID=f071c7d5-cf0f-4538-9415-bbf9a9c94338\n'
-            printf 'CLOUDRU_MEDIA_KEY_ID=%s\n' "$CLOUDRU_MEDIA_KEY_ID"
-            printf 'CLOUDRU_MEDIA_KEY_SECRET=%s\n' "$CLOUDRU_MEDIA_KEY_SECRET"
-            printf 'YANDEX_OAUTH_CLIENT_ID=%s\n' "$YANDEX_OAUTH_CLIENT_ID"
-            printf 'YANDEX_NATIVE_REGISTRATION_ENABLED=true\n'
-            printf 'YANDEX_ONLY_AUTH_ENABLED=true\n'
-            printf 'CORS_ALLOWED_ORIGINS=https://fit-training.ru,https://fit-drab.vercel.app,capacitor://localhost,https://localhost\n'
-          } >>"$runtime_file"
-          sudo install -d -m 700 /opt/fit/secrets
-          sudo install -m 600 "$runtime_file" /opt/fit/secrets/api.env
-          cleanup_failed_start() {
-            sudo podman logs --tail 50 fit-api-stage 2>/dev/null || true
-            sudo podman rm --force fit-api-stage >/dev/null 2>&1 || true
-          }
-          trap cleanup_failed_start ERR
-          sudo podman run --detach \
-            --name fit-api-stage \
-            --restart unless-stopped \
-            --publish 127.0.0.1:18080:8080 \
-            --env-file /opt/fit/secrets/api.env \
-            --env APP_ENV=stage \
-            --env FIT_RELEASE_ID="$GITHUB_SHA" \
-            --env PORT=8080 \
-            "localhost/fit-api:$GITHUB_SHA" >/dev/null
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:18080/health >/dev/null; then break; fi
-            test "$attempt" -lt 30
-            sleep 1
-          done
-          curl --fail --silent http://127.0.0.1:18080/ready >/dev/null
-          status=$(curl --silent --output "$RUNNER_TEMP/fit-api-smoke.json" \
-            --write-out '%{http_code}' http://127.0.0.1:18080/v1/profile)
-          test "$status" = 401
-          jq -e '.error == "unauthorized"' "$RUNNER_TEMP/fit-api-smoke.json" >/dev/null
-          test "$(sudo podman port fit-api-stage 8080/tcp)" = 127.0.0.1:18080
-          sudo podman exec fit-api-stage node -e '
-            const { S3Client, ListObjectsV2Command } = require("@aws-sdk/client-s3")
-            const client = new S3Client({
-              endpoint: "https://s3.cloud.ru", forcePathStyle: true, region: "ru-central-1",
-              credentials: {
-                accessKeyId: `${process.env.CLOUDRU_TENANT_ID}:${process.env.CLOUDRU_MEDIA_KEY_ID}`,
-                secretAccessKey: process.env.CLOUDRU_MEDIA_KEY_SECRET,
-              },
-            })
-            client.send(new ListObjectsV2Command({
-              Bucket: process.env.CLOUDRU_MEDIA_BUCKET, MaxKeys: 1,
-            })).then(() => client.destroy()).catch(() => process.exit(1))
-          '
-          trap - ERR
-          echo 'Stage API DB and S3 checks passed on loopback; external routing unchanged.'
