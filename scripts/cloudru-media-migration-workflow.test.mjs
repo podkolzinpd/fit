@@ -20,6 +20,7 @@ test('keeps the Yandex to Cloud.ru media transfer manual, bounded and non-deleti
   assert.match(workflow, /CREATE_CLOUDRU_MEDIA_TARGET_BUCKET/)
   assert.match(workflow, /fit-chat-media-b1gt7dfq/)
   assert.match(workflow, /fit-cloudru-stage-media-c2ad3760/)
+  assert.match(workflow, /CLOUDRU_TENANT_ID: f071c7d5-cf0f-4538-9415-bbf9a9c94338/)
   assert.match(workflow, /secrets\.YANDEX_MEDIA_MIGRATION_SECRET_ACCESS_KEY/)
   assert.match(workflow, /secrets\.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET/)
   assert.match(migration, /'chat-media\/',\s*'fit-exercise-media\/',\s*'trainer-profile-media\/'/)
