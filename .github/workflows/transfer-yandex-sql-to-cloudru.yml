@@ -98,7 +98,7 @@ jobs:
             --username "$MIGRATION_DATABASE_USER" --dbname "$MIGRATION_DATABASE_NAME" \
             --quiet <<'SQL'
           do $$
-          declare table_row record; row_count bigint; nonempty_count integer := 0;
+          declare table_row record; row_count bigint; unexpected_count integer := 0;
           begin
             for table_row in
               select schemaname, tablename from pg_tables
@@ -108,17 +108,26 @@ jobs:
               execute format('select count(*) from %I.%I', table_row.schemaname, table_row.tablename)
                 into row_count;
               if row_count > 0 then
-                raise notice 'nonempty target table %.%: % rows',
-                  table_row.schemaname, table_row.tablename, row_count;
-                nonempty_count := nonempty_count + 1;
+                if table_row.schemaname = 'app_private' and (
+                  (table_row.tablename in ('trainer_schedule_v2_allowlist', 'fit_lime_pilot_allowlist') and row_count = 2)
+                  or (table_row.tablename in ('experiment_claim_tokens', 'client_lime_pilot_allowlist',
+                    'assistant_feature_links_pilot_allowlist', 'lime_rollout_controls') and row_count = 1)
+                ) then
+                  raise notice 'expected migration seed table %.%: % rows',
+                    table_row.schemaname, table_row.tablename, row_count;
+                else
+                  raise notice 'unexpected nonempty target table %.%: % rows',
+                    table_row.schemaname, table_row.tablename, row_count;
+                  unexpected_count := unexpected_count + 1;
+                end if;
               end if;
             end loop;
-            if nonempty_count > 0 then
-              raise exception 'target has % nonempty application tables', nonempty_count;
+            if unexpected_count > 0 then
+              raise exception 'target has % unexpected nonempty application tables', unexpected_count;
             end if;
           end $$;
           SQL
-          echo 'Target TLS, identities and empty application data verified.'
+          echo 'Target TLS, identities and only known migration seed data verified.'
 
       - name: Stop after read-only preflight
         if: inputs.mode == 'preflight'

@@ -24,6 +24,47 @@ interface ForeignKeyRow {
 const NAME = /^[a-z][a-z0-9_]*$/u
 const SHA256 = /^[a-f0-9]{64}$/u
 const CONFIRMATION = 'READ_YANDEX_STAGE_SQL_SNAPSHOT'
+// These six tables are populated by the clean migration chain even when the
+// application has never run. Validate their exact seed values before replacing
+// them with the source snapshot, inside the same transaction.
+const MIGRATION_SEEDS: Readonly<Record<string, { rows: number; predicate: string }>> = {
+  'app_private.experiment_claim_tokens': {
+    rows: 1,
+    predicate: `token_hash = '1a624a68e8693aabdca34a5ac5cdaf28e5bbfcf2c9e85ca033d61379ca66e566'
+      and experiment_key = 'trainer_schedule_v2'
+      and expires_at = '2026-10-25T23:59:59+03:00'::timestamptz
+      and consumed_at is null and consumed_by is null`,
+  },
+  'app_private.trainer_schedule_v2_allowlist': {
+    rows: 2,
+    predicate: `login_sha256 in (
+      '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71',
+      '1a13619899d89af007676a24b698ad3685b9e6a48cc27c84bad16927b7a2d581'
+    ) and profile_id is null`,
+  },
+  'app_private.fit_lime_pilot_allowlist': {
+    rows: 2,
+    predicate: `login_sha256 in (
+      '9efabf271d2433836f53f4efad98e31ae12e2283cae536eb9b1d800a2e734b71',
+      '1a13619899d89af007676a24b698ad3685b9e6a48cc27c84bad16927b7a2d581'
+    ) and profile_id is null and enabled`,
+  },
+  'app_private.client_lime_pilot_allowlist': {
+    rows: 1,
+    predicate: `login_sha256 = 'c04908d54f928f24a1d3d2d53b666a78546a4e0ab6306a250b48863fc463a488'
+      and profile_id is null and enabled`,
+  },
+  'app_private.assistant_feature_links_pilot_allowlist': {
+    rows: 1,
+    predicate: `login_sha256 = 'cb34df8e58e7ee2b8e26a5adf3244394f3a599616f5d7a607fd4a38b0ae754e3'
+      and profile_id is null and enabled`,
+  },
+  'app_private.lime_rollout_controls': {
+    rows: 1,
+    predicate: `singleton and client_mode = 'pilot' and trainer_mode = 'pilot'
+      and schedule_mode = 'pilot' and revision = 0`,
+  },
+}
 const SAFE_TRANSFER_MESSAGE = /^(?:source manifest HTTP [1-5][0-9]{2}|source chunk HTTP [1-5][0-9]{2}|sql_chunk_too_large|source rows changed during download|source changed during download|source changed before apply|source and target table sets differ|target is not empty|saved row count mismatch|non-deferrable foreign-key cycle|invalid source chunk|invalid saved chunk|source checksum changed for (?:app_private|private|public)\.[a-z][a-z0-9_]*|target checksum mismatch for (?:app_private|private|public)\.[a-z][a-z0-9_]*)$/u
 let transferPhase = 'startup'
 
@@ -301,10 +342,19 @@ async function restore(
       throw new Error('source and target table sets differ')
     }
     for (const table of manifest.tables) {
-      const rows = await connection.query<{ count: string }>(
-        `select count(*)::text as count from ${reference(table.schema, table.table)}`,
+      const name = `${table.schema}.${table.table}`
+      const referenceName = reference(table.schema, table.table)
+      const seed = MIGRATION_SEEDS[name]
+      const rows = await connection.query<{ count: string; matches: boolean | null }>(
+        `select count(*)::text as count${seed === undefined ? ''
+          : `, bool_and(${seed.predicate}) as matches`} from ${referenceName}`,
       )
-      if (rows[0]?.count !== '0') throw new Error('target is not empty')
+      const count = rows[0]?.count
+      if (count === '0') continue
+      if (seed === undefined || count !== String(seed.rows) || rows[0]?.matches !== true) {
+        throw new Error('target is not empty')
+      }
+      await connection.query(`delete from ${referenceName}`)
     }
     for (const table of await insertionOrder(connection, manifest)) {
       if (table.rows === 0) continue
