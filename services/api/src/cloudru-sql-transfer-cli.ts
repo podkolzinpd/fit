@@ -338,6 +338,7 @@ async function restore(
     }
     for (const table of await insertionOrder(connection, manifest)) {
       if (table.rows === 0) continue
+      transferPhase = `${apply ? 'target-apply' : 'target-rehearsal'}:insert:${table.schema}.${table.table}`
       const referenceName = reference(table.schema, table.table)
       const columns = await connection.query<ColumnRow>(`select attname as column,
           attidentity as identity
@@ -358,7 +359,10 @@ async function restore(
         [`[${data.join(',')}]`],
       )
     }
-    for (const table of manifest.tables) await verifyTable(connection, table)
+    for (const table of manifest.tables) {
+      transferPhase = `${apply ? 'target-apply' : 'target-rehearsal'}:verify:${table.schema}.${table.table}`
+      await verifyTable(connection, table)
+    }
     if (apply) await synchronizeIdentitySequences(connection)
     await connection.query(apply ? 'commit' : 'rollback')
   } catch (error) {
@@ -420,8 +424,11 @@ main().catch((error: unknown) => {
   const databaseCode = typeof error === 'object' && error !== null && 'code' in error
     && typeof error.code === 'string' && /^[A-Z0-9]{5}$/iu.test(error.code)
     ? error.code : 'unknown'
+  const constraint = typeof error === 'object' && error !== null && 'constraint' in error
+    && typeof error.constraint === 'string' && /^[a-z][a-z0-9_]{0,127}$/u.test(error.constraint)
+    ? `; constraint=${error.constraint}` : ''
   const safeMessage = error instanceof Error && SAFE_TRANSFER_MESSAGE.test(error.message)
     ? `; reason=${error.message}` : ''
-  process.stderr.write(`Cloud.ru SQL snapshot transfer failed at ${transferPhase}; databaseCode=${databaseCode}${safeMessage}; target transaction rolled back if active.\n`)
+  process.stderr.write(`Cloud.ru SQL snapshot transfer failed at ${transferPhase}; databaseCode=${databaseCode}${constraint}${safeMessage}; target transaction rolled back if active.\n`)
   process.exitCode = 1
 })
