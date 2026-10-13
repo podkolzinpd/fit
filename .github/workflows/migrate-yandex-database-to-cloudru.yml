@@ -226,6 +226,8 @@ jobs:
             --name fit-stage-migration \
             --folder-id "$YC_FOLDER_ID" \
             --format json | jq -er '.url')
+          migration_url=${migration_url%/}
+          echo 'Requesting bounded Yandex stage database export.'
           curl --fail --silent --show-error \
             --request POST \
             --header "Authorization: Bearer $YC_IAM_TOKEN" \
@@ -239,10 +241,12 @@ jobs:
           expected_sha=$(jq -er '.sha256 | select(test("^[0-9a-f]{64}$"))' "$response")
           signed_url=$(jq -er '.url | select(startswith("https://storage.yandexcloud.net/"))' "$response")
           echo "::add-mask::$signed_url"
+          echo 'Downloading encrypted Yandex stage export.'
           curl --fail --silent --show-error --location \
             --output "$encrypted" "$signed_url"
           test "$(sha256sum "$encrypted" | cut -d' ' -f1)" = "$expected_sha"
 
+          echo 'Running Cloud.ru target migrations and guarded restore.'
           common_database_env=(
             --env "MIGRATION_DATABASE_HOST=$MIGRATION_DATABASE_HOST"
             --env "MIGRATION_DATABASE_PORT=$MIGRATION_DATABASE_PORT"
