@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import process from 'node:process'
+import { isDeepStrictEqual } from 'node:util'
 
 const containerAddress = 'yandex_serverless_container.migration[0]'
 const bindingAddress = 'yandex_serverless_container_iam_binding.migration_invocation[0]'
@@ -22,6 +23,7 @@ function resources(module) {
 
 const plan = JSON.parse(readFileSync(argument('--plan'), 'utf8'))
 const imageTag = argument('--image-tag')
+const imageRepository = argument('--image-repository')
 const changed = (plan.resource_changes ?? []).filter(
   (resource) => resource.change.actions.join(',') !== 'no-op',
 )
@@ -42,6 +44,20 @@ if (changed.some((resource) => resource.address === bindingAddress)) {
 if (changed.some((resource) => resource.address === containerAddress && resource.change.actions.join(',') !== 'update')) {
   throw new Error('Migration container may only receive an in-place revision update')
 }
+const containerChange = changed.find((resource) => resource.address === containerAddress)?.change
+if (containerChange) {
+  const withoutRevisionImage = (value) => ({
+    ...value,
+    revision_id: undefined,
+    image: value?.image?.map((entry) => ({ ...entry, url: undefined })),
+  })
+  if (!isDeepStrictEqual(
+    withoutRevisionImage(containerChange.before),
+    withoutRevisionImage(containerChange.after),
+  )) {
+    throw new Error('Migration-only plan changes runner configuration beyond the image revision')
+  }
+}
 
 const planned = resources(plan.planned_values?.root_module)
 const container = planned.find((resource) => resource.address === containerAddress)?.values
@@ -53,7 +69,7 @@ if (
   || container?.memory !== 512
   || container?.cores !== 1
   || container?.core_fraction !== 100
-  || image?.url?.endsWith(`:${imageTag}`) !== true
+  || image?.url !== `${imageRepository}:${imageTag}`
   || JSON.stringify(image?.command) !== JSON.stringify(['node', 'dist/migration-server.js'])
   || image?.environment?.APP_ENV !== 'stage'
   || binding?.role !== 'serverless.containers.invoker'

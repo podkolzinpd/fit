@@ -84,7 +84,9 @@ jobs:
           curl --fail --silent --show-error --location https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
           bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
-      - name: Exchange OIDC token for the stage deployment identity
+      - name: Exchange OIDC token for push metadata identity
+        env:
+          YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
         run: scripts/yandex-github-oidc.sh
       - name: Resolve required push metadata without reading its payload
         run: |
@@ -93,6 +95,8 @@ jobs:
           echo "TF_VAR_push_function_id=$(jq -er '.functionId' <<<"$metadata")" >> "$GITHUB_ENV"
           echo "TF_VAR_push_transport_secret_id=$(jq -er '.sourceSecretId' <<<"$metadata")" >> "$GITHUB_ENV"
           echo "TF_VAR_push_transport_secret_version_id=$(jq -er '.sourceSecretVersionId' <<<"$metadata")" >> "$GITHUB_ENV"
+      - name: Exchange OIDC token for the stage deployment identity
+        run: scripts/yandex-github-oidc.sh
       - name: Resolve the immutable migration image
         run: |
           image_tag=$(git rev-parse 'HEAD:services/api')
@@ -119,7 +123,22 @@ jobs:
             -target=yandex_serverless_container_iam_binding.migration_invocation
           terraform show -json migration-only.tfplan > migration-only.tfplan.json
           node ../../scripts/check-yandex-migration-container-plan.mjs \
-            --plan migration-only.tfplan.json --image-tag "$MIGRATION_IMAGE_TAG"
+            --plan migration-only.tfplan.json --image-tag "$MIGRATION_IMAGE_TAG" \
+            --image-repository 'cr.yandex/${{ vars.YC_API_REPOSITORY }}'
+      - name: Reuse or build the immutable migration image
+        env:
+          IMAGE_REPOSITORY: cr.yandex/${{ vars.YC_API_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          image="$IMAGE_REPOSITORY:$MIGRATION_IMAGE_TAG"
+          printf '%s' "$YC_TOKEN" | podman login --username iam --password-stdin cr.yandex
+          if skopeo inspect --creds "iam:$YC_TOKEN" "docker://$image" >/dev/null 2>&1; then
+            echo 'Immutable migration image already exists.'
+          else
+            podman build --platform linux/amd64 --file services/api/Dockerfile --tag "$image" services/api
+            podman push "$image"
+          fi
+          skopeo inspect --creds "iam:$YC_TOKEN" "docker://$image" >/dev/null
       - name: Deploy only the candidate migration revision
         working-directory: infra/yandex
         run: >-

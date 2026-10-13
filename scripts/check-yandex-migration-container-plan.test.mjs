@@ -31,7 +31,7 @@ function check(value) {
   const path = join(directory, 'plan.json')
   try {
     writeFileSync(path, JSON.stringify(value))
-    return execFileSync(process.execPath, [script, '--plan', path, '--image-tag', tag], { encoding: 'utf8' })
+    return execFileSync(process.execPath, [script, '--plan', path, '--image-tag', tag, '--image-repository', 'cr.yandex/test'], { encoding: 'utf8' })
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
@@ -44,8 +44,16 @@ test('accepts a no-op or private in-place migration revision plan', () => {
 })
 
 test('rejects trigger changes, binding drift and deletion', () => {
-  const failure = (change) => assert.throws(() => check(plan([change])), /unexpected resources|binding drift|must not delete/)
+  const failure = (change) => assert.throws(() => check(plan([change])), /unexpected resources|binding drift|must not delete|beyond the image revision/)
   failure({ address: 'yandex_function_trigger.api_warmup_timer', change: { actions: ['update'] } })
   failure({ address: bindingAddress, change: { actions: ['update'] } })
   failure({ address: containerAddress, change: { actions: ['delete'] } })
+  failure({
+    address: containerAddress,
+    change: {
+      actions: ['update'],
+      before: { service_account_id: 'migration-runtime', image: [{ url: 'cr.yandex/test:old' }] },
+      after: { service_account_id: 'other-runtime', image: [{ url: `cr.yandex/test:${tag}` }] },
+    },
+  })
 })
