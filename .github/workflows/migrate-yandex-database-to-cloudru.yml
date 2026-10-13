@@ -139,7 +139,19 @@ jobs:
               --command "select has_database_privilege(current_user, current_database(), 'CONNECT')")
           test "$owner_can_create" = t
           test "$runtime_can_connect" = t
-          echo 'Cloud.ru PostgreSQL encrypted connection and role identities verified; peer certificate identity is not verified.'
+          target_table_count=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
+            PGSSLMODE=require PGCONNECT_TIMEOUT=10 \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$MIGRATION_DATABASE_HOST" \
+              --port "$MIGRATION_DATABASE_PORT" \
+              --username "$MIGRATION_DATABASE_USER" \
+              --dbname "$MIGRATION_DATABASE_NAME" \
+              --command "select count(*) from pg_catalog.pg_tables where schemaname in ('public', 'app_private') and not (schemaname = 'app_private' and tablename = 'fit_migrations')")
+          if [[ "$target_table_count" != 0 ]]; then
+            echo "Target database already has $target_table_count application tables; refusing migration." >&2
+            exit 1
+          fi
+          echo 'Cloud.ru PostgreSQL encrypted connection, roles and empty target verified; peer certificate identity is not verified.'
 
       - name: Stop after read-only preflight
         if: inputs.mode == 'preflight'
