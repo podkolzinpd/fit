@@ -83,14 +83,8 @@ jobs:
           set -euo pipefail
           ca=/etc/ssl/certs/ca-certificates.crt
           test -s "$ca"
-          tls_output=$(mktemp)
-          trap 'rm -f "$tls_output"' EXIT
-          openssl s_client -starttls postgres \
-            -connect "$MIGRATION_DATABASE_HOST:$MIGRATION_DATABASE_PORT" \
-            -CAfile "$ca" -verify_return_error </dev/null >"$tls_output" 2>&1
-          grep -q 'Verify return code: 0 (ok)' "$tls_output"
           ssl_used=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$MIGRATION_DATABASE_HOST" \
               --port "$MIGRATION_DATABASE_PORT" \
@@ -99,7 +93,7 @@ jobs:
               --command "select ssl from pg_stat_ssl where pid = pg_backend_pid()")
           test "$ssl_used" = t
           owner_identity=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$MIGRATION_DATABASE_HOST" \
               --port "$MIGRATION_DATABASE_PORT" \
@@ -107,7 +101,7 @@ jobs:
               --dbname "$MIGRATION_DATABASE_NAME" \
               --command 'select current_user')
           runtime_identity=$(PGPASSWORD="$DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$DATABASE_HOST" \
               --port "$DATABASE_PORT" \
