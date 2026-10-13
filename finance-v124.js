@@ -207,6 +207,9 @@
     '$1\n          $3$2'
   );
   defs[0].css += '\n.tier.club .plus{margin-top:0;margin-bottom:8px}\n';
+  // Omit the VAT footnote and the 2027 column only on the revenue slide.
+  defs[1].html = defs[1].html.replace('<div class="fn">с НДС · Fit оставляет себе ~3,2% оборота без НДС</div>', '');
+  defs[1].css += '\n#cols > .col:first-child{display:none}\n';
   const find = d => document.querySelector('#deck>[data-section="' + d.section + '"]');
   // заголовки для меню слайдов — до инициализации движка
   defs.forEach(d => { const s = find(d); const h = s && s.querySelector('h2'); if (h && d.title) h.textContent = d.title; });
