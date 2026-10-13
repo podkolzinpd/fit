@@ -23,3 +23,15 @@ infra253/lint/typecheck/build. Exact-head CI/merge/main CI/VM ещё гейты.
 локально не запускаются. Реальный frontend build на VM пока не подтверждён.
 После merge нужен зелёный CI нового main, затем manual frontend preparation.
 Пользовательский untracked CLOUD_RU_MIGRATION_RUNBOOK.md сохраняется.
+
+## Новая post-merge фактура
+
+Main447c283e/CI38456305705 green. Manual API release38460887601 success:
+candidate health/ready/unauthorized, switch18080 и RUNNING_SHA readback
+подтвердили exact447c283e. Public HTTPS/DNS не менялись, native auth E2E
+этот smoke не доказывает. Media audit38460661553 только читал S3 inventory:
+обе стороны2100objects/77256815bytes, pending0; содержимое файлов и свежесть БД
+не подтверждены. Первоначальный SQL workflow запрещает повторный import в
+nonempty target: до cutover нужен согласованный freeze/final snapshot, не
+слепой повтор apply или ручное удаление target. Frontend environment fix всё
+ещё должен пройти свой exact-head CI/merge и новый main CI перед VM запуском.
