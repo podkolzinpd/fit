@@ -210,6 +210,12 @@
   // Omit the VAT footnote and the 2027 column only on the revenue slide.
   defs[1].html = defs[1].html.replace('<div class="fn">с НДС · Fit оставляет себе ~3,2% оборота без НДС</div>', '');
   defs[1].css += '\n#cols > .col:first-child{display:none}\n';
+  // Слайд 09 (13.10): без подписи у заголовка и схемы арбитража, короче «по желанию», реклама и итог — по строкам.
+  defs[0].html = defs[0].html.replace(/<div class="sub">[\s\S]*?<\/div>/, '');
+  defs[0].html = defs[0].html.replace(/<div class="arb">[\s\S]*?(?=<div class="gains">)/, '');
+  defs[0].html = defs[0].html.replace(': приложением можно пользоваться и без неё. Вход максимально простой', '');
+  defs[0].html = defs[0].html.replace('по виду спорта и цели пользователя · <b>оплата за показы', 'по виду спорта и цели пользователя<br><b>оплата за показы');
+  defs[0].html = defs[0].html.replace('Больше клиентов и оплат у тренера — больше комиссии и подписок у Fit.', 'Больше клиентов<br>Больше оплат у тренеров<br>Больше комиссии и подписок у Fit');
   const find = d => document.querySelector('#deck>[data-section="' + d.section + '"]');
   // заголовки для меню слайдов — до инициализации движка
   defs.forEach(d => { const s = find(d); const h = s && s.querySelector('h2'); if (h && d.title) h.textContent = d.title; });
