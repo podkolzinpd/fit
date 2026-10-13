@@ -12,8 +12,10 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { ChatImageUpload, ChatMediaStore } from './chat-media.js'
 import type { VitalMediaSigner } from './vital-media.js'
 
-const OBJECT_STORAGE_ENDPOINT = 'https://storage.yandexcloud.net'
-const OBJECT_STORAGE_REGION = 'ru-central1'
+const YANDEX_OBJECT_STORAGE_ENDPOINT = 'https://storage.yandexcloud.net'
+const YANDEX_OBJECT_STORAGE_REGION = 'ru-central1'
+const CLOUDRU_OBJECT_STORAGE_ENDPOINT = 'https://s3.cloud.ru'
+const CLOUDRU_OBJECT_STORAGE_REGION = 'ru-central-1'
 const OBJECT_STORAGE_DELETE_TIMEOUT_MS = 5_000
 const CHAT_MEDIA_PREFIX = 'chat-media'
 const VITAL_MEDIA_PREFIX = 'fit-exercise-media'
@@ -26,7 +28,17 @@ export interface YandexMediaStorageConfig {
   accessKeyId: string
   bucket: string
   secretAccessKey: string
+  provider?: 'yandex'
 }
+
+export interface CloudruMediaStorageConfig {
+  accessKeyId: string
+  bucket: string
+  secretAccessKey: string
+  provider: 'cloudru'
+}
+
+export type S3MediaStorageConfig = YandexMediaStorageConfig | CloudruMediaStorageConfig
 
 export interface StoredMediaMetadata {
   sha256?: string
@@ -107,11 +119,38 @@ export function readYandexMediaStorageConfig(
   }
 }
 
+export function readMediaStorageConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): S3MediaStorageConfig | undefined {
+  const provider = environment.FIT_MEDIA_STORAGE_PROVIDER?.trim() || 'yandex'
+  if (provider === 'yandex') return readYandexMediaStorageConfig(environment)
+  if (provider !== 'cloudru') throw new Error('FIT_MEDIA_STORAGE_PROVIDER is invalid')
+  const bucket = environment.CLOUDRU_MEDIA_BUCKET?.trim()
+  const tenantId = environment.CLOUDRU_TENANT_ID?.trim()
+  const keyId = environment.CLOUDRU_MEDIA_KEY_ID?.trim()
+  const secretAccessKey = environment.CLOUDRU_MEDIA_KEY_SECRET?.trim()
+  if (!bucket || !tenantId || !keyId || !secretAccessKey) {
+    throw new Error('Cloud.ru media storage configuration is incomplete')
+  }
+  if (
+    !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket)
+    || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(tenantId)
+    || !/^[A-Za-z0-9_-]{8,128}$/.test(keyId)
+    || !/^[^\s]{16,256}$/.test(secretAccessKey)
+  ) throw new Error('Cloud.ru media storage configuration is invalid')
+  return {
+    accessKeyId: `${tenantId}:${keyId}`,
+    bucket,
+    provider: 'cloudru',
+    secretAccessKey,
+  }
+}
+
 export class YandexMediaObjectStorage implements MediaObjectStorage {
   private readonly client: S3Client
 
   constructor(
-    private readonly config: YandexMediaStorageConfig,
+    private readonly config: S3MediaStorageConfig,
     private readonly deleteTimeoutMs = OBJECT_STORAGE_DELETE_TIMEOUT_MS,
   ) {
     this.client = new S3Client({
@@ -119,8 +158,13 @@ export class YandexMediaObjectStorage implements MediaObjectStorage {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
       },
-      endpoint: OBJECT_STORAGE_ENDPOINT,
-      region: OBJECT_STORAGE_REGION,
+      endpoint: config.provider === 'cloudru'
+        ? CLOUDRU_OBJECT_STORAGE_ENDPOINT
+        : YANDEX_OBJECT_STORAGE_ENDPOINT,
+      forcePathStyle: config.provider === 'cloudru',
+      region: config.provider === 'cloudru'
+        ? CLOUDRU_OBJECT_STORAGE_REGION
+        : YANDEX_OBJECT_STORAGE_REGION,
     })
   }
 

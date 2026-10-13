@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ChatImageUpload } from './chat-media.js'
 import {
   mediaObjectKey,
+  readMediaStorageConfig,
   readYandexMediaStorageConfig,
   type MediaObjectStorage,
   VITAL_MEDIA_CACHE_CONTROL,
@@ -44,6 +45,40 @@ describe('readYandexMediaStorageConfig', () => {
       ...environment,
       YANDEX_MEDIA_BUCKET: '../unsafe',
     })).toThrow('configuration is invalid')
+  })
+})
+
+describe('readMediaStorageConfig', () => {
+  it('keeps the existing Yandex provider as the default', () => {
+    expect(readMediaStorageConfig({})).toBeUndefined()
+    expect(readMediaStorageConfig({
+      YANDEX_MEDIA_ACCESS_KEY_ID: `YC${'a'.repeat(23)}`,
+      YANDEX_MEDIA_BUCKET: 'fit-stage-media-example',
+      YANDEX_MEDIA_SECRET_ACCESS_KEY: `YC${'b'.repeat(38)}`,
+    })?.bucket).toBe('fit-stage-media-example')
+  })
+
+  it('uses tenant-prefixed credentials for the Cloud.ru S3 endpoint', () => {
+    const config = readMediaStorageConfig({
+      FIT_MEDIA_STORAGE_PROVIDER: 'cloudru',
+      CLOUDRU_MEDIA_BUCKET: 'fit-cloudru-stage-media-c2ad3760',
+      CLOUDRU_TENANT_ID: 'f071c7d5-cf0f-4538-9415-bbf9a9c94338',
+      CLOUDRU_MEDIA_KEY_ID: 'exampleKey123',
+      CLOUDRU_MEDIA_KEY_SECRET: 'exampleSecretValue123',
+    })
+    expect(config).toEqual({
+      accessKeyId: 'f071c7d5-cf0f-4538-9415-bbf9a9c94338:exampleKey123',
+      bucket: 'fit-cloudru-stage-media-c2ad3760',
+      provider: 'cloudru',
+      secretAccessKey: 'exampleSecretValue123',
+    })
+  })
+
+  it('fails closed for incomplete or unknown provider settings', () => {
+    expect(() => readMediaStorageConfig({ FIT_MEDIA_STORAGE_PROVIDER: 'cloudru' }))
+      .toThrow('configuration is incomplete')
+    expect(() => readMediaStorageConfig({ FIT_MEDIA_STORAGE_PROVIDER: 'unexpected' }))
+      .toThrow('FIT_MEDIA_STORAGE_PROVIDER is invalid')
   })
 })
 

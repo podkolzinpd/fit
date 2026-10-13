@@ -16,7 +16,7 @@ import {
   SupabaseLegacyChatMediaAuthorizer,
 } from './legacy-chat-media.js'
 import {
-  readYandexMediaStorageConfig,
+  readMediaStorageConfig,
   YandexChatMediaStore,
   YandexMediaObjectStorage,
   YandexVitalMediaSigner,
@@ -236,10 +236,10 @@ const pilotTrainingSummaryGenerator =
     ? undefined
     : pilotTrainingSummaryReader
 const supabaseBridgeConfig = readSupabaseBridgeConfig()
-const yandexMediaStorageConfig = readYandexMediaStorageConfig()
-const yandexMediaStorage = yandexMediaStorageConfig === undefined
+const mediaStorageConfig = readMediaStorageConfig()
+const yandexMediaStorage = mediaStorageConfig === undefined
   ? undefined
-  : new YandexMediaObjectStorage(yandexMediaStorageConfig)
+  : new YandexMediaObjectStorage(mediaStorageConfig)
 const pilotTrainerProfiles = databasePool === undefined
   ? undefined
   : new DatabasePilotTrainerProfiles(databasePool, yandexMediaStorage)
