@@ -24,6 +24,8 @@ interface ForeignKeyRow {
 const NAME = /^[a-z][a-z0-9_]*$/u
 const SHA256 = /^[a-f0-9]{64}$/u
 const CONFIRMATION = 'READ_YANDEX_STAGE_SQL_SNAPSHOT'
+const SAFE_TRANSFER_MESSAGE = /^(?:source manifest HTTP [1-5][0-9]{2}|source chunk HTTP [1-5][0-9]{2}|sql_chunk_too_large|source rows changed during download|source changed during download|source changed before apply|source and target table sets differ|target is not empty|saved row count mismatch|non-deferrable foreign-key cycle|invalid source chunk|invalid saved chunk|source checksum changed for (?:app_private|private|public)\.[a-z][a-z0-9_]*|target checksum mismatch for (?:app_private|private|public)\.[a-z][a-z0-9_]*)$/u
+let transferPhase = 'startup'
 
 function required(name: string): string {
   const value = process.env[name]
@@ -138,9 +140,11 @@ async function downloadSnapshot(
   token: string,
   passphrase: string,
   directory: string,
+  onTable: (table: SqlSnapshotTable) => void,
 ): Promise<Map<string, string[]>> {
   const files = new Map<string, string[]>()
   for (const [tableIndex, table] of manifest.tables.entries()) {
+    onTable(table)
     const hash = createHash('sha256')
     const tableFiles: string[] = []
     let offset = 0
@@ -348,20 +352,27 @@ async function main(): Promise<void> {
   const pool = new PgDatabasePool(databaseConfig, 'migration-owner')
   const directory = await mkdtemp(join(tmpdir(), `fit-sql-${randomBytes(4).toString('hex')}-`))
   try {
+    transferPhase = 'source-manifest'
     const manifest = await fetchManifest(url, token)
-    const files = await downloadSnapshot(manifest, url, token, passphrase, directory)
+    const files = await downloadSnapshot(manifest, url, token, passphrase, directory,
+      (table) => { transferPhase = `download:${table.schema}.${table.table}` })
+    transferPhase = 'source-recheck'
     const afterDownload = await fetchManifest(url, token)
     if (JSON.stringify(afterDownload) !== JSON.stringify(manifest)) {
       throw new Error('source changed during download')
     }
+    transferPhase = 'target-connect'
     const connection = await pool.connect()
     try {
+      transferPhase = 'target-rehearsal'
       await restore(connection, manifest, files, passphrase, false)
       if (mode === 'apply') {
+        transferPhase = 'source-before-apply'
         const beforeApply = await fetchManifest(url, token)
         if (JSON.stringify(beforeApply) !== JSON.stringify(manifest)) {
           throw new Error('source changed before apply')
         }
+        transferPhase = 'target-apply'
         await restore(connection, manifest, files, passphrase, true)
       }
     } finally {
@@ -375,7 +386,12 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch(() => {
-  process.stderr.write('Cloud.ru SQL snapshot transfer failed; target transaction rolled back if active.\n')
+main().catch((error: unknown) => {
+  const databaseCode = typeof error === 'object' && error !== null && 'code' in error
+    && typeof error.code === 'string' && /^[A-Z0-9]{5}$/iu.test(error.code)
+    ? error.code : 'unknown'
+  const safeMessage = error instanceof Error && SAFE_TRANSFER_MESSAGE.test(error.message)
+    ? `; reason=${error.message}` : ''
+  process.stderr.write(`Cloud.ru SQL snapshot transfer failed at ${transferPhase}; databaseCode=${databaseCode}${safeMessage}; target transaction rolled back if active.\n`)
   process.exitCode = 1
 })
