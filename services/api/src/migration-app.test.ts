@@ -118,9 +118,12 @@ describe('Cloud.ru database export', () => {
     expect(create).not.toHaveBeenCalled()
   })
 
-  it('returns only a bounded source dump error code on preflight failure', async () => {
+  it('returns a bounded private diagnostic on preflight failure', async () => {
     const preflightSource = vi.fn<NonNullable<CloudDatabaseExportService['preflightSource']>>()
-      .mockRejectedValue(new CloudDatabaseTransferError('database_export_source_permission_denied'))
+      .mockRejectedValue(new CloudDatabaseTransferError(
+        'database_export_source_permission_denied',
+        'pg_dump: error: permission denied for table example',
+      ))
     const app = buildMigrationApp({
       cloudDatabaseExport: {
         create: () => Promise.reject(new Error('must not export')),
@@ -140,6 +143,7 @@ describe('Cloud.ru database export', () => {
     expect(response.json()).toEqual({
       status: 'database_export_source_not_ready',
       code: 'database_export_source_permission_denied',
+      diagnostic: 'pg_dump: error: permission denied for table example',
     })
   })
 
