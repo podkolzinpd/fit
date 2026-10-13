@@ -32,6 +32,10 @@ const sourceAccessKeyId = required('YANDEX_MEDIA_ACCESS_KEY_ID')
 const sourceAccessKeyFingerprint = createHash('sha256')
   .update(sourceAccessKeyId)
   .digest('hex')
+const targetAccessKeyId = required('CLOUDRU_MEDIA_KEY_ID')
+const targetAccessKeyFingerprint = createHash('sha256')
+  .update(targetAccessKeyId)
+  .digest('hex')
 
 const source = new S3Client({
   endpoint: 'https://storage.yandexcloud.net',
@@ -66,16 +70,15 @@ const listMediaObjects = async (client, bucket) => {
 }
 
 const targetCredentials = () => {
-  const keyId = required('CLOUDRU_MEDIA_KEY_ID')
   const tenantId = required('CLOUDRU_TENANT_ID')
   const projectId = required('CLOUDRU_PROJECT_ID')
   const secretAccessKey = required('CLOUDRU_MEDIA_KEY_SECRET')
   return [
-    keyId,
-    `${tenantId}:${keyId}`,
-    `${tenantId}.${keyId}`,
-    `${projectId}:${keyId}`,
-    `${projectId}.${keyId}`,
+    targetAccessKeyId,
+    `${tenantId}:${targetAccessKeyId}`,
+    `${tenantId}.${targetAccessKeyId}`,
+    `${projectId}:${targetAccessKeyId}`,
+    `${projectId}.${targetAccessKeyId}`,
   ].map((accessKeyId) => ({ accessKeyId, secretAccessKey }))
 }
 
@@ -139,6 +142,10 @@ try {
   console.log(JSON.stringify({
     event: 'source_access_key_fingerprint',
     sha256: sourceAccessKeyFingerprint,
+  }))
+  console.log(JSON.stringify({
+    event: 'target_access_key_fingerprint',
+    sha256: targetAccessKeyFingerprint,
   }))
   target = await connectTarget({ createIfMissing: mode === 'bootstrap-target' })
   if (mode === 'bootstrap-target') {
