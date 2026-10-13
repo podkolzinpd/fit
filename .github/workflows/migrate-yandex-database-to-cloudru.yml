@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Verify target TLS/roles only, or perform the guarded snapshot restore'
+        description: 'Verify encrypted private target connection/roles, or perform guarded restore'
         required: true
         type: choice
         default: preflight
@@ -77,14 +77,12 @@ jobs:
           test "$(jq -r '.DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_api
           test "$(jq -r '.MIGRATION_DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_owner
 
-      - name: Verify target TLS and database identities
+      - name: Verify encrypted private target connection and database identities
         shell: bash
         run: |
           set -euo pipefail
-          ca=/etc/ssl/certs/ca-certificates.crt
-          test -s "$ca"
           if ! ssl_used=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
+            PGSSLMODE=require PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$MIGRATION_DATABASE_HOST" \
               --port "$MIGRATION_DATABASE_PORT" \
@@ -106,7 +104,7 @@ jobs:
           fi
           test "$ssl_used" = t
           owner_identity=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
+            PGSSLMODE=require PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$MIGRATION_DATABASE_HOST" \
               --port "$MIGRATION_DATABASE_PORT" \
@@ -114,7 +112,7 @@ jobs:
               --dbname "$MIGRATION_DATABASE_NAME" \
               --command 'select current_user')
           runtime_identity=$(PGPASSWORD="$DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
+            PGSSLMODE=require PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$DATABASE_HOST" \
               --port "$DATABASE_PORT" \
@@ -123,7 +121,25 @@ jobs:
               --command 'select current_user')
           test "$owner_identity" = fit_owner
           test "$runtime_identity" = fit_api
-          echo 'Cloud.ru PostgreSQL TLS and role identities verified.'
+          owner_can_create=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
+            PGSSLMODE=require PGCONNECT_TIMEOUT=10 \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$MIGRATION_DATABASE_HOST" \
+              --port "$MIGRATION_DATABASE_PORT" \
+              --username "$MIGRATION_DATABASE_USER" \
+              --dbname "$MIGRATION_DATABASE_NAME" \
+              --command "select has_database_privilege(current_user, current_database(), 'CREATE')")
+          runtime_can_connect=$(PGPASSWORD="$DATABASE_PASSWORD" \
+            PGSSLMODE=require PGCONNECT_TIMEOUT=10 \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$DATABASE_HOST" \
+              --port "$DATABASE_PORT" \
+              --username "$DATABASE_USER" \
+              --dbname "$DATABASE_NAME" \
+              --command "select has_database_privilege(current_user, current_database(), 'CONNECT')")
+          test "$owner_can_create" = t
+          test "$runtime_can_connect" = t
+          echo 'Cloud.ru PostgreSQL encrypted connection and role identities verified; peer certificate identity is not verified.'
 
       - name: Stop after read-only preflight
         if: inputs.mode == 'preflight'
@@ -163,7 +179,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ca=/etc/ssl/certs/ca-certificates.crt
           transfer_dir=$(mktemp -d "$RUNNER_TEMP/fit-db-transfer.XXXXXX")
           response="$transfer_dir/response.json"
           encrypted="$transfer_dir/source.dump.aes"
@@ -216,7 +231,7 @@ jobs:
             --env "MIGRATION_DATABASE_NAME=$MIGRATION_DATABASE_NAME"
             --env "MIGRATION_DATABASE_USER=$MIGRATION_DATABASE_USER"
             --env "MIGRATION_DATABASE_PASSWORD=$MIGRATION_DATABASE_PASSWORD"
-            --env "MIGRATION_DATABASE_SSL_ROOT_CERT=$ca"
+            --env MIGRATION_DATABASE_SSL_MODE=require
           )
           sudo podman run --rm --network=host \
             "${common_database_env[@]}" \
@@ -234,7 +249,7 @@ jobs:
             node dist/cloud-database-restore-cli.js
 
           profile_count=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
-            PGSSLMODE=verify-full PGSSLROOTCERT="$ca" \
+            PGSSLMODE=require \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$MIGRATION_DATABASE_HOST" \
               --port "$MIGRATION_DATABASE_PORT" \
@@ -258,7 +273,7 @@ jobs:
             printf 'DATABASE_NAME=%s\n' "$DATABASE_NAME"
             printf 'DATABASE_USER=%s\n' "$DATABASE_USER"
             printf 'DATABASE_PASSWORD=%s\n' "$DATABASE_PASSWORD"
-            printf 'DATABASE_SSL_ROOT_CERT=%s\n' /etc/ssl/certs/ca-certificates.crt
+            printf 'DATABASE_SSL_MODE=require\n'
           } >"$runtime_file"
           chmod 600 "$runtime_file"
           sudo install -m 600 "$runtime_file" /opt/fit/secrets/api.env

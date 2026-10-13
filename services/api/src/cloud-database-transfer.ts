@@ -33,6 +33,7 @@ const IV_BYTES = 12
 const TAG_BYTES = 16
 const MAX_DUMP_BYTES = 256 * 1024 * 1024
 const SIGNED_URL_SECONDS = 10 * 60
+const CLOUDRU_STAGE_DATABASE_HOST = '10.70.10.67'
 
 type Environment = Readonly<Record<string, string | undefined>>
 
@@ -41,7 +42,8 @@ interface DatabaseTransferConnection {
   host: string
   password: string
   port: string
-  sslRootCert: string
+  sslMode: 'verify-full' | 'require'
+  sslRootCert?: string
   user: string
 }
 
@@ -77,12 +79,28 @@ export function readDatabaseTransferConnection(
   environment: Environment,
   prefix: 'DATABASE' | 'MIGRATION_DATABASE',
 ): DatabaseTransferConnection {
+  const host = required(environment, `${prefix}_HOST`)
+  const sslMode = environment[`${prefix}_SSL_MODE`] ?? 'verify-full'
+  if (sslMode !== 'verify-full' && sslMode !== 'require') {
+    throw new CloudDatabaseTransferError('database_export_ssl_mode_invalid')
+  }
+  if (sslMode === 'require' && (
+    prefix !== 'MIGRATION_DATABASE' ||
+    host !== CLOUDRU_STAGE_DATABASE_HOST ||
+    environment[`${prefix}_PORT`] !== '5432' ||
+    environment[`${prefix}_NAME`] !== 'fit'
+  )) {
+    throw new CloudDatabaseTransferError('database_export_ssl_mode_invalid')
+  }
   return {
     database: required(environment, `${prefix}_NAME`),
-    host: required(environment, `${prefix}_HOST`),
+    host,
     password: required(environment, `${prefix}_PASSWORD`),
     port: required(environment, `${prefix}_PORT`),
-    sslRootCert: required(environment, `${prefix}_SSL_ROOT_CERT`),
+    sslMode,
+    ...(sslMode === 'verify-full'
+      ? { sslRootCert: required(environment, `${prefix}_SSL_ROOT_CERT`) }
+      : {}),
     user: required(environment, `${prefix}_USER`),
   }
 }
@@ -118,10 +136,9 @@ async function assertTargetEmpty(
     host: database.host,
     password: database.password,
     port: Number(database.port),
-    ssl: {
-      ca: await readFile(database.sslRootCert, 'utf8'),
-      rejectUnauthorized: true,
-    },
+    ssl: database.sslMode === 'require'
+      ? { rejectUnauthorized: false }
+      : { ca: await readFile(required({ sslRootCert: database.sslRootCert }, 'sslRootCert'), 'utf8'), rejectUnauthorized: true },
     user: database.user,
   })
   try {
@@ -252,8 +269,8 @@ export class YandexCloudDatabaseExport implements CloudDatabaseExportService {
       ], {
         ...process.env,
         PGPASSWORD: this.database.password,
-        PGSSLMODE: 'verify-full',
-        PGSSLROOTCERT: this.database.sslRootCert,
+        PGSSLMODE: this.database.sslMode,
+        ...(this.database.sslRootCert === undefined ? {} : { PGSSLROOTCERT: this.database.sslRootCert }),
       })
       const dumpStat = await stat(dumpPath)
       if (dumpStat.size < 1 || dumpStat.size > MAX_DUMP_BYTES) {
@@ -350,8 +367,8 @@ export async function restoreEncryptedDatabaseDump(
     ], {
       ...process.env,
       PGPASSWORD: database.password,
-      PGSSLMODE: 'verify-full',
-      PGSSLROOTCERT: database.sslRootCert,
+      PGSSLMODE: database.sslMode,
+      ...(database.sslRootCert === undefined ? {} : { PGSSLROOTCERT: database.sslRootCert }),
     })
   } catch (error) {
     if (error instanceof CloudDatabaseTransferError) throw error

@@ -37,6 +37,35 @@ describe('database connection config', () => {
     expect(readCertificate).toHaveBeenCalledWith('/certs/yandex.pem')
   })
 
+  it('requires encrypted TLS for the Cloud.ru stage IP without an unavailable CA', () => {
+    const readCertificate = vi.fn()
+    expect(buildDatabaseConnectionConfig('DATABASE', {
+      environment: {
+        DATABASE_HOST: '10.70.10.67',
+        DATABASE_PORT: '5432',
+        DATABASE_NAME: 'fit',
+        DATABASE_USER: 'fit_api',
+        DATABASE_PASSWORD: 'generated-password',
+        DATABASE_SSL_MODE: 'require',
+      },
+      readCertificate,
+    })).toMatchObject({ ssl: { rejectUnauthorized: false } })
+    expect(readCertificate).not.toHaveBeenCalled()
+  })
+
+  it('does not allow unverified TLS for other databases', () => {
+    expect(() => buildDatabaseConnectionConfig('DATABASE', {
+      environment: {
+        DATABASE_HOST: 'private.db.yandexcloud.net',
+        DATABASE_PORT: '6432',
+        DATABASE_NAME: 'fit',
+        DATABASE_USER: 'fit_api',
+        DATABASE_PASSWORD: 'generated-password',
+        DATABASE_SSL_MODE: 'require',
+      },
+    })).toThrow('DATABASE_SSL_MODE=require is limited to the Cloud.ru stage database')
+  })
+
   it('rejects partial component configuration', () => {
     expect(() =>
       buildDatabaseConnectionConfig('DATABASE', {

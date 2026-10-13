@@ -39,8 +39,26 @@ describe('cloud database transfer encryption', () => {
       host: 'source.internal',
       password: 'secret',
       port: '6432',
+      sslMode: 'verify-full',
       sslRootCert: '/app/certs/yandex-cloud-ca.pem',
       user: 'fit_owner',
     })
+  })
+
+  it('allows encrypted TLS only for the Cloud.ru migration target', () => {
+    const environment = {
+      MIGRATION_DATABASE_HOST: '10.70.10.67',
+      MIGRATION_DATABASE_PORT: '5432',
+      MIGRATION_DATABASE_NAME: 'fit',
+      MIGRATION_DATABASE_USER: 'fit_owner',
+      MIGRATION_DATABASE_PASSWORD: 'secret',
+      MIGRATION_DATABASE_SSL_MODE: 'require',
+    }
+    expect(readDatabaseTransferConnection(environment, 'MIGRATION_DATABASE'))
+      .toMatchObject({ host: '10.70.10.67', sslMode: 'require' })
+    expect(() => readDatabaseTransferConnection({
+      ...environment,
+      MIGRATION_DATABASE_HOST: 'source.internal',
+    }, 'MIGRATION_DATABASE')).toThrow(CloudDatabaseTransferError)
   })
 })
