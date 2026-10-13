@@ -1,0 +1,145 @@
+name: Release Cloud.ru stage API
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'Successful CI run for current main'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source:
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+       (vars.CLOUDRU_API_AUTODEPLOY_ENABLED == 'true' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.verify.outputs.commit }}
+    steps:
+      - name: Verify successful CI for current main
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
+            select(.path == ".github/workflows/ci.yml" and
+              .head_repository.full_name == $repo and .head_branch == "main" and
+              (.event == "push" or .event == "workflow_dispatch") and
+              .status == "completed" and .conclusion == "success") | .head_sha
+          ' <<<"$run")
+          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Build and replace loopback-only API with rollback
+    needs: source
+    runs-on: [self-hosted, cloudru-stage]
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 30
+    env:
+      RELEASE_SHA: ${{ needs.source.outputs.commit }}
+    steps:
+      - name: Check out verified main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - name: Verify stage host, current main and runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          sudo podman info >/dev/null
+          sudo test -s /opt/fit/secrets/api.env
+          sudo grep -qx 'FIT_AI_FUNCTIONS_ENABLED=false' /opt/fit/secrets/api.env
+          sudo grep -qx 'FIT_AI_SUMMARY_GENERATION_DISABLED=true' /opt/fit/secrets/api.env
+          sudo podman container exists fit-api-stage
+          curl --fail --silent --show-error http://127.0.0.1:18080/ready >/dev/null
+      - name: Build exact-main image on the stage VM
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="/opt/fit/releases/$RELEASE_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          test ! -e "$release_dir"
+          sudo install -d -m 755 "$release_dir"
+          git archive --format=tar "$RELEASE_SHA" | sudo tar -xf - -C "$release_dir"
+          sudo podman build --pull=always -t "localhost/fit-api:$RELEASE_SHA" "$release_dir/services/api"
+          sudo podman image exists "localhost/fit-api:$RELEASE_SHA"
+      - name: Smoke candidate, switch stage port and roll back on failure
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          candidate="fit-api-candidate-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          old_image=$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')
+          test -n "$old_image"
+          old_removed=false
+          rollback() {
+            sudo podman rm --force "$candidate" >/dev/null 2>&1 || true
+            if [ "$old_removed" = true ]; then
+              sudo podman rm --force fit-api-stage >/dev/null 2>&1 || true
+              sudo podman run --detach --name fit-api-stage --restart unless-stopped \
+                --publish 127.0.0.1:18080:8080 --env-file /opt/fit/secrets/api.env \
+                --env APP_ENV=stage --env PORT=8080 "$old_image" >/dev/null || true
+            fi
+          }
+          trap rollback ERR
+          sudo podman run --detach --name "$candidate" \
+            --publish 127.0.0.1:18082:8080 --env-file /opt/fit/secrets/api.env \
+            --env APP_ENV=stage --env FIT_RELEASE_ID="$RELEASE_SHA" --env PORT=8080 \
+            "localhost/fit-api:$RELEASE_SHA" >/dev/null
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18082/health >/dev/null; then break; fi
+            test "$attempt" -lt 30
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:18082/ready >/dev/null
+          status=$(curl --silent --output "$RUNNER_TEMP/cloudru-api-candidate.json" \
+            --write-out '%{http_code}' http://127.0.0.1:18082/v1/profile)
+          test "$status" = 401
+          jq -e '.error == "unauthorized"' "$RUNNER_TEMP/cloudru-api-candidate.json" >/dev/null
+          sudo podman rm --force "$candidate" >/dev/null
+          sudo podman rm --force fit-api-stage >/dev/null
+          old_removed=true
+          sudo podman run --detach --name fit-api-stage --restart unless-stopped \
+            --publish 127.0.0.1:18080:8080 --env-file /opt/fit/secrets/api.env \
+            --env APP_ENV=stage --env FIT_RELEASE_ID="$RELEASE_SHA" --env PORT=8080 \
+            "localhost/fit-api:$RELEASE_SHA" >/dev/null
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18080/ready >/dev/null; then break; fi
+            test "$attempt" -lt 30
+            sleep 1
+          done
+          test "$(sudo podman port fit-api-stage 8080/tcp)" = 127.0.0.1:18080
+          marker="/opt/fit/.RUNNING_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf '%s\n' "$RELEASE_SHA" | sudo tee "$marker" >/dev/null
+          sudo chmod 644 "$marker"
+          sudo mv -Tf "$marker" /opt/fit/RUNNING_SHA
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$RELEASE_SHA"
+          trap - ERR
+          echo "Cloud.ru stage API running revision: $RELEASE_SHA"
+          echo 'Public HTTPS and DNS routing unchanged.'

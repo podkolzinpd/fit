@@ -53,10 +53,25 @@ Credentials checkout не сохраняются. Только versioned source 
 Ошибки preflight/build не меняют прежние SHA/current; старые releases/образы
 этот workflow не удаляет.
 
-В этой фазе **API-контейнер не запускается**, migrations и runtime secrets не
-читаются и не применяются. SHA означает подготовленный образ, не работающий
-runtime и не доступность API. Runtime secrets и migration dry-run остаются
-отдельными гейтами. Новая сборка не меняет Yandex production, frontend или DNS.
+Сборка **не запускает API-контейнер**: SHA в `/opt/fit/DEPLOYED_SHA` означает
+подготовленный образ, не работающий runtime. После завершения SQL-переноса и
+первого loopback smoke отдельный workflow `Release Cloud.ru stage API` принимает
+только зелёный CI текущего `main` (либо `workflow_dispatch` с ID такого CI).
+Его автоматический режим требует `CLOUDRU_API_AUTODEPLOY_ENABLED=true`.
+Workflow собирает exact-main образ, проверяет кандидата на `127.0.0.1:18082`,
+переключает runtime на `127.0.0.1:18080`, проверяет `/ready` и пишет
+`/opt/fit/RUNNING_SHA`; при неудаче после переключения пытается вернуть прежний
+образ. Migrations, DNS и публичный listener он не меняет. Runtime берёт
+существующий `/opt/fit/secrets/api.env` и отказывается выпускать ревизию, если
+AI-функции там не выключены.
+
+`Prepare Cloud.ru frontend without public routing` также требует зелёный CI
+текущего `main`; его автоматический режим требует
+`CLOUDRU_FRONTEND_AUTODEPLOY_ENABLED=true`. Он собирает frontend с
+`https://api.fit-training.ru` и устанавливает его в отдельный nginx-сервис,
+слушающий только `127.0.0.1:18081`. Сервис не меняет существующий системный
+nginx, основной домен, DNS или публичный трафик. Сначала нужны зелёные ручные
+прогоны обоих workflows, затем можно включать их автоматические флаги.
 Обычному job не нужны SSH, приватный ключ и registration token: runner получает
 задания через исходящее HTTPS-соединение с GitHub; входящий SSH не открывается.
 
