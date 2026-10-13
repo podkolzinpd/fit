@@ -69,11 +69,38 @@ AI-функции там не выключены.
 текущего `main`; его автоматический режим требует
 `CLOUDRU_FRONTEND_AUTODEPLOY_ENABLED=true`. Он собирает frontend с
 `https://api.fit-training.ru` и устанавливает его в отдельный nginx-сервис,
-слушающий только `127.0.0.1:18081`. Сервис не меняет существующий системный
-nginx, основной домен, DNS или публичный трафик. Сначала нужны зелёные ручные
+слушающий только `127.0.0.1:18081`. В этой сборке программа Assistant выключена
+(`VITE_ASSISTANT_PROGRAM_ENABLED=false`); runtime AI остаётся выключенным.
+Сервис не меняет системный nginx, основной домен или DNS. Если отдельный public
+web ingress уже включён, новая сборка будет доступна через него: loopback сам
+по себе не означает отсутствия внешнего потребителя. Сначала нужны зелёные ручные
 прогоны обоих workflows, затем можно включать их автоматические флаги.
 Обычному job не нужны SSH, приватный ключ и registration token: runner получает
 задания через исходящее HTTPS-соединение с GitHub; входящий SSH не открывается.
+
+Frontend artifact — пакет с exact-main SHA, SHA-256/размерами и MIME/cache
+каждого файла. Он материализуется только в новый immutable каталог
+/opt/fit/frontend/candidates/<SHA>-<run>-<attempt>/site; existing paths и symlinks
+не переиспользуются. До изменения current отдельный непривилегированный Nginx
+на127.0.0.1:18083 проверяет все bytes/headers, SPA/OAuth callback, recovery старого
+JS и404 отсутствующих CSS/WASM/fonts. Probe не останавливает stage18081;
+public80/443 и API18080 не затрагиваются. Hosted fonts обязательны, без fallback.
+
+Promotion сохраняет previous current/config/systemd unit, проверяет Nginx syntax
+и повторяет полный HTTP-контракт на18081. При ERR/INT/TERM возвращает прежние
+файлы/указатель, перезапускает ранее активный stage и завершает job с ошибкой.
+Первый неудачный install убирает только созданные pointer/config/unit; releases
+и backups сохраняются. Failed rollback явно сообщается; SIGKILL/потеря VM
+не покрываются. Retention candidates/backups пока не настроена: проверять диск.
+Unit/refusal/rollback входят в npm run frontend:hosting:test. Real Nginx:
+node --test scripts/cloudru-frontend-nginx.integration.test.mjs через Podman,
+без production URL/БД. Это hosting-проверка, не пользовательский OAuth E2E.
+
+Это откат frontend, не данных между облаками. Перед cutover нужны свежий
+согласованный DB/media snapshot, контроль всех writers и auth/data/media
+acceptance. После Cloud.ru writes возврат DNS на старый Yandex snapshot потеряет
+новые данные; reverse-transfer ещё не реализован/не испытан. Yandex ресурсы
+этим workflow не удаляются.
 
 `Configure Cloud.ru public HTTPS ingress` — отдельный **ручной** шаг после
 успешного CI текущего `main` и loopback smoke обоих сервисов. Вход `target=api`

@@ -35,6 +35,8 @@ jobs:
           RUN_ID: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
         run: |
           set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
           [[ "$RUN_ID" =~ ^[0-9]+$ ]]
           run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
           commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
@@ -83,7 +85,7 @@ jobs:
           VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
           VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
           VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
-          VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
+          VITE_ASSISTANT_PROGRAM_ENABLED: 'false'
           VITE_MAINTENANCE_MODE: 'false'
           VITE_CONTEST_WINNER_ENABLED: ${{ vars.VITE_CONTEST_WINNER_ENABLED || 'true' }}
           VITE_CONTEST_WINNER_PILOT_USER_IDS: ${{ vars.VITE_CONTEST_WINNER_PILOT_USER_IDS || '092bfc1b-db7c-450d-9f60-aaf9ea4df975,50536f5c-e380-419e-8fa7-410a2c6b249c' }}
@@ -107,10 +109,11 @@ jobs:
             echo 'Frontend still embeds the old API origin.' >&2
             exit 1
           fi
+          node scripts/frontend-release.mjs dist "${{ needs.source.outputs.commit }}" cloudru-release.json
       - uses: actions/upload-artifact@v4
         with:
           name: cloudru-frontend-${{ needs.source.outputs.commit }}
-          path: dist/
+          path: cloudru-release.json
           if-no-files-found: error
           retention-days: 7
 
@@ -131,16 +134,19 @@ jobs:
           [[ "${{ needs.source.outputs.commit }}" =~ ^[0-9a-f]{40}$ ]]
           test "$(hostname)" = fit-stage-app
           sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
-          curl --fail --silent http://127.0.0.1:18080/ready >/dev/null
+          curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18080/ready >/dev/null
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.source.outputs.commit }}
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
           name: cloudru-frontend-${{ needs.source.outputs.commit }}
           path: cloudru-dist
-      - name: Install immutable release and loopback-only Nginx preview
+      - name: Verify immutable candidate before changing serving frontend
         shell: bash
         env:
           RELEASE_SHA: ${{ needs.source.outputs.commit }}
@@ -148,37 +154,21 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
-          test -s cloudru-dist/index.html
-          grep -RqlF 'https://api.fit-training.ru' cloudru-dist/assets
-          release_dir="/opt/fit/frontend/releases/$RELEASE_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          test ! -e "$release_dir"
-          sudo install -d -m 755 "$release_dir"
-          sudo cp -a cloudru-dist/. "$release_dir/"
-          sudo test -s "$release_dir/index.html"
-          sudo install -d -m 755 /opt/fit/frontend
-          if [ -e /opt/fit/frontend/current ] && [ ! -L /opt/fit/frontend/current ]; then
-            echo 'Refusing to replace a non-symlink frontend path.' >&2
-            exit 1
-          fi
-          next_link="/opt/fit/frontend/.current-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          sudo ln -s "$release_dir" "$next_link"
-          sudo mv -Tf "$next_link" /opt/fit/frontend/current
-          sudo install -m 644 infra/cloudru/nginx-frontend-stage.conf \
-            /etc/nginx/fit-frontend-stage.conf
-          sudo install -m 644 infra/cloudru/fit-frontend-stage.service \
-            /etc/systemd/system/fit-frontend-stage.service
-          sudo nginx -t -c /etc/nginx/fit-frontend-stage.conf
-          sudo systemctl daemon-reload
-          sudo systemctl enable --now fit-frontend-stage.service
-          sudo systemctl reload fit-frontend-stage.service
-          test "$(readlink -f /opt/fit/frontend/current)" = "$release_dir"
-          curl --fail --silent --show-error --header 'Host: fit-training.ru' \
-            http://127.0.0.1:18081/ --output "$RUNNER_TEMP/cloudru-frontend-index.html"
-          grep -q '<html' "$RUNNER_TEMP/cloudru-frontend-index.html"
-          spa_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            --header 'Host: fit-training.ru' http://127.0.0.1:18081/client)
-          test "$spa_status" = 200
-          asset_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            --header 'Host: fit-training.ru' http://127.0.0.1:18081/assets/missing.js)
-          test "$asset_status" = 404
+          candidate="/opt/fit/frontend/candidates/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          test ! -e "$candidate" && test ! -L "$candidate"
+          workspace=$(mktemp -d "$RUNNER_TEMP/fit-cloudru-candidate.XXXXXX")
+          node scripts/prepare-cloudru-frontend.mjs cloudru-dist/cloudru-release.json \
+            "$workspace/prepared" "$RELEASE_SHA" "$candidate/site"
+          sudo install -d -m 755 /opt/fit/frontend/candidates
+          sudo cp -a "$workspace/prepared" "$candidate"
+          node scripts/verify-cloudru-frontend.mjs cloudru-dist/cloudru-release.json "$candidate" "$RELEASE_SHA"
+      - name: Promote verified loopback frontend with rollback
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          bash scripts/promote-cloudru-frontend.sh cloudru-dist/cloudru-release.json \
+            "/opt/fit/frontend/candidates/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$RELEASE_SHA"
           echo 'Cloud.ru frontend staged on 127.0.0.1:18081; public routing unchanged.'
