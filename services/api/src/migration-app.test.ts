@@ -56,6 +56,37 @@ afterEach(async () => {
 })
 
 describe('Cloud.ru database export', () => {
+  it('requires private confirmation before SQL manifest or encrypted row chunks', async () => {
+    const manifest = vi.fn().mockResolvedValue({
+      format: 'fit-cloudru-sql-snapshot-v1', tables: [],
+    })
+    const chunk = vi.fn().mockResolvedValue(Buffer.from('encrypted'))
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      sqlSnapshotSource: { manifest, chunk },
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST', url: '/stage/cloudru/sql-snapshot/manifest',
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(manifest).not.toHaveBeenCalled()
+    const accepted = await app.inject({
+      headers: { 'x-fit-sql-snapshot-confirmation': 'READ_YANDEX_STAGE_SQL_SNAPSHOT' },
+      method: 'POST', url: '/stage/cloudru/sql-snapshot/manifest',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(manifest).toHaveBeenCalledOnce()
+    const invalidChunk = await app.inject({
+      headers: { 'x-fit-sql-snapshot-confirmation': 'READ_YANDEX_STAGE_SQL_SNAPSHOT' },
+      method: 'POST', url: '/stage/cloudru/sql-snapshot/chunk',
+      payload: { schema: 'public', table: 'profiles', offset: 0, limit: 1 },
+    })
+    expect(invalidChunk.statusCode).toBe(400)
+    expect(chunk).not.toHaveBeenCalled()
+  })
+
   it('keeps source inventory private and returns only aggregate table metadata', async () => {
     const inventory = vi.fn().mockResolvedValue([
       { schema: 'public', table: 'profiles', estimatedRows: 12 },

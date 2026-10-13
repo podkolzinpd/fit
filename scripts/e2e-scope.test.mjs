@@ -14,6 +14,7 @@ test('skips the browser runtime for explicit non-browser scopes', () => {
     '.github/workflows/deploy-cloudru-stage.yml',
     '.github/workflows/migrate-yandex-database-to-cloudru.yml',
     '.github/workflows/migrate-yandex-media-to-cloudru.yml',
+    '.github/workflows/transfer-yandex-sql-to-cloudru.yml',
     '.github/workflows/manage-yandex-stage-identity-unlink.yml',
     'OPERATIONS.md',
     'scripts/check-yandex-terraform-plan.mjs',

@@ -8,6 +8,7 @@ const SAFE_WITHOUT_E2E = [
   /^services\/api\//,
   /^\.github\/workflows\/deploy-cloudru-stage\.yml$/,
   /^\.github\/workflows\/migrate-yandex-(?:database|media)-to-cloudru\.yml$/,
+  /^\.github\/workflows\/transfer-yandex-sql-to-cloudru\.yml$/,
   /^\.github\/(?:copilot-instructions\.md|pull_request_template\.md)$/,
   /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|manage-yandex-stage-identity-unlink|manage-trainer-schedule-v2-pilot|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
   /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
