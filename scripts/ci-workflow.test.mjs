@@ -287,7 +287,8 @@ test('Cloud.ru runtime and frontend releases require successful current-main CI'
   assert.match(cloudruApiRelease, /--publish 127\.0\.0\.1:18080:8080/)
   assert.match(cloudruApiRelease, /trap rollback ERR/)
   assert.match(cloudruFrontend, /https:\/\/api\.fit-training\.ru/)
-  assert.match(cloudruFrontend, /listen 127\.0\.0\.1:18081|nginx-frontend-stage\.conf/)
+  assert.match(cloudruFrontend, /scripts\/verify-cloudru-frontend.mjs/)
+  assert.match(cloudruFrontend, /scripts\/promote-cloudru-frontend.sh/)
 })
 
 test('Cloud.ru public ingress is manual, CI-gated and proxies only loopback runtimes', () => {
