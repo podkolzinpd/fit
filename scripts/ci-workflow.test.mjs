@@ -244,6 +244,9 @@ const cloudruBootstrap = readFileSync(join(import.meta.dirname, '..', '.github',
 const cloudruApi = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-cloudru-api-stage.yml'), 'utf8')
 const cloudruApiRelease = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'release-cloudru-api-stage.yml'), 'utf8')
 const cloudruFrontend = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'prepare-cloudru-frontend.yml'), 'utf8')
+const cloudruIngress = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'configure-cloudru-public-ingress.yml'), 'utf8')
+const cloudruApiProxy = readFileSync(join(import.meta.dirname, '..', 'infra', 'cloudru', 'nginx-public-api.conf'), 'utf8')
+const cloudruWebProxy = readFileSync(join(import.meta.dirname, '..', 'infra', 'cloudru', 'nginx-public-web.conf'), 'utf8')
 const cloudruDatabaseMigration = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', 'migrate-yandex-database-to-cloudru.yml'), 'utf8')
 
 function inlineShell(workflowSource) {
@@ -285,6 +288,20 @@ test('Cloud.ru runtime and frontend releases require successful current-main CI'
   assert.match(cloudruApiRelease, /trap rollback ERR/)
   assert.match(cloudruFrontend, /https:\/\/api\.fit-training\.ru/)
   assert.match(cloudruFrontend, /listen 127\.0\.0\.1:18081|nginx-frontend-stage\.conf/)
+})
+
+test('Cloud.ru public ingress is manual, CI-gated and proxies only loopback runtimes', () => {
+  assert.match(cloudruIngress, /on:\n  workflow_dispatch:/)
+  assert.doesNotMatch(cloudruIngress, /^  (?:push|pull_request|schedule):/m)
+  assert.match(cloudruIngress, /\.conclusion == "success"/)
+  assert.match(cloudruIngress, /commits\/main" --jq \.sha/)
+  assert.match(cloudruIngress, /group: cloudru-stage-vm/)
+  assert.match(cloudruIngress, /getent ahostsv4/)
+  assert.match(cloudruIngress, /certbot certonly --webroot/)
+  assert.match(cloudruIngress, /trap rollback ERR/)
+  assert.match(cloudruApiProxy, /proxy_pass http:\/\/127\.0\.0\.1:18080/)
+  assert.match(cloudruWebProxy, /proxy_pass http:\/\/127\.0\.0\.1:18081/)
+  assert.doesNotMatch(cloudruApiProxy + cloudruWebProxy, /proxy_pass http:\/\/(?:0\.0\.0\.0|10\.)/)
 })
 
 test('Cloud.ru database migration is manual, confirmed and loopback-only', () => {
@@ -345,7 +362,7 @@ test('Cloud.ru markers advance only after the exact revision image is confirmed'
 })
 
 test('Cloud.ru workflows contain syntactically valid Bash', () => {
-  for (const source of [cloudruBootstrap, cloudruApi, cloudruApiRelease, cloudruFrontend, cloudruDatabaseMigration]) {
+  for (const source of [cloudruBootstrap, cloudruApi, cloudruApiRelease, cloudruFrontend, cloudruIngress, cloudruDatabaseMigration]) {
     for (const script of inlineShell(source)) {
       const result = spawnSync('bash', ['-n'], { input: script, encoding: 'utf8' })
       assert.equal(result.status, 0, result.stderr)
