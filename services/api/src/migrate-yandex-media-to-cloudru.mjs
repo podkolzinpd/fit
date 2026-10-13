@@ -2,6 +2,8 @@ import {
   CreateBucketCommand,
   GetObjectCommand,
   ListObjectsV2Command,
+  PutBucketAclCommand,
+  PutBucketOwnershipControlsCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -14,12 +16,13 @@ const required = (name) => {
 }
 
 const mode = required('FIT_MEDIA_TRANSFER_MODE')
-if (!['audit', 'apply', 'bootstrap-target'].includes(mode)) {
-  throw new Error('FIT_MEDIA_TRANSFER_MODE must be audit, apply, or bootstrap-target')
+if (!['audit', 'apply', 'bootstrap-target', 'configure-target-acl'].includes(mode)) {
+  throw new Error('FIT_MEDIA_TRANSFER_MODE must be audit, apply, bootstrap-target, or configure-target-acl')
 }
 
 const sourceBucket = required('YANDEX_MEDIA_SOURCE_BUCKET')
 const targetBucket = required('CLOUDRU_MEDIA_TARGET_BUCKET')
+const targetServiceAccountId = 'b87cd7c3-c737-4cd7-87b3-6591dd9b3ec9'
 const mediaPrefixes = [
   'chat-media/',
   'fit-exercise-media/',
@@ -82,15 +85,17 @@ const targetCredentials = () => {
   ].map((accessKeyId) => ({ accessKeyId, secretAccessKey }))
 }
 
+const targetClient = (credentials) => new S3Client({
+  endpoint: 'https://s3.cloud.ru',
+  forcePathStyle: true,
+  region: 'ru-central-1',
+  credentials,
+})
+
 const connectTarget = async ({ createIfMissing = false } = {}) => {
   let attemptedBootstrap = false
   for (const [format, credentials] of targetCredentials().entries()) {
-    const client = new S3Client({
-      endpoint: 'https://s3.cloud.ru',
-      forcePathStyle: true,
-      region: 'ru-central-1',
-      credentials,
-    })
+    const client = targetClient(credentials)
     try {
       await client.send(new ListObjectsV2Command({ Bucket: targetBucket, MaxKeys: 1 }))
       console.log(JSON.stringify({ event: 'target_access_ok', format }))
@@ -147,11 +152,30 @@ try {
     event: 'target_access_key_fingerprint',
     sha256: targetAccessKeyFingerprint,
   }))
-  target = await connectTarget({ createIfMissing: mode === 'bootstrap-target' })
+  if (mode === 'configure-target-acl') {
+    const client = targetClient(targetCredentials()[1])
+    await client.send(new PutBucketOwnershipControlsCommand({
+      Bucket: targetBucket,
+      OwnershipControls: {
+        Rules: [{ ObjectOwnership: 'BucketOwnerPreferred' }],
+      },
+    }))
+    await client.send(new PutBucketAclCommand({
+      Bucket: targetBucket,
+      GrantRead: `id="${targetServiceAccountId}"`,
+      GrantWrite: `id="${targetServiceAccountId}"`,
+    }))
+    await client.send(new ListObjectsV2Command({ Bucket: targetBucket, MaxKeys: 1 }))
+    client.destroy()
+    console.log(JSON.stringify({ event: 'target_acl_configured' }))
+    console.log(JSON.stringify({ event: 'complete', mode }))
+  } else {
+    target = await connectTarget({ createIfMissing: mode === 'bootstrap-target' })
+  }
   if (mode === 'bootstrap-target') {
     console.log(JSON.stringify({ event: 'complete', mode }))
     process.exitCode = 0
-  } else {
+  } else if (mode !== 'configure-target-acl') {
     const sourceObjects = await listMediaObjects(source, sourceBucket)
     console.log(JSON.stringify({ event: 'source_inventory', ...inventory(sourceObjects) }))
   let targetObjects = await listMediaObjects(target, targetBucket)
@@ -184,6 +208,7 @@ try {
         await target.send(new PutObjectCommand({
           Bucket: targetBucket,
           Key: item.Key,
+          ACL: 'bucket-owner-full-control',
           Body: sourceBytes,
           CacheControl: object.CacheControl,
           ContentDisposition: object.ContentDisposition,
