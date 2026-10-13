@@ -65,21 +65,23 @@ const planned = resources(plan.planned_values?.root_module)
 const container = planned.find((resource) => resource.address === containerAddress)?.values
 const binding = planned.find((resource) => resource.address === bindingAddress)?.values
 const image = Array.isArray(container?.image) ? container.image[0] : undefined
-if (
-  container?.concurrency !== 1
-  || container?.execution_timeout !== '300s'
-  || container?.memory !== 512
-  || container?.cores !== 1
-  || container?.core_fraction !== 100
-  || image?.url !== `${imageRepository}:${imageTag}`
-  || JSON.stringify(image?.command) !== JSON.stringify(['node', 'dist/migration-server.js'])
-  || image?.environment?.APP_ENV !== 'stage'
-  || binding?.role !== 'serverless.containers.invoker'
-  || !Array.isArray(binding?.members)
-  || binding.members.length !== 1
-  || binding.members.includes('system:allUsers')
-) {
-  throw new Error('Migration-only plan does not preserve the reviewed private runner contract')
+const contract = {
+  'container.concurrency': container?.concurrency === 1,
+  'container.execution_timeout': container?.execution_timeout === '300s',
+  'container.memory': container?.memory === 512,
+  'container.cores': container?.cores === 1,
+  'container.core_fraction': container?.core_fraction === 100,
+  'image.url': image?.url === `${imageRepository}:${imageTag}`,
+  'image.command': JSON.stringify(image?.command) === JSON.stringify(['node', 'dist/migration-server.js']),
+  'image.environment.APP_ENV': image?.environment?.APP_ENV === 'stage',
+  'binding.role': binding?.role === 'serverless.containers.invoker',
+  'binding.members': Array.isArray(binding?.members)
+    && binding.members.length === 1
+    && !binding.members.includes('system:allUsers'),
+}
+const failed = Object.entries(contract).filter(([, valid]) => !valid).map(([name]) => name)
+if (failed.length > 0) {
+  throw new Error(`Migration-only plan does not preserve the reviewed private runner contract: ${failed.join(', ')}`)
 }
 
 const summary = [
