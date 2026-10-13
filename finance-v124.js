@@ -219,6 +219,9 @@
   // Слайд 10 (13.10): без заголовка «От оборота к выручке», подпись по шагам — на его месте, легенда и выноска — выше.
   defs[1].html = defs[1].html.replace(/<h1>[\s\S]*?<\/h1>/, '');
   defs[1].css += '\n.cap{top:84px}\n.leg,.call{top:176px}\n';
+  // Слайд 11 (13.10): итоговая плашка — расходы растут медленнее выручки (2028 → 2031: выручка 118 → 1 432 млн ₽, расходы 249 → 890 млн ₽).
+  defs[2].html = defs[2].html.replace(/<div class="fin">[\s\S]*?<div class="s">[\s\S]*?<\/div><\/div>\s*<\/div>/, '<div class="fin"><div><div class="t">Расходы растут медленнее выручки</div><div class="x">выручка <span>×12</span> · расходы <span>×3,6</span></div></div></div>');
+  defs[2].css += '\n.fin .t{font-size:30px}\n.fin .x{font-size:24px;font-weight:700;color:var(--paper);margin-top:10px}\n.fin .x span{color:var(--lime);font-weight:800;font-size:36px}\n';
   const find = d => document.querySelector('#deck>[data-section="' + d.section + '"]');
   // заголовки для меню слайдов — до инициализации движка
   defs.forEach(d => { const s = find(d); const h = s && s.querySelector('h2'); if (h && d.title) h.textContent = d.title; });
