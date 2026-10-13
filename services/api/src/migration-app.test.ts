@@ -5,7 +5,10 @@ import {
   YandexIdentityUnavailableError,
   type YandexIdentityProvider,
 } from './auth/yandex-identity.js'
-import type { CloudDatabaseExportService } from './cloud-database-transfer.js'
+import {
+  CloudDatabaseTransferError,
+  type CloudDatabaseExportService,
+} from './cloud-database-transfer.js'
 import {
   PilotEnrollmentConflictError,
   type PilotEnroller,
@@ -86,6 +89,58 @@ describe('Cloud.ru database export', () => {
     })
     expect(response.statusCode).toBe(403)
     expect(create).not.toHaveBeenCalled()
+  })
+
+  it('runs a confirmed source-only pg_dump preflight without exporting or writing to S3', async () => {
+    const create = vi.fn<CloudDatabaseExportService['create']>()
+    const preflightSource = vi.fn<NonNullable<CloudDatabaseExportService['preflightSource']>>()
+      .mockResolvedValue(undefined)
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create, preflightSource, remove: () => Promise.resolve() },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/cloudru/database-export/preflight',
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(preflightSource).not.toHaveBeenCalled()
+    const accepted = await app.inject({
+      headers: { 'x-fit-database-export-confirmation': 'PREFLIGHT_YANDEX_STAGE_EXPORT' },
+      method: 'POST',
+      url: '/stage/cloudru/database-export/preflight',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toEqual({ status: 'database_export_source_ready' })
+    expect(preflightSource).toHaveBeenCalledOnce()
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('returns only a bounded source dump error code on preflight failure', async () => {
+    const preflightSource = vi.fn<NonNullable<CloudDatabaseExportService['preflightSource']>>()
+      .mockRejectedValue(new CloudDatabaseTransferError('database_export_source_permission_denied'))
+    const app = buildMigrationApp({
+      cloudDatabaseExport: {
+        create: () => Promise.reject(new Error('must not export')),
+        preflightSource,
+        remove: () => Promise.resolve(),
+      },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const response = await app.inject({
+      headers: { 'x-fit-database-export-confirmation': 'PREFLIGHT_YANDEX_STAGE_EXPORT' },
+      method: 'POST',
+      url: '/stage/cloudru/database-export/preflight',
+    })
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({
+      status: 'database_export_source_not_ready',
+      code: 'database_export_source_permission_denied',
+    })
   })
 
   it('returns only bounded transfer metadata', async () => {

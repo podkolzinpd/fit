@@ -313,6 +313,23 @@ export function buildMigrationApp(
 
   if (options.cloudDatabaseExport !== undefined) {
     const databaseExport = options.cloudDatabaseExport
+    if (databaseExport.preflightSource !== undefined) {
+      app.post('/stage/cloudru/database-export/preflight', async (request, reply) => {
+        if (
+          request.headers['x-fit-database-export-confirmation']
+            !== 'PREFLIGHT_YANDEX_STAGE_EXPORT'
+        ) return reply.code(403).send({ status: 'preflight_not_confirmed' })
+        try {
+          await databaseExport.preflightSource?.()
+          return { status: 'database_export_source_ready' }
+        } catch (error) {
+          const code = error instanceof CloudDatabaseTransferError
+            ? error.code
+            : 'database_export_source_dump_failed'
+          return reply.code(503).send({ status: 'database_export_source_not_ready', code })
+        }
+      })
+    }
     app.post('/stage/cloudru/database-export', async (request, reply) => {
       const passphrase = readTenantMigrationPassphrase(
         request.headers['x-fit-database-export-passphrase'],

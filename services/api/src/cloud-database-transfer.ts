@@ -57,6 +57,7 @@ export interface CloudDatabaseExportResult {
 
 export interface CloudDatabaseExportService {
   create(passphrase: string): Promise<CloudDatabaseExportResult>
+  preflightSource?(): Promise<void>
   remove(exportId: string, versionId: string): Promise<void>
 }
 
@@ -120,6 +121,51 @@ async function run(
     child.once('exit', (code, signal) => {
       if (code === 0 && signal === null) resolve()
       else reject(new Error('database transfer command failed'))
+    })
+  })
+}
+
+export function classifyPgDumpFailure(stderr: string): string {
+  if (/permission denied|must be owner|insufficient privilege/i.test(stderr)) {
+    return 'database_export_source_permission_denied'
+  }
+  if (/certificate verify failed|SSL error/i.test(stderr)) {
+    return 'database_export_source_tls_failed'
+  }
+  if (/password authentication failed|no password supplied/i.test(stderr)) {
+    return 'database_export_source_auth_failed'
+  }
+  if (/could not connect|connection refused|connection timed out|network is unreachable/i.test(stderr)) {
+    return 'database_export_source_connection_failed'
+  }
+  if (/unrecognized option|invalid option/i.test(stderr)) {
+    return 'database_export_pg_dump_option_invalid'
+  }
+  return 'database_export_source_dump_failed'
+}
+
+async function runPgDump(
+  args: readonly string[],
+  environment: NodeJS.ProcessEnv,
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn('pg_dump', args, {
+      env: environment,
+      shell: false,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    })
+    let stderr = ''
+    child.stderr?.on('data', (chunk: Buffer) => {
+      if (stderr.length < 4096) stderr += chunk.toString('utf8').slice(0, 4096 - stderr.length)
+    })
+    child.once('error', (error: NodeJS.ErrnoException) => {
+      reject(new CloudDatabaseTransferError(
+        error.code === 'ENOENT' ? 'database_export_pg_dump_missing' : 'database_export_source_dump_failed',
+      ))
+    })
+    child.once('exit', (code, signal) => {
+      if (code === 0 && signal === null) resolve()
+      else reject(new CloudDatabaseTransferError(classifyPgDumpFailure(stderr)))
     })
   })
 }
@@ -248,30 +294,42 @@ export class YandexCloudDatabaseExport implements CloudDatabaseExportService {
     })
   }
 
+  private dumpArgs(path: string): string[] {
+    return [
+      '--format=custom',
+      '--compress=9',
+      '--data-only',
+      '--no-owner',
+      '--no-privileges',
+      '--serializable-deferrable',
+      '--lock-wait-timeout=5000',
+      '--exclude-table-data=app_private.fit_migrations',
+      `--host=${this.database.host}`,
+      `--port=${this.database.port}`,
+      `--username=${this.database.user}`,
+      `--dbname=${this.database.database}`,
+      `--file=${path}`,
+    ]
+  }
+
+  private dumpEnvironment(): NodeJS.ProcessEnv {
+    return {
+      ...process.env,
+      PGPASSWORD: this.database.password,
+      PGSSLMODE: this.database.sslMode,
+      ...(this.database.sslRootCert === undefined ? {} : { PGSSLROOTCERT: this.database.sslRootCert }),
+    }
+  }
+
+  async preflightSource(): Promise<void> {
+    await runPgDump(this.dumpArgs('/dev/null'), this.dumpEnvironment())
+  }
+
   async create(passphrase: string): Promise<CloudDatabaseExportResult> {
     const exportId = randomBytes(16).toString('hex')
     const dumpPath = join(tmpdir(), `fit-${exportId}.dump`)
     try {
-      await run('pg_dump', [
-        '--format=custom',
-        '--compress=9',
-        '--data-only',
-        '--no-owner',
-        '--no-privileges',
-        '--serializable-deferrable',
-        '--lock-wait-timeout=5000',
-        '--exclude-table-data=app_private.fit_migrations',
-        `--host=${this.database.host}`,
-        `--port=${this.database.port}`,
-        `--username=${this.database.user}`,
-        `--dbname=${this.database.database}`,
-        `--file=${dumpPath}`,
-      ], {
-        ...process.env,
-        PGPASSWORD: this.database.password,
-        PGSSLMODE: this.database.sslMode,
-        ...(this.database.sslRootCert === undefined ? {} : { PGSSLROOTCERT: this.database.sslRootCert }),
-      })
+      await runPgDump(this.dumpArgs(dumpPath), this.dumpEnvironment())
       const dumpStat = await stat(dumpPath)
       if (dumpStat.size < 1 || dumpStat.size > MAX_DUMP_BYTES) {
         throw new CloudDatabaseTransferError('database_export_size_invalid')
