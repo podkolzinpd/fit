@@ -116,6 +116,8 @@ jobs:
           {
             printf 'DATABASE_SSL_MODE=require\n'
             printf 'FIT_MEDIA_STORAGE_PROVIDER=cloudru\n'
+            printf 'FIT_AI_FUNCTIONS_ENABLED=false\n'
+            printf 'FIT_AI_SUMMARY_GENERATION_DISABLED=true\n'
             printf 'CLOUDRU_MEDIA_BUCKET=fit-cloudru-stage-media-c2ad3760\n'
             printf 'CLOUDRU_TENANT_ID=f071c7d5-cf0f-4538-9415-bbf9a9c94338\n'
             printf 'CLOUDRU_MEDIA_KEY_ID=%s\n' "$CLOUDRU_MEDIA_KEY_ID"

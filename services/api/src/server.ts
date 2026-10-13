@@ -1,4 +1,5 @@
 import { buildApp } from './app.js'
+import { aiFunctionsEnabled } from './ai-functions-enabled.js'
 import { DatabaseWorkoutHomeReader } from './workout-home-reader.js'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
 import { YandexOAuthCodeClient } from './auth/yandex-oauth-code.js'
@@ -78,6 +79,7 @@ function parsePort(value: string | undefined): number {
 }
 
 const databaseConfig = buildDatabaseConnectionConfig('DATABASE')
+const aiEnabled = aiFunctionsEnabled()
 const databasePool =
   databaseConfig === undefined ? undefined : new PgDatabasePool(databaseConfig, 'api')
 // Production food rollout is native-only; even an empty configuration never
@@ -158,7 +160,7 @@ const pilotAssistantState =
     ? undefined
     : new DatabasePilotAssistantState(databasePool)
 const pilotAssistantTurnRunner =
-  databasePool === undefined
+  databasePool === undefined || !aiEnabled
     ? undefined
     : new DatabasePilotAssistantTurnRunner(databasePool)
 const pilotPushNotifications =
@@ -211,9 +213,9 @@ const pilotProgressData =
   databasePool === undefined
     ? undefined
     : new DatabasePilotProgressData(databasePool)
-const yandexAiAuthorization = buildYandexAiAuthorization()
+const yandexAiAuthorization = aiEnabled ? buildYandexAiAuthorization() : undefined
 const pilotWorkoutParser =
-  databasePool === undefined
+  !aiEnabled || databasePool === undefined
     || yandexAiAuthorization === undefined
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
@@ -230,7 +232,7 @@ const pilotTrainingSummaryReader =
     ? undefined
     : new DatabasePilotTrainingSummaries(databasePool, yandexAiAuthorization)
 const pilotTrainingSummaryGenerator =
-  databasePool === undefined
+  !aiEnabled || databasePool === undefined
     || yandexAiAuthorization === undefined
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
@@ -270,7 +272,7 @@ const existingCredentialsProvider =
     ? undefined
     : new SupabaseExistingCredentialsProvider(new SupabaseBridge(supabaseBridgeConfig))
 const legacyWorkoutParser =
-  supabaseBridgeConfig === undefined
+  !aiEnabled || supabaseBridgeConfig === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
     || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
@@ -281,7 +283,7 @@ const legacyWorkoutParser =
         process.env.YANDEX_CLOUD_MODEL_ID,
       )
 const legacySummaryHandler =
-  supabaseBridgeConfig === undefined
+  !aiEnabled || supabaseBridgeConfig === undefined
   || yandexAiAuthorization === undefined
   || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
     ? undefined
