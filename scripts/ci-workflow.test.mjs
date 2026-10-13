@@ -276,6 +276,8 @@ test('Cloud.ru database migration is manual, confirmed and loopback-only', () =>
   assert.match(cloudruDatabaseMigration, /MIGRATE_YANDEX_STAGE_DATABASE_TO_CLOUDRU/)
   assert.match(cloudruDatabaseMigration, /initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready/)
   assert.match(cloudruDatabaseMigration, /PGSSLMODE=verify-full/g)
+  assert.match(cloudruDatabaseMigration, /PGSSLMODE=verify-full PGSSLROOTCERT="\$ca" PGCONNECT_TIMEOUT=10/)
+  assert.doesNotMatch(cloudruDatabaseMigration, /openssl s_client -starttls postgres/)
   assert.match(cloudruDatabaseMigration, /db:migrate:dry-run/)
   assert.match(cloudruDatabaseMigration, /cloud-database-restore-cli\.js/)
   assert.match(cloudruDatabaseMigration, /--publish 127\.0\.0\.1:18080:8080/)
