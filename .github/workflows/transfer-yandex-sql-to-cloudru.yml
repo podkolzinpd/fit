@@ -84,8 +84,8 @@ jobs:
             PGCONNECT_TIMEOUT=10 psql --no-psqlrc --tuples-only --no-align \
             --host "$MIGRATION_DATABASE_HOST" --port "$MIGRATION_DATABASE_PORT" \
             --username "$MIGRATION_DATABASE_USER" --dbname "$MIGRATION_DATABASE_NAME" \
-            --command "select current_user || ':' || ssl from pg_stat_ssl where pid=pg_backend_pid()")
-          test "$owner" = fit_owner:t
+            --command "select case when current_user = 'fit_owner' and ssl then 'ok' else 'bad' end from pg_stat_ssl where pid=pg_backend_pid()")
+          test "$owner" = ok
           runtime=$(PGPASSWORD="$DATABASE_PASSWORD" PGSSLMODE=require \
             PGCONNECT_TIMEOUT=10 psql --no-psqlrc --tuples-only --no-align \
             --host "$DATABASE_HOST" --port "$DATABASE_PORT" \
@@ -187,9 +187,9 @@ jobs:
             printf 'FIT_SQL_SNAPSHOT_MODE=%s\n' "${{ inputs.mode }}"
           } > "$secret_file"
           sudo podman run --rm --network=host --env-file "$secret_file" \
-            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate:dry-run
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate:dry-run -- --no-reject-unauthorized
           sudo podman run --rm --network=host --env-file "$secret_file" \
-            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate -- --no-reject-unauthorized
           sudo podman run --rm --network=host --env-file "$secret_file" \
             "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-sql-transfer-cli.js
 
