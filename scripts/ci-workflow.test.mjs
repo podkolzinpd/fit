@@ -11,6 +11,21 @@ const workflow = readFileSync(
 )
 
 const supportedSupabaseCliVersion = '2.116.0'
+const migrationOnlyWorkflow = readFileSync(
+  join(import.meta.dirname, '..', '.github', 'workflows', 'deploy-yandex-migration-container-only.yml'),
+  'utf8',
+)
+
+test('migration-only recovery cannot refresh triggers or deploy public traffic', () => {
+  assert.match(migrationOnlyWorkflow, /workflow_dispatch:/)
+  assert.match(migrationOnlyWorkflow, /DEPLOY_YANDEX_MIGRATION_CONTAINER_ONLY/)
+  assert.match(migrationOnlyWorkflow, /-target=yandex_serverless_container\.migration/)
+  assert.match(migrationOnlyWorkflow, /-target=yandex_serverless_container_iam_binding\.migration_invocation/)
+  assert.match(migrationOnlyWorkflow, /check-yandex-migration-container-plan\.mjs/)
+  assert.match(migrationOnlyWorkflow, /deploy-yandex-serverless-revision\.mjs deploy/)
+  assert.match(migrationOnlyWorkflow, /database-export/)
+  assert.doesNotMatch(migrationOnlyWorkflow, /terraform apply|refresh-only|yandex_function_trigger|system:allUsers/)
+})
 
 test('runs isolated WebKit shards in four parallel lanes and retries only a failed shard', () => {
   assert.match(workflow, /e2e-webkit:/)

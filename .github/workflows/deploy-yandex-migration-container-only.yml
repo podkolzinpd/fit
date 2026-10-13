@@ -1,0 +1,140 @@
+name: Deploy Yandex migration container only
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type DEPLOY_YANDEX_MIGRATION_CONTAINER_ONLY to deploy the private migration runner only'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  TF_CLI_CONFIG_FILE: ${{ github.workspace }}/infra/yandex/terraform.rc.example
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-provider-cache
+  TF_VAR_cloud_id: ${{ vars.YC_CLOUD_ID }}
+  TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
+  TF_VAR_environment: stage
+  TF_VAR_media_bucket_override: ${{ vars.YC_STAGE_MEDIA_BUCKET }}
+  TF_VAR_media_s3_credentials_override: ${{ vars.YC_STAGE_MEDIA_S3_CREDENTIALS || 'null' }}
+  TF_VAR_api_min_instances: '1'
+  TF_VAR_api_execution_timeout: '120s'
+  TF_VAR_postgres_backup_retain_period_days: '14'
+  TF_VAR_postgres_backup_window_start: '{"hours":0,"minutes":30}'
+  TF_VAR_allow_unauthenticated_api: 'true'
+  TF_VAR_deployer_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
+  TF_VAR_migration_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
+  TF_VAR_api_invoker_member: serviceAccount:${{ vars.YC_DEPLOY_SA_ID }}
+  TF_VAR_yandex_oauth_client_id: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
+  TF_VAR_yandex_native_registration_enabled: ${{ vars.YC_STAGE_YANDEX_NATIVE_REGISTRATION_ENABLED || 'false' }}
+  TF_VAR_yandex_only_auth_enabled: ${{ vars.YC_STAGE_YANDEX_ONLY_AUTH_ENABLED || 'false' }}
+  TF_VAR_calorie_v2_rollout_percent: ${{ vars.FIT_CALORIE_V2_ROLLOUT_PERCENT || '0' }}
+  TF_VAR_nutrition_enabled: ${{ vars.FIT_NUTRITION_ENABLED || 'false' }}
+  TF_VAR_nutrition_client_user_ids: ${{ vars.FIT_NUTRITION_CLIENT_USER_IDS || '[]' }}
+  TF_VAR_nutrition_trainer_user_ids: ${{ vars.FIT_NUTRITION_TRAINER_USER_IDS || '[]' }}
+  TF_VAR_api_cors_allowed_origins: '["http://localhost:5173","https://localhost","capacitor://localhost","https://fit-git-codex-yandex-id-b494d5-uniteddispatch999-8643s-projects.vercel.app","https://fit-drab.vercel.app","https://d5drmhq5ovqk03jgsm8i.wnq2w1o5.apigw.yandexcloud.net","https://fit-training.ru"]'
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_PUSH_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+  YC_PUSH_FUNCTION_NAME: fit-send-push-notifications
+  YC_PUSH_LOCKBOX_NAME: fit-send-push-notifications-secrets
+  YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+
+jobs:
+  deploy:
+    name: Deploy private migration revision without trigger refresh
+    runs-on: ubuntu-24.04
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_TFSTATE_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Confirm the narrow recovery mode
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$CONFIRMATION" = DEPLOY_YANDEX_MIGRATION_CONTAINER_ONLY
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: actions/cache@v4
+        with:
+          path: .terraform-provider-cache
+          key: terraform-yandex-${{ runner.os }}-${{ hashFiles('infra/yandex/.terraform.lock.hcl') }}
+      - name: Prepare Terraform provider cache
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl --fail --silent --show-error --location https://storage.yandexcloud.net/yandexcloud-yc/install.sh --output /tmp/install-yc.sh
+          bash /tmp/install-yc.sh -i "$HOME/yandex-cloud" -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange OIDC token for the stage deployment identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Resolve required push metadata without reading its payload
+        run: |
+          set -euo pipefail
+          metadata=$(node scripts/deploy-yandex-stage-workflow.mjs)
+          echo "TF_VAR_push_function_id=$(jq -er '.functionId' <<<"$metadata")" >> "$GITHUB_ENV"
+          echo "TF_VAR_push_transport_secret_id=$(jq -er '.sourceSecretId' <<<"$metadata")" >> "$GITHUB_ENV"
+          echo "TF_VAR_push_transport_secret_version_id=$(jq -er '.sourceSecretVersionId' <<<"$metadata")" >> "$GITHUB_ENV"
+      - name: Resolve the immutable migration image
+        run: |
+          image_tag=$(git rev-parse 'HEAD:services/api')
+          echo "TF_VAR_migration_image_tag=$image_tag" >> "$GITHUB_ENV"
+          echo "MIGRATION_IMAGE_TAG=$image_tag" >> "$GITHUB_ENV"
+      - name: Initialize the existing Terraform state
+        working-directory: infra/yandex
+        run: >-
+          terraform init
+          -backend-config=backend.hcl.example
+          -backend-config=bucket=${{ vars.YC_TFSTATE_BUCKET }}
+          -backend-config=key=fit/stage/terraform.tfstate
+      - name: Pin existing push runtime identities from Terraform state
+        working-directory: infra/yandex
+        run: |
+          set -euo pipefail
+          echo "TF_VAR_push_dispatcher_registry_service_account_id=$(terraform output -raw push_dispatcher_service_account_id)" >> "$GITHUB_ENV"
+          echo "TF_VAR_push_scheduler_invoker_service_account_id=$(terraform output -raw push_scheduler_service_account_id)" >> "$GITHUB_ENV"
+      - name: Create and enforce the migration-only plan
+        working-directory: infra/yandex
+        run: |
+          bash ../../scripts/terraform-plan-with-transient-retry.sh -out=migration-only.tfplan \
+            -target=yandex_serverless_container.migration \
+            -target=yandex_serverless_container_iam_binding.migration_invocation
+          terraform show -json migration-only.tfplan > migration-only.tfplan.json
+          node ../../scripts/check-yandex-migration-container-plan.mjs \
+            --plan migration-only.tfplan.json --image-tag "$MIGRATION_IMAGE_TAG"
+      - name: Deploy only the candidate migration revision
+        working-directory: infra/yandex
+        run: >-
+          node ../../scripts/deploy-yandex-serverless-revision.mjs deploy
+          --plan migration-only.tfplan.json
+          --address 'yandex_serverless_container.migration[0]'
+      - name: Smoke the export route without creating an export
+        working-directory: infra/yandex
+        run: |
+          set -euo pipefail
+          migration_url=$(terraform output -raw migration_container_url)
+          status=$(curl --silent --show-error --output response.json --write-out '%{http_code}' \
+            --request POST --header "Authorization: Bearer $YC_TOKEN" \
+            "${migration_url%/}/stage/cloudru/database-export")
+          test "$status" = 400
+          jq -e '.status == "invalid_request"' response.json >/dev/null
+          echo 'Private export route is deployed and correctly rejects an unconfirmed request.'
+          echo 'Terraform refresh/apply, Trigger updates, public API deployment, DNS, and traffic switching were not performed.'
