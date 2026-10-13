@@ -8,7 +8,7 @@ on:
         required: true
         type: choice
         default: audit
-        options: [audit, apply, bootstrap-target]
+        options: [audit, apply, bootstrap-target, configure-target-acl]
       migration_confirmation:
         description: 'For apply: COPY_YANDEX_MEDIA_TO_CLOUDRU'
         required: false
@@ -74,6 +74,8 @@ jobs:
             test "${{ inputs.migration_confirmation }}" = COPY_YANDEX_MEDIA_TO_CLOUDRU
           elif test "$FIT_MEDIA_TRANSFER_MODE" = bootstrap-target; then
             test "${{ inputs.migration_confirmation }}" = CREATE_CLOUDRU_MEDIA_TARGET_BUCKET
+          elif test "$FIT_MEDIA_TRANSFER_MODE" = configure-target-acl; then
+            test "${{ inputs.migration_confirmation }}" = CONFIGURE_CLOUDRU_MEDIA_TARGET_ACL
           fi
 
       - run: npm ci --prefix services/api
@@ -96,6 +98,6 @@ jobs:
             exit 0
           fi
           jq -s -r '
-            map(select(.event == "source_access_key_fingerprint" or .event == "target_access_key_fingerprint" or .event == "target_bucket_bootstrapped" or .event == "target_bootstrap_failed" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
+            map(select(.event == "source_access_key_fingerprint" or .event == "target_access_key_fingerprint" or .event == "target_bucket_bootstrapped" or .event == "target_bootstrap_failed" or .event == "target_acl_configured" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
             | "`" + (.event | tostring) + "`: " + (tojson)
           ' "$report" >> "$GITHUB_STEP_SUMMARY"
