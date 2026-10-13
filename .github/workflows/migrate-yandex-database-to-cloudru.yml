@@ -83,14 +83,27 @@ jobs:
           set -euo pipefail
           ca=/etc/ssl/certs/ca-certificates.crt
           test -s "$ca"
-          ssl_used=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
+          if ! ssl_used=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
             PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
             psql --no-psqlrc --tuples-only --no-align \
               --host "$MIGRATION_DATABASE_HOST" \
               --port "$MIGRATION_DATABASE_PORT" \
               --username "$MIGRATION_DATABASE_USER" \
               --dbname "$MIGRATION_DATABASE_NAME" \
-              --command "select ssl from pg_stat_ssl where pid = pg_backend_pid()")
+              --command "select ssl from pg_stat_ssl where pid = pg_backend_pid()"); then
+            peer_output=$(mktemp "$RUNNER_TEMP/fit-postgres-peer.XXXXXX")
+            trap 'rm -f "$peer_output"' EXIT
+            timeout 10 openssl s_client -starttls postgres \
+              -connect "$MIGRATION_DATABASE_HOST:$MIGRATION_DATABASE_PORT" \
+              -showcerts </dev/null >"$peer_output" 2>&1 || true
+            echo 'Target peer certificate metadata (diagnostic only; not trusted):' >&2
+            if ! awk '/-----BEGIN CERTIFICATE-----/ {found=1} found {print} /-----END CERTIFICATE-----/ {exit}' "$peer_output" \
+              | openssl x509 -noout -subject -issuer -dates -ext subjectAltName -fingerprint -sha256 >&2; then
+              echo 'Could not read target peer certificate metadata.' >&2
+            fi
+            grep -E 'verify error:num=|Verify return code:' "$peer_output" | tail -n 2 >&2 || true
+            exit 1
+          fi
           test "$ssl_used" = t
           owner_identity=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" \
             PGSSLMODE=verify-full PGSSLROOTCERT="$ca" PGCONNECT_TIMEOUT=10 \
