@@ -98,7 +98,7 @@ jobs:
             --username "$MIGRATION_DATABASE_USER" --dbname "$MIGRATION_DATABASE_NAME" \
             --quiet <<'SQL'
           do $$
-          declare table_row record; row_count bigint;
+          declare table_row record; row_count bigint; nonempty_count integer := 0;
           begin
             for table_row in
               select schemaname, tablename from pg_tables
@@ -108,9 +108,14 @@ jobs:
               execute format('select count(*) from %I.%I', table_row.schemaname, table_row.tablename)
                 into row_count;
               if row_count > 0 then
-                raise exception 'target application table is not empty';
+                raise notice 'nonempty target table %.%: % rows',
+                  table_row.schemaname, table_row.tablename, row_count;
+                nonempty_count := nonempty_count + 1;
               end if;
             end loop;
+            if nonempty_count > 0 then
+              raise exception 'target has % nonempty application tables', nonempty_count;
+            end if;
           end $$;
           SQL
           echo 'Target TLS, identities and empty application data verified.'
