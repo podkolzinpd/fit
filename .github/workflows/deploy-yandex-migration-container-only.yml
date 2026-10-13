@@ -139,21 +139,67 @@ jobs:
             podman push "$image"
           fi
           skopeo inspect --creds "iam:$YC_TOKEN" "docker://$image" >/dev/null
+      - name: Record the active private revision for rollback
+        id: previous
+        run: |
+          set -euo pipefail
+          container_id=$(yc serverless container get \
+            --name fit-stage-migration --folder-id "$YC_FOLDER_ID" --format json \
+            | jq -er '.id | select(test("^[a-z0-9]{20}$"))')
+          revisions=$(yc serverless container revision list \
+            --container-id "$container_id" --format json)
+          revision_id=$(jq -er '
+            [.[] | select(.status == "ACTIVE") | .id]
+            | select(length == 1) | .[0] | select(test("^[a-z0-9]{20}$"))
+          ' <<<"$revisions")
+          echo "container_id=$container_id" >> "$GITHUB_OUTPUT"
+          echo "revision_id=$revision_id" >> "$GITHUB_OUTPUT"
       - name: Deploy only the candidate migration revision
+        id: candidate
+        continue-on-error: true
         working-directory: infra/yandex
         run: >-
           node ../../scripts/deploy-yandex-serverless-revision.mjs deploy
           --plan migration-only.tfplan.json
           --address 'yandex_serverless_container.migration[0]'
       - name: Smoke the export route without creating an export
+        id: smoke
+        if: steps.candidate.outcome == 'success'
+        continue-on-error: true
         working-directory: infra/yandex
         run: |
           set -euo pipefail
           migration_url=$(terraform output -raw migration_container_url)
-          status=$(curl --silent --show-error --output response.json --write-out '%{http_code}' \
-            --request POST --header "Authorization: Bearer $YC_TOKEN" \
-            "${migration_url%/}/stage/cloudru/database-export")
-          test "$status" = 400
-          jq -e '.status == "invalid_request"' response.json >/dev/null
+          deadline=$(( $(date +%s) + 90 ))
+          while true; do
+            status=$(curl --silent --show-error --max-time 12 \
+              --output response.json --write-out '%{http_code}' \
+              --request POST --header "Authorization: Bearer $YC_TOKEN" \
+              "${migration_url%/}/stage/cloudru/database-export") || status=000
+            if test "$status" = 400 \
+              && jq -e '.status == "invalid_request"' response.json >/dev/null 2>&1; then
+              break
+            fi
+            if test "$(date +%s)" -ge "$deadline"; then
+              echo "Private export route smoke failed with HTTP $status." >&2
+              exit 1
+            fi
+            sleep 3
+          done
+          active_image=$(yc serverless container revision list \
+            --container-id '${{ steps.previous.outputs.container_id }}' --format json \
+            | jq -er '[.[] | select(.status == "ACTIVE") | .image.image_url] | select(length == 1) | .[0]')
+          test "$active_image" = 'cr.yandex/${{ vars.YC_API_REPOSITORY }}:'"$MIGRATION_IMAGE_TAG"
           echo 'Private export route is deployed and correctly rejects an unconfirmed request.'
           echo 'Terraform refresh/apply, Trigger updates, public API deployment, DNS, and traffic switching were not performed.'
+      - name: Restore the previous private revision after failure
+        if: always() && (steps.candidate.outcome == 'failure' || steps.smoke.outcome == 'failure')
+        run: >-
+          node scripts/deploy-yandex-serverless-revision.mjs rollback
+          --container-id '${{ steps.previous.outputs.container_id }}'
+          --revision-id '${{ steps.previous.outputs.revision_id }}'
+      - name: Fail after recovery rollback
+        if: always() && (steps.candidate.outcome == 'failure' || steps.smoke.outcome == 'failure')
+        run: |
+          echo 'Private migration candidate failed; rollback was attempted.' >&2
+          exit 1
