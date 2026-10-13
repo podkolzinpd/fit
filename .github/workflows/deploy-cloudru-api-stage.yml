@@ -87,11 +87,13 @@ jobs:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
           CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
+          YANDEX_OAUTH_CLIENT_ID: ${{ vars.YC_YANDEX_OAUTH_CLIENT_ID }}
         run: |
           set -euo pipefail
           test -n "$CLOUDRU_DATABASE_CONFIG_JSON"
           test -n "$CLOUDRU_MEDIA_KEY_ID"
           test -n "$CLOUDRU_MEDIA_KEY_SECRET"
+          test -n "$YANDEX_OAUTH_CLIENT_ID"
           echo "::add-mask::$CLOUDRU_MEDIA_KEY_ID"
           echo "::add-mask::$CLOUDRU_MEDIA_KEY_SECRET"
           test "$(jq -er '.DATABASE_HOST' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 10.70.10.67
@@ -118,6 +120,10 @@ jobs:
             printf 'CLOUDRU_TENANT_ID=f071c7d5-cf0f-4538-9415-bbf9a9c94338\n'
             printf 'CLOUDRU_MEDIA_KEY_ID=%s\n' "$CLOUDRU_MEDIA_KEY_ID"
             printf 'CLOUDRU_MEDIA_KEY_SECRET=%s\n' "$CLOUDRU_MEDIA_KEY_SECRET"
+            printf 'YANDEX_OAUTH_CLIENT_ID=%s\n' "$YANDEX_OAUTH_CLIENT_ID"
+            printf 'YANDEX_NATIVE_REGISTRATION_ENABLED=true\n'
+            printf 'YANDEX_ONLY_AUTH_ENABLED=true\n'
+            printf 'CORS_ALLOWED_ORIGINS=https://fit-training.ru,https://fit-drab.vercel.app,capacitor://localhost,https://localhost\n'
           } >>"$runtime_file"
           sudo install -d -m 700 /opt/fit/secrets
           sudo install -m 600 "$runtime_file" /opt/fit/secrets/api.env
