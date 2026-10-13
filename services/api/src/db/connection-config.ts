@@ -10,6 +10,7 @@ interface BuildDatabaseConnectionConfigOptions {
 }
 
 const DEFAULT_CA_PATH = '/app/certs/yandex-cloud-ca.pem'
+const CLOUDRU_STAGE_DATABASE_HOST = '10.70.10.67'
 
 function parsePort(value: string, variableName: string): number {
   const port = Number(value)
@@ -53,6 +54,15 @@ export function buildDatabaseConnectionConfig(
     string,
     string,
   ]
+  const sslMode = environment[`${prefix}_SSL_MODE`] ?? 'verify-full'
+  if (sslMode !== 'verify-full' && sslMode !== 'require') {
+    throw new Error(`${prefix}_SSL_MODE must be verify-full or require`)
+  }
+  if (sslMode === 'require' && (
+    host !== CLOUDRU_STAGE_DATABASE_HOST || port !== '5432' || database !== 'fit'
+  )) {
+    throw new Error(`${prefix}_SSL_MODE=require is limited to the Cloud.ru stage database`)
+  }
   const caPath = environment[`${prefix}_SSL_ROOT_CERT`] ?? DEFAULT_CA_PATH
   const readCertificate = options.readCertificate ?? ((path: string) => readFileSync(path, 'utf8'))
 
@@ -62,9 +72,8 @@ export function buildDatabaseConnectionConfig(
     database,
     user,
     password,
-    ssl: {
-      ca: readCertificate(caPath),
-      rejectUnauthorized: true,
-    },
+    ssl: sslMode === 'require'
+      ? { rejectUnauthorized: false }
+      : { ca: readCertificate(caPath), rejectUnauthorized: true },
   }
 }

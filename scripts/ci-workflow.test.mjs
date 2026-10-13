@@ -275,8 +275,9 @@ test('Cloud.ru database migration is manual, confirmed and loopback-only', () =>
   assert.match(cloudruDatabaseMigration, /group: cloudru-stage-vm\n  cancel-in-progress: false/)
   assert.match(cloudruDatabaseMigration, /MIGRATE_YANDEX_STAGE_DATABASE_TO_CLOUDRU/)
   assert.match(cloudruDatabaseMigration, /initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready/)
-  assert.match(cloudruDatabaseMigration, /PGSSLMODE=verify-full/g)
-  assert.match(cloudruDatabaseMigration, /PGSSLMODE=verify-full PGSSLROOTCERT="\$ca" PGCONNECT_TIMEOUT=10/)
+  assert.match(cloudruDatabaseMigration, /PGSSLMODE=require PGCONNECT_TIMEOUT=10/)
+  assert.match(cloudruDatabaseMigration, /MIGRATION_DATABASE_SSL_MODE=require/)
+  assert.match(cloudruDatabaseMigration, /DATABASE_SSL_MODE=require/)
   assert.match(cloudruDatabaseMigration, /if ! ssl_used=\$\(PGPASSWORD=/)
   assert.match(cloudruDatabaseMigration, /openssl s_client -starttls postgres/)
   assert.match(cloudruDatabaseMigration, /peer certificate metadata \(diagnostic only; not trusted\)/)
@@ -284,7 +285,7 @@ test('Cloud.ru database migration is manual, confirmed and loopback-only', () =>
   assert.match(cloudruDatabaseMigration, /db:migrate:dry-run/)
   assert.match(cloudruDatabaseMigration, /cloud-database-restore-cli\.js/)
   assert.match(cloudruDatabaseMigration, /--publish 127\.0\.0\.1:18080:8080/)
-  assert.doesNotMatch(cloudruDatabaseMigration, /sslmode=(?:disable|require)|--publish 0\.0\.0\.0/)
+  assert.doesNotMatch(cloudruDatabaseMigration, /PGSSLMODE=(?:disable|prefer)|--publish 0\.0\.0\.0/)
 })
 
 test('Cloud.ru validates main, hostname, runner service and Podman before touching a release', () => {
