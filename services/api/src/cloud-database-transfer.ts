@@ -149,7 +149,10 @@ export function safePgDumpDiagnostic(stderr: string, password: string | undefine
     .filter((line) => /^(?:pg_dump: error:|connection to server|FATAL:|ERROR:)/iu.test(line))
     .slice(0, 3)
   if (lines.length === 0) return undefined
-  let diagnostic = lines.join(' ').replace(/[\x00-\x1f\x7f]/gu, ' ').slice(0, 500)
+  let diagnostic = [...lines.join(' ')].map((character) => {
+    const code = character.charCodeAt(0)
+    return code < 32 || code === 127 ? ' ' : character
+  }).join('').slice(0, 500)
   if (password) diagnostic = diagnostic.replaceAll(password, '[REDACTED]')
   return diagnostic.replace(/\b(password|token|secret)\s*[:=]\s*\S+/giu, '$1=[REDACTED]')
 }
