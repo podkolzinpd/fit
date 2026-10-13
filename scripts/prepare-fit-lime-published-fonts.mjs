@@ -37,7 +37,7 @@ export function prepareFitLimePublishedFonts({ directory = 'public/fonts' } = {}
     try { return execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024, timeout: 120000, stdio: ['ignore', 'pipe', 'pipe'] }) }
     catch { throw new Error('Published frontend artifact retrieval failed') }
   }
-  const runs = JSON.parse(gh(['api', `repos/${repository}/actions/workflows/deploy-yandex-frontend.yml/runs?per_page=20`])).workflow_runs
+  const runs = JSON.parse(gh(['api', `repos/${repository}/actions/workflows/deploy-yandex-frontend.yml/runs?status=success&per_page=20`])).workflow_runs
   const run = selectPublishedFrontendRun(runs)
   const artifacts = JSON.parse(gh(['api', `repos/${repository}/actions/runs/${run.id}/artifacts`])).artifacts
     .filter(a => a.name === 'yandex-frontend-release' && a.expired === false)
