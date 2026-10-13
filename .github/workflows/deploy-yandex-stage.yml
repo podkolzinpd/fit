@@ -118,7 +118,7 @@ jobs:
   plan:
     name: Review Terraform plan
     needs: validate
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')
     runs-on: ubuntu-24.04
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
@@ -277,7 +277,7 @@ jobs:
   deploy:
     name: Migrate and deploy API
     needs: plan
-    if: github.ref == 'refs/heads/main' && inputs.plan_only != true
+    if: github.ref == 'refs/heads/main' && inputs.plan_only != true && (github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')
     runs-on: ubuntu-24.04
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
@@ -1995,7 +1995,7 @@ jobs:
   publish_deployment:
     name: Publish yandex-stage deployment status
     needs: [plan, deploy]
-    if: always() && github.ref == 'refs/heads/main' && inputs.plan_only != true
+    if: always() && github.ref == 'refs/heads/main' && inputs.plan_only != true && (github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')
     runs-on: ubuntu-24.04
     permissions:
       deployments: write

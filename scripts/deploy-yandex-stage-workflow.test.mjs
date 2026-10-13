@@ -352,7 +352,7 @@ test('publishes the final yandex-stage result without restoring an approval gate
   )
   assert.match(
     workflow,
-    /^    if: always\(\) && github\.ref == 'refs\/heads\/main' && inputs\.plan_only != true$/m,
+    /^    if: always\(\) && github\.ref == 'refs\/heads\/main' && inputs\.plan_only != true && \(github\.event_name == 'workflow_dispatch' \|\| vars\.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true'\)$/m,
   )
   assert.match(workflow, /DEPLOY_RESULT: \$\{\{ needs\.deploy\.result \}\}/)
   assert.match(workflow, /required_contexts: \[\]/)
@@ -993,6 +993,14 @@ test('supports a plan-only stage diagnostic that cannot deploy resources', () =>
     [...workflow.matchAll(/inputs\.plan_only != true/g)].length,
     2,
   )
+})
+
+test('keeps automatic Yandex Terraform refresh and deployment default-off during Cloud.ru migration', () => {
+  const optIn = "(github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')"
+  assert.match(workflow, /name: Review Terraform plan\n    needs: validate\n    if: /)
+  assert.match(workflow, /name: Migrate and deploy API\n    needs: plan\n    if: /)
+  assert.equal(workflow.split(optIn).length - 1, 3)
+  assert.doesNotMatch(workflow, /terraform plan -refresh=false|terraform state rm/)
 })
 
 test('validates feature branches without expanding the main-only Yandex OIDC trust', () => {
