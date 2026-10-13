@@ -281,6 +281,8 @@ test('Cloud.ru database migration is manual, confirmed and loopback-only', () =>
   assert.match(cloudruDatabaseMigration, /target_table_count=\$\(PGPASSWORD=/)
   assert.match(cloudruDatabaseMigration, /pg_catalog\.pg_tables where schemaname in \('public', 'app_private'\)/)
   assert.ok(cloudruDatabaseMigration.indexOf('target_table_count=$(') < cloudruDatabaseMigration.indexOf('Stop after read-only preflight'))
+  assert.match(cloudruDatabaseMigration, /name: Install Node for Yandex OIDC exchange\n        if: inputs\.mode == 'migrate'\n        uses: actions\/setup-node@v4\n        with:\n          node-version: 22/)
+  assert.ok(cloudruDatabaseMigration.indexOf('Install Node for Yandex OIDC exchange') < cloudruDatabaseMigration.indexOf('Exchange GitHub OIDC for the bounded Yandex deploy identity'))
   assert.match(cloudruDatabaseMigration, /if ! ssl_used=\$\(PGPASSWORD=/)
   assert.match(cloudruDatabaseMigration, /openssl s_client -starttls postgres/)
   assert.match(cloudruDatabaseMigration, /peer certificate metadata \(diagnostic only; not trusted\)/)
