@@ -64,3 +64,9 @@ test('rejects trigger changes, binding drift and deletion', () => {
     },
   })
 })
+
+test('reports only failed contract field names without sensitive values', () => {
+  const value = plan()
+  value.planned_values.root_module.resources[0].values.image[0].url = 'cr.yandex/test:unexpected'
+  assert.throws(() => check(value), /runner contract: image.url/)
+})
