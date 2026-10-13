@@ -17,6 +17,11 @@ if (!['audit', 'apply'].includes(mode)) throw new Error('FIT_MEDIA_TRANSFER_MODE
 
 const sourceBucket = required('YANDEX_MEDIA_SOURCE_BUCKET')
 const targetBucket = required('CLOUDRU_MEDIA_TARGET_BUCKET')
+const mediaPrefixes = [
+  'chat-media/',
+  'fit-exercise-media/',
+  'trainer-profile-media/',
+]
 if (sourceBucket !== 'fit-chat-media-b1gt7dfq') throw new Error('Unexpected source bucket')
 if (targetBucket !== 'fit-cloudru-stage-media-c2ad3760') throw new Error('Unexpected target bucket')
 
@@ -29,17 +34,26 @@ const source = new S3Client({
   },
 })
 
-const listObjects = async (client, bucket) => {
+const listObjects = async (client, bucket, prefix) => {
   const objects = []
   let continuationToken
   do {
     const page = await client.send(new ListObjectsV2Command({
       Bucket: bucket,
+      Prefix: prefix,
       ContinuationToken: continuationToken,
     }))
     objects.push(...(page.Contents ?? []).filter(({ Key }) => typeof Key === 'string'))
     continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined
   } while (continuationToken)
+  return objects
+}
+
+const listMediaObjects = async (client, bucket) => {
+  const objects = []
+  for (const prefix of mediaPrefixes) {
+    objects.push(...await listObjects(client, bucket, prefix))
+  }
   return objects
 }
 
@@ -97,10 +111,10 @@ const digest = (bytes) => createHash('sha256').update(bytes).digest('hex')
 
 let target
 try {
-  const sourceObjects = await listObjects(source, sourceBucket)
+  const sourceObjects = await listMediaObjects(source, sourceBucket)
   console.log(JSON.stringify({ event: 'source_inventory', ...inventory(sourceObjects) }))
   target = await connectTarget()
-  let targetObjects = await listObjects(target, targetBucket)
+  let targetObjects = await listMediaObjects(target, targetBucket)
   console.log(JSON.stringify({ event: 'target_inventory', ...inventory(targetObjects) }))
 
   const targetByKey = new Map(targetObjects.map((item) => [item.Key, Number(item.Size ?? 0)]))
@@ -154,7 +168,7 @@ try {
       }
     }
 
-    targetObjects = await listObjects(target, targetBucket)
+    targetObjects = await listMediaObjects(target, targetBucket)
     const verifiedByKey = new Map(targetObjects.map((item) => [item.Key, Number(item.Size ?? 0)]))
     let mismatches = 0
     for (const item of sourceObjects) {
