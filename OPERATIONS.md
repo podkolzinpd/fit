@@ -17,6 +17,18 @@ Supabase baseline, не Yandex PostgreSQL.
 
 ## Cloud.ru stage: bootstrap и подготовка API
 
+На время переноса в Cloud.ru автоматический `Deploy Yandex stage` после push в
+`main` выполняет только локальную валидацию Terraform. `Review Terraform plan`,
+`deploy` и публикация Yandex deployment запускаются только при точном значении
+repository variable `YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED=true`; отсутствие
+переменной означает `false`. Ручной `workflow_dispatch` остаётся явным
+разовым запуском, включая `plan_only=true`. Это останавливает повторяющийся
+remote refresh двух Yandex Cloud Functions Triggers, не удаляет их из Terraform
+state и не планирует их уничтожение. Пока флаг выключен, изменения Yandex API
+и инфраструктуры **не попадают автоматически в Yandex stage**; перед возвратом
+туда требуется отдельный проверенный plan. Cloud.ru workflows этим флагом не
+затрагиваются.
+
 `.github/workflows/deploy-cloudru-stage.yml` — **Bootstrap Cloud.ru stage runner**,
 только аварийный ручной `workflow_dispatch`. Он может временно использовать
 SSH-ключ и `CLOUDRU_RUNNER_REGISTRATION_TOKEN`; после регистрации runner
