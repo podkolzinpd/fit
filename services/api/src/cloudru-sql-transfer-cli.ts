@@ -395,6 +395,10 @@ async function restore(
         [`[${data.join(',')}]`],
       )
     }
+    // Flush deferred FK events before ALTER TABLE restores trigger modes.
+    // PostgreSQL rejects ALTER TABLE while that relation has pending events.
+    transferPhase = `${apply ? 'target-apply' : 'target-rehearsal'}:restore-triggers`
+    await connection.query('set constraints all immediate')
     await restoreSnapshotTriggers(connection, disabledTriggers)
     for (const table of manifest.tables) {
       transferPhase = `${apply ? 'target-apply' : 'target-rehearsal'}:verify:${table.schema}.${table.table}`
