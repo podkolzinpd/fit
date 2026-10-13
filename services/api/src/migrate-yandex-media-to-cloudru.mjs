@@ -1,4 +1,5 @@
 import {
+  CreateBucketCommand,
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -13,7 +14,9 @@ const required = (name) => {
 }
 
 const mode = required('FIT_MEDIA_TRANSFER_MODE')
-if (!['audit', 'apply'].includes(mode)) throw new Error('FIT_MEDIA_TRANSFER_MODE must be audit or apply')
+if (!['audit', 'apply', 'bootstrap-target'].includes(mode)) {
+  throw new Error('FIT_MEDIA_TRANSFER_MODE must be audit, apply, or bootstrap-target')
+}
 
 const sourceBucket = required('YANDEX_MEDIA_SOURCE_BUCKET')
 const targetBucket = required('CLOUDRU_MEDIA_TARGET_BUCKET')
@@ -76,7 +79,8 @@ const targetCredentials = () => {
   ].map((accessKeyId) => ({ accessKeyId, secretAccessKey }))
 }
 
-const connectTarget = async () => {
+const connectTarget = async ({ createIfMissing = false } = {}) => {
+  let attemptedBootstrap = false
   for (const [format, credentials] of targetCredentials().entries()) {
     const client = new S3Client({
       endpoint: 'https://s3.cloud.ru',
@@ -89,6 +93,22 @@ const connectTarget = async () => {
       console.log(JSON.stringify({ event: 'target_access_ok', format }))
       return client
     } catch (error) {
+      if (createIfMissing && !attemptedBootstrap && error?.name === 'NoSuchBucket') {
+        attemptedBootstrap = true
+        try {
+          await client.send(new CreateBucketCommand({ Bucket: targetBucket }))
+          await client.send(new ListObjectsV2Command({ Bucket: targetBucket, MaxKeys: 1 }))
+          console.log(JSON.stringify({ event: 'target_bucket_bootstrapped', format }))
+          return client
+        } catch (bootstrapError) {
+          console.log(JSON.stringify({
+            event: 'target_bootstrap_failed',
+            format,
+            name: bootstrapError?.name,
+            status: bootstrapError?.$metadata?.httpStatusCode,
+          }))
+        }
+      }
       console.log(JSON.stringify({
         event: 'target_access_failed',
         format,
@@ -120,9 +140,13 @@ try {
     event: 'source_access_key_fingerprint',
     sha256: sourceAccessKeyFingerprint,
   }))
-  const sourceObjects = await listMediaObjects(source, sourceBucket)
-  console.log(JSON.stringify({ event: 'source_inventory', ...inventory(sourceObjects) }))
-  target = await connectTarget()
+  target = await connectTarget({ createIfMissing: mode === 'bootstrap-target' })
+  if (mode === 'bootstrap-target') {
+    console.log(JSON.stringify({ event: 'complete', mode }))
+    process.exitCode = 0
+  } else {
+    const sourceObjects = await listMediaObjects(source, sourceBucket)
+    console.log(JSON.stringify({ event: 'source_inventory', ...inventory(sourceObjects) }))
   let targetObjects = await listMediaObjects(target, targetBucket)
   console.log(JSON.stringify({ event: 'target_inventory', ...inventory(targetObjects) }))
 
@@ -198,6 +222,7 @@ try {
   }
 
   console.log(JSON.stringify({ event: 'complete', mode }))
+  }
 } finally {
   source.destroy()
   target?.destroy()
