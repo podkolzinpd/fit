@@ -41,6 +41,13 @@ test('accepts a no-op or private in-place migration revision plan', () => {
   assert.match(check(plan()), /Changed resources: 0/)
   const change = { address: containerAddress, change: { actions: ['update'] } }
   assert.match(check(plan([change])), /Changed resources: 1/)
+  assert.match(check({ ...plan([change]), complete: false }), /Changed resources: 1/)
+})
+
+test('rejects an invalid or non-applyable targeted plan', () => {
+  assert.throws(() => check({ ...plan(), complete: undefined }), /valid and applyable/)
+  assert.throws(() => check({ ...plan(), complete: false, applyable: false }), /valid and applyable/)
+  assert.throws(() => check({ ...plan(), complete: false, errored: true }), /valid and applyable/)
 })
 
 test('rejects trigger changes, binding drift and deletion', () => {

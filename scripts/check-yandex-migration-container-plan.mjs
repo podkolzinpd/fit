@@ -29,8 +29,10 @@ const changed = (plan.resource_changes ?? []).filter(
 )
 const permitted = new Set([containerAddress, bindingAddress])
 
-if (plan.complete !== true || plan.errored === true || plan.applyable !== true) {
-  throw new Error('Migration-only Terraform plan must be complete and applyable')
+// Terraform marks a -target plan incomplete because unrelated resources are omitted.
+// This recovery workflow deliberately targets only the private runner and binding.
+if (typeof plan.complete !== 'boolean' || plan.errored === true || plan.applyable !== true) {
+  throw new Error('Migration-only Terraform plan must be valid and applyable')
 }
 if (changed.some((resource) => !permitted.has(resource.address))) {
   throw new Error(`Migration-only plan includes unexpected resources: ${changed.map((resource) => resource.address).join(', ')}`)
