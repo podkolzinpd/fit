@@ -65,7 +65,7 @@ const MIGRATION_SEEDS: Readonly<Record<string, { rows: number; predicate: string
       and schedule_mode = 'pilot' and revision = 0`,
   },
 }
-const SAFE_TRANSFER_MESSAGE = /^(?:source manifest HTTP [1-5][0-9]{2}|source chunk HTTP [1-5][0-9]{2}|sql_chunk_too_large|source rows changed during download|source changed during download|source changed before apply|source and target table sets differ|target is not empty|saved row count mismatch|non-deferrable foreign-key cycle|invalid source chunk|invalid saved chunk|source checksum changed for (?:app_private|private|public)\.[a-z][a-z0-9_]*|target checksum mismatch for (?:app_private|private|public)\.[a-z][a-z0-9_]*)$/u
+const SAFE_TRANSFER_MESSAGE = /^(?:source manifest HTTP [1-5][0-9]{2}|source chunk HTTP [1-5][0-9]{2}|sql_chunk_too_large|source rows changed during download|source changed during download|source changed before apply|target missing source table (?:app_private|private|public)\.[a-z][a-z0-9_]*|target is not empty|saved row count mismatch|non-deferrable foreign-key cycle|invalid source chunk|invalid saved chunk|source checksum changed for (?:app_private|private|public)\.[a-z][a-z0-9_]*|target checksum mismatch for (?:app_private|private|public)\.[a-z][a-z0-9_]*)$/u
 let transferPhase = 'startup'
 
 function required(name: string): string {
@@ -336,10 +336,19 @@ async function restore(
     await connection.query("set local bytea_output to 'hex'")
     await connection.query('set constraints all deferred')
     const actual = await targetTables(connection)
-    const expectedNames = manifest.tables.map((item) => `${item.schema}.${item.table}`).sort()
-    const actualNames = actual.map((item) => `${item.schema}.${item.table}`).sort()
-    if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) {
-      throw new Error('source and target table sets differ')
+    const expectedNames = new Set(manifest.tables.map((item) => `${item.schema}.${item.table}`))
+    const actualNames = new Set(actual.map((item) => `${item.schema}.${item.table}`))
+    for (const name of expectedNames) {
+      if (!actualNames.has(name)) throw new Error(`target missing source table ${name}`)
+    }
+    // Newer target migrations can create schema-only tables absent from the
+    // source. They must remain empty; never overwrite or import into them.
+    for (const table of actual) {
+      if (expectedNames.has(`${table.schema}.${table.table}`)) continue
+      const rows = await connection.query<{ count: string }>(
+        `select count(*)::text as count from ${reference(table.schema, table.table)}`,
+      )
+      if (rows[0]?.count !== '0') throw new Error('target is not empty')
     }
     for (const table of manifest.tables) {
       const name = `${table.schema}.${table.table}`
