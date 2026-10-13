@@ -7,6 +7,7 @@ import {
   readDatabaseTransferConnection,
   YandexCloudDatabaseExport,
 } from './cloud-database-transfer.js'
+import { YandexSqlSnapshotSource } from './cloudru-sql-snapshot.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
@@ -172,6 +173,8 @@ const cloudDatabaseSourceInventory = privateFeaturePool === undefined
     }
 
 const app = buildMigrationApp({
+  ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
+    ? {} : { sqlSnapshotSource: new YandexSqlSnapshotSource(privateFeaturePool) }),
   ...(cloudDatabaseExport === undefined ? {} : { cloudDatabaseExport }),
   ...(cloudDatabaseSourceInventory === undefined
     ? {} : { cloudDatabaseSourceInventory }),

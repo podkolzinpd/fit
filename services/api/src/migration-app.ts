@@ -10,6 +10,10 @@ import {
   type CloudDatabaseExportService,
 } from './cloud-database-transfer.js'
 import {
+  SqlSnapshotError,
+  type YandexSqlSnapshotSource,
+} from './cloudru-sql-snapshot.js'
+import {
   PilotEnrollmentConflictError,
   type PilotAccountRole,
   type PilotEnroller,
@@ -77,6 +81,7 @@ interface BuildMigrationAppOptions {
     table: string
     estimatedRows: number
   }[]>
+  sqlSnapshotSource?: Pick<YandexSqlSnapshotSource, 'manifest' | 'chunk'>
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   domainChangeAnnouncement?: DomainChangeAnnouncementManager
   logger?: boolean
@@ -315,6 +320,55 @@ export function buildMigrationApp(
   const app = Fastify({ logger: options.logger ?? true })
 
   app.get('/health', () => ({ status: 'ok' }))
+
+  if (options.sqlSnapshotSource !== undefined) {
+    const source = options.sqlSnapshotSource
+    app.post('/stage/cloudru/sql-snapshot/manifest', async (request, reply) => {
+      if (request.headers['x-fit-sql-snapshot-confirmation']
+        !== 'READ_YANDEX_STAGE_SQL_SNAPSHOT') {
+        return reply.code(403).send({ status: 'sql_snapshot_not_confirmed' })
+      }
+      try {
+        return await source.manifest()
+      } catch (error) {
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          && error.code === '42501'
+          ? 'sql_source_permission_denied' : 'sql_snapshot_manifest_failed'
+        return reply.code(503).send({ status: 'sql_snapshot_manifest_failed', code })
+      }
+    })
+    app.post('/stage/cloudru/sql-snapshot/chunk', async (request, reply) => {
+      if (request.headers['x-fit-sql-snapshot-confirmation']
+        !== 'READ_YANDEX_STAGE_SQL_SNAPSHOT') {
+        return reply.code(403).send({ status: 'sql_snapshot_not_confirmed' })
+      }
+      const passphrase = readTenantMigrationPassphrase(
+        request.headers['x-fit-sql-snapshot-passphrase'],
+      )
+      const body = request.body
+      if (passphrase === undefined || typeof body !== 'object' || body === null
+        || !('schema' in body) || !('table' in body)
+        || !('offset' in body) || !('limit' in body)
+        || typeof body.schema !== 'string' || typeof body.table !== 'string'
+        || typeof body.offset !== 'number' || typeof body.limit !== 'number') {
+        return reply.code(400).send({ status: 'sql_snapshot_request_invalid' })
+      }
+      try {
+        const encrypted = await source.chunk(
+          body.schema, body.table, body.offset, body.limit, passphrase,
+        )
+        return reply.type('application/octet-stream').send(encrypted)
+      } catch (error) {
+        if (error instanceof SqlSnapshotError) {
+          return reply.code(409).send({ status: 'sql_snapshot_rejected', code: error.code })
+        }
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          && error.code === '42501'
+          ? 'sql_source_permission_denied' : 'sql_snapshot_chunk_failed'
+        return reply.code(503).send({ status: 'sql_snapshot_chunk_failed', code })
+      }
+    })
+  }
 
   if (options.cloudDatabaseSourceInventory !== undefined) {
     app.post('/stage/cloudru/database-source/inventory', async (request, reply) => {
