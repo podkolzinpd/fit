@@ -178,3 +178,14 @@ test('candidate preserves every production VITE setting except explicitly approv
     assert.equal(next.get(name), value, name)
   }
 })
+
+test('only the hosted build uses the existing frontend candidate secret environment', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/prepare-cloudru-frontend.yml', import.meta.url), 'utf8')
+  const build = workflow.slice(workflow.indexOf('  build:\n'), workflow.indexOf('  prepare:\n'))
+  const prepare = workflow.slice(workflow.indexOf('  prepare:\n'))
+  assert.match(build, /runs-on: ubuntu-24\.04\n    environment: fit-frontend-candidate/)
+  assert.match(build, /VITE_SUPABASE_URL: \$\{\{ secrets.VITE_SUPABASE_URL \}\}/)
+  assert.match(build, /FIT_LIME_FONTS_REQUIRED: 'true'/)
+  assert.doesNotMatch(prepare, /environment:|secrets\./)
+  assert.doesNotMatch(workflow, /environment: fit-frontend-production|id-token: write/)
+})

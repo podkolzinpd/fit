@@ -68,6 +68,10 @@ AI-функции там не выключены.
 `Prepare Cloud.ru frontend without public routing` также требует зелёный CI
 текущего `main`; его автоматический режим требует
 `CLOUDRU_FRONTEND_AUTODEPLOY_ENABLED=true`. Он собирает frontend с
+build environment `fit-frontend-candidate`, где уже находятся публичные startup
+параметры и обязательные licensed fonts. Секреты не копируются в repository
+или на VM: environment подключён только к hosted build, не к self-hosted prepare.
+Сборка использует
 `https://api.fit-training.ru` и устанавливает его в отдельный nginx-сервис,
 слушающий только `127.0.0.1:18081`. В этой сборке программа Assistant выключена
 (`VITE_ASSISTANT_PROGRAM_ENABLED=false`); runtime AI остаётся выключенным.

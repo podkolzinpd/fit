@@ -52,6 +52,7 @@ jobs:
     needs: source
     name: Build exact-main frontend for Cloud.ru API
     runs-on: ubuntu-24.04
+    environment: fit-frontend-candidate
     timeout-minutes: 20
     steps:
       - name: Require trusted main dispatch
