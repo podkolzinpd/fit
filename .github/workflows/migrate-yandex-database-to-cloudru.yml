@@ -181,6 +181,12 @@ jobs:
           bash "$RUNNER_TEMP/install-yc.sh" -i "$RUNNER_TEMP/yandex-cloud" -n
           echo "$RUNNER_TEMP/yandex-cloud/bin" >> "$GITHUB_PATH"
 
+      - name: Install Node for Yandex OIDC exchange
+        if: inputs.mode == 'migrate'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Exchange GitHub OIDC for the bounded Yandex deploy identity
         if: inputs.mode == 'migrate'
         shell: bash
