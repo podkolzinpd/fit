@@ -21,6 +21,13 @@ function resources(module) {
   ]
 }
 
+function durationSeconds(value) {
+  if (typeof value !== 'string') return NaN
+  const match = /^(?:(\d{1,4})h)?(?:(\d{1,4})m)?(?:(\d{1,4})s)?$/.exec(value)
+  if (!match || !match.slice(1).some(Boolean)) return NaN
+  return Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0)
+}
+
 const plan = JSON.parse(readFileSync(argument('--plan'), 'utf8'))
 const imageTag = argument('--image-tag')
 const imageRepository = argument('--image-repository')
@@ -67,7 +74,7 @@ const binding = planned.find((resource) => resource.address === bindingAddress)?
 const image = Array.isArray(container?.image) ? container.image[0] : undefined
 const contract = {
   'container.concurrency': container?.concurrency === 1,
-  'container.execution_timeout': container?.execution_timeout === '300s',
+  'container.execution_timeout': durationSeconds(container?.execution_timeout) === 300,
   'container.memory': container?.memory === 512,
   'container.cores': container?.cores === 1,
   'container.core_fraction': container?.core_fraction === 100,

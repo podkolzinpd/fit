@@ -70,3 +70,16 @@ test('reports only failed contract field names without sensitive values', () => 
   value.planned_values.root_module.resources[0].values.image[0].url = 'cr.yandex/test:unexpected'
   assert.throws(() => check(value), /runner contract: image.url/)
 })
+
+test('accepts equivalent 300-second timeout formats but rejects duration drift', () => {
+  for (const timeout of ['300s', '5m0s', '5m']) {
+    const value = plan()
+    value.planned_values.root_module.resources[0].values.execution_timeout = timeout
+    assert.match(check(value), /Changed resources: 0/, timeout)
+  }
+  for (const timeout of ['299s', '5m1s', '300', '']) {
+    const value = plan()
+    value.planned_values.root_module.resources[0].values.execution_timeout = timeout
+    assert.throws(() => check(value), /container.execution_timeout/, timeout)
+  }
+})
