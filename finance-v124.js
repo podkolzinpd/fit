@@ -216,6 +216,9 @@
   defs[0].html = defs[0].html.replace(': приложением можно пользоваться и без неё. Вход максимально простой', '');
   defs[0].html = defs[0].html.replace('по виду спорта и цели пользователя · <b>оплата за показы', 'по виду спорта и цели пользователя<br><b>оплата за показы');
   defs[0].html = defs[0].html.replace('Больше клиентов и оплат у тренера — больше комиссии и подписок у Fit.', 'Больше клиентов<br>Больше оплат у тренеров<br>Больше комиссии и подписок у Fit');
+  // Слайд 10 (13.10): без заголовка «От оборота к выручке», подпись по шагам — на его месте, легенда и выноска — выше.
+  defs[1].html = defs[1].html.replace(/<h1>[\s\S]*?<\/h1>/, '');
+  defs[1].css += '\n.cap{top:84px}\n.leg,.call{top:176px}\n';
   const find = d => document.querySelector('#deck>[data-section="' + d.section + '"]');
   // заголовки для меню слайдов — до инициализации движка
   defs.forEach(d => { const s = find(d); const h = s && s.querySelector('h2'); if (h && d.title) h.textContent = d.title; });
