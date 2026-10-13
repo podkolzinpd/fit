@@ -14,6 +14,7 @@ interface NameRow { schema: string; table: string }
 interface DataRow { row: string }
 interface ColumnRow { column: string; identity: string }
 interface IdentityColumnRow { schema: string; table: string; column: string }
+interface TriggerRow { schema: string; table: string; trigger: string; enabled: string }
 interface ForeignKeyRow {
   childSchema: string
   childTable: string
@@ -293,6 +294,38 @@ async function synchronizeIdentitySequences(connection: DatabaseConnection): Pro
   }
 }
 
+async function disableSnapshotTriggers(
+  connection: DatabaseConnection,
+  expectedNames: ReadonlySet<string>,
+): Promise<readonly TriggerRow[]> {
+  const triggers = await connection.query<TriggerRow>(`select
+      namespace.nspname as schema, relation.relname as "table",
+      trigger_row.tgname as "trigger", trigger_row.tgenabled as enabled
+    from pg_trigger trigger_row
+    join pg_class relation on relation.oid = trigger_row.tgrelid
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname in ('app_private', 'private', 'public')
+      and not trigger_row.tgisinternal and trigger_row.tgenabled in ('O', 'A')
+    order by namespace.nspname, relation.relname, trigger_row.tgname`)
+  const selected = triggers.filter((item) => expectedNames.has(`${item.schema}.${item.table}`))
+  for (const item of selected) {
+    const trigger = `"${item.trigger.replaceAll('"', '""')}"`
+    await connection.query(`alter table ${reference(item.schema, item.table)} disable trigger ${trigger}`)
+  }
+  return selected
+}
+
+async function restoreSnapshotTriggers(
+  connection: DatabaseConnection,
+  triggers: readonly TriggerRow[],
+): Promise<void> {
+  for (const item of triggers) {
+    const trigger = `"${item.trigger.replaceAll('"', '""')}"`
+    const mode = item.enabled === 'A' ? 'enable always' : 'enable'
+    await connection.query(`alter table ${reference(item.schema, item.table)} ${mode} trigger ${trigger}`)
+  }
+}
+
 async function restore(
   connection: DatabaseConnection,
   manifest: SqlSnapshotManifest,
@@ -336,6 +369,9 @@ async function restore(
       }
       await connection.query(`delete from ${referenceName}`)
     }
+    // A snapshot must not regenerate derived rows while its original rows are
+    // imported. Keep PostgreSQL's internal FK triggers active throughout.
+    const disabledTriggers = await disableSnapshotTriggers(connection, expectedNames)
     for (const table of await insertionOrder(connection, manifest)) {
       if (table.rows === 0) continue
       transferPhase = `${apply ? 'target-apply' : 'target-rehearsal'}:insert:${table.schema}.${table.table}`
@@ -359,6 +395,7 @@ async function restore(
         [`[${data.join(',')}]`],
       )
     }
+    await restoreSnapshotTriggers(connection, disabledTriggers)
     for (const table of manifest.tables) {
       transferPhase = `${apply ? 'target-apply' : 'target-rehearsal'}:verify:${table.schema}.${table.table}`
       await verifyTable(connection, table)
