@@ -382,7 +382,7 @@ function appSessionResponseError(status: number, errorCode?: string): Error {
 
 export class YandexAccountSetupRequiredError extends Error {
   constructor(readonly handoff: { token: string; expiresAt: string }) {
-    super('Нужно связать прежний профиль FIT или создать новый аккаунт.')
+    super('Нужно создать аккаунт FIT.')
     this.name = 'YandexAccountSetupRequiredError'
   }
 }
@@ -392,16 +392,6 @@ export class YandexAuthHandoffRefreshRequiredError extends Error {
     super(message)
     this.name = 'YandexAuthHandoffRefreshRequiredError'
   }
-}
-
-function recoveryResponseError(status: number): Error {
-  if (status === 401) return new Error('Email или пароль не подошли. Проверьте данные старого аккаунта.')
-  if (status === 403) return new Error('Данные профиля ещё не готовы к переключению. Попробуйте позднее.')
-  if (status === 404) return new Error('Перенесённый профиль не найден. Проверьте данные или создайте новый аккаунт.')
-  if (status === 409) return new Error('Этот Yandex ID или FIT-профиль уже связан с другим аккаунтом.')
-  if (status === 400) return new Error('Проверьте введённые данные.')
-  if (status === 503) return new Error('Проверка старого аккаунта временно недоступна. Попробуйте позднее.')
-  return new Error('Не удалось связать старый аккаунт.')
 }
 
 function handoffRegistrationResponseError(status: number): Error {
@@ -625,29 +615,6 @@ export const yandexPilotRepository = {
     if (!result.success) {
       throw new Error('Stage вернул неподдерживаемый формат регистрации Yandex ID.')
     }
-    return result.data
-  },
-  async recoverYandexAccount(
-    apiBaseUrl: string,
-    input: { handoffToken: string; email: string; password: string },
-  ): Promise<YandexAppSession> {
-    let response: Response
-    try {
-      response = await yandexPilotQueries.recoverYandexAccount(apiBaseUrl, input)
-    } catch (caught) {
-      throw yandexAuthConnectionError(caught)
-    }
-    if (!response.ok) {
-      if (response.status === 401) {
-        const body = await response.clone().json().catch(() => null) as { error?: unknown } | null
-        if (body?.error === 'yandex_auth_handoff_expired') {
-          throw new YandexAuthHandoffRefreshRequiredError()
-        }
-      }
-      throw responseFailure(response, recoveryResponseError(response.status))
-    }
-    const result = appSessionSchema.safeParse(await response.json())
-    if (!result.success) throw new Error('Сервер вернул неподдерживаемый формат Yandex ID сессии.')
     return result.data
   },
   async completeYandexRegistration(

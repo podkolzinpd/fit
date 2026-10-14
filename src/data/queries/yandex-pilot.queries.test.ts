@@ -44,25 +44,6 @@ describe('yandexPilotQueries', () => {
     expect(fetchMock.mock.calls.at(-1)?.[1]?.headers)
       .not.toHaveProperty('authorization')
 
-    await yandexPilotQueries.recoverYandexAccount(baseUrl, {
-      handoffToken: 'h'.repeat(43),
-      email: 'person@example.test',
-      password: 'secret-password',
-    })
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      `${baseUrl}/v1/auth/yandex/recover`,
-      expect.objectContaining({
-        method: 'POST',
-        cache: 'no-store',
-        headers: { 'content-type': 'application/json', 'x-fit-request-id': REQUEST_ID },
-        body: JSON.stringify({
-          handoffToken: 'h'.repeat(43),
-          email: 'person@example.test',
-          password: 'secret-password',
-        }),
-      }),
-    )
-
     await yandexPilotQueries.completeYandexRegistration(baseUrl, {
       handoffToken: 'h'.repeat(43),
       accountRole: 'client',
