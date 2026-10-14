@@ -43,7 +43,6 @@ import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import {
   DatabaseYandexAccountLinker,
   SupabaseExistingActorProvider,
-  SupabaseExistingCredentialsProvider,
 } from './yandex-account-linking.js'
 import { DatabaseYandexNativeRegistrar } from './yandex-native-registration.js'
 import { DatabaseYandexAuthHandoffService } from './yandex-auth-handoff.js'
@@ -267,10 +266,6 @@ const existingActorProvider =
   supabaseBridgeConfig === undefined
     ? undefined
     : new SupabaseExistingActorProvider(new SupabaseBridge(supabaseBridgeConfig))
-const existingCredentialsProvider =
-  supabaseBridgeConfig === undefined || !yandexOnlyAuthEnabled
-    ? undefined
-    : new SupabaseExistingCredentialsProvider(new SupabaseBridge(supabaseBridgeConfig))
 const legacyWorkoutParser =
   !aiEnabled || supabaseBridgeConfig === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
@@ -330,7 +325,6 @@ const app = buildApp(
     ...(yandexNativeRegistrar === undefined ? {} : { yandexNativeRegistrar }),
     ...(yandexAuthHandoffService === undefined ? {} : { yandexAuthHandoffService }),
     ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
-    ...(existingCredentialsProvider === undefined ? {} : { existingCredentialsProvider }),
     yandexOnlyAuthEnabled,
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(databasePool === undefined ? {} : { clientWorkoutStatsReader: new DatabaseClientWorkoutStatsReader(databasePool) }),

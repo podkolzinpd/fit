@@ -11,7 +11,6 @@ const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   exchangeCodeForAppSession: vi.fn(),
   registerYandexAccount: vi.fn(),
-  recoverYandexAccount: vi.fn(),
   completeYandexRegistration: vi.fn(),
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
@@ -203,7 +202,6 @@ describe('yandexPilotRepository', () => {
     queries.exchangeCodeForSession.mockReset()
     queries.exchangeCodeForAppSession.mockReset()
     queries.registerYandexAccount.mockReset()
-    queries.recoverYandexAccount.mockReset()
     queries.completeYandexRegistration.mockReset()
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
@@ -378,18 +376,11 @@ describe('yandexPilotRepository', () => {
     })
   })
 
-  it('validates recovered and newly registered app sessions', async () => {
-    queries.recoverYandexAccount.mockResolvedValue(
-      new Response(JSON.stringify(appSession), { status: 200 }),
-    )
+  it('validates newly registered app sessions', async () => {
     queries.completeYandexRegistration.mockResolvedValue(
       new Response(JSON.stringify(appSession), { status: 200 }),
     )
 
-    await expect(yandexPilotRepository.recoverYandexAccount(
-      'https://stage.example.test',
-      { handoffToken: 'h'.repeat(43), email: 'person@example.test', password: 'secret-password' },
-    )).resolves.toEqual(appSession)
     await expect(yandexPilotRepository.completeYandexRegistration(
       'https://stage.example.test',
       {
