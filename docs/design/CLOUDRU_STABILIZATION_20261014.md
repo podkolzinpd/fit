@@ -49,7 +49,7 @@ credential и доступность требуют отдельного фак�
 
 | Пункт | Результат и проверка | Статус |
 | --- | --- | --- |
-| 1 | Canonical web/Android/iOS build guard и тесты; credential-free 307 для старого API подготовлен | В работе |
+| 1 | Canonical web/Android/iOS build guard и тесты; credential-free proxy для старого API подготовлен | В работе |
 | 2 | Публичная делегация исправна; stale resolver воспроизведён | В работе |
 | 3 | API/frontend d10c2d12 выпущены38633109023/38633113898; runtime readback200; autodeploy включён | Выполнен для исходного main; новый выпуск после CI |
 | 4 | Недостающие credentials/dispatch/relay проверяются | Не завершён |
@@ -72,6 +72,28 @@ credential и доступность требуют отдельного фак�
   клиент/writer не атрибутирован. Данных не перезаписывали и не объединяли.
   Владелец затем явно разрешил направить старые DNS/API в Cloud.ru с сохранением
   Yandex-БД и ресурсов. Подготовлены manual exact-main workflow и credential-free
-  API redirect307 с CORS/preflight и сохранением метода/тела; apply ещё не выполнен.
+  API proxy с CORS/preflight и сохранением метода/тела/Origin; apply ещё не выполнен.
 - Создан отдельный CLOUDRU_BACKUP_ENCRYPTION_KEY без вывода/локального файла;
   backup bucket/проверка восстановления ещё не выполнены.
+
+## Локальная проверка перед PR
+
+- Полный npm run check: frontend2668/2668, API1397 passed/157 standard DB skips,
+  infra294/294, hosting167/167, build прошёл. После проверки браузером заменён
+  междоменный307 на proxy: исходный Origin/session сохраняются; полный финальный
+  check этого варианта запускается отдельно и его результат фиксируется в PR.
+- Изолированный реальный Podman PostgreSQL17: cutover history3/3; отдельный
+  pg_dump/restore fixture без сети/портов сохранил две таблицы, строки, policy и
+  migration history. Общие локальные базы не сбрасывались; production не источник.
+- Chromium и WebKit: реальный cross-origin POST через локальный proxy сохранил
+  body/session/Origin. Старый307 воспроизвёл CORS отказ с Origin:null и не включался.
+- Подготовленный proxy → настоящий Cloud.ru TLS/SNI: health200/release22e08f4e,
+  unauthenticated clients401, CORS capacitor://localhost. Никаких сессий/PII.
+- Relay:5 реальных WS тестов; npm audit relay0 vulnerabilities после grpc-js fix.
+- Новое покрытие ловит разные риски: crypto tamper, private bucket policy,
+  least-privilege env, WS auth-before-billing, HTTP framing/CORS, idempotent
+  cutover. Тяжёлые продуктовые E2E/visual матрицы не расширялись.
+- Automatic API/frontend release main22e08f4e38639750368/38639750407 success;
+  public health подтвердил22e08f4e. Старый Terraform autodeploy явно false/readback.
+- Authenticated test roles, реальные media/voice/AI/push и свежие native bundles
+  всё ещё не проверены. Новые configure/backup/DNS/API workflows не запускались.

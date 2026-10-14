@@ -109,6 +109,11 @@ jobs:
             sleep 1
           done
           sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+          for origin in https://fit-training.ru https://www.fit-training.ru capacitor://localhost https://localhost; do
+            test "$(curl --silent --show-error --max-time 3 --output /dev/null --write-out '%{http_code}' \
+              --request OPTIONS --header "Origin: $origin" --header 'Access-Control-Request-Method: POST' \
+              http://127.0.0.1:18080/v1/clients)" = 204
+          done
           trap - ERR INT TERM
           echo 'Cloud.ru native AI enabled after external model and candidate checks.' >> "$GITHUB_STEP_SUMMARY"
       - name: Remove any unconsumed credential staging files

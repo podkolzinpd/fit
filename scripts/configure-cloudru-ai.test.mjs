@@ -10,6 +10,7 @@ test('enables external AI while preserving exact Cloud.ru database and media set
   assert.ok(next.includes('FIT_AI_FUNCTIONS_ENABLED=true\n'))
   assert.ok(next.includes('CLOUDRU_MEDIA_KEY_SECRET=synthetic-media-key\n'))
   assert.ok(next.includes('DATABASE_USER=fit_api\n'))
+  assert.ok(next.includes('https://www.fit-training.ru'))
   assert.equal(mergeCloudruAiEnv(next, external), next)
 })
 

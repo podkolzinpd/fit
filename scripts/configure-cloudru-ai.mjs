@@ -18,6 +18,9 @@ export function mergeCloudruAiEnv(existing, external) {
   values.set('FIT_AI_FUNCTIONS_ENABLED', 'true')
   values.set('FIT_AI_SUMMARY_GENERATION_DISABLED', 'false')
   values.set('ASSISTANT_PROGRAM_ENABLED', 'true')
+  const origins = (values.get('CORS_ALLOWED_ORIGINS') ?? '').split(/[;,]/).map(value => value.trim()).filter(Boolean)
+  values.set('CORS_ALLOWED_ORIGINS', [...new Set([...origins, 'https://fit-training.ru',
+    'https://www.fit-training.ru', 'capacitor://localhost', 'https://localhost'])].join(','))
   const next = [...values].map(([key, value]) => `${key}=${value}\n`).join('')
   checkCloudruApiEnv(next)
   return next

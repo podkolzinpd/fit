@@ -182,10 +182,20 @@ workflow и вернуть прежние A, если выпуск сертиф�
 
 14.10 ручные API/frontend38633109023/38633113898 выпустили d10c2d12;
 после public release/readiness readback включены оба CLOUDRU autodeploy-флага.
-Production web и native используют `https://api.fit-training.ru`; технический
+Production web использует `https://api.fit-training.ru`; новые native builds
+получили тот же обязательный контракт. Технический
 Yandex origin не принимается production native validator. Старые установленные
 bundles этим не переписываются. Backend provider выбирается DNS/API, не новым
-доменных контрактом. Старые Yandex DNS/API пока не изменены.
+доменных контрактом. Старые Yandex DNS/API пока не изменены; владелец разрешил их совместимость.
+Manual workflow `Route legacy Yandex addresses to Cloud.ru` сначала делает inspect,
+затем меняет только три A/CNAME записи старой зоны и отдельно revision старого API.
+API проксирует в Cloud.ru с сохранением CORS Origin и сессии; credentials/DB
+в image отсутствуют. Междоменный307 отвергнут реальным Chromium-тестом:
+браузер меняет Origin на null. Прокси не повторяет запрос при сетевой ошибке.
+Старые DB/resources/revisions сохраняются; предыдущая revision записана в summary.
+Старая app-session может потребовать повторного входа в Cloud.ru. Это не объединяет
+независимые изменения двух БД. Повторный Yandex Terraform apply может вернуть
+старый writer, поэтому YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED должен оставаться off.
 
 Подготовленные main-only workflows включаются после их CI и ручной приёмки:
 

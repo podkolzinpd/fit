@@ -21,7 +21,7 @@ export function compatibilityRevision(previous, imageUrl) {
   if (previous.containerId !== legacyContainerId || !/^[a-z0-9]{20}$/.test(previous.serviceAccountId ?? '')
     || !/^cr\.yandex\/crp5dt6662a8s2vlt1hm\/api:cloudru-compat-[a-f0-9]{40}$/.test(imageUrl ?? '')) throw new Error('legacy_revision_rejected')
   return { containerId: legacyContainerId, resources: { memory: '134217728', cores: '1', coreFraction: '100' },
-    executionTimeout: '15s', concurrency: '16', serviceAccountId: previous.serviceAccountId,
+    executionTimeout: '180s', concurrency: '16', serviceAccountId: previous.serviceAccountId,
     imageSpec: { imageUrl, environment: {} }, logOptions: { disabled: true }, runtime: { http: {} } }
 }
 
@@ -51,7 +51,7 @@ async function main() {
   const revisions = await json(`${containerBase}/revisions?containerId=${legacyContainerId}&pageSize=100`)
   if (revisions.nextPageToken) throw new Error('legacy_revisions_incomplete')
   const active = (revisions.revisions ?? []).filter(revision => revision.status === 'ACTIVE')
-  if (active.length !== 1) throw new Error('legacy_revision_ambiguous')
+  if (active.length !== 1 || !/^[a-z0-9]{20}$/.test(active[0].id ?? '')) throw new Error('legacy_revision_ambiguous')
   if (mode === 'api') {
     if (!process.env.GITHUB_STEP_SUMMARY) throw new Error('legacy_summary_missing')
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `Previous Yandex API revision retained for rollback: ${active[0].id}\n`)
@@ -74,7 +74,7 @@ async function main() {
   const change = compatibilityDnsChange(recordPage.recordSets ?? [])
   if (mode === 'dns') await completed(await json(`${dnsBase}/${zoneId}:updateRecordSets`, change))
   console.log(JSON.stringify({ event: mode === 'dns' ? 'legacy_dns_routed_to_cloudru' : 'legacy_compatibility_inventory',
-    zoneId, previousRevision: active[0].id, records: change.deletions }))
+    zoneId, previousRevision: active[0].id, records: change.deletions.map(({ name, type, ttl, data }) => ({ name, type, ttl, data })) }))
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
