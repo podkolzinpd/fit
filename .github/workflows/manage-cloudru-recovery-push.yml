@@ -1,0 +1,134 @@
+name: Manage Cloud.ru recovery push
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Inspect recipients or send the approved recovery notification
+        type: choice
+        required: true
+        default: inspect
+        options: [inspect, send]
+      confirmation:
+        description: SEND_FIT_RECOVERY_2026_10_14 for send
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  recovery:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 15
+    env:
+      ACTION: ${{ inputs.action }}
+      RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+      CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+      YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - name: Verify bounded campaign on trusted main runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          case "$ACTION" in
+            inspect) test -z "$RECOVERY_CONFIRMATION" ;;
+            send) test "$RECOVERY_CONFIRMATION" = SEND_FIT_RECOVERY_2026_10_14 ;;
+            *) exit 1 ;;
+          esac
+          sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          running=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$running" =~ ^[a-f0-9]{40}$ ]]
+          test "$(sudo podman inspect --format '{{.ImageName}}' fit-api-stage)" = "localhost/fit-api:$running"
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 20 \
+            http://127.0.0.1:18080/ready >/dev/null
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read existing push transport without changing Yandex resources
+        if: inputs.action == 'send'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output "$RUNNER_TEMP/install-yc.sh"
+          bash "$RUNNER_TEMP/install-yc.sh" -i "$RUNNER_TEMP/yandex-cloud" -n
+          echo "$RUNNER_TEMP/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Exchange existing sender identity
+        if: inputs.action == 'send'
+        run: scripts/yandex-github-oidc.sh
+      - name: Inspect or send only the recovery campaign
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          runtime_file=$(mktemp "$RUNNER_TEMP/fit-recovery-push.XXXXXX")
+          response_file=$(mktemp "$RUNNER_TEMP/fit-recovery-probe.XXXXXX")
+          trap 'rm -f "$runtime_file" "$response_file"' EXIT
+          for name in MIGRATION_DATABASE_HOST MIGRATION_DATABASE_PORT MIGRATION_DATABASE_NAME MIGRATION_DATABASE_USER MIGRATION_DATABASE_PASSWORD; do
+            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+            echo "::add-mask::$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" >> "$runtime_file"
+          done
+          test "$(jq -r '.MIGRATION_DATABASE_HOST' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 10.70.10.67
+          test "$(jq -r '.MIGRATION_DATABASE_PORT' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 5432
+          test "$(jq -r '.MIGRATION_DATABASE_NAME' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit
+          test "$(jq -r '.MIGRATION_DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_owner
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nRECOVERY_CONFIRMATION=%s\n' "$RECOVERY_CONFIRMATION" >> "$runtime_file"
+          running=$(cat /opt/fit/RUNNING_SHA)
+          run_campaign() {
+            sudo podman run --rm --read-only --network=host --cap-drop=ALL \
+              --security-opt=no-new-privileges --env-file "$runtime_file" \
+              --env RECOVERY_ACTION="$1" \
+              --volume "$GITHUB_WORKSPACE/services/api/src/cloudru-recovery-push.ts:/app/dist/cloudru-recovery-push.ts:ro" \
+              "localhost/fit-api:$running" node --experimental-strip-types dist/cloudru-recovery-push.ts
+          }
+          if test "$ACTION" = send; then
+            metadata=$(yc lockbox secret get --name fit-send-push-notifications-secrets \
+              --folder-id "$YC_FOLDER_ID" --format json)
+            secret_id=$(jq -er '.id' <<<"$metadata")
+            version_id=$(jq -er '.current_version.id' <<<"$metadata")
+            dispatch_secret=$(yc lockbox payload get --id "$secret_id" \
+              --version-id "$version_id" --key PUSH_DISPATCH_SECRET)
+            echo "::add-mask::$dispatch_secret"
+            [[ "$dispatch_secret" =~ ^[A-Za-z0-9_-]{32,}$ ]]
+            function_url=$(yc serverless function get --name fit-send-push-notifications \
+              --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
+            [[ "$function_url" =~ ^https://functions\.yandexcloud\.net/[a-z0-9]+$ ]]
+            # Authenticated malformed request checks transport before any enqueue.
+            # It contains no subscriptions and cannot send a notification.
+            status=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+              --output "$response_file" --write-out '%{http_code}' --request POST \
+              --header "x-push-dispatch-secret: $dispatch_secret" \
+              --header 'Content-Type: application/json' --data '{}' "$function_url")
+            test "$status" = 400
+            jq -e '.error == "notifications_required"' "$response_file" >/dev/null
+            printf 'PUSH_FUNCTION_URL=%s\nPUSH_DISPATCH_SECRET=%s\n' \
+              "$function_url" "$dispatch_secret" >> "$runtime_file"
+            run_campaign enqueue | tee -a "$GITHUB_STEP_SUMMARY"
+            run_campaign dispatch | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          run_campaign inspect | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo 'Title: ФИТ снова работает 💪'
+            echo 'Body: Всё починили. Возвращайтесь к тренировкам!'
+            echo 'Click: /'
+            echo 'Sent means accepted by the Web Push provider, not read by the user.'
+          } >> "$GITHUB_STEP_SUMMARY"
