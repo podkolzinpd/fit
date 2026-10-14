@@ -37,7 +37,10 @@ async function main() {
     || config.user !== 'fit_owner' || config.port !== 5432) throw new Error('email_audit_target_required')
   const keys = await getJson(`https://api.supabase.com/v1/projects/${ref}/api-keys`, token)
   if (!Array.isArray(keys)) throw new Error('email_audit_keys_invalid')
-  const key = keys.find(item => item.name === 'service_role')?.api_key
+  const entries = keys as unknown[]
+  const entry = entries.find(item => typeof item === 'object' && item !== null
+    && 'name' in item && item.name === 'service_role') as Record<string, unknown> | undefined
+  const key = entry?.api_key
   if (typeof key !== 'string' || !key) throw new Error('email_audit_key_missing')
   const users: LegacyUser[] = []
   const seen = new Set<string>()
