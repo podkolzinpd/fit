@@ -1478,13 +1478,18 @@ runner, а не превращает skipped cases в зелёный job.
 Не передавайте пустой grep и не обновляйте digest без повторного аудита tags.
 План/приёмка: `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`.
 
-### Разделённая Fit Lime acceptance (14 октября 2026)
+### Разделённая Fit Lime acceptance (обновлено 15 октября 2026)
 
-`e2e/fit-lime.behavior.spec.ts` содержит 94 поведенческих случая без screenshot,
+`e2e/fit-lime.behavior.spec.ts` содержит 98 поведенческих случаев без screenshot,
 CSS/font/geometry assertions. `e2e/trainer-schedule-v2.visual.spec.ts` содержит
-522 визуальных и смешанных interaction/state случая. Общие page-scoped моки
+526 визуальных и смешанных interaction/state случаев. Общие page-scoped моки
 находятся в `e2e/fit-lime-fixtures.ts`; это browser UI acceptance, не проверка
-реальной облачной БД. Все прежние 616 случаев сохранены в обоих engine.
+реальной облачной БД. Сохранены уникальные проверки исходного набора616;
+после выделения4 behavior cases оплат/шаблонов и включения4 новых случаев
+client empty-entry изPR1631 полный набор624 в обоих engine.
+Их25 visual-конфигураций сохраняют geometry/keyboard/focus/save/copy/overflow,
+но не повторяют полные edit/delete/payment и preflight/reload/replay цепочки.
+Mapping и локальный замер: `docs/design/FINANCE_TEMPLATE_TEST_DEDUPLICATION_20261015.md`.
 
 Full CI запускает behavior 1/1 и visual 1/4…4/4 независимо в Chromium и WebKit.
 Scoped feature-PR использует behavior 1/1 + visual 1/1 (4 jobs вместо 10),

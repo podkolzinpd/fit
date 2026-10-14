@@ -1,10 +1,92 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import type { WorkoutExercise, WorkoutExerciseDraft } from '../src/shared/domain'
+import type { WorkoutExercise, WorkoutExerciseDraft, WorkoutTemplateDraft } from '../src/shared/domain'
+import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/repositories/trainer-finance.repository'
 import { computeClientStats } from '../src/data/repositories/workout-rules'
 import { workoutHomeSummaries } from '../src/data/repositories/workout-home'
 import { localDate } from '../src/shared/local-date'
 
 // Synthetic, page-scoped mocks shared by behavior and visual acceptance.
+
+export async function mockFinancePaymentLifecycle(page: Page) {
+  const ledger: TrainerFinanceClientBundle = { clientId, packages: [], payments: [], sessions: [] }
+  const receiptIds: string[] = []
+  const updateTotals = () => {
+    const service = ledger.packages[0]!
+    service.paidCents = ledger.payments.filter((payment) => !payment.voidedAt).reduce((sum, payment) => sum + payment.amountCents, 0)
+    service.dueCents = Math.max(0, service.priceCents - service.paidCents)
+    service.paymentStatus = service.dueCents === 0 ? 'paid' : service.paidCents ? 'partial' : 'unpaid'
+  }
+  await page.route(`**/v1/clients/${clientId}/finance`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ finance: ledger }) }))
+  await page.route(`**/v1/clients/${clientId}/finance/packages`, async (route) => {
+    const draft = route.request().postDataJSON() as TrainerFinancePackageDraft
+    expect(draft.openingReceivedOn).toBe('2026-08-27')
+    expect(draft.requestId).toBeTruthy()
+    ledger.packages.push({ ...draft, id: newWorkoutId, clientId, trainerId, sessionsUsed: 0, sessionsRemaining: draft.sessionsTotal, paidCents: draft.openingPaidCents, dueCents: draft.priceCents - draft.openingPaidCents, packageStatus: 'active', paymentStatus: 'partial', closedAt: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' })
+    ledger.payments.push({ id: messageId, packageId: newWorkoutId, amountCents: draft.openingPaidCents, receivedOn: draft.openingReceivedOn!, source: 'opening', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' })
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ package: ledger.packages[0] }) })
+  })
+  await page.route(`**/v1/finance/packages/${newWorkoutId}/payments`, async (route) => {
+    const draft = route.request().postDataJSON() as TrainerFinancePaymentDraft
+    expect(draft.requestId).toBeTruthy()
+    receiptIds.push(draft.requestId!)
+    const payment = { ...draft, id: `20000000-0000-4000-8000-${String(receiptIds.length).padStart(12, '0')}`, packageId: newWorkoutId, source: 'manual' as const, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' }
+    ledger.payments.push(payment)
+    updateTotals()
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ payment }) })
+  })
+  await page.route('**/v1/finance/payments/*', async (route) => {
+    const payment = ledger.payments.find((item) => item.id === new URL(route.request().url()).pathname.split('/').pop())!
+    if (route.request().method() === 'DELETE') payment.voidedAt = '2026-10-07T00:00:00Z'
+    else { Object.assign(payment, route.request().postDataJSON()); payment.version += 1 }
+    updateTotals()
+    await route.fulfill({ status: route.request().method() === 'DELETE' ? 204 : 200, contentType: 'application/json', body: route.request().method() === 'DELETE' ? '' : JSON.stringify({ payment }) })
+  })
+  return { ledger, receiptIds }
+}
+
+// Prepares the final visual state; business transitions are tested through UI
+// in behavior acceptance, not reproduced for every theme/viewport.
+export function seedPaidFinanceFixture(ledger: TrainerFinanceClientBundle) {
+  const opening = ledger.payments[0]!
+  ledger.payments = [opening, {
+    ...opening, id: '20000000-0000-4000-8000-000000000002',
+    amountCents: 2_000_000, receivedOn: '2026-09-24', source: 'manual',
+  }]
+  Object.assign(ledger.packages[0]!, {
+    paidCents: 3_000_000, dueCents: 0, paymentStatus: 'paid',
+  })
+}
+
+export async function mockTemplateUncertainSave(page: Page) {
+  const rows = new Map<string, object>()
+  const commands: Array<{ draft: WorkoutTemplateDraft; expectedVersion: number | null }> = []
+  await page.route('http://127.0.0.1:4100/v1/workout-templates', async (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { templates: [...rows.values()] } })
+    const command = route.request().postDataJSON() as typeof commands[number]
+    commands.push(command)
+    const row = rows.get(command.draft.id) ?? { ...command.draft, trainerId, notes: command.draft.notes ?? null, version: 1, createdAt: '2026-10-08T00:00:00Z', updatedAt: '2026-10-08T00:00:00Z' }
+    rows.set(command.draft.id, row)
+    if (commands.length === 1) return route.abort('connectionreset')
+    return route.fulfill({ json: { template: row } })
+  })
+  return { rows, commands }
+}
+
+export async function copyTemplateDiagnostic(page: Page) {
+  const alert = page.getByRole('alert')
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
+    configurable: true, value: {
+      writeText: (text: string) => {
+        localStorage.setItem('template-test-diagnostics', text)
+        return Promise.resolve()
+      },
+    },
+  }))
+  await alert.getByRole('button', { name: 'Скопировать диагностику' }).click()
+  await expect(alert.getByRole('status')).toHaveText('Скопировано')
+  return page.evaluate(() => localStorage.getItem('template-test-diagnostics'))
+}
+
 export const trainerId = '10000000-0000-4000-8000-000000000001'
 
 export const clientId = '10000000-0000-4000-8000-000000000002'
