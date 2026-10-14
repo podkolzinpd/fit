@@ -129,3 +129,13 @@ Fit Lime, весь новый main snapshot сохранён. Финальный
 frontend2670/API1387+156 стандартныхlocalDBskip/media2/infra276/calendar12/
 hosting158/lint/typecheck/build. Specs/guards не менялись относительно
 проверенного b35, полный CI всё ещё обязателен.
+
+Удалённая ветка обновлена другим актором normal merge main2048ffd8 (#1638).
+Protected tests/digest не изменились; local fast-forward сохранил эту историю.
+Targeted CI/scope policy59/59 passed. Старый run38650158092 штатно отменён новым
+head до окончания Chromium shard3; его WebKit624 unique/1 старый InBody retry/
+3 CDP skips, affected29/retry0; partial Chromium493 unique/1 старый touch-swipe
+retry, affected29/retry0. Это не успешный полный CI, отсутствующий131-case shard
+не засчитывается. Новый exact-head CI/merge записываются вPR1639, без повторного
+browser push только ради финальной документации. Upstream snapshot121→120
+достигнут соединением двух абзацев, без удаления фактов.
