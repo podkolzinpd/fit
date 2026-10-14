@@ -61,9 +61,44 @@ Credentials checkout не сохраняются. Только versioned source 
 Workflow собирает exact-main образ, проверяет кандидата на `127.0.0.1:18082`,
 переключает runtime на `127.0.0.1:18080`, проверяет `/ready` и пишет
 `/opt/fit/RUNNING_SHA`; при неудаче после переключения пытается вернуть прежний
-образ. Migrations, DNS и публичный listener он не меняет. Runtime берёт
+образ. До запуска кандидата он применяет только новые numbered SQL-миграции
+из того же exact-main образа; DNS и публичный listener не меняет. Runtime берёт
 существующий `/opt/fit/secrets/api.env` и отказывается выпускать ревизию, если
 AI-функции там не выключены.
+
+Миграции выпуска запускает `dist/cloudru-release-migrations.js` в одноразовом
+read-only Podman-контейнере без capabilities/публичного порта. Только этот
+контейнер получает `MIGRATION_DATABASE_*` владельца `fit_owner` из существующего
+`CLOUDRU_STAGE_DATABASE_CONFIG_JSON`; API продолжает получать только свой
+`/opt/fit/secrets/api.env`. Target жёстко ограничен `10.70.10.67:5432/fit` с
+прежним согласованным `SSL_MODE=require`: TLS шифруется, CA/hostname в этом
+режиме не проверяются. Yandex, OIDC и source snapshot в этом выпуске не нужны.
+
+Перед apply проверяются owner/database, существующая непустая история
+`app_private.fit_migrations`, её PK и соответствие истории файлам образа.
+Это не initial bootstrap, не restore и не синхронизация данных между облаками.
+Стандартный advisory lock node-pg-migrate удерживается одной сессией непрерывно
+при планировании, backup и apply; конкурирующий migrator получает ошибку.
+Pending SQL выполняется одной транзакцией, без fake/down/no-lock. Явные
+transaction boundaries в Up отвергаются. Timeout SQL120s/lock3s ограничивает
+влияние DDL на работающий API. При отсутствии pending SQL backup/apply не нужны.
+
+Если изменения есть, до apply PostgreSQL17 `pg_dump` сохраняет custom archive
+`/opt/fit/db-backups/<SHA>/<run-id>-<attempt>/before-migrations.dump`;
+`pg_restore --list` проверяет его читаемость. Каталоги root0700, archive0600,
+backup не перезаписывается, не публикуется в GitHub artifacts и не удаляется
+автоматически. Это локальная аварийная копия на той же VM, не offsite backup
+и не доказательство восстановления production. Контролировать диск; retention
+и offsite/restore drill — отдельные задачи. Owner env root0600 и одноразовый
+контейнер удаляются EXIT trap; после SIGKILL/потери VM может понадобиться
+проверка оставшегося защищённого env/container. Копии данных не трогать.
+
+Ошибка backup/миграции останавливает выпуск до кандидата и замены старого API.
+После success проверяется отсутствие pending. Ошибка API возвращает предыдущий
+образ, **не** выполняет down/restore БД: forward-миграции обязаны сохранять
+совместимость со старым API. Первое ручное выполнение на зелёном текущем main
+проверяется до включения `CLOUDRU_API_AUTODEPLOY_ENABLED=true`; флаг запускает
+тот же gated workflow после успешного CI `main`, не отдельный apply.
 
 `Prepare Cloud.ru frontend without public routing` также требует зелёный CI
 текущего `main`; его автоматический режим требует
@@ -1412,7 +1447,7 @@ feature-файлами используют `@lime-critical` + tags каждог
 в обоих прежних браузерах. Неизвестные/shared/CSS/auth/navigation и смешанные
 frontend/API изменения требуют full. Точный allowlist и expiry находятся в
 `scripts/fit-lime-ci-scope.mjs`; с 26.10.2026 00:00 МСК — автоматически full.
-Неверный clock, изменившийся SHA256 проверенного spec или неполный inventory
+Неверный clock, изменившийся SHA256 обоих spec/общей fixture или неполный inventory
 также возвращают full либо останавливают job, а не пропускают проверку.
 
 На main и ручном CI выполняется полный Fit Lime набор, когда browser gate
@@ -1425,6 +1460,31 @@ Playwright команда или `FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-
 runner, а не превращает skipped cases в зелёный job.
 Не передавайте пустой grep и не обновляйте digest без повторного аудита tags.
 План/приёмка: `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`.
+
+### Разделённая Fit Lime acceptance (14 октября 2026)
+
+`e2e/fit-lime.behavior.spec.ts` содержит 94 поведенческих случая без screenshot,
+CSS/font/geometry assertions. `e2e/trainer-schedule-v2.visual.spec.ts` содержит
+522 визуальных и смешанных interaction/state случая. Общие page-scoped моки
+находятся в `e2e/fit-lime-fixtures.ts`; это browser UI acceptance, не проверка
+реальной облачной БД. Все прежние 616 случаев сохранены в обоих engine.
+
+Full CI запускает behavior 1/1 и visual 1/4…4/4 независимо в Chromium и WebKit.
+Scoped feature-PR использует behavior 1/1 + visual 1/1 (4 jobs вместо 10),
+сохраняя union выбранных tags без дробления маленького набора.
+Required `e2e` требует успеха всей matrix; main/manual покрывают полный union.
+Локальная команда выше по-прежнему запускает оба spec; точный запуск части:
+`FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-lime-ci.mjs <project> full '' visual 1/4`
+или `... <project> full '' behavior 1/1`. Нужны прежние fixture-env/fonts.
+Временный feature scope выбирается до разбиения; expiry и allowlist прежние.
+После явного аудита переноса digest защищает оба spec и fixture.
+
+Каждый job сохраняет `fit-lime-timings-<engine>-<lane>-<job-index>` на 7 дней,
+включая успешный прогон. JSON содержит source location/case hash, duration,
+retry/status без названий, payload, ошибок и attachments; top-10 выводится в
+лог. Failure diagnostics имеют отдельное уникальное имя на каждую часть.
+Ускорение требует больше параллельных runners; очередь GitHub и setup могут
+ограничить выигрыш. План: `docs/design/FIT_LIME_ACCEPTANCE_SPLIT_20261014.md`.
 
 - GitHub branch protection для `main`: PR only, обязательные `app`, `database`, `e2e`.
 - Зелёный CI и воспроизводимый `supabase db reset`.

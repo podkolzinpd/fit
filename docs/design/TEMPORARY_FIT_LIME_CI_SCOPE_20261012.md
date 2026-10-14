@@ -61,3 +61,12 @@
 Baseline CI38275172698: Chromium616 passed/24,8min; WebKit612 passed,
 3 engine-specific skips/1 flaky/32,2min. Эти прежние skips/flaky не удаляются
 и не выдаются за исправленные этим PR.
+
+## Повторный аудит разделения — 14.10.2026
+
+По новому прямому решению владельца acceptance разделяется на behavior94 и
+visual/mixed522; общий inventory616/engine и все235 callback bodies прежние.
+Новый явный digest защищает оба spec и общую fixture. В full визуальная часть
+имеет4 shards, в scoped — один; behavior отдельно в обоих режимах. Окно,
+allowlist, tags, assertions и release gates не расширяются и не ослабляются.
+Доказательства: `FIT_LIME_ACCEPTANCE_SPLIT_20261014.md`.
