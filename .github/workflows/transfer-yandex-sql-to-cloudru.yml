@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Target preflight, schema plus rollback-only SQL rehearsal, or guarded apply'
+        description: 'Read-only parity audit, empty-target preflight/rehearsal, or guarded initial apply'
         required: true
         type: choice
         default: preflight
         options:
+          - audit
           - preflight
           - dry-run
           - apply
@@ -50,7 +51,9 @@ jobs:
           test "$(hostname)" = fit-stage-app
           sudo systemctl is-active --quiet \
             actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
-          sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
+          if [[ "${{ inputs.mode }}" != audit ]]; then
+            sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
+          fi
 
       - name: Check out exact main
         uses: actions/checkout@v4
@@ -77,6 +80,7 @@ jobs:
           test "$(jq -r '.DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_api
 
       - name: Verify target TLS identities and absence of application rows
+        if: inputs.mode != 'audit'
         shell: bash
         run: |
           set -euo pipefail
@@ -134,7 +138,7 @@ jobs:
         run: echo 'No source or target data changed.'
 
       - name: Validate backup and apply gates
-        if: inputs.mode != 'preflight'
+        if: inputs.mode == 'dry-run' || inputs.mode == 'apply'
         shell: bash
         env:
           BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
@@ -169,7 +173,7 @@ jobs:
         run: scripts/yandex-github-oidc.sh
 
       - name: Apply target schema and transfer verified SQL snapshot
-        if: inputs.mode != 'preflight'
+        if: inputs.mode == 'dry-run' || inputs.mode == 'apply'
         shell: bash
         run: |
           set -euo pipefail
@@ -219,3 +223,61 @@ jobs:
               --command 'select count(*) from public.profiles')
           test "$profile_count" -gt 0
           echo "Cloud.ru SQL snapshot applied; profiles=$profile_count. External routing unchanged."
+
+      - name: Read-only SQL parity and private runtime audit
+        if: inputs.mode == 'audit'
+        shell: bash
+        run: |
+          set -euo pipefail
+          running=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$running" =~ ^[0-9a-f]{40}$ ]]
+          test "$(sudo podman inspect --format '{{.ImageName}}' fit-api-stage)" = "localhost/fit-api:$running"
+          test "$(sudo podman port fit-api-stage 8080/tcp)" = 127.0.0.1:18080
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 30 \
+            http://127.0.0.1:18080/health >/dev/null
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 30 \
+            http://127.0.0.1:18080/ready >/dev/null
+          status=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+            --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/v1/profile)
+          test "$status" = 401
+          sudo podman exec fit-api-stage node -e '
+            const valid = process.env.YANDEX_ONLY_AUTH_ENABLED === "true" &&
+              process.env.YANDEX_NATIVE_REGISTRATION_ENABLED === "true" &&
+              Boolean(process.env.YANDEX_OAUTH_CLIENT_ID) &&
+              process.env.CORS_ALLOWED_ORIGINS?.split(",").includes("https://fit-training.ru") &&
+              process.env.FIT_AI_FUNCTIONS_ENABLED === "false" &&
+              process.env.FIT_AI_SUMMARY_GENERATION_DISABLED === "true";
+            if (!valid) process.exit(1);
+            console.log("Private API auth/CORS/AI-off configuration verified; no credential values emitted.");
+          '
+          headers=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+            --request OPTIONS --header 'Origin: https://fit-training.ru' \
+            --header 'Access-Control-Request-Method: POST' \
+            --header 'Access-Control-Request-Headers: content-type,authorization' \
+            --dump-header - --output /dev/null http://127.0.0.1:18080/v1/auth/yandex/session)
+          tr -d '\r' <<<"$headers" | grep -Eq '^HTTP/[0-9.]+ 204( |$)'
+          tr -d '\r' <<<"$headers" | grep -Fqi 'access-control-allow-origin: https://fit-training.ru'
+          echo "Private API health/ready/401/CORS verified; running revision=$running."
+          migration_url=$(yc serverless container get \
+            --name fit-stage-migration --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          umask 077
+          audit_env=$(mktemp "$RUNNER_TEMP/fit-sql-audit.XXXXXX")
+          trap 'rm -f "$audit_env"' EXIT
+          for name in MIGRATION_DATABASE_HOST MIGRATION_DATABASE_PORT MIGRATION_DATABASE_NAME MIGRATION_DATABASE_USER MIGRATION_DATABASE_PASSWORD; do
+            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" >>"$audit_env"
+          done
+          {
+            printf 'MIGRATION_DATABASE_SSL_MODE=require\n'
+            printf 'FIT_SQL_SOURCE_URL=%s\n' "${migration_url%/}"
+            printf 'YC_IAM_TOKEN=%s\n' "$YC_IAM_TOKEN"
+          } >>"$audit_env"
+          # Existing immutable runtime image supplies DB/manifest libraries;
+          # mount only this reviewed audit entrypoint, without rebuilding API.
+          sudo podman run --rm --read-only --network=host --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$audit_env" \
+            --volume "$GITHUB_WORKSPACE/services/api/src/cloudru-sql-audit.ts:/app/dist/cloudru-sql-audit.ts:ro" \
+            "localhost/fit-api:$running" node --experimental-strip-types dist/cloudru-sql-audit.ts
