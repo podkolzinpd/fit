@@ -79,3 +79,32 @@ Targeted12/12 покрывают порядок SQL, фактическую read
 причина08P01 окончательно не подтверждена до успешного подключения.
 Повторный полный npm run check exit0: frontend2659/API1360+142DB штатно
 skipped, infra253/hosting137/build; targeted12/12, lint/typecheck/diff passed.
+
+## Подтверждённый live результат — 14 октября, 12:28 МСК
+
+PR1619 merged/ad1a77e1 после полного CI38541726506; main CI38542398320
+success. Read-only audit38542399640 завершился exit2/status different, не
+техническим сбоем: source63tables/51438rows, target67tables/51438rows. Все63
+исходные таблицы совпали по count и SHA-256; source before/after стабилен.
+Новый target connect acquired1/acquireErrors0, readonly readback и весь
+manifest прошли. После удаления audit startup parameters08P01 не повторился.
+
+Единственные различия — четыре дополнительные target-таблицы, все пустые:
+app_private.nutrition_food_catalog, app_private.nutrition_native_bindings,
+public.nutrition_consents, public.nutrition_entries. Они точно соответствуют
+additive миграциям142/143; не являются потерянными исходными строками. Их
+удаление/принудительное игнорирование red audit не выполнялось. Полная schema
+parity этим data-manifest не доказана. VITE_NUTRITION_ENABLED отсутствует в
+repository и fit-frontend-candidate, workflow default=false; target runtime
+NUTRITION_ENABLED напрямую этим запуском не инспектировался.
+
+API447c283e повторно подтвердил health/ready/401/auth/CORS204/AI-off, но это
+не real OAuth/authorized-user E2E. Public ingress runs по-прежнему отсутствуют;
+NS Yandex/root158.160.171.31/api A отсутствует. Прямой VM HTTPS ранее refused;
+сертификаты/CA terms/DNS/runtime/data/maintenance не изменены этой задачей.
+Media checksums/freshness этим SQL-аудитом не перепроверялись.
+
+На этот момент повторный SQL import не обоснован. Это не вечная гарантия:
+в согласованном cutover window нужна свежая проверка и контроль всех writers,
+без blind initial apply на непустую цель. Публичный HTTPS и реальный OAuth
+остаются отдельными гейтами/разрешениями; две БД не получают dual-write.
