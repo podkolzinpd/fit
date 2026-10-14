@@ -51,6 +51,8 @@ pg_dump/pg_restore с сохранением исходных fixture rows. Пр
 После включения main3b910679 полный check повторён: frontend2659/API1387 и157
 стандартно skipped DB tests/infra263/hosting137/build —exit0; свежий API check
 после обработки idle-connection ошибок тоже1387 passed.
+После включения main4392b1a9 полный npm run check снова завершился exit0;
+конфликт snapshot устранён, изменения CI из PR1624 сохранены.
 Новой схемы/SQL migrations нет, local:verify не запускался вместо изолированного
 clean-chain. PR/main CI и production/manual/autoflag ещё гейты.
 В CI real backup/restore использует уже существующий PostgreSQL17 service;
