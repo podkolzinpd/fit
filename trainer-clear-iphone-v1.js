@@ -28,5 +28,5 @@
       <small class="tc-review">Тренер проверяет и адаптирует план.</small></div><div class="tc-actions tc-ai-actions">${button('Добавить в расписание')}${button('Изменить условия',true)}</div>`
   };
   function make(name,thumb=false){const div=document.createElement('div');div.className='tc-screen tc-'+name;div.innerHTML=screens[name];if(thumb)div.querySelectorAll('video').forEach(v=>{const i=document.createElement('img');i.src=v.poster;i.alt='';v.replaceWith(i);});const phone=document.createElement('div');phone.className='fit-trainer-iphone';phone.innerHTML='<div class="fit-device-status"><span>9:41</span><span>▮▮▮ ▰</span></div><div class="fit-device-island"></div><div class="fit-device-home"></div>';phone.append(div);return phone;}
-  window.FIT_TRAINER_CLEAR={mount(proof,figures){const names=['client','ai','finance','marketplace'];names.forEach((name,i)=>{proof.querySelector('.m-proof-'+name+' .m-proof-window').replaceChildren(make(name));figures[i].querySelector('.m-screen-window').replaceChildren(make(name,true));});}};
+  window.FIT_TRAINER_CLEAR={mount(proof,figures,names=['client','ai','finance','marketplace']){names.forEach((name,i)=>{proof.querySelector('.m-proof-'+name+' .m-proof-window').replaceChildren(make(name));figures[i].querySelector('.m-screen-window').replaceChildren(make(name,true));});}};
 })();

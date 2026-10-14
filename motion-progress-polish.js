@@ -39,7 +39,7 @@
     ['Для клиента','Для тренера','Масштаб рынка','Вся идея'],
     ['Жители России','15–59 лет','Занимаются спортом','Аудитория Fit','Товары и одежда','Фитнес-услуги','Секции и питание','Устройства и онлайн','Весь рынок'],
     ['Разные приложения','Собираем вокруг Fit','Концепция развития'],
-    ['Весь маршрут','Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск клиентов'],
+    ['Весь маршрут','Поиск клиентов','Расписание и оплата','Клиенты и связь','Программа с ИИ'],
     ['Все возможности','Голосом или текстом','Слова → упражнения','План','Выполнение','Завершение','Было → стало','Карта тела','Все возможности'],
     ['14 сентября','20 сентября','4 октября','Записи тренировок','Итог и методика'],
     ['Тренеры и клиенты','Яндекс Плюс','Экосистема Яндекса','Обучение тренеров','Спортивные события','Все каналы'],
@@ -92,8 +92,10 @@
   const trainer=scope[4], gallery=q('.content>div:last-child',trainer), trainerCopy=q('.content>div:first-child',trainer);
   trainer.classList.add('m-trainer-lime','m-trainer-four','m-trainer-approved');
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
-  const trainerScreens=['client','ai','finance','marketplace'];
-  const trainerCaptions=['Клиент и связь','Программа с ИИ','Расписание и финансы','Поиск клиентов'];
+  const trainerScreens=['marketplace','finance','client','ai'];
+  const trainerCaptions=['Поиск клиентов','Расписание и оплата','Клиенты и связь','Программа с ИИ'];
+  const trainerBlocks=qa(':scope>div',trainerCopy);
+  [3,2,0,1].forEach(i=>trainerCopy.append(trainerBlocks[i]));
   gallery.replaceChildren();
   trainerScreens.forEach((name,i)=>{const f=document.createElement('figure');f.innerHTML=`<div class="m-screen-window"><img src="assets/trainer-approved/${name}.png" alt="Иллюстрация сценария Fit: ${trainerCaptions[i]}. Демонстрационные данные."></div><figcaption><span>0${i+1}</span> ${trainerCaptions[i]}</figcaption>`;gallery.append(f);});
   const figures=qa('figure',gallery);
@@ -102,7 +104,7 @@
     const panel=document.createElement('figure');panel.className='m-proof-panel';
     const win=document.createElement('div');win.className='m-proof-window';win.append(q('img',f).cloneNode());panel.append(win);
     panel.classList.add(`m-proof-${trainerScreens[i]}`);
-    if(i===1){
+    if(trainerScreens[i]==='ai'){
       const video=document.createElement('video');video.className='m-trainer-exercise-video';
       video.src='assets/trainer-approved/ai.mp4';video.poster='assets/trainer-approved/ai.png';
       video.muted=true;video.loop=true;video.playsInline=true;video.preload='metadata';
@@ -113,7 +115,7 @@
     }
     proof.append(panel);
   });gallery.append(proof);
-  window.FIT_TRAINER_CLEAR.mount(proof,figures);
+  window.FIT_TRAINER_CLEAR.mount(proof,figures,trainerScreens);
   const route=document.createElement('div');route.className='m-route';route.innerHTML='<span></span>';trainer.append(route);
   // Concept/demonstration status remains in alt text and presenter notes, not in
   // the visible footer. The user approved these four visual scenarios in chat.
@@ -290,7 +292,7 @@
       });
       qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus?'1':'.7');
       q('span',route).style.width=(focus<0?100:(focus+1)/4*100)+'%';
-      if(focus===1&&!document.hidden)qa('video',proof).forEach(video=>video.play().catch(()=>{}));
+      if(trainerScreens[focus]==='ai'&&!document.hidden)qa('video',proof).forEach(video=>video.play().catch(()=>{}));
     }
     if(s===client)renderClient(staticMode?8:scene,previousScene,motion&&!staticMode);
     updateToolbar();
