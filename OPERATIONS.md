@@ -130,7 +130,27 @@ Promotion сохраняет previous current/config/systemd unit, провер�
 файлы/указатель, перезапускает ранее активный stage и завершает job с ошибкой.
 Первый неудачный install убирает только созданные pointer/config/unit; releases
 и backups сохраняются. Failed rollback явно сообщается; SIGKILL/потеря VM
-не покрываются. Retention candidates/backups пока не настроена: проверять диск.
+не покрываются.
+
+Диск self-hosted runner обслуживает shell-only workflow **Maintain Cloud.ru
+runner disk**. Он не использует `actions/checkout`/`setup-node`, поэтому может
+запуститься даже когда свободного места недостаточно для скачивания GitHub
+Action. Ручной `inspect` только выводит `df`, inode, размеры строго известных
+каталогов и `podman system df`. Ручной `apply` требует подтверждение
+`APPLY_CLOUDRU_RUNNER_RETENTION`; тот же bounded apply запускается ежедневно в
+05:17 МСК под общим lock `cloudru-stage-vm`.
+
+Retention сохраняет SHA работающего API, подготовленный SHA, образы всех
+контейнеров и три последних API release SHA; для frontend сохраняются текущий
+candidate и три последних candidate. Удаляются только прошедшие строгую
+проверку старые `/opt/fit/releases/<sha>`, frontend candidates и их
+`localhost/fit-api:<sha>` tags, затем dangling image cache и воспроизводимые
+GitHub Actions/Node tool caches. Volumes, контейнеры, media, secrets и
+`/opt/fit/db-backups` не очищаются. После apply повторно проверяются оба current
+pointer, RUNNING_SHA, API/frontend loopback smoke и минимум 2 ГБ свободного
+места. Если проверка не проходит, workflow завершается ошибкой; удалённые
+артефакты восстанавливаются только новой сборкой, поэтому защищённые rollback
+версии являются обязательной границей.
 Unit/refusal/rollback входят в npm run frontend:hosting:test. Real Nginx:
 node --test scripts/cloudru-frontend-nginx.integration.test.mjs через Podman,
 без production URL/БД. Это hosting-проверка, не пользовательский OAuth E2E.
