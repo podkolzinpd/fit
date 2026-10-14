@@ -17,7 +17,8 @@ export type GoalCriteriaSuggestionResponse = {
 }
 
 const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'
-const isLocalSupabase = import.meta.env.DEV && typeof import.meta.env.VITE_SUPABASE_URL === 'string'
+const isLocalSupabase = (import.meta.env.DEV || import.meta.env.MODE === 'development')
+  && typeof import.meta.env.VITE_SUPABASE_URL === 'string'
   && import.meta.env.VITE_SUPABASE_URL.includes('127.0.0.1:54321')
 
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {

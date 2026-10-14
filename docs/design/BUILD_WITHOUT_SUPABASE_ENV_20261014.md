@@ -58,3 +58,14 @@ full check повторён успешно. Production26 и typecheck прове
 После rebase maind10c2d12: infra:policy275/275 иhosting158/158 passed.
 Изменения main — runner retention workflow/tests/docs/package script; frontend
 source и auth bundle прежние. Полный CI подтверждается в связанном PR.
+
+Финальный review: Vite build --mode development имеет PROD=true. Release guard
+по PROD заменён явной allowlist development/test; другие modes fail-closed.
+URL проверяется как локальный даже при DEV=false. Добавлены четыре контракта
+local native/remote deny/unknown mode; локальный parser выбирает Edge Function
+для explicit development. Release production build по-прежнему без env/SDK.
+
+Финальный mode fix: targeted47/47 иfullcheck2668frontend/1387API+156DBskip/
+infra275/hosting158/build exit0. Реальные Vite build production иdevelopment
+прошли:12 release JS безsynthetic legacy values; development native artifact
+сохраняет явно заданную local config.

@@ -8,14 +8,16 @@ let client: LegacyClient | undefined
 
 function legacyClient(): LegacyClient {
   // Production uses app-session/API only, even if an old env file is present.
-  if (import.meta.env.PROD) throw new Error('Устаревший источник данных недоступен в этой сборке.')
+  if (import.meta.env.MODE !== 'development' && import.meta.env.MODE !== 'test') {
+    throw new Error('Устаревший источник данных недоступен в этой сборке.')
+  }
   if (client !== undefined) return client
   const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)
     ?? (import.meta.env.MODE === 'test' ? 'http://127.0.0.1:54321' : undefined)
   const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined)
     ?? (import.meta.env.MODE === 'test' ? 'test-publishable-key' : undefined)
   if (!url || !publishableKey) throw new Error('Локальный Supabase не настроен.')
-  assertSafeSupabaseUrl(url, import.meta.env.DEV)
+  assertSafeSupabaseUrl(url, true)
   client = createClient<Database>(url, publishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     global: { fetch: createAuthFetch() },

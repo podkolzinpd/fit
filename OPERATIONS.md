@@ -995,7 +995,9 @@ legacy операцию локально даже при stale env. Yandex-only 
 подписывается на Supabase Auth и не вызывает legacy signOut/getSession для
 обновления/выхода из app-session. Таймауты Yandex session и UI states сохранены.
 Два legacy storage bucket API тоже ленивые; SDK создаётся только при явном
-локальном legacy обращении с локальной конфигурацией. Dummy credentials нет.
+локальном legacy обращении с локальной конфигурацией. Только явные modes
+`development`/`test` допускают legacy SDK; URL остаётся localhost даже когда
+Vite build выставляет `PROD=true`. Release modes закрыты. Dummy credentials нет.
 
 Production iOS guard проверяет `VITE_YANDEX_API_BASE_URL` как remote HTTPS origin,
 публичный `VITE_YANDEX_OAUTH_CLIENT_ID` и точное `true` app-session/main routing/

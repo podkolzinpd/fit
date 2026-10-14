@@ -9,6 +9,7 @@ describe('local-only lazy Supabase transport', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    vi.stubEnv('MODE', 'test')
     vi.stubEnv('PROD', false)
     vi.stubEnv('DEV', true)
     vi.stubEnv('VITE_SUPABASE_URL', 'http://127.0.0.1:54321')
@@ -65,6 +66,7 @@ describe('local-only lazy Supabase transport', () => {
   })
 
   it.each([false, true])('never constructs a production SDK, including stale env=%s', async (configured) => {
+    vi.stubEnv('MODE', 'production')
     vi.stubEnv('PROD', true)
     vi.stubEnv('DEV', false)
     if (!configured) {
@@ -77,6 +79,32 @@ describe('local-only lazy Supabase transport', () => {
     expect(createClient).not.toHaveBeenCalled()
     expect(() => supabase.auth).toThrow('Устаревший источник данных недоступен')
     expect(() => supabase.rpc('list_chat_threads')).toThrow('Устаревший источник данных недоступен')
+    expect(createClient).not.toHaveBeenCalled()
+  })
+
+  it.each(['development', 'test'])('keeps explicit local %s builds available when Vite sets PROD=true', async (mode) => {
+    vi.stubEnv('MODE', mode)
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('DEV', false)
+    const { supabase } = await import('./client')
+    expect(supabase.auth).toBe(sdk.auth)
+    expect(createClient).toHaveBeenCalledOnce()
+  })
+
+  it('rejects remote legacy config in an explicit local native build', async () => {
+    vi.stubEnv('MODE', 'development')
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://legacy.example.test')
+    const { supabase } = await import('./client')
+    expect(() => supabase.auth).toThrow('Локальная разработка может использовать только локальный Supabase')
+    expect(createClient).not.toHaveBeenCalled()
+  })
+
+  it('fails closed for an unknown release mode', async () => {
+    vi.stubEnv('MODE', 'custom-release')
+    const { supabase } = await import('./client')
+    expect(() => supabase.auth).toThrow('Устаревший источник данных недоступен')
     expect(createClient).not.toHaveBeenCalled()
   })
 
