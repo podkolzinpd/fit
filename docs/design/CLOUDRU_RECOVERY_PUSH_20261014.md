@@ -71,3 +71,20 @@ Exact manual recovery workflow и его policy test внесены в суще�
 non-browser allowlist наряду с другими Cloud.ru административными workflow:
 не меняются browser код/fixtures/DOM/API маршруты. Проверки database/API/infra
 остаются; любой frontend/CI/unknown workflow path по-прежнему требует E2E.
+
+## Runner ENOSPC до начала отправки
+
+Прямой sender PR1625 слитee094d06 после свежего CI38613605501 success.
+Run38614434397 остановился на checkout до чтения ключей/enqueue/dispatch:
+annotation116026133399 подтверждает ENOSPC в /opt/actions-runner/_diag.
+Других попыток доставки этим run нет;20unknown остаются неповторёнными.
+
+Первый main-only trusted-host шаг send до checkout проверяет свободное место.
+При менее512MiB применяется только default `podman image prune --force`:
+неиспользуемые dangling build images, без --all, volumes, tagged images,
+release directories или backups. После cleanup снова требуется минимум512MiB,
+иначе остановка до отправки. Inspect cleanup не выполняет. Если runner не
+сможет стартовать даже этот шаг, потребуется доступ к VM вне runner.
+
+Cache guards6/6, YAML/Bash и diff check passed. Полный check exit0:
+frontend2659/API1389+158standardDBskip/infra271/hosting137/build.

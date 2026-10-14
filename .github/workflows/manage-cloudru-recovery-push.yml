@@ -48,6 +48,19 @@ jobs:
             *) exit 1 ;;
           esac
           sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          # Recover enough space before checkout/setup can allocate anything.
+          # Default image prune removes only dangling, unused build images.
+          # Tagged running/rollback images, volumes, releases and backups stay.
+          available_kib=$(df -Pk / | awk 'NR == 2 { print $4 }')
+          [[ "$available_kib" =~ ^[0-9]+$ ]]
+          if test "$ACTION" = send && test "$available_kib" -lt 524288; then
+            echo 'Low runner disk space: removing dangling build image cache only.'
+            sudo podman image prune --force
+            available_kib=$(df -Pk / | awk 'NR == 2 { print $4 }')
+            [[ "$available_kib" =~ ^[0-9]+$ ]]
+            echo "Runner disk available after cache cleanup: $((available_kib / 1024)) MiB."
+            test "$available_kib" -ge 524288
+          fi
           running=$(cat /opt/fit/RUNNING_SHA)
           [[ "$running" =~ ^[a-f0-9]{40}$ ]]
           test "$(sudo podman inspect --format '{{.ImageName}}' fit-api-stage)" = "localhost/fit-api:$running"
