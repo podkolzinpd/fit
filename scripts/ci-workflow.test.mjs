@@ -330,6 +330,10 @@ test('Cloud.ru public ingress is manual, CI-gated and proxies only loopback runt
   assert.match(cloudruIngress, /trap rollback ERR/)
   assert.match(cloudruApiProxy, /proxy_pass http:\/\/127\.0\.0\.1:18080/)
   assert.match(cloudruWebProxy, /proxy_pass http:\/\/127\.0\.0\.1:18081/)
+  assert.match(cloudruWebProxy, /proxy_buffering off;/)
+  assert.match(cloudruIngress, /mapfile -t frontend_assets/)
+  assert.match(cloudruIngress, /test "\$\{#frontend_assets\[@\]\}" -ge 2/)
+  assert.match(cloudruIngress, /https:\/\/\$cert_name\$asset/)
   assert.doesNotMatch(cloudruApiProxy + cloudruWebProxy, /proxy_pass http:\/\/(?:0\.0\.0\.0|10\.)/)
 })
 
