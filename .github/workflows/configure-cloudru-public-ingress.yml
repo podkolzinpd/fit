@@ -12,6 +12,28 @@ on:
         required: true
         type: choice
         options: [api, web]
+      mode:
+        description: 'Sealed HTTPS preparation (503 only), or separately approved public cutover'
+        required: true
+        type: choice
+        default: sealed
+        options: [sealed, activate]
+      preparation_confirmation:
+        description: 'Sealed only: PREPARE_CLOUDRU_HTTPS_CLOSED, after owner approval'
+        required: false
+        type: string
+      dns_confirmation:
+        description: 'Sealed issuance only: TEMPORARY_FIT_ACME_DNS_WITH_RESTORE, after approval of exact DNS scope'
+        required: false
+        type: string
+      activation_confirmation:
+        description: 'Activate only: OPEN_CLOUDRU_PUBLIC_INGRESS, after writer-control/cutover approval'
+        required: false
+        type: string
+      ca_terms_confirmation:
+        description: 'Certbot only: ACCEPT_LETS_ENCRYPT_TERMS_FOR_CLOUDRU, after action-time approval'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -41,6 +63,7 @@ jobs:
           test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
   ingress:
+    if: inputs.mode == 'activate'
     needs: source
     runs-on: [self-hosted, cloudru-stage]
     concurrency:
@@ -50,6 +73,8 @@ jobs:
     env:
       RELEASE_SHA: ${{ needs.source.outputs.commit }}
       TARGET: ${{ inputs.target }}
+      ACTIVATION_CONFIRMATION: ${{ inputs.activation_confirmation }}
+      CA_TERMS_CONFIRMATION: ${{ inputs.ca_terms_confirmation }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,6 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$ACTIVATION_CONFIRMATION" = OPEN_CLOUDRU_PUBLIC_INGRESS
           test "$(hostname)" = fit-stage-app
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
@@ -139,6 +165,7 @@ jobs:
           if ! sudo test -s "/etc/letsencrypt/live/$cert_name/fullchain.pem" ||
              ! sudo openssl x509 -checkend 604800 -noout \
                -in "/etc/letsencrypt/live/$cert_name/fullchain.pem" >/dev/null; then
+            test "$CA_TERMS_CONFIRMATION" = ACCEPT_LETS_ENCRYPT_TERMS_FOR_CLOUDRU
             sudo certbot certonly --webroot -w /var/www/fit-acme \
               --non-interactive --agree-tos --register-unsafely-without-email \
               --cert-name "$cert_name" "${domains[@]}"
@@ -162,3 +189,53 @@ jobs:
           trap - ERR
           if [ "$had_site" = true ]; then sudo rm -f "$backup"; fi
           echo "Cloud.ru public HTTPS ready for $TARGET at $RELEASE_SHA"
+
+  sealed:
+    if: inputs.mode == 'sealed'
+    needs: source
+    runs-on: [self-hosted, cloudru-stage]
+    permissions:
+      contents: read
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 40
+    env:
+      RELEASE_SHA: ${{ needs.source.outputs.commit }}
+      TARGET: ${{ inputs.target }}
+      PREPARE_CONFIRMATION: ${{ inputs.preparation_confirmation }}
+      DNS_CONFIRMATION: ${{ inputs.dns_confirmation }}
+      CA_TERMS_CONFIRMATION: ${{ inputs.ca_terms_confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - name: Verify trusted closed preparation, without public DNS change
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          test "$PREPARE_CONFIRMATION" = PREPARE_CLOUDRU_HTTPS_CLOSED
+          test "$(getent ahostsv4 fit-training.ru | awk '{print $1}' | sort -u)" = 158.160.171.31
+          test "$(getent ahostsv4 www.fit-training.ru | awk '{print $1}' | sort -u)" = 158.160.184.183
+          sudo nginx -t
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Obtain certificate locally using separately approved DNS proof
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y certbot dnsutils
+          sudo --preserve-env=GITHUB_REPOSITORY,GITHUB_REF,RELEASE_SHA,TARGET,DNS_CONFIRMATION,CA_TERMS_CONFIRMATION \
+            "$(command -v node)" scripts/issue-cloudru-sealed-certificate.mjs
+      - name: Prepare verified local certificates and closed HTTPS only
+        run: |
+          set -euo pipefail
+          sudo --preserve-env=GITHUB_REPOSITORY,GITHUB_REF,RELEASE_SHA,TARGET,PREPARE_CONFIRMATION \
+            "$(command -v node)" scripts/prepare-cloudru-sealed-https.mjs

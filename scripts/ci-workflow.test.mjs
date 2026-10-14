@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
+import './prepare-cloudru-sealed-https.test.mjs'
 
 const workflow = readFileSync(
   join(import.meta.dirname, '..', '.github', 'workflows', 'ci.yml'),
