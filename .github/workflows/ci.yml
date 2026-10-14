@@ -171,6 +171,20 @@ jobs:
         run: npm --prefix services/api run db:migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
+      - name: Verify recovery push against a separate local PostgreSQL database
+        run: |
+          node --input-type=module <<'NODE'
+          import pg from './services/api/node_modules/pg/lib/index.js'
+          const client = new pg.Client({ connectionString: 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' })
+          await client.connect()
+          try {
+            await client.query("create role fit_owner login password 'recovery-ci-local'")
+            await client.query('create database fit_recovery_test owner fit_owner')
+          } finally { await client.end() }
+          NODE
+          npm --prefix services/api test -- src/cloudru-recovery-push.test.ts
+        env:
+          TEST_RECOVERY_DATABASE_URL: postgresql://fit_owner:recovery-ci-local@127.0.0.1:5432/fit_recovery_test
 
   e2e-scope:
     runs-on: ubuntu-latest
