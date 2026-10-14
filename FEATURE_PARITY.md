@@ -231,6 +231,11 @@ fixtures остаются локальными. SDK package/server adapters/SQL 
 
 ## Client self-service workout acceptance contract
 
+- Empty current-workouts plus opens the same compact creation entry as the
+  header Add action; accessible 44×44 link, touch and keyboard. Client Lime
+  root tabs and list/calendar labels share the existing 14 px / 500 UI role.
+  Acceptance: `docs/design/CLIENT_WORKOUTS_EMPTY_ACTION_20261014.md`.
+
 - Предупреждение частичного разбора после закрытия редактора не меняет ширину карточек главной; «Редактировать текст», автосохранение и продолжение черновика остаются доступны. Распознавание SpeechKit и LLM-контракт прежние; регрессия покрыта WebKit/Chromium в Lime/Mono и обеих темах.
 - Главная клиента всегда начинает с крупного голосового действия и отдельного
   ввода текстом; инструкция показывается после запуска микрофона. Следом идут
