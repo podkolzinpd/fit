@@ -1412,7 +1412,7 @@ feature-файлами используют `@lime-critical` + tags каждог
 в обоих прежних браузерах. Неизвестные/shared/CSS/auth/navigation и смешанные
 frontend/API изменения требуют full. Точный allowlist и expiry находятся в
 `scripts/fit-lime-ci-scope.mjs`; с 26.10.2026 00:00 МСК — автоматически full.
-Неверный clock, изменившийся SHA256 проверенного spec или неполный inventory
+Неверный clock, изменившийся SHA256 обоих spec/общей fixture или неполный inventory
 также возвращают full либо останавливают job, а не пропускают проверку.
 
 На main и ручном CI выполняется полный Fit Lime набор, когда browser gate
@@ -1425,6 +1425,31 @@ Playwright команда или `FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-
 runner, а не превращает skipped cases в зелёный job.
 Не передавайте пустой grep и не обновляйте digest без повторного аудита tags.
 План/приёмка: `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`.
+
+### Разделённая Fit Lime acceptance (14 октября 2026)
+
+`e2e/fit-lime.behavior.spec.ts` содержит 94 поведенческих случая без screenshot,
+CSS/font/geometry assertions. `e2e/trainer-schedule-v2.visual.spec.ts` содержит
+522 визуальных и смешанных interaction/state случая. Общие page-scoped моки
+находятся в `e2e/fit-lime-fixtures.ts`; это browser UI acceptance, не проверка
+реальной облачной БД. Все прежние 616 случаев сохранены в обоих engine.
+
+Full CI запускает behavior 1/1 и visual 1/4…4/4 независимо в Chromium и WebKit.
+Scoped feature-PR использует behavior 1/1 + visual 1/1 (4 jobs вместо 10),
+сохраняя union выбранных tags без дробления маленького набора.
+Required `e2e` требует успеха всей matrix; main/manual покрывают полный union.
+Локальная команда выше по-прежнему запускает оба spec; точный запуск части:
+`FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-lime-ci.mjs <project> full '' visual 1/4`
+или `... <project> full '' behavior 1/1`. Нужны прежние fixture-env/fonts.
+Временный feature scope выбирается до разбиения; expiry и allowlist прежние.
+После явного аудита переноса digest защищает оба spec и fixture.
+
+Каждый job сохраняет `fit-lime-timings-<engine>-<lane>-<job-index>` на 7 дней,
+включая успешный прогон. JSON содержит source location/case hash, duration,
+retry/status без названий, payload, ошибок и attachments; top-10 выводится в
+лог. Failure diagnostics имеют отдельное уникальное имя на каждую часть.
+Ускорение требует больше параллельных runners; очередь GitHub и setup могут
+ограничить выигрыш. План: `docs/design/FIT_LIME_ACCEPTANCE_SPLIT_20261014.md`.
 
 - GitHub branch protection для `main`: PR only, обязательные `app`, `database`, `e2e`.
 - Зелёный CI и воспроизводимый `supabase db reset`.
