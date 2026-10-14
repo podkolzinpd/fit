@@ -1,35 +1,9 @@
-import packageJson from '../../../package.json'
+import { currentAppFeedbackContext, type AppFeedbackInput, type AppFeedbackKind } from './app-feedback-context'
 import { appFeedbackQueries } from '../queries/app-feedback.queries'
 import { repositoryError } from './error'
 
-export type AppFeedbackKind = 'suggestion' | 'problem' | 'training program'
-export type AppDisplayMode = 'browser' | 'standalone'
-
-export interface AppFeedbackInput {
-  kind: AppFeedbackKind
-  message: string
-  screenPath: string
-  appVersion: string
-  displayMode: AppDisplayMode
-  userAgent: string
-  modelInputJson?: Record<string, unknown>
-  modelOutputJson?: Record<string, unknown>
-}
-
-export function appDisplayMode(): AppDisplayMode {
-  const standalone = window.matchMedia?.('(display-mode: standalone)').matches
-    || ('standalone' in navigator && navigator.standalone === true)
-  return standalone ? 'standalone' : 'browser'
-}
-
-export function currentAppFeedbackContext(): Omit<AppFeedbackInput, 'kind' | 'message'> {
-  return {
-    screenPath: `${window.location.pathname}${window.location.search}${window.location.hash}`.slice(0, 500) || '/',
-    appVersion: packageJson.version,
-    displayMode: appDisplayMode(),
-    userAgent: navigator.userAgent.slice(0, 512) || 'unknown',
-  }
-}
+export { appDisplayMode, currentAppFeedbackContext } from './app-feedback-context'
+export type { AppFeedbackInput, AppFeedbackKind, AppDisplayMode } from './app-feedback-context'
 
 export const appFeedbackRepository = {
   async submit(kind: AppFeedbackKind, message: string, metadata?: Pick<AppFeedbackInput, 'modelInputJson' | 'modelOutputJson'>): Promise<string> {

@@ -12,7 +12,7 @@ import type {
   AssistantBackend,
 } from './assistant.repository'
 import { yandexPilotRepository } from './yandex-pilot.repository'
-import { trainingSummaryFromRow } from './training-summaries.repository'
+import { trainingSummaryFromRow } from './training-summary-mappers'
 
 const actionSchema = z.object({
   id: z.uuid().optional(),
