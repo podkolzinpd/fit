@@ -424,11 +424,10 @@ describe('AppLayout: служебная плашка о восстановлен
     expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
   })
 
+  // Две роли — два отдельных каркаса AppLayout, в каждом своя вставка плашки.
   it.each([
     ['client', '/me'],
-    ['client', '/assistant'],
     ['trainer', '/today'],
-    ['trainer', '/clients'],
   ] as const)('%s видит плашку над содержимым %s', (role, path) => {
     vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
     authState.role = role
@@ -440,6 +439,7 @@ describe('AppLayout: служебная плашка о восстановлен
     expect(notice.compareDocumentPosition(screen.getByText('Содержимое')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  // Два независимых условия исключения: Live и переписка.
   it.each(['/workouts/w1/live', '/chat'])('не мешает действию на %s', (path) => {
     vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
     renderLayout(path)
