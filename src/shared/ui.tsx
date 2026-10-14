@@ -55,14 +55,14 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 
 type StatePanelTone = 'empty' | 'error' | 'info'
 
-export function StatePanel({ tone, title, description, details, action, compact = false }: {
-  tone: StatePanelTone; title: string; description: string; details?: ReactNode; action?: ReactNode; compact?: boolean
+export function StatePanel({ tone, title, description, details, action, markAction, compact = false }: {
+  tone: StatePanelTone; title: string; description: string; details?: ReactNode; action?: ReactNode; markAction?: ReactNode; compact?: boolean
 }) {
   const role = tone === 'error' ? 'alert' : 'status'
   const icon = tone === 'empty' ? <AddIcon /> : tone === 'error' ? <AlertIcon /> : <InfoIcon />
   const Heading = compact ? 'h3' : 'h2'
   return <section className={`state-panel state-panel-${tone}${compact ? ' state-panel-compact' : ''}`} role={role}>
-    <span className="state-panel-mark" aria-hidden="true">{icon}</span>
+    {markAction ?? <span className="state-panel-mark" aria-hidden="true">{icon}</span>}
     <Heading>{title}</Heading>
     <p>{description}</p>
     {details}
@@ -100,10 +100,10 @@ export function InlineRequestError({ error, message }: { error: Error; message?:
   </div>
 }
 
-export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action, compact }: {
-  title?: string; description?: string; action?: ReactNode; compact?: boolean
+export function EmptyState({ title = 'Пока ничего нет', description = 'Здесь появятся новые данные.', action, markAction, compact }: {
+  title?: string; description?: string; action?: ReactNode; markAction?: ReactNode; compact?: boolean
 }) {
-  return <StatePanel tone="empty" title={title} description={description} action={action} compact={compact} />
+  return <StatePanel tone="empty" title={title} description={description} action={action} markAction={markAction} compact={compact} />
 }
 
 export function SaveStatus({ status, error }: {

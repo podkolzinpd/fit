@@ -1027,7 +1027,7 @@ async function openPreviewLiveWorkout(page: import('@playwright/test').Page, fre
 
   await gotoStable(page, '/me/workouts')
   const activeWorkout = page.getByRole('link', { name: /Идёт/ }).first()
-  const addAction = page.getByRole('link', { name: /^(?:Добавить|Добавить тренировку)$/ })
+  const addAction = page.locator('.client-workouts-page .page-header').getByRole('link', { name: 'Добавить', exact: true })
   await expect(addAction).toBeVisible()
   if (await activeWorkout.isVisible()) {
     await activeWorkout.click()

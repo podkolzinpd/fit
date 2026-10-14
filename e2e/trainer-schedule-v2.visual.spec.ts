@@ -5811,3 +5811,47 @@ test('Compact workout feedback explains the new control once', async ({ page }, 
   await card.screenshot({ path:info.outputPath('compact-feedback-approved-live.png') })
   await expect(card.getByRole('button', { name:'Сохранить итоги',exact:true })).toBeEnabled()
 })
+
+// 4 cases/engine (8 in full CI): themes exercise glyph/focus contrast; widths exercise
+// text fit and the 44px touch/focus target. This short entry flow performs no workout mutation.
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
+  test(`Client Lime empty workouts creation and equal controls ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [] })
+    await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+    await page.goto('/me/workouts')
+    const panel = page.locator('#workouts-current-panel .state-panel-empty')
+    await expect(panel).toBeVisible()
+    await expect(panel.locator('.state-panel-mark')).toHaveCount(1)
+    await page.evaluate(() => document.fonts.ready)
+    await page.screenshot({ path: info.outputPath('empty-workouts.png') })
+    const entry = panel.getByRole('link', { name: 'Добавить тренировку', exact: true })
+    await expect(entry).toHaveAttribute('href', '/me?entry=workout')
+    const box = await entry.boundingBox()
+    expect(box?.width).toBeGreaterThanOrEqual(44)
+    expect(box?.height).toBeGreaterThanOrEqual(44)
+    for (const button of await page.locator('.client-workouts-page .progress-view-tabs button, #workouts-current-panel .client-history-view-toggle button').all()) {
+      await expect(button).toHaveCSS('font-size', '14px')
+      await expect(button).toHaveCSS('font-weight', '500')
+      await expect(button).toHaveCSS('min-height', '44px')
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await entry.tap()
+    await expect(page).toHaveURL((url) => url.pathname === '/me' && url.searchParams.get('entry') === 'workout' && url.searchParams.has('draft'))
+    await expect(page.locator('.today-text-fallback')).toBeVisible()
+    await page.goBack()
+    await expect(panel).toBeVisible()
+    await entry.focus()
+    await expect(entry).toBeFocused()
+    await entry.press('Enter')
+    await expect(page).toHaveURL((url) => url.pathname === '/me' && url.searchParams.get('entry') === 'workout' && url.searchParams.has('draft'))
+    await page.goBack()
+    await page.getByRole('tab', { name: 'История', exact: true }).click()
+    const history = page.getByRole('group', { name: 'Вид истории тренировок' })
+    for (const button of await history.getByRole('button').all()) await expect(button).toHaveCSS('font-size', '14px')
+    await history.getByRole('button', { name: 'Календарь', exact: true }).click()
+    await expect(history.getByRole('button', { name: 'Календарь', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('#workouts-history-panel .client-history-calendar')).toBeVisible()
+    await page.screenshot({ path: info.outputPath('history-calendar.png') })
+  })
+}
