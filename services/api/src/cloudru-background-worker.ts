@@ -24,6 +24,7 @@ export async function runCloudruBackground(): Promise<void> {
     )
     const result = await dispatcher.run()
     console.log(JSON.stringify({ event: 'cloudru_background_completed', ...result }))
+    if (result.sessionCleanup.status === 'failed') throw new Error('cloudru_session_cleanup_failed')
   } finally { await pool.end() }
 }
 

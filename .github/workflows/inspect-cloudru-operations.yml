@@ -69,6 +69,34 @@ jobs:
           check 'Running API marker matches container' test "$image" = "localhost/fit-api:$revision"
           printf 'API release: %s; free disk: %s MiB\n' "$revision" "$((available / 1024))" >> "$GITHUB_STEP_SUMMARY"
           exit "$failed"
+      - name: Inspect only private queue aggregates in a read-only transaction
+        if: always()
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]+-[0-9]+$ ]]
+          owner="/opt/fit/secrets/queue-inspect-$id.env"
+          sudo test ! -e "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" \
+            "localhost/fit-api:$revision" node dist/cloudru-operations-health.js | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Verify certificate renewal against the staging CA
         if: always() && inputs.renewal_check
         run: |

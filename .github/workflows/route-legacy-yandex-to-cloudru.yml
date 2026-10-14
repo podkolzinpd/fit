@@ -6,7 +6,7 @@ on:
       mode:
         description: Inspect first; dns changes only old Yandex records; api replaces only the old API with a Cloud.ru proxy
         type: choice
-        options: [inspect, dns, api]
+        options: [inspect, dns, api, pause-background]
         default: inspect
       ci_run_id:
         description: Successful CI run for current main
@@ -67,6 +67,9 @@ jobs:
       - name: Update only legacy Yandex DNS address records
         if: inputs.mode == 'dns'
         run: node scripts/route-legacy-yandex-to-cloudru.mjs dns
+      - name: Pause only the existing Yandex dispatcher timer before Cloud.ru delivery
+        if: inputs.mode == 'pause-background'
+        run: node scripts/route-legacy-yandex-to-cloudru.mjs pause-background
       - name: Build the credential-free compatibility image
         if: inputs.mode == 'api'
         run: |

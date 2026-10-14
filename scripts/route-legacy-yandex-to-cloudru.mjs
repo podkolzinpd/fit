@@ -4,6 +4,7 @@ import { appendFile } from 'node:fs/promises'
 export const legacyContainerId = 'bbat47es6kspjb3dvfn2'
 const containerBase = 'https://serverless-containers.api.cloud.yandex.net/containers/v1'
 const dnsBase = 'https://dns.api.cloud.yandex.net/dns/v1/zones'
+const triggersBase = 'https://serverless-triggers.api.cloud.yandex.net/triggers/v1/triggers'
 const names = ['fit-training.ru.', 'www.fit-training.ru.', 'api.fit-training.ru.']
 
 export function compatibilityDnsChange(records) {
@@ -27,7 +28,7 @@ export function compatibilityRevision(previous, imageUrl) {
 
 async function main() {
   const mode = process.argv[2]
-  if (!['inspect', 'dns', 'api'].includes(mode) || process.env.GITHUB_REPOSITORY !== 'podkolzinpd/fit'
+  if (!['inspect', 'dns', 'api', 'pause-background'].includes(mode) || process.env.GITHUB_REPOSITORY !== 'podkolzinpd/fit'
     || process.env.GITHUB_REF !== 'refs/heads/main' || !process.env.YC_IAM_TOKEN) throw new Error('legacy_context_rejected')
   if (mode !== 'inspect' && process.env.CONFIRMATION !== 'ROUTE_OLD_ADDRESSES_TO_CLOUDRU') throw new Error('legacy_confirmation_rejected')
   async function json(url, body) {
@@ -52,6 +53,26 @@ async function main() {
   if (revisions.nextPageToken) throw new Error('legacy_revisions_incomplete')
   const active = (revisions.revisions ?? []).filter(revision => revision.status === 'ACTIVE')
   if (active.length !== 1 || !/^[a-z0-9]{20}$/.test(active[0].id ?? '')) throw new Error('legacy_revision_ambiguous')
+  if (mode === 'inspect' || mode === 'pause-background') {
+    const folder = 'b1goqho12tlk9dibc3f3'
+    const containers = await json(`${containerBase}/containers?folderId=${folder}&pageSize=1000`)
+    const triggers = await json(`${triggersBase}?folderId=${folder}&pageSize=1000`)
+    if (containers.nextPageToken || triggers.nextPageToken) throw new Error('legacy_background_inventory_incomplete')
+    const dispatcher = (containers.containers ?? []).filter(item => item.name === 'fit-stage-push-dispatcher')
+    const timers = (triggers.triggers ?? []).filter(item => item.name === 'fit-stage-push-dispatcher')
+    const timer = timers[0]
+    if (dispatcher.length !== 1 || timers.length !== 1 || !/^[a-z0-9]{20}$/.test(timer.id ?? '')
+      || timer.rule?.timer?.invokeContainerWithRetry?.containerId !== dispatcher[0].id
+      || timer.rule.timer.invokeContainerWithRetry.path !== '/internal/push/dispatch') throw new Error('legacy_background_target_rejected')
+    if (mode === 'pause-background') {
+      if (timer.status !== 'PAUSED') await completed(await json(`${triggersBase}/${timer.id}:pause`, {}))
+      const verified = await json(`${triggersBase}/${timer.id}`)
+      if (verified.status !== 'PAUSED') throw new Error('legacy_background_pause_unverified')
+      console.log(JSON.stringify({ event: 'legacy_background_paused', triggerId: timer.id, status: 'PAUSED' }))
+      return
+    }
+    console.log(JSON.stringify({ event: 'legacy_background_inventory', triggerId: timer.id, status: timer.status }))
+  }
   if (mode === 'api') {
     if (!process.env.GITHUB_STEP_SUMMARY) throw new Error('legacy_summary_missing')
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `Previous Yandex API revision retained for rollback: ${active[0].id}\n`)

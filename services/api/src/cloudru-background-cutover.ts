@@ -3,14 +3,16 @@ import { Client, type QueryResultRow } from 'pg'
 import type { DatabaseClient } from './db/types.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 
-export async function archiveCloudruPushHistory(client: DatabaseClient, cutoff: Date): Promise<number> {
+export async function archiveCloudruPushHistory(client: {
+  query(text: string, values?: readonly unknown[]): Promise<readonly Record<string, unknown>[]>
+}, cutoff: Date): Promise<number> {
   if (!Number.isFinite(cutoff.getTime())) throw new Error('cloudru_push_cutoff_rejected')
   await client.query('begin')
   try {
     await client.query("set local statement_timeout = '20s'")
     await client.query("set local lock_timeout = '3s'")
     await client.query("select pg_advisory_xact_lock(hashtextextended('fit-cloudru-push-cutover', 0))")
-    const rows = await client.query<{ archived: number }>(`with archived as (
+    const rows = await client.query(`with archived as (
       update app_private.push_notifications_outbox
       set discarded_at = now(), last_error = 'cloudru_cutover_history_preserved'
       where sent_at is null and discarded_at is null

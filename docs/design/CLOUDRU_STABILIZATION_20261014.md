@@ -81,7 +81,7 @@ credential и доступность требуют отдельного фак�
 - Полный npm run check: frontend2668/2668, API1397 passed/157 standard DB skips,
   infra294/294, hosting167/167, build прошёл. После проверки браузером заменён
   междоменный307 на proxy: исходный Origin/session сохраняются; полный финальный
-  check этого варианта запускается отдельно и его результат фиксируется в PR.
+  набор стадий check этого варианта выполнен в изолированной рабочей копии.
 - Изолированный реальный Podman PostgreSQL17: cutover history3/3; отдельный
   pg_dump/restore fixture без сети/портов сохранил две таблицы, строки, policy и
   migration history. Общие локальные базы не сбрасывались; production не источник.
@@ -97,3 +97,21 @@ credential и доступность требуют отдельного фак�
   public health подтвердил22e08f4e. Старый Terraform autodeploy явно false/readback.
 - Authenticated test roles, реальные media/voice/AI/push и свежие native bundles
   всё ещё не проверены. Новые configure/backup/DNS/API workflows не запускались.
+
+- В изолированной worktree frontend2668/coverage/lint/typecheck, infra294,
+  hosting167 passed с VITEST_MAX_WORKERS=1. Первый default-parallel прогон
+  упёрся в resource timeouts неизменённых UI tests при совместной локальной
+  нагрузке; assertions/timeouts/coverage не менялись. API check1399 passed,
+  158 standard DB skips; schema migrations не добавлены. Production build passed.
+- Проверка ACL обнаружила недостаток старого pg_dump --no-acl: теперь grants
+  сохраняются, synthetic PostgreSQL17 restore подтвердил fit_api SELECT/RLS и
+  чтение fixture. Production restore workflow требует также owner/RLS трёх таблиц.
+- Реальный operations PostgreSQL17 cutover+queue monitor6/6: preserved historical
+  receipts, fresh events, retries, overdue/stale leases и terminal counts.
+- Legacy compatibility включает обратимый pause только старого dispatcher timer
+  с проверкой target/path/PAUSED до запуска Cloud.ru worker. Два timer одновременно
+  не включаются. Telegram/Tracker feedback delivery ждёт отдельного разрешения;
+  новые сервисы и legacy DNS/API/timer пока не активированы.
+- PR https://github.com/podkolzinpd/fit/pull/1637 draft, обязательная очередь.
+  Рабочая копия /private/tmp/fit-cloudru-stabilization создана после переключения
+  общей папки другим чатом; исходные два пользовательских файла не изменялись.

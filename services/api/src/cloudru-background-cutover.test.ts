@@ -1,14 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Pool, type QueryResultRow } from 'pg'
 import { archiveCloudruPushHistory } from './cloudru-background-cutover.js'
 import type { DatabaseClient } from './db/types.js'
+import { inspectCloudruQueue } from './cloudru-operations-health.js'
 
 describe('Cloud.ru fresh push cutover', () => {
   it('archives only unsent historical events and the recovery campaign while retaining receipts and subscriptions', async () => {
-    const query = vi.fn().mockResolvedValue([])
+    const query = vi.fn<Parameters<typeof archiveCloudruPushHistory>[0]['query']>().mockResolvedValue([])
       .mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([])
       .mockResolvedValueOnce([]).mockResolvedValueOnce([{ archived: 3 }])
-    const client = { query } as DatabaseClient
+    const client = { query }
     const cutoff = new Date('2026-10-14T20:00:00Z')
     expect(await archiveCloudruPushHistory(client, cutoff)).toBe(3)
     const sql: string = String(query.mock.calls[4]?.[0])
@@ -20,8 +21,8 @@ describe('Cloud.ru fresh push cutover', () => {
   })
 
   it('rolls back if the update or aggregate verification fails', async () => {
-    const query = vi.fn().mockResolvedValue([])
-    const client = { query } as DatabaseClient
+    const query = vi.fn<Parameters<typeof archiveCloudruPushHistory>[0]['query']>().mockResolvedValue([])
+    const client = { query }
     await expect(archiveCloudruPushHistory(client, new Date())).rejects.toThrow('cloudru_push_archive_rejected')
     expect(query).toHaveBeenLastCalledWith('rollback')
   })
@@ -42,6 +43,7 @@ describe.skipIf(!process.env.TEST_CLOUDRU_OPERATIONS_DATABASE_URL)('push cutover
         dispatch_token text, dispatch_started_at timestamptz, attempts integer default 0)`)
   })
   afterAll(async () => { await pool?.end() })
+  beforeEach(async () => { await pool.query('truncate app_private.push_notifications_outbox') })
 
   it('retains confirmed sends and uncertain receipts, archives old pending events, and leaves new events deliverable across retries', async () => {
     const cutoff = new Date('2026-10-14T20:00:00Z')
@@ -66,5 +68,20 @@ describe.skipIf(!process.env.TEST_CLOUDRU_OPERATIONS_DATABASE_URL)('push cutover
       { id: 3, discarded: false, sent: true, dispatch_token: null },
       { id: 4, discarded: false, sent: false, dispatch_token: null },
     ])
+  })
+
+  it('detects overdue queues and expired leases while excluding preserved historical receipts from new failures', async () => {
+    await pool.query(`insert into app_private.push_notifications_outbox
+      (id,created_at,kind,dispatch_started_at,discarded_at,attempts,last_error) values
+      (1,now()-interval '1 minute','chat_message',null,null,0,null),
+      (2,now()-interval '20 minutes','chat_message',null,null,0,null),
+      (3,now()-interval '20 minutes','chat_message',now()-interval '11 minutes',null,0,null),
+      (4,now()-interval '1 day','chat_message',null,now(),10,'cloudru_cutover_history_preserved'),
+      (5,now()-interval '20 minutes','chat_message',null,now(),10,'web_push_500')`)
+    const connection = await pool.connect()
+    try {
+      await expect(inspectCloudruQueue({ query: async text => (await connection.query<Record<string, unknown>>(text)).rows }))
+        .resolves.toEqual({ pending: 3, overdue: 2, staleLeases: 1, terminalFailures: 1 })
+    } finally { connection.release() }
   })
 })

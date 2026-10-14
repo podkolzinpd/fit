@@ -193,6 +193,10 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
 в image отсутствуют. Междоменный307 отвергнут реальным Chromium-тестом:
 браузер меняет Origin на null. Прокси не повторяет запрос при сетевой ошибке.
 Старые DB/resources/revisions сохраняются; предыдущая revision записана в summary.
+Перед запуском Cloud.ru background выполнить mode pause-background: он проверяет
+единственный старый fit-stage-push-dispatcher timer и его target/path, приостанавливает
+только этот timer и проверяет PAUSED. Ресурс не удаляется; не включать одновременно
+старый timer и Cloud.ru timer.
 Старая app-session может потребовать повторного входа в Cloud.ru. Это не объединяет
 независимые изменения двух БД. Повторный Yandex Terraform apply может вернуть
 старый writer, поэтому YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED должен оставаться off.
@@ -231,7 +235,8 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   контролировать объём. Лимит одного archive64MiB предотвращает расход памяти.
   После S3 readback/checksum/decryption выполняется настоящий restore на той же
   Cloud.ru VM в одноразовом PostgreSQL17 без сети/портов, с отдельным volume.
-  Проверяются число таблиц и migration history; пользовательские строки не
+  Backup сохраняет grants; restore проверяет fit_api SELECT, RLS/owner трёх
+  основных таблиц, число таблиц и migration history; пользовательские строки не
   печатаются, не попадают в artifacts и не копируются локально. Временные dumps,
   env и restore volume удаляются только в рамках свежего attempt. Native
   managed PostgreSQL backups не считаются доказанными этим механизмом.
@@ -240,7 +245,11 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
 - `Inspect Cloud.ru production operations`: ежечасно проверяет readiness,
   worker/relay/renewal timer, disk>=2GiB, certificates>=14дней и возраст последнего
   проверенного offsite restore<48часов. Manual renewal_check запускает bounded
-  staging renewal dry-run без выдачи нового production сертификата.
+  staging renewal dry-run без выдачи нового production сертификата. Отдельный
+  short-lived owner container читает только counts push outbox в READ ONLY
+  transaction (statement timeout5s): pending, overdue>15min, stale lease>10min
+  и terminal failures за час; historical cutover marker исключён. Owner env
+  удаляется EXIT и не передаётся runtime/relay/background.
 
 Workflows сохраняют общий VM lock и не отменяют уже выполняющиеся операции.
 Bootstrap/configuration не означают пройденный реальный OAuth/voice E2E;
