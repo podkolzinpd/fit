@@ -185,6 +185,19 @@ jobs:
           fi
           curl --fail --silent --show-error --resolve "$cert_name:443:127.0.0.1" \
             "https://$cert_name$public_path" >/dev/null
+          if [ "$TARGET" = web ]; then
+            mapfile -t frontend_assets < <(
+              curl --fail --silent --show-error --header 'Host: fit-training.ru' \
+                http://127.0.0.1:18081/ |
+                grep -oE '/assets/[^" ]+\.(js|css)' | sort -u
+            )
+            test "${#frontend_assets[@]}" -ge 2
+            for asset in "${frontend_assets[@]}"; do
+              curl --fail --silent --show-error \
+                --resolve "$cert_name:443:127.0.0.1" \
+                "https://$cert_name$asset" >/dev/null
+            done
+          fi
           curl --fail --silent --show-error "$upstream" >/dev/null
           trap - ERR
           if [ "$had_site" = true ]; then sudo rm -f "$backup"; fi
