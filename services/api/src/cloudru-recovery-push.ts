@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
+import webpush from 'web-push'
 
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import { finalizePushNotifications } from './push-dispatcher-command.js'
-import { YandexPushNotificationSender, type PushNotificationSender } from './push-notifications/http-sender.js'
+import type { PushNotificationSender } from './push-notifications/http-sender.js'
+import type { PushNotificationInput, PushNotificationResult, VapidConfig } from './push-notifications/send.js'
 import { parsePushRequest } from './push-notifications/parse-request.js'
 
 export const recoveryCampaign = {
@@ -14,6 +16,32 @@ export const recoveryCampaign = {
   body: 'Всё починили. Возвращайтесь к тренировкам!',
   data: JSON.stringify({ announcement: 'cloudru_recovery_2026_10_14', url: '/' }),
 } as const
+
+// Reuse the original VAPID identity but send directly from Cloud.ru, without
+// waiting for a second cloud function's aggregate HTTP response.
+export class DirectRecoveryPushSender implements PushNotificationSender {
+  private readonly vapid: VapidConfig
+
+  constructor(vapid: VapidConfig) { this.vapid = vapid }
+
+  async send(items: readonly PushNotificationInput[]): Promise<PushNotificationResult[]> {
+    return Promise.all(items.map(async (item): Promise<PushNotificationResult> => {
+      try {
+        await webpush.sendNotification(item.subscription,
+          JSON.stringify({ title: item.title, body: item.body, data: item.data }),
+          { vapidDetails: this.vapid, timeout: 10_000 })
+        return { id: item.id, ok: true }
+      } catch (error) {
+        const value = typeof error === 'object' && error !== null && 'statusCode' in error
+          ? error.statusCode : undefined
+        const status = typeof value === 'number' && Number.isInteger(value)
+          && value >= 100 && value <= 599 ? value : 0
+        return { id: item.id, ok: false, status, error: status === 0
+          ? 'delivery_outcome_unknown' : `web_push_${status}` }
+      }
+    }))
+  }
+}
 
 const eligible = `select subscription.id, subscription.user_id
   from public.push_subscriptions subscription
@@ -115,9 +143,21 @@ export async function dispatchRecovery(connection: DatabaseConnection, sender: P
     }
     if (rows.length === 0) return { sent, failed }
     const results = await sender.send(parsePushRequest({ notifications: rows }))
+    // A socket error is not evidence that a provider rejected a notification.
+    // Keep only those devices leased; confirmed outcomes can be finalized using
+    // a separate token, without dropping receipts for healthy devices.
+    const known = results.filter(result => result.ok || result.status > 0)
+    if (known.length === 0) continue
     await connection.query('begin')
     try {
-      const finalized = await finalizePushNotifications(connection, token, results, new Date())
+      const knownToken = known.length === results.length ? token : randomUUID()
+      if (knownToken !== token) {
+        const moved = await connection.query(`update app_private.push_notifications_outbox
+          set dispatch_token=$1::uuid where dispatch_token=$2::uuid and id=any($3::uuid[]) returning id`,
+        [knownToken, token, known.map(result => result.id)])
+        if (moved.length !== known.length) throw new Error('recovery_lease_changed')
+      }
+      const finalized = await finalizePushNotifications(connection, knownToken, known, new Date())
       await connection.query('commit')
       sent += finalized.succeeded
       failed += finalized.failed
@@ -162,8 +202,11 @@ async function main() {
   }
   const pool = new PgDatabasePool({ ...config, max: 1 }, 'migration-owner')
   try {
-    const sender = action === 'dispatch' ? new YandexPushNotificationSender(
-      process.env.PUSH_FUNCTION_URL ?? '', process.env.PUSH_DISPATCH_SECRET ?? '') : undefined
+    const sender = action === 'dispatch' ? new DirectRecoveryPushSender({
+      publicKey: process.env.VAPID_PUBLIC_KEY ?? '',
+      privateKey: process.env.VAPID_PRIVATE_KEY ?? '',
+      subject: process.env.VAPID_SUBJECT ?? '',
+    }) : undefined
     console.log(JSON.stringify(await runRecovery(pool, action, sender)))
   } finally {
     await pool.end()

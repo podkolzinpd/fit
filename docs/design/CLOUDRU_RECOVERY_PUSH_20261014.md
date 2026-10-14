@@ -21,16 +21,19 @@ immutable API image и read-only mount проверенного CLI, без вы
 существующий unique constraint обеспечивают enqueue идемпотентность.
 
 Отправка только новой кампании, пачки до 20, максимум 2000 за запуск.
-Существующий Yandex Web Push sender переиспользуется как транспорт: новая БД
-остаётся Cloud.ru. Читается только существующий dispatch secret; VAPID private
-key остаётся в существующем Lockbox/function, ключи не генерируются.
-До enqueue authenticated malformed probe проверяет доступность transport без
-пользовательской отправки. Inspect — только SELECT агрегатов из Cloud.ru.
+После таймаута прежнего helper используется прямой Web Push из Cloud.ru:
+читаются прежние VAPID ключи из существующей версии Lockbox, без генерации,
+rotation, Yandex deployment/IAM или изменения browser identity. Ключи только
+в masked временном env-файле runner (0600) и памяти ephemeral контейнера,
+с удалением файла при выходе. Provider socket timeout10s, ответы на устройства
+фиксируются отдельно. Inspect — только SELECT агрегатов из Cloud.ru.
 
 Confirmed successes не пересылаются. Известные ошибки записываются через
 существующий multi-device finalizer; 404/410 удаляют только протухшее устройство.
 Неизвестный результат доставки остаётся leased: автоматического resend/release
-нет. Это не абсолютная гарантия exactly-once Web Push, чтения сообщения или
+нет. В mixed batch confirmed rows получают отдельный lease token и штатный
+finalize; socket/transport unknown rows сохраняют исходную lease. Это не
+абсолютная гарантия exactly-once Web Push, чтения сообщения или
 отображения на устройстве. Общий прежний dispatcher не следует включать для
 этой кампании: он может автоматически повторить leased записи через 10 минут.
 Исторический outbox не отправляется этим CLI. Новый cron/systemd timer не
@@ -42,9 +45,29 @@ background jobs. Native APNs/FCM не добавляются; это сущес�
 Изолированный локальный PostgreSQL17 fixture с настоящим deployed multi-device
 finalizer: read-only inspect, opt-out, multi-device, repeat enqueue/send,
 unrelated historical campaign, invalid endpoint, unknown transport outcome,
-post-enqueue unsubscribe/opt-out, transient error. Локально 7/7 passed; workflow/CI policy39/39 и YAML/Bash syntax passed.
-Полный npm run check exit0: frontend2659, API1361 (148 стандартных
-DB/isolated tests skipped; отдельные семь PostgreSQL проверок запущены явно),
-infra262, hosting137, build. Это разовая owner-only административная операция
+post-enqueue unsubscribe/opt-out, transient error и mixed known/unknown.
+Прямой sender проверяет exact payload/оригинальные ключи/timeout10s/санитизацию.
+Локально10/10 passed. Предыдущий полный check и CI38598199813 прошли, PR1623
+слит3b910679. Новый полный npm run check exit0: frontend2659/API1363+149standardDBskip,
+infra262/hosting137/build; policy42/42 и YAML/Bash passed. Новый CI ещё гейт. Это разовая owner-only административная операция
 в существующей схеме, не новый actor API или периодический product producer;
-миграции/гранты и application runtime не меняются. Production ещё не менялся.
+миграции/гранты и application runtime не меняются.
+
+## Production observation и продолжение
+
+Inspect38602797888:513profiles/52subscribed users/66subscriptions, очередь0.
+Run38603247613 прошёл transport auth probe, enqueue66; первый dispatch потерял
+aggregate response через20s, без HTTP/individual provider receipt. Последующий
+inspect38603753593 подтвердил sent0/pending46/uncertain20. Эти20 не повторяются
+и не объявляются sent/discarded без подтверждения. Продолжение отправляет только
+46 ещё не попытанных devices напрямую, с сохранением отдельных unknown leases.
+
+VITE_VAPID_PUBLIC_KEY в repository variables отсутствует. Новые keys не
+генерируются: используется текущая immutable sender identity; при наличии
+frontend public variable она должна совпадать. Подписка новых устройств в
+Cloud.ru frontend этой task не меняется и не заявляется проверенной.
+
+Exact manual recovery workflow и его policy test внесены в существующий
+non-browser allowlist наряду с другими Cloud.ru административными workflow:
+не меняются browser код/fixtures/DOM/API маршруты. Проверки database/API/infra
+остаются; любой frontend/CI/unknown workflow path по-прежнему требует E2E.

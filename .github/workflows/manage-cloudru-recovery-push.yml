@@ -33,6 +33,7 @@ jobs:
       YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
       YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
       YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+      EXPECTED_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
     steps:
       - name: Verify bounded campaign on trusted main runner
         shell: bash
@@ -59,7 +60,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Read existing push transport without changing Yandex resources
+      - name: Read existing VAPID identity without changing Yandex resources
         if: inputs.action == 'send'
         shell: bash
         run: |
@@ -78,8 +79,7 @@ jobs:
           set -euo pipefail
           umask 077
           runtime_file=$(mktemp "$RUNNER_TEMP/fit-recovery-push.XXXXXX")
-          response_file=$(mktemp "$RUNNER_TEMP/fit-recovery-probe.XXXXXX")
-          trap 'rm -f "$runtime_file" "$response_file"' EXIT
+          trap 'rm -f "$runtime_file"' EXIT
           for name in MIGRATION_DATABASE_HOST MIGRATION_DATABASE_PORT MIGRATION_DATABASE_NAME MIGRATION_DATABASE_USER MIGRATION_DATABASE_PASSWORD; do
             value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
             echo "::add-mask::$value"
@@ -105,23 +105,24 @@ jobs:
               --folder-id "$YC_FOLDER_ID" --format json)
             secret_id=$(jq -er '.id' <<<"$metadata")
             version_id=$(jq -er '.current_version.id' <<<"$metadata")
-            dispatch_secret=$(yc lockbox payload get --id "$secret_id" \
-              --version-id "$version_id" --key PUSH_DISPATCH_SECRET)
-            echo "::add-mask::$dispatch_secret"
-            [[ "$dispatch_secret" =~ ^[A-Za-z0-9_-]{32,}$ ]]
-            function_url=$(yc serverless function get --name fit-send-push-notifications \
-              --folder-id "$YC_FOLDER_ID" --format json | jq -er '.http_invoke_url')
-            [[ "$function_url" =~ ^https://functions\.yandexcloud\.net/[a-z0-9]+$ ]]
-            # Authenticated malformed request checks transport before any enqueue.
-            # It contains no subscriptions and cannot send a notification.
-            status=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
-              --output "$response_file" --write-out '%{http_code}' --request POST \
-              --header "x-push-dispatch-secret: $dispatch_secret" \
-              --header 'Content-Type: application/json' --data '{}' "$function_url")
-            test "$status" = 400
-            jq -e '.error == "notifications_required"' "$response_file" >/dev/null
-            printf 'PUSH_FUNCTION_URL=%s\nPUSH_DISPATCH_SECRET=%s\n' \
-              "$function_url" "$dispatch_secret" >> "$runtime_file"
+            # Preserve the exact existing browser identity. No key generation,
+            # rotation, IAM change or cloud function deployment is performed.
+            for name in VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+              value=$(yc lockbox payload get --id "$secret_id" --version-id "$version_id" --key "$name")
+              echo "::add-mask::$value"
+              test "$value" = "${value//$'\n'/}"
+              test "$value" = "${value//$'\r'/}"
+              case "$name" in
+                VAPID_PUBLIC_KEY)
+                  [[ "$value" =~ ^[A-Za-z0-9_-]{87}$ ]]
+                  if test -n "$EXPECTED_VAPID_PUBLIC_KEY"; then
+                    test "$value" = "$EXPECTED_VAPID_PUBLIC_KEY"
+                  fi ;;
+                VAPID_PRIVATE_KEY) [[ "$value" =~ ^[A-Za-z0-9_-]{43}$ ]] ;;
+                VAPID_SUBJECT) [[ "$value" =~ ^(https://|mailto:).+ ]] ;;
+              esac
+              printf '%s=%s\n' "$name" "$value" >> "$runtime_file"
+            done
             run_campaign enqueue | tee -a "$GITHUB_STEP_SUMMARY"
             run_campaign dispatch | tee -a "$GITHUB_STEP_SUMMARY"
           fi
