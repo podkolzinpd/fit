@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { reviewedInventoryDigest, scopedPrExpiresAt, selectFitLimeScope } from './fit-lime-ci-scope.mjs'
+import { fitLimeInventoryDigest, reviewedInventoryFiles, reviewedInventoryDigest, scopedPrExpiresAt, selectFitLimeScope } from './fit-lime-ci-scope.mjs'
 import { fitLimeArgs, validateFitLimeInventory } from './run-fit-lime-ci.mjs'
+import './fit-lime-split.test.mjs'
 
 const activePr = { eventName: 'pull_request', now: new Date('2026-10-12T12:00:00Z'), inventoryDigest: reviewedInventoryDigest }
 const finance = 'src/features/finance/ClientFinancePage.tsx'
@@ -46,7 +46,7 @@ test('shared contracts, auth, navigation, styles and unknown changes fail closed
     'src/features/finance/NewUnknownPage.tsx', 'src/features/clients/ClientPortalPages.tsx',
     'src/features/profile/index.ts', 'src/features/nutrition/nutrition.css', 'src/features/chat/chat-image.ts',
     'services/api/src/server.ts', 'supabase/migrations/existing.sql', 'package-lock.json',
-    'e2e/trainer-schedule-v2.visual.spec.ts', '.github/workflows/ci.yml', 'scripts/fit-lime-ci-scope.mjs']) {
+    ...reviewedInventoryFiles, '.github/workflows/ci.yml', 'scripts/fit-lime-ci-scope.mjs']) {
     assert.equal(selectFitLimeScope([finance, path], activePr).mode, 'full', path)
   }
 })
@@ -72,12 +72,15 @@ test('missing, changed inventory and unverified diffs never narrow the suite', (
 })
 
 test('actual spec edits switch to full without requiring an automatic digest refresh', () => {
-  const source = readFileSync(new URL('../e2e/trainer-schedule-v2.visual.spec.ts', import.meta.url))
-  const digest = createHash('sha256').update(source).digest('hex')
+  const digest = fitLimeInventoryDigest()
   assert.equal(selectFitLimeScope([finance], { ...activePr, inventoryDigest: digest }).mode,
     digest === reviewedInventoryDigest ? 'scoped' : 'full')
-  const changed = createHash('sha256').update(source).update('\n// future test change').digest('hex')
-  assert.equal(selectFitLimeScope([finance], { ...activePr, inventoryDigest: changed }).mode, 'full')
+  const sources = reviewedInventoryFiles.map(path => readFileSync(new URL(`../${path}`, import.meta.url)))
+  for (let i = 0; i < sources.length; i++) {
+    const changed = sources.map((source, index) => index === i ? Buffer.concat([source, Buffer.from('\n// future test change')]) : source)
+    assert.equal(selectFitLimeScope([finance], { ...activePr, inventoryDigest: fitLimeInventoryDigest(changed) }).mode, 'full')
+  }
+  assert.throws(() => fitLimeInventoryDigest([]))
 })
 
 test('production frontend accepts only successful current-main push/manual CI, never scoped PR CI', () => {
@@ -90,7 +93,7 @@ test('production frontend accepts only successful current-main push/manual CI, n
 
 test('full mode keeps all cases without grep, shard, timeout or retry changes', () => {
   assert.deepEqual(fitLimeArgs('lime-acceptance-webkit', 'full').args,
-    ['test', 'e2e/trainer-schedule-v2.visual.spec.ts', '--project=lime-acceptance-webkit', '--workers=2'])
+    ['test', 'e2e/fit-lime.behavior.spec.ts', 'e2e/trainer-schedule-v2.visual.spec.ts', '--project=lime-acceptance-webkit', '--workers=2'])
 })
 
 test('runner rejects empty, unknown, duplicate, partial or injected selectors', () => {

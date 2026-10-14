@@ -8,8 +8,26 @@ import { changedPaths, requiresE2E } from './e2e-scope.mjs'
 export const scopedPrExpiresAt = '2026-10-25T21:00:00.000Z'
 export const scopedPrStartsAt = '2026-10-12T00:00:00.000Z'
 // Any edit to the reviewed inventory/fixtures fails closed until re-audited.
-export const reviewedInventoryDigest = 'd6309f4ececefce091893e2198389c491d6171da5bf06b09f4d79669179b3fc0'
+// Explicit 14.10 re-audit: all 616 titles/tags, 235 callback bodies and shared
+// fixture declarations match the pre-split source. This is not auto-refreshed.
+export const reviewedInventoryDigest = 'dd5b538cfea6e0ac1df9a904e02ff63500c32d7306b44aab8726897cadde1beb'
+export const reviewedInventoryFiles = [
+  'e2e/fit-lime.behavior.spec.ts', 'e2e/trainer-schedule-v2.visual.spec.ts', 'e2e/fit-lime-fixtures.ts',
+]
+export function fitLimeInventoryDigest(sources = reviewedInventoryFiles.map(path => readFileSync(new URL(`../${path}`, import.meta.url)))) {
+  if (sources.length !== reviewedInventoryFiles.length) throw new Error('Incomplete Fit Lime inventory sources')
+  const hash = createHash('sha256')
+  reviewedInventoryFiles.forEach((path, i) => hash.update(path).update('\0').update(sources[i]).update('\0'))
+  return hash.digest('hex')
+}
 export const limeTags = ['critical', 'finance', 'templates', 'clients', 'goals', 'progress', 'profile', 'chat', 'exercises', 'duration']
+
+export function fitLimePartitions(mode) {
+  if (!['full', 'scoped'].includes(mode)) throw new Error('Unknown Fit Lime partition mode')
+  return [{ lane: 'behavior', shard: '1/1' }, ...(mode === 'scoped'
+    ? [{ lane: 'visual', shard: '1/1' }]
+    : [1, 2, 3, 4].map(i => ({ lane: 'visual', shard: `${i}/4` })))]
+}
 
 const featureFiles = [
   ['finance', /^src\/features\/finance\/(?:ClientFinancePage|TrainerFinancePage|TrainerFinanceOverviewPage)(?:\.test)?\.tsx$/],
@@ -44,12 +62,11 @@ export function selectFitLimeScope(paths, { eventName, now = new Date(), invento
 
 function main() {
   const [baseSha, headSha] = process.argv.slice(2)
-  const source = readFileSync(new URL('../e2e/trainer-schedule-v2.visual.spec.ts', import.meta.url))
   const selection = selectFitLimeScope(changedPaths(baseSha, headSha), {
     eventName: process.env.EVENT_NAME,
-    inventoryDigest: createHash('sha256').update(source).digest('hex'),
+    inventoryDigest: fitLimeInventoryDigest(),
   })
-  const output = `mode=${selection.mode}\ntags=${selection.tags.join(',')}\n`
+  const output = `mode=${selection.mode}\ntags=${selection.tags.join(',')}\npartitions=${JSON.stringify(fitLimePartitions(selection.mode))}\n`
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, output)
   process.stdout.write(output)
   console.log(selection.reason)

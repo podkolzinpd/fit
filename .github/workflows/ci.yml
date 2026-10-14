@@ -179,6 +179,7 @@ jobs:
       database_required: ${{ steps.database-scope.outputs.required }}
       lime_mode: ${{ steps.lime-scope.outputs.mode }}
       lime_tags: ${{ steps.lime-scope.outputs.tags }}
+      lime_partitions: ${{ steps.lime-scope.outputs.partitions }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -472,6 +473,7 @@ jobs:
   # sessions/data or licensed font secrets enter untrusted PR jobs. Exact-font
   # rendering is separately verified locally and in the trusted release build.
   e2e-fit-lime:
+    name: e2e-fit-lime (${{ matrix.engine.browser }}, ${{ matrix.acceptance.lane }}, ${{ matrix.acceptance.shard }})
     permissions:
       contents: read
       actions: read
@@ -482,11 +484,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
+        engine:
           - project: mobile-chromium
             browser: chromium
           - project: lime-acceptance-webkit
             browser: webkit
+        acceptance: ${{ fromJSON(needs.e2e-scope.outputs.lime_partitions) }}
     env:
       FIT_SCHEDULE_V2_VISUAL: '1'
       FIT_LIME_FONTS_REQUIRED: 'true'
@@ -515,19 +518,28 @@ jobs:
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright install --with-deps ${{ matrix.engine.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.
-      - name: Run full release or scoped PR Fit Lime acceptance
-        run: node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS"
+      - name: Run full release or scoped PR Fit Lime acceptance partition
+        run: node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS" "$LIME_LANE" "$LIME_SHARD"
         env:
-          LIME_PROJECT: ${{ matrix.project }}
+          LIME_PROJECT: ${{ matrix.engine.project }}
           LIME_MODE: ${{ needs.e2e-scope.outputs.lime_mode }}
           LIME_TAGS: ${{ needs.e2e-scope.outputs.lime_tags }}
+          LIME_LANE: ${{ matrix.acceptance.lane }}
+          LIME_SHARD: ${{ matrix.acceptance.shard }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fit-lime-timings-${{ matrix.engine.browser }}-${{ matrix.acceptance.lane }}-${{ strategy.job-index }}
+          path: test-results/lime-timings.json
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: fit-lime-diagnostics-${{ matrix.project }}
+          name: fit-lime-diagnostics-${{ matrix.engine.browser }}-${{ matrix.acceptance.lane }}-${{ strategy.job-index }}
           path: test-results/
           retention-days: 7
 
