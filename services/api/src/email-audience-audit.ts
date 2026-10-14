@@ -5,23 +5,17 @@ import { PgDatabasePool } from './db/pg-pool.js'
 interface LegacyUser { id: string; email?: string; email_confirmed_at?: string | null; banned_until?: string | null; deleted_at?: string | null }
 export function aggregateEmailAudience(users: readonly LegacyUser[], profiles: ReadonlySet<string>, pushUsers: ReadonlySet<string>) {
   const matched = users.filter(user => profiles.has(user.id))
-  const usable = matched.filter(user => {
-    const email = (user.email ?? '').trim().toLowerCase()
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-      && !/@(?:[^@]+\.)?(?:invalid|test|example)$/.test(email)
-      && !/@example\.(?:com|org|net)$/.test(email)
-      && !user.deleted_at && !(user.banned_until && Date.parse(user.banned_until) > Date.now())
-  })
-  const confirmed = usable.filter(user => Boolean(user.email_confirmed_at))
+  const withEmail = users.filter(user => Boolean((user.email ?? '').trim()))
+  const matchedWithEmail = matched.filter(user => Boolean((user.email ?? '').trim()))
   const unique = (rows: readonly LegacyUser[]) => new Set(rows.map(user => user.email!.trim().toLowerCase())).size
-  return { currentProfiles: profiles.size, legacyAccounts: users.length, matchedProfiles: matched.length,
-    currentProfilesWithoutLegacyMatch: profiles.size - matched.length,
-    profilesWithCandidateEmail: usable.length, uniqueCandidateEmails: unique(usable),
-    profilesWithConfirmedEmail: confirmed.length, uniqueConfirmedEmails: unique(confirmed),
-    confirmedProfilesWithoutPush: confirmed.filter(user => !pushUsers.has(user.id)).length,
-    uniqueConfirmedEmailsWithoutPush: unique(confirmed.filter(user => !pushUsers.has(user.id))),
-    excludedMatchedProfiles: matched.length - usable.length }
+  return { currentProfiles: profiles.size, registeredAccounts: users.length,
+    registeredAccountsWithEmail: withEmail.length, uniqueRegisteredEmails: unique(withEmail),
+    registeredAccountsWithoutEmail: users.length - withEmail.length,
+    matchedCurrentProfiles: matched.length, currentProfilesWithRegisteredEmail: matchedWithEmail.length,
+    uniqueRegisteredEmailsForCurrentProfiles: unique(matchedWithEmail),
+    currentProfilesWithRegisteredEmailWithoutPush: matchedWithEmail.filter(user => !pushUsers.has(user.id)).length }
 }
+
 async function getJson(url: string, key: string, apiKey = false): Promise<unknown> {
   const response = await fetch(url, { method: 'GET', redirect: 'error', signal: AbortSignal.timeout(20_000),
     headers: { Authorization: `Bearer ${key}`, ...(apiKey ? { apikey: key } : {}) } })
@@ -65,13 +59,8 @@ async function main() {
     const push = await connection.query<{ user_id: string }>('select distinct user_id from public.push_subscriptions')
     const counts = aggregateEmailAudience(users, new Set(profiles.map(row => row.id)), new Set(push.map(row => row.user_id)))
     await connection.query('commit')
-    let smtpConfigured: boolean | null = null
-    try {
-      const auth = await getJson(`https://api.supabase.com/v1/projects/${ref}/config/auth`, token) as Record<string, unknown>
-      smtpConfigured = Boolean(auth.smtp_host && auth.smtp_user && auth.smtp_admin_email)
-    } catch { /* SMTP availability is reported independently of the audience audit. */ }
-    console.log(JSON.stringify({ action: 'email-audit', ...counts, legacyCustomSmtpConfigured: smtpConfigured,
-      sentEmails: 0, note: 'Syntax and confirmation only; mailbox deliverability and service notice preferences are not verified.' }))
+    console.log(JSON.stringify({ action: 'email-audit', ...counts, sentEmails: 0,
+      note: 'Counts all non-empty registered emails regardless of confirmation, syntax or account status; no mail sent.' }))
   } finally { connection.release(); await pool.end() }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
