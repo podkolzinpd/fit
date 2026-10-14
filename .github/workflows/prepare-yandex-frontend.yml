@@ -27,9 +27,6 @@ jobs:
       - run: node --test scripts/prepare-yandex-frontend.test.mjs scripts/frontend-release.test.mjs
       - name: Build an offline rehearsal, not a production configuration
         run: npm run build
-        env:
-          VITE_SUPABASE_URL: http://127.0.0.1:54321
-          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       - name: Prepare checksums and required hosting contract
         run: node scripts/prepare-yandex-frontend.mjs dist "$RELEASE_ID" frontend-manifest.json
         env:
@@ -81,8 +78,6 @@ jobs:
       - name: Build candidate with public client configuration only
         working-directory: app
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
           VITE_YANDEX_API_BASE_URL: https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
           VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
@@ -95,8 +90,6 @@ jobs:
           VITE_CONTEST_WINNER_ENABLED: ${{ vars.VITE_CONTEST_WINNER_ENABLED || 'true' }}
           VITE_CONTEST_WINNER_PILOT_USER_IDS: ${{ vars.VITE_CONTEST_WINNER_PILOT_USER_IDS || '092bfc1b-db7c-450d-9f60-aaf9ea4df975,50536f5c-e380-419e-8fa7-410a2c6b249c' }}
         run: |
-          test -n "$VITE_SUPABASE_URL"
-          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
           npm run build
       - name: Package candidate and version-pinned gateway plan
         env:

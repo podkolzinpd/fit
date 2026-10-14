@@ -148,6 +148,15 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 | Wearables | Клиент подключает системное health-хранилище и видит локальные показатели активности и восстановления | Prototype: iOS HealthKit read-only PoC for sleep, steps, active energy, resting HR and HRV; server sync, trainer visibility and real-device acceptance pending |
 | Navigation | URL/deep-link/refresh/back/404/unauthorized | Implemented; default-off maintenance switch replaces every direct route before auth/data providers mount, exposes one reload action and prevents product requests from the maintenance bundle; an independent default-off Supabase gate rejects DML from stale bundles, RPC and background writers on all 37 source product/operational tables; mobile WebKit 390/430 light/dark covered, broader acceptance matrix pending |
 
+Дополнение Auth/build — 14.10.2026: production web/Android/iOS build не требует
+`VITE_SUPABASE_*`; импорт data/repository graph не создаёт SDK/storage buckets.
+Yandex-only AuthProvider не подписывается на Supabase Auth и не отзывает legacy
+token. Локальный SDK ленивый, production legacy call fail-closed до сети даже
+при stale env; Native session/roles/registration/invitation и media semantics
+сохранены. Production bundle проверяется через preview/WebKit, а legacy CI
+fixtures остаются локальными. SDK package/server adapters/SQL history
+не удаляются этим изменением.
+
 Дополнение Auth/Navigation: HTML bootstrap и восстановление сессии используют
 одну оптимизированную фотографию из материалов владельца; nonblocking CSS не
 задерживает её первую отрисовку, но остаётся обязательным перед показом React.

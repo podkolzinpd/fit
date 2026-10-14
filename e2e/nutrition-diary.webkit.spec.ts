@@ -67,7 +67,8 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
     localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'n'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
     localStorage.setItem(`fit.clientLime.theme.${actorId}`, theme)
     localStorage.setItem('fit.appTheme', theme)
-    localStorage.setItem(`fit.coachmarks-seen.${actorId}`, JSON.stringify(['nutrition-client-20261010', 'nutrition-trainer-20261010']))
+    localStorage.setItem(`fit.coachmarks-seen.${actorId}`, JSON.stringify(['nutrition-client-20261010', 'nutrition-trainer-20261010',
+      'client-assistant-2026-09', 'assistant-all-trainers-2026-09']))
   }, { actorId, theme: options.theme ?? 'dark' })
   return state
 }

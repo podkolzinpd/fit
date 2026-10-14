@@ -8,8 +8,8 @@ frontend. Безопасные локальные URL и publishable key хра�
 `.env.development`.
 
 Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и
-`127.0.0.1`. Legacy `VITE_SUPABASE_*` пока остаются в production Yandex frontend
-build из-за startup/legacy совместимости; текущая конфигурация находится в
+`127.0.0.1`. `VITE_SUPABASE_*` нужны только локальным legacy-сценариям, не production
+web/Android/iOS build. Текущая production-конфигурация находится в
 `.github/workflows/deploy-yandex-frontend.yml`, а не в Vercel Production.
 Production URL/ключи нельзя копировать в `.env.local`, `.env.development` или
 другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
@@ -988,25 +988,22 @@ PR Preview, сначала спроектируйте отдельную Yandex-
 - build command: `npm run build`;
 - output directory: `dist`.
 
-На время диагностического отката #1144 для старой Vercel-сборки и Preview
-понадобились публичные frontend-переменные Supabase. Новых Vercel-сборок нет;
-в текущей Yandex production-сборке они также пока обязательны для startup/legacy
-совместимости и читаются GitHub workflow, а не Vercel Environment:
+Исторический startup rollback #1144 требовал Supabase env. Эта зависимость
+устранена: production web/Android/iOS собираются без `VITE_SUPABASE_*`.
+Frontend SDK не создаётся при импорте; production transport отклоняет любую
+legacy операцию локально даже при stale env. Yandex-only AuthProvider не
+подписывается на Supabase Auth и не вызывает legacy signOut/getSession для
+обновления/выхода из app-session. Таймауты Yandex session и UI states сохранены.
+Два legacy storage bucket API тоже ленивые; SDK создаётся только при явном
+локальном legacy обращении с локальной конфигурацией. Dummy credentials нет.
 
-```text
-VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
-```
-
-SDK снова создаётся при импорте, а AuthProvider подписывается на auth events.
-Сохранённый legacy token может обновляться через Supabase Auth, но Yandex-only
-actor и data routing остаются Yandex: stale auth events не инициализируют
-Supabase-профиль, а отсутствие Yandex session не включает fallback. Таймаут
-восстановления Yandex session и последующие media/invitation fixes сохранены.
-Это была проверка гипотезы startup-регрессии, а не доказанное исправление
-сетевого таймаута Vercel. До удаления переменных из текущего Yandex build
-нужен отдельный проверенный Yandex-only startup release. Backend bridge
-secrets не удалять.
+Production iOS guard проверяет `VITE_YANDEX_API_BASE_URL` как remote HTTPS origin,
+публичный `VITE_YANDEX_OAUTH_CLIENT_ID` и точное `true` app-session/main routing/
+native registration/Yandex-only switches. Supabase config не заменяет их.
+CI Yandex-auth lane собирает production bundle и проверяет его через Vite
+preview/WebKit без Supabase env/services; локальные frozen legacy lanes остаются.
+Удаление env из workflow не удаляет GitHub Secrets или Supabase проект.
+Серверные bridge secrets/media/migration/rollback tooling пока сохраняются.
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client
 Secret во frontend build не добавляются.
@@ -1204,15 +1201,13 @@ handoff endpoints скрыты с `404`, пока `YANDEX_ONLY_AUTH_ENABLED` н�
 один из этих switches: stage Terraform читает отсутствующие repository
 variables как `false`.
 
-В эффективном Yandex-only режиме browser Supabase client не создаётся даже при
-наличии старых `VITE_SUPABASE_URL` и `VITE_SUPABASE_PUBLISHABLE_KEY`: legacy
-запрос завершается локальной ошибкой до сетевого вызова. Для авторизованного
-пользователя без подходящей Yandex app-session data backend тоже закрывается,
-а не переключается на Supabase. После deployment и проверки входа обеих ролей,
-публичной анкеты и приглашения эти две переменные можно удалить именно из
-Yandex frontend build workflow и сделать новый deployment. Серверные Supabase
-secrets не удалять: они ещё нужны для recovery старых аккаунтов и оставшегося
-media bridge. Локальная разработка сохраняет свои legacy настройки.
+Stale Supabase session не выбирает production auth/data backend. Новый bundle
+не инициализирует SDK, не обновляет legacy token и не обращается к Supabase даже
+при старых frontend env. Авторизованный пользователь без подходящей app-session
+остаётся в закрытом Yandex состоянии. Сборки web/Android/iOS не требуют Supabase
+переменных; rollout требует штатного выпуска соответствующих bundles. Серверные
+Supabase secrets сохраняются для legacy linking/media/migration/rollback.
+Локальная разработка сохраняет свои legacy настройки.
 
 Не включайте frontend раньше server revision. Порядок cutover: maintenance →
 fresh 35-table apply → repeat checksum → linked-ready assignments → server

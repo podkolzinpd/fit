@@ -59,13 +59,13 @@ test('workflow is manual, artifact-only and has no cloud credentials', async () 
   assert.match(workflow, /workflow_dispatch:/)
   assert.doesNotMatch(workflow, /\b(push|pull_request|schedule):|id-token:|terraform apply|aws s3|yc storage/)
   assert.deepEqual([...new Set([...workflow.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]))].sort(),
-    ['VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_SUPABASE_URL'])
+    [])
   assert.match(workflow, /environment: fit-frontend-candidate/)
   assert.match(workflow, /git merge-base --is-ancestor/)
   assert.match(workflow, /if: inputs.candidate_commit == ''/)
   assert.match(workflow, /contents: read/)
   assert.match(workflow, /actions\/upload-artifact@v4/)
-  assert.match(workflow, /127\.0\.0\.1:54321/)
+  assert.doesNotMatch(workflow, /VITE_SUPABASE_/)
 })
 
 test('separate Terraform root is disabled and private, without DNS or IAM changes', async () => {

@@ -51,9 +51,6 @@ jobs:
       - run: npm run frontend:hosting:test
       - run: node --test scripts/prepare-fit-lime-fonts.test.mjs
       - run: npm run build
-        env:
-          VITE_SUPABASE_URL: http://127.0.0.1:54321
-          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
 
       - name: Verify offline frontend package against the real build
         run: node scripts/frontend-release.mjs dist "$RELEASE_ID" frontend-release.json
@@ -234,8 +231,6 @@ jobs:
     env:
       FIT_YANDEX_E2E_REQUIRED: 'true'
       VITE_CLIENT_LIME_ENABLED: 'true'
-      VITE_SUPABASE_URL: http://127.0.0.1:54321
-      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
       VITE_YANDEX_API_BASE_URL: https://stage.example.test
       VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
@@ -258,10 +253,11 @@ jobs:
         run: |
           docker run --rm --init --ipc=host --network host \
             --env CI=true \
+            --env FIT_TEST_PRODUCTION_BUILD=true \
+            --env VITE_NUTRITION_ENABLED=true \
+            --env VITE_NUTRITION_NATIVE_COHORT=true \
             --env FIT_YANDEX_E2E_REQUIRED \
             --env VITE_CLIENT_LIME_ENABLED \
-            --env VITE_SUPABASE_URL \
-            --env VITE_SUPABASE_PUBLISHABLE_KEY \
             --env VITE_YANDEX_OAUTH_CLIENT_ID \
             --env VITE_YANDEX_API_BASE_URL \
             --env VITE_YANDEX_ONLY_AUTH_ENABLED \
@@ -271,7 +267,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests
+            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests'
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -510,8 +506,6 @@ jobs:
       FIT_SCHEDULE_V2_VISUAL: '1'
       FIT_LIME_FONTS_REQUIRED: 'true'
       VITE_CLIENT_LIME_ENABLED: 'true'
-      VITE_SUPABASE_URL: http://127.0.0.1:54321
-      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       VITE_YANDEX_API_BASE_URL: http://127.0.0.1:4100
       VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
       VITE_YANDEX_APP_SESSION_ENABLED: 'true'
