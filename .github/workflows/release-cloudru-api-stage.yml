@@ -48,7 +48,7 @@ jobs:
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
 
   release:
-    name: Build and replace loopback-only API with rollback
+    name: Migrate and release Cloud.ru API with rollback
     needs: source
     runs-on: [self-hosted, cloudru-stage]
     concurrency:
@@ -89,6 +89,60 @@ jobs:
           git archive --format=tar "$RELEASE_SHA" | sudo tar -xf - -C "$release_dir"
           sudo podman build --pull=always -t "localhost/fit-api:$RELEASE_SHA" "$release_dir/services/api"
           sudo podman image exists "localhost/fit-api:$RELEASE_SHA"
+      - name: Apply only pending Cloud.ru migrations before candidate startup
+        shell: bash
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          set +x
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ && "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          expected='["DATABASE_HOST","DATABASE_NAME","DATABASE_PASSWORD","DATABASE_PORT","DATABASE_USER","MIGRATION_DATABASE_HOST","MIGRATION_DATABASE_NAME","MIGRATION_DATABASE_PASSWORD","MIGRATION_DATABASE_PORT","MIGRATION_DATABASE_USER"]'
+          if ! jq -e --argjson expected "$expected" '
+            type == "object" and (keys | sort) == $expected and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not)) and
+            .MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .DATABASE_USER == "fit_api"
+          ' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null 2>&1; then
+            echo 'Cloud.ru migration configuration rejected.' >&2
+            exit 1
+          fi
+          while IFS= read -r value; do
+            echo "::add-mask::${value//%/%25}"
+          done < <(jq -r '.[]' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+          sudo test -d /opt/fit/secrets
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = '0:700'
+          sudo test ! -L /opt/fit/db-backups
+          sudo install -d -m 700 /opt/fit/db-backups
+          test "$(sudo stat -c '%u:%a' /opt/fit/db-backups)" = '0:700'
+          migration_env="/opt/fit/secrets/release-migrations-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          migration_container="fit-release-migrations-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          backup_dir="/opt/fit/db-backups/$RELEASE_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          sudo test ! -L "/opt/fit/db-backups/$RELEASE_SHA"
+          sudo install -d -m 700 "/opt/fit/db-backups/$RELEASE_SHA"
+          test "$(sudo stat -c '%u:%a' "/opt/fit/db-backups/$RELEASE_SHA")" = '0:700'
+          sudo test ! -e "$migration_env"
+          sudo test ! -L "$migration_env"
+          sudo test ! -e "$backup_dir"
+          sudo test ! -L "$backup_dir"
+          if sudo podman container exists "$migration_container"; then exit 1; fi
+          trap 'sudo podman rm --force --ignore "$migration_container" >/dev/null; sudo rm -f -- "$migration_env"' EXIT
+          sudo sh -c 'umask 077; set -C; : > "$1"' _ "$migration_env"
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$migration_env" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nRELEASE_SHA=%s\nCLOUDRU_MIGRATION_CONFIRMATION=APPLY_CLOUDRU_PENDING_MIGRATIONS\n' \
+            "$RELEASE_SHA" | sudo tee -a "$migration_env" >/dev/null
+          test "$(sudo stat -c '%u:%a' "$migration_env")" = '0:600'
+          sudo install -d -m 700 "$backup_dir"
+          sudo podman run --rm --read-only --user 0 --cap-drop=ALL \
+            --name "$migration_container" \
+            --security-opt=no-new-privileges --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --env-file "$migration_env" --mount "type=bind,src=$backup_dir,dst=/backup" \
+            "localhost/fit-api:$RELEASE_SHA" node dist/cloudru-release-migrations.js
+          echo 'Cloud.ru pending migrations verified; backup remains private on this VM.'
       - name: Smoke candidate, switch stage port and roll back on failure
         shell: bash
         run: |
