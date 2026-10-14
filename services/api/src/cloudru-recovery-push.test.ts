@@ -4,8 +4,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { Pool } from 'pg'
 
 import { PgDatabasePool } from './db/pg-pool.js'
-import { recoveryCampaign, runRecovery } from './cloudru-recovery-push.js'
+import { DirectRecoveryPushSender, recoveryCampaign, runRecovery } from './cloudru-recovery-push.js'
 import type { PushNotificationInput } from './push-notifications/send.js'
+
+const providerSend = vi.hoisted(() => vi.fn())
+vi.mock('web-push', () => ({ default: { sendNotification: (...args: unknown[]): unknown => providerSend(...args) } }))
 
 describe('approved recovery copy', () => {
   it('keeps the complete main message short and opens the canonical app root', () => {
@@ -14,6 +17,31 @@ describe('approved recovery copy', () => {
     expect([...recoveryCampaign.title].length).toBeLessThan(30)
     expect([...recoveryCampaign.body].length).toBeLessThan(50)
     expect(JSON.parse(recoveryCampaign.data)).toEqual({ announcement: 'cloudru_recovery_2026_10_14', url: '/' })
+  })
+
+  it('uses existing VAPID identity, bounds provider calls and preserves exact payload', async () => {
+    providerSend.mockReset().mockResolvedValueOnce(undefined)
+    const item: PushNotificationInput = { id: 'test', subscription: {
+      endpoint: 'https://push.example/test', keys: { p256dh: 'test-key', auth: 'test-auth' } },
+    title: recoveryCampaign.title, body: recoveryCampaign.body, data: { url: '/' } }
+    const vapid = { publicKey: 'test-public', privateKey: 'test-private', subject: 'mailto:test@example.test' }
+    expect(await new DirectRecoveryPushSender(vapid).send([item])).toEqual([{ id: 'test', ok: true }])
+    expect(providerSend).toHaveBeenCalledWith(item.subscription,
+      JSON.stringify({ title: item.title, body: item.body, data: item.data }),
+      { vapidDetails: vapid, timeout: 10_000 })
+  })
+
+  it('does not expose provider errors and distinguishes HTTP rejection from uncertain socket outcome', async () => {
+    providerSend.mockReset().mockRejectedValueOnce({ statusCode: 410, body: 'private provider body' })
+      .mockRejectedValueOnce(new Error('private endpoint socket timeout'))
+    const item: PushNotificationInput = { id: 'test', subscription: {
+      endpoint: 'https://push.example/test', keys: { p256dh: 'test-key', auth: 'test-auth' } },
+    title: 'Test', body: 'Test', data: {} }
+    const sender = new DirectRecoveryPushSender({ publicKey: 'test', privateKey: 'test', subject: 'test' })
+    expect(await sender.send([item, { ...item, id: 'timeout' }])).toEqual([
+      { id: 'test', ok: false, status: 410, error: 'web_push_410' },
+      { id: 'timeout', ok: false, status: 0, error: 'delivery_outcome_unknown' },
+    ])
   })
 })
 
@@ -122,6 +150,17 @@ describe.skipIf(!process.env.TEST_RECOVERY_DATABASE_URL)('recovery push on isola
     const send = vi.fn((items: readonly PushNotificationInput[]) => Promise.resolve(items.map(item =>
       ({ id: item.id, ok: false as const, status: 503, error: 'web_push_503' }))))
     expect(await runRecovery(pool, 'dispatch', { send })).toMatchObject({ sent: 0, failed: 4, pending: 0 })
+    await runRecovery(pool, 'dispatch', { send })
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps only uncertain devices leased while finalizing healthy siblings', async () => {
+    await runRecovery(pool, 'enqueue')
+    const send = vi.fn((items: readonly PushNotificationInput[]) => Promise.resolve(items.map(item =>
+      item.subscription.endpoint.endsWith(devices[0]!)
+        ? { id: item.id, ok: false as const, status: 0, error: 'delivery_outcome_unknown' }
+        : { id: item.id, ok: true as const })))
+    expect(await runRecovery(pool, 'dispatch', { send })).toMatchObject({ sent: 3, uncertain: 1, pending: 0 })
     await runRecovery(pool, 'dispatch', { send })
     expect(send).toHaveBeenCalledTimes(1)
   })
