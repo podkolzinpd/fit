@@ -3,7 +3,10 @@ import { spawnSync } from 'node:child_process'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { auditManifest, compareAuditManifests, readSourceAuditManifest, runSqlAudit } from './cloudru-sql-audit.js'
+import { auditManifest, boundedAuditPool, compareAuditManifests, readSourceAuditManifest, runSqlAudit } from './cloudru-sql-audit.js'
+import { PgDatabasePool } from './db/pg-pool.js'
+
+vi.mock('./db/pg-pool.js', () => ({ PgDatabasePool: vi.fn() }))
 
 const table = { schema: 'public', table: 'workouts', rows: 2, sha256: 'a'.repeat(64) }
 const manifest = { format: 'fit-cloudru-sql-snapshot-v1' as const, tables: [table] }
@@ -52,6 +55,41 @@ describe('read-only Cloud.ru SQL audit', () => {
   it('propagates failed reads instead of returning a false parity result', async () => {
     await expect(runSqlAudit(() => Promise.resolve(manifest), () => Promise.reject(new Error('failed'))))
       .rejects.toThrow('failed')
+  })
+
+  it('sets bounded timeouts only inside an established read-only transaction', async () => {
+    const client = { query: vi.fn().mockResolvedValue([]), release: vi.fn() }
+    client.query.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ readOnly: 'on' }])
+    const raw = new PgDatabasePool({ max: 1 })
+    vi.mocked(raw).connect = vi.fn().mockResolvedValue(client)
+    const end = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(raw).end = end
+    const bounded = boundedAuditPool(raw)
+    const connection = await bounded.connect()
+    await connection.query('begin isolation level repeatable read read only')
+    expect(client.query).toHaveBeenNthCalledWith(1, 'begin isolation level repeatable read read only', [])
+    expect(client.query).toHaveBeenNthCalledWith(2, "set local statement_timeout = '60s'")
+    expect(client.query).toHaveBeenNthCalledWith(3, "set local lock_timeout = '2s'")
+    expect(client.query).toHaveBeenNthCalledWith(4, "select current_setting('transaction_read_only') as \"readOnly\"")
+    await connection.query('commit')
+    expect(client.query).toHaveBeenCalledTimes(5)
+    connection.release()
+    await bounded.end()
+    expect(client.release).toHaveBeenCalledOnce()
+    expect(end).toHaveBeenCalledOnce()
+  })
+
+  it('refuses a connection not actually in READ ONLY and propagates setup failures', async () => {
+    const client = { query: vi.fn().mockResolvedValue([]), release: vi.fn() }
+    const raw = new PgDatabasePool({ max: 1 })
+    vi.mocked(raw).connect = vi.fn().mockResolvedValue(client)
+    const connection = await boundedAuditPool(raw).connect()
+    await expect(connection.query('begin isolation level repeatable read read only'))
+      .rejects.toThrow('audit_readonly_required')
+    client.query.mockRejectedValueOnce(new Error('setup failed'))
+    await expect(connection.query('begin isolation level repeatable read read only'))
+      .rejects.toThrow('setup failed')
   })
 
   it('calls only the IAM-protected manifest with bounded time and no redirects/chunks', async () => {
