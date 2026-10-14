@@ -4,7 +4,8 @@ import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, Sched
 import { useAuth } from './auth-context'
 import { Coachmark } from '../shared/ui'
 import { applyAppTheme, applyMonochromeThemeColor, applyThemeVariant, resolveThemeVariant, themeVariantClass, useAppTheme } from './theme'
-import { isAssistantNavPilotEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { isAssistantNavPilotEnabled, isServiceNoticeEnabled, isTodayStartRedesignEnabled } from './feature-flags'
+import { ServiceNotice } from './service-notice'
 import { useAppViewport } from './app-viewport'
 import { isTrainerScheduleV2CalendarRoute, isTrainerScheduleV2Enabled } from './trainer-schedule-v2'
 import { isFitLimeEnabled, isFitLimeShellRoute } from './fit-lime'
@@ -156,6 +157,8 @@ export function AppLayout() {
     keyboardOpen ? 'keyboard-open' : '',
   ].filter(Boolean).join(' ')
   // Объявление победителю конкурса не перебивает Live, форму тренировки и чат.
+  // Над содержимым любого экрана обеих ролей; в Live и переписке не мешаем действию.
+  const serviceNotice = isServiceNoticeEnabled() && !liveSession && !chat ? <ServiceNotice /> : null
   const contestWinnerDialog = actor && <ContestWinnerDialog userId={actor.userId} suppressed={immersive} />
   const trainerAssistantNav = actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
     id="assistant-all-trainers-2026-09"
@@ -165,7 +168,7 @@ export function AppLayout() {
   >
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
-  if (actor?.role === 'client') return <FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     {monochromeClientFinance || pathname === '/me/nutrition'
       ? <Link to="/me" className="active" aria-current="page"><HomeIcon />Кабинет</Link>
       : <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>}
@@ -181,7 +184,7 @@ export function AppLayout() {
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
   </nav>}</div></FitLimeIconsContext>
-  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}><Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
+  return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}
     {(redesignedStart || trainerScheduleV2) && ((fitLimeShell && /^\/progress\/[^/]+$/.test(pathname)) || monochromeTrainerFinance

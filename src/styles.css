@@ -7330,3 +7330,8 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .quick-start-format .actions > .primary { background: var(--mono-on-primary, #faf9f6); color: var(--mono-primary, #202024); }
 .quick-start-format .actions > .secondary { background: transparent; color: inherit; border-color: currentColor; }
 .quick-start-workout.compact .quick-start-format .actions > .primary { background: var(--mono-primary, #202024); color: var(--mono-on-primary, #faf9f6); }
+
+/* Временное служебное сообщение (см. src/app/service-notice.tsx). */
+.service-notice { display:grid; gap:4px; margin:calc(var(--space-3) + 2px) var(--space-4) 0; padding:12px 14px; border:1px solid var(--warning-border); border-radius:14px; background:var(--warning-surface); color:var(--fg) }
+.service-notice strong { font-size:15px; font-weight:700; color:var(--warning-fg) }
+.service-notice p { margin:0; font-size:14px; line-height:1.4; color:var(--fg) }

@@ -418,6 +418,35 @@ describe('AppLayout: вкладка ассистента', () => {
   })
 })
 
+describe('AppLayout: служебная плашка о восстановлении ИИ', () => {
+  it('без флага сборки плашки нет', () => {
+    renderLayout('/me')
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['client', '/me'],
+    ['client', '/assistant'],
+    ['trainer', '/today'],
+    ['trainer', '/clients'],
+  ] as const)('%s видит плашку над содержимым %s', (role, path) => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    authState.role = role
+    renderLayout(path)
+    const notice = screen.getByRole('status', { name: 'Состояние сервиса' })
+    expect(notice).toHaveTextContent('Fit снова работает')
+    expect(notice).toHaveTextContent('ИИ-функции')
+    // Плашка идёт первой, до содержимого экрана.
+    expect(notice.compareDocumentPosition(screen.getByText('Содержимое')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it.each(['/workouts/w1/live', '/chat'])('не мешает действию на %s', (path) => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    renderLayout(path)
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+  })
+})
+
 describe('AppLayout: объявление победителю конкурса', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
