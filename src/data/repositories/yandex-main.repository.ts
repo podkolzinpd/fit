@@ -35,7 +35,7 @@ import type {
   WorkoutHomeSummary,
   WorkoutTemplate,
 } from '../../shared/domain'
-import { parseTrainerDiscoveryPrompt } from './trainer-discovery.repository'
+import { parseTrainerDiscoveryPrompt } from './trainer-discovery-prompt'
 import { localDate } from '../../shared/local-date'
 import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { validateGoalCriteriaSuggestion } from '../../shared/goal-criteria-suggestions'
@@ -46,7 +46,7 @@ import { reconcilePushSubscription } from '../../features/notifications/reconcil
 import { createYandexMainQueries, type YandexMainQueries } from '../queries/yandex-main.queries'
 import { diagnosticsForResponse } from '../queries/request-diagnostics'
 import { toJson } from '../queries/json'
-import { currentAppFeedbackContext } from './app-feedback.repository'
+import { currentAppFeedbackContext } from './app-feedback-context'
 import type { CustomExercise } from './exercises.repository'
 import type {
   TrainerFinancePackageDraft,
@@ -58,13 +58,13 @@ import type {
 } from './trainer-finance.repository'
 import { RepositoryError } from './error'
 import { collectPages } from './collect-pages'
-import { roundMetric } from './progress.repository'
+import { roundMetric } from './progress-rules'
 import { DEFAULT_REST_BETWEEN_SETS } from './workout-rules'
 import { recognizeInBody } from '../queries/inbody-recognition'
 import {
   publishedTrainingSummaryFromRow,
   trainingSummaryFromRow,
-} from './training-summaries.repository'
+} from './training-summary-mappers'
 import { trainingSummaryGenerationError } from './training-summary-errors'
 import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
 import { expandSpecialtiesForCatalogSearch, trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'

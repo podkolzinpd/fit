@@ -150,6 +150,8 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 
 Дополнение Auth/build — 14.10.2026: production web/Android/iOS build не требует
 `VITE_SUPABASE_*`; импорт data/repository graph не создаёт SDK/storage buckets.
+Main и Assistant native repositories используют общие helpers напрямую, без
+импорта legacy repositories и SDK; семантика расчётов, DTO и validation сохранена.
 Yandex-only AuthProvider не подписывается на Supabase Auth и не отзывает legacy
 token. Локальный SDK ленивый, production legacy call fail-closed до сети даже
 при stale env; Native session/roles/registration/invitation и media semantics
