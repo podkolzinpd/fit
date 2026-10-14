@@ -601,3 +601,12 @@ format/stage/template/comment/technique/duration/distance/RPE сохранены
 и request ID. Browser18/18 Chromium/WebKit375/390/430/1440; прежний ClientLime
 light/dark390/430 и непилотный trainer1440 WebKit5/5. CI, последовательный merge,
 финальное включение и production/native acceptance остаются отдельными гейтами.
+
+## Cloud.ru production stabilization — In progress
+
+План и неизменяемая приёмка: docs/design/CLOUDRU_STABILIZATION_20261014.md,
+GitHub1633. Единый API web/native, DNS, gated release, external SpeechKit/GPT,
+новые push, роль клиента/тренера, media и offsite restore проверяются отдельно.
+API/frontend d10c2d12 опубликованы; это не Implemented для всей стабилизации.
+Legacy writers и независимое расхождение БД требуют контролируемого решения;
+повторный initial import/замена непустой Cloud.ru БД запрещены.

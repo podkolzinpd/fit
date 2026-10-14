@@ -1,0 +1,126 @@
+name: Backup and restore-check Cloud.ru production
+
+on:
+  schedule:
+    - cron: '35 2 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Create the private backup bucket once, or back up and restore-check
+        type: choice
+        default: backup
+        options: [bootstrap, backup]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 20
+    env:
+      CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+      CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
+      CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
+      CLOUDRU_BACKUP_ENCRYPTION_KEY: ${{ secrets.CLOUDRU_BACKUP_ENCRYPTION_KEY }}
+      BACKUP_MODE: ${{ inputs.mode || 'backup' }}
+    steps:
+      - name: Verify trusted host and bound scratch paths
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          [[ "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+-[0-9]+$ ]]
+          test "$BACKUP_MODE" = bootstrap -o "$BACKUP_MODE" = backup
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          [[ "$CLOUDRU_BACKUP_ENCRYPTION_KEY" =~ ^[a-f0-9]{64}$ ]]
+      - name: Back up only Cloud.ru PostgreSQL into encrypted private Cloud.ru S3
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          directory="/opt/fit/backup-attempts/$id"
+          private_env="/opt/fit/secrets/backup-$id.env"
+          sudo test ! -e "$directory"
+          sudo test ! -e "$private_env"
+          sudo install -d -m 700 "$directory"
+          sudo install -m 600 /dev/null "$private_env"
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$private_env" >/dev/null
+          for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET CLOUDRU_BACKUP_ENCRYPTION_KEY BACKUP_MODE; do
+            value="${!name}"
+            test -n "$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" | sudo tee -a "$private_env" >/dev/null
+          done
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nCLOUDRU_TENANT_ID=f071c7d5-cf0f-4538-9415-bbf9a9c94338\nCLOUDRU_BACKUP_CONFIRMATION=BACKUP_CLOUDRU_TO_PRIVATE_S3\nBACKUP_ATTEMPT=%s\n' \
+            "$id" | sudo tee -a "$private_env" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --user 0 --memory=512m --cpus=1 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$private_env" \
+            --mount "type=bind,src=$directory,dst=/backup" \
+            "localhost/fit-api:$revision" node dist/cloudru-backup.js
+          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=1 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$private_env" \
+            "localhost/fit-api:$revision" node dist/cloudru-media-health.js
+      - name: Restore downloaded backup into a disposable PostgreSQL without network
+        if: inputs.mode != 'bootstrap'
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          directory="/opt/fit/backup-attempts/$id"
+          container="fit-backup-restore-$id"
+          volume="fit-backup-restore-$id"
+          image='public.ecr.aws/docker/library/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3'
+          if sudo podman container exists "$container" || sudo podman volume exists "$volume"; then exit 1; fi
+          trap 'sudo podman rm --force --ignore "$container" >/dev/null; sudo podman volume rm --force "$volume" >/dev/null' EXIT
+          sudo podman volume create "$volume" >/dev/null
+          sudo podman run --detach --name "$container" --network=none --memory=512m --cpus=1 --pids-limit=256 \
+            --env POSTGRES_USER=fit_owner --env POSTGRES_DB=fit_restore --env POSTGRES_HOST_AUTH_METHOD=trust \
+            --mount "type=volume,src=$volume,dst=/var/lib/postgresql/data" \
+            --mount "type=bind,src=$directory,dst=/backup,ro=true" "$image" >/dev/null
+          for attempt in {1..30}; do
+            if sudo podman exec "$container" pg_isready -U fit_owner -d fit_restore >/dev/null 2>&1; then break; fi
+            test "$attempt" -lt 30
+            sleep 1
+          done
+          sudo podman exec "$container" psql -U fit_owner -d fit_restore -v ON_ERROR_STOP=1 \
+            -qc 'create role fit_api nologin;' >/dev/null 2>&1
+          expected=$(sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
+            | awk '/ TABLE / && !/ TABLE DATA / {count++} END {print count+0}')
+          test "$expected" -gt 0
+          sudo podman exec --user 0 "$container" pg_restore --clean --if-exists --no-owner --no-acl --exit-on-error \
+            --username fit_owner --dbname fit_restore /backup/readback.dump >/dev/null 2>&1
+          restored=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
+            "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind in ('r','p') and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'")
+          test "$restored" = "$expected"
+          migrations=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
+            'select count(*) from app_private.fit_migrations')
+          test "$migrations" -gt 0
+          printf 'Offsite backup downloaded, decrypted and restored; tables=%s; migrations=%s.\n' \
+            "$restored" "$migrations" >> "$GITHUB_STEP_SUMMARY"
+          date -u +%Y-%m-%dT%H:%M:%SZ | sudo tee /opt/fit/BACKUP_VERIFIED_AT >/dev/null
+      - name: Remove only this attempt's private scratch and temporary credentials
+        if: always()
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]+-[0-9]+$ ]]
+          sudo podman rm --force --ignore "fit-backup-restore-$id" >/dev/null
+          if sudo podman volume exists "fit-backup-restore-$id"; then
+            sudo podman volume rm --force "fit-backup-restore-$id" >/dev/null
+          fi
+          sudo rm -f -- "/opt/fit/secrets/backup-$id.env" \
+            "/opt/fit/backup-attempts/$id/before-migrations.dump" \
+            "/opt/fit/backup-attempts/$id/readback.dump"
+          if sudo test -d "/opt/fit/backup-attempts/$id"; then sudo rmdir -- "/opt/fit/backup-attempts/$id"; fi

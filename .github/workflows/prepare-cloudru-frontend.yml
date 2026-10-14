@@ -79,12 +79,13 @@ jobs:
           FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2 }}
           VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
           VITE_YANDEX_API_BASE_URL: https://api.fit-training.ru
+          VITE_SPEECHKIT_RELAY_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL || '' }}
           VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
           VITE_YANDEX_APP_SESSION_ENABLED: 'true'
           VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
           VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
           VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
-          VITE_ASSISTANT_PROGRAM_ENABLED: 'false'
+          VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}
           VITE_MAINTENANCE_MODE: 'false'
           VITE_CONTEST_WINNER_ENABLED: ${{ vars.VITE_CONTEST_WINNER_ENABLED || 'true' }}
           VITE_CONTEST_WINNER_PILOT_USER_IDS: ${{ vars.VITE_CONTEST_WINNER_PILOT_USER_IDS || '092bfc1b-db7c-450d-9f60-aaf9ea4df975,50536f5c-e380-419e-8fa7-410a2c6b249c' }}
@@ -99,6 +100,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/check-production-api-routing.mjs
           npm run build
           test -s dist/index.html
           grep -RqlF 'https://api.fit-training.ru' dist/assets

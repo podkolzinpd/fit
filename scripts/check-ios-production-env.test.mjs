@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { validateIosProductionEnv } from './check-ios-production-env.mjs'
 
-const valid = { VITE_YANDEX_API_BASE_URL: 'https://api.example.test', VITE_YANDEX_OAUTH_CLIENT_ID: 'public-client-id',
+const valid = { VITE_YANDEX_API_BASE_URL: 'https://api.fit-training.ru', VITE_YANDEX_OAUTH_CLIENT_ID: 'public-client-id',
   VITE_YANDEX_APP_SESSION_ENABLED: 'true', VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true',
   VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true', VITE_YANDEX_ONLY_AUTH_ENABLED: 'true' }
 
@@ -22,7 +22,7 @@ for (const origin of [undefined, '', 'not-url', 'http://api.example.test', 'http
   test(`rejects unsafe production origin: ${origin}`, () => assert.ok(validateIosProductionEnv({ ...valid, VITE_YANDEX_API_BASE_URL: origin }).length > 0))
 }
 test('accepts a single trailing slash and validates public OAuth ID', () => {
-  assert.deepEqual(validateIosProductionEnv({ ...valid, VITE_YANDEX_API_BASE_URL: 'https://api.example.test/' }), [])
+  assert.deepEqual(validateIosProductionEnv({ ...valid, VITE_YANDEX_API_BASE_URL: 'https://api.fit-training.ru/' }), [])
   for (const value of [undefined, '', ' '.repeat(5), 'x'.repeat(201)]) assert.ok(validateIosProductionEnv({ ...valid, VITE_YANDEX_OAUTH_CLIENT_ID: value }).length > 0)
 })
 for (const name of ['prepare-cloudru-frontend', 'prepare-yandex-frontend', 'deploy-yandex-frontend', 'android-build']) {

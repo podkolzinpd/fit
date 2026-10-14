@@ -1,0 +1,92 @@
+name: Route legacy Yandex addresses to Cloud.ru
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Inspect first; dns changes only old Yandex records; api replaces only the old API with a redirect
+        type: choice
+        options: [inspect, dns, api]
+        default: inspect
+      ci_run_id:
+        description: Successful CI run for current main
+        required: true
+        type: string
+      confirmation:
+        description: ROUTE_OLD_ADDRESSES_TO_CLOUDRU for dns/api
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: yandex-stage
+  cancel-in-progress: false
+
+jobs:
+  compatibility:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+      CONFIRMATION: ${{ inputs.confirmation }}
+      COMPAT_IMAGE: cr.yandex/${{ vars.YC_API_REPOSITORY }}:cloudru-compat-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify exact green main and healthy Cloud.ru target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" 'select(.path == ".github/workflows/ci.yml" and
+            .head_repository.full_name == $repo and .head_branch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success") | .head_sha' <<<"$run")
+          test "$commit" = "$GITHUB_SHA"
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          curl --fail --silent --show-error --max-time 10 https://api.fit-training.ru/ready >/dev/null
+      - name: Exchange short-lived deployment identity
+        run: scripts/yandex-github-oidc.sh
+      - name: Inspect only known legacy resources
+        if: inputs.mode == 'inspect'
+        run: node scripts/route-legacy-yandex-to-cloudru.mjs inspect
+      - name: Update only legacy Yandex DNS address records
+        if: inputs.mode == 'dns'
+        run: node scripts/route-legacy-yandex-to-cloudru.mjs dns
+      - name: Build the credential-free compatibility image
+        if: inputs.mode == 'api'
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = ROUTE_OLD_ADDRESSES_TO_CLOUDRU
+          printf '%s' "$YC_TOKEN" | podman login --username iam --password-stdin cr.yandex
+          trap 'podman logout cr.yandex >/dev/null' EXIT
+          podman build --platform linux/amd64 --file services/legacy-api-redirect/Dockerfile \
+            --tag "$COMPAT_IMAGE" services/legacy-api-redirect
+          podman push "$COMPAT_IMAGE"
+      - name: Replace only the old public API revision and verify redirect semantics
+        if: inputs.mode == 'api'
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          node scripts/route-legacy-yandex-to-cloudru.mjs api
+          base=https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
+          for method in GET POST PATCH; do
+            headers=$(curl --silent --show-error --max-time 20 --request "$method" \
+              --header 'Origin: capacitor://localhost' --dump-header - --output /dev/null "$base/v1/clients")
+            test "$(head -n1 <<<"$headers" | tr -d '\r' | awk '{print $2}')" = 307
+            grep -iq '^location: https://api.fit-training.ru/v1/clients' <<<"$headers"
+            grep -iq '^access-control-allow-origin: capacitor://localhost' <<<"$headers"
+          done
+          echo 'Old API redirects GET/POST/PATCH to Cloud.ru; Yandex database and previous revisions retained.' >> "$GITHUB_STEP_SUMMARY"

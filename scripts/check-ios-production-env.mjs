@@ -1,13 +1,10 @@
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { loadEnv } from 'vite'
+import { validateProductionApiRouting } from './check-production-api-routing.mjs'
 
 export function validateIosProductionEnv(environment) {
-  const errors = []
-  for (const key of ['VITE_YANDEX_APP_SESSION_ENABLED', 'VITE_YANDEX_MAIN_ROUTING_ENABLED',
-    'VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'VITE_YANDEX_ONLY_AUTH_ENABLED']) {
-    if (environment[key] !== 'true') errors.push(`${key} must be true`)
-  }
+  const errors = validateProductionApiRouting(environment)
   const apiBaseUrl = environment.VITE_YANDEX_API_BASE_URL?.trim()
   try {
     const url = new URL(apiBaseUrl)

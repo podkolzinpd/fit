@@ -1,13 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
-import webpush from 'web-push'
 
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
 import { finalizePushNotifications } from './push-dispatcher-command.js'
 import type { PushNotificationSender } from './push-notifications/http-sender.js'
-import type { PushNotificationInput, PushNotificationResult, VapidConfig } from './push-notifications/send.js'
+import { DirectPushNotificationSender as DirectRecoveryPushSender } from './push-notifications/direct-sender.js'
 import { parsePushRequest } from './push-notifications/parse-request.js'
 
 export const recoveryCampaign = {
@@ -17,31 +16,7 @@ export const recoveryCampaign = {
   data: JSON.stringify({ announcement: 'cloudru_recovery_2026_10_14', url: '/' }),
 } as const
 
-// Reuse the original VAPID identity but send directly from Cloud.ru, without
-// waiting for a second cloud function's aggregate HTTP response.
-export class DirectRecoveryPushSender implements PushNotificationSender {
-  private readonly vapid: VapidConfig
-
-  constructor(vapid: VapidConfig) { this.vapid = vapid }
-
-  async send(items: readonly PushNotificationInput[]): Promise<PushNotificationResult[]> {
-    return Promise.all(items.map(async (item): Promise<PushNotificationResult> => {
-      try {
-        await webpush.sendNotification(item.subscription,
-          JSON.stringify({ title: item.title, body: item.body, data: item.data }),
-          { vapidDetails: this.vapid, timeout: 10_000 })
-        return { id: item.id, ok: true }
-      } catch (error) {
-        const value = typeof error === 'object' && error !== null && 'statusCode' in error
-          ? error.statusCode : undefined
-        const status = typeof value === 'number' && Number.isInteger(value)
-          && value >= 100 && value <= 599 ? value : 0
-        return { id: item.id, ok: false, status, error: status === 0
-          ? 'delivery_outcome_unknown' : `web_push_${status}` }
-      }
-    }))
-  }
-}
+export { DirectPushNotificationSender as DirectRecoveryPushSender } from './push-notifications/direct-sender.js'
 
 const eligible = `select subscription.id, subscription.user_id
   from public.push_subscriptions subscription

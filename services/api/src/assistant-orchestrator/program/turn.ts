@@ -6,7 +6,7 @@ import type { AssistantAction, AssistantTurnResponse } from '../index.js'
 import { briefExtractionSchema, briefProperties, briefSuggestionsFor, decodeQuotedBriefPatch, briefQuestions, briefSummary, CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE, mergeExtractedBrief, missingBriefFields, readProgramBrief, type ProgramBrief } from './brief.js'
 import { PROGRAM_CATALOG, PROGRAM_EQUIPMENT } from './catalog.js'
 import { addDays, materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
-import { programIamToken, programModelJson } from './model.js'
+import { programIamToken, programModelAuthorization, programModelJson } from './model.js'
 import { explicitBriefAnswer, type BriefAnswerContext } from './answer.js'
 import type { loadProgramContext } from './source.js'
 
@@ -301,7 +301,7 @@ export async function invokeProgramGenerator(actorId: string, operationId: strin
   const requestBody = JSON.stringify({ actorId, operationId, today, brief, context })
   let status: number
   let raw: unknown
-  let token: string
+  let token: string | null
   if (endpoint) {
     if (!/^https:\/\/functions\.yandexcloud\.net\/[a-z0-9]+$/.test(endpoint)) throw new Error('program_generator_unconfigured')
     token = await programIamToken()
@@ -317,7 +317,7 @@ export async function invokeProgramGenerator(actorId: string, operationId: strin
     const response = await handler({ httpMethod: 'POST', body: requestBody })
     status = response.statusCode
     raw = JSON.parse(response.body) as unknown
-    token = await programIamToken()
+    token = (await programModelAuthorization()).iamToken
   }
   const rawMetrics = record(raw)?.metrics
   const metrics = Array.isArray(rawMetrics) ? rawMetrics : [record(raw)?.metric]

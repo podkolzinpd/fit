@@ -1,0 +1,16 @@
+[Unit]
+Description=Fit authenticated Cloud.ru SpeechKit relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/fit-cloudru-speechkit
+ExecStop=/usr/bin/podman stop --time 10 fit-speechkit-cloudru
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

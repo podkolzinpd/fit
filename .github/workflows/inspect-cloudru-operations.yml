@@ -1,0 +1,81 @@
+name: Inspect Cloud.ru production operations
+
+on:
+  schedule:
+    - cron: '43 * * * *'
+  workflow_dispatch:
+    inputs:
+      renewal_check:
+        description: Also run a bounded Let's Encrypt staging renewal check
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 8
+    steps:
+      - name: Inspect runtime, workers, certificates and backup freshness without reading user data
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          failed=0
+          check() {
+            label=$1
+            shift
+            if "$@" >/dev/null 2>&1; then
+              printf '%s: passed\n' "$label" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              printf '%s: failed\n' "$label" | tee -a "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+          }
+          for unit in nginx certbot.timer fit-background.timer fit-speechkit.service; do
+            check "$unit" sudo systemctl is-active --quiet "$unit"
+          done
+          for domain in fit-training.ru api.fit-training.ru; do
+            check "Certificate $domain >=14 days" sudo openssl x509 -noout -checkend 1209600 \
+              -in "/etc/letsencrypt/live/$domain/fullchain.pem"
+          done
+          available=$(df -Pk / | awk 'NR == 2 {print $4}')
+          check 'Runner disk >=2 GiB' test "$available" -ge 2097152
+          check 'API ready' curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready
+          check 'Frontend available' curl --fail --silent --max-time 5 http://127.0.0.1:18081/auth
+          check 'Speech relay available' curl --fail --silent --max-time 5 http://127.0.0.1:18084/health
+          if sudo test -f /opt/fit/BACKUP_VERIFIED_AT; then
+            backup=$(sudo cat /opt/fit/BACKUP_VERIFIED_AT)
+            verified=$(date -d "$backup" +%s)
+            age=$(( $(date +%s) - verified ))
+            check 'Offsite backup restore verified within48h' test "$age" -ge 0
+            check 'Offsite backup restore freshness' test "$age" -lt 172800
+          else
+            echo 'Offsite backup restore: missing' | tee -a "$GITHUB_STEP_SUMMARY"
+            failed=1
+          fi
+          result=$(sudo systemctl show fit-background.service --property=Result --value)
+          check 'Background last run' test "$result" = success
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          image=$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')
+          check 'Running API marker matches container' test "$image" = "localhost/fit-api:$revision"
+          printf 'API release: %s; free disk: %s MiB\n' "$revision" "$((available / 1024))" >> "$GITHUB_STEP_SUMMARY"
+          exit "$failed"
+      - name: Verify certificate renewal against the staging CA
+        if: always() && inputs.renewal_check
+        run: |
+          set -euo pipefail
+          if sudo timeout 300 certbot renew --dry-run --non-interactive --no-random-sleep-on-renew >/dev/null 2>&1; then
+            echo 'Certificate renewal dry-run: passed' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Certificate renewal dry-run: failed' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

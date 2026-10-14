@@ -149,7 +149,7 @@ test('prepare workflow retains green-main and default-off automatic gate without
   assert.match(workflow, /\.status == "completed" and .conclusion == "success"/)
   assert.match(workflow, /head_repository.full_name == \$repo/)
   assert.match(workflow, /VITE_YANDEX_API_BASE_URL: https:\/\/api.fit-training.ru/)
-  assert.match(workflow, /VITE_ASSISTANT_PROGRAM_ENABLED: 'false'/)
+  assert.ok(workflow.includes("VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}"))
   assert.match(workflow, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(workflow, /group: cloudru-stage-vm\n\s+cancel-in-progress: false/)
   assert.match(workflow, /verify-cloudru-frontend.mjs/)
@@ -172,7 +172,7 @@ test('candidate preserves every production VITE setting except explicitly approv
     .map((match) => [match[1], match[2]]))
   const original = settings(production)
   const next = settings(candidate)
-  assert.deepEqual([...next.keys()].sort(), [...original.keys()].sort())
+  assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys()].sort())
   for (const [name, value] of original) {
     if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED') continue
     assert.equal(next.get(name), value, name)

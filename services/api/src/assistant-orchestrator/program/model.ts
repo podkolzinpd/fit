@@ -1,5 +1,14 @@
 import { aiStudioUsage, reportAiStudioMetric } from '../../ai-studio-usage-metrics.js'
 import { signLlmGatewayRequest } from '../../yandex-llm-gateway-auth.js'
+import { buildYandexAiAuthorization, MetadataYandexAiAuthorization } from '../../yandex-ai-authorization.js'
+
+export async function programModelAuthorization(): Promise<{ header: string; iamToken: string | null }> {
+  const authorization = buildYandexAiAuthorization()
+    ?? (process.env.FIT_MEDIA_STORAGE_PROVIDER === 'cloudru' ? undefined : new MetadataYandexAiAuthorization())
+  if (authorization === undefined) throw new Error('program_auth_unavailable')
+  const header = await authorization.authorizationHeader()
+  return { header, iamToken: header.startsWith('Bearer ') ? header.slice(7) : null }
+}
 
 export async function programIamToken(): Promise<string> {
   const response = await fetch('http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token', {
@@ -35,7 +44,7 @@ export async function programModelJson(input: {
   }
   const folder = process.env.YANDEX_CLOUD_FOLDER_ID?.trim()
   if (!folder) throw new Error('program_model_unconfigured')
-  const token = await programIamToken()
+  const authorization = await programModelAuthorization()
   const modelUri = `gpt://${folder}/${process.env.YANDEX_CLOUD_MODEL_ID ?? 'yandexgpt'}/latest`
   const requestBody = { modelUri, completionOptions: { stream: false, temperature: 0.1, maxTokens: String(input.maxTokens) },
     jsonSchema: { schema: input.schema }, messages: [
@@ -44,7 +53,7 @@ export async function programModelJson(input: {
     ] }
   input.onRequest?.(requestBody)
   const response = await fetch('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', {
-    method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    method: 'POST', headers: { authorization: authorization.header, 'content-type': 'application/json' },
     signal: AbortSignal.timeout(input.timeoutMs ?? 90_000),
     body: JSON.stringify(requestBody),
   })
@@ -52,7 +61,7 @@ export async function programModelJson(input: {
   const payload = await response.json() as { result?: { alternatives?: { message?: { text?: string }; status?: string }[]; usage?: unknown } }
   if (input.onUsage) input.onUsage(payload.result?.usage, modelUri, response.headers.get('x-request-id'))
   else await reportAiStudioMetric({ functionName: input.functionName, modelUri, invocationId: input.operationId,
-    iamToken: token, upstreamRequestId: response.headers.get('x-request-id'), usage: aiStudioUsage(payload.result?.usage) })
+    iamToken: authorization.iamToken, upstreamRequestId: response.headers.get('x-request-id'), usage: aiStudioUsage(payload.result?.usage) })
   const result = payload.result?.alternatives?.[0]
   if (!result?.message?.text || result.status === 'ALTERNATIVE_STATUS_TRUNCATED_FINAL') throw new Error('program_model_incomplete')
   const parsed = JSON.parse(result.message.text) as unknown

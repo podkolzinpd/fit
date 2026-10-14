@@ -69,6 +69,7 @@ jobs:
       - run: npm ci
       - name: Build Android auth smoke app
         run: |
+          node scripts/check-production-api-routing.mjs
           npm run build
           npx cap sync android
         env:
@@ -78,13 +79,14 @@ jobs:
           FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1 }}
           FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2 }}
           VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
-          VITE_YANDEX_API_BASE_URL: https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net
+          VITE_YANDEX_API_BASE_URL: https://api.fit-training.ru
+          VITE_SPEECHKIT_RELAY_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL || '' }}
           VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
           VITE_YANDEX_APP_SESSION_ENABLED: 'true'
           VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
           VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
           VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
-          VITE_ASSISTANT_PROGRAM_ENABLED: 'true'
+          VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}
           VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
           VITE_NUTRITION_ENABLED: ${{ vars.VITE_NUTRITION_ENABLED || 'false' }}
           VITE_NUTRITION_NATIVE_COHORT: ${{ vars.VITE_NUTRITION_NATIVE_COHORT || 'false' }}

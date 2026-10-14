@@ -1,0 +1,119 @@
+name: Configure Cloud.ru external AI
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful CI run for current main
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 10
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify green current main and running API
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" 'select(.path == ".github/workflows/ci.yml" and
+            .head_repository.full_name == $repo and .head_branch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success") | .head_sha' <<<"$run")
+          test "$commit" = "$GITHUB_SHA"
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$commit"
+          test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$commit"
+          sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+      - name: Read only the existing external model credentials
+        run: |
+          set -euo pipefail
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          extra="/opt/fit/secrets/ai-external-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$extra"
+          sudo install -m 600 /dev/null "$extra"
+          node scripts/read-cloudru-external-credentials.mjs ai | sudo tee "$extra" >/dev/null
+      - name: Verify model, candidate and atomic runtime configuration with rollback
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          extra="/opt/fit/secrets/ai-external-$id.env"
+          next="/opt/fit/secrets/api-next-$id.env"
+          previous="/opt/fit/secrets/api-before-ai-$id.env"
+          candidate="fit-ai-candidate-$id"
+          switched=false
+          cleanup() {
+            sudo podman rm --force --ignore "$candidate" >/dev/null
+            sudo rm -f -- "$extra" "$next"
+          }
+          rollback() {
+            if test "$switched" = true; then
+              sudo cp -- "$previous" /opt/fit/secrets/api.env
+              sudo podman rm --force --ignore fit-api-stage >/dev/null
+              sudo podman run --detach --name fit-api-stage --restart unless-stopped \
+                --publish 127.0.0.1:18080:8080 --env-file /opt/fit/secrets/api.env \
+                --env APP_ENV=stage --env FIT_RELEASE_ID="$GITHUB_SHA" --env PORT=8080 "localhost/fit-api:$GITHUB_SHA" >/dev/null
+            fi
+          }
+          trap cleanup EXIT
+          trap rollback ERR INT TERM
+          sudo "$(command -v node)" scripts/configure-cloudru-ai.mjs "$id"
+          sudo podman run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --env-file "$next" "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-ai-smoke.js
+          sudo podman run --detach --name "$candidate" --publish 127.0.0.1:18082:8080 \
+            --env-file "$next" --env APP_ENV=stage --env FIT_RELEASE_ID="$GITHUB_SHA" \
+            --env PORT=8080 "localhost/fit-api:$GITHUB_SHA" >/dev/null
+          for attempt in {1..20}; do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:18082/ready >/dev/null; then break; fi
+            test "$attempt" -lt 20
+            sleep 1
+          done
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          sudo test ! -e "$previous"
+          sudo cp -- /opt/fit/secrets/api.env "$previous"
+          switched=true
+          sudo mv -T -- "$next" /opt/fit/secrets/api.env
+          sudo podman rm --force fit-api-stage >/dev/null
+          sudo podman run --detach --name fit-api-stage --restart unless-stopped \
+            --publish 127.0.0.1:18080:8080 --env-file /opt/fit/secrets/api.env \
+            --env APP_ENV=stage --env FIT_RELEASE_ID="$GITHUB_SHA" --env PORT=8080 "localhost/fit-api:$GITHUB_SHA" >/dev/null
+          for attempt in {1..20}; do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:18080/ready >/dev/null; then break; fi
+            test "$attempt" -lt 20
+            sleep 1
+          done
+          sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+          trap - ERR INT TERM
+          echo 'Cloud.ru native AI enabled after external model and candidate checks.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove any unconsumed credential staging files
+        if: always()
+        run: |
+          sudo podman rm --force --ignore "fit-ai-candidate-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >/dev/null
+          sudo rm -f -- "/opt/fit/secrets/ai-external-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env" \
+            "/opt/fit/secrets/api-next-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
