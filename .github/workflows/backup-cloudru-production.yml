@@ -99,7 +99,7 @@ jobs:
           expected=$(sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
             | awk '/ TABLE / && !/ TABLE DATA / {count++} END {print count+0}')
           test "$expected" -gt 0
-          sudo podman exec --user 0 "$container" pg_restore --clean --if-exists --no-owner --no-acl --exit-on-error \
+          sudo podman exec --user 0 "$container" pg_restore --clean --if-exists --no-owner --exit-on-error \
             --username fit_owner --dbname fit_restore /backup/readback.dump >/dev/null 2>&1
           restored=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
             "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind in ('r','p') and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'")
@@ -107,6 +107,12 @@ jobs:
           migrations=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
             'select count(*) from app_private.fit_migrations')
           test "$migrations" -gt 0
+          access=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
+            "select has_table_privilege('fit_api', 'public.workouts', 'SELECT')")
+          test "$access" = t
+          rls=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
+            "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('profiles','workouts','workout_sets') and c.relrowsecurity and c.relowner=(select oid from pg_roles where rolname='fit_owner')")
+          test "$rls" = 3
           printf 'Offsite backup downloaded, decrypted and restored; tables=%s; migrations=%s.\n' \
             "$restored" "$migrations" >> "$GITHUB_STEP_SUMMARY"
           date -u +%Y-%m-%dT%H:%M:%SZ | sudo tee /opt/fit/BACKUP_VERIFIED_AT >/dev/null

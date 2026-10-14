@@ -45,7 +45,7 @@ export async function backupCloudruDatabase(config: ClientConfig, directory: str
     if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
   }
   await new Promise<void>((resolve, reject) => {
-    const child = spawn('pg_dump', ['--format=custom', '--no-owner', '--no-acl', '--lock-wait-timeout=10s',
+    const child = spawn('pg_dump', ['--format=custom', '--no-owner', '--lock-wait-timeout=10s',
       '--file', archive], {
       env: {
         PATH: process.env.PATH,

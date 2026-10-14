@@ -41,6 +41,7 @@ describe('private pre-migration backup', () => {
     expect(vi.mocked(spawn).mock.calls[0]?.[2]?.env)
       .toMatchObject({ PGUSER: 'fit_owner', PGPASSWORD: 'synthetic-owner-password', PGSSLMODE: 'require' })
     expect(JSON.stringify(vi.mocked(spawn).mock.calls[0]?.[1])).not.toContain('synthetic-owner-password')
+    expect(vi.mocked(spawn).mock.calls[0]?.[1]).not.toContain('--no-acl')
     expect(spawn).toHaveBeenNthCalledWith(2, 'pg_restore', ['--list', '/backup/before-migrations.dump'],
       expect.objectContaining({ stdio: 'ignore', timeout: 30_000 }))
     expect(chmod).toHaveBeenCalledWith('/backup/before-migrations.dump', 0o600)
