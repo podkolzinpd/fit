@@ -407,7 +407,6 @@ function YandexAppSessionCallbackPage() {
   const config = useMemo(() => getYandexAppSessionEntryConfig(), [])
   const [error, setError] = useState<Error | null>(null)
   const [handoff, setHandoff] = useState<{ token: string; expiresAt: string } | null>(null)
-  const [setupMode, setSetupMode] = useState<'choice' | 'existing' | 'new'>('choice')
   const [setupBusy, setSetupBusy] = useState(false)
   const [setupError, setSetupError] = useState<string | null>(null)
   const [firstName, setFirstName] = useState('')
@@ -486,17 +485,6 @@ function YandexAppSessionCallbackPage() {
     }
   }
 
-  function recoverExisting(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    if (config === null || handoff === null) return
-    const values = new FormData(event.currentTarget)
-    void completeSetup(() => yandexPilotRepository.recoverYandexAccount(config.apiBaseUrl, {
-      handoffToken: handoff.token,
-      email: String(values.get('email')),
-      password: String(values.get('password')),
-    }))
-  }
-
   function registerNew(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     if (config === null || handoff === null) return
@@ -511,34 +499,11 @@ function YandexAppSessionCallbackPage() {
   }
 
   if (config === null) return <Navigate to="/auth" replace />
-  if (handoff !== null && setupMode === 'new') return <YandexRegistrationForm
+  if (handoff !== null) return <YandexRegistrationForm
     role={role} onRoleChange={setRole} invitationRequiresClient={invitationRequiresClient}
     firstName={firstName} onNameChange={setFirstName} busy={setupBusy} error={setupError}
-    onSubmit={registerNew} onBack={() => { setSetupMode('choice'); setSetupError(null) }}
+    onSubmit={registerNew} onBack={() => navigate('/auth', { replace: true })}
   />
-  if (handoff !== null) return <AuthIdentityScreen>
-    <header className="auth-entry-head">
-      <FitLogo />
-      <p className="eyebrow">YANDEX ID ПОДТВЕРЖДЁН</p>
-      <h1>{setupMode === 'choice'
-        ? 'У вас уже был аккаунт FIT?'
-        : 'Найдём прежний аккаунт'}</h1>
-      <p className="muted">{setupMode === 'choice'
-        ? 'Свяжем Yandex ID с перенесёнными тренировками или начнём с чистого профиля.'
-        : 'Введите данные, которыми вы раньше входили в FIT. Они нужны один раз и не сохраняются.'}</p>
-    </header>
-    {setupMode === 'choice' && <div className="stack auth-setup-actions">
-      <button className="primary" type="button" onClick={() => setSetupMode('existing')}>Да, был аккаунт</button>
-      <button className="secondary" type="button" onClick={() => setSetupMode('new')}>Нет, создать новый</button>
-    </div>}
-    {setupMode === 'existing' && <form className="stack auth-form" onSubmit={recoverExisting}>
-      <Field label="Email старого аккаунта"><input name="email" type="email" autoComplete="email" required /></Field>
-      <Field label="Пароль старого аккаунта"><input name="password" type="password" minLength={8} autoComplete="current-password" required /></Field>
-      {setupError && <p className="error" role="alert">{setupError}</p>}
-      <button className="primary" disabled={setupBusy} aria-busy={setupBusy}>{setupBusy ? 'Проверяем…' : 'Связать и продолжить'}</button>
-      <button className="link" type="button" disabled={setupBusy} onClick={() => { setSetupMode('choice'); setSetupError(null) }}>Назад</button>
-    </form>}
-  </AuthIdentityScreen>
   return <AuthIdentityScreen>
     <header className="auth-entry-head">
       <FitLogo />

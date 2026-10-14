@@ -54,7 +54,6 @@ import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
   type ExistingActor,
-  type ExistingCredentialsProvider,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
@@ -2548,23 +2547,8 @@ function buildExistingActorProvider(
   return { existingActorProvider: { resolveActor }, resolveActor }
 }
 
-function buildExistingCredentialsProvider(
-  result: ExistingActor | null | Error = EXISTING_ACTOR,
-): {
-  existingCredentialsProvider: ExistingCredentialsProvider
-  resolveCredentials: ReturnType<typeof vi.fn>
-} {
-  const resolveCredentials = vi.fn(() =>
-    result instanceof Error
-      ? Promise.reject(result)
-      : Promise.resolve(result ?? undefined),
-  )
-  return { existingCredentialsProvider: { resolveCredentials }, resolveCredentials }
-}
-
 function buildYandexAuthHandoffService(options: {
   issue?: Exclude<Awaited<ReturnType<YandexAuthHandoffService['issue']>>, undefined> | null | Error
-  recovery?: Awaited<ReturnType<YandexAuthHandoffService['recoverExisting']>> | Error
   register?: Awaited<ReturnType<YandexAuthHandoffService['register']>> | Error
 } = {}) {
   const issueResult = options.issue === undefined ? {
@@ -2575,20 +2559,14 @@ function buildYandexAuthHandoffService(options: {
   const issue = vi.fn(() => issueResult instanceof Error
     ? Promise.reject(issueResult)
     : Promise.resolve(issueResult ?? undefined))
-  const recoverExisting = vi.fn(() => options.recovery instanceof Error
-    ? Promise.reject(options.recovery)
-    : Promise.resolve(options.recovery ?? APP_SESSION_RESPONSE))
   const register = vi.fn(() => options.register instanceof Error
     ? Promise.reject(options.register)
     : Promise.resolve(options.register ?? completed))
-  const recordRecoveryAttempt = vi.fn().mockResolvedValue(undefined)
   return {
     yandexAuthHandoffService: {
-      issue, recordRecoveryAttempt, recoverExisting, register,
+      issue, register,
     } satisfies YandexAuthHandoffService,
     issue,
-    recordRecoveryAttempt,
-    recoverExisting,
     register,
   }
 }
@@ -3666,64 +3644,20 @@ describe('Yandex ID app session and account linking endpoints', () => {
     expect(response.json()).toEqual({ error: 'yandex_access_disabled' })
   })
 
-  it('links verified legacy credentials and returns only the Yandex app session', async () => {
-    const credentials = buildExistingCredentialsProvider()
+  it.each([false, true])('does not expose retired recovery with Yandex-only=%s', async (yandexOnlyAuthEnabled) => {
     const handoff = buildYandexAuthHandoffService()
     const app = buildApp({
-      existingCredentialsProvider: credentials.existingCredentialsProvider,
       yandexAuthHandoffService: handoff.yandexAuthHandoffService,
-      yandexOnlyAuthEnabled: true,
+      yandexOnlyAuthEnabled,
       logger: false,
     })
     apps.push(app)
-
     const response = await app.inject({
-      method: 'POST',
-      url: '/v1/auth/yandex/recover',
-      payload: {
-        handoffToken: 'h'.repeat(43),
-        email: 'person@example.test',
-        password: 'secret-password',
-      },
+      method: 'POST', url: '/v1/auth/yandex/recover',
+      payload: { handoffToken: 'h'.repeat(43), email: 'synthetic@example.test', password: 'synthetic-password' },
     })
-
-    expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual(APP_SESSION_RESPONSE)
-    expect(response.body).not.toContain('person@example.test')
-    expect(response.body).not.toContain('secret-password')
-    expect(credentials.resolveCredentials).toHaveBeenCalledWith(
-      'person@example.test',
-      'secret-password',
-    )
-    expect(handoff.recordRecoveryAttempt).toHaveBeenCalledWith('h'.repeat(43))
-    expect(handoff.recoverExisting).toHaveBeenCalledWith('h'.repeat(43), EXISTING_ACTOR)
-  })
-
-  it('does not turn invalid old-account credentials into a new empty profile', async () => {
-    const credentials = buildExistingCredentialsProvider(null)
-    const handoff = buildYandexAuthHandoffService()
-    const app = buildApp({
-      existingCredentialsProvider: credentials.existingCredentialsProvider,
-      yandexAuthHandoffService: handoff.yandexAuthHandoffService,
-      yandexAppSessionIssuer: buildYandexAppSessionIssuer().yandexAppSessionIssuer,
-      yandexOnlyAuthEnabled: true,
-      logger: false,
-    })
-    apps.push(app)
-
-    const response = await app.inject({
-      method: 'POST',
-      url: '/v1/auth/yandex/recover',
-      payload: {
-        handoffToken: 'h'.repeat(43),
-        email: 'person@example.test',
-        password: 'wrong-password',
-      },
-    })
-
-    expect(response.statusCode).toBe(401)
-    expect(response.json()).toEqual({ error: 'legacy_credentials_invalid' })
-    expect(handoff.recoverExisting).not.toHaveBeenCalled()
+    expect(response.statusCode).toBe(404)
+    expect(handoff.issue).not.toHaveBeenCalled()
     expect(handoff.register).not.toHaveBeenCalled()
   })
 

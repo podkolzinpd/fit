@@ -9,7 +9,7 @@ frontend. Безопасные локальные URL и publishable key хра�
 
 Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и
 `127.0.0.1`. Legacy `VITE_SUPABASE_*` пока остаются в production Yandex frontend
-build из-за startup/recovery совместимости; текущая конфигурация находится в
+build из-за startup/legacy совместимости; текущая конфигурация находится в
 `.github/workflows/deploy-yandex-frontend.yml`, а не в Vercel Production.
 Production URL/ключи нельзя копировать в `.env.local`, `.env.development` или
 другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
@@ -721,7 +721,7 @@ delete/replace и любые сопутствующие изменения datab
 - `SUPABASE_DB_PASSWORD` — пароль новой БД;
 - `SUPABASE_PROJECT_ID` — `xwfuzfkuhblswpdludbc`.
 
-Это **legacy Supabase secrets** для сохранённых recovery/media/rollback путей.
+Это **legacy Supabase secrets** для сохранённых legacy linking/media/rollback путей.
 Новые изменения схемы в `supabase/migrations` больше не добавляются. Workflow
 `.github/workflows/deploy-database.yml` пока технически существует и сработает,
 если изменить legacy migration-файлы в `main`; не используйте его для новой
@@ -970,7 +970,7 @@ PR Preview, сначала спроектируйте отдельную Yandex-
 
 На время диагностического отката #1144 для старой Vercel-сборки и Preview
 понадобились публичные frontend-переменные Supabase. Новых Vercel-сборок нет;
-в текущей Yandex production-сборке они также пока обязательны для startup/recovery
+в текущей Yandex production-сборке они также пока обязательны для startup/legacy
 совместимости и читаются GitHub workflow, а не Vercel Environment:
 
 ```text
@@ -1682,3 +1682,16 @@ If calendar rollback is also requested, leave trainer all first, then inspect
 and choose target=trainer-schedule with mode=pilot and
 `SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
 The trainer workflow rejects client targets. No operation has been dispatched.
+
+## Удаление legacy password recovery — 14.10.2026
+
+`POST /v1/auth/yandex/recover` удалён из API и возвращает 404, включая запросы
+от старых web/native bundles. Они должны обновиться; новая версия сразу
+показывает регистрацию неизвестному Yandex ID. Уже связанные профили входят
+обычным способом. Старые email/пароль больше не проверяются в этом сценарии,
+непривязанная история не присоединяется к новому аккаунту автоматически.
+SQL migration history, профили и identity не удаляются. Supabase configuration
+пока нужна startup, legacy linking и media; удаление recovery ещё не разрешает
+удалить все Supabase secrets или проект. Проверка целевого production-поведения
+требует выпуска API и frontend/native вместе; один frontend deployment не
+доказывает удаление серверного endpoint.

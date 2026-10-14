@@ -38,7 +38,8 @@ export function YandexRegistrationForm({ role, onRoleChange, invitationRequiresC
         </fieldset>
         <Field label="Имя"><input name="firstName" minLength={2} maxLength={120} autoComplete="given-name" required disabled={busy} value={firstName} onChange={(event) => onNameChange(event.target.value)} /></Field>
         {error && <p className="error" role="alert">{error}</p>}
-        <button className="primary" disabled={busy} aria-busy={busy}>{busy ? 'Создаём…' : 'Создать аккаунт'}</button>
+        {/* Keep the focused field until click so the photo does not move the submit button on blur. */}
+        <button className="primary" disabled={busy} aria-busy={busy} onPointerDown={(event) => event.preventDefault()}>{busy ? 'Создаём…' : 'Создать аккаунт'}</button>
         <p className="lime-registration-consent">Создавая аккаунт, вы принимаете <Link to={LEGAL_PATHS.terms}>Условия использования</Link> и <Link to={LEGAL_PATHS.privacy}>Политику конфиденциальности</Link>.</p>
       </form>
     </main>
