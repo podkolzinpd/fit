@@ -14,6 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": { "#fit/local-legacy-composition": ["./src/app/local-legacy-composition.ts"] },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,

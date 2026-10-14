@@ -1,25 +1,26 @@
+import { getLocalLegacyComposition, localLegacyAvailable } from '#fit/local-legacy-composition'
 import { createContext, use, useMemo, type PropsWithChildren } from 'react'
-import { appFeedbackRepository } from '../data/repositories/app-feedback.repository'
-import { clientsRepository } from '../data/repositories/clients.repository'
-import { chatRepository } from '../data/repositories/chat.repository'
-import { exercisesRepository } from '../data/repositories/exercises.repository'
-import { favoriteWorkoutsRepository } from '../data/repositories/favorite-workouts.repository'
-import { goalsRepository } from '../data/repositories/goals.repository'
-import { invitationsRepository } from '../data/repositories/invitations.repository'
-import { legalRepository } from '../data/repositories/legal.repository'
-import { progressRepository } from '../data/repositories/progress.repository'
-import { pushNotificationsRepository } from '../data/repositories/push-notifications.repository'
-import { realtimeRepository } from '../data/repositories/realtime.repository'
-import { trainingSummariesRepository } from '../data/repositories/training-summaries.repository'
-import { trainerProfilesRepository } from '../data/repositories/trainer-profiles.repository'
-import { trainerDiscoveryRepository } from '../data/repositories/trainer-discovery.repository'
-import { trainerWorkspaceRepository } from '../data/repositories/trainer-workspace.repository'
-import { trainerFinanceRepository } from '../data/repositories/trainer-finance.repository'
-import { clientFinanceRepository } from '../data/repositories/client-finance.repository'
-import { athleteSportProfileRepository } from '../data/repositories/athlete-sport-profile.repository'
-import { unsupportedNutritionRepository, type NutritionRepository } from '../data/repositories/nutrition.repository'
-import { workoutsRepository } from '../data/repositories/workouts.repository'
-import { workoutTemplatesRepository } from '../data/repositories/workout-templates.repository'
+import type { appFeedbackRepository } from '../data/repositories/app-feedback.repository'
+import type { clientsRepository } from '../data/repositories/clients.repository'
+import type { chatRepository } from '../data/repositories/chat.repository'
+import type { exercisesRepository } from '../data/repositories/exercises.repository'
+import type { favoriteWorkoutsRepository } from '../data/repositories/favorite-workouts.repository'
+import type { goalsRepository } from '../data/repositories/goals.repository'
+import type { invitationsRepository } from '../data/repositories/invitations.repository'
+import type { legalRepository } from '../data/repositories/legal.repository'
+import type { progressRepository } from '../data/repositories/progress.repository'
+import type { pushNotificationsRepository } from '../data/repositories/push-notifications.repository'
+import type { realtimeRepository } from '../data/repositories/realtime.repository'
+import type { trainingSummariesRepository } from '../data/repositories/training-summaries.repository'
+import type { trainerProfilesRepository } from '../data/repositories/trainer-profiles.repository'
+import type { trainerDiscoveryRepository } from '../data/repositories/trainer-discovery.repository'
+import type { trainerWorkspaceRepository } from '../data/repositories/trainer-workspace.repository'
+import type { trainerFinanceRepository } from '../data/repositories/trainer-finance.repository'
+import type { clientFinanceRepository } from '../data/repositories/client-finance.repository'
+import type { athleteSportProfileRepository } from '../data/repositories/athlete-sport-profile.repository'
+import type { NutritionRepository } from '../data/repositories/nutrition.repository'
+import type { workoutsRepository } from '../data/repositories/workouts.repository'
+import type { workoutTemplatesRepository } from '../data/repositories/workout-templates.repository'
 import { createYandexMainRepository } from '../data/repositories/yandex-main.repository'
 import { getYandexAppSessionEntryConfig, getYandexMainRoutingConfig, isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useAuth } from './auth-context'
@@ -50,31 +51,6 @@ export interface DataBackend {
   realtime: typeof realtimeRepository
 }
 
-const supabaseDataBackend: DataBackend = {
-  source: 'supabase',
-  clients: clientsRepository,
-  chat: chatRepository,
-  exercises: exercisesRepository,
-  goals: goalsRepository,
-  invitations: invitationsRepository,
-  legal: legalRepository,
-  progress: progressRepository,
-  workouts: workoutsRepository,
-  favoriteWorkouts: favoriteWorkoutsRepository,
-  workoutTemplates: workoutTemplatesRepository,
-  trainingSummaries: trainingSummariesRepository,
-  trainerProfiles: trainerProfilesRepository,
-  trainerDiscovery: trainerDiscoveryRepository,
-  trainerWorkspace: trainerWorkspaceRepository,
-  trainerFinance: trainerFinanceRepository,
-  clientFinance: clientFinanceRepository,
-  athleteSportProfile: athleteSportProfileRepository,
-  nutrition: unsupportedNutritionRepository,
-  appFeedback: appFeedbackRepository,
-  pushNotifications: pushNotificationsRepository,
-  realtime: realtimeRepository,
-}
-
 const DataBackendContext = createContext<DataBackend | 'yandex-session-unavailable' | null>(null)
 
 export function DataBackendProvider({ children }: PropsWithChildren) {
@@ -93,7 +69,7 @@ export function DataBackendProvider({ children }: PropsWithChildren) {
     if (actor === null || session === null || config === null
       || actor.userId !== session.profile.id
       || (!isYandexMainRoutingEnabled() && session.accessMode !== 'read_write')) {
-      return supabaseDataBackend
+      return localLegacyAvailable ? getLocalLegacyComposition().data : 'yandex-session-unavailable'
     }
     return createYandexMainRepository(config.apiBaseUrl, session.session.token, actor)
   }, [actor, config, session])
@@ -106,8 +82,9 @@ export function useDataBackend(): DataBackend {
   if (backend === 'yandex-session-unavailable') {
     throw new Error('Сессия Yandex ID недоступна. Войдите снова.')
   }
-  // Keeping the Supabase backend as the test/default value preserves existing
-  // isolated component harnesses. Production composition always installs the
-  // provider and selects once from the authenticated session.
-  return backend ?? supabaseDataBackend
+  // Local component harnesses retain their legacy default. Release builds
+  // require explicit native composition and cannot select a legacy adapter.
+  if (backend !== null) return backend
+  if (localLegacyAvailable) return getLocalLegacyComposition().data
+  throw new Error('useDataBackend должен использоваться внутри DataBackendProvider')
 }

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { getYandexSessionLinkingConfig } from '../../app/feature-flags'
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
-import { authRepository } from '../../data/repositories/auth.repository'
+import { getLocalLegacyComposition } from '#fit/local-legacy-composition'
 import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
 import type { SessionActor } from '../../shared/domain'
 import { createYandexAuthorizationUrl } from './yandex-pilot-oauth'
@@ -28,7 +28,7 @@ export function YandexAccountLinkingCard({
     staleTime: 60_000,
     queryFn: async () => {
       if (config === null) throw new Error('Проверка Yandex ID не настроена.')
-      const session = await authRepository.getSession()
+      const session = await getLocalLegacyComposition().auth.getSession()
       if (session.error) throw session.error
       const accessToken = session.data.session?.access_token
       if (!accessToken) throw new Error('Сессия FIT истекла. Войдите заново.')

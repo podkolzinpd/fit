@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
-import { getPublicTrainerProfile } from '../../data/repositories/trainer-profiles.repository'
+import { getPublicTrainerProfile } from '../../data/repositories/public-trainer-profile.repository'
 import type { TrainerProfessionalProfile } from '../../shared/domain'
 import { FullscreenImageViewer } from '../../shared/FullscreenImageViewer'
 import { AsyncView, Page } from '../../shared/ui'

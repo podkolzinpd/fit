@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: mocks.actor }) }))
-vi.mock('../../data/repositories/trainer-profiles.repository', () => ({
+vi.mock('../../data/repositories/public-trainer-profile.repository', () => ({
   getPublicTrainerProfile: mocks.getPublicTrainerProfile,
 }))
 vi.mock('../chat/ChatEntry', () => ({
