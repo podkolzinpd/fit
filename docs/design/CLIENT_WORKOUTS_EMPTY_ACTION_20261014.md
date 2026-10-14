@@ -60,3 +60,37 @@ check запущен после исправления; ни один прежн
 переиспользованный каталог API node_modules оказался пустым. Зависимости
 восстановлены из worktree YAFIT-607 с совпадающим API lock; код API не менялся.
 Третий полный check завершён exit0. Схема не меняется, local:verify не нужен.
+
+CI первого head aeb34b09 выявил strict-mode конфликт в общем visual helper:
+регулярное имя Add/Add workout стало совпадать с двумя корректными входами.
+Helper теперь явно выбирает прежнюю ссылку «Добавить» в page-header; плюсик
+проверяет новая приёмка. Визуальные baseline, thresholds и assertions неизменны.
+
+Linux strict visual после уточнения helper:6passed/1прежний430skip/1startup
+timeout; точный повтор completion3901/1 passed. Error context первого сбоя
+показывал только стартовый «Открываем Fit», не результат тренировки. Ни
+thresholds, ни assertions/таймауты/baseline не менялись. Lint helper passed.
+
+15.10: PR1630 слит4fcbfe672b283bee9ea17d9a3612627933f9b365. Ветка
+обновлена от нового main; конфликты только в CURRENT_STATE, обе записи
+сохранены, snapshot120строк. Root/API lock прежние. Свежий полный check exit0:
+frontend2669/API1387+156standardDBskip/infra275/hosting158/build/fonts2/2.
+WebKit новой приёмки4/4 и Linux strict detail/completion/history390/4302/2
+прошли без baseline updates. Final current-head CI/merge/release/native впереди.
+
+Main22e08f4e после PR1635 меняет только AGENTS/CURRENT_STATE. Ветка обновлена;
+продуктовый diff неизменён. Новая test-policy соблюдена:4кейса/engine,8 в fullCI;
+темы проверяют glyph/focus, размеры — текст/hit target; короткий путь без mutation.
+Причина матрицы записана рядом с параметризацией. Дублирующая новая component проверка удалена: доступный link/href
+проверяются browser-role/href assertions; единственность mark перенесена
+в browser count assertion. Прежние18sharedUIcomponent tests сохранены. Existing inventory policy проверяет union/disjoint обоих engines.
+PNG — диагностические/manual QA, не автоматический regression gate; computed
+font/geometry/selection assertions и прежние строгие visual baselines сохранены.
+Отдельный CI before/after benchmark не снимался; доступные локальные новые
+сценарии занимают1.0–3.5s, combined WebKit4cases8.5s. Assertions/лимиты прежние.
+
+Карта удаления дубля: unit link/href → browser getByRole+href; unit
+aria-hidden → browser getByRole без includeHidden; unit один mark →
+новый browser toHaveCount(1). Браузеры, состояния и уникальные assertions
+сохранены. Результат последнего полного check2669 относится к версии до
+удаления одного unit; runtime код не менялся.

@@ -5812,6 +5812,8 @@ test('Compact workout feedback explains the new control once', async ({ page }, 
   await expect(card.getByRole('button', { name:'Сохранить итоги',exact:true })).toBeEnabled()
 })
 
+// 4 cases/engine (8 in full CI): themes exercise glyph/focus contrast; widths exercise
+// text fit and the 44px touch/focus target. This short entry flow performs no workout mutation.
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime empty workouts creation and equal controls ${theme} ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 })
@@ -5820,6 +5822,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.goto('/me/workouts')
     const panel = page.locator('#workouts-current-panel .state-panel-empty')
     await expect(panel).toBeVisible()
+    await expect(panel.locator('.state-panel-mark')).toHaveCount(1)
     await page.evaluate(() => document.fonts.ready)
     await page.screenshot({ path: info.outputPath('empty-workouts.png') })
     const entry = panel.getByRole('link', { name: 'Добавить тренировку', exact: true })
