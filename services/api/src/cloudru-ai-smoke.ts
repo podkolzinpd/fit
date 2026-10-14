@@ -12,5 +12,10 @@ export async function smokeCloudruAi(): Promise<void> {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   smokeCloudruAi().then(() => { console.log('{"event":"cloudru_external_ai_smoke_passed"}') })
-    .catch(() => { console.error('cloudru_external_ai_smoke_failed'); process.exitCode = 1 })
+    .catch((error: unknown) => {
+      const reason = error instanceof Error && /^program_model_http_[1-5][0-9]{2}$/u.test(error.message)
+        ? error.message : 'cloudru_external_ai_smoke_failed'
+      console.error(reason)
+      process.exitCode = 1
+    })
 }

@@ -118,3 +118,11 @@ credential и доступность требуют отдельного фак�
 
 - Www/native CORS можно исправить отдельным mode cors-only без вызова модели
   и без включения AI; это исключает зависимость доступности www от YandexGPT.
+
+- Cloud.ru S3 API сверён с текущей документацией: versioning и bucket policy
+  поддержаны; backup не посылает ACL header, совместим с BucketOwnerEnforced,
+  bucket ACL/policy проверяются до upload. Synthetic crypto и API auth5/5,
+  API lint/typecheck и speech smoke syntax passed после правки.
+- Локально установлен только Command Line Tools: Xcode.app/Simulator отсутствуют
+  (xcode-select и точный bundle-id lookup). iOS build/install/launch пока не
+  выполнены; Android main auth-smoke build и роль/native-проверка после activation.

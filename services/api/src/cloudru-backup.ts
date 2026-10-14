@@ -52,7 +52,9 @@ async function main() {
       try { await client.send(new GetBucketAclCommand({ Bucket: bucket })) }
       catch (error) {
         if (!(error instanceof Error) || !['NoSuchBucket', 'NotFound'].includes(error.name)) throw error
-        await client.send(new CreateBucketCommand({ Bucket: bucket, ACL: 'private' }))
+        // Default bucket/object privacy also works with BucketOwnerEnforced,
+        // where sending an ACL header is rejected. Verify privacy below.
+        await client.send(new CreateBucketCommand({ Bucket: bucket }))
       }
     }
     const acl = await client.send(new GetBucketAclCommand({ Bucket: bucket }))
@@ -68,6 +70,7 @@ async function main() {
     encryptionKey(key)
     const config = buildDatabaseConnectionConfig('MIGRATION_DATABASE')
     if (!config) throw new Error('backup_database_missing')
+    console.log('{"event":"cloudru_backup_stage","stage":"dump"}')
     await backupCloudruDatabase(config, '/backup')
     const archivePath = '/backup/before-migrations.dump'
     const size = (await stat(archivePath)).size
@@ -76,9 +79,11 @@ async function main() {
     const encrypted = encryptCloudruBackup(plain, key)
     const digest = createHash('sha256').update(encrypted).digest('hex')
     const objectKey = `db/${new Date().toISOString().slice(0, 10)}/${attempt}.dump.aesgcm`
-    await client.send(new PutObjectCommand({ Bucket: bucket, Key: objectKey, ACL: 'private',
+    console.log('{"event":"cloudru_backup_stage","stage":"upload"}')
+    await client.send(new PutObjectCommand({ Bucket: bucket, Key: objectKey,
       Body: encrypted, ContentLength: encrypted.length, ContentType: 'application/octet-stream',
       IfNoneMatch: '*', Metadata: { sha256: digest, 'encryption-format': 'FITBKP01', 'key-version': 'v1' } }))
+    console.log('{"event":"cloudru_backup_stage","stage":"readback"}')
     const downloaded = await client.send(new GetObjectCommand({ Bucket: bucket, Key: objectKey }))
     if (!downloaded.Body || downloaded.ContentLength !== encrypted.length) throw new Error('backup_readback_failed')
     const bytes = Buffer.from(await downloaded.Body.transformToByteArray())

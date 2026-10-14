@@ -6,7 +6,11 @@ async function upstream() {
     const stream = cloudruSpeechStream()
     const timer = setTimeout(() => { stream.cancel(); reject(new Error('speech_timeout')) }, 12_000)
     stream.on('data', () => {})
-    stream.once('error', () => { clearTimeout(timer); reject(new Error('speech_upstream_failed')) })
+    stream.once('error', error => {
+      clearTimeout(timer)
+      const code = Number.isInteger(error.code) && error.code >= 0 && error.code <= 16 ? error.code : 'unknown'
+      reject(new Error(`speech_upstream_grpc_${code}`))
+    })
     stream.once('end', () => { clearTimeout(timer); resolve() })
     stream.write({ config: { specification: { language_code: 'ru-RU', model: 'general', audio_encoding: 'LINEAR16_PCM',
       sample_rate_hertz: 16000, audio_channel_count: 1, partial_results: true, single_utterance: false, raw_results: false }, folder_id: process.env.YANDEX_CLOUD_FOLDER_ID } })
@@ -33,4 +37,8 @@ try {
   else if (mode === 'guard') await guard()
   else throw new Error('speech_mode_rejected')
   console.log(JSON.stringify({ event: 'cloudru_speech_smoke_passed', check: mode }))
-} catch { console.error('cloudru_speech_smoke_failed'); process.exitCode = 1 }
+} catch (error) {
+  console.error(error instanceof Error && /^speech_upstream_grpc_(?:[0-9]|1[0-6]|unknown)$/.test(error.message)
+    ? error.message : 'cloudru_speech_smoke_failed')
+  process.exitCode = 1
+}
