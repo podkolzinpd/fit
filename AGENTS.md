@@ -15,8 +15,12 @@
 открывайте только по правилам ниже и по таблице workflow — не загружайте всю
 документацию без необходимости.
 
-Production frontend работает на `https://fit-training.ru` через Yandex API
-Gateway/Object Storage, а production auth/API/БД — в Yandex Cloud. Vercel
+Production frontend работает на `https://fit-training.ru` через Cloud.ru
+Nginx, а app-session/API/PostgreSQL и media размещены в Cloud.ru. Yandex ID
+остаётся внешним провайдером входа. Упоминания Yandex API/migrations ниже
+обозначают сохранённые кодовые контракты, а не разрешение создавать ресурсы
+или направлять production-запросы в Yandex Cloud; старый контур — только rollback.
+Vercel
 сохранён только для редиректа со старого адреса; новые Vercel deployments,
 включая PR Preview, выключены, GitHub repository отключён от Vercel-проекта.
 Supabase остаётся временной legacy-зависимостью для
@@ -212,9 +216,12 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
   Ручной SQL в production Dashboard/WebSQL запрещён.
 - `npm run dev` автоматически применяет pending Yandex migrations только к
   локальному Podman PostgreSQL. `npm run local:verify` проверяет локальную
-  цепочку и actor/RLS. После merge `.github/workflows/deploy-yandex-stage.yml`
-  применяет pending migrations к принятому production data plane до
-  переключения API-ревизии; не запускайте отдельный ручной apply без причины.
+  цепочку и actor/RLS. `.github/workflows/release-cloudru-api-stage.yml`
+  после зелёного current-main CI применяет только pending forward migrations
+  к Cloud.ru до запуска кандидата API, с отдельной owner-ролью, backup и
+  advisory lock. Автоматический выпуск требует CLOUDRU_API_AUTODEPLOY_ENABLED=true;
+  иначе он ручной. Build workflow не применяет миграции. Не повторяйте initial
+  import на nonempty target; откат API не откатывает уже применённую схему.
 - PK бизнес-сущностей: `uuid default gen_random_uuid()`.
 - `created_at`: `default now()`; единственный trigger — общий `updated_at` trigger.
 - Бизнес- и auth-trigger запрещены. Инициализация пользователя вызывается явно.

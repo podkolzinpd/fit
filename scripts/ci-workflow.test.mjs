@@ -296,6 +296,25 @@ test('Cloud.ru runtime and frontend releases require successful current-main CI'
   assert.match(cloudruFrontend, /scripts\/promote-cloudru-frontend.sh/)
 })
 
+test('Cloud.ru release applies pending migrations with isolated owner credentials before API candidate or switch', () => {
+  const migrations = cloudruApiRelease.indexOf('Apply only pending Cloud.ru migrations before candidate startup')
+  assert.ok(migrations > cloudruApiRelease.indexOf('Build exact-main image on the stage VM'))
+  assert.ok(migrations < cloudruApiRelease.indexOf('Smoke candidate, switch stage port and roll back on failure'))
+  const script = inlineShell(cloudruApiRelease).find(body => body.includes('cloudru-release-migrations.js'))
+  assert.ok(script)
+  assert.match(script, /MIGRATION_DATABASE_USER == "fit_owner"/)
+  assert.match(script, /startswith\("MIGRATION_DATABASE_"\)/)
+  assert.match(script, /CLOUDRU_MIGRATION_CONFIRMATION=APPLY_CLOUDRU_PENDING_MIGRATIONS/)
+  assert.match(script, /MIGRATION_DATABASE_SSL_MODE=require/)
+  assert.match(script, /0:600/)
+  assert.match(script, /0:700/)
+  assert.match(script, /trap 'sudo podman rm --force --ignore "\$migration_container" >\/dev\/null; sudo rm -f -- "\$migration_env"' EXIT/)
+  assert.match(script, /podman run --rm --read-only --user 0 --cap-drop=ALL/)
+  assert.doesNotMatch(script, /GITHUB_ENV|api\.env|yc |OIDC|sql-transfer|pg_restore|truncate|--publish/)
+  const parsed = spawnSync('bash', ['-n'], { input: script, encoding: 'utf8' })
+  assert.equal(parsed.status, 0, parsed.stderr)
+})
+
 test('Cloud.ru public ingress is manual, CI-gated and proxies only loopback runtimes', () => {
   assert.match(cloudruIngress, /on:\n  workflow_dispatch:/)
   assert.doesNotMatch(cloudruIngress, /^  (?:push|pull_request|schedule):/m)
