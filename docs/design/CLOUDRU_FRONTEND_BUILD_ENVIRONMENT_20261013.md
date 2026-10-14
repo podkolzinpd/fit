@@ -35,3 +35,23 @@ candidate health/ready/unauthorized, switch18080 и RUNNING_SHA readback
 nonempty target: до cutover нужен согласованный freeze/final snapshot, не
 слепой повтор apply или ручное удаление target. Frontend environment fix всё
 ещё должен пройти свой exact-head CI/merge и новый main CI перед VM запуском.
+
+## Закрытая подготовка завершена — 14 октября
+
+PR1610 прошёл весь CI38461484831 и штатно merged; main3f5bf3d8 прошёл
+CI38466310247. Единственный manual frontend workflow38532114217 завершился
+success: licensed fonts2/2,207verifiedfiles, real non-root candidate18083 и
+serving18081 проверили bytes/MIME/cache/SPA/recovery/missing-assets. Current
+promoted; guards сохранены, отказа/rollback в этом запуске не было. Ни public
+nginx/DNS, ни API/БД/media этим frontend workflow не менялись. DNS readback
+14октября: NS Yandex/root158.160.171.31, api A отсутствует; public ingress
+workflows не запускались. Это закрытый static hosting smoke, не real OAuth
+или authenticated user E2E. Frontend revision3f5bf3d8 работает с private
+API447c283e; API source code между ними не менялся, environment/docs-only diff.
+
+SQL-перенос уже состоялся13октября; необходимость повторного переноса не
+доказана. До cutover нужно проверить актуальность относительно последующих
+source writes. Если нужны новые данные, требуется отдельный согласованный
+final snapshot/write control; blind apply на nonempty target запрещён.
+Heartbeat cloud-ru-frontend-ci остановлен (PAUSED) после verified preparation,
+по инструкции владельца. Следующий этап — только по отдельному решению.
