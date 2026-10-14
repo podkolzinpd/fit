@@ -53,6 +53,14 @@ describe('StatePanel', () => {
     expect(screen.getByRole('status')).toHaveClass('state-panel-compact')
     expect(screen.getByRole('status').querySelector('svg')).toHaveAttribute('data-icon', 'add')
   })
+
+  it('оставляет действие вместо декоративной иконки доступным для скринридера', () => {
+    render(<EmptyState markAction={<a className="state-panel-mark" href="/me?entry=workout" aria-label="Добавить тренировку">+</a>} />)
+    const entry = screen.getByRole('link', { name: 'Добавить тренировку' })
+    expect(entry).toHaveAttribute('href', '/me?entry=workout')
+    expect(entry.closest('[aria-hidden="true"]')).toBeNull()
+    expect(document.querySelectorAll('.state-panel-mark')).toHaveLength(1)
+  })
 })
 
 describe('system actions', () => {

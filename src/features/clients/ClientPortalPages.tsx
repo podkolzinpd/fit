@@ -7,7 +7,7 @@ import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { splitClientWorkouts } from '../../data/repositories/workouts.repository'
 import type { CustomMetric, InBodyRecognitionResult, ProgressEntry, Workout } from '../../shared/domain'
-import { CloseIcon, ScheduleIcon } from '../../shared/icons'
+import { AddIcon, CloseIcon, ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, EmptyState, Field, Page, useConfirm } from '../../shared/ui'
 import { ClientTrainingSummaryCard, groupMetricRows, InBodyDetails, InBodyImport, InBodyProgressCard } from '../progress'
@@ -119,7 +119,8 @@ export function MyWorkoutsPage() {
         {plannedCalendarState.view === 'list' ? hasCurrentWorkouts ? <div className="client-workouts-stack">
           {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => renderPlannedCard(workout, plannedReturnTo))}</div></section>}
           {pastItems.needsDecision.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">РАНЕЕ ЗАПЛАНИРОВАНО</p><h2>Выберите действие</h2></div><div className="cards client-workout-cards">{pastItems.needsDecision.map((workout) => renderPlannedCard(workout, plannedReturnTo))}</div></section>}
-        </div> : <EmptyState title="Новая тренировка" description="Добавьте упражнения голосом, текстом или из каталога." />
+        </div> : <EmptyState title="Новая тренировка" description="Добавьте упражнения голосом, текстом или из каталога."
+          markAction={<Link className="state-panel-mark" to="/me?entry=workout" aria-label="Добавить тренировку"><AddIcon /></Link>} />
           : <ClientWorkoutHistoryCalendar
               scope="planned"
               month={plannedCalendarState.month}

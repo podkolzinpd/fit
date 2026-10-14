@@ -174,6 +174,11 @@ html.fit-client-lime-document.theme-light { color-scheme: light; }
   box-shadow: none;
 }
 .phone-frame.fit-client-lime .ai-progress-periods button::before { content: none; }
+.phone-frame.fit-client-lime .client-workouts-page :is(.progress-view-tabs, .client-history-view-toggle) button {
+  font-size: var(--type-body-size);
+  font-weight: 500;
+  line-height: 20px;
+}
 .phone-frame.fit-client-lime .body-progress-modes::before,
 .phone-frame.fit-client-lime .body-progress-modes button[aria-pressed='true']::before { content: none; }
 .phone-frame.fit-client-lime :is(.today-record-mode, .workout-record-mode, .ai-progress-periods, .running-progress-periods, .progress-view-tabs, .app-feedback-kinds) button.active,
