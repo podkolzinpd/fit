@@ -236,16 +236,19 @@ export async function migrateCloudruRelease(context: ReleaseMigrationContext): P
 async function main(): Promise<void> {
   const config = cloudruMigrationConfig(process.env)
   const client = new Client(config)
-  client.on('error', () => undefined)
+  let connectionFailed = false
+  let applied: number
+  client.on('error', () => { connectionFailed = true })
   try {
     await client.connect()
-    const applied = await migrateCloudruRelease({ client, expectedDatabase: 'fit', expectedOwner: 'fit_owner',
+    applied = await migrateCloudruRelease({ client, expectedDatabase: 'fit', expectedOwner: 'fit_owner',
       directory: fileURLToPath(new URL('../db/migrations', import.meta.url)),
       backup: () => backupCloudruDatabase(config, '/backup') })
-    process.stdout.write(JSON.stringify({ event: 'cloudru_release_migrations_verified', applied }) + '\n')
   } finally {
     await client.end()
   }
+  if (connectionFailed) throw new ReleaseMigrationError('cloudru_migration_connection_lost')
+  process.stdout.write(JSON.stringify({ event: 'cloudru_release_migrations_verified', applied }) + '\n')
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

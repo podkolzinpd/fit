@@ -7,6 +7,7 @@ Cloud.ru. Разрешены реализация, обычный PR/зелён�
 ручной выпуск и последующее включение автоматического выпуска API. Yandex
 Cloud не использовать, не повторять initial import и не сбрасывать БД.
 Базовый main: 938b69e0, после более раннего зелёного документационного PR1622.
+Включён main3b910679/PR1623; обе параллельные записи snapshot сохранены.
 
 ## Неизменяемая приёмка
 
@@ -45,6 +46,9 @@ contract checks passed. На нативном Podman PostgreSQL17.11 clean-chain
 actor/RLS142 и migrations/backup9 —151/151 passed, включая настоящий
 pg_dump/pg_restore с сохранением исходных fixture rows. Предыдущий x64-on-arm
 прогон149/151 упёрся в2 старых RLS deadline5s; таймауты/проверки не менялись.
+После включения main3b910679 полный check повторён: frontend2659/API1387 и157
+стандартно skipped DB tests/infra263/hosting137/build —exit0; свежий API check
+после обработки idle-connection ошибок тоже1387 passed.
 Новой схемы/SQL migrations нет, local:verify не запускался вместо изолированного
 clean-chain. PR/main CI и production/manual/autoflag ещё гейты.
 В CI real backup/restore использует уже существующий PostgreSQL17 service;
