@@ -1,0 +1,196 @@
+name: Maintain Cloud.ru runner disk
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Inspect disk usage or apply the bounded retention policy
+        required: true
+        type: choice
+        default: inspect
+        options: [inspect, apply]
+      confirmation:
+        description: APPLY_CLOUDRU_RUNNER_RETENTION for apply
+        required: false
+        type: string
+  schedule:
+    - cron: '17 2 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 15
+    env:
+      REQUESTED_ACTION: ${{ github.event_name == 'schedule' && 'apply' || inputs.action }}
+      RETENTION_CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      # This job intentionally has no actions/* dependencies. It must remain able
+      # to start when the runner is too full to download an action repository.
+      - name: Inspect or apply bounded build retention
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          sudo podman info >/dev/null
+          case "$REQUESTED_ACTION" in
+            inspect)
+              test "$GITHUB_EVENT_NAME" = workflow_dispatch
+              test -z "$RETENTION_CONFIRMATION"
+              ;;
+            apply)
+              if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
+                test "$RETENTION_CONFIRMATION" = APPLY_CLOUDRU_RUNNER_RETENTION
+              else
+                test "$GITHUB_EVENT_NAME" = schedule
+                test -z "$RETENTION_CONFIRMATION"
+              fi
+              ;;
+            *) exit 1 ;;
+          esac
+
+          root=/opt/fit
+          releases=$root/releases
+          frontend_candidates=$root/frontend/candidates
+          runner_work=/opt/actions-runner/_work
+          declare -A keep_api=()
+          declare -A keep_frontend=()
+          api_delete=()
+          frontend_delete=()
+          image_delete=()
+          backup_state=$(sudo stat -c '%d:%i:%s:%Y' "$root/db-backups" 2>/dev/null || printf absent)
+
+          add_api_sha() {
+            local sha=$1
+            [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+            keep_api["$sha"]=1
+          }
+          add_frontend_candidate() {
+            local name=$1
+            [[ "$name" =~ ^[a-f0-9]{40}-[0-9]+-[0-9]+$ ]]
+            keep_frontend["$name"]=1
+          }
+
+          for marker in "$root/RUNNING_SHA" "$root/DEPLOYED_SHA"; do
+            sudo test -f "$marker" && sudo test ! -L "$marker"
+            add_api_sha "$(sudo cat "$marker" | tr -d '\n')"
+          done
+          current_api=$(sudo readlink -f "$root/current")
+          [[ "$current_api" =~ ^/opt/fit/releases/([a-f0-9]{40})(/|$) ]]
+          add_api_sha "${BASH_REMATCH[1]}"
+          current_frontend=$(sudo readlink -f "$root/frontend/current")
+          [[ "$current_frontend" =~ ^/opt/fit/frontend/candidates/([a-f0-9]{40}-[0-9]+-[0-9]+)/site$ ]]
+          add_frontend_candidate "${BASH_REMATCH[1]}"
+
+          while IFS= read -r image; do
+            if [[ "$image" =~ ^localhost/fit-api:([a-f0-9]{40})$ ]]; then
+              add_api_sha "${BASH_REMATCH[1]}"
+            fi
+          done < <(sudo podman ps -a --format '{{.Image}}')
+
+          if sudo test -d "$releases"; then
+            while IFS= read -r sha; do add_api_sha "$sha"; done < <(
+              sudo find "$releases" -mindepth 1 -maxdepth 1 -type d \
+                -regextype posix-extended -regex '.*/[a-f0-9]{40}' \
+                -printf '%T@ %f\n' | sort -rn | awk 'NR <= 3 { print $2 }'
+            )
+            while IFS= read -r path; do
+              sha=${path##*/}
+              if test -z "${keep_api[$sha]+x}"; then api_delete+=("$path"); fi
+            done < <(
+              sudo find "$releases" -mindepth 1 -maxdepth 1 -type d \
+                -regextype posix-extended -regex '.*/[a-f0-9]{40}' -print
+            )
+          fi
+
+          if sudo test -d "$frontend_candidates"; then
+            while IFS= read -r name; do add_frontend_candidate "$name"; done < <(
+              sudo find "$frontend_candidates" -mindepth 1 -maxdepth 1 -type d \
+                -regextype posix-extended -regex '.*/[a-f0-9]{40}-[0-9]+-[0-9]+' \
+                -printf '%T@ %f\n' | sort -rn | awk 'NR <= 3 { print $2 }'
+            )
+            while IFS= read -r path; do
+              name=${path##*/}
+              if test -z "${keep_frontend[$name]+x}"; then frontend_delete+=("$path"); fi
+            done < <(
+              sudo find "$frontend_candidates" -mindepth 1 -maxdepth 1 -type d \
+                -regextype posix-extended -regex '.*/[a-f0-9]{40}-[0-9]+-[0-9]+' -print
+            )
+          fi
+
+          while IFS= read -r image; do
+            if [[ "$image" =~ ^localhost/fit-api:([a-f0-9]{40})$ ]] &&
+               test -z "${keep_api[${BASH_REMATCH[1]}]+x}"; then
+              image_delete+=("$image")
+            fi
+          done < <(sudo podman images --format '{{.Repository}}:{{.Tag}}')
+
+          report_path() {
+            local path=$1
+            if sudo test -e "$path"; then sudo du -x -s -B1 "$path"; fi
+          }
+          echo 'Filesystem before maintenance:'
+          df -Pk / "$root"
+          df -Pi / "$root"
+          report_path "$releases"
+          report_path "$frontend_candidates"
+          report_path "$root/db-backups"
+          report_path "$runner_work/_actions"
+          report_path "$runner_work/_tool"
+          sudo podman system df
+          printf 'Protected API revisions: %s\n' "${!keep_api[*]}"
+          printf 'Protected frontend candidates: %s\n' "${!keep_frontend[*]}"
+          printf 'Planned API release removals: %s\n' "${api_delete[*]:-none}"
+          printf 'Planned frontend candidate removals: %s\n' "${frontend_delete[*]:-none}"
+          printf 'Planned API image removals: %s\n' "${image_delete[*]:-none}"
+
+          if test "$REQUESTED_ACTION" = inspect; then
+            echo 'Inspection complete; nothing was removed.'
+            exit 0
+          fi
+
+          for path in "${api_delete[@]}"; do
+            [[ "$path" =~ ^/opt/fit/releases/[a-f0-9]{40}$ ]]
+            sudo test -d "$path" && sudo test ! -L "$path"
+            sudo rm -rf -- "$path"
+          done
+          for path in "${frontend_delete[@]}"; do
+            [[ "$path" =~ ^/opt/fit/frontend/candidates/[a-f0-9]{40}-[0-9]+-[0-9]+$ ]]
+            sudo test -d "$path" && sudo test ! -L "$path"
+            sudo rm -rf -- "$path"
+          done
+          for image in "${image_delete[@]}"; do
+            [[ "$image" =~ ^localhost/fit-api:[a-f0-9]{40}$ ]]
+            sudo podman image rm "$image"
+          done
+          sudo podman image prune --force
+
+          for cache in "$runner_work/_actions" "$runner_work/_tool"; do
+            if sudo test -d "$cache"; then
+              sudo test ! -L "$cache"
+              sudo find "$cache" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+            fi
+          done
+
+          test "$(sudo stat -c '%d:%i:%s:%Y' "$root/db-backups" 2>/dev/null || printf absent)" = "$backup_state"
+          test "$(sudo readlink -f "$root/current")" = "$current_api"
+          test "$(sudo readlink -f "$root/frontend/current")" = "$current_frontend"
+          test "$(sudo cat "$root/RUNNING_SHA" | tr -d '\n')" = "$(sudo podman inspect --format '{{.ImageName}}' fit-api-stage | sed 's#^localhost/fit-api:##')"
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 20 http://127.0.0.1:18080/ready >/dev/null
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 20 \
+            --header 'Host: fit-training.ru' http://127.0.0.1:18081/ >/dev/null
+          available_kib=$(df -Pk / | awk 'NR == 2 { print $4 }')
+          [[ "$available_kib" =~ ^[0-9]+$ ]]
+          echo "Filesystem after maintenance: $((available_kib / 1024)) MiB available."
+          test "$available_kib" -ge 2097152
+          sudo podman system df
+
