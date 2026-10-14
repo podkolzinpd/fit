@@ -39,3 +39,13 @@ test('Cloud.ru recovery sends only reviewed copy from main on the trusted runner
   assert.match(workflow, /Title: ФИТ снова работает 💪/)
   assert.match(workflow, /Body: Всё починили\. Возвращайтесь к тренировкам!/)
 })
+
+test('recovery frees only dangling image cache before checkout on a low-disk send', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/manage-cloudru-recovery-push.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /test "\$ACTION" = send && test "\$available_kib" -lt 524288/)
+  assert.match(workflow, /sudo podman image prune --force\n/)
+  assert.ok(workflow.indexOf('test "$(hostname)" = fit-stage-app') < workflow.indexOf('sudo podman image prune'))
+  assert.ok(workflow.indexOf('sudo podman image prune') < workflow.indexOf('uses: actions/checkout'))
+  assert.match(workflow, /test "\$available_kib" -ge 524288/)
+  assert.doesNotMatch(workflow, /prune[^\n]*(?:--all|--volumes)|podman (?:system|volume) prune|rm -r[f ]/)
+})
