@@ -26,8 +26,9 @@ routing или переносимые продуктовые данные. Те�
 - frontend выпускается на `fit-training.ru` только проверенным
   `.github/workflows/deploy-yandex-frontend.yml` после зелёного CI на `main`;
 - production frontend больше не маршрутизирует продуктовые запросы в Supabase,
-  но startup/legacy-linking/media зависимости и `VITE_SUPABASE_*` пока могут
-  оставаться; их удаление — отдельная проверяемая задача;
+  web/Android/iOS production build больше не требует `VITE_SUPABASE_*` и
+  не инициализирует Supabase SDK/Auth. Локальный SDK, server-side legacy linking/
+  media и rollback tooling пока сохраняются;
 - Supabase Auth, Data API, Storage, Edge Functions и фоновые producer отключены
   только после подтверждённого окна стабилизации и сохранения rollback backup;
 - пользовательский контракт клиента и тренера не ухудшается при переключении.
@@ -40,7 +41,7 @@ client transport и API. Непривязанный Yandex ID открывает
 не удаляются, но больше не привязываются через проверку Supabase credentials.
 Старый `/v1/auth/yandex/recover` возвращает 404. Исторические SQL migrations
 сохраняются без переписывания; они не являются доступным recovery API.
-Supabase SDK, legacy linking по существующему token и media adapters остаются
+Локальный Supabase SDK, server-side legacy linking и media adapters остаются
 для следующих отдельных задач; это ещё не полный decommission.
 
 ## Общая методика продуктовой разработки

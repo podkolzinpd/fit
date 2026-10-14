@@ -193,7 +193,7 @@ describe('AuthProvider', () => {
     expect(await screen.findByText('accepted')).toBeVisible()
   })
 
-  it('does not reopen the Supabase backend from a stale browser session after Yandex-only cutover', async () => {
+  it('does not reopen the Supabase backend from a stale browser session after Yandex-only cutover', () => {
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
@@ -202,15 +202,14 @@ describe('AuthProvider', () => {
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
 
     renderAuth(<AuthProbe />)
-    authCallback()('INITIAL_SESSION', { user })
 
-    await waitFor(() => expect(auth.onAuthStateChange).toHaveBeenCalledOnce())
+    expect(auth.onAuthStateChange).not.toHaveBeenCalled()
     expect(auth.initialize).not.toHaveBeenCalled()
     expect(screen.getByText('anonymous')).toBeVisible()
     expect(screen.queryByText(user.email)).not.toBeInTheDocument()
   })
 
-  it('uses Yandex-only session actions while retiring the legacy credential in the background', async () => {
+  it('uses only native session actions without subscribing, reading or revoking legacy auth', async () => {
     const retry = vi.fn().mockResolvedValue(undefined)
     const signOut = vi.fn().mockResolvedValue(undefined)
     yandex.state = {
@@ -227,7 +226,7 @@ describe('AuthProvider', () => {
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
-    // The legacy network request must not hold either Yandex session action.
+    // An accidental legacy call would never settle; native actions must not use it.
     auth.signOut.mockReturnValue(new Promise(() => undefined))
 
     renderAuth(<YandexProbe />)
@@ -237,8 +236,8 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
     expect(retry).toHaveBeenCalledOnce()
-    expect(auth.onAuthStateChange).toHaveBeenCalledOnce()
-    expect(auth.signOut).toHaveBeenCalledOnce()
+    expect(auth.onAuthStateChange).not.toHaveBeenCalled()
+    expect(auth.signOut).not.toHaveBeenCalled()
     expect(auth.getSession).not.toHaveBeenCalled()
   })
 

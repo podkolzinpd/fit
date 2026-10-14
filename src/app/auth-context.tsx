@@ -119,6 +119,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [applyUser, queryClient])
 
   useEffect(() => {
+    if (isYandexOnlyAuthEnabled()) return
     const { data } = authRepository.onAuthStateChange((_event, session) => {
       const user = session?.user
       queueMicrotask(() => void applyUser(user ? {
@@ -181,6 +182,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     : supabaseError
 
   useEffect(() => {
+    if (isYandexOnlyAuthEnabled()) return
     const token = yandexRoutingEnabled ? yandexSession?.session?.session.token : undefined
     if (token === undefined || retiredSupabaseForYandexRef.current === token) return
     retiredSupabaseForYandexRef.current = token

@@ -81,9 +81,10 @@ npm run check
 
 1. Установите Xcode.
 2. `npm install`
-3. Убедитесь, что release-переменные Supabase доступны сборке через локальный
-   игнорируемый env-файл или защищённое окружение. Не добавляйте их в Git и не
-   печатайте в логах.
+3. Передайте публичные Yandex ID/API settings и включите app-session, main routing,
+   native registration и Yandex-only auth. `ios:env:check` проверяет HTTPS API origin,
+   OAuth client ID и точное `true` всех четырёх switches. Supabase env для release
+   не требуется; серверные credentials во frontend не передаются.
 4. `npm run ios:open` — сначала проверит наличие HTTPS release-конфигурации,
    затем соберёт release-parity bundle, засинкает его в `ios/` и откроет
    Xcode-проект. Без обязательных переменных команда завершится до сборки,
@@ -98,7 +99,7 @@ npm run check
 Светлая тема используется по умолчанию во всех сборках. Для временного отката
 на тёмную соберите приложение с `VITE_APP_THEME=dark`.
 
-Вход через Google не показывается в веб- и iOS-интерфейсе. Существующие Google-аккаунты и серверный OAuth-провайдер не удалены. Вход по email и паролю работает штатно.
+Вход через Google не показывается в веб- и iOS-интерфейсе. Существующие Google-аккаунты и серверный OAuth-провайдер не удалены. В production вход выполняется через Yandex ID; email/password остаются только в локальном legacy-режиме.
 
 ## Обязательные документы
 

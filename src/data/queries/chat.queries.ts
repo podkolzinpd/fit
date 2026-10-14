@@ -1,7 +1,12 @@
 import { supabase } from './client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-export const chatMedia = supabase.storage.from('chat-media')
+type LegacyMediaBucket = ReturnType<typeof supabase.storage.from>
+export const chatMedia = {
+  upload: (...args: Parameters<LegacyMediaBucket['upload']>) => supabase.storage.from('chat-media').upload(...args),
+  createSignedUrl: (...args: Parameters<LegacyMediaBucket['createSignedUrl']>) => supabase.storage.from('chat-media').createSignedUrl(...args),
+  remove: (...args: Parameters<LegacyMediaBucket['remove']>) => supabase.storage.from('chat-media').remove(...args),
+}
 
 export const chatQueries = {
   listThreads: () => supabase.rpc('list_chat_threads'),
