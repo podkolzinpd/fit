@@ -187,4 +187,3 @@ export function publishedTrainingSummaryFromRow(row: PublishedTrainingSummaryRow
     publishedAt: row.published_at,
   }
 }
-

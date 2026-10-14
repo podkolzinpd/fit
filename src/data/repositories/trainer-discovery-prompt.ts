@@ -16,4 +16,3 @@ export function parseTrainerDiscoveryPrompt(value: unknown): TrainerDiscoveryPro
     updatedAt: prompt.updatedAt,
   }
 }
-

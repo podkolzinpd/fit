@@ -28,4 +28,3 @@ export function currentAppFeedbackContext(): Omit<AppFeedbackInput, 'kind' | 'me
     userAgent: navigator.userAgent.slice(0, 512) || 'unknown',
   }
 }
-

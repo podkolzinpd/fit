@@ -30,7 +30,10 @@ server-side media/linking и rollback history сохраняются. Production
 - Production WebKit native/auth/profile/chat/registration: 17/17 passed, light/dark
   390/430/1440 px. Первый запуск 16/17: отсутствовал CI build flag
   `VITE_CLIENT_LIME_ENABLED`; повтор с CI-конфигурацией прошёл без изменения тестов.
-- CI: pending. Acceptance 1–4 выполнены; локальная часть 5 выполнена.
+- После rebase: 88/88 targeted tests; source diff с проверенным commit отсутствует.
+- CI на `ff3c336a`: все тестовые jobs и Android passed, итоговый e2e gate
+  оставался в очереди. После EOF whitespace cleanup exact-head CI — в PR.
+  Acceptance 1–4 выполнены; локальная часть 5 выполнена.
 
 Существующие 86 tests проверяют поведение; новые 2 import-boundary cases
 ловят отдельную регрессию: transitive SDK import в main и Assistant.
