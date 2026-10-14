@@ -1,8 +1,10 @@
 import { pathToFileURL } from 'node:url'
+import type { QueryResultRow } from 'pg'
 
 import { YandexSqlSnapshotSource, type SqlSnapshotManifest } from './cloudru-sql-snapshot.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
+import type { DatabaseConnection, DatabasePool } from './db/types.js'
 
 const NAME = /^[a-z][a-z0-9_]*$/u
 const DIGEST = /^[a-f0-9]{64}$/u
@@ -84,6 +86,34 @@ export async function runSqlAudit(readSource: () => Promise<SqlSnapshotManifest>
   }
 }
 
+export function boundedAuditPool(pool: DatabasePool): DatabasePool {
+  return {
+    async connect(): Promise<DatabaseConnection> {
+      const connection = await pool.connect()
+      return {
+        async query<Row extends QueryResultRow = QueryResultRow>(
+          text: string, values: readonly unknown[] = [],
+        ): Promise<readonly Row[]> {
+          const rows = await connection.query<Row>(text, values)
+          if (text === 'begin isolation level repeatable read read only') {
+            // Poolers can reject nonstandard startup parameters with 08P01.
+            // Transaction-local SQL is compatible and cannot escape this audit.
+            await connection.query("set local statement_timeout = '60s'")
+            await connection.query("set local lock_timeout = '2s'")
+            const state = await connection.query<{ readOnly: string }>(
+              "select current_setting('transaction_read_only') as \"readOnly\"",
+            )
+            if (state[0]?.readOnly !== 'on') throw new Error('audit_readonly_required')
+          }
+          return rows
+        },
+        release: () => connection.release(),
+      }
+    },
+    end: () => pool.end(),
+  }
+}
+
 async function main(): Promise<void> {
   // Owner access is confined to a single bounded READ ONLY snapshot. Reuse the
   // existing transfer manifest algorithm so imported JSON/checksums agree.
@@ -96,9 +126,7 @@ async function main(): Promise<void> {
   const url = process.env.FIT_SQL_SOURCE_URL
   const token = process.env.YC_IAM_TOKEN
   if (config === undefined || !url || !token) throw new Error('audit_config_missing')
-  const pool = new PgDatabasePool({ ...config, max: 1, statement_timeout: 60_000,
-    options: '-c default_transaction_read_only=on -c lock_timeout=2000',
-  }, 'migration-owner')
+  const pool = boundedAuditPool(new PgDatabasePool({ ...config, max: 1 }, 'migration-owner'))
   try {
     const report = await runSqlAudit(() => readSourceAuditManifest(url, token),
       () => new YandexSqlSnapshotSource(pool).manifest())

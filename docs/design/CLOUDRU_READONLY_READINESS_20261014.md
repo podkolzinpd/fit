@@ -26,8 +26,8 @@
 `transfer-yandex-sql-to-cloudru.yml` получает независимый режим `audit`.
 Он использует существующий IAM-protected `/sql-snapshot/manifest` и target
 `YandexSqlSnapshotSource.manifest()` в одной bounded READ ONLY транзакции.
-Target connection default_transaction_read_only=on, один connection, statement
-timeout60s/lock2s. Existing immutable RUNNING_SHA image используется без сборки,
+Target BEGIN READ ONLY с проверкой transaction_read_only=on, один connection,
+транзакционные SET LOCAL timeout60s/lock2s. Existing immutable RUNNING_SHA image используется без сборки,
 остановки или переустановки API; reviewed TypeScript entrypoint mounted readonly.
 TLS require остаётся ранее согласованным Cloud.ru контрактом, не ослабляется.
 
@@ -60,3 +60,22 @@ syntax и diff check passed. Полный npm run check exit0: frontend2659/API1
 DB schema/API runtime/UI не меняются: local:verify/новая clean-chain и WebKit
 не запускались. Exact-head CI/merge/live audit ещё гейты. Реальный OAuth login
 не подменяется 401/config/CORS smoke.
+
+## Первый live audit и совместимость с pooler
+
+PR1618 merged/f085fdfc после полного exact-head CI38539670546. Режим audit
+38540417270 подтвердил существующий API447c283e: health/ready/401, auth/AI-off
+конфигурацию и CORS204 для fit-training.ru. Source manifest был прочитан;
+target connect остановился за35ms с08P01 до первого SQL/acquired0. Parity ещё
+не измерена; данных не меняли, повторный apply не запускали.
+
+Вероятная причина — nonstandard startup parameters statement_timeout/options,
+добавленные audit-client и потенциально не принимаемые Cloud.ru pooler.
+Они убраны из startup-пакета; bounded timeout задаётся SET LOCAL после BEGIN
+READ ONLY с отдельным server readback. Режим чтения/лимиты не ослабляются,
+API runtime/environment/DB-grants прежние. Сохранены rollback/release/end.
+Targeted12/12 покрывают порядок SQL, фактическую readonly-проверку и отказ
+на setup error. Следующий exact-head CI и повторный live audit обязательны;
+причина08P01 окончательно не подтверждена до успешного подключения.
+Повторный полный npm run check exit0: frontend2659/API1360+142DB штатно
+skipped, infra253/hosting137/build; targeted12/12, lint/typecheck/diff passed.
