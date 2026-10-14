@@ -5,6 +5,13 @@ export function isMaintenanceModeEnabled(): boolean {
   return import.meta.env.VITE_MAINTENANCE_MODE === 'true'
 }
 
+// Временное служебное сообщение после переезда: приложение работает, а ИИ-функции
+// ещё восстанавливаются. Включается только явным "true" в сборке; без флага
+// плашки нет. Это не авторизация и не отключение функций — только уведомление.
+export function isServiceNoticeEnabled(): boolean {
+  return import.meta.env.VITE_SERVICE_NOTICE_ENABLED === 'true'
+}
+
 // Independent closed five-person pilot. Invalid or incomplete configuration
 // never means a public rollout; server checks its own role-specific cohort.
 export function isNutritionPilotEnabled(userId: string, serverDecision?: boolean): boolean {
