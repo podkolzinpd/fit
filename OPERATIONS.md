@@ -203,7 +203,9 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
 
 Подготовленные main-only workflows включаются после их CI и ручной приёмки:
 
-- `Configure Cloud.ru external AI`: берёт только существующие YandexGPT key,
+- `Configure Cloud.ru external AI`: mode cors-only исправляет www/native CORS
+  отдельным candidate/rollback без внешних ключей и без включения AI. Mode
+  external-ai берёт только существующие YandexGPT key,
   folder/model из pinned Lockbox version через GitHub OIDC; Supabase credentials
   не копируются, Yandex ресурсы/IAM не меняются. Synthetic model call и API
   candidate проверяются до замены root0600 runtime env, с rollback. Prompt и
@@ -222,7 +224,8 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   recovery receipts получают terminal history marker без удаления/повторной
   отправки; первый BACKGROUND_STARTED_AT не сдвигается повторным запуском.
   Обычные push и session cleanup работают в Cloud.ru; Telegram/Tracker feedback
-  credentials этим workflow не переносятся и доставка туда не заявляется.
+  credentials этим workflow не переносятся. Владелец15.10 явно оставил эту
+  доставку выключенной; обращения сохраняются без внешней отправки.
 - `Backup and restore-check Cloud.ru production`: отдельный приватный bucket
   fit-cloudru-backups-c2ad3760. Разовый bootstrap, затем ежедневно05:35МСК.
   Bootstrap также включает versioning приватного media bucket; ежедневная

@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { mergeCloudruAiEnv } from './configure-cloudru-ai.mjs'
+import { mergeCloudruAiEnv, mergeCloudruRoutingEnv } from './configure-cloudru-ai.mjs'
 
 const base = 'DATABASE_HOST=10.70.10.67\nDATABASE_PORT=5432\nDATABASE_NAME=fit\nDATABASE_USER=fit_api\nDATABASE_SSL_MODE=require\nFIT_MEDIA_STORAGE_PROVIDER=cloudru\nFIT_AI_FUNCTIONS_ENABLED=false\nFIT_AI_SUMMARY_GENERATION_DISABLED=true\nCLOUDRU_MEDIA_KEY_SECRET=synthetic-media-key\n'
 const external = 'YANDEX_CLOUD_API_KEY=synthetic-ai-key\nYANDEX_CLOUD_FOLDER_ID=synthetic-folder\nYANDEX_CLOUD_MODEL_ID=yandexgpt\n'
+
+test('repairs canonical www/native CORS independently from external AI availability', () => {
+  const next = mergeCloudruRoutingEnv(base)
+  assert.ok(next.includes('FIT_AI_FUNCTIONS_ENABLED=false\n'))
+  assert.ok(!next.includes('YANDEX_CLOUD_API_KEY'))
+  assert.ok(next.includes('https://www.fit-training.ru'))
+  assert.ok(next.includes('DATABASE_USER=fit_api\n'))
+  assert.equal(mergeCloudruRoutingEnv(next), next)
+})
 
 test('enables external AI while preserving exact Cloud.ru database and media settings', () => {
   const next = mergeCloudruAiEnv(base, external)

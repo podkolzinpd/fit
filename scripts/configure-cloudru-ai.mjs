@@ -3,9 +3,20 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { checkCloudruApiEnv } from './check-cloudru-api-env.mjs'
 
-export function mergeCloudruAiEnv(existing, external) {
+export function mergeCloudruRoutingEnv(existing) {
   checkCloudruApiEnv(existing)
   const values = new Map(existing.split('\n').filter(Boolean).map(line => {
+    const index = line.indexOf('=')
+    return [line.slice(0, index), line.slice(index + 1)]
+  }))
+  const origins = (values.get('CORS_ALLOWED_ORIGINS') ?? '').split(/[;,]/).map(value => value.trim()).filter(Boolean)
+  values.set('CORS_ALLOWED_ORIGINS', [...new Set([...origins, 'https://fit-training.ru',
+    'https://www.fit-training.ru', 'capacitor://localhost', 'https://localhost'])].join(','))
+  return [...values].map(([key, value]) => `${key}=${value}\n`).join('')
+}
+
+export function mergeCloudruAiEnv(existing, external) {
+  const values = new Map(mergeCloudruRoutingEnv(existing).trimEnd().split('\n').map(line => {
     const index = line.indexOf('=')
     return [line.slice(0, index), line.slice(index + 1)]
   }))
@@ -18,9 +29,6 @@ export function mergeCloudruAiEnv(existing, external) {
   values.set('FIT_AI_FUNCTIONS_ENABLED', 'true')
   values.set('FIT_AI_SUMMARY_GENERATION_DISABLED', 'false')
   values.set('ASSISTANT_PROGRAM_ENABLED', 'true')
-  const origins = (values.get('CORS_ALLOWED_ORIGINS') ?? '').split(/[;,]/).map(value => value.trim()).filter(Boolean)
-  values.set('CORS_ALLOWED_ORIGINS', [...new Set([...origins, 'https://fit-training.ru',
-    'https://www.fit-training.ru', 'capacitor://localhost', 'https://localhost'])].join(','))
   const next = [...values].map(([key, value]) => `${key}=${value}\n`).join('')
   checkCloudruApiEnv(next)
   return next
@@ -30,8 +38,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const id = process.argv[2]
     if (process.getuid() !== 0 || !/^[0-9]+-[0-9]+$/.test(id ?? '')) throw new Error('rejected')
-    const next = mergeCloudruAiEnv(readFileSync('/opt/fit/secrets/api.env', 'utf8'),
-      readFileSync(`/opt/fit/secrets/ai-external-${id}.env`, 'utf8'))
+    const mode = process.argv[3] ?? 'external-ai'
+    if (!['external-ai', 'cors-only'].includes(mode)) throw new Error('rejected')
+    const existing = readFileSync('/opt/fit/secrets/api.env', 'utf8')
+    const next = mode === 'cors-only' ? mergeCloudruRoutingEnv(existing)
+      : mergeCloudruAiEnv(existing, readFileSync(`/opt/fit/secrets/ai-external-${id}.env`, 'utf8'))
     writeFileSync(`/opt/fit/secrets/api-next-${id}.env`, next, { flag: 'wx', mode: 0o600 })
   } catch { console.error('cloudru_ai_configuration_failed'); process.exitCode = 1 }
 }

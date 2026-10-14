@@ -3,6 +3,11 @@ name: Configure Cloud.ru external AI
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Repair CORS independently, or enable verified external AI
+        type: choice
+        options: [external-ai, cors-only]
+        default: external-ai
       ci_run_id:
         description: Successful CI run for current main
         type: string
@@ -24,6 +29,7 @@ jobs:
     env:
       YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
       YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+      MODE: ${{ inputs.mode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +57,7 @@ jobs:
           test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$commit"
           sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
       - name: Read only the existing external model credentials
+        if: inputs.mode == 'external-ai'
         run: |
           set -euo pipefail
           sudo test ! -L /opt/fit/secrets
@@ -83,9 +90,11 @@ jobs:
           }
           trap cleanup EXIT
           trap rollback ERR INT TERM
-          sudo "$(command -v node)" scripts/configure-cloudru-ai.mjs "$id"
-          sudo podman run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
-            --env-file "$next" "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-ai-smoke.js
+          sudo "$(command -v node)" scripts/configure-cloudru-ai.mjs "$id" "$MODE"
+          if test "$MODE" = external-ai; then
+            sudo podman run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+              --env-file "$next" "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-ai-smoke.js
+          fi
           sudo podman run --detach --name "$candidate" --publish 127.0.0.1:18082:8080 \
             --env-file "$next" --env APP_ENV=stage --env FIT_RELEASE_ID="$GITHUB_SHA" \
             --env PORT=8080 "localhost/fit-api:$GITHUB_SHA" >/dev/null
@@ -115,7 +124,7 @@ jobs:
               http://127.0.0.1:18080/v1/clients)" = 204
           done
           trap - ERR INT TERM
-          echo 'Cloud.ru native AI enabled after external model and candidate checks.' >> "$GITHUB_STEP_SUMMARY"
+          printf 'Cloud.ru runtime configured after candidate checks; mode=%s.\n' "$MODE" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove any unconsumed credential staging files
         if: always()
         run: |

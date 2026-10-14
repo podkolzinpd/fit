@@ -110,8 +110,11 @@ credential и доступность требуют отдельного фак�
   receipts, fresh events, retries, overdue/stale leases и terminal counts.
 - Legacy compatibility включает обратимый pause только старого dispatcher timer
   с проверкой target/path/PAUSED до запуска Cloud.ru worker. Два timer одновременно
-  не включаются. Telegram/Tracker feedback delivery ждёт отдельного разрешения;
+  не включаются. Владелец15.10 явно оставил Telegram/Tracker delivery выключенной;
   новые сервисы и legacy DNS/API/timer пока не активированы.
-- PR https://github.com/podkolzinpd/fit/pull/1637 draft, обязательная очередь.
+- PR https://github.com/podkolzinpd/fit/pull/1637 ready for review, обязательная очередь.
   Рабочая копия /private/tmp/fit-cloudru-stabilization создана после переключения
   общей папки другим чатом; исходные два пользовательских файла не изменялись.
+
+- Www/native CORS можно исправить отдельным mode cors-only без вызова модели
+  и без включения AI; это исключает зависимость доступности www от YandexGPT.

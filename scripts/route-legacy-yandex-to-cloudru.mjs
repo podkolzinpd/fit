@@ -49,9 +49,16 @@ async function main() {
   }
   const container = await json(`${containerBase}/containers/${legacyContainerId}`)
   if (container.name !== 'fit-stage-api' || container.folderId !== 'b1goqho12tlk9dibc3f3') throw new Error('legacy_container_rejected')
-  const revisions = await json(`${containerBase}/revisions?containerId=${legacyContainerId}&pageSize=100`)
-  if (revisions.nextPageToken) throw new Error('legacy_revisions_incomplete')
-  const active = (revisions.revisions ?? []).filter(revision => revision.status === 'ACTIVE')
+  const revisions = []
+  let next = ''
+  let pages = 0
+  do {
+    if (++pages > 20) throw new Error('legacy_revisions_incomplete')
+    const page = await json(`${containerBase}/revisions?containerId=${legacyContainerId}&pageSize=100&pageToken=${encodeURIComponent(next)}`)
+    revisions.push(...(page.revisions ?? []))
+    next = page.nextPageToken ?? ''
+  } while (next)
+  const active = revisions.filter(revision => revision.status === 'ACTIVE')
   if (active.length !== 1 || !/^[a-z0-9]{20}$/.test(active[0].id ?? '')) throw new Error('legacy_revision_ambiguous')
   if (mode === 'inspect' || mode === 'pause-background') {
     const folder = 'b1goqho12tlk9dibc3f3'
