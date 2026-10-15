@@ -1,4 +1,5 @@
 import type { DatabasePool } from './db/types.js'
+import { withBackgroundTransaction } from './background-transaction.js'
 
 export interface SessionCleanupResult {
   deleted: number
@@ -8,9 +9,8 @@ export class DatabaseSessionCleanup {
   constructor(private readonly pool: DatabasePool) {}
 
   async run(): Promise<SessionCleanupResult> {
-    const connection = await this.pool.connect()
-    try {
-      // One autocommit statement: the SQL function owns the atomic fixed batch.
+    return withBackgroundTransaction(this.pool, async (connection) => {
+      // The SQL function owns the atomic fixed batch; the transaction bounds it.
       const rows = await connection.query<{ deleted: number }>(
         'select app_private.cleanup_yandex_app_sessions() as deleted',
       )
@@ -20,8 +20,6 @@ export class DatabaseSessionCleanup {
         throw new Error('Session cleanup returned an unsupported count')
       }
       return { deleted }
-    } finally {
-      connection.release()
-    }
+    })
   }
 }
