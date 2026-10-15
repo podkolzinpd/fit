@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: inspect
-        options: [inspect, send, email-audit]
+        options: [inspect, send, email-audit, email-test, email-send]
       confirmation:
         description: SEND_FIT_RECOVERY_2026_10_14 for send
         type: string
@@ -45,8 +45,9 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
           case "$ACTION" in
-            inspect|email-audit) test -z "$RECOVERY_CONFIRMATION" ;;
+            inspect|email-audit|email-test) test -z "$RECOVERY_CONFIRMATION" ;;
             send) test "$RECOVERY_CONFIRMATION" = SEND_FIT_RECOVERY_2026_10_14 ;;
+            email-send) test "$RECOVERY_CONFIRMATION" = SEND_FIT_RECOVERY_EMAIL_2026_10_15 ;;
             *) exit 1 ;;
           esac
           sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
@@ -75,6 +76,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Send individually addressed recovery email from the approved FIT mailbox
+        if: inputs.action == 'email-test' || inputs.action == 'email-send'
+        env:
+          FIT_SMTP_PASSWORD: ${{ secrets.FIT_SMTP_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$FIT_SMTP_PASSWORD"
+          if test "$ACTION" = email-send; then
+            sudo install -d -m 700 -o "$(id -u)" -g "$(id -g)" /opt/fit/recovery-email
+          fi
+          python3 -B services/api/ops/send_recovery_email.py | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Audit legacy email audience without exporting contacts
         if: inputs.action == 'email-audit'
         shell: bash
@@ -119,7 +132,7 @@ jobs:
         if: inputs.action == 'send'
         run: scripts/yandex-github-oidc.sh
       - name: Inspect or send only the recovery campaign
-        if: inputs.action != 'email-audit'
+        if: inputs.action == 'inspect' || inputs.action == 'send'
         shell: bash
         run: |
           set -euo pipefail
