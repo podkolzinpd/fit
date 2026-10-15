@@ -283,7 +283,7 @@ scope yc.ai.speechkitStt.execute. Новые Yandex IAM/key resources и рас�
 Owner explicitly approved the root ANAME target/TTL, dedicated backup SA/key with
 bucket-only temporary admin followed by restricted roles, and media-only
 s3e.viewer-acl. Root ANAME saved; both legacy NS return87.242.117.210 and site auth200.
-Legacy www remains an independent old Gateway ANAME; no MX/TXT change.
+Owner separately approved www ANAME→api.fit-training.ru/TTL60. Saved and verified on both legacy NS→87.242.117.210; no MX/TXT change. Production monitor on runtime1ccf81d1 passed DNS3/3 and HTTP/TLS8/8.
 Created fit-cloudru-backup with project UserServices and temporary admin only on
 the backup bucket. Its key pair was transferred through an owner-only FIFO directly
 to the two approved GitHub secrets, without a regular secret file or output.
