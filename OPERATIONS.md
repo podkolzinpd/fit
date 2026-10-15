@@ -1767,6 +1767,11 @@ function capability as runtime role, then probes candidate/API health and auth.
 Atomic configuration replacement has a private previous-env backup and rollback.
 Temporary private input is removed; no cohort or credentials are logged.
 No IAM, infrastructure, AI, CORS, identities, roles, connections or consents change.
+Readiness failures expose only fixed reason codes for target/cohort, service
+execution privilege, catalog introspection privilege and admission capability.
+No driver message, SQL, credentials or cohort values are logged. A pre-switch
+failure leaves the previous runtime intact; classify the cause before changing
+anything, never bypass the gate or grant broad database privileges speculatively.
 Then set only `VITE_NUTRITION_ENABLED=true` and
 `VITE_NUTRITION_NATIVE_COHORT=true`, and release the exact same green main through
 `prepare-cloudru-frontend.yml`; native builds use the same two independent flags.

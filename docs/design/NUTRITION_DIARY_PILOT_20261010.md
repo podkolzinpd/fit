@@ -57,6 +57,66 @@ trace/AX snapshot уже содержит7 controls. Питание/UI/CSS не 
 targeted lint/typecheck и workflow/shell checks11/11 зелёные. Новых кейсов0,
 новых матриц0, screenshot goldens и защищённый inventory не менялись.
 
+## Фактическое включение: безопасная диагностика runtime — 15.10.2026
+
+PR1643/1644 слиты; общий PR1645 восстановил runner REST/curl и совместимые
+PostgreSQL17 Bookworm tools. Main619892be/CI38725081174 полностью зелёный;
+API38726558866 success: обязательный private backup и pending144 applied1,
+публичный API отдаёт619892be. Exact-six private cohort secret обновлён строго
+4/2, без контактов/индивидуальных hashes в git/logs/Tracker. Автоматический
+frontend38726558952 success, оба food frontend flags ещё default-off.
+
+Nutrition configure38727274705 остановился на read-only smoke до candidate/
+switch: generic `cloudru_nutrition_smoke_failed`, verified events0. Подготовка
+точного cohort прошла; api.env не переключался, temporary private input удалён
+cleanup. Продуктовый доступ пока не открыт, реальные OAuth не имитировались.
+Локально тот же env-file JSON даёт4/2 и тот же runtime-role query даёт
+execute=true/cap4=true на изолированной PostgreSQL17. Это не доказательство
+production grants; причина live-отличия пока не классифицирована.
+
+Следующий scoped fix сохраняет все admission/role/target/privilege guards и
+добавляет только whitelist статических failure reasons: target/cohort/probe/
+execute/capability и несколько безопасных DB-кодов, без driver messages/SQL/
+credentials/cohort values. Capability4/2 допускает лишь разный регистр и
+whitespace SQL, не другой лимит. Привилегии/схема/данные/роли не меняются.
+Уникальное новое покрытие —7 CLI unit cases (включая case/whitespace,
+отдельные service-execute/catalog-permission failures и redaction); новых UI cases/матриц0. Фактическое
+enable повторяется только через green exact-current-main workflow.
+Полный check завершился exit0: frontend2680/API1407/infra302/hosting169/build.
+После финального разделения двух read-only проверок повторяется API check;
+неизменённый frontend/инвентарь браузерных случаев не дублируется локально.
+Финальный API check exit0:1408 passed/159 стандартных DB skips, lint/typecheck/
+build зелёные. Новых SQL/schema/permission изменений нет, поэтому clean-chain
+и actor-проверка остаются прежними150/150 плюс реальный production apply144.
+
+## Совместимость read-only smoke с текущим Cloud.ru pooler — 15.10.2026
+
+Maincdc2a10e/CI38731455369, API38731933454 и frontend38731933617 прошли.
+Повтор configure38732779912 снова остановился до candidate/switch, generic
+reason; runtime не изменён, frontend flags остаются off. Классификатор не
+покрывал08P01. Уже зафиксированный в проекте live SQL audit38540417270 имел
+тот же быстрый отказ подключения08P01/acquired0; после переноса nonstandard
+startup parameters в SET LOCAL повтор38542399640 успешно прочитал target.
+См. CLOUDRU_READONLY_READINESS_20261014.md. Для nutrition точный SQLSTATE ещё
+не получен, поэтому это применяемое подтверждённое правило совместимости,
+а не выдуманный readback ошибки нового запуска.
+
+Nutrition smoke использует один dedicated Client, стандартный startup,
+connection/client query deadlines5s и BEGIN READ ONLY. Server statement5s/
+lock2s задаются только SET LOCAL; фактические readonly=on/timeout=5s читаются
+обратно перед прежними execute/cap4 проверками. Ошибка закрывает соединение
+с rollback незавершённой транзакции; commit возможен только после всех checks.
+08P01 теперь имеет отдельный статический reason. Привилегии, данные, schema,
+когорта4/2, admission/consent/rollback guards не меняются. Targeted9/9 проверяют
+также отсутствие startup statement_timeout/options, SQL ordering/readback и
+fail-closed setup. Новых UI случаев/матриц0; full check/CI и реальное enable
+ещё обязательны до заявления об открытом доступе. Финальный полный check exit0:
+frontend2680/API1410+159 стандартных DB skips, infra/hosting/lint/typecheck/
+build/fonts2/2 passed. Первый прогон остановился только на типах CLI mock;
+они исправлены, полный финальный прогон повторён. Реальный pg Client startup
+также проверен с synthetic config: statement_timeout/options отсутствуют,
+client deadline сохранён. Live enable остаётся отдельной проверкой.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
