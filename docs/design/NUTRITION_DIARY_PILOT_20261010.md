@@ -117,6 +117,53 @@ build/fonts2/2 passed. Первый прогон остановился толь
 также проверен с synthetic config: statement_timeout/options отсутствуют,
 client deadline сохранён. Live enable остаётся отдельной проверкой.
 
+## Согласованные исправления — два PR, 15.10.2026
+
+Владелец подтвердил план и разрешил реализацию/выпуск. Исходные9 пунктов
+ниже не переписываются. Текущий nutrition pilot уже включён на6 участников;
+прежние сообщения об off описывают исторический preflight, не новый замер.
+
+1. PR1 — только Client Home и общий NutritionSummary: mount только обычный
+   кабинет, без requesting/recording/preparing/loading/transcribing и любого
+   text/draft/review/save workflow тренировки, в том числе first-run. После
+   отмены возвращается обычный кабинет. Вертикальная scoped card: заголовок/
+   diary link, непрерывная пара kcal, группы БЖУ, secondary48px Add; voice
+   остаётся главным действием. Shared Fit surfaces/tokens/ChevronRightIcon,
+   compact loading/empty/error/retry/partial macros и cache refresh. Никаких
+   SpeechKit/LLM/schema/cohort/consent changes. Проверить trainer summary,
+   actual production CSS order, light/dark390/430 и узкий smoke, synthetic
+   WebKit home→voice→cancel плюс существующие diary flows. Документация,
+   CURRENT_STATE и приёмка в том же PR; зелёный exact-head/main CI и обычный
+   Cloud.ru выпуск/публичная проверка до перехода к PR2.
+2. PR2 — одна дополнительно одобренная учётка CURRENT Yandex sign-in, всего7.
+   Существующую роль не назначать/не менять; прежние6 сохраняют доступ.
+   Контакт/индивидуальные hashes только private input. Обновить exact cohort
+   preparation/проверки/capability и при необходимости следующую forward-only
+   migration admission ceiling; старые migrations immutable. Preserve role,
+   verified identity/domain/read-write, connection/consent guards; outsider
+   forbidden. Clean-chain/actor/grants/idempotence/config tests, полный check,
+   fresh CI/API backup/migration и atomic candidate runtime configure.
+   После server readback обновлённые web/native builds и публичная приёмка.
+   Не выдавать synthetic OAuth, simulator startup или созданный APK за реальные
+   входы владельцев/физические устройства/публикацию в магазины.
+
+Очередь: сначала PR1 выпускается на прежних6, потом PR2 подключает7-го к уже
+исправленному UI. Новых служебных/docs-only/release PR не планируется; новые
+внешние блокеры сначала диагностируются. Rollback не удаляет дневники.
+
+PR1 local acceptance: полный check exit0/frontend2698/API1420+159 штатных DB
+skips, lint/typecheck/infra/hosting/build passed. Component12/12, existing diary
+WebKit9/9, новые6 cases на real /me и trainer detail: обе темы320/390/430,
+requesting/recording/cancel/error/text в Lime/identity/first-run, locked trainer
+390/1440. Новых projects/matrices0, protected specs/goldens/timeouts/retries
+не менялись. Production build с native-only composition и тем же CSS load
+order прошёл6/6 отдельно; synthetic auth/API, canonical public relay полностью
+заменён FakeWebSocket, реального OAuth/remote speech не было. Первый production
+прогон3/6 установил, что localhost relay закономерно отвергается production
+guard; исправлена тестовая конфигурация, не ослаблен сам guard. Скриншоты
+light/dark и записи просмотрены: вертикальные цифры/actions, питания в записи
+нет. Подключение7-го/PR2 ещё не начиналось, CI/production PR1 ещё не заявлены.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.

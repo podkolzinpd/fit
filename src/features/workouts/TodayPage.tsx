@@ -204,6 +204,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [restoredDraftScreen, setRestoredDraftScreen] = useState<Screen | null>(null)
   const [textComposerOpen, setTextComposerOpen] = useState(firstWorkoutIntent?.mode === 'text' || compactClientEntry || compactTrainerTextEntry || (clientLime && Boolean(requestedClientDraft)))
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
+  const [clientVoiceEntryActive, setClientVoiceEntryActive] = useState(Boolean(firstWorkoutIntent))
   const [parsing, setParsing] = useState(false)
   const [parseError, setParseError] = useState<WorkoutParseErrorKind | null>(null)
   const [llmUnmatched, setLlmUnmatched] = useState<UnmatchedView[]>([])
@@ -266,6 +267,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }
 
   function closeTextComposer() {
+    setClientVoiceEntryActive(false)
     setTextComposerOpen(false)
     if (clientLime) { setRestoredDraftScreen(text.trim() || items.length ? 'compose' : null); navigate('/me'); return }
     if (compactClientEntry) navigate(todayPath, { replace: true })
@@ -892,9 +894,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
               idleLabel="Надиктовать тренировку"
               heroTitle={clientLime ? "Создать новую тренировку" : "Составить тренировку"}
               heroSubtitle="Голосом или вручную"
-              onStart={() => startClientDraft(false)}
+              onStart={() => { startClientDraft(false); setClientVoiceEntryActive(true) }}
               onInterimTranscript={clientLime ? (value) => setText(value) : undefined}
-              onCancel={clientLime ? () => { voiceParseVersion.current += 1; setVoiceRefinement(null); setTextComposerOpen(true) } : undefined}
+              onCancel={() => { setClientVoiceEntryActive(false); if (clientLime) { voiceParseVersion.current += 1; setVoiceRefinement(null); setTextComposerOpen(true) } }}
               onPhaseChange={setVoicePhase}
               onTranscript={(transcript) => heroTranscriptHandler.current(transcript)}
               secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" onClick={() => startClientDraft(true)}><KeyboardIcon /></button> : undefined}
@@ -910,7 +912,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
         wearable={actor && isWearablesPilotEnabled(actor.userId) ? <WearableHealthCard /> : undefined}
         trainerDiscovery={mine.data ? <TrainerDiscoveryHomeCard clientId={mine.data.id} /> : undefined}
         presetPrompt={<PresetWorkoutPicker onSelect={handlePresetSelected} />}
-      /><NutritionSummary /></> : <>
+      />{voicePhase === 'idle' && !clientVoiceEntryActive && !requestedClientDraft && !voiceRefinement && !parsing && !parseError && !pickerOpen && <NutritionSummary />}</> : <>
       {!clientMode && trainerHasNoClients && !textComposerOpen && <TrainerFirstRun creating={firstClientCreating} error={firstClientError} onCreate={createFirstClient} />}
       {!clientMode && firstPlanClient && !textComposerOpen && <TrainerFirstPlanPrompt clientName={firstPlanClient.fullName} />}
       {!clientMode && !limePlanning && !textComposerOpen && <QuickStartWorkout role="trainer" clients={clients.data} workouts={trainerHome.data} loading={clients.isLoading || trainerHome.isLoading} error={clients.error ?? trainerHome.error} onRetry={() => { void clients.refetch(); void trainerHome.refetch() }} returnTo="/today" />}

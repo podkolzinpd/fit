@@ -42,6 +42,7 @@ function setup(path = '/me/nutrition?date=2026-10-10&action=add') {
     <Route path="/clients/:clientId/nutrition" element={<NutritionPage />} />
     <Route path="/me" element={<p>Кабинет</p>} />
     <Route path="/summary" element={<NutritionSummary clientId="synthetic-client" />} />
+    <Route path="/own-summary" element={<NutritionSummary />} />
   </Routes></QueryClientProvider></MemoryRouter>)
   return { ...result, user: userEvent.setup(), cache }
 }
@@ -136,6 +137,26 @@ it('shows a dated latest-record link without presenting it as today', async () =
   setup('/summary')
   expect(await screen.findByText('Сегодня записей нет')).toBeVisible()
   expect(screen.getByRole('link', { name: /Последние записи:/ })).toHaveAttribute('href', '/clients/synthetic-client/nutrition?date=2026-10-09')
+})
+
+it('home summary separates empty, partial data, loading and retry without fake zero totals', async () => {
+  const { cache, user } = setup('/own-summary')
+  const card = screen.getByRole('region', { name: 'Питание сегодня' })
+  expect(await within(card).findByText('Сегодня записей нет')).toBeVisible()
+  expect(within(card).queryByText('0 ккал')).toBeNull()
+  expect(within(card).getByRole('link', { name: 'Добавить еду' })).toHaveClass('button', 'secondary')
+  fixture.day.mockResolvedValue({ ...empty, entries: [entry], totals: { ...entry.totals, protein: null } })
+  await cache.invalidateQueries({ queryKey: ['nutrition'] })
+  expect(await within(card).findByText('228,3 ккал')).toBeVisible()
+  expect(within(card).getByText('— нет данных; итог БЖУ неполный')).toBeVisible()
+  expect(within(card).getByLabelText('Белки: —, нет данных')).toHaveTextContent('Б —')
+  fixture.day.mockRejectedValue(new Error('Synthetic network failure'))
+  await cache.invalidateQueries({ queryKey: ['nutrition'] })
+  expect(await within(card).findByRole('alert')).toHaveTextContent('Не удалось загрузить питание.')
+  expect(within(card).queryByText('228,3 ккал')).toBeNull()
+  fixture.day.mockResolvedValue(empty)
+  await user.click(within(card).getByRole('button', { name: 'Повторить' }))
+  expect(await within(card).findByText('Сегодня записей нет')).toBeVisible()
 })
 
 it('hides the trainer card feature when this client is outside the server-authorized pilot, not on a network error', async () => {

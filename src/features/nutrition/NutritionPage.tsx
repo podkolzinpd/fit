@@ -9,7 +9,7 @@ import { isRepositoryConflict, RepositoryError } from '../../data/repositories/e
 import { addDays, currentTimeInTimeZone, formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { NUTRITION_MEALS, nutritionNumber, scaledNutrition, type NutritionConnection, type NutritionDraft, type NutritionEntry, type NutritionFood, type NutritionValues } from '../../shared/nutrition'
 import { BackIcon, ChevronRightIcon } from '../../shared/icons'
-import { AsyncView, Coachmark, Field, OverflowMenu, Page, SaveStatus, Switch, useConfirm } from '../../shared/ui'
+import { AsyncView, Coachmark, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, Skeleton, Switch, useConfirm } from '../../shared/ui'
 import { nutritionDecimal, readNutritionForm, removeNutritionForm, storeNutritionForm, type NutritionForm } from './draft'
 import './nutrition.css'
 import { ChatStartButton } from '../chat'
@@ -18,9 +18,13 @@ const queryKey = (userId: string) => ['nutrition', userId] as const
 function selectedDate(text: string | null, today: LocalDate): LocalDate {
   try { return text && text >= '1900-01-01' && text <= '2100-12-31' ? localDate(text) : today } catch { return today }
 }
-function Totals({ values }: { values: NutritionValues }) {
+function Totals({ values, summary = false }: { values: NutritionValues; summary?: boolean }) {
   return <div className="nutrition-totals"><strong>{nutritionNumber(values.calories)} ккал</strong>
-    <span>Б {nutritionNumber(values.protein)} · Ж {nutritionNumber(values.fat)} · У {nutritionNumber(values.carbs)} г</span>
+    {summary ? <div className="nutrition-summary-macros">{([
+      ['protein', 'Б', 'Белки'], ['fat', 'Ж', 'Жиры'], ['carbs', 'У', 'Углеводы'],
+    ] as const).map(([key, label, name]) => <span key={key} aria-label={`${name}: ${nutritionNumber(values[key])}${values[key] === null ? ', нет данных' : ' г'}`}>
+      {label} {nutritionNumber(values[key])}{values[key] === null ? '' : ' г'}
+    </span>)}</div> : <span>Б {nutritionNumber(values.protein)} · Ж {nutritionNumber(values.fat)} · У {nutritionNumber(values.carbs)} г</span>}
     {[values.protein, values.fat, values.carbs].some((value) => value === null) && <small>— нет данных; итог БЖУ неполный</small>}
   </div>
 }
@@ -40,17 +44,24 @@ export function NutritionSummary({ clientId }: { clientId?: string }) {
   const path = clientId ? `/clients/${clientId}/nutrition` : '/me/nutrition'
   return <Coachmark id={`nutrition-${clientId ? 'trainer' : 'client'}-20261010`} userId={actor.userId}
     title="Дневник питания" description={clientId ? 'Записи клиента появятся здесь, когда он разрешит вам просмотр.' : 'Выберите еду и количество — калории посчитаются автоматически.'}>
-    <section className="card nutrition-summary" aria-label="Питание сегодня"><h2>Питание сегодня</h2>
-      <AsyncView loading={day.isLoading} error={day.error} onRetry={() => void day.refetch()}>
+    <section className="nutrition-summary" aria-label="Питание сегодня" aria-busy={day.isLoading}>
+      <header className="nutrition-summary-heading"><h2>Питание сегодня</h2>
+        <Link className="link nutrition-summary-open" aria-label="Открыть дневник" to={`${path}?date=${today}`}>Дневник<ChevronRightIcon /></Link>
+      </header>
+      <div className="nutrition-summary-content">
+      {day.isLoading ? <Skeleton rows={1} /> : day.error ? <div className="nutrition-summary-error">
+        <InlineRequestError error={day.error} message="Не удалось загрузить питание." />
+        <button type="button" className="link" onClick={() => void day.refetch()}>Повторить</button>
+      </div> : <>
         {day.data?.access === 'locked' ? <p className="muted">Клиент пока не разрешил просмотр дневника.</p>
-          : day.data?.access === 'granted' && (day.data.entries.length ? <><span className="muted">Записано</span><Totals values={day.data.totals} />
+          : day.data?.access === 'granted' && (day.data.entries.length ? <><Totals values={day.data.totals} summary />
             {clientId && <small className="muted">Записей: {day.data.entries.length} · Обновлено в {new Date(Math.max(...day.data.entries.map((entry) => Date.parse(entry.updatedAt)))).toLocaleTimeString('ru-RU', { timeZone: actor.timezone || 'Europe/Moscow', hour: '2-digit', minute: '2-digit' })}</small>}
           </> : <p className="muted">Сегодня записей нет</p>)}
         {clientId && day.data?.access === 'granted' && !day.data.entries.length && day.data.lastRecordedDay && day.data.lastRecordedDay !== today &&
           <Link className="link" to={`${path}?date=${day.data.lastRecordedDay}`}>Последние записи: {formatLocalDate(localDate(day.data.lastRecordedDay))}</Link>}
-      </AsyncView>
-      {!clientId && <Link className="secondary" to={`${path}?date=${today}&action=add`}>Добавить еду</Link>}
-      <Link className="link" to={`${path}?date=${today}`}>Открыть дневник</Link>
+      </>}
+      </div>
+      {!clientId && <Link className="button secondary nutrition-summary-add" to={`${path}?date=${today}&action=add`}>Добавить еду</Link>}
     </section>
   </Coachmark>
 }
