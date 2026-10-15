@@ -226,6 +226,11 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   Обычные push и session cleanup работают в Cloud.ru; Telegram/Tracker feedback
   credentials этим workflow не переносятся. Владелец15.10 явно оставил эту
   доставку выключенной; обращения сохраняются без внешней отправки.
+  Production15.10: fresh push и session cleanup активированы на ed7969d3
+  (config38788301745, ops38788159966/38788392205/38790329441 success). Постоянная граница
+  создана38781475448;24 старых unsent сохранены terminal history marker,
+  повторная настройка явно пропускает архивирование. Старый Yandex timer PAUSED.
+  Это проверка worker/queue, не доказательство доставки на конкретное устройство.
   Cloud.ru pooler не принимает startup statement_timeout: node-postgres query
   deadline задаётся query_timeout=10000, server limit — SET LOCAL
   statement_timeout='10s' после BEGIN каждой background transaction. Timeout
