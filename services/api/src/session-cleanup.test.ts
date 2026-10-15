@@ -15,7 +15,10 @@ describe('DatabaseSessionCleanup', () => {
     const { query, release, cleanup } = fixture()
     query.mockResolvedValue([{ deleted }])
     await expect(cleanup.run()).resolves.toEqual({ deleted })
-    expect(query).toHaveBeenCalledExactlyOnceWith('select app_private.cleanup_yandex_app_sessions() as deleted')
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'begin', "set local statement_timeout = '10s'",
+      'select app_private.cleanup_yandex_app_sessions() as deleted', 'commit',
+    ])
     expect(release).toHaveBeenCalledOnce()
   })
 
@@ -23,15 +26,34 @@ describe('DatabaseSessionCleanup', () => {
     const { query, release, cleanup } = fixture()
     query.mockResolvedValue([{ deleted }])
     await expect(cleanup.run()).rejects.toThrow('unsupported count')
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'begin', "set local statement_timeout = '10s'",
+      'select app_private.cleanup_yandex_app_sessions() as deleted', 'rollback',
+    ])
     expect(release).toHaveBeenCalledOnce()
   })
 
   it('releases after a query failure and does not retry', async () => {
     const { query, release, cleanup } = fixture()
     const failure = new Error('database unavailable')
-    query.mockRejectedValue(failure)
+    query.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+      .mockRejectedValueOnce(failure).mockResolvedValueOnce([])
     await expect(cleanup.run()).rejects.toBe(failure)
-    expect(query).toHaveBeenCalledOnce()
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'begin', "set local statement_timeout = '10s'",
+      'select app_private.cleanup_yandex_app_sessions() as deleted', 'rollback',
+    ])
+    expect(release).toHaveBeenCalledOnce()
+  })
+
+  it('rolls back without running cleanup if the transaction timeout cannot be installed', async () => {
+    const { query, release, cleanup } = fixture()
+    const failure = Object.assign(new Error('synthetic timeout setup'), { code: '42501' })
+    query.mockResolvedValueOnce([]).mockRejectedValueOnce(failure).mockResolvedValueOnce([])
+    await expect(cleanup.run()).rejects.toBe(failure)
+    expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+      'begin', "set local statement_timeout = '10s'", 'rollback',
+    ])
     expect(release).toHaveBeenCalledOnce()
   })
 

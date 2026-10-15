@@ -16,7 +16,7 @@ export async function runCloudruBackground(): Promise<void> {
   const config = buildDatabaseConnectionConfig('DATABASE')
   const { VAPID_PUBLIC_KEY: publicKey, VAPID_PRIVATE_KEY: privateKey, VAPID_SUBJECT: subject } = process.env
   if (!config || !publicKey || !privateKey || !subject) throw new Error('cloudru_background_config_missing')
-  const pool = new PgDatabasePool({ ...config, max: 1, statement_timeout: 10_000 }, 'dispatcher')
+  const pool = new PgDatabasePool({ ...config, max: 1, query_timeout: 10_000 }, 'dispatcher')
   try {
     const dispatcher = new BackgroundDispatcher(
       new PushDispatcher(pool, new DirectPushNotificationSender({ publicKey, privateKey, subject })),

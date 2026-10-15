@@ -68,7 +68,7 @@ describe('PushDispatcher', () => {
     const sender = { send: vi.fn().mockResolvedValue([]) }
     await expect(new PushDispatcher(pool, sender).run()).rejects.toMatchObject({ operation: 'push', phase: 'finalize', cause })
     expect(sender.send).toHaveBeenCalledOnce()
-    expect(pool.connections.at(-1)?.queries).toEqual(['begin', 'rollback'])
+    expect(pool.connections.at(-1)?.queries).toEqual(['begin', "set local statement_timeout = '10s'", 'rollback'])
     expect(pool.connections.every((connection) => connection.released)).toBe(true)
   })
 
@@ -107,8 +107,8 @@ describe('PushDispatcher', () => {
       now,
     )
     expect(pool.connections.map((connection) => connection.queries)).toEqual([
-      ['begin', 'commit'],
-      ['begin', 'commit'],
+      ['begin', "set local statement_timeout = '10s'", 'commit'],
+      ['begin', "set local statement_timeout = '10s'", 'commit'],
     ])
     expect(pool.connections.every((connection) => connection.released)).toBe(true)
   })
@@ -141,7 +141,7 @@ describe('PushDispatcher', () => {
     })
     expect(sender.send).not.toHaveBeenCalled()
     expect(pool.connections.map((connection) => connection.queries)).toEqual([
-      ['begin', 'rollback'],
+      ['begin', "set local statement_timeout = '10s'", 'rollback'],
     ])
     expect(pool.connections[0]?.released).toBe(true)
   })

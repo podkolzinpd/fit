@@ -399,3 +399,26 @@ timer, но worker завершился с ошибкой. Следующий ga
 
 Клиентская сессия не получена: владелец увидел регистрацию, форму не отправляли.
 Голос и feedback остаются OFF; media repair не запускался.
+
+## Background startup protocol rejection — 15.10
+
+PR1655 merged48da5797 после CI38782794958. Read-only
+inspect38785439887: workerFailed=true, sessionCleanupFailed=true, DB08P01,
+moduleMissing/containerError=false; queue pending/overdue/stale/terminal=0.
+Worker передавал statement_timeout как startup field node-postgres; такой
+параметр уже вызывал08P01 в этом Cloud.ru pooler в audit38540417270,
+исправленном38542399640. Новый fix требует отдельного live readback.
+
+Ограничение server10s переносится в SET LOCAL внутри background transaction,
+client query deadline10s сохраняется. Push preparation/finalization сохраняют
+BEGIN/COMMIT/ROLLBACK/release; session cleanup теперь использует тот же
+ограниченный transaction helper. Схема, grants, VAPID, cutoff и dispatch
+idempotency не меняются. Старый outbox повторно не архивируется и не отправляется.
+
+Новое покрытие: worker startup config не содержит statement_timeout/options;
+timeout setup failure отменяет cleanup до business query с ROLLBACK/release.
+Существующие push/cleanup assertions сохранены, транзакционный порядок обновлён.
+Targeted29/29 passed. Изолированный локальный PG17 подтвердил server10s и
+сброс SET LOCAL после commit/rollback; одноразовый контейнер удалён.
+Полный npm run check passed: frontend2695/API1420+159 localDB skips,
+infra313/hosting169 и builds. CI/production — следующие гейты.
