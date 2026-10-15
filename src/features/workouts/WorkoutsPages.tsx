@@ -105,7 +105,7 @@ import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useTrainerWorkspace } from './use-trainer-workspace'
-import { useChatThreads } from '../chat/use-chat-threads'
+import { ChatHeaderAction, useChatThreads } from '../chat'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { getYandexAppSessionEntryConfig } from '../../app/feature-flags'
 import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
@@ -878,10 +878,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     <header className={`schedule-v2-topbar${isDayView ? ' schedule-v2-topbar-day' : ''}`}>
       {isDayView ? <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
       {(fitLimeToday || fitLimeSchedule)
-        ? <div className="schedule-v2-day-actions"><FitLimeDatePicker value={selected} onChange={openDay} /><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
+        ? <div className="schedule-v2-day-actions">{!isDayView && <ChatHeaderAction returnTo={returnTo} />}<FitLimeDatePicker value={selected} onChange={openDay} /><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : isDayView
         ? <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
-        : <div className="schedule-v2-day-actions"><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
+        : <div className="schedule-v2-day-actions"><ChatHeaderAction returnTo={returnTo} /><label className="schedule-v2-calendar" aria-label="Выбрать дату"><ScheduleIcon /><input ref={dateInputRef} type="date" value={selected} onChange={(event) => event.target.value && openDay(localDate(event.target.value))} /></label><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>}
     </header>
     {fitLimeToday && selected !== today && <button className="schedule-v2-return-today" type="button" onClick={() => openDay(today)}>Сегодня</button>}
     {(fitLimeToday || fitLimeSchedule) && typeof savedPlanId === 'string' && /^[0-9a-f-]{36}$/i.test(savedPlanId) && <section className="fit-lime-plan-saved" role="status">

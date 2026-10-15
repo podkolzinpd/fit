@@ -82,7 +82,19 @@ before/after Lime390 просмотрены как диагностика, не 
 Повторный полный check с VITEST_MAX_WORKERS=4 прошёл: frontend2698/2698,
 API1418 passed/159 DB skipped, lint/typecheck/infra/hosting/build passed;
 timeout/assertions не менялись. DB-skipped не считается приёмкой будущего PR3.
-PR2–PR3 не реализованы; CI/production/native всего набора ещё не подтверждены.
+PR1 открыт как #1659; очередь после активного #1657, старый #1634 не блокирует.
+PR2 локально: общий canOpenClientChat, существующий conversationId из detail,
+ChatThreadsNotice loading/error/retry в списке и карточке, ChatHeaderAction
+в неделе с возвратом в исходный календарь. Client UI/allowlists не менялись.
+Component/rule32/32 passed. Недельный маршрут, узкие320 и navigation6/6
+Chromium/WebKit; снимок Lime просмотрен. Browser history/retry4/4 первоначально
+passed, дополнительная явная проверка приглашения обнаружила неверную query-only
+маску fixture; заменена точной pathname-маской, финальный повтор4/4 passed.
+Inventory8/8:625→626, ровно один новый history case на engine; существующий
+questions/error case расширен входом из недели и возвратом без потери assertions.
+SHA256 не обновлялся, full CI остаётся обязательным. Полный check PR2 exit0:
+frontend2701/API1420 (159DB skipped), lint/typecheck/infra/hosting/build passed.
+PR3 не реализован; CI/production/native всего набора ещё не подтверждены.
 
 Аудит тестового набора PR1: было624 → стало625 случаев на engine.
 Единственный новый browser case проверяет trusted gesture с вложенной SVG

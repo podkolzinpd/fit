@@ -17,7 +17,7 @@ import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationShareButton } from '../auth/InvitationShareActions'
-import { ChatStartButton } from '../chat'
+import { canOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { YandexAccountLinkingCard } from '../auth'
 import { isRepositoryConflict } from '../../data/repositories/error'
 import { isFitLimeEnabled } from '../../app/fit-lime'
@@ -413,6 +413,8 @@ export function ClientDetailPage() {
   const { actor } = useAuth(); const navigate = useNavigate()
   const fitLimePilot = isFitLimeEnabled(actor) && isTrainerScheduleV2Enabled(actor)
   const financePilot = actor?.role === 'trainer' && isTrainerFinancePilotEnabled(actor.userId)
+  const threads = useChatThreads()
+  const thread = threads.data?.find((item) => item.clientId === clientId && item.conversationId)
   const today = todayInTimeZone(actor?.timezone)
   useClientRealtime(clientId)
   const query = useQuery({ queryKey: ['client', clientId], queryFn: () => clientsRepository.get(clientId) })
@@ -457,7 +459,8 @@ export function ClientDetailPage() {
       <ClientDetailSourceState label="данные InBody" loading={progress.isLoading} error={progress.error} onRetry={() => void progress.refetch()} />
       {stats.data?.needsAttention && <p className="attention">Давно не тренировался</p>}
       <div className="client-detail-actions">
-        {query.data.hasAccount && actor?.role === 'trainer' && <ChatStartButton clientId={clientId} trainerId={actor.userId} className="secondary wide client-detail-message" />}
+        {actor?.role === 'trainer' && <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />}
+        {actor?.role === 'trainer' && canOpenClientChat(query.data, thread) && <ChatStartButton clientId={clientId} trainerId={thread?.trainerId ?? actor.userId} conversationId={thread?.conversationId} className="secondary wide client-detail-message" />}
         {actor?.role === 'trainer' && !query.data.archivedAt && <QuickStartWorkout role="trainer" clientId={clientId} workouts={workouts.data} loading={workouts.isLoading} error={workouts.error} onRetry={() => void workouts.refetch()} returnTo={`/clients/${clientId}`} compact />}
         <Link className="client-detail-plan" to={`/workouts/new?client=${clientId}`}>
           <ScheduleIcon />
