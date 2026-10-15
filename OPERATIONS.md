@@ -1882,10 +1882,47 @@ socket; the restore container still has no network or published ports.
 
 `CLOUDRU_BACKUP_ACCOUNT_ID` is the approved backup service account's canonical
 S3 principal ID (GitHub repository variable), not an inferred runtime account.
-Bootstrap is a manual access-policy operation: after the owner approves that
-principal and bucket scope, it keeps the existing owner and grants only that
-principal READ/WRITE/READ_ACP. Public groups, unknown accounts and bucket-policy
-presence fail closed before any ACL write. Normal backups do not modify ACLs.
-Any temporary bucket-scoped administrative bootstrap permission must be removed
-before accepting a backup/restore run under restricted data/ACL-read permissions.
-No service account, access key or role grant is created by this workflow.
+The account uses only bucket-scoped s3e.viewer/s3e.editor/s3e.viewer-acl. Actual
+upload/readback succeeded with those roles and the bucket's existing private ACL;
+additional ACL delegation was unnecessary and its attempted write returned400.
+Bootstrap verifies default privacy without editing ACLs or bucket policies.
+Public groups, unknown accounts and bucket-policy presence still fail closed.
+No administrative role is required for an existing bucket. The workflow creates
+no service account, access key or role grant.
+
+The downloaded database archive is restored and its RLS/grants checked before
+media verification. Media failure still fails the overall job, but cannot skip
+an otherwise valid database restore drill. BACKUP_VERIFIED_AT records only a
+successful database restore, not media acceptance. Separate credential files
+remain root0600 and are removed on success or failure. Constant media operation
+stages identify ACL/policy/versioning/read failures without paths or SDK payloads.
+
+
+Cloud.ru SpeechKit relay uses its own `CLOUDRU_SPEECHKIT_API_KEY` GitHub secret and
+`CLOUDRU_SPEECHKIT_FOLDER_ID` repository variable. It never borrows YandexGPT's
+key/folder from api.env. The root0600 relay file contains only the SpeechKit key
+and folder; no model, database or backup credentials. Missing/invalid configuration
+fails before any staging file or container. Upstream recognition and unauthenticated
+WebSocket rejection must pass before relay/ingress promotion. Provisioning an
+external Yandex IAM account, STT-only role and scoped key requires explicit owner
+approval; this workflow creates no IAM resources. Keep frontend WSS default-off
+until the relay passes its real upstream and guard checks.
+
+The isolated backup restore cluster creates fit_api and optional analytics grantee
+fit_datalens as NOLOGIN roles before restoring ACLs. These placeholders never
+change production roles or permit connections. Conditional analytics migrations
+can include fit_datalens grants in an archive even when a clean local schema
+without that role does not. Restore progress emits fixed stages; failures expose
+only missing_role, permission_denied, missing_extension or unclassified. Raw
+pg_restore stderr stays in the disposable container and is deleted with it,
+because COPY failures can contain private row values.
+
+Media ACL repair is a separate manual workflow, repair-cloudru-media-acl.yml,
+with GRANT_APP_MEDIA_ACL_READ_ONLY. It uses only the existing media key pair and
+the fixed media bucket. It reads the existing ACL, rejects groups/unknown
+principals or a bucket policy, preserves owner/app grants, adds only app
+READ_ACP if needed, then verifies the complete readback. It does not change IAM,
+ownership, policy, object data or credentials. Any temporary bucket-only admin
+role must be separately approved by the owner and removed after the operation;
+repeat media verification with final restricted roles. Restore TOC diagnostics
+print only allowlisted system-extension names and redact unknown names.

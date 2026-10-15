@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Bootstrap owner and approved-backup-only ACL once, or back up and restore-check
+        description: Verify a private backup bucket, or back up and restore-check
         type: choice
         default: backup
         options: [bootstrap, backup]
@@ -88,9 +88,6 @@ jobs:
             --security-opt=no-new-privileges --env-file "$private_env" \
             --mount "type=bind,src=$directory,dst=/backup" \
             "localhost/fit-api:$revision" node dist/cloudru-backup.js
-          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=1 --cap-drop=ALL \
-            --security-opt=no-new-privileges --env-file "$media_env" \
-            "localhost/fit-api:$revision" node dist/cloudru-media-health.js
       - name: Restore downloaded backup into a disposable PostgreSQL without network
         if: inputs.mode != 'bootstrap'
         run: |
@@ -102,6 +99,7 @@ jobs:
           image='public.ecr.aws/docker/library/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3'
           if sudo podman container exists "$container" || sudo podman volume exists "$volume"; then exit 1; fi
           trap 'sudo podman rm --force --ignore "$container" >/dev/null; sudo podman volume rm --force "$volume" >/dev/null' EXIT
+          echo 'cloudru_restore_stage=start'
           sudo podman volume create "$volume" >/dev/null
           sudo podman run --detach --name "$container" --network=none --memory=512m --cpus=1 --pids-limit=256 \
             --env POSTGRES_USER=fit_owner --env POSTGRES_DB=fit_restore --env POSTGRES_HOST_AUTH_METHOD=trust \
@@ -112,28 +110,62 @@ jobs:
             test "$attempt" -lt 30
             sleep 1
           done
+          echo 'cloudru_restore_stage=roles'
           sudo podman exec "$container" psql -U fit_owner -d fit_restore -v ON_ERROR_STOP=1 \
-            -qc 'create role fit_api nologin;' >/dev/null 2>&1
+            -qc 'create role fit_api nologin; create role fit_datalens nologin;' >/dev/null 2>&1
+          echo 'cloudru_restore_stage=inventory'
+          # System-extension metadata only; unknown names remain hidden.
+          sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
+            | awk '$4 == "EXTENSION" {known=" plpgsql pg_stat_statements pgcrypto uuid-ossp pg_trgm pg_cron pg_stat_kcache pg_wait_sampling pg_store_plans pg_stat_monitor pg_hint_plan pgaudit pg_graphql supabase_vault vault pg_net pgjwt http pgsodium vector postgis timescaledb pg_partman pg_repack pg_track_settings pgpro_stats "; if (index(known," "$6" ")) print "cloudru_restore_extension=" $6; else print "cloudru_restore_extension=unrecognized"}'
           expected=$(sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
-            | awk '/ TABLE / && !/ TABLE DATA / {count++} END {print count+0}')
+            | awk '$4 == "TABLE" && $5 != "DATA" && $5 != "ATTACH" {count++} END {print count+0}')
           test "$expected" -gt 0
-          sudo podman exec --user 0 "$container" pg_restore --clean --if-exists --no-owner --exit-on-error \
-            --username fit_owner --dbname fit_restore /backup/readback.dump >/dev/null 2>&1
+          echo 'cloudru_restore_stage=restore'
+          if ! sudo podman exec --user 0 "$container" sh -c \
+            'umask 077; pg_restore --clean --if-exists --no-owner --exit-on-error --username fit_owner --dbname fit_restore /backup/readback.dump >/dev/null 2>/tmp/restore-error'; then
+            # Never publish raw stderr: COPY errors can include private row values.
+            # This file exists only inside the disposable, network-isolated container.
+            sudo podman exec --user 0 "$container" sh -c '
+              if grep -Eq '\''role "[^"]+" does not exist'\'' /tmp/restore-error; then
+                echo cloudru_restore_failed=missing_role
+              elif grep -q "permission denied" /tmp/restore-error; then
+                echo cloudru_restore_failed=permission_denied
+              elif grep -Eq "extension .* is not available" /tmp/restore-error; then
+                echo cloudru_restore_failed=missing_extension
+              else
+                echo cloudru_restore_failed=unclassified
+              fi'
+            exit 1
+          fi
+          echo 'cloudru_restore_stage=tables'
           restored=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
             "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind in ('r','p') and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'")
           test "$restored" = "$expected"
+          echo 'cloudru_restore_stage=migrations'
           migrations=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
             'select count(*) from app_private.fit_migrations')
           test "$migrations" -gt 0
+          echo 'cloudru_restore_stage=grants'
           access=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
             "select has_table_privilege('fit_api', 'public.workouts', 'SELECT')")
           test "$access" = t
+          echo 'cloudru_restore_stage=rls'
           rls=$(sudo podman exec "$container" psql -U fit_owner -d fit_restore -Atqc \
             "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('profiles','workouts','workout_sets') and c.relrowsecurity and c.relowner=(select oid from pg_roles where rolname='fit_owner')")
           test "$rls" = 3
           printf 'Offsite backup downloaded, decrypted and restored; tables=%s; migrations=%s.\n' \
             "$restored" "$migrations" >> "$GITHUB_STEP_SUMMARY"
           date -u +%Y-%m-%dT%H:%M:%SZ | sudo tee /opt/fit/BACKUP_VERIFIED_AT >/dev/null
+      - name: Verify private media after the database restore check
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          media_env="/opt/fit/secrets/media-health-$id.env"
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=1 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$media_env" \
+            "localhost/fit-api:$revision" node dist/cloudru-media-health.js
       - name: Remove only this attempt's private scratch and temporary credentials
         if: always()
         run: |

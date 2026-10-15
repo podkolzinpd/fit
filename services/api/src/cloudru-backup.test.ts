@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertPrivateBackupAcl, cloudruBackupStorageCredentials, decryptCloudruBackup, encryptCloudruBackup, privateBackupAccessPolicy } from './cloudru-backup.js'
+import { assertPrivateBackupAcl, cloudruBackupStorageCredentials, decryptCloudruBackup, encryptCloudruBackup } from './cloudru-backup.js'
 import { S3ServiceException } from '@aws-sdk/client-s3'
 import { cloudruStorageFailure } from './cloudru-storage-error.js'
 
@@ -39,26 +39,21 @@ describe('Cloud.ru private backup principals', () => {
       { Grantee: backup, Permission: 'READ' }, { Grantee: backup, Permission: 'WRITE' },
       { Grantee: backup, Permission: 'READ_ACP' },
     ] }, backup.ID)).not.toThrow()
-    const policy = privateBackupAccessPolicy(owner, backup.ID)
-    expect(policy).toEqual({ Owner: owner.Owner, Grants: [...owner.Grants,
-      { Grantee: backup, Permission: 'READ' }, { Grantee: backup, Permission: 'WRITE' },
-      { Grantee: backup, Permission: 'READ_ACP' },
-    ] })
-    expect(privateBackupAccessPolicy(owner, owner.Owner.ID)).toEqual(owner)
+    expect(() => assertPrivateBackupAcl(owner, owner.Owner.ID)).not.toThrow()
   })
 
   it.each([
     { Type: 'Group' as const, URI: 'http://acs.amazonaws.com/groups/global/AllUsers' },
     { Type: 'CanonicalUser' as const, ID: 'unapproved-account' },
   ])('rejects public groups and other private accounts: %j', grantee => {
-    expect(() => privateBackupAccessPolicy({ ...owner, Grants: [...owner.Grants,
+    expect(() => assertPrivateBackupAcl({ ...owner, Grants: [...owner.Grants,
       { Grantee: grantee, Permission: 'READ' },
     ] }, backup.ID)).toThrow('backup_bucket_not_private')
   })
 
   it('rejects permissions that let the backup writer change bucket access', () => {
     for (const permission of ['FULL_CONTROL', 'WRITE_ACP'] as const) {
-      expect(() => privateBackupAccessPolicy({ ...owner, Grants: [...owner.Grants,
+      expect(() => assertPrivateBackupAcl({ ...owner, Grants: [...owner.Grants,
         { Grantee: backup, Permission: permission },
       ] }, backup.ID)).toThrow('backup_bucket_not_private')
     }

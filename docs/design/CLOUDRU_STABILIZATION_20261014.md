@@ -305,3 +305,69 @@ Diagnostic follow-up local acceptance: full npm run check passed (frontend2680,
 API1418 with159 local DB skips, infra302, hosting169, calendar12, relay5 and both
 builds). Existing storage-redaction test now also checks reviewed HTTP400 names;
 there is no new browser/test matrix. CI and operational retry remain pending.
+
+
+## Restricted backup succeeds; independent restore gate, 15.10
+
+PR1649 merged5533bee7; CI38759361618 and release38760015107 succeeded, actual runtime5533.
+Bootstrap38760221199 proves ACL/policy reads pass and ACL write returns400.
+Temporary admin was removed again. Normal backup38760512531 under only bucket-scoped
+viewer/editor/viewer-acl passed encrypted upload, readback, checksum and decryption
+(10,811,912 encrypted bytes). The current private ACL plus IAM roles already permit
+this approved data access: ACL mutation is unnecessary and is removed entirely.
+Owner/public/unknown-principal/policy rejection remains unchanged. Bootstrap now
+verifies privacy; only the actual upload/readback proves write/read capability.
+
+The same run then failed media403 before reaching the restore step. Move media
+verification after the isolated DB restore so media failure remains a red job
+without hiding the DB recovery result. The DB freshness marker still requires
+successful pg_restore, table/migration counts, runtime grants and three RLS checks.
+Media credentials remain isolated from DB/encryption/backup credentials. New media
+stage constants identify the denied operation without identities or object paths.
+
+Test mapping: removed ACL-builder output assertions covered a deleted mutation;
+owner-only/approved-principal/public/unknown/admin-permission checks remain on the
+privacy guard (14 targeted tests unchanged). Existing workflow case now additionally
+rejects media execution before restore, ignored media failures, or ACL writes.
+No new parameter matrix. Targeted API14/14 and workflow9/9 passed. Full npm run check passed: frontend2680/API1418+159 DB skips, infra302, hosting169, relay5, calendar12 and both builds.
+
+Owner-console readback confirms fit-stage-app media viewer-acl, but the owner of
+the existing MEDIA_MIGRATION key pair is not yet proven. Do not broaden another
+account on that assumption. Old proxy retry38758949770 still timed out at30seconds.
+Root/www DNS and public production monitor passed. Fresh push and feedback remain OFF;
+actual offsite restore and complete media acceptance remain open.
+
+
+The same operational follow-up also separates SpeechKit credentials from the
+existing model key which failed STT withgrpc7. Dedicated GitHub secret
+CLOUDRU_SPEECHKIT_API_KEY and variable CLOUDRU_SPEECHKIT_FOLDER_ID produce only two
+relay environment fields. No GPT credential fallback, model/DB/backup injection,
+new IAM resources or frontend WSS activation occurs. The accessible folder is
+b1goqho12tlk9dibc3f3; a new STT-only identity/key there remains an explicit owner
+decision, not a bypass of the inaccessible prior model folder.
+
+Existing Speech ingress policy coverage now permits only that one secret and
+checks the actual shell validation prefix with five independent fixtures: valid
+inputs, missing key, malformed folder, newline and other control character.
+No file/container/upstream action executes in this test; no browser/theme matrix
+is added. An explicit failure exit handles macOS Bash3.2's intermediate [[ ]]
+errexit behavior as well as Linux Bash. Targeted workflow9/9 passed after this
+addition; final full npm run check passed for the expanded diff (frontend2680, API1418+159 DB skips, infra302, hosting169, calendar12, relay5 and builds).
+
+## Уточнение владельца и локальная restore-проверка — 15.10
+
+Владелец решил пока оставить голос выключенным. Новый STT-only аккаунт/ключ не создаётся; relay/WSS не включаются. Поддержка отдельного ключа в workflow остаётся fail-closed при его отсутствии.
+
+Полная локальная схема обнаружила ложный отказ проверки restore: TOC parser считал ACL TABLE вместе с таблицами (104 против 68). Подсчёт ограничен типом TABLE и исключает DATA/ATTACH. Новый короткий executable fixture проверяет этот отдельный риск; повторная полная rehearsal прошла: 68 таблиц, 151 запись истории миграций, fit_api SELECT и RLS/owner трёх core-таблиц сохранены. Production-данные в ней не используются.
+
+## Реальная копия и изолированные роли — 15.10
+
+PR1650 merged8f651b85 после green CI38766243161. Drill38768373489 подтвердил encrypted upload/readback/decrypt (~10.9MB), но restore завершился exit1; media пропущен, cleanup прошёл, BACKUP_VERIFIED_AT не записан. Причина production-отказа пока не классифицирована.
+
+Отдельная локальная source/restore пара воспроизводит пропущенную analytics-роль: при наличии fit_datalens в source условные миграции сохраняют её grants в dump; чистый target только с fit_api отвергает restore. В disposable target добавляется fit_datalens NOLOGIN (production-роли/доступы не меняются). Постоянные stage/error категории различают этап и три известных отказа; raw stderr остаётся только внутри disposable container и удаляется с ним, поскольку COPY errors могут содержать данные. Один executable classifier test покрывает четыре категории без публикации stderr; существующий isolation test проверяет обе NOLOGIN-роли.
+
+## Media ACL и restore extension blocker — 15.10
+
+PR1651 merged8ecbb182 после CI38769917720. Drill38771498321: backup readback прошёл; restore достиг pg_restore и classified missing_extension; cleanup прошёл, media skipped. Полная локальная rehearsal с analytics-ролью и pg_stat_statements прошла. В owner console fit DB отмечены pg_stat_statements1.11/plpgsql1.0; это пока не доказывает полный catalog внутри архива. В TOC diagnostic добавляется allowlist системных extension names; неизвестные имена скрыты.
+
+Bootstrap38770947883 подтвердил приватность backup-бакета, затем media acl_read403. Отпечаток действующего GitHub media key сопоставлен с существующим ключом fit-stage-app; ID не опубликован. Для безопасного ремонта подготовлена отдельная manual workflow: только existing media pair, один фиксированный bucket, сохранить owner/app grants, добавить приложению READ_ACP, повторно прочитать ACL. Публичные/неизвестные получатели и bucket policy останавливают mutation. IAM/ownership/policy эта команда не меняет; temporary bucket-only admin потребует точного разрешения владельца, пока не выдавался. Четыре небольших unit/workflow checks покрывают preservation, idempotency, privacy rejection и manual secret/bucket scope; отдельный TOC extension fixture скрывает неизвестные имена.
