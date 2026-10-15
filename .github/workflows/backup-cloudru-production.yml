@@ -114,6 +114,9 @@ jobs:
           sudo podman exec "$container" psql -U fit_owner -d fit_restore -v ON_ERROR_STOP=1 \
             -qc 'create role fit_api nologin; create role fit_datalens nologin;' >/dev/null 2>&1
           echo 'cloudru_restore_stage=inventory'
+          # System-extension metadata only; unknown names remain hidden.
+          sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
+            | awk '$4 == "EXTENSION" {known=" plpgsql pg_stat_statements pgcrypto uuid-ossp pg_trgm pg_cron pg_stat_kcache pg_wait_sampling pg_store_plans pg_stat_monitor pg_hint_plan pgaudit pg_graphql supabase_vault vault pg_net pgjwt http pgsodium vector postgis timescaledb pg_partman pg_repack pg_track_settings pgpro_stats "; if (index(known," "$6" ")) print "cloudru_restore_extension=" $6; else print "cloudru_restore_extension=unrecognized"}'
           expected=$(sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
             | awk '$4 == "TABLE" && $5 != "DATA" && $5 != "ATTACH" {count++} END {print count+0}')
           test "$expected" -gt 0

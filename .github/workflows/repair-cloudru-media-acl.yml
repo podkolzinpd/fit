@@ -1,0 +1,44 @@
+name: Repair Cloud.ru media ACL read access
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: GRANT_APP_MEDIA_ACL_READ_ONLY preserves existing private grants
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 5
+    steps:
+      - name: Verify manual confirmation and trusted production host
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$CONFIRMATION" = GRANT_APP_MEDIA_ACL_READ_ONLY
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --prefix services/api --ignore-scripts
+      - name: Preserve private media ACL and add only app READ_ACP
+        env:
+          MEDIA_ACL_CONFIRMATION: ${{ inputs.confirmation }}
+          CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
+          CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
+        run: node scripts/repair-cloudru-media-acl.mjs

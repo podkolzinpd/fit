@@ -1916,3 +1916,13 @@ without that role does not. Restore progress emits fixed stages; failures expose
 only missing_role, permission_denied, missing_extension or unclassified. Raw
 pg_restore stderr stays in the disposable container and is deleted with it,
 because COPY failures can contain private row values.
+
+Media ACL repair is a separate manual workflow, repair-cloudru-media-acl.yml,
+with GRANT_APP_MEDIA_ACL_READ_ONLY. It uses only the existing media key pair and
+the fixed media bucket. It reads the existing ACL, rejects groups/unknown
+principals or a bucket policy, preserves owner/app grants, adds only app
+READ_ACP if needed, then verifies the complete readback. It does not change IAM,
+ownership, policy, object data or credentials. Any temporary bucket-only admin
+role must be separately approved by the owner and removed after the operation;
+repeat media verification with final restricted roles. Restore TOC diagnostics
+print only allowlisted system-extension names and redact unknown names.
