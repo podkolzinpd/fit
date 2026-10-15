@@ -94,7 +94,38 @@ Inventory8/8:625→626, ровно один новый history case на engine;
 questions/error case расширен входом из недели и возвратом без потери assertions.
 SHA256 не обновлялся, full CI остаётся обязательным. Полный check PR2 exit0:
 frontend2701/API1420 (159DB skipped), lint/typecheck/infra/hosting/build passed.
-PR3 не реализован; CI/production/native всего набора ещё не подтверждены.
+PR3 локально: migration145 CREATE OR REPLACE list_chat_threads/open_chat —
+partner/доступ по неизменным conversation participants, а не mutable auth binding.
+ClientId для UI может указывать на доступную same-owner canonical card
+(bounded8/cycle-safe lookup); conversation/messages/photo/read cursors не меняются.
+Список не теряет отдельные histories: key=conversationId; кнопка карточки
+выбирает newest existing history, connection-only candidate её не затирает.
+Финальный крайний случай: после merge пустой кандидат текущей связи не
+дублирует исторический диалог; две настоящие истории остаются двумя.
+Final actor/release150 passed/1skip, точный локальный Down→Up145; отдельная
+повторная полная check exit0 на финальном SQL (2702frontend/1420API,
+160DBskip; DB150 проверены отдельно). Первичный запуск
+Down был остановлен неверным import path CLI (никаких изменений БД); после
+корректного package import проверенный Down→Up и весь набор прошли.
+Component/chat64/64; clean PostgreSQL17 chain1→145 и полный actor/release150
+passed/1 optional skipped. Финальный повтор150/150 после архивного состояния;
+Down→Up145 воспроизвёл выпадение и восстановил доступ, original participants
+и outsiders/reassigned user проверены настоящей ролью fit_api/RLS, grants intact.
+Initial base144 suite: один старый fixture-seed превысил5s под параллельной
+нагрузкой; точный clean-final sequential повтор прошёл без смены таймаутов.
+Новая fixture сначала нарушила unique auth binding; исправлен порядок
+подстановки двух последовательных реальных состояний, не production SQL.
+Fullcheck PR3 exit0: frontend2702/API1420 (160DBskip), lint/typecheck/
+infra/hosting/build passed; DB приёмка отдельно настоящая150.
+local:verify остановлен на прежнем shared drift112 append_live_round;
+общая база не сбрасывалась, новая145 там не применялась.
+Дополнительная локальная геометрия390/430/1440 —3/3,44px/no overlap/no overflow,
+desktop и мобильный Lime снимки просмотрены; это диагностика, не golden diff.
+Protected inventory626/engine: один прежний optional coachmark-dismiss selector
+синхронизирован с новым текстом, кейсы/assertions не удалялись; SHA не обновлялся.
+Очередь: #1634 реактивирован новыми commits15.10 18:58Z и теперь снова раньше
+#1657/#1658/#1659; прежняя отметка о неактивности описывает только preflight.
+CI/production/native всего набора ещё не подтверждены; не объявляем выпуск.
 
 Аудит тестового набора PR1: было624 → стало625 случаев на engine.
 Единственный новый browser case проверяет trusted gesture с вложенной SVG
@@ -130,3 +161,19 @@ PR2#1660 и PR3#1661 подготовлены в отдельных ветках
 PR1 перенесён на этот main (включая#1663). Конфликт только CURRENT_STATE:
 новая operational-checkpoint строка main сохранена целиком, добавлена только
 короткая строка YAFIT-611. Чужая историческая фактура не переписывалась.
+
+Повтор после mainb3f2d957: PR1 component29/29, PR2 component32/32 passed.
+Повторный DB suite на накопленной собственной базе:149passed/1failed/1skip;
+соседняя bounded-session-cleanup ожидала30, получила38 из-за старых fixture
+сессий. Чатовая приёмка прошла. Новая пустая собственная база прошла цепочку
+1–145 и весь actor/release suite150passed/1optionalSkip; защитное требование
+имени fit_actor_test не ослаблялось. Прежняя база сохранена как
+fit_actor_test_retained_20261015 в том же собственном контейнере55448;
+shared DB не сбрасывалась. Production/native ещё не объявлены завершёнными.
+
+Финальная очередь: PR1#1659 слит main e4138cbf после CI38799020485;
+PR2#1660 слит main6894cea1 после CI38800621923. Оба full CI и Android green.
+PR3 перенесён на main6894cea1 без изменения runtime SQL; полный стек
+component74/74 passed. PR3 exact-head CI, main CI, штатные API/frontend
+release/readback и свежий native sync/build/install/launch ещё обязательны.
+Итоговые post-release доказательства и закрытие чеклиста — в YAFIT-611.

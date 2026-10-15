@@ -68,7 +68,7 @@ export function ChatListPage() {
     {pilot && <div className="chat-thread-section-title"><h2>Сообщения</h2><span>{query.isError ? '—' : query.isLoading ? '…' : query.data?.reduce((sum, item) => sum + item.unreadCount, 0) ?? 0}</span></div>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}
       empty={query.data?.length === 0} emptyTitle="Диалогов пока нет" emptyDescription="Подключите тренера или спортсмена, чтобы начать переписку.">
-      <div className="chat-thread-list">{query.data?.map((item) => <button type="button" className="chat-thread" key={`${item.clientId}:${item.trainerId}`}
+      <div className="chat-thread-list">{query.data?.map((item) => <button type="button" className="chat-thread" key={item.conversationId ?? `${item.clientId}:${item.trainerId}`}
         disabled={opening} onClick={() => void openChat(item)}>
         <span className="chat-avatar" aria-hidden="true">{item.partnerName.slice(0, 1).toUpperCase()}</span>
         <span className="chat-thread-copy"><strong>{item.partnerName}</strong><small>{item.lastMessageBody === '' ? 'Фото' : item.lastMessageBody ?? 'Начать диалог'}</small>{!item.activeConnection && <em>Не подключён</em>}</span>
