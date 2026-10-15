@@ -178,6 +178,24 @@ component12/12, включая явную проверку loading без лож
 production WebKit6/6 повторены; light320/dark390 просмотрены, empty не показывает
 подпись/ложный ноль. Новых cases/projects не добавлено; final-main CI впереди.
 
+16.10, final-main integration: включены все более ранние1657–1661 и1663,
+итоговый main8da92981. Full local check exit0: frontend2703/API1421+160 штатных
+DB skips, infra315/hosting169/lint/typecheck/build passed. Наших DB/schema/role/
+cohort/consent изменений вPR1 нет; incoming145 не переписывается. Snapshot
+из main имел123 строки: весь чужой текст сохранён, два soft line breaks между
+соседними статусами чатов заменены пробелами и один пустой разделитель убран,
+получилось120. Это ровно3 форматных изменения, не удаление чужих фактов.
+Исходный9-пунктный блок сравнивается с оригиналом побайтово. Final production
+browser/CI/release ещё не объявлены. Дополнительный CURRENT Yandex login
+уточняется отдельно без угадывания другого адреса; PR1 от этого не зависит.
+
+Final production-native composition на main8da92981: тот же обязательный
+auth/diary/Home WebKit gate прошёл40/40 без flaky retries, policy46/46 passed,
+union626 Fit Lime cases сохранён без дублей/изменения матриц. Просмотрены
+итоговые dark390 Home и запись Lime: карточка читаема и отсутствует в записи.
+Реальные API/OAuth/speech/consents не имитировались: API fixtures и FakeWebSocket.
+Local check не заменяет fresh exact-head/main CI и живую Cloud.ru приёмку.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
