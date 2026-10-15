@@ -5,6 +5,7 @@ import { CreateBucketCommand, GetBucketAclCommand, GetObjectCommand, PutObjectCo
 import { backupCloudruDatabase } from './cloudru-release-migrations.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { assertNoBucketPolicy } from './cloudru-media-health.js'
+import { cloudruStorageFailure } from './cloudru-storage-error.js'
 
 const bucket = 'fit-cloudru-backups-c2ad3760'
 const magic = Buffer.from('FITBKP01')
@@ -96,5 +97,8 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(() => { console.error('cloudru_offsite_backup_failed'); process.exitCode = 1 })
+  main().catch((error: unknown) => {
+    console.error(JSON.stringify({ event: 'cloudru_offsite_backup_failed', ...cloudruStorageFailure(error) }))
+    process.exitCode = 1
+  })
 }

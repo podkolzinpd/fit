@@ -140,3 +140,26 @@ credential и доступность требуют отдельного фак�
 
 - Production public monitor после ingress: DNS3/3 и HTTP/TLS8/8 passed,
   certificates89days; targeted merge routing61/61 и native/ops29/29 passed.
+
+- Post-merge15.10: PR1637 merged0d42d3a7 после CI38709299161 success;
+  main CI38711706924 success, API38713138618/frontend38713138583 success.
+  Следующий55c8ea52 — nutrition pilot отдельной задачи; его cohort не меняется.
+- Legacy auto deployments orchestrator38711706852/push38711706843 остановлены
+  на build до OIDC/IAM/publish; оба и summary disabled_manually/readback.
+  Yandex stage38711706949: validation success, plan/migrate/deploy skipped.
+- CORS38715240066 failed до изменения API: gh отсутствует в self-hosted.
+  Legacy inspect38715274517 остановлен exact-main guard после обновления main.
+  Backup bootstrap38715637999 generic failure; private bucket/restore не доказаны.
+- Follow-up codex/cloudru-operations-fix: только curl вместо gh в четырёх self-hosted
+  configurations и безопасные allowlisted S3 diagnostics (не message/resource).
+  Source guards, private ACL/policy checks, DB targets и rollback прежние.
+  Targeted workflow8/8 и crypto/privacy/error redaction6/6 passed; полный check
+  выполняется. Сценарии пользователя/SQL/PII/cohort не меняются.
+
+- Follow-up final local check exit0: frontend2676/API1404+159 standard DBskip,
+  infra301/hosting169/lint/types/coverage/build passed. После выявления такого же
+  gh call в nutrition configuration он заменён тем же curl без изменения cohort;
+  final workflow9/9 passed. Local DB migration chain не менялась этим fix.
+- Main55 CI38715304043 встретил pre-existing visual assertion Progress: высота
+  toggle0 вместо>=44 в progress-results-fixture.ts:101, три попытки. Ни UI-код,
+  ни этот test в fix не меняются; CI gates сохраняются, current-main rollout ждёт green.

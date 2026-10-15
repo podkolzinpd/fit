@@ -47,12 +47,18 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
           [[ "$RUN_ID" =~ ^[0-9]+$ ]]
-          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          github_api() {
+            curl --fail --silent --show-error --max-time 15 \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/$1"
+          }
+          run=$(github_api "actions/runs/$RUN_ID")
           commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" 'select(.path == ".github/workflows/ci.yml" and
             .head_repository.full_name == $repo and .head_branch == "main" and
             (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success") | .head_sha' <<<"$run")
           test "$commit" = "$GITHUB_SHA"
-          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          test "$commit" = "$(github_api commits/main | jq -er .sha)"
           test "$(cat /opt/fit/RUNNING_SHA)" = "$commit"
           test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$commit"
           sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs

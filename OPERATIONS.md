@@ -254,6 +254,13 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   и terminal failures за час; historical cutover marker исключён. Owner env
   удаляется EXIT и не передаётся runtime/relay/background.
 
+Post-merge15.10: self-hosted runner имеет curl/jq и не имеет GitHub CLI.
+Configuration workflows читают GitHub API через bounded HTTPS curl с GITHUB_TOKEN,
+затем сохраняют прежние exact-main/CI/running-image guards. S3 diagnostics выводит
+только allowlisted code и HTTP status, без provider message/resource/request metadata.
+После merge автоматически стартовавшие legacy orchestrator/push workflows отменены
+на build до OIDC/publish/IAM. Эти workflows и summary выключены через GitHub
+`disabled_manually`; перед rollback их можно отдельно включить обратно после решения.
 Workflows сохраняют общий VM lock и не отменяют уже выполняющиеся операции.
 Bootstrap/configuration не означают пройденный реальный OAuth/voice E2E;
 приёмка двух тестовых ролей и свежие мобильные bundles фиксируются отдельно.

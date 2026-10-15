@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { cloudruStorageFailure } from './cloudru-storage-error.js'
 import { pathToFileURL } from 'node:url'
 import { GetBucketAclCommand, GetBucketPolicyCommand, GetBucketVersioningCommand, GetObjectCommand,
   ListObjectsV2Command, PutBucketVersioningCommand, S3Client, type GetBucketAclCommandOutput } from '@aws-sdk/client-s3'
@@ -61,5 +62,8 @@ async function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(() => { console.error('cloudru_media_verification_failed'); process.exitCode = 1 })
+  main().catch((error: unknown) => {
+    console.error(JSON.stringify({ event: 'cloudru_media_verification_failed', ...cloudruStorageFailure(error) }))
+    process.exitCode = 1
+  })
 }

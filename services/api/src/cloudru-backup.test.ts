@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { decryptCloudruBackup, encryptCloudruBackup } from './cloudru-backup.js'
+import { S3ServiceException } from '@aws-sdk/client-s3'
+import { cloudruStorageFailure } from './cloudru-storage-error.js'
+
+it('reports only reviewed storage codes and HTTP status, never error payloads or private paths', () => {
+  const error = new S3ServiceException({ name: 'AccessDenied', $fault: 'client',
+    $metadata: { httpStatusCode: 403, requestId: 'private-request' }, message: 'private object or credential' })
+  expect(cloudruStorageFailure(error)).toEqual({ reason: 'AccessDenied', httpStatus: 403 })
+  error.name = 'private-object-name'
+  expect(cloudruStorageFailure(error)).toEqual({ reason: 'storage_operation_failed', httpStatus: 403 })
+  expect(cloudruStorageFailure(new Error('private-secret'))).toEqual({ reason: 'storage_operation_failed' })
+  expect(cloudruStorageFailure(new Error('backup_bucket_not_private'))).toEqual({ reason: 'backup_bucket_not_private' })
+})
 
 describe('Cloud.ru offsite backup encryption', () => {
   const key = 'a'.repeat(64)

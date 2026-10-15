@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
-const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech']
+const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
 
 for (const name of configurations) {
   test(`${name} requires green exact-main, a trusted host and the shared VM lock`, () => {
@@ -14,6 +14,11 @@ for (const name of configurations) {
     assert.match(workflow, /\.conclusion == "success"/)
     assert.match(workflow, /\.head_repository.full_name == \$repo/)
     assert.match(workflow, /\.path == "\.github\/workflows\/ci.yml"/)
+    // Production runner has curl/jq, but no GitHub CLI. Keep the source guard executable there.
+    assert.doesNotMatch(workflow, /\bgh api\b/)
+    assert.match(workflow, /curl --fail --silent --show-error --max-time 15/)
+    assert.match(workflow, /Authorization: Bearer \$GH_TOKEN/)
+    assert.match(workflow, /github_api commits\/main \| jq -er \.sha/)
     assert.match(workflow, /test "\$\(hostname\)" = fit-stage-app/)
     assert.match(workflow, /group: cloudru-stage-vm\n  cancel-in-progress: false/)
     assert.doesNotMatch(workflow, /\n  (push|pull_request|schedule):|add-access-binding|terraform apply|system:allUsers/)
