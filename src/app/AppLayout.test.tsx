@@ -419,6 +419,24 @@ describe('AppLayout: вкладка ассистента', () => {
 })
 
 describe('AppLayout: служебная плашка о восстановлении ИИ', () => {
+  afterEach(() => window.sessionStorage.clear())
+
+  it('крестик скрывает плашку до конца запуска, следующий запуск показывает её снова', async () => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    const first = renderLayout('/me')
+    await userEvent.click(screen.getByRole('button', { name: 'Скрыть сообщение' }))
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    first.unmount()
+    // Другой экран в том же запуске: плашка остаётся скрытой.
+    const sameLaunch = renderLayout('/me/workouts')
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    sameLaunch.unmount()
+    // Новый запуск приложения начинается с чистой sessionStorage.
+    window.sessionStorage.clear()
+    renderLayout('/me')
+    expect(screen.getByRole('status', { name: 'Состояние сервиса' })).toBeInTheDocument()
+  })
+
   it('без флага сборки плашки нет', () => {
     renderLayout('/me')
     expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
