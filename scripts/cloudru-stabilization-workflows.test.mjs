@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
+import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
@@ -28,7 +29,7 @@ for (const name of configurations) {
 }
 
 test('all new operational shell steps parse without performing any infrastructure operations', () => {
-  for (const name of [...configurations, 'backup-cloudru-production', 'inspect-cloudru-operations', 'route-legacy-yandex-to-cloudru']) {
+  for (const name of [...configurations, 'backup-cloudru-production', 'inspect-cloudru-operations', 'route-legacy-yandex-to-cloudru', 'repair-cloudru-media-acl']) {
     const workflow = read(`.github/workflows/${name}.yml`)
     for (const match of workflow.matchAll(/\n        run: \|\n([\s\S]*?)(?=\n      - |$)/g)) {
       const result = spawnSync('bash', ['-n'], { input: match[1].replace(/^          /gm, ''), encoding: 'utf8' })
@@ -38,6 +39,58 @@ test('all new operational shell steps parse without performing any infrastructur
   for (const path of ['scripts/promote-cloudru-speech.sh', 'infra/cloudru/fit-cloudru-background', 'infra/cloudru/fit-cloudru-speechkit']) {
     assert.equal(spawnSync('bash', ['-n'], { input: read(path), encoding: 'utf8' }).status, 0, path)
   }
+})
+
+const mediaApp = 'b87cd7c3-c737-4cd7-87b3-6591dd9b3ec9'
+const mediaAcl = () => ({ Owner: { ID: 'fixture-owner' }, Grants: [
+  { Grantee: { Type: 'CanonicalUser', ID: 'fixture-owner' }, Permission: 'FULL_CONTROL' },
+  { Grantee: { Type: 'CanonicalUser', ID: mediaApp }, Permission: 'READ' },
+  { Grantee: { Type: 'CanonicalUser', ID: mediaApp }, Permission: 'WRITE' },
+] })
+
+test('media ACL repair preserves owner and app data grants and adds only READ_ACP', () => {
+  const acl = mediaAcl()
+  const before = structuredClone(acl)
+  assert.deepEqual(planMediaAclReadRepair(acl), { changed: true, headers: {
+    GrantRead: `id="${mediaApp}"`, GrantWrite: `id="${mediaApp}"`,
+    GrantReadACP: `id="${mediaApp}"`, GrantFullControl: 'id="fixture-owner"',
+  } })
+  assert.deepEqual(acl, before)
+})
+
+test('media ACL repair is idempotent when app already has ACL read or full control', () => {
+  for (const permission of ['READ_ACP', 'FULL_CONTROL']) {
+    const acl = mediaAcl()
+    acl.Grants.push({ Grantee: { Type: 'CanonicalUser', ID: mediaApp }, Permission: permission })
+    assert.equal(planMediaAclReadRepair(acl).changed, false)
+  }
+})
+
+test('media ACL repair rejects public, unknown or malformed grants before mutation', () => {
+  for (const grant of [
+    { Grantee: { Type: 'Group', URI: 'http://acs.amazonaws.com/groups/global/AllUsers' }, Permission: 'READ' },
+    { Grantee: { Type: 'CanonicalUser', ID: 'unexpected-account' }, Permission: 'READ' },
+    { Grantee: { Type: 'CanonicalUser', ID: mediaApp }, Permission: 'UNKNOWN' },
+  ]) {
+    const acl = mediaAcl()
+    acl.Grants.push(grant)
+    assert.throws(() => planMediaAclReadRepair(acl), /media_acl_requires_review/)
+  }
+  assert.throws(() => planMediaAclReadRepair({}), /media_acl_invalid/)
+})
+
+test('media ACL repair is manual, bucket-bound and uses only existing media credentials', () => {
+  const workflow = read('.github/workflows/repair-cloudru-media-acl.yml')
+  assert.match(workflow, /GRANT_APP_MEDIA_ACL_READ_ONLY/)
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(workflow, /test "\$\(hostname\)" = fit-stage-app/)
+  assert.match(workflow, /group: cloudru-stage-vm\n  cancel-in-progress: false/)
+  assert.deepEqual([...workflow.matchAll(/secrets\.([A-Z0-9_]+)/g)].map(match => match[1]),
+    ['CLOUDRU_MEDIA_MIGRATION_KEY_ID', 'CLOUDRU_MEDIA_MIGRATION_KEY_SECRET'])
+  const command = read('scripts/repair-cloudru-media-acl.mjs')
+  assert.match(command, /const bucket = 'fit-cloudru-stage-media-c2ad3760'/)
+  assert.doesNotMatch(command, /PutBucketPolicyCommand|PutBucketOwnershipControlsCommand|CreateAccessKey|DATABASE_/)
+  assert.doesNotMatch(workflow, /schedule:|push:|pull_request:|add-access-binding/)
 })
 
 test('legacy routing is manually confirmed and never changes database or IAM resources', () => {
@@ -84,7 +137,7 @@ test('offsite restore cannot connect to production or expose a database port and
 
 test('restore table inventory excludes ACL, table data and partition attachment entries', () => {
   const workflow = read('.github/workflows/backup-cloudru-production.yml')
-  const program = workflow.match(/\| awk '([^']+)'/)[1]
+  const program = workflow.match(/\| awk '(\$4 == "TABLE"[^']+)'/)[1]
   const inventory = [
     '1; 1259 123 TABLE public workouts fit_owner',
     '2; 1259 124 TABLE app_private fit_migrations fit_owner',
@@ -96,6 +149,18 @@ test('restore table inventory excludes ACL, table data and partition attachment 
   const result = spawnSync('awk', [program], { input: inventory, encoding: 'utf8' })
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.stdout.trim(), '2')
+})
+
+test('restore extension diagnostics expose only allowlisted system names', () => {
+  const workflow = read('.github/workflows/backup-cloudru-production.yml')
+  const program = workflow.match(/\| awk '(\$4 == "EXTENSION"[^']+)'/)[1]
+  const result = spawnSync('awk', [program], { encoding: 'utf8', input: [
+    '1; 3079 123 EXTENSION - pg_stat_statements',
+    '2; 3079 124 EXTENSION - synthetic-sensitive-name',
+    '3; 0 0 COMMENT - EXTENSION pg_stat_statements',
+  ].join('\n') })
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout, 'cloudru_restore_extension=pg_stat_statements\ncloudru_restore_extension=unrecognized\n')
 })
 
 test('restore diagnostics emit only fixed categories, never private stderr', () => {
