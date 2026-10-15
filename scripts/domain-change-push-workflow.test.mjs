@@ -49,3 +49,17 @@ test('recovery frees only dangling image cache before checkout on a low-disk sen
   assert.match(workflow, /test "\$available_kib" -ge 524288/)
   assert.doesNotMatch(workflow, /prune[^\n]*(?:--all|--volumes)|podman (?:system|volume) prune|rm -r[f ]/)
 })
+
+test('email audit uses GET and a read-only transaction and skips all delivery steps', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/manage-cloudru-recovery-push.yml', import.meta.url), 'utf8')
+  const audit = await readFile(new URL('../services/api/src/email-audience-audit.ts', import.meta.url), 'utf8')
+  assert.match(workflow, /options: \[inspect, send, email-audit\]/)
+  assert.match(workflow, /inspect\|email-audit\) test -z/)
+  assert.match(workflow, /if: inputs.action == 'email-audit'/)
+  assert.match(workflow, /if: inputs.action != 'email-audit'/)
+  assert.match(audit, /method: 'GET', redirect: 'error'/)
+  assert.match(audit, /repeatable read read only/)
+  assert.match(audit, /sentEmails: 0/)
+  assert.doesNotMatch(audit, /console\.(?:log|error)\((?:users|keys|token|key|auth)\)|sendNotification|sendMail|writeFile/)
+  assert.match(audit, /private source details suppressed/)
+})
