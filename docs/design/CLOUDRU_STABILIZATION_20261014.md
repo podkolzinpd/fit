@@ -174,3 +174,9 @@ credential и доступность требуют отдельного фак�
   network blocked. Это проверка race mechanism, не полный app E2E: локальный
   Supabase auth54321 недоступен, общие базы не запускались/не сбрасывались.
   Полный existing browser scenario остаётся обязательным final CI.
+
+- Mainfc7b31d6 (#1644) merged без конфликтов: scoped nutrition CORS и geometry
+  expect.poll сохранены. Наш panel-visible wait остаётся отдельным readiness
+  контрактом: иначе poll мог бы измерить controls прежнего overview. Повторный
+  nutrition shell parse после union устранён (один workflow — один parse).
+  Combined workflow/nutrition12/12 и targeted ESLint passed. Final CI после push.

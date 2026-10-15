@@ -26,7 +26,7 @@ for (const name of configurations) {
 }
 
 test('all new operational shell steps parse without performing any infrastructure operations', () => {
-  for (const name of [...configurations, 'configure-cloudru-nutrition', 'backup-cloudru-production', 'inspect-cloudru-operations', 'route-legacy-yandex-to-cloudru']) {
+  for (const name of [...configurations, 'backup-cloudru-production', 'inspect-cloudru-operations', 'route-legacy-yandex-to-cloudru']) {
     const workflow = read(`.github/workflows/${name}.yml`)
     for (const match of workflow.matchAll(/\n        run: \|\n([\s\S]*?)(?=\n      - |$)/g)) {
       const result = spawnSync('bash', ['-n'], { input: match[1].replace(/^          /gm, ''), encoding: 'utf8' })
