@@ -29,14 +29,14 @@
   const animations = new Set();
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
-  const timeline = [[1],[3],[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
+  const timeline = [[1],Array.from({length:14},(_,i)=>i),[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
   timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
   if(fin124)timeline.splice(timeline.length-1,1,...fin124.stops.map(n=>[...Array(n).keys()]));
   extraSlides.forEach(i=>timeline.splice(i,0,[0]));
   const max = timeline.map(stops=>stops.length-1);
   const sceneLabels = [
     ['Фотография','Твой спорт. Твоя команда.'],
-    ['Для клиента','Для тренера','Масштаб рынка','Вся идея'],
+    window.FIT_PROBLEMS.titles,
     ['Жители России','15–59 лет','Занимаются спортом','Аудитория Fit','Товары и одежда','Фитнес-услуги','Секции и питание','Устройства и онлайн','Весь рынок'],
     ['Разные приложения','Собираем вокруг Fit','Концепция развития'],
     ['Весь маршрут','Поиск клиентов','Расписание и оплата','Клиенты и связь','Программа с ИИ'],
@@ -70,6 +70,7 @@
   qa('.content section',scope[1]).forEach((el,i)=>phase(el,i));
   phase(q('.content>div>div:last-child',scope[1]),2);
   scope[1].classList.add('idea-compact');
+  window.FIT_PROBLEMS.mount(scope[1]);
   // Market: reveal original SVG elements in place, never rescale one group alone.
   const market=scope[2];
   const marketUnit=document.createElementNS('http://www.w3.org/2000/svg','text');
@@ -267,6 +268,7 @@
     eventSlide.classList.toggle('fit-events-visible',showEvents);
     eventProof.setAttribute('aria-hidden',String(!showEvents));
     const scene=timeline[index][n],previousScene=timeline[index][prev];
+    if(s===scope[1]){window.FIT_PROBLEMS.render(scene,motion&&!staticMode);return updateToolbar();}
     const clientStory=clientStories.find(story=>story.slide===s);
     if(clientStory){clientStory.render(scene,motion&&!staticMode,animate,staticMode);return updateToolbar();}
     if(fin124?.has(s)){fin124.render(s,scene,motion&&!staticMode,staticMode);return updateToolbar();}
