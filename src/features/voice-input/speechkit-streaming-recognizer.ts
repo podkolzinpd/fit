@@ -1,6 +1,7 @@
 import { yandexAppSessionTransport } from '../../data/yandex-app-session-transport'
 
 const DEFAULT_RELAY_URL = 'wss://89-169-132-80.sslip.io/stt'
+const PRODUCTION_RELAY_URL = 'wss://api.fit-training.ru/stt'
 const SOCKET_CONNECT_TIMEOUT_MS = 5_000
 const SOCKET_FLUSH_TIMEOUT_MS = 5_000
 
@@ -28,14 +29,15 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
 
   async start(onPartial: (text: string, result?: StreamingSpeechResult) => void, onFinal: (text: string, result?: StreamingSpeechResult) => void): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia || typeof WebSocket === 'undefined') throw new Error('Потоковое распознавание недоступно в этом браузере.')
+    const configuredUrl = String(import.meta.env.VITE_SPEECHKIT_RELAY_URL ?? '').trim()
+    if (import.meta.env.PROD && configuredUrl !== PRODUCTION_RELAY_URL) throw new Error('Потоковое распознавание недоступно в этом браузере.')
+    const url = configuredUrl || (import.meta.env.PROD ? '' : DEFAULT_RELAY_URL)
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
     if (this.stopped) {
       stream.getTracks().forEach((track) => track.stop())
       throw new Error('Запрос микрофона отменён.')
     }
     this.stream = stream
-    const configuredUrl = (import.meta.env as unknown as { VITE_SPEECHKIT_RELAY_URL?: string }).VITE_SPEECHKIT_RELAY_URL
-    const url = configuredUrl || DEFAULT_RELAY_URL
     this.onPartial = onPartial
     this.onFinal = onFinal
     this.context = new AudioContext()
@@ -114,8 +116,7 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
     const oldSocket = this.socket
     await this.flush(oldSocket)
     oldSocket.close()
-    const configuredUrl = (import.meta.env as unknown as { VITE_SPEECHKIT_RELAY_URL?: string }).VITE_SPEECHKIT_RELAY_URL
-    await this.connectSocket(configuredUrl || DEFAULT_RELAY_URL)
+    await this.connectSocket(oldSocket.url)
   }
 
   async stop(): Promise<void> {
