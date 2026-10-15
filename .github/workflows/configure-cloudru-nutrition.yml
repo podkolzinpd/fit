@@ -123,7 +123,9 @@ jobs:
               --env-file /opt/fit/secrets/api.env "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-nutrition-smoke.js
           fi
           test "$(curl --silent --show-error --max-time 3 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/v1/profile)" = 401
-          for origin in https://fit-training.ru https://www.fit-training.ru capacitor://localhost https://localhost; do
+          # Gate only the canonical app and native clients; do not repair or
+          # require unrelated www routing/CORS during nutrition activation.
+          for origin in https://fit-training.ru capacitor://localhost https://localhost; do
             test "$(curl --silent --show-error --max-time 3 --output /dev/null --write-out '%{http_code}' \
               --request OPTIONS --header "Origin: $origin" --header 'Access-Control-Request-Method: POST' \
               http://127.0.0.1:18080/v1/clients)" = 204

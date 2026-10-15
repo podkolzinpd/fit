@@ -35,6 +35,15 @@ Bounded live source search вернул7 обычных продуктов с в
 строки CURRENT_STATE побайтово сохранены; migration safety exact-base passed.
 Это локальные доказательства, не заявление об уже включённом production.
 
+Post-merge preflight15.10: PR1643 слит в main55c8ea52. Публичные OPTIONS к
+native API разрешают canonical `https://fit-training.ru`, `capacitor://localhost`
+и `https://localhost` (204 + точный Allow-Origin), но www даёт403. Питание не
+меняет этот чужой CORS-контракт. В новом scoped release ошибочно осталась
+скопированная проверка www; она исключена из nutrition-only activation,
+остальные canonical/native/auth/schema/rollback гейты сохранены. Добавлен
+регрессионный assertion на точные три релевантных origin. Конфигурация CORS,
+маршруты сайта и права пользователей не меняются; неуспешный enable не запускался.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.

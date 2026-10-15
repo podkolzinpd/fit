@@ -30,6 +30,8 @@ test('nutrition release uses green exact current main, existing runner, private 
     'sudo mv -T -- "$next" /opt/fit/secrets/api.env', 'dist/cloudru-nutrition-smoke.js',
     'http://127.0.0.1:18082/v1/profile', 'http://127.0.0.1:18080/v1/profile']) assert.ok(workflow.includes(contract), contract)
   assert.equal(workflow.split('node dist/cloudru-nutrition-smoke.js').length - 1, 2)
+  assert.match(workflow, /for origin in https:\/\/fit-training\.ru capacitor:\/\/localhost https:\/\/localhost; do/)
+  assert.doesNotMatch(workflow, /for origin in [^\n]*www\./)
   assert.doesNotMatch(workflow, /id-token:|terraform|YC_TOKEN|read-cloudru-external|configure-cloudru-ai|--database|pg_dump/)
   const helper = readFileSync(new URL('./configure-cloudru-nutrition.mjs', import.meta.url), 'utf8')
   assert.match(helper, /GITHUB_REF !== 'refs\/heads\/main'/)
