@@ -681,6 +681,9 @@ Live она переезжает на фактический день и сра�
 
 Production web и мобильный release bundle используют Yandex ID/app-session/API
 без Supabase startup/auth-подписки и без frontend Supabase configuration.
+Release-сборка также исключает Supabase SDK из всех frontend chunks; локальные
+legacy adapters подключаются только в development/test. Отсутствие native
+сессии не переключает приложение на старый backend.
 Восстановление, expiry/retry, logout, роли и приглашения сохраняют прежний
 пользовательский контракт. Local legacy и server-side media/migration tooling
 ещё существуют; это не fallback после ошибки нового API.

@@ -1,8 +1,28 @@
+import { fileURLToPath } from 'node:url'
+import { isLocalLegacyBuild, assertNativeFrontendModules } from './src/app/composition-build-boundary'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  resolve: { alias: {
+    '#fit/local-auth': fileURLToPath(new URL(isLocalLegacyBuild(mode)
+      ? './src/app/local-auth-composition.ts'
+      : './src/app/native-only-composition.ts', import.meta.url)),
+    '#fit/local-data': fileURLToPath(new URL(isLocalLegacyBuild(mode)
+      ? './src/app/local-data-composition.ts'
+      : './src/app/native-only-composition.ts', import.meta.url)),
+    '#fit/local-assistant': fileURLToPath(new URL(isLocalLegacyBuild(mode)
+      ? './src/app/local-assistant-composition.ts'
+      : './src/app/native-only-composition.ts', import.meta.url)),
+  } },
   plugins: [react(), {
+    name: 'fit-native-composition-boundary',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      if (isLocalLegacyBuild(mode)) return
+      assertNativeFrontendModules(Object.values(bundle).flatMap((item) => item.type === 'chunk' ? Object.keys(item.modules) : []))
+    },
+  }, {
     name: 'fit-nonblocking-startup-styles',
     apply: 'build',
     transformIndexHtml: {
@@ -51,4 +71,4 @@ export default defineConfig({
       ],
     },
   },
-})
+}))

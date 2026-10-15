@@ -1,3 +1,4 @@
+import { localLegacyAvailable } from '#fit/local-assistant'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import {
@@ -18,7 +19,7 @@ export function YandexAssistantRoute() {
   const [authorizing, setAuthorizing] = useState(false)
   const config = getYandexAppSessionEntryConfig()
   const routedToYandex = actor !== null
-    && (isYandexAssistantRoutingPilotEnabled(actor.userId)
+    && (!localLegacyAvailable || isYandexAssistantRoutingPilotEnabled(actor.userId)
       || isYandexMainRoutingEnabled()
       || isYandexAppSessionEnabled())
   const backend = useMemo(() => !routedToYandex || config === null
@@ -33,7 +34,7 @@ export function YandexAssistantRoute() {
     session?.session.token,
   ])
 
-  if (!routedToYandex) return <AssistantHistoryPage />
+  if (localLegacyAvailable && !routedToYandex) return <AssistantHistoryPage />
   if (loading) return <main className="assistant-page">
     <StatePanel
       tone="info"
