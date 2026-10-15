@@ -14,6 +14,7 @@ import {
 } from '../../data/repositories/yandex-pilot.repository'
 import { useAuth } from '../../app/auth-context'
 import { ClientLimeStandaloneThemeContext } from '../../app/client-lime-standalone-context'
+import { ClientLimeStandaloneLayout } from '../../app/ClientLimeStandaloneLayout'
 import {
   getYandexAppSessionEntryConfig,
   getYandexIdPilotConfig,
@@ -194,31 +195,33 @@ export function AuthPage() {
       .catch(() => { setError('Не удалось начать вход через Yandex ID.'); setYandexBusy(false) })
   }
 
-  if (yandexOnlyAuthConfig !== null) return <AuthIdentityScreen className="auth-login-screen">
-    <header className="auth-entry-head">
-      <FitLogo />
-      <h1>Добро пожаловать</h1>
-      <p className="muted">Войдите, чтобы продолжить тренировки</p>
-      {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join'))
-        && <p className="muted">Войдите, чтобы продолжить по приглашению.</p>}
-    </header>
-    <section className="stack auth-form" aria-label="Авторизация через Yandex ID">
-      <p className="muted">Вход и регистрация выполняются через Yandex ID.</p>
-      <button
-        className="primary auth-yandex"
-        type="button"
-        disabled={yandexBusy}
-        aria-busy={yandexBusy}
-        onClick={startYandexLogin}
-      >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>
-      {error && <p className="error" role="alert">{error}</p>}
-      {yandexAppSession.error && <div className="stack" role="alert">
-        <p className="error">{yandexAppSession.error}</p>
-        <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
-      </div>}
-    </section>
-    <nav className="auth-legal-links" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
-  </AuthIdentityScreen>
+  if (yandexOnlyAuthConfig !== null) return <ClientLimeStandaloneLayout authEntry>
+    <main className="lime-auth-entry" aria-label="Вход в Fit">
+      <header className="lime-auth-header">
+        <FitLogo />
+      </header>
+      <img className="lime-auth-photo" src="/assets/startup-photo-983c93dc4df8.jpg" width={940} height={1673} alt="" aria-hidden="true" fetchPriority="high" onError={(event) => { event.currentTarget.hidden = true }} />
+      <section className="lime-auth-actions" aria-label="Авторизация через Yandex ID">
+        <h1>Добро пожаловать</h1>
+        <p className="muted">Войдите, чтобы продолжить тренировки</p>
+        {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join'))
+          && <p className="muted">Войдите, чтобы продолжить по приглашению.</p>}
+        <button
+          className="primary auth-yandex"
+          type="button"
+          disabled={yandexBusy}
+          aria-busy={yandexBusy}
+          onClick={startYandexLogin}
+        >{yandexBusy ? 'Переходим в Yandex ID…' : 'Продолжить с Yandex ID'}</button>
+        {error && <p className="error" role="alert">{error}</p>}
+        {yandexAppSession.error && <div className="stack" role="alert">
+          <p className="error">{yandexAppSession.error}</p>
+          <button className="secondary" type="button" onClick={() => void yandexAppSession.retry()}>Повторить проверку</button>
+        </div>}
+      </section>
+      <nav className="lime-auth-legal" aria-label="Юридическая информация"><Link to={LEGAL_PATHS.terms}>Условия использования</Link><Link to={LEGAL_PATHS.privacy}>Конфиденциальность</Link></nav>
+    </main>
+  </ClientLimeStandaloneLayout>
 
   return <AuthIdentityScreen className={mode === 'login' ? 'auth-login-screen' : undefined}>
     <header className="auth-entry-head">

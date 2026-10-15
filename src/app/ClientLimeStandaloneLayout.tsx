@@ -7,16 +7,19 @@ import { applyAppTheme, applyThemeVariant, themeVariantClass, useAppTheme } from
 import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 import { ClientLimeStandaloneThemeContext } from './client-lime-standalone-context'
 
-// Public routes stay public. Visual scope is assigned only after the same
-// server-confirmed client gate used by AppLayout; no email/storage inference.
-export function ClientLimeStandaloneLayout({ children, registration = false }: PropsWithChildren<{ registration?: boolean }>) {
+// Public routes stay public. The approved auth entry and registration are the
+// only pre-actor exceptions to AppLayout's server-confirmed client gate.
+export function ClientLimeStandaloneLayout({ children, registration = false, authEntry = false }: PropsWithChildren<{ registration?: boolean; authEntry?: boolean }>) {
   const { actor } = useAuth()
   const inherited = useContext(ClientLimeStandaloneThemeContext) !== null
-  // The approved new-account screen precedes the actor/experiment response.
+  // The approved welcome/registration screens precede the actor response.
   // Other public routes continue to require the server-confirmed client gate.
-  const enabled = registration || isClientLimeEnabled(actor)
+  const enabled = registration || authEntry || isClientLimeEnabled(actor)
   const baseTheme = useAppTheme()
-  const { theme } = useClientLimeTheme(actor?.userId ?? '')
+  const { theme: clientTheme } = useClientLimeTheme(actor?.userId ?? '')
+  // The public welcome screen has a fixed dark identity. Never persist this
+  // choice over an athlete's or trainer's own appearance preference.
+  const theme = authEntry ? 'dark' : clientTheme
 
   useLayoutEffect(() => {
     if (!enabled || inherited) return
