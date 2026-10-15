@@ -1907,3 +1907,12 @@ WebSocket rejection must pass before relay/ingress promotion. Provisioning an
 external Yandex IAM account, STT-only role and scoped key requires explicit owner
 approval; this workflow creates no IAM resources. Keep frontend WSS default-off
 until the relay passes its real upstream and guard checks.
+
+The isolated backup restore cluster creates fit_api and optional analytics grantee
+fit_datalens as NOLOGIN roles before restoring ACLs. These placeholders never
+change production roles or permit connections. Conditional analytics migrations
+can include fit_datalens grants in an archive even when a clean local schema
+without that role does not. Restore progress emits fixed stages; failures expose
+only missing_role, permission_denied, missing_extension or unclassified. Raw
+pg_restore stderr stays in the disposable container and is deleted with it,
+because COPY failures can contain private row values.

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 
@@ -55,6 +57,7 @@ test('offsite restore cannot connect to production or expose a database port and
   assert.match(restore, /--dbname fit_restore/)
   assert.match(restore, /has_table_privilege\('fit_api'/)
   assert.match(restore, /c.relrowsecurity/)
+  assert.match(restore, /create role fit_api nologin; create role fit_datalens nologin;/)
   assert.doesNotMatch(restore, /--no-acl/)
   assert.doesNotMatch(restore, /--publish|--network=host|10\.70\.10\.67|DATABASE_PASSWORD/)
   assert.match(workflow, /sudo rm -f --/)
@@ -93,6 +96,29 @@ test('restore table inventory excludes ACL, table data and partition attachment 
   const result = spawnSync('awk', [program], { input: inventory, encoding: 'utf8' })
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.stdout.trim(), '2')
+})
+
+test('restore diagnostics emit only fixed categories, never private stderr', () => {
+  const workflow = read('.github/workflows/backup-cloudru-production.yml')
+  const classifier = workflow.match(/sudo podman exec --user 0 "\$container" (sh -c '[\s\S]*?')\n            exit 1/)[1]
+  const directory = mkdtempSync(join(tmpdir(), 'fit-restore-diagnostics-'))
+  try {
+    const errorFile = join(directory, 'restore-error')
+    for (const [error, category] of [
+      ['role "fit_datalens" does not exist', 'missing_role'],
+      ['permission denied for relation example', 'permission_denied'],
+      ['extension example is not available', 'missing_extension'],
+      ['COPY failed: synthetic-sensitive-row', 'unclassified'],
+    ]) {
+      writeFileSync(errorFile, `${error}\nsynthetic-sensitive-row\n`)
+      const result = spawnSync('bash', ['-c', classifier.replaceAll('/tmp/restore-error', errorFile)], { encoding: 'utf8' })
+      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.stdout.trim(), `cloudru_restore_failed=${category}`)
+      assert.equal(result.stderr, '')
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
 })
 
 test('background delivery boundary is persistent and existing uncertain recovery receipts are not retried', () => {

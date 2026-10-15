@@ -359,3 +359,9 @@ addition; final full npm run check passed for the expanded diff (frontend2680, A
 Владелец решил пока оставить голос выключенным. Новый STT-only аккаунт/ключ не создаётся; relay/WSS не включаются. Поддержка отдельного ключа в workflow остаётся fail-closed при его отсутствии.
 
 Полная локальная схема обнаружила ложный отказ проверки restore: TOC parser считал ACL TABLE вместе с таблицами (104 против 68). Подсчёт ограничен типом TABLE и исключает DATA/ATTACH. Новый короткий executable fixture проверяет этот отдельный риск; повторная полная rehearsal прошла: 68 таблиц, 151 запись истории миграций, fit_api SELECT и RLS/owner трёх core-таблиц сохранены. Production-данные в ней не используются.
+
+## Реальная копия и изолированные роли — 15.10
+
+PR1650 merged8f651b85 после green CI38766243161. Drill38768373489 подтвердил encrypted upload/readback/decrypt (~10.9MB), но restore завершился exit1; media пропущен, cleanup прошёл, BACKUP_VERIFIED_AT не записан. Причина production-отказа пока не классифицирована.
+
+Отдельная локальная source/restore пара воспроизводит пропущенную analytics-роль: при наличии fit_datalens в source условные миграции сохраняют её grants в dump; чистый target только с fit_api отвергает restore. В disposable target добавляется fit_datalens NOLOGIN (production-роли/доступы не меняются). Постоянные stage/error категории различают этап и три известных отказа; raw stderr остаётся только внутри disposable container и удаляется с ним, поскольку COPY errors могут содержать данные. Один executable classifier test покрывает четыре категории без публикации stderr; существующий isolation test проверяет обе NOLOGIN-роли.
