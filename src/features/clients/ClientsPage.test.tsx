@@ -55,6 +55,16 @@ function pointerEvent(surface: Element, type: string, x: number, y = 40) {
   fireEvent(surface, new TestPointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, clientX: x, clientY: y }))
 }
 
+async function revealArchive(name = 'Анна Смирнова') {
+  const link = await screen.findByRole('link', { name: new RegExp(name) })
+  const surface = link.closest<HTMLElement>('.client-swipe-surface')!
+  vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 350, 100))
+  pointerEvent(surface, 'pointerdown', 310)
+  pointerEvent(surface, 'pointermove', 210)
+  pointerEvent(surface, 'pointerup', 210)
+  return surface.closest<HTMLElement>('.client-swipe-row')!
+}
+
 function renderPage(clients: Client[] | undefined, initialEntry = '/clients') {
   if (clients) backend.list.mockResolvedValue(clients)
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -82,15 +92,16 @@ describe('ClientsPage archive actions', () => {
   it('labels archiving with an archive icon and keeps restore visually distinct', async () => {
     const root = { ...client('root', 'Анна Смирнова'), canArchive: true }
     const { unmount } = renderPage([root])
-    const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' }))
+    expect(await screen.findByText('Архив — свайпом')).toBeVisible()
+    expect(screen.queryByText('Чат — по нажатию, архив — свайпом')).not.toBeInTheDocument()
+    await revealArchive()
     const action = screen.getByRole('button', { name: 'В архив' })
     expect(action.querySelector('svg')).toHaveAttribute('data-icon', 'archive')
     expect(action.querySelector('.client-swipe-action-icon')).toHaveAttribute('aria-hidden', 'true')
     expect(action.querySelector('[data-icon="trash"]')).not.toBeInTheDocument()
     unmount()
     renderPage([{ ...root, archivedAt: '2026-10-07T12:00:00Z' }], '/clients/archive')
-    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' }))
+    await revealArchive()
     expect(screen.getByRole('button', { name: 'Восстановить' }).querySelector('svg')).toHaveAttribute('data-icon', 'history')
   })
 
@@ -238,31 +249,27 @@ describe('ClientsPage archive actions', () => {
   })
 
   it('shows archive controls only to the root trainer and keeps one action rail open', async () => {
-    const user = userEvent.setup()
     renderPage([
       { ...client('root-1', 'Анна Смирнова'), canArchive: true },
       { ...client('root-2', 'Борис Иванов'), canArchive: true },
       client('member', 'Вера Кузнецова'),
     ])
 
-    const first = await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' })
-    const second = screen.getByRole('button', { name: 'Действия с клиентом Борис Иванов' })
-    expect(screen.queryByRole('button', { name: 'Действия с клиентом Вера Кузнецова' })).not.toBeInTheDocument()
-
-    await user.click(first)
-    expect(first).toHaveAttribute('aria-expanded', 'true')
-    await user.click(second)
-    expect(first).toHaveAttribute('aria-expanded', 'false')
-    expect(second).toHaveAttribute('aria-expanded', 'true')
-    await user.click(first)
-    const surface = second.closest<HTMLElement>('.client-swipe-surface')!
+    const first = await revealArchive()
+    expect(first).toHaveClass('is-open')
+    const second = await revealArchive('Борис Иванов')
+    expect(first).not.toHaveClass('is-open')
+    expect(second).toHaveClass('is-open')
+    expect(screen.getByRole('link', { name: /Вера Кузнецова/ }).closest('.client-swipe-row')).toBeNull()
+    await revealArchive()
+    const surface = second.querySelector<HTMLElement>('.client-swipe-surface')!
     vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 350, 100))
     pointerEvent(surface, 'pointerdown', 310)
     pointerEvent(surface, 'pointermove', 210)
-    expect(first).toHaveAttribute('aria-expanded', 'false')
+    expect(first).not.toHaveClass('is-open')
     expect(surface).toHaveStyle({ transform: 'translate3d(-100px, 0, 0)' })
     pointerEvent(surface, 'pointerup', 210)
-    expect(second).toHaveAttribute('aria-expanded', 'true')
+    expect(second).toHaveClass('is-open')
   })
 
   it('archives only after the explicit action and can restore the returned version', async () => {
@@ -273,7 +280,7 @@ describe('ClientsPage archive actions', () => {
       .mockResolvedValueOnce({ ...rootClient, archivedAt: null, version: 3 })
     renderPage([rootClient])
 
-    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' }))
+    await revealArchive()
     expect(backend.setArchived).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'В архив' }))
     await waitFor(() => expect(backend.setArchived).toHaveBeenCalledWith(rootClient, true))
@@ -293,7 +300,7 @@ describe('ClientsPage archive actions', () => {
     backend.setArchived.mockResolvedValue({ ...archived, archivedAt: null, version: 2 })
     renderPage([archived], '/clients/archive')
 
-    await user.click(await screen.findByRole('button', { name: 'Действия с клиентом Архивный спортсмен' }))
+    await revealArchive('Архивный спортсмен')
     await user.click(screen.getByRole('button', { name: 'Восстановить' }))
     await waitFor(() => expect(backend.setArchived).toHaveBeenCalledWith(archived, false))
   })
@@ -304,12 +311,11 @@ describe('ClientsPage archive actions', () => {
     backend.setArchived.mockRejectedValue(new Error('Данные уже изменились. Обновите страницу и повторите.'))
     renderPage([rootClient])
 
-    const menu = await screen.findByRole('button', { name: 'Действия с клиентом Анна Смирнова' })
-    await user.click(menu)
+    const row = await revealArchive()
     await user.click(screen.getByRole('button', { name: 'В архив' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Данные уже изменились')
-    expect(menu).toHaveAttribute('aria-expanded', 'true')
+    expect(row).toHaveClass('is-open')
     expect(screen.queryByRole('button', { name: 'Вернуть' })).not.toBeInTheDocument()
   })
 })
@@ -364,6 +370,27 @@ describe('ClientsPage search', () => {
 })
 
 describe('ClientsPage chat actions', () => {
+  it('replaces the menu with chat and suppresses the release click after a swipe from its icon', async () => {
+    const root = { ...client('root', 'Анна Смирнова', true), canArchive: true }
+    backend.listThreads.mockResolvedValue([thread('root', 4)])
+    renderPage([root])
+    const surface = await swipeSurface()
+    const chat = await screen.findByRole('button', { name: 'Сообщения с Анна Смирнова, непрочитанных: 4' })
+    expect(surface.querySelector('.client-card-menu')).toBeNull()
+    const icon = chat.querySelector('svg')!
+    pointerEvent(icon, 'pointerdown', 310)
+    pointerEvent(icon, 'pointermove', 210)
+    pointerEvent(icon, 'pointerup', 210)
+    fireEvent.click(chat, { detail: 1 })
+    expect(screen.queryByText('Чат открыт')).not.toBeInTheDocument()
+    expect(surface.closest('.client-swipe-row')).toHaveClass('is-open')
+    expect(backend.open).not.toHaveBeenCalled()
+    expect(backend.setArchived).not.toHaveBeenCalled()
+    await userEvent.setup().click(chat)
+    expect(await screen.findByText('Чат открыт')).toBeVisible()
+    expect(backend.open).not.toHaveBeenCalled()
+  })
+
   it('opens an existing conversation directly and shows a capped unread badge', async () => {
     const user = userEvent.setup()
     backend.listThreads.mockResolvedValue([thread('c1', 105)])

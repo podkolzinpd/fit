@@ -5,6 +5,33 @@ import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGest
 // Behavior-only acceptance. Visual/mixed state matrices live in the visual spec.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+// One 390px interaction case per engine: trusted touch capture in Chromium and
+// WebKit pointer bubbling from the nested SVG. Geometry stays in the existing matrix.
+test('Client chat tap stays separate from archive gestures', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page, browserName }) => {
+  const row = await openSwipeFixture(page, true)
+  const chat = row.getByRole('button', { name: /Сообщения с Алексей Смирнов/ })
+  await expect(chat).toBeVisible()
+  await expect(row.locator('.client-card-menu')).toHaveCount(0)
+  const gesture = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName, chat.locator('svg'))
+  await gesture.move(96)
+  await gesture.end()
+  await expect(page).toHaveURL(/\/clients$/)
+  await expect(row.getByRole('button', { name: 'В архив', exact: true })).toBeVisible()
+  await row.getByRole('button', { name: 'В архив', exact: true }).focus()
+  await page.keyboard.press('Escape')
+  await expect(row).not.toHaveClass(/is-open/)
+  const cancelled = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName, chat)
+  await cancelled.move(96)
+  await cancelled.end(true)
+  await expect(row).not.toHaveClass(/is-open/)
+  await expect(page).toHaveURL(/\/clients$/)
+  await chat.click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(/\/clients$/)
+})
+
 // Mono/Lime have distinct form surfaces; business chains run once per surface
 // in each required engine, not for every theme/viewport.
 for (const fitLime of [false, true]) {

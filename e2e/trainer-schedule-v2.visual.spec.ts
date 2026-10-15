@@ -3114,7 +3114,7 @@ for (const [fitLime, width, theme] of [
   await shortAction.focus()
   await expect(shortAction).toHaveCSS('outline-style', 'solid')
   await page.screenshot({ path: testInfo.outputPath('full-swipe-short.png') })
-  await row.getByRole('button', { name: /Действия с клиентом/ }).click()
+  await page.keyboard.press('Escape')
   expect(commands).toHaveLength(0)
   const gesture = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName)
   await gesture.move(Math.min(280, gesture.width * 0.72))
@@ -3222,7 +3222,7 @@ for (const [account, profileId] of [
   ['first', trainerId],
   ['second', '10000000-0000-4000-8000-000000000010'],
 ] as const) {
-  test(`${account} Fit Lime client list keeps search, archive and restore`, { tag: ["@lime-clients"] }, async ({ page }, testInfo) => {
+  test(`${account} Fit Lime client list keeps search, archive and restore`, { tag: ["@lime-clients"] }, async ({ page, browserName }, testInfo) => {
     await mockPilot(page, { profileId, fitLime: true, clientRecords: limeClients })
     await page.goto('/clients')
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
@@ -3232,13 +3232,17 @@ for (const [account, profileId] of [
     await expect(page.getByRole('link', { name: /Вера Кузнецова/ })).toBeVisible()
     await expect(page.getByRole('link', { name: /Алексей Смирнов/ })).toHaveCount(0)
     await page.getByRole('button', { name: 'Очистить поиск' }).click()
+    const tip = page.getByRole('status').filter({ hasText: 'Чат — по нажатию, архив — свайпом' })
+    if (await tip.isVisible()) await tip.getByRole('button', { name: 'Понятно' }).click()
     if (account === 'first') {
       const screenshotPath = testInfo.outputPath('fit-lime-clients-list.png')
       await page.screenshot({ path: screenshotPath, fullPage: true })
       await testInfo.attach('fit-lime-clients-list', { path: screenshotPath, contentType: 'image/png' })
     }
     const firstCard = page.locator(`[data-client-swipe-id="${clientId}"]`)
-    await firstCard.getByRole('button', { name: 'Действия с клиентом Алексей Смирнов' }).click()
+    const archiveGesture = await beginClientGesture(page, firstCard.locator('.client-swipe-surface'), browserName)
+    await archiveGesture.move(96)
+    await archiveGesture.end()
     await firstCard.getByRole('button', { name: 'В архив' }).click()
     await expect(page.getByRole('status').getByText('Карточка «Алексей Смирнов» перемещена в архив')).toBeVisible()
     await page.getByRole('link', { name: 'Архив' }).click()
@@ -3246,7 +3250,9 @@ for (const [account, profileId] of [
     await expect(page.locator('.phone-frame')).toHaveClass(/fit-lime-shell/)
     const archivedCard = page.locator(`[data-client-swipe-id="${clientId}"]`)
     await expect(archivedCard.getByRole('link', { name: /Алексей Смирнов/ })).toBeVisible()
-    await archivedCard.getByRole('button', { name: 'Действия с клиентом Алексей Смирнов' }).click()
+    const restoreGesture = await beginClientGesture(page, archivedCard.locator('.client-swipe-surface'), browserName)
+    await restoreGesture.move(96)
+    await restoreGesture.end()
     await archivedCard.getByRole('button', { name: 'Восстановить' }).click()
     await expect(page.getByRole('heading', { name: 'Архив пуст' })).toBeVisible()
   })
