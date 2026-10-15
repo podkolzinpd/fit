@@ -70,3 +70,19 @@ visual/mixed522; общий inventory616/engine и все235 callback bodies п�
 имеет4 shards, в scoped — один; behavior отдельно в обоих режимах. Окно,
 allowlist, tags, assertions и release gates не расширяются и не ослабляются.
 Доказательства: `FIT_LIME_ACCEPTANCE_SPLIT_20261014.md`.
+
+## Повторный аудит оплат/шаблонов — 15.10.2026
+
+По прямому решению владельца длинные цепочки этих двух сценариев вынесены из
+визуальных матриц: прежние25 конфигураций сохранены, добавлены4 поведенческих
+случая на движок (Mono/Lime × оплаты/шаблоны). После rebase на mainb35ce27f
+сохранены и4 новые client empty-entry cases изPR1631:98 behavior +526 visual
+=624/engine; critical+finance94/engine. AST-сверка сохранила все45 уникальных
+assertions, остальные234 callback bodies и все старые fixture declarations.
+Новый digest фиксируется вручную после этого аудита; автоматического refresh
+нет. Tags, окно, allowlist, браузеры, timeout/retries и required gates прежние.
+Полный набор в исходном решении616 относится к baseline12.10, новый полный
+набор624 — к этой явно согласованной переработке +4 уже принятым upstream
+cases, не к сокращённому CI. ClientPortal/shared UI/CSS требуютfull по прежнему
+allowlist; четыре incoming cases остаются без feature tag, как вPR1631.
+Доказательства: `FINANCE_TEMPLATE_TEST_DEDUPLICATION_20261015.md`.

@@ -64,7 +64,30 @@ test('shared fixtures declare no tests and create mutable state inside page-scop
   assert.ok(ast.statements.some(n => ts.isFunctionDeclaration(n) && n.name.text === 'mockPilot'))
 })
 
-test('real Playwright partitions preserve the 620-case union without duplicates in either engine', () => {
+test('finance/template visual matrices cannot grow back into full business chains', () => {
+  const source = readFileSync(join(root, fitLimeSpecs.visual), 'utf8')
+  const ast = ts.createSourceFile(fitLimeSpecs.visual, source, ts.ScriptTarget.Latest, true)
+  const bodies = new Map()
+  function visit(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'test') {
+      const title = node.arguments[0].getText(ast)
+      const callback = node.arguments.find(ts.isArrowFunction)
+      if (callback && /Finance payment layout and keyboard|Template diagnostic layout/.test(title)) {
+        bodies.set(title.includes('Finance') ? 'finance' : 'template', callback.getText(ast))
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(ast)
+  assert.equal(bodies.size, 2)
+  assert.match(bodies.get('finance'), /seedPaidFinanceFixture\(ledger\)/)
+  assert.match(bodies.get('finance'), /height: 400/)
+  assert.doesNotMatch(bodies.get('finance'), /menuitem|receiptIds|\.voidedAt|commands/)
+  assert.match(bodies.get('template'), /copyTemplateDiagnostic\(page\)/)
+  assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
+})
+
+test('real Playwright partitions preserve the 624-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -80,8 +103,19 @@ test('real Playwright partitions preserve the 620-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 620) // Original 616 plus four empty-workout entry/theme/width cases.
+    assert.equal(full.length, 624) // 616 + four upstream empty-entry + four separate finance/template behavior cases.
     assert.equal(full.filter((item) => item.includes('Client Lime empty workouts creation and equal controls ')).length, 4)
+    // Original 16 finance + 9 template visual configurations remain; their
+    // long chains now run just once per Mono/Lime surface in each engine.
+    assert.equal(full.filter(key => key.includes('Finance payment layout and keyboard')).length, 16)
+    assert.equal(full.filter(key => key.includes('Template diagnostic layout')).length, 9)
+    assert.equal(full.filter(key => key.includes('Finance payment lifecycle behavior')).length, 2)
+    assert.equal(full.filter(key => key.includes('Template slow connection and diagnostic retry behavior')).length, 2)
+    const financeTitles = [false, true].flatMap(lime => ['light', 'dark'].flatMap(theme =>
+      [320, 390, 430, 1440].map(width => `Finance payment layout and keyboard ${lime ? 'Lime' : 'Mono'} ${theme} ${width}`)))
+    const templateTitles = [[false, 'light'], [false, 'dark'], [true, 'dark']].flatMap(([lime, theme]) =>
+      [390, 430, 1440].map(width => `Template diagnostic layout ${width} lime=${lime} ${theme}`))
+    for (const title of [...financeTitles, ...templateTitles]) assert.equal(full.filter(key => key.endsWith(title)).length, 1, title)
     const parts = partitions.flatMap(({ lane, shard }) => collect(fitLimeArgs(project, 'full', '', lane, shard).args))
     assert.equal(parts.length, full.length)
     assert.equal(new Set(parts).size, parts.length)
@@ -89,7 +123,7 @@ test('real Playwright partitions preserve the 620-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 92)
+    assert.equal(scoped.length, 94)
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
