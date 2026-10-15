@@ -1874,10 +1874,17 @@ socket; the restore container still has no network or published ports.
 
 `CLOUDRU_BACKUP_ACCOUNT_ID` is the approved backup service account's canonical
 S3 principal ID (GitHub repository variable), not an inferred runtime account.
-Bootstrap is a manual access-policy operation: after the owner approves that
-principal and bucket scope, it keeps the existing owner and grants only that
-principal READ/WRITE/READ_ACP. Public groups, unknown accounts and bucket-policy
-presence fail closed before any ACL write. Normal backups do not modify ACLs.
-Any temporary bucket-scoped administrative bootstrap permission must be removed
-before accepting a backup/restore run under restricted data/ACL-read permissions.
-No service account, access key or role grant is created by this workflow.
+The account uses only bucket-scoped s3e.viewer/s3e.editor/s3e.viewer-acl. Actual
+upload/readback succeeded with those roles and the bucket's existing private ACL;
+additional ACL delegation was unnecessary and its attempted write returned400.
+Bootstrap verifies default privacy without editing ACLs or bucket policies.
+Public groups, unknown accounts and bucket-policy presence still fail closed.
+No administrative role is required for an existing bucket. The workflow creates
+no service account, access key or role grant.
+
+The downloaded database archive is restored and its RLS/grants checked before
+media verification. Media failure still fails the overall job, but cannot skip
+an otherwise valid database restore drill. BACKUP_VERIFIED_AT records only a
+successful database restore, not media acceptance. Separate credential files
+remain root0600 and are removed on success or failure. Constant media operation
+stages identify ACL/policy/versioning/read failures without paths or SDK payloads.

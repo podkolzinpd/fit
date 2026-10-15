@@ -48,7 +48,7 @@ test('legacy routing is manually confirmed and never changes database or IAM res
 
 test('offsite restore cannot connect to production or expose a database port and never publishes dumps', () => {
   const workflow = read('.github/workflows/backup-cloudru-production.yml')
-  const restore = workflow.slice(workflow.indexOf('      - name: Restore downloaded backup'), workflow.indexOf('      - name: Remove only'))
+  const restore = workflow.slice(workflow.indexOf('      - name: Restore downloaded backup'), workflow.indexOf('      - name: Verify private media after'))
   assert.match(restore, /--network=none/)
   assert.match(restore, /POSTGRES_DB=fit_restore/)
   assert.match(restore, /pg_isready -h 127\.0\.0\.1 -U fit_owner -d fit_restore/)
@@ -66,7 +66,13 @@ test('offsite restore cannot connect to production or expose a database port and
   assert.match(backupRun, /for name in CLOUDRU_BACKUP_KEY_ID CLOUDRU_BACKUP_KEY_SECRET CLOUDRU_BACKUP_ACCOUNT_ID CLOUDRU_BACKUP_ENCRYPTION_KEY BACKUP_MODE/)
   assert.match(backupRun, /for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET BACKUP_MODE/)
   assert.match(backupRun, /--env-file "\$private_env"[^\n]*\n[^\n]*\n[^\n]*cloudru-backup\.js/)
-  assert.match(backupRun, /--env-file "\$media_env"[^\n]*\n[^\n]*cloudru-media-health\.js/)
+  const mediaRun = workflow.slice(workflow.indexOf('      - name: Verify private media after'), workflow.indexOf('      - name: Remove only'))
+  assert.match(mediaRun, /--env-file "\$media_env"[^\n]*\n[^\n]*cloudru-media-health\.js/)
+  assert.doesNotMatch(backupRun, /cloudru-media-health\.js/)
+  assert.doesNotMatch(restore, /cloudru-media-health\.js|continue-on-error/)
+  assert.ok(workflow.indexOf('date -u +%Y-%m-%dT%H:%M:%SZ') < workflow.indexOf('      - name: Verify private media after'))
+  assert.doesNotMatch(mediaRun, /continue-on-error|--env-file "\$private_env"/)
+  assert.doesNotMatch(read('services/api/src/cloudru-backup.ts'), /PutBucketAclCommand|PutBucketPolicyCommand/)
   assert.match(workflow, /"\/opt\/fit\/secrets\/media-health-\$id\.env"/)
   for (const runtime of ['start-cloudru-api-stage', 'release-cloudru-api-stage']) {
     assert.doesNotMatch(read(`.github/workflows/${runtime}.yml`), /CLOUDRU_BACKUP_KEY_(?:ID|SECRET)/)

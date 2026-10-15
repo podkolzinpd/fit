@@ -30,17 +30,22 @@ async function main() {
     credentials: { accessKeyId: `${tenantId}:${keyId}`, secretAccessKey } })
   const bucket = 'fit-cloudru-stage-media-c2ad3760'
   try {
+    console.log('{"event":"cloudru_media_stage","stage":"acl_read"}')
     assertPrivateMediaAcl(await client.send(new GetBucketAclCommand({ Bucket: bucket })))
+    console.log('{"event":"cloudru_media_stage","stage":"policy_read"}')
     await assertNoBucketPolicy(client, bucket)
     if (process.env.BACKUP_MODE === 'bootstrap') {
+      console.log('{"event":"cloudru_media_stage","stage":"versioning_write"}')
       await client.send(new PutBucketVersioningCommand({ Bucket: bucket, VersioningConfiguration: { Status: 'Enabled' } }))
     }
+    console.log('{"event":"cloudru_media_stage","stage":"versioning_read"}')
     const versioning = await client.send(new GetBucketVersioningCommand({ Bucket: bucket }))
     if (versioning.Status !== 'Enabled') throw new Error('media_versioning_not_enabled')
     let token: string | undefined
     let objects = 0
     let bytes = 0
     const manifest = createHash('sha256')
+    console.log('{"event":"cloudru_media_stage","stage":"objects_read"}')
     do {
       const page = await client.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }))
       for (const object of page.Contents ?? []) {

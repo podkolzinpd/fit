@@ -305,3 +305,34 @@ Diagnostic follow-up local acceptance: full npm run check passed (frontend2680,
 API1418 with159 local DB skips, infra302, hosting169, calendar12, relay5 and both
 builds). Existing storage-redaction test now also checks reviewed HTTP400 names;
 there is no new browser/test matrix. CI and operational retry remain pending.
+
+
+## Restricted backup succeeds; independent restore gate, 15.10
+
+PR1649 merged5533bee7; CI38759361618 and release38760015107 succeeded, actual runtime5533.
+Bootstrap38760221199 proves ACL/policy reads pass and ACL write returns400.
+Temporary admin was removed again. Normal backup38760512531 under only bucket-scoped
+viewer/editor/viewer-acl passed encrypted upload, readback, checksum and decryption
+(10,811,912 encrypted bytes). The current private ACL plus IAM roles already permit
+this approved data access: ACL mutation is unnecessary and is removed entirely.
+Owner/public/unknown-principal/policy rejection remains unchanged. Bootstrap now
+verifies privacy; only the actual upload/readback proves write/read capability.
+
+The same run then failed media403 before reaching the restore step. Move media
+verification after the isolated DB restore so media failure remains a red job
+without hiding the DB recovery result. The DB freshness marker still requires
+successful pg_restore, table/migration counts, runtime grants and three RLS checks.
+Media credentials remain isolated from DB/encryption/backup credentials. New media
+stage constants identify the denied operation without identities or object paths.
+
+Test mapping: removed ACL-builder output assertions covered a deleted mutation;
+owner-only/approved-principal/public/unknown/admin-permission checks remain on the
+privacy guard (14 targeted tests unchanged). Existing workflow case now additionally
+rejects media execution before restore, ignored media failures, or ACL writes.
+No new parameter matrix. Targeted API14/14 and workflow9/9 passed. Full npm run check passed: frontend2680/API1418+159 DB skips, infra302, hosting169, relay5, calendar12 and both builds.
+
+Owner-console readback confirms fit-stage-app media viewer-acl, but the owner of
+the existing MEDIA_MIGRATION key pair is not yet proven. Do not broaden another
+account on that assumption. Old proxy retry38758949770 still timed out at30seconds.
+Root/www DNS and public production monitor passed. Fresh push and feedback remain OFF;
+actual offsite restore and complete media acceptance remain open.
