@@ -276,3 +276,32 @@ scope yc.ai.speechkitStt.execute. Новые Yandex IAM/key resources и рас�
   and approved dedicated backup principal (READ/WRITE/READ_ACP); unknown grants
   fail closed. Normal backup does not write ACLs. This code is not deployed and
   no new principal has been approved or provisioned.
+
+
+## Explicit owner approval and S3 diagnostic follow-up, 15.10
+
+Owner explicitly approved the root ANAME target/TTL, dedicated backup SA/key with
+bucket-only temporary admin followed by restricted roles, and media-only
+s3e.viewer-acl. Root ANAME saved; both legacy NS return87.242.117.210 and site auth200.
+Legacy www remains an independent old Gateway ANAME; no MX/TXT change.
+Created fit-cloudru-backup with project UserServices and temporary admin only on
+the backup bucket. Its key pair was transferred through an owner-only FIFO directly
+to the two approved GitHub secrets, without a regular secret file or output.
+API runtime never receives it. Readback confirms media-only viewer-acl on fit-stage-app.
+PR1648 merged1ccf81d1; CI38754619608 and API release38756737947 succeeded, runtime verified.
+Bootstrap38756948298 failed HTTP400 with an unknown standard storage code. Backup
+acceptance is still blocked. This follow-up adds only constant operation stages
+and reviewed S3 bad-request names; messages, identities, paths and SDK metadata
+remain excluded. No retry, ACL or public-access guards are relaxed. Temporary admin
+must be removed before a pause or accepting backup/restore under restricted roles.
+The current Yandex console session cannot access the previous SpeechKit folder.
+Fresh push and feedback delivery remain OFF; no production data rewrite occurred.
+
+Temporary backup admin was removed after the failed bootstrap, before waiting
+for diagnostic acceptance/CI. Owner-console readback confirms only bucket-scoped
+s3e.viewer, s3e.editor and s3e.viewer-acl remain. No public ACL was requested.
+
+Diagnostic follow-up local acceptance: full npm run check passed (frontend2680,
+API1418 with159 local DB skips, infra302, hosting169, calendar12, relay5 and both
+builds). Existing storage-redaction test now also checks reviewed HTTP400 names;
+there is no new browser/test matrix. CI and operational retry remain pending.

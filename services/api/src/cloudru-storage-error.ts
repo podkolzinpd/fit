@@ -4,6 +4,7 @@ const storageCodes = new Set([
   'AccessDenied', 'InvalidAccessKeyId', 'SignatureDoesNotMatch', 'NoSuchBucket',
   'NoSuchBucketPolicy', 'NotFound', 'InvalidRequest', 'InvalidBucketName',
   'InvalidLocationConstraint', 'IllegalLocationConstraintException',
+  'InvalidArgument', 'MalformedACLError', 'MissingContentMD5', 'BadDigest', 'InvalidDigest',
   'NotImplemented', 'RequestTimeout', 'ServiceUnavailable',
 ])
 const localCodes = new Set([

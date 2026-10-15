@@ -87,6 +87,7 @@ async function main() {
   const client = new S3Client({ endpoint: 'https://s3.cloud.ru', forcePathStyle: true, region: 'ru-central-1', maxAttempts: 2,
     credentials: cloudruBackupStorageCredentials(process.env) })
   try {
+    console.log('{"event":"cloudru_backup_stage","stage":"acl_read"}')
     if (process.env.BACKUP_MODE === 'bootstrap') {
       try { await client.send(new GetBucketAclCommand({ Bucket: bucket })) }
       catch (error) {
@@ -98,11 +99,14 @@ async function main() {
     }
     const acl = await client.send(new GetBucketAclCommand({ Bucket: bucket }))
     assertPrivateBackupAcl(acl, backupAccountId)
+    console.log('{"event":"cloudru_backup_stage","stage":"policy_read"}')
     await assertNoBucketPolicy(client, bucket)
     if (process.env.BACKUP_MODE === 'bootstrap') {
       // Only this dedicated bucket and the operator-approved principal. Unknown
       // or public ACL grants were rejected above, before any configuration write.
+      console.log('{"event":"cloudru_backup_stage","stage":"acl_write"}')
       await client.send(new PutBucketAclCommand({ Bucket: bucket, AccessControlPolicy: privateBackupAccessPolicy(acl, backupAccountId) }))
+      console.log('{"event":"cloudru_backup_stage","stage":"acl_verify"}')
       const verified = await client.send(new GetBucketAclCommand({ Bucket: bucket }))
       assertPrivateBackupAcl(verified, backupAccountId)
       const granted = new Set(verified.Grants?.filter(grant => grant.Grantee?.ID === backupAccountId).map(grant => grant.Permission))
