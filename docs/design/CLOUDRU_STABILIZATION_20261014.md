@@ -49,12 +49,12 @@ credential и доступность требуют отдельного фак�
 
 | Пункт | Результат и проверка | Статус |
 | --- | --- | --- |
-| 1 | Canonical web/Android/iOS build guard и тесты; credential-free proxy для старого API подготовлен | В работе |
-| 2 | Публичная делегация исправна; stale resolver воспроизведён | В работе |
-| 3 | API/frontend d10c2d12 выпущены38633109023/38633113898; runtime readback200; autodeploy включён | Выполнен для исходного main; новый выпуск после CI |
-| 4 | Недостающие credentials/dispatch/relay проверяются | Не завершён |
+| 1 | Native canonical API, web same-origin, guards passed; old proxy deployed, forwarding503 | В работе |
+| 2 | Public DNS/TLS8/8; old api87, root/www old IP; DNS operator403 | В работе |
+| 3 | Main619892be CI green, API/frontend released; backup/pending migrations passed | Выполнен для619892be |
+| 4 | External GPT smoke passed/frontend AI on; SpeechKit gRPC7; old timer PAUSED, fresh push OFF | Не завершён |
 | 5 | Пока только unauthenticated hosting/API guards | Не завершён |
-| 6 | Disk retention работает; backup/restore/monitoring впереди | Не завершён |
+| 6 | Disk/TLS/API/hosting passed; offsite S3 AccessDenied403, restore pending | Не завершён |
 
 ## Дополнительные решения и фактура
 
@@ -205,3 +205,74 @@ credential и доступность требуют отдельного фак�
   postgres17 был Debian13, runtime node24-bookworm — Debian12. Donor заменён
   на официальный digest-pinned PostgreSQL17-bookworm; build проверяет запуск
   pg_dump и pg_restore, не ослабляя обязательный backup перед migrations.
+
+## Production readback после PR1645, 15.10
+
+- PR CI38723303705 и main CI38725081174 success на619892be; API38726558866
+  прошёл реальный backup/pending migrations/candidate/promotion. Frontend
+  38726558952 и AI rebuild38728031198 success. Public monitor DNS3/3 и HTTP/TLS8/8,
+  обе API health619892be, protected401; сертификаты89days.
+- CORS38726722970 success, www OPTIONS204; Nginx web38727056363/API38727148937
+  success, лимит50m/read120s/buffering off применены.
+- GPT38727264363 external smoke passed и runtime aiEnabled:true; GitHub
+  CLOUDRU_AI_ENABLED=true/readback. Это не замена authenticated AI acceptance.
+- Speech38727437613: image built/audit0, upstream gRPC7 PERMISSION_DENIED.
+  Cloud relay не активирован; прежний IAM-backed Yandex VM не переносится молча.
+- Offsite bootstrap38726879615: AccessDenied403, приватность и restore не доказаны.
+  Encryption keyv1 сохранён; privacy guards не ослаблялись.
+- Legacy inspect38726726653: container/timer доступны, DNS list403. Локальные
+  профили содержат ту же identity; старый статический ключ401, не обновлялся.
+  DNS root/www на обоих ns1/ns2 пока158.160.171.31/158.160.184.183; API87.
+- Old timer38726901087 success/PAUSED. API38727051982 deploy operation completed,
+  затем health timeout. New proxy OPTIONS204, GET503≈60s. Точный Node22 image
+  локально с реальным Cloud target возвращает200/619892be. Межоблачное соединение
+  не принято; прежний DB-код не возвращался, ресурсы/ревизии/обе БД сохранены.
+- Ops38727946166: Nginx, certbot.timer, disk>=2GiB, cert>=14days, API/hosting/marker
+  passed. Speech/background units/backup freshness не готовы. Queue read-only
+  pending22/overdue22/stale leases20/terminal0; доставка/архивация не запускались.
+  Certbot staging renewal не выполнен: предыдущие checks остановили workflow.
+- Тестовый callback показывает регистрацию, пользовательской формы не отправляли.
+  Владелец попросил пояснить запрос: приёмка аккаунта отложена до готовности.
+  Android production-routing38728035187 success, artifact fit-android-auth-smoke-apk;
+  установка/пользовательские сценарии не проверены. Xcode отсутствует, iOS не собран.
+
+Оставшиеся prerequisites доступа: восстановить разрешённый доступ operator к
+существующей legacy DNS-зоне; проверить private backup bucket/access key в Cloud.ru;
+для SpeechKit использовать действующий credential с ролью ai.speechkit-stt.user и
+scope yc.ai.speechkitStt.execute. Новые Yandex IAM/key resources и расширение прав
+не выполнялись. Требуется владелец либо уже разрешённый действующий доступ.
+
+## Owner-console continuation, 15.10
+
+- Current main8393bbe3/runtime8393bbe3, CI38737310804 success; nutrition fixes1646/1647
+  preserved by merge without conflicts.
+- Owner consoles have active sessions. Legacy zone is dns7eld4ceutkbftord9 in
+  b1goqho12tlk9dibc3f3. Root ANAME points to old API Gateway, not a literal A.
+  Prepared root ANAME→api.fit-training.ru/TTL60 was NOT saved: automatic approval
+  rejected the exact target as insufficiently approved. Exact confirmation was requested; the owner asked to handle technical choices
+  autonomously. The blocked DNS write remains unapplied. Host-preserving curl to87 returned frontend200; both old NS api→87.
+- Created private backup bucket fit-cloudru-backups-c2ad3760 through owner console.
+  Bootstrap38744078639 still fails AccessDenied403. No roles or access keys changed.
+- Existing fit-stage-app parameters show global s3e.viewer and media-bucket
+  s3e.editor/s3e.editor-acl. The parameter page shows assigned service roles; its
+  separate access-rights tab manages access TO the account and is not an inventory
+  of its data permissions.
+- Existing startup and backup workflows consume the same media secret pair.
+  Granting it backup write would also grant the API deletion of encrypted backups.
+  Code now requires a dedicated backup pair, with no media fallback; isolated
+  media-health env does not contain DB/encryption/dedicated backup credentials.
+  No new SA/key/grant yet; owner action-time approval remains required for these.
+- Four new credential cases cover dedicated selection with decoy runtime pair,
+  no fallback for missing/incomplete pair, wrong tenant and control characters.
+  Four ACL cases cover owner/approved-principal access, public and unknown
+  principals, and rejection of backup-writer access-policy administration.
+  Existing restore policy case additionally guards separate secret wiring and
+  no runtime injection; no additional workflow test matrix. API crypto/privacy/
+  credential/ACL14/14 and operational workflow9/9 passed. Final local acceptance passed: frontend lint/types2680, API lint/types1418+159 DB skips, infra302, hosting169, calendar12, relay5 and builds. The first check stopped at sandbox loopback EPERM; the remaining stages passed with loopback permission. API lint found a control-regex violation, corrected before API acceptance. CI pending.
+- Restore workflow now waits for TCP127.0.0.1, matching the earlier actual local
+  fixture failure/recovery: Unix readiness could observe initdb's temporary server.
+  No timeout/retry reduction or RLS/public-access/privacy guard weakening.
+- Manual bootstrap now explicitly scopes private ACL access to the existing owner
+  and approved dedicated backup principal (READ/WRITE/READ_ACP); unknown grants
+  fail closed. Normal backup does not write ACLs. This code is not deployed and
+  no new principal has been approved or provisioned.

@@ -614,7 +614,9 @@ light/dark390/430 и непилотный trainer1440 WebKit5/5. CI, после�
 План и неизменяемая приёмка: docs/design/CLOUDRU_STABILIZATION_20261014.md,
 GitHub1633. Единый API web/native, DNS, gated release, external SpeechKit/GPT,
 новые push, роль клиента/тренера, media и offsite restore проверяются отдельно.
-API/frontend0d42d3a7 опубликованы; это не Implemented для всей стабилизации.
+API/frontend619892be опубликованы, GPT backend smoke passed; SpeechKit gRPC7,
+legacy DNS403, offsite S3 403 и authenticated acceptance остаются открытыми.
+Это не Implemented для всей стабилизации.
 Production streaming требует canonical WSS; до его настройки сохранён recorder fallback.
 Legacy writers и независимое расхождение БД требуют контролируемого решения;
 повторный initial import/замена непустой Cloud.ru БД запрещены.

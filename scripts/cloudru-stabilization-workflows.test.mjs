@@ -51,6 +51,7 @@ test('offsite restore cannot connect to production or expose a database port and
   const restore = workflow.slice(workflow.indexOf('      - name: Restore downloaded backup'), workflow.indexOf('      - name: Remove only'))
   assert.match(restore, /--network=none/)
   assert.match(restore, /POSTGRES_DB=fit_restore/)
+  assert.match(restore, /pg_isready -h 127\.0\.0\.1 -U fit_owner -d fit_restore/)
   assert.match(restore, /--dbname fit_restore/)
   assert.match(restore, /has_table_privilege\('fit_api'/)
   assert.match(restore, /c.relrowsecurity/)
@@ -59,6 +60,17 @@ test('offsite restore cannot connect to production or expose a database port and
   assert.match(workflow, /sudo rm -f --/)
   assert.doesNotMatch(workflow, /upload-artifact|rm -rf|volume prune|--dbname fit(?:\s|$)/)
   assert.match(workflow, /CLOUDRU_BACKUP_ENCRYPTION_KEY/)
+  assert.match(workflow, /CLOUDRU_BACKUP_KEY_ID: \$\{\{ secrets\.CLOUDRU_BACKUP_KEY_ID \}\}/)
+  assert.match(workflow, /CLOUDRU_BACKUP_KEY_SECRET: \$\{\{ secrets\.CLOUDRU_BACKUP_KEY_SECRET \}\}/)
+  const backupRun = workflow.slice(workflow.indexOf('      - name: Back up only'), workflow.indexOf('      - name: Restore downloaded'))
+  assert.match(backupRun, /for name in CLOUDRU_BACKUP_KEY_ID CLOUDRU_BACKUP_KEY_SECRET CLOUDRU_BACKUP_ACCOUNT_ID CLOUDRU_BACKUP_ENCRYPTION_KEY BACKUP_MODE/)
+  assert.match(backupRun, /for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET BACKUP_MODE/)
+  assert.match(backupRun, /--env-file "\$private_env"[^\n]*\n[^\n]*\n[^\n]*cloudru-backup\.js/)
+  assert.match(backupRun, /--env-file "\$media_env"[^\n]*\n[^\n]*cloudru-media-health\.js/)
+  assert.match(workflow, /"\/opt\/fit\/secrets\/media-health-\$id\.env"/)
+  for (const runtime of ['start-cloudru-api-stage', 'release-cloudru-api-stage']) {
+    assert.doesNotMatch(read(`.github/workflows/${runtime}.yml`), /CLOUDRU_BACKUP_KEY_(?:ID|SECRET)/)
+  }
 })
 
 test('background delivery boundary is persistent and existing uncertain recovery receipts are not retried', () => {

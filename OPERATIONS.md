@@ -1861,3 +1861,23 @@ SQL migration history, профили и identity не удаляются. Supab
 Cloud.ru API image copies PostgreSQL17 backup tools from the pinned Bookworm
 variant, matching node24-bookworm. The image build executes both pg_dump and
 pg_restore --version: incompatible binaries must fail the build before release.
+
+Cloud.ru offsite backup uses dedicated GitHub secrets `CLOUDRU_BACKUP_KEY_ID`
+and `CLOUDRU_BACKUP_KEY_SECRET`. Give their service account access only to the
+private backup bucket. Do not grant the API runtime key access to backup objects.
+The backup container receives only the dedicated pair and DB/encryption inputs;
+media verification receives a separate root0600 env containing the existing media
+pair. Neither pair is borrowed when the other is missing. API startup/release
+workflows never install the dedicated backup pair into the API environment.
+Restore readiness uses loopback TCP to avoid PostgreSQL initdb's temporary Unix
+socket; the restore container still has no network or published ports.
+
+`CLOUDRU_BACKUP_ACCOUNT_ID` is the approved backup service account's canonical
+S3 principal ID (GitHub repository variable), not an inferred runtime account.
+Bootstrap is a manual access-policy operation: after the owner approves that
+principal and bucket scope, it keeps the existing owner and grants only that
+principal READ/WRITE/READ_ACP. Public groups, unknown accounts and bucket-policy
+presence fail closed before any ACL write. Normal backups do not modify ACLs.
+Any temporary bucket-scoped administrative bootstrap permission must be removed
+before accepting a backup/restore run under restricted data/ACL-read permissions.
+No service account, access key or role grant is created by this workflow.
