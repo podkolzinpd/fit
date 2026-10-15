@@ -52,3 +52,26 @@ test('Cloud.ru disk maintenance workflow contains valid Bash', async () => {
   assert.equal(result.status, 0, result.stderr)
 })
 
+test('retention keeps externally referenced images but fails on other removal errors', async () => {
+  const workflow = await readFile(workflowUrl, 'utf8')
+  const removal = workflow.match(/            if ! removal=[\s\S]*?\n            fi/)[0]
+  for (const [result, expected] of [['success', 0], ['referenced', 0], ['other', 1]]) {
+    const script = `set -e
+image=localhost/fit-api:0000000000000000000000000000000000000000
+sudo() {
+  case "$FIXTURE_RESULT" in
+    success) return 0 ;;
+    referenced) echo 'image is in use by a container'; return 125 ;;
+    other) echo 'storage failure'; return 125 ;;
+  esac
+}
+${removal}
+echo retention_continued
+`
+    const run = spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env, FIXTURE_RESULT: result } })
+    assert.equal(run.status, expected, run.stderr)
+    assert.equal(run.stdout.includes('retention_continued'), expected === 0)
+    assert.doesNotMatch(run.stdout + run.stderr, /storage failure/)
+  }
+})
+

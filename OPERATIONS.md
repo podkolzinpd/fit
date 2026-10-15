@@ -1926,3 +1926,17 @@ ownership, policy, object data or credentials. Any temporary bucket-only admin
 role must be separately approved by the owner and removed after the operation;
 repeat media verification with final restricted roles. Restore TOC diagnostics
 print only allowlisted system-extension names and redact unknown names.
+
+Owner decision15.10: keep media ACL/IAM/versioning unchanged for now; the manual
+repair is not authorized to run. ACL-read403 remains an open metadata check.
+Voice is also intentionally OFF; operations inspection expects its service and
+health only when CLOUDRU_SPEECHKIT_RELAY_URL is configured to the canonical URL.
+
+The disposable restore image extends the pinned PostgreSQL17 base with pinned
+PGDG postgresql-17-pgaudit17.1-2.pgdg13+1 and preloads pg_stat_statements/pgaudit.
+Both extensions occur in the real archive; they are restored, not excluded.
+SQL/audit/error-statement logging is disabled only in this isolated environment.
+Its build context is public infra/cloudru source, never the backup directory.
+Retention preserves an API image if Podman reports it is still used by a
+container and continues other bounded cleanup; any other removal error fails.
+It never force-removes that container or performs system/volume pruning.
