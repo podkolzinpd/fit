@@ -8,16 +8,16 @@ import { fileURLToPath } from 'node:url'
 // Emails are held in a private GitHub secret, never in source/logs/artifacts.
 const approvedCohort = '18a070387b4d9b9dcfdfe65608f4b887cffb0a938b1c0ca1fa1221d14c25a668'
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
-export function readNutritionAccounts(raw, expected = approvedCohort) {
+export function readNutritionAccounts(raw, expected = approvedCohort, clientCount = 3) {
   let accounts
   try { accounts = JSON.parse(raw) } catch { throw new Error('Invalid private cohort') }
-  if (!Array.isArray(accounts) || accounts.length !== 5 || accounts.some(a => !a
+  if (![3, 4].includes(clientCount) || !Array.isArray(accounts) || accounts.length !== clientCount + 2 || accounts.some(a => !a
     || Object.keys(a).sort().join(',') !== 'email,role'
     || !['client', 'trainer'].includes(a.role) || typeof a.email !== 'string'
     || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email))) throw new Error('Invalid private cohort')
   accounts = accounts.map(a => ({ role: a.role, email: a.email.trim().toLowerCase() }))
-  if (new Set(accounts.map(a => a.email)).size !== 5
-    || accounts.filter(a => a.role === 'client').length !== 3) throw new Error('Invalid private cohort')
+  if (new Set(accounts.map(a => a.email)).size !== clientCount + 2
+    || accounts.filter(a => a.role === 'client').length !== clientCount) throw new Error('Invalid private cohort')
   const digest = createHash('sha256').update(accounts.map(a => `${a.role}:${a.email}`).sort().join('\n')).digest('hex')
   if (digest !== expected) throw new Error('Unapproved private cohort')
   return accounts

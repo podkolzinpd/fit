@@ -1,5 +1,40 @@
 # Дневник питания — неизменяемый план и приёмка, 10.10.2026
 
+## Разрешение выпуска и актуальный контур — 15.10.2026
+
+Прямая команда владельца «раскати на выбранные учетки» отменяет запрет
+выкладки12.10. Scope: ровно4 клиентских и те же2 тренерских CURRENT Yandex
+аккаунта; точный private input проверяется фиксированным approved fingerprint.
+Исходный план из9 пунктов ниже неизменен; historical Yandex deployment steps
+не применяются: production теперь Cloud.ru, внешний вход остаётся Yandex ID.
+
+Порядок: актуальный main и очередь PR → чистая изолированная PostgreSQL17
+chain144/actor/RLS → точные config/native/WebKit проверки → full check → PR/CI
+→ штатный merge без обхода более ранних активных PR → зелёный exact-main CI
+→ Cloud.ru API release с backup/pending migrations → приватный exact-six secret
+и независимый nutrition configure workflow → проверка4/2 и schema/runtime
+→ два frontend nutrition flags и проверенный Cloud.ru frontend/native release
+→ публичные auth/health/bundle проверки и фактура в YAFIT-608.
+
+Новые уникальные проверки: сохранение чужих env-значений при enable/disable,
+отказ substituted cohort, current-main/candidate/rollback workflow guards и
+read-only runtime capability smoke до/после включения. Существующие actor и
+WebKit сценарии проверяют роли/согласие/дневник без новой тяжёлой UI-матрицы.
+Общий local:verify адресует shared DB и меняет её runtime/pending migrations;
+вместо вмешательства в чужую базу используется новый изолированный clean-chain
+actor test. Реальные пользовательские OAuth-входы не имитируются, согласия
+не выдаются. Итоговые доказательства добавляются после фактических проверок.
+
+Локальная приёмка15.10: изолированный чистый PostgreSQL17 на55447, цепочка144,
+actor/RLS и реальный backup/restore150/150; nutrition config17/17 и native/smoke
+10/10; WebKit9/9 — обе роли/темы, retry, source error, прямой outsider route.
+Полный `npm run check` exit0: frontend2676, API1403 (159 стандартных DB skips
+проверены отдельно), infra301, hosting169, lint/typecheck/build, fonts2/2.
+Bounded live source search вернул7 обычных продуктов с валидной100g КБЖУ;
+магазинные метаданные исключены. Исходные9 пунктов, historical143 и все чужие
+строки CURRENT_STATE побайтово сохранены; migration safety exact-base passed.
+Это локальные доказательства, не заявление об уже включённом production.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
@@ -367,6 +402,15 @@
 - Точечная readback-проверка только трёх nutrition variables вернула отсутствие FIT_NUTRITION_ENABLED, VITE_NUTRITION_ENABLED и VITE_NUTRITION_NATIVE_COHORT: их reviewed defaults false. Private approved exact3/2 cohort secret сохраняется; feature bindings создаются только настоящим provider-verified входом после успешного серверного выпуска. Ни роли, identity, другие пилоты, связи или client consent не менялись.
 - Однократный bounded запрос живым adapter по обычному запросу курица с рисом вернул7 валидных продуктов с обычными названиями/КБЖУ на100г. Это доказательство доступности источника из локальной сети, не production-сети или реальных аккаунтов; массового импорта нет. Публичные health/ready Node-запросы ограничены20s и не завершились. Независимые IPv4/HTTP1.1 public GETs стандартным HTTP-клиентом, без credentials, также не завершились в20s. Успешное здоровье действующего API или глобальная причина отказа по этим проверкам не заявляются.
 - Frontend38143323802 завершился failure на Upload, verify, activate and smoke (rollback on failure), build success. Фиксированное сообщение The operation was aborted due to timeout; шаг13:30:23–13:30:54 UTC/31s, штатный read-only HTTP deadline30s. Сохранён только release build artifact; подтверждённые activation/readback/automatic rollback отсутствуют и не объявляются выполненными. Production142/143/API, включённая функция у пятёрки, fresh enabled native builds и настоящие OAuth-входы всех пяти не подтверждены. Подготовленные зависимости iOS и прежние PR debug builds не заменяют эту приёмку. YAFIT-608 остаётся inProgress/пункт9 открытым. Для продолжения нужен успешный штатный metadata/API rollout и frontend readback; новое расширение инфраструктуры/IAM/runner или обход guard не выполняется из этой задачи.
+
+## Согласованное дополнение — четвёртый клиент, без выкладки — 12.10.2026
+
+- Владелец явно добавил ещё один текущий Яндекс-аккаунт и подтвердил клиентскую роль. Новая подготовленная когорта:4 клиента/2 прежних тренера, ровно6 различных адресов. Адреса и индивидуальные hashes не публикуются; новая private candidate находится вне git, исходный private input и GitHub secret не перезаписаны. Исходный девятипунктный блок остаётся дословным историческим контрактом; изменён только отдельно согласованный состав пилота.
+- Поток:product/feature-only native admission. База:проверенный main39b573208248734822066c5e9b594cac48825769; локальная ветка feat/nutrition-fourth-client-20261012. Подготовка fingerprint допускает лишь исходный approved3/2 либо новый approved4/2; server config принимает только эти размеры с полной уникальностью. Legacy registry по умолчанию остаётся strict5, не используется для назначения native-доступа. Роли и namespace других экспериментов не меняются.
+- Отдельная additive Yandex migration144 заменяет только admission function с потолком4 клиентов, оставляя2 тренеров, verified identity/current domain/read-write, immutable bindings и grants. Историческая143 не переписывается. Down возвращает потолок3 без удаления назначений/дневников/согласий. API продолжает проверять exact private membership: один свободный слот БД не разрешает сторонний логин. Старая конфигурация3/2 не допускает нового клиента и остаётся совместимой.
+- UI/маршруты/токены/контракт client consent не меняются. Проверены fourth-client binding/profile decision, запрет5-го клиента/3-го тренера, role mismatch/collision/unapproved input, old-five compatibility и144 Up/Down с сохранением привилегий. Целевые private-config/migration14/14 и native API7/7, API lint/typecheck прошли. На отдельной новой PostgreSQL17/55446 чистая chain144 и все143 actor/RLS-тестов прошли. Итоговый full check exit0:frontend2659/API1328/infra227/hosting117/build/fonts2/2. Migration safety относительно точного base39b57320 прошла:только новая144,143 не менялась. Original9/snapshot120/чужие строки побайтово сохранены; diff не содержит private emails/индивидуальных login hashes.
+- Стандартный local:verify не запускался: его текущий скрипт жёстко адресует общие local PostgreSQL/Supabase, меняет общий runtime-role password и применяет pending migrations. Эта задача не трогает чужую/shared базу и не обходит известный drift112 сбросом; новая схема и actor/RLS полностью проверены в отдельной чистой PostgreSQL17. UI-код/стили не изменены, новый визуальный или реальный OAuth-прогон не заявляется. Удалённый CI не запускался:нет push/PR.
+- Ограничение владельца имеет приоритет над прежним разрешением полного выпуска: никаких push/PR/merge/workflow dispatch, обновления GitHub secrets/variables или production apply. Реальные OAuth-входы/доступ дополнительного клиента не имитируются. До отдельной команды выпуск запрещён; старые сетевые блокеры11.10 являются исторической фактурой, а не новым production-измерением12.10.
 
 ## Сведение служебного исправления с проверенным main — 11.10.2026
 

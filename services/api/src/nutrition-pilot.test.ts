@@ -20,7 +20,7 @@ describe('native nutrition cohort', () => {
     expect(nutritionLoginHash('sample@example.test')).not.toBe(nutritionLoginHash('sample@other.test'))
     expect(nutritionLoginHash('bad login')).toBeUndefined()
   })
-  it('requires the independent flag, exactly three clients and two unique trainers', () => {
+  it('requires the independent flag, three or four clients and the same two unique trainers', () => {
     expect(pilot).toEqual({ clients: hashes.slice(0, 3), trainers: hashes.slice(3), native: true })
     for (const value of ['', '{}', '[]', '{', JSON.stringify({ clients: hashes, trainers: [] }),
       JSON.stringify({ clients: hashes.slice(0, 3), trainers: [hashes[0], hashes[4]] }),
@@ -29,6 +29,23 @@ describe('native nutrition cohort', () => {
       expect(readNativeNutritionPilot('true', value)).toBeNull()
     }
     for (const enabled of [undefined, 'false', 'TRUE', '1']) expect(readNativeNutritionPilot(enabled, raw)).toBeNull()
+  })
+  it('admits the fourth client only in the expanded private configuration, never a fifth client or third trainer', async () => {
+    const fourth = '6'.repeat(64)
+    const expanded = readNativeNutritionPilot('true', JSON.stringify({ clients: [...pilot.clients, fourth], trainers: pilot.trainers }))!
+    expect(expanded.clients).toHaveLength(4)
+    expect(readNativeNutritionPilot('true', JSON.stringify({ clients: [...expanded.clients, '7'.repeat(64)], trainers: pilot.trainers }))).toBeNull()
+    expect(readNativeNutritionPilot('true', JSON.stringify({ clients: expanded.clients, trainers: [...pilot.trainers, '7'.repeat(64)] }))).toBeNull()
+    expect(readNativeNutritionPilot('true', JSON.stringify({ clients: [...pilot.clients, pilot.trainers[0]], trainers: pilot.trainers }))).toBeNull()
+    const f = fixture()
+    expect(await new DatabaseNutritionAutoActivator(f.pool, pilot).bind('a'.repeat(64), fourth)).toEqual({ bound: false })
+    expect(f.query).not.toHaveBeenCalled()
+    expect(await new DatabaseNutritionAutoActivator(f.pool, expanded).bind('a'.repeat(64), fourth)).toEqual({ bound: true })
+    expect(f.query.mock.calls[0]?.[1]).toEqual(['a'.repeat(64), fourth, 'client'])
+    f.query.mockResolvedValue([{ login_hash: fourth }])
+    expect(await nutritionProfileAllowed(f.client, expanded, 'fourth', 'client')).toBe(true)
+    expect(await nutritionProfileAllowed(f.client, pilot, 'fourth', 'client')).toBe(false)
+    expect(await nutritionProfileAllowed(f.client, expanded, 'fourth', 'trainer')).toBe(false)
   })
   it('binds only the exact approved verified login with its expected role through the feature-only function', async () => {
     const f = fixture()
