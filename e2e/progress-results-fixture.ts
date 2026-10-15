@@ -98,10 +98,14 @@ export async function verifyResultsSources(page: Page) {
   // controls, otherwise the old overview can become hidden during measurement.
   await expect(page.getByRole('tabpanel', { name: 'ПРО', exact: true })).toBeVisible()
   await expect(page.locator('.progress-pro-list #results-center')).toHaveCount(1)
-  const toggleHeights = await page.locator('.progress-details-toggle:visible').evaluateAll((controls) =>
-    controls.map((control) => control.getBoundingClientRect().height))
-  expect(toggleHeights.length).toBeGreaterThan(0)
-  for (const height of toggleHeights) expect(height).toBeGreaterThanOrEqual(44)
+  // DOM presence can precede WebKit's layout after the tab switch. Keep the
+  // nonempty/all-targets >=44px contract, but wait within the normal assertion
+  // budget instead of inspecting an intermediate zero-height render once.
+  await expect.poll(async () => {
+    const heights = await page.locator('.progress-details-toggle:visible').evaluateAll((controls) =>
+      controls.map((control) => control.getBoundingClientRect().height))
+    return heights.length > 0 && heights.every((height) => height >= 44)
+  }, { message: 'Visible progress controls settle at their required 44px minimum' }).toBe(true)
   await expect(center).not.toHaveAttribute('open')
   await expect(page.locator('.weekly-training-load')).not.toHaveAttribute('open')
   await center.getByText('Все результаты', { exact: true }).click()
