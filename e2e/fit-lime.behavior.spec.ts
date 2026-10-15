@@ -1055,7 +1055,9 @@ test('Fit Lime trainer profile retains publication, confirmation and sign-out', 
   await page.goto('/profile/settings')
   await page.getByRole('button', { name: 'Выйти' }).click()
   await expect(page).toHaveURL(/\/auth$/)
-  await expect(page.locator('.fit-lime-shell')).toHaveCount(0)
+  await expect(page.locator('.phone-frame.fit-lime-shell:not(.fit-client-lime-public)')).toHaveCount(0)
+  await expect(page.locator('.profile-settings-page')).toHaveCount(0)
+  await expect(page.getByRole('main', { name: 'Вход в Fit' })).toBeVisible()
 })
 
 test('Fit Lime trainer profile has addressed load retry and non-pilot control', { tag: ["@lime-profile"] }, async ({ page }) => {
