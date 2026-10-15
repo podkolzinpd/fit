@@ -255,6 +255,10 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   удаляется EXIT и не передаётся runtime/relay/background.
 
 Post-merge15.10: self-hosted runner имеет curl/jq и не имеет GitHub CLI.
+Production streaming требует явный VITE_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt;
+пустое или старое значение завершает streaming startup до microphone/network.
+Существующий VoiceInputButton fallback recorder остаётся прежним. Legacy default
+relay доступен только development; production bundle исключает этот адрес.
 Configuration workflows читают GitHub API через bounded HTTPS curl с GITHUB_TOKEN,
 затем сохраняют прежние exact-main/CI/running-image guards. S3 diagnostics выводит
 только allowlisted code и HTTP status, без provider message/resource/request metadata.
@@ -1848,3 +1852,7 @@ SQL migration history, профили и identity не удаляются. Supab
 удалить все Supabase secrets или проект. Проверка целевого production-поведения
 требует выпуска API и frontend/native вместе; один frontend deployment не
 доказывает удаление серверного endpoint.
+
+Cloud.ru API image copies PostgreSQL17 backup tools from the pinned Bookworm
+variant, matching node24-bookworm. The image build executes both pg_dump and
+pg_restore --version: incompatible binaries must fail the build before release.

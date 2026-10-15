@@ -304,6 +304,10 @@ test('Cloud.ru runtime and frontend releases require successful current-main CI'
 test('Cloud.ru release applies pending migrations with isolated owner credentials before API candidate or switch', () => {
   const migrations = cloudruApiRelease.indexOf('Apply only pending Cloud.ru migrations before candidate startup')
   assert.ok(migrations > cloudruApiRelease.indexOf('Build exact-main image on the stage VM'))
+  const apiDockerfile = readFileSync(join(import.meta.dirname, '..', 'services', 'api', 'Dockerfile'), 'utf8')
+  assert.match(apiDockerfile, /postgres:17-bookworm@sha256:[a-f0-9]{64}/)
+  assert.match(apiDockerfile, /pg_dump --version/)
+  assert.match(apiDockerfile, /pg_restore --version/)
   assert.ok(migrations < cloudruApiRelease.indexOf('Smoke candidate, switch stage port and roll back on failure'))
   const script = inlineShell(cloudruApiRelease).find(body => body.includes('cloudru-release-migrations.js'))
   assert.ok(script)
@@ -331,6 +335,13 @@ test('Cloud.ru public ingress is manual, CI-gated and proxies only loopback runt
   assert.match(cloudruIngress, /trap rollback ERR/)
   assert.match(cloudruApiProxy, /proxy_pass http:\/\/127\.0\.0\.1:18080/)
   assert.match(cloudruWebProxy, /proxy_pass http:\/\/127\.0\.0\.1:18081/)
+  const webApiLocation = cloudruWebProxy.match(/location \^~ \/api\/ \{([^}]+)\}/)?.[1] ?? ''
+  const directApiLocation = cloudruApiProxy.match(/location \/ \{([^}]*proxy_pass[^}]+)\}/)?.[1] ?? ''
+  assert.match(webApiLocation, /client_max_body_size 50m;/)
+  for (const apiLocation of [webApiLocation, directApiLocation]) {
+    assert.match(apiLocation, /proxy_read_timeout 120s;/)
+    assert.match(apiLocation, /proxy_buffering off;/)
+  }
   assert.match(cloudruWebProxy, /proxy_buffering off;/)
   assert.match(cloudruIngress, /mapfile -t frontend_assets/)
   assert.match(cloudruIngress, /test "\$\{#frontend_assets\[@\]\}" -ge 2/)

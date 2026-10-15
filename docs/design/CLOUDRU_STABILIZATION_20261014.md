@@ -180,3 +180,28 @@ credential и доступность требуют отдельного фак�
   контрактом: иначе poll мог бы измерить controls прежнего overview. Повторный
   nutrition shell parse после union устранён (один workflow — один parse).
   Combined workflow/nutrition12/12 и targeted ESLint passed. Final CI после push.
+
+- Дополнительный доказанный routing blocker: configuredUrl||DEFAULT_RELAY_URL
+  выбирал старый89-169-132-80 relay при пустой production env. Production streaming
+  теперь требует явный canonical WSS до microphone/network; development legacy
+  default и existing recorder fallback/VoiceInputButton phases/texts сохранены.
+  Primary VoiceInputButton и Fit tokens/icons/markup прежние, transport-only scope.
+  Три новых runtime cases (missing/empty/explicit old URL) проверяют отсутствие
+  mic/network; существующий final-flush case теперь использует canonical production
+  relay. VoiceInputButton+streaming20/20 и typecheck passed; полный check passed. Rotation сохраняет URL проверенного сокета; production JS не содержит старого relay.
+- UI identity/voice-first context прочитан, public auth route открыт во встроенном
+  браузере для самостоятельного входа владельца в test client. Authenticated role
+  flows ещё не выполнены; credentials/PII не выводятся и не извлекаются.
+- CI mainfc7b31d6 attempt1: Chromium environment port54322 busy до tests; attempt2
+  уже запущен другим оператором, повтор не дублировался. Guards требуют success.
+
+- Web `/api/` теперь получает тот же лимит50m и read timeout120s, что и прямой
+  API. Buffering отключён на обоих API proxy: сохраняется ранее выявленное
+  ограничение proxy_temp на VM. Проверяется существующим ingress policy test;
+  runtime nginx-t/activation остаётся rollout-гейтом.
+
+- mainfc7 CI38718724986 success; API release38721385510 остановлен до migration
+  на backup. Изолированный ABI probe воспроизвёл GLIBC_2.38 not found: donor
+  postgres17 был Debian13, runtime node24-bookworm — Debian12. Donor заменён
+  на официальный digest-pinned PostgreSQL17-bookworm; build проверяет запуск
+  pg_dump и pg_restore, не ослабляя обязательный backup перед migrations.

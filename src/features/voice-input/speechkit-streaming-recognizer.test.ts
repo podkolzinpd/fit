@@ -45,13 +45,27 @@ describe('SpeechKitStreamingSession final flush', () => {
     })
   })
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs() })
+
+  // Missing/explicitly empty config previously selected the legacy default;
+  // an explicit legacy URL must also be rejected by the production runtime.
+  it.each([undefined, '', 'wss://89-169-132-80.sslip.io/stt'])('rejects production relay configuration %s before microphone or network access', async (url) => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_SPEECHKIT_RELAY_URL', url)
+    const microphoneRequest = vi.spyOn(navigator.mediaDevices, 'getUserMedia')
+    await expect(new SpeechKitStreamingSession().start(vi.fn(), vi.fn())).rejects.toThrow('Потоковое распознавание недоступно')
+    expect(microphoneRequest).not.toHaveBeenCalled()
+    expect(FakeWebSocket.instances).toHaveLength(0)
+  })
 
   it('waits for the relay acknowledgement and keeps the final chunk before closing', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_SPEECHKIT_RELAY_URL', 'wss://api.fit-training.ru/stt')
     const onFinal = vi.fn()
     const session = new SpeechKitStreamingSession()
     await session.start(vi.fn(), onFinal)
     const socket = FakeWebSocket.instances[0]!
+    expect(socket.url).toBe('wss://api.fit-training.ru/stt')
 
     let stopped = false
     const stopping = session.stop().then(() => { stopped = true })
@@ -65,5 +79,25 @@ describe('SpeechKitStreamingSession final flush', () => {
 
     expect(onFinal).toHaveBeenCalledWith('жим лёжа 3 по 10', { endOfUtterance: true })
     expect(socket.readyState).toBe(3)
+  })
+
+  it('rotates the stream through the same validated production relay after acknowledgement', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_SPEECHKIT_RELAY_URL', 'wss://api.fit-training.ru/stt')
+    const session = new SpeechKitStreamingSession()
+    await session.start(vi.fn(), vi.fn())
+    const first = FakeWebSocket.instances[0]!
+    const rotating = session.rotate()
+    expect(first.sent).toContain(JSON.stringify({ type: 'stop' }))
+    expect(FakeWebSocket.instances).toHaveLength(1)
+    first.emit({ type: 'done' })
+    await rotating
+    expect(first.readyState).toBe(3)
+    expect(FakeWebSocket.instances).toHaveLength(2)
+    const next = FakeWebSocket.instances[1]!
+    expect(next.url).toBe(first.url)
+    const stopping = session.stop()
+    next.emit({ type: 'done' })
+    await stopping
   })
 })
