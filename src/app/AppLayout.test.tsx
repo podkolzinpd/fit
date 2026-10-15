@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -419,6 +419,26 @@ describe('AppLayout: вкладка ассистента', () => {
 })
 
 describe('AppLayout: служебная плашка о восстановлении ИИ', () => {
+  afterEach(() => window.sessionStorage.clear())
+
+  it('крестик скрывает плашку до конца запуска, следующий запуск показывает её снова', () => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    const first = renderLayout('/me')
+    // Синхронный клик: кадр прокрутки каркаса отменяется при unmount и не
+    // вызывает отсутствующий в jsdom scrollTo.
+    fireEvent.click(screen.getByRole('button', { name: 'Скрыть сообщение' }))
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    first.unmount()
+    // Другой экран в том же запуске: плашка остаётся скрытой.
+    const sameLaunch = renderLayout('/me/workouts')
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    sameLaunch.unmount()
+    // Новый запуск приложения начинается с чистой sessionStorage.
+    window.sessionStorage.clear()
+    renderLayout('/me')
+    expect(screen.getByRole('status', { name: 'Состояние сервиса' })).toBeInTheDocument()
+  })
+
   it('без флага сборки плашки нет', () => {
     renderLayout('/me')
     expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
