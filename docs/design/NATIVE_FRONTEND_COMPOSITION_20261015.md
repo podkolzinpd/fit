@@ -94,3 +94,20 @@ SpeechKit/Cloud.ru изменения взяты из main без правок. 
 coverage functions82.75/branches76.97%, production build/startup guard passed.
 CI обновлённой ветки — отдельный гейт; browser suite отдельно не повторялась
 локально при этом rebase (предыдущая приёмка выше, новый прогон — в CI).
+
+CI 38756052995: единственный failed сценарий — existing mobile-shell Live
+client case. Первое падение: Escape отправлен после появления текста, до
+проверки готового фокуса диалога; повторные попытки останавливались раньше
+на substring «Добавить» (совпадают CTA и ссылка-иконка пустого состояния).
+Две ссылки выбираются по exact accessible name; перед Escape проверяется
+фокус confirm-кнопки, установленный существующим dialog effect. Все прежние
+assertions отмены/маршрута/повторного открытия сохранены, product code, timeout
+и retries не менялись. Новый отдельный тест не добавлен: тот же 1 case/1
+WebKit project, локально повторён последовательно трижды для проверки гонки:
+3/3 passed, 33.6s (11.1s/10.0s/6.0s). CI first failure занимал 5s ожидания
+закрытия; надёжного сравнения timing всего сценария до/после нет. Protected
+Fit Lime inventory и его SHA256 не менялись; shared PR по-прежнему требует full CI.
+Полный `npm run check` после test-only fix passed: frontend2695/API1418+159DBskip,
+infra302/hosting169/build/startup; coverage thresholds/exclusions прежние.
+Перед push включён main5533bee7 (#1649, backup-only); application/test/config
+diff относительно проверенного0f925ff7 пуст. Upstream backup unit11/11 passed.

@@ -1012,7 +1012,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByRole('button', { name: 'Скрыть' }).click()
 
   await page.goto('/me/workouts')
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await expect(page.getByRole('heading', { name: 'Выберите упражнения' })).toBeVisible()
   await page.getByRole('button', { name: 'Фильтры' }).click()
@@ -1067,7 +1067,7 @@ test('iPhone: в live клиент видит те же действия с тр
   await page.getByRole('button', { name: 'Назад' }).click()
   expect(new URL(page.url()).pathname).toBe(activeWorkoutPath)
   await page.goto('/me/workouts')
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByLabel('Поиск упражнения').fill('Планка')
   await page.getByRole('button', { name: /^Выбрать: Планка/ }).first().click()
@@ -1078,6 +1078,8 @@ test('iPhone: в live клиент видит те же действия с тр
   const recovery = page.getByRole('alertdialog')
   await expect(recovery).toContainText('уже есть незавершённая тренировка')
   expect(new URL(page.url()).pathname).toBe(selectedPlanPath)
+  // Text can paint before the dialog effect installs focus and Escape handling.
+  await expect(recovery.getByRole('button', { name: 'Открыть незавершённую' })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(recovery).toHaveCount(0)
   expect(new URL(page.url()).pathname).toBe(selectedPlanPath)
