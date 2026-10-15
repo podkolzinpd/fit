@@ -5,8 +5,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => ({
   resolve: { alias: {
-    '#fit/local-legacy-composition': fileURLToPath(new URL(isLocalLegacyBuild(mode)
-      ? './src/app/local-legacy-composition.ts'
+    '#fit/local-auth': fileURLToPath(new URL(isLocalLegacyBuild(mode)
+      ? './src/app/local-auth-composition.ts'
+      : './src/app/native-only-composition.ts', import.meta.url)),
+    '#fit/local-data': fileURLToPath(new URL(isLocalLegacyBuild(mode)
+      ? './src/app/local-data-composition.ts'
+      : './src/app/native-only-composition.ts', import.meta.url)),
+    '#fit/local-assistant': fileURLToPath(new URL(isLocalLegacyBuild(mode)
+      ? './src/app/local-assistant-composition.ts'
       : './src/app/native-only-composition.ts', import.meta.url)),
   } },
   plugins: [react(), {

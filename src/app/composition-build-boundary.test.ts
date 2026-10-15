@@ -14,7 +14,9 @@ describe('frontend composition build boundary', () => {
     '/project/node_modules/@supabase/supabase-js/dist/index.mjs',
     '/project/node_modules/@supabase/auth-js/dist/index.mjs',
     '/project/src/data/queries/client.ts',
-    '/project/src/app/local-legacy-composition.ts',
+    '/project/src/app/local-auth-composition.ts',
+    '/project/src/app/local-data-composition.ts',
+    '/project/src/app/local-assistant-composition.ts',
     'C:\\project\\src\\data\\queries\\client.ts?shared',
   ])('rejects a transitive local module in the emitted graph: %s', (moduleId) => {
     expect(() => assertNativeFrontendModules([moduleId])).toThrow('local legacy dependency')

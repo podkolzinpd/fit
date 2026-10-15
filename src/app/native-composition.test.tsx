@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './auth-context'
 
-vi.mock('#fit/local-legacy-composition', async () => import('./native-only-composition'))
+vi.mock('#fit/local-auth', async () => import('./native-only-composition'))
 vi.mock('../data/queries/client', () => { throw new Error('Native app imported the legacy client') })
 vi.mock('@supabase/supabase-js', () => { throw new Error('Native app imported the Supabase SDK') })
 const session = vi.hoisted(() => ({ retry: vi.fn(), signOut: vi.fn() }))

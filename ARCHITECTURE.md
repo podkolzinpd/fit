@@ -17,7 +17,7 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 
 ## Граница локальных legacy adapters
 
-Vite alias `#fit/local-legacy-composition` выбирает local adapters только для
+Vite alias `#fit/local-auth`, `#fit/local-data`, `#fit/local-assistant` выбирает local adapters только для
 `development`/`test`; остальные modes используют native-only composition.
 Auth/DataBackend/Assistant не импортируют legacy adapters напрямую.
 Production build проверяет каждый emitted chunk и отклоняет Supabase SDK,

@@ -1119,7 +1119,7 @@ CI Yandex-auth lane собирает production bundle и проверяет е�
 preview/WebKit без Supabase env/services; локальные frozen legacy lanes остаются.
 
 С 15.10 release graph также исключает сам SDK: Vite alias
-`#fit/local-legacy-composition` выбирает local adapters только в точных modes
+`#fit/local-auth`, `#fit/local-data`, `#fit/local-assistant` выбирает local adapters только в точных modes
 `development`/`test`. Все остальные modes используют native-only composition;
 проверка emitted chunks отклоняет SDK/client/local composition. Отсутствующие
 flags или native session не разрешают legacy backend. Production flags/API

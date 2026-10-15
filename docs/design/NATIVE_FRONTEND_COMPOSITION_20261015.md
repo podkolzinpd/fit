@@ -27,7 +27,7 @@ production-графа, сохранив локальные legacy-тесты».
 
 ## Реализация
 
-Vite alias `#fit/local-legacy-composition` выбирается только по точному build
+Vite alias `#fit/local-auth`, `#fit/local-data`, `#fit/local-assistant` выбирается только по точному build
 mode: development/test -> local composition; любой другой -> native-only
 composition с запрещённым legacy getter. Это не runtime feature flag и не
 fallback после API ошибки. TypeScript paths описывают общий контракт, Vite
@@ -67,3 +67,14 @@ Import-only AppRoot test не сохранён: он дублировал про
 реальной production-сборкой и включал неподходящие UI surfaces в unit-метрику.
 Unit остаётся для mode/guard/native auth, actual bundle — для всего графа, WebKit
 — для поведения страниц. Coverage thresholds/exclusions не менялись.
+
+CI 38655217481: все checks, кроме WebKit shard3, прошли. Trace показал, что
+offline body-map fixture через AuthProvider загружала общий local registry и
+`legacy-cloud-functions.ts`; её existing network guard закономерно блокировал
+этот import. Local auth/data/Assistant разнесены в независимые build aliases;
+fixture, assertions, timeouts и network isolation не изменены.
+
+После разделения original body-map WebKit case passed (9.7s), все 54 targeted
+auth/data/Assistant/parser cases passed. Existing auth-context tests теперь
+запрещают imports workout/Assistant adapters, не добавляя функциональные дубли.
+Финальные full check, production WebKit и CI повторяются для исправленной версии.

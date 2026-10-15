@@ -7,7 +7,7 @@ import {
   isYandexAccountLinkRequired,
 } from '../../app/feature-flags'
 import { useOptionalYandexAppSession } from '../../app/yandex-app-session-context'
-import { getLocalLegacyComposition } from '#fit/local-legacy-composition'
+import { getLocalAuthRepository } from '#fit/local-auth'
 import { yandexPilotRepository } from '../../data/repositories/yandex-pilot.repository'
 import { FitLogo } from '../../shared/FitLogo'
 import { LEGAL_PATHS } from '../../shared/legal'
@@ -37,7 +37,7 @@ export function YandexAccountLinkRequiredGate({
     staleTime: 60_000,
     queryFn: async () => {
       if (config === null) throw new Error('Проверка Yandex ID не настроена.')
-      const session = await getLocalLegacyComposition().auth.getSession()
+      const session = await getLocalAuthRepository().getSession()
       if (session.error) throw session.error
       const accessToken = session.data.session?.access_token
       if (!accessToken) throw new Error('Сессия FIT истекла. Войдите заново.')

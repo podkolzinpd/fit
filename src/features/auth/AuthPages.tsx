@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { getLocalLegacyComposition } from '#fit/local-legacy-composition'
+import { getLocalAuthRepository } from '#fit/local-auth'
 import {
   yandexPilotRepository,
   type YandexPilotClient,
@@ -172,8 +172,8 @@ export function AuthPage() {
     }
     setBusy(true)
     try {
-      if (mode === 'login') await getLocalLegacyComposition().auth.signIn(String(values.get('email')), String(values.get('password')))
-      else await getLocalLegacyComposition().auth.signUp(String(values.get('email')), String(values.get('password')), firstName, role)
+      if (mode === 'login') await getLocalAuthRepository().signIn(String(values.get('email')), String(values.get('password')))
+      else await getLocalAuthRepository().signUp(String(values.get('email')), String(values.get('password')), firstName, role)
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Не удалось войти') }
     finally { setBusy(false) }
   }
@@ -876,7 +876,7 @@ function YandexAccountLinkingCallbackPage() {
           if (authorization.intent !== 'link') {
             throw new Error('Начните привязку Yandex ID с главной FIT.')
           }
-          const supabaseSession = await getLocalLegacyComposition().auth.getSession()
+          const supabaseSession = await getLocalAuthRepository().getSession()
           if (supabaseSession.error) throw supabaseSession.error
           const supabaseAccessToken = supabaseSession.data.session?.access_token
           if (!supabaseAccessToken) {
@@ -962,7 +962,7 @@ export function ForgotPasswordPage() {
   if (getYandexOnlyAuthConfig() !== null) return <Navigate to="/auth" replace />
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(null)
-    try { await getLocalLegacyComposition().auth.resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
+    try { await getLocalAuthRepository().resetPassword(String(new FormData(event.currentTarget).get('email'))); setMessage('Ссылка отправлена, если такой аккаунт существует.') }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }
   }
   return <AuthIdentityScreen><header className="auth-entry-head"><FitLogo /><p className="eyebrow">ДОСТУП К АККАУНТУ</p><h1>Восстановление пароля</h1><p className="muted">Отправим ссылку на ваш email.</p></header><form className="stack auth-form" onSubmit={(e) => void submit(e)}><Field label="Email"><input name="email" type="email" autoComplete="email" required /></Field>{error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}<button className="primary">Отправить ссылку</button></form><Link className="auth-back-link" to="/auth">Вернуться ко входу</Link></AuthIdentityScreen>
@@ -974,7 +974,7 @@ export function ResetPasswordPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     try {
-      await getLocalLegacyComposition().auth.updatePassword(String(new FormData(event.currentTarget).get('password')))
+      await getLocalAuthRepository().updatePassword(String(new FormData(event.currentTarget).get('password')))
       navigate(hasPendingInvitationLink() ? '/invite' : consumeInvitationAuthReturn() ?? '/')
     }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'Ошибка') }

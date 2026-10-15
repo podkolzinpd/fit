@@ -1,4 +1,4 @@
-import { localLegacyAvailable } from '#fit/local-legacy-composition'
+import { localLegacyAvailable } from '#fit/local-assistant'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import {

@@ -19,8 +19,6 @@ import { athleteSportProfileRepository } from '../data/repositories/athlete-spor
 import { unsupportedNutritionRepository } from '../data/repositories/nutrition.repository'
 import { workoutsRepository } from '../data/repositories/workouts.repository'
 import { workoutTemplatesRepository } from '../data/repositories/workout-templates.repository'
-import { authRepository } from '../data/repositories/auth.repository'
-import { supabaseAssistantBackend } from '../data/repositories/assistant.repository'
 import type { DataBackend } from './data-backend-context'
 
 const supabaseDataBackend: DataBackend = {
@@ -50,6 +48,6 @@ const supabaseDataBackend: DataBackend = {
 
 export const localLegacyAvailable = true
 
-export function getLocalLegacyComposition() {
-  return { auth: authRepository, data: supabaseDataBackend, assistant: supabaseAssistantBackend }
+export function getLocalDataBackend(): DataBackend {
+  return supabaseDataBackend
 }

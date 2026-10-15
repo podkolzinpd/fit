@@ -1,4 +1,4 @@
-import { getLocalLegacyComposition } from '#fit/local-legacy-composition'
+import { getLocalAssistantBackend } from '#fit/local-assistant'
 import { Link } from 'react-router-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -34,7 +34,7 @@ import { extractAssistantNavigationLinks } from './assistant-navigation-links'
 
 type FailedTurn = { turnId: string; message: string }
 
-export function AssistantHistoryPage({ backend = getLocalLegacyComposition().assistant }: {
+export function AssistantHistoryPage({ backend = getLocalAssistantBackend() }: {
   backend?: AssistantBackend
 }) {
   const { actor } = useAuth()

@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import type { ScheduleDensity, SessionActor } from '../shared/domain'
-import { getLocalLegacyComposition, localLegacyAvailable } from '#fit/local-legacy-composition'
+import { getLocalAuthRepository, localLegacyAvailable } from '#fit/local-auth'
 import { yandexPilotRepository } from '../data/repositories/yandex-pilot.repository'
 import { isYandexMainRoutingEnabled, isYandexOnlyAuthEnabled } from './feature-flags'
 import { useOptionalYandexAppSession } from './yandex-app-session-context'
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!force && actorRef.current?.userId === user.id) return Promise.resolve(actorRef.current)
     if (!force && initializationRef.current?.userId === user.id) return initializationRef.current.promise
 
-    const promise = getLocalLegacyComposition().auth.initialize(user).finally(() => {
+    const promise = getLocalAuthRepository().initialize(user).finally(() => {
       if (initializationRef.current?.promise === promise) initializationRef.current = null
     })
     initializationRef.current = { userId: user.id, promise }
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const refreshSupabase = useCallback(async () => {
     try {
-      const result = await getLocalLegacyComposition().auth.getSession()
+      const result = await getLocalAuthRepository().getSession()
       if (result.error) throw result.error
       const user = result.data.session?.user
       await applyUser(user ? { id: user.id, email: user.email, user_metadata: user.user_metadata } : null, true)
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (yandexOnlyAuthEnabled) return
-    const { data } = getLocalLegacyComposition().auth.onAuthStateChange((_event, session) => {
+    const { data } = getLocalAuthRepository().onAuthStateChange((_event, session) => {
       const user = session?.user
       queueMicrotask(() => void applyUser(user ? {
         id: user.id,
@@ -189,7 +189,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // После выбора sticky Yandex backend удаляем старую Supabase-сессию этого
     // браузера: истечение Yandex token не должно молча вернуть пользователя к
     // другому источнику данных.
-    void getLocalLegacyComposition().auth.signOut().catch(() => {
+    void getLocalAuthRepository().signOut().catch(() => {
       actorRef.current = null
       setSupabaseActor(null)
     })
@@ -208,9 +208,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (yandexOnlyAuthEnabled && yandexSession === null) throw new Error('Yandex ID сессия недоступна')
     if ((yandexRoutingEnabled || yandexOnlyAuthEnabled) && yandexSession !== null) {
       await yandexSession.signOut()
-      if (!yandexOnlyAuthEnabled) await getLocalLegacyComposition().auth.signOut()
+      if (!yandexOnlyAuthEnabled) await getLocalAuthRepository().signOut()
     } else {
-      await getLocalLegacyComposition().auth.signOut()
+      await getLocalAuthRepository().signOut()
     }
     // Если локальная сессия действительно осталась активной, repository
     // пробросит ошибку и данные текущего пользователя не исчезнут из UI.
@@ -230,7 +230,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return
     }
     if (yandexOnlyAuthEnabled || supabaseActor?.kind !== 'trainer') throw new Error('Профиль тренера недоступен')
-    await getLocalLegacyComposition().auth.updateProfile({ ...supabaseActor, ...input })
+    await getLocalAuthRepository().updateProfile({ ...supabaseActor, ...input })
   }, [supabaseActor, yandexOnlyAuthEnabled, yandexRoutingEnabled, yandexSession])
 
   const updateScheduleDensity = useCallback(async (density: ScheduleDensity) => {

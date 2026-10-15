@@ -1,4 +1,4 @@
-import { getLocalLegacyComposition, localLegacyAvailable } from '#fit/local-legacy-composition'
+import { getLocalDataBackend, localLegacyAvailable } from '#fit/local-data'
 import { createContext, use, useMemo, type PropsWithChildren } from 'react'
 import type { appFeedbackRepository } from '../data/repositories/app-feedback.repository'
 import type { clientsRepository } from '../data/repositories/clients.repository'
@@ -69,7 +69,7 @@ export function DataBackendProvider({ children }: PropsWithChildren) {
     if (actor === null || session === null || config === null
       || actor.userId !== session.profile.id
       || (!isYandexMainRoutingEnabled() && session.accessMode !== 'read_write')) {
-      return localLegacyAvailable ? getLocalLegacyComposition().data : 'yandex-session-unavailable'
+      return localLegacyAvailable ? getLocalDataBackend() : 'yandex-session-unavailable'
     }
     return createYandexMainRepository(config.apiBaseUrl, session.session.token, actor)
   }, [actor, config, session])
@@ -85,6 +85,6 @@ export function useDataBackend(): DataBackend {
   // Local component harnesses retain their legacy default. Release builds
   // require explicit native composition and cannot select a legacy adapter.
   if (backend !== null) return backend
-  if (localLegacyAvailable) return getLocalLegacyComposition().data
+  if (localLegacyAvailable) return getLocalDataBackend()
   throw new Error('useDataBackend должен использоваться внутри DataBackendProvider')
 }

@@ -1,4 +1,4 @@
-import { getLocalLegacyComposition } from '#fit/local-legacy-composition'
+import { getLocalDataBackend } from '#fit/local-data'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import type { WorkoutParseResponse } from '../../data/repositories/exercises.repository'
 import { matchesExplicitWorkoutEquipment, parseQuickWorkoutEntry, resolveQuickWorkoutLine, splitWorkoutText, workoutCandidates, type ParsedWorkoutExercise } from './quick-workout-entry'
@@ -40,7 +40,7 @@ export async function parseWorkoutWithLlm(text: string, catalog: readonly Exerci
     .map(({ item }) => item.sourceText)
     .join('\n')
   try {
-    const remote = await (options.remoteParser ?? getLocalLegacyComposition().data.exercises.parseWorkout)(
+    const remote = await (options.remoteParser ?? getLocalDataBackend().exercises.parseWorkout)(
       unresolvedText,
       selectableExercises(catalog).filter((exercise) => exercise.source === 'system'),
     )
