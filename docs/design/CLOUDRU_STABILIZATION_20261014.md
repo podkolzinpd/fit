@@ -336,3 +336,20 @@ the existing MEDIA_MIGRATION key pair is not yet proven. Do not broaden another
 account on that assumption. Old proxy retry38758949770 still timed out at30seconds.
 Root/www DNS and public production monitor passed. Fresh push and feedback remain OFF;
 actual offsite restore and complete media acceptance remain open.
+
+
+The same operational follow-up also separates SpeechKit credentials from the
+existing model key which failed STT withgrpc7. Dedicated GitHub secret
+CLOUDRU_SPEECHKIT_API_KEY and variable CLOUDRU_SPEECHKIT_FOLDER_ID produce only two
+relay environment fields. No GPT credential fallback, model/DB/backup injection,
+new IAM resources or frontend WSS activation occurs. The accessible folder is
+b1goqho12tlk9dibc3f3; a new STT-only identity/key there remains an explicit owner
+decision, not a bypass of the inaccessible prior model folder.
+
+Existing Speech ingress policy coverage now permits only that one secret and
+checks the actual shell validation prefix with five independent fixtures: valid
+inputs, missing key, malformed folder, newline and other control character.
+No file/container/upstream action executes in this test; no browser/theme matrix
+is added. An explicit failure exit handles macOS Bash3.2's intermediate [[ ]]
+errexit behavior as well as Linux Bash. Targeted workflow9/9 passed after this
+addition; final full npm run check passed for the expanded diff (frontend2680, API1418+159 DB skips, infra302, hosting169, calendar12, relay5 and builds).

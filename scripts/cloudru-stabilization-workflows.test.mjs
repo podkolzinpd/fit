@@ -90,10 +90,33 @@ test('background delivery boundary is persistent and existing uncertain recovery
 })
 
 test('speech ingress upgrades only the authenticated loopback relay and its runtime has no database credentials', () => {
+  const configure = read('.github/workflows/configure-cloudru-speech.yml')
+  assert.match(configure, /SPEECHKIT_API_KEY: \$\{\{ secrets\.CLOUDRU_SPEECHKIT_API_KEY \}\}/)
+  assert.match(configure, /SPEECHKIT_FOLDER_ID: \$\{\{ vars\.CLOUDRU_SPEECHKIT_FOLDER_ID \}\}/)
+  assert.match(configure, /test -n "\$SPEECHKIT_API_KEY"/)
+  assert.match(configure, /\[\[ "\$SPEECHKIT_FOLDER_ID" =~ \^\[a-z0-9\]\{20\}\$ \]\]/)
+  assert.doesNotMatch(configure, /sudo awk|YANDEX_CLOUD_MODEL_ID/)
   const workflow = read('.github/workflows/configure-cloudru-speech.yml')
   assert.match(workflow, /cloudru-smoke.mjs upstream/)
   assert.match(workflow, /cloudru-smoke.mjs guard/)
-  assert.doesNotMatch(workflow, /secrets\.|MIGRATION_DATABASE_|DATABASE_PASSWORD/)
+  assert.deepEqual([...workflow.matchAll(/secrets\.([A-Z0-9_]+)/g)].map(match => match[1]), ['CLOUDRU_SPEECHKIT_API_KEY'])
+  assert.doesNotMatch(workflow, /MIGRATION_DATABASE_|DATABASE_PASSWORD/)
+  const validationStart = workflow.indexOf('          test -n "$SPEECHKIT_API_KEY"')
+  const validation = workflow.slice(validationStart, workflow.indexOf('          id=', validationStart)).replace(/^          /gm, '')
+  // Independent validation failures, not a browser/theme matrix: nothing after
+  // this prefix (files, containers, upstream calls) is executed by this test.
+  for (const [key, folder, expected] of [
+    ['synthetic-speech-key', 'b1goqho12tlk9dibc3f3', 0],
+    ['', 'b1goqho12tlk9dibc3f3', 1],
+    ['synthetic-speech-key', 'invalid-folder', 1],
+    ['synthetic\nspeech-key', 'b1goqho12tlk9dibc3f3', 1],
+    ['synthetic\u0007speech-key', 'b1goqho12tlk9dibc3f3', 1],
+  ]) {
+    const result = spawnSync('bash', ['-eu', '-c', validation], {
+      env: { SPEECHKIT_API_KEY: key, SPEECHKIT_FOLDER_ID: folder }, encoding: 'utf8',
+    })
+    assert.equal(result.status === 0, expected === 0)
+  }
   const nginx = read('infra/cloudru/nginx-public-api.conf')
   assert.match(nginx, /location = \/stt/)
   assert.match(nginx, /proxy_pass http:\/\/127\.0\.0\.1:18084\/stt/)

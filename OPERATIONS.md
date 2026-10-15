@@ -1888,3 +1888,14 @@ an otherwise valid database restore drill. BACKUP_VERIFIED_AT records only a
 successful database restore, not media acceptance. Separate credential files
 remain root0600 and are removed on success or failure. Constant media operation
 stages identify ACL/policy/versioning/read failures without paths or SDK payloads.
+
+
+Cloud.ru SpeechKit relay uses its own `CLOUDRU_SPEECHKIT_API_KEY` GitHub secret and
+`CLOUDRU_SPEECHKIT_FOLDER_ID` repository variable. It never borrows YandexGPT's
+key/folder from api.env. The root0600 relay file contains only the SpeechKit key
+and folder; no model, database or backup credentials. Missing/invalid configuration
+fails before any staging file or container. Upstream recognition and unauthenticated
+WebSocket rejection must pass before relay/ingress promotion. Provisioning an
+external Yandex IAM account, STT-only role and scoped key requires explicit owner
+approval; this workflow creates no IAM resources. Keep frontend WSS default-off
+until the relay passes its real upstream and guard checks.
