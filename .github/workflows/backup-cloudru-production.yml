@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Bootstrap owner and approved-backup-only ACL once, or back up and restore-check
+        description: Verify a private backup bucket, or back up and restore-check
         type: choice
         default: backup
         options: [bootstrap, backup]
@@ -88,9 +88,6 @@ jobs:
             --security-opt=no-new-privileges --env-file "$private_env" \
             --mount "type=bind,src=$directory,dst=/backup" \
             "localhost/fit-api:$revision" node dist/cloudru-backup.js
-          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=1 --cap-drop=ALL \
-            --security-opt=no-new-privileges --env-file "$media_env" \
-            "localhost/fit-api:$revision" node dist/cloudru-media-health.js
       - name: Restore downloaded backup into a disposable PostgreSQL without network
         if: inputs.mode != 'bootstrap'
         run: |
@@ -115,7 +112,7 @@ jobs:
           sudo podman exec "$container" psql -U fit_owner -d fit_restore -v ON_ERROR_STOP=1 \
             -qc 'create role fit_api nologin;' >/dev/null 2>&1
           expected=$(sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
-            | awk '/ TABLE / && !/ TABLE DATA / {count++} END {print count+0}')
+            | awk '$4 == "TABLE" && $5 != "DATA" && $5 != "ATTACH" {count++} END {print count+0}')
           test "$expected" -gt 0
           sudo podman exec --user 0 "$container" pg_restore --clean --if-exists --no-owner --exit-on-error \
             --username fit_owner --dbname fit_restore /backup/readback.dump >/dev/null 2>&1
@@ -134,6 +131,16 @@ jobs:
           printf 'Offsite backup downloaded, decrypted and restored; tables=%s; migrations=%s.\n' \
             "$restored" "$migrations" >> "$GITHUB_STEP_SUMMARY"
           date -u +%Y-%m-%dT%H:%M:%SZ | sudo tee /opt/fit/BACKUP_VERIFIED_AT >/dev/null
+      - name: Verify private media after the database restore check
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          media_env="/opt/fit/secrets/media-health-$id.env"
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --user 0 --memory=256m --cpus=1 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$media_env" \
+            "localhost/fit-api:$revision" node dist/cloudru-media-health.js
       - name: Remove only this attempt's private scratch and temporary credentials
         if: always()
         run: |

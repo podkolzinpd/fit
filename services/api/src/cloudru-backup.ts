@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { readFile, writeFile, stat } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
-import { CreateBucketCommand, GetBucketAclCommand, GetObjectCommand, PutBucketAclCommand, PutObjectCommand, S3Client, type AccessControlPolicy, type GetBucketAclCommandOutput } from '@aws-sdk/client-s3'
+import { CreateBucketCommand, GetBucketAclCommand, GetObjectCommand, PutObjectCommand, S3Client, type GetBucketAclCommandOutput } from '@aws-sdk/client-s3'
 import { backupCloudruDatabase } from './cloudru-release-migrations.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { assertNoBucketPolicy } from './cloudru-media-health.js'
@@ -64,17 +64,6 @@ export function assertPrivateBackupAcl(acl: Pick<GetBucketAclCommandOutput, 'Own
   }
 }
 
-export function privateBackupAccessPolicy(acl: Pick<GetBucketAclCommandOutput, 'Owner' | 'Grants'>, backupAccountId: string): AccessControlPolicy {
-  assertPrivateBackupAcl(acl, backupAccountId)
-  const ownerId = acl.Owner?.ID
-  if (!ownerId) throw new Error('backup_bucket_not_private')
-  return { Owner: { ID: ownerId }, Grants: [
-    { Grantee: { Type: 'CanonicalUser', ID: ownerId }, Permission: 'FULL_CONTROL' },
-    ...(ownerId === backupAccountId ? [] : (['READ', 'WRITE', 'READ_ACP'] as const)
-      .map(permission => ({ Grantee: { Type: 'CanonicalUser' as const, ID: backupAccountId }, Permission: permission }))),
-  ] }
-}
-
 async function main() {
   if (process.getuid?.() !== 0 || process.env.CLOUDRU_BACKUP_CONFIRMATION !== 'BACKUP_CLOUDRU_TO_PRIVATE_S3'
     || process.env.MIGRATION_DATABASE_HOST !== '10.70.10.67' || process.env.MIGRATION_DATABASE_PORT !== '5432'
@@ -92,8 +81,8 @@ async function main() {
       try { await client.send(new GetBucketAclCommand({ Bucket: bucket })) }
       catch (error) {
         if (!(error instanceof Error) || !['NoSuchBucket', 'NotFound'].includes(error.name)) throw error
-        // Create with default private access, then verify and configure the
-        // explicitly approved principal before permitting any backup upload.
+        // Create with default private access. Bucket-scoped IAM roles provide
+        // access; bootstrap verifies privacy without changing existing ACLs.
         await client.send(new CreateBucketCommand({ Bucket: bucket }))
       }
     }
@@ -102,18 +91,9 @@ async function main() {
     console.log('{"event":"cloudru_backup_stage","stage":"policy_read"}')
     await assertNoBucketPolicy(client, bucket)
     if (process.env.BACKUP_MODE === 'bootstrap') {
-      // Only this dedicated bucket and the operator-approved principal. Unknown
-      // or public ACL grants were rejected above, before any configuration write.
-      console.log('{"event":"cloudru_backup_stage","stage":"acl_write"}')
-      await client.send(new PutBucketAclCommand({ Bucket: bucket, AccessControlPolicy: privateBackupAccessPolicy(acl, backupAccountId) }))
-      console.log('{"event":"cloudru_backup_stage","stage":"acl_verify"}')
-      const verified = await client.send(new GetBucketAclCommand({ Bucket: bucket }))
-      assertPrivateBackupAcl(verified, backupAccountId)
-      const granted = new Set(verified.Grants?.filter(grant => grant.Grantee?.ID === backupAccountId).map(grant => grant.Permission))
-      if (verified.Owner?.ID !== backupAccountId && !(['READ', 'WRITE', 'READ_ACP'] as const).every(permission => granted.has(permission))) {
-        throw new Error('backup_bucket_not_private')
-      }
-      console.log('{"event":"cloudru_private_backup_bucket_verified","access":"owner_and_approved_backup"}')
+      // Actual data access is proved by backup upload/readback, not inferred
+      // from ACL grants. Unknown/public grants remain rejected above.
+      console.log('{"event":"cloudru_private_backup_bucket_verified"}')
       return
     }
     if (process.env.BACKUP_MODE !== 'backup') throw new Error('backup_mode_rejected')

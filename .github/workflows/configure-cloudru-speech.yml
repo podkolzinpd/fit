@@ -53,16 +53,24 @@ jobs:
           sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
           sudo grep -qx 'FIT_AI_FUNCTIONS_ENABLED=true' /opt/fit/secrets/api.env
       - name: Build and verify isolated relay before exposing the WebSocket route
+        env:
+          SPEECHKIT_API_KEY: ${{ secrets.CLOUDRU_SPEECHKIT_API_KEY }}
+          SPEECHKIT_FOLDER_ID: ${{ vars.CLOUDRU_SPEECHKIT_FOLDER_ID }}
         run: |
           set -euo pipefail
+          test -n "$SPEECHKIT_API_KEY"
+          [[ "$SPEECHKIT_FOLDER_ID" =~ ^[a-z0-9]{20}$ ]] || exit 1
+          test "$SPEECHKIT_API_KEY" = "${SPEECHKIT_API_KEY//$'\n'/}"
+          test "$SPEECHKIT_API_KEY" = "${SPEECHKIT_API_KEY//$'\r'/}"
+          [[ "$SPEECHKIT_API_KEY" != *[[:cntrl:][:space:]]* ]] || exit 1
           id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           next="/opt/fit/secrets/speech-next-$id.env"
           candidate="fit-speech-candidate-$id"
           sudo test ! -e "$next"
           sudo install -m 600 /dev/null "$next"
-          sudo awk '/^YANDEX_CLOUD_(API_KEY|FOLDER_ID|MODEL_ID)=/' /opt/fit/secrets/api.env \
-            | sudo tee "$next" >/dev/null
-          test "$(sudo wc -l "$next" | awk '{print $1}')" -eq 3
+          printf 'YANDEX_CLOUD_API_KEY=%s\nYANDEX_CLOUD_FOLDER_ID=%s\n' \
+            "$SPEECHKIT_API_KEY" "$SPEECHKIT_FOLDER_ID" | sudo tee "$next" >/dev/null
+          test "$(sudo wc -l "$next" | awk '{print $1}')" -eq 2
           trap 'sudo podman rm --force --ignore "$candidate" >/dev/null' EXIT
           sudo podman build --pull=always -f services/speechkit-relay/Dockerfile.cloudru \
             -t "localhost/fit-speechkit:$GITHUB_SHA" services/speechkit-relay
