@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { readFile, writeFile, stat } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
-import { CreateBucketCommand, GetBucketAclCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { CreateBucketCommand, GetBucketAclCommand, GetObjectCommand, PutBucketAclCommand, PutObjectCommand, S3Client, type AccessControlPolicy, type GetBucketAclCommandOutput } from '@aws-sdk/client-s3'
 import { backupCloudruDatabase } from './cloudru-release-migrations.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { assertNoBucketPolicy } from './cloudru-media-health.js'
@@ -38,32 +38,78 @@ function required(name: string): string {
   return value
 }
 
+export function cloudruBackupStorageCredentials(environment: Readonly<Record<string, string | undefined>>): {
+  accessKeyId: string
+  secretAccessKey: string
+} {
+  const keyId = environment.CLOUDRU_BACKUP_KEY_ID
+  const secretAccessKey = environment.CLOUDRU_BACKUP_KEY_SECRET
+  if (environment.CLOUDRU_TENANT_ID !== 'f071c7d5-cf0f-4538-9415-bbf9a9c94338'
+    || !keyId || !secretAccessKey || [keyId, secretAccessKey].some(value =>
+      [...value].some(character => character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127))) {
+    throw new Error('backup_configuration_rejected')
+  }
+  return { accessKeyId: `${environment.CLOUDRU_TENANT_ID}:${keyId}`, secretAccessKey }
+}
+
+export function assertPrivateBackupAcl(acl: Pick<GetBucketAclCommandOutput, 'Owner' | 'Grants'>, backupAccountId: string): void {
+  const permissions = new Set(['FULL_CONTROL', 'READ', 'WRITE', 'READ_ACP', 'WRITE_ACP'])
+  const backupPermissions = new Set(['READ', 'WRITE', 'READ_ACP'])
+  if (!/^[a-zA-Z0-9_-]{1,128}$/u.test(backupAccountId) || !acl.Owner?.ID || !acl.Grants?.length
+    || acl.Grants.some(grant => grant.Grantee?.Type !== 'CanonicalUser'
+      || !permissions.has(grant.Permission ?? '')
+      || (grant.Grantee.ID !== acl.Owner?.ID
+        && (grant.Grantee.ID !== backupAccountId || !backupPermissions.has(grant.Permission ?? ''))))) {
+    throw new Error('backup_bucket_not_private')
+  }
+}
+
+export function privateBackupAccessPolicy(acl: Pick<GetBucketAclCommandOutput, 'Owner' | 'Grants'>, backupAccountId: string): AccessControlPolicy {
+  assertPrivateBackupAcl(acl, backupAccountId)
+  const ownerId = acl.Owner?.ID
+  if (!ownerId) throw new Error('backup_bucket_not_private')
+  return { Owner: { ID: ownerId }, Grants: [
+    { Grantee: { Type: 'CanonicalUser', ID: ownerId }, Permission: 'FULL_CONTROL' },
+    ...(ownerId === backupAccountId ? [] : (['READ', 'WRITE', 'READ_ACP'] as const)
+      .map(permission => ({ Grantee: { Type: 'CanonicalUser' as const, ID: backupAccountId }, Permission: permission }))),
+  ] }
+}
+
 async function main() {
   if (process.getuid?.() !== 0 || process.env.CLOUDRU_BACKUP_CONFIRMATION !== 'BACKUP_CLOUDRU_TO_PRIVATE_S3'
     || process.env.MIGRATION_DATABASE_HOST !== '10.70.10.67' || process.env.MIGRATION_DATABASE_PORT !== '5432'
     || process.env.MIGRATION_DATABASE_NAME !== 'fit' || process.env.MIGRATION_DATABASE_USER !== 'fit_owner'
     || process.env.MIGRATION_DATABASE_SSL_MODE !== 'require') throw new Error('backup_target_rejected')
+  const backupAccountId = required('CLOUDRU_BACKUP_ACCOUNT_ID')
+  if (!/^[a-zA-Z0-9_-]{1,128}$/u.test(backupAccountId)) throw new Error('backup_configuration_rejected')
   const attempt = required('BACKUP_ATTEMPT')
   if (!/^[0-9]+-[0-9]+$/u.test(attempt)) throw new Error('backup_attempt_rejected')
   const client = new S3Client({ endpoint: 'https://s3.cloud.ru', forcePathStyle: true, region: 'ru-central-1', maxAttempts: 2,
-    credentials: { accessKeyId: `${required('CLOUDRU_TENANT_ID')}:${required('CLOUDRU_MEDIA_KEY_ID')}`,
-      secretAccessKey: required('CLOUDRU_MEDIA_KEY_SECRET') } })
+    credentials: cloudruBackupStorageCredentials(process.env) })
   try {
     if (process.env.BACKUP_MODE === 'bootstrap') {
       try { await client.send(new GetBucketAclCommand({ Bucket: bucket })) }
       catch (error) {
         if (!(error instanceof Error) || !['NoSuchBucket', 'NotFound'].includes(error.name)) throw error
-        // Default bucket/object privacy also works with BucketOwnerEnforced,
-        // where sending an ACL header is rejected. Verify privacy below.
+        // Create with default private access, then verify and configure the
+        // explicitly approved principal before permitting any backup upload.
         await client.send(new CreateBucketCommand({ Bucket: bucket }))
       }
     }
     const acl = await client.send(new GetBucketAclCommand({ Bucket: bucket }))
-    if (!acl.Owner?.ID || !acl.Grants?.length || acl.Grants.some(grant =>
-      grant.Grantee?.Type !== 'CanonicalUser' || grant.Grantee.ID !== acl.Owner?.ID)) throw new Error('backup_bucket_not_private')
+    assertPrivateBackupAcl(acl, backupAccountId)
     await assertNoBucketPolicy(client, bucket)
     if (process.env.BACKUP_MODE === 'bootstrap') {
-      console.log('{"event":"cloudru_private_backup_bucket_verified"}')
+      // Only this dedicated bucket and the operator-approved principal. Unknown
+      // or public ACL grants were rejected above, before any configuration write.
+      await client.send(new PutBucketAclCommand({ Bucket: bucket, AccessControlPolicy: privateBackupAccessPolicy(acl, backupAccountId) }))
+      const verified = await client.send(new GetBucketAclCommand({ Bucket: bucket }))
+      assertPrivateBackupAcl(verified, backupAccountId)
+      const granted = new Set(verified.Grants?.filter(grant => grant.Grantee?.ID === backupAccountId).map(grant => grant.Permission))
+      if (verified.Owner?.ID !== backupAccountId && !(['READ', 'WRITE', 'READ_ACP'] as const).every(permission => granted.has(permission))) {
+        throw new Error('backup_bucket_not_private')
+      }
+      console.log('{"event":"cloudru_private_backup_bucket_verified","access":"owner_and_approved_backup"}')
       return
     }
     if (process.env.BACKUP_MODE !== 'backup') throw new Error('backup_mode_rejected')

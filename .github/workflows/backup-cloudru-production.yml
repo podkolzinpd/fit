@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Create the private backup bucket once, or back up and restore-check
+        description: Bootstrap owner and approved-backup-only ACL once, or back up and restore-check
         type: choice
         default: backup
         options: [bootstrap, backup]
@@ -26,6 +26,9 @@ jobs:
       CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
       CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
       CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
+      CLOUDRU_BACKUP_KEY_ID: ${{ secrets.CLOUDRU_BACKUP_KEY_ID }}
+      CLOUDRU_BACKUP_KEY_SECRET: ${{ secrets.CLOUDRU_BACKUP_KEY_SECRET }}
+      CLOUDRU_BACKUP_ACCOUNT_ID: ${{ vars.CLOUDRU_BACKUP_ACCOUNT_ID }}
       CLOUDRU_BACKUP_ENCRYPTION_KEY: ${{ secrets.CLOUDRU_BACKUP_ENCRYPTION_KEY }}
       BACKUP_MODE: ${{ inputs.mode || 'backup' }}
     steps:
@@ -39,31 +42,46 @@ jobs:
           test "$BACKUP_MODE" = bootstrap -o "$BACKUP_MODE" = backup
           test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
           [[ "$CLOUDRU_BACKUP_ENCRYPTION_KEY" =~ ^[a-f0-9]{64}$ ]]
+          test -n "$CLOUDRU_BACKUP_KEY_ID"
+          test -n "$CLOUDRU_BACKUP_KEY_SECRET"
+          test -n "$CLOUDRU_BACKUP_ACCOUNT_ID"
       - name: Back up only Cloud.ru PostgreSQL into encrypted private Cloud.ru S3
         run: |
           set -euo pipefail
           id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           directory="/opt/fit/backup-attempts/$id"
           private_env="/opt/fit/secrets/backup-$id.env"
+          media_env="/opt/fit/secrets/media-health-$id.env"
           sudo test ! -e "$directory"
           sudo test ! -e "$private_env"
+          sudo test ! -e "$media_env"
           sudo install -d -m 700 "$directory"
           sudo install -m 600 /dev/null "$private_env"
+          sudo install -m 600 /dev/null "$media_env"
           jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
             .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
             all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
             <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
           jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
             <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$private_env" >/dev/null
-          for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET CLOUDRU_BACKUP_ENCRYPTION_KEY BACKUP_MODE; do
+          for name in CLOUDRU_BACKUP_KEY_ID CLOUDRU_BACKUP_KEY_SECRET CLOUDRU_BACKUP_ACCOUNT_ID CLOUDRU_BACKUP_ENCRYPTION_KEY BACKUP_MODE; do
             value="${!name}"
             test -n "$value"
             test "$value" = "${value//$'\n'/}"
             test "$value" = "${value//$'\r'/}"
             printf '%s=%s\n' "$name" "$value" | sudo tee -a "$private_env" >/dev/null
           done
+          for name in CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET BACKUP_MODE; do
+            value="${!name}"
+            test -n "$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" | sudo tee -a "$media_env" >/dev/null
+          done
           printf 'MIGRATION_DATABASE_SSL_MODE=require\nCLOUDRU_TENANT_ID=f071c7d5-cf0f-4538-9415-bbf9a9c94338\nCLOUDRU_BACKUP_CONFIRMATION=BACKUP_CLOUDRU_TO_PRIVATE_S3\nBACKUP_ATTEMPT=%s\n' \
             "$id" | sudo tee -a "$private_env" >/dev/null
+          printf 'CLOUDRU_TENANT_ID=f071c7d5-cf0f-4538-9415-bbf9a9c94338\nCLOUDRU_BACKUP_CONFIRMATION=BACKUP_CLOUDRU_TO_PRIVATE_S3\n' \
+            | sudo tee -a "$media_env" >/dev/null
           revision=$(cat /opt/fit/RUNNING_SHA)
           [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
           sudo podman run --rm --read-only --user 0 --memory=512m --cpus=1 --cap-drop=ALL \
@@ -71,7 +89,7 @@ jobs:
             --mount "type=bind,src=$directory,dst=/backup" \
             "localhost/fit-api:$revision" node dist/cloudru-backup.js
           sudo podman run --rm --read-only --user 0 --memory=256m --cpus=1 --cap-drop=ALL \
-            --security-opt=no-new-privileges --env-file "$private_env" \
+            --security-opt=no-new-privileges --env-file "$media_env" \
             "localhost/fit-api:$revision" node dist/cloudru-media-health.js
       - name: Restore downloaded backup into a disposable PostgreSQL without network
         if: inputs.mode != 'bootstrap'
@@ -90,7 +108,7 @@ jobs:
             --mount "type=volume,src=$volume,dst=/var/lib/postgresql/data" \
             --mount "type=bind,src=$directory,dst=/backup,ro=true" "$image" >/dev/null
           for attempt in {1..30}; do
-            if sudo podman exec "$container" pg_isready -U fit_owner -d fit_restore >/dev/null 2>&1; then break; fi
+            if sudo podman exec "$container" pg_isready -h 127.0.0.1 -U fit_owner -d fit_restore >/dev/null 2>&1; then break; fi
             test "$attempt" -lt 30
             sleep 1
           done
@@ -127,6 +145,7 @@ jobs:
             sudo podman volume rm --force "fit-backup-restore-$id" >/dev/null
           fi
           sudo rm -f -- "/opt/fit/secrets/backup-$id.env" \
+            "/opt/fit/secrets/media-health-$id.env" \
             "/opt/fit/backup-attempts/$id/before-migrations.dump" \
             "/opt/fit/backup-attempts/$id/readback.dump"
           if sudo test -d "/opt/fit/backup-attempts/$id"; then sudo rmdir -- "/opt/fit/backup-attempts/$id"; fi

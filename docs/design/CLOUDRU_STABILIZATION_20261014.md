@@ -241,3 +241,38 @@ credential и доступность требуют отдельного фак�
 для SpeechKit использовать действующий credential с ролью ai.speechkit-stt.user и
 scope yc.ai.speechkitStt.execute. Новые Yandex IAM/key resources и расширение прав
 не выполнялись. Требуется владелец либо уже разрешённый действующий доступ.
+
+## Owner-console continuation, 15.10
+
+- Current main8393bbe3/runtime8393bbe3, CI38737310804 success; nutrition fixes1646/1647
+  preserved by merge without conflicts.
+- Owner consoles have active sessions. Legacy zone is dns7eld4ceutkbftord9 in
+  b1goqho12tlk9dibc3f3. Root ANAME points to old API Gateway, not a literal A.
+  Prepared root ANAME→api.fit-training.ru/TTL60 was NOT saved: automatic approval
+  rejected the exact target as insufficiently approved. Exact confirmation was requested; the owner asked to handle technical choices
+  autonomously. The blocked DNS write remains unapplied. Host-preserving curl to87 returned frontend200; both old NS api→87.
+- Created private backup bucket fit-cloudru-backups-c2ad3760 through owner console.
+  Bootstrap38744078639 still fails AccessDenied403. No roles or access keys changed.
+- Existing fit-stage-app parameters show global s3e.viewer and media-bucket
+  s3e.editor/s3e.editor-acl. The parameter page shows assigned service roles; its
+  separate access-rights tab manages access TO the account and is not an inventory
+  of its data permissions.
+- Existing startup and backup workflows consume the same media secret pair.
+  Granting it backup write would also grant the API deletion of encrypted backups.
+  Code now requires a dedicated backup pair, with no media fallback; isolated
+  media-health env does not contain DB/encryption/dedicated backup credentials.
+  No new SA/key/grant yet; owner action-time approval remains required for these.
+- Four new credential cases cover dedicated selection with decoy runtime pair,
+  no fallback for missing/incomplete pair, wrong tenant and control characters.
+  Four ACL cases cover owner/approved-principal access, public and unknown
+  principals, and rejection of backup-writer access-policy administration.
+  Existing restore policy case additionally guards separate secret wiring and
+  no runtime injection; no additional workflow test matrix. API crypto/privacy/
+  credential/ACL14/14 and operational workflow9/9 passed. Final local acceptance passed: frontend lint/types2680, API lint/types1418+159 DB skips, infra302, hosting169, calendar12, relay5 and builds. The first check stopped at sandbox loopback EPERM; the remaining stages passed with loopback permission. API lint found a control-regex violation, corrected before API acceptance. CI pending.
+- Restore workflow now waits for TCP127.0.0.1, matching the earlier actual local
+  fixture failure/recovery: Unix readiness could observe initdb's temporary server.
+  No timeout/retry reduction or RLS/public-access/privacy guard weakening.
+- Manual bootstrap now explicitly scopes private ACL access to the existing owner
+  and approved dedicated backup principal (READ/WRITE/READ_ACP); unknown grants
+  fail closed. Normal backup does not write ACLs. This code is not deployed and
+  no new principal has been approved or provisioned.
