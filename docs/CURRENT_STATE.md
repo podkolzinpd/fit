@@ -1,3 +1,6 @@
+## Individually addressed recovery email — 2026-10-15
+Manual main-only recovery workflow adds email-test (self-mail only) and confirmation-gated email-send for the approved FIT copy, sender fitteam@fit-training.ru via verified SMTP SSL smtp.beget.com:465. Every message has exactly one To and one envelope recipient; no Cc/Bcc. Legacy registered email audience is fetched in memory, normalized/deduplicated and bounded to250; no confirmation filter. Durable private hashed campaign ledger is flushed before SMTP DATA; accepted/rejected/uncertain entries are never automatically retried. No contact exports or schema changes; secret only in GitHub/runner environment. SMTP acceptance does not establish inbox delivery.
+
 ## Read-only email audience audit — 2026-10-14
 Manual recovery workflow adds email-audit: counts all non-empty registered legacy Supabase auth emails regardless of confirmation, syntax or account status, with normalization/deduplication. Exact current Cloud.ru profile UUID matches are reported separately. Read-only Cloud.ru transaction; no mail, user updates, contact exports or new DB schema; sender configuration is inspected as presence booleans only. Counts do not establish mailbox deliverability or notice preferences.
 
