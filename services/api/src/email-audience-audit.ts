@@ -59,7 +59,15 @@ async function main() {
     const push = await connection.query<{ user_id: string }>('select distinct user_id from public.push_subscriptions')
     const counts = aggregateEmailAudience(users, new Set(profiles.map(row => row.id)), new Set(push.map(row => row.user_id)))
     await connection.query('commit')
-    console.log(JSON.stringify({ action: 'email-audit', ...counts, sentEmails: 0,
+    let legacyCustomSmtpConfigured: boolean | null = null
+    let legacySmtpCredentialsAvailable: boolean | null = null
+    try {
+      const auth = await getJson(`https://api.supabase.com/v1/projects/${ref}/config/auth`, token) as Record<string, unknown>
+      legacyCustomSmtpConfigured = Boolean(auth.smtp_host && auth.smtp_user && auth.smtp_admin_email)
+      legacySmtpCredentialsAvailable = Boolean(auth.smtp_host && auth.smtp_user && auth.smtp_pass && auth.smtp_admin_email)
+    } catch { /* Report sender configuration separately without exposing private details. */ }
+    console.log(JSON.stringify({ action: 'email-audit', ...counts, legacyCustomSmtpConfigured,
+      legacySmtpCredentialsAvailable, sentEmails: 0,
       note: 'Counts all non-empty registered emails regardless of confirmation, syntax or account status; no mail sent.' }))
   } finally { connection.release(); await pool.end() }
 }
