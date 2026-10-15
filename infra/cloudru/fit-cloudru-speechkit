@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+test "$(id -u)" = 0
+test "$(hostname)" = fit-stage-app
+revision=$(cat /opt/fit/SPEECH_RELEASE_SHA)
+[[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+test "$(stat -c '%u:%a' /opt/fit/secrets/speech.env)" = 0:600
+exec podman run --rm --name fit-speechkit-cloudru --network=host --read-only \
+  --cap-drop=ALL --security-opt=no-new-privileges --memory=256m --cpus=1 --pids-limit=128 \
+  --env-file /opt/fit/secrets/speech.env "localhost/fit-speechkit:$revision"

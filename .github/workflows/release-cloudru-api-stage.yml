@@ -63,6 +63,9 @@ jobs:
         with:
           ref: ${{ needs.source.outputs.commit }}
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Verify stage host, current main and runtime configuration
         shell: bash
         run: |
@@ -75,8 +78,7 @@ jobs:
           sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
           sudo podman info >/dev/null
           sudo test -s /opt/fit/secrets/api.env
-          sudo grep -qx 'FIT_AI_FUNCTIONS_ENABLED=false' /opt/fit/secrets/api.env
-          sudo grep -qx 'FIT_AI_SUMMARY_GENERATION_DISABLED=true' /opt/fit/secrets/api.env
+          sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
           sudo podman container exists fit-api-stage
           curl --fail --silent --show-error http://127.0.0.1:18080/ready >/dev/null
       - name: Build exact-main image on the stage VM

@@ -149,10 +149,13 @@ test('prepare workflow retains green-main and default-off automatic gate without
   assert.match(workflow, /\.status == "completed" and .conclusion == "success"/)
   assert.match(workflow, /head_repository.full_name == \$repo/)
   assert.match(workflow, /VITE_YANDEX_API_BASE_URL: https:\/\/fit-training.ru\/api/)
-  assert.match(workflow, /VITE_ASSISTANT_PROGRAM_ENABLED: 'false'/)
+  assert.ok(workflow.includes("VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}"))
   assert.match(workflow, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(workflow, /group: cloudru-stage-vm\n\s+cancel-in-progress: false/)
   assert.match(workflow, /verify-cloudru-frontend.mjs/)
+  assert.match(workflow, /https:\/\/fit-training\.ru\/api\/health/)
+  assert.match(workflow, /\.releaseId == \$release/)
+  assert.match(workflow, /https:\/\/fit-training\.ru\/api\/v1\/clients\)" = 401/)
   assert.match(workflow, /scripts\/promote-cloudru-frontend.sh/)
   assert.ok(workflow.indexOf('Verify immutable candidate') < workflow.indexOf('Promote verified loopback'))
   assert.doesNotMatch(workflow, /ssh |SSH_|REGISTRATION_TOKEN|certbot|dns record|pg_restore|psql|podman run|DATABASE_PASSWORD|service_role/)
@@ -172,7 +175,7 @@ test('candidate preserves every production VITE setting except explicitly approv
     .map((match) => [match[1], match[2]]))
   const original = settings(production)
   const next = settings(candidate)
-  assert.deepEqual([...next.keys()].sort(), [...original.keys()].sort())
+  assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys()].sort())
   for (const [name, value] of original) {
     // VITE_SERVICE_NOTICE_ENABLED: временная плашка о восстановлении ИИ, решение владельца 14.10.
     if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED' || name === 'VITE_SERVICE_NOTICE_ENABLED') continue

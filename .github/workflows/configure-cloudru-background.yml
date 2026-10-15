@@ -1,0 +1,113 @@
+name: Configure Cloud.ru fresh background delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful CI run for current main
+        type: string
+        required: true
+      confirmation:
+        description: START_CLOUDRU_FRESH_PUSH_ONLY preserves old notifications without delivery
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 10
+    env:
+      YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
+      EXPECTED_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+      CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify green current main and existing Cloud.ru runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$CONFIRMATION" = START_CLOUDRU_FRESH_PUSH_ONLY
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" 'select(.path == ".github/workflows/ci.yml" and
+            .head_repository.full_name == $repo and .head_branch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success") | .head_sha' <<<"$run")
+          test "$commit" = "$GITHUB_SHA"
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$commit"
+          sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+      - name: Read the existing VAPID identity into private staging
+        run: |
+          set -euo pipefail
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          extra="/opt/fit/secrets/push-external-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$extra"
+          sudo install -m 600 /dev/null "$extra"
+          node scripts/read-cloudru-external-credentials.mjs push | sudo tee "$extra" >/dev/null
+          sudo "$(command -v node)" scripts/configure-cloudru-background.mjs "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Preserve historical outbox before enabling only new event delivery
+        run: |
+          set -euo pipefail
+          if sudo test -f /opt/fit/BACKGROUND_STARTED_AT; then
+            echo 'Existing delivery boundary retained; history is not modified again.'
+            exit 0
+          fi
+          owner="/opt/fit/secrets/background-owner-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          cutoff=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nCLOUDRU_PUSH_CONFIRMATION=START_CLOUDRU_FRESH_PUSH_ONLY\nCLOUDRU_PUSH_CUTOFF=%s\n' \
+            "$cutoff" | sudo tee -a "$owner" >/dev/null
+          sudo podman run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --env-file "$owner" "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-background-cutover.js
+          printf '%s\n' "$cutoff" | sudo tee /opt/fit/BACKGROUND_STARTED_AT >/dev/null
+          sudo chmod 644 /opt/fit/BACKGROUND_STARTED_AT
+      - name: Install the private worker and persistent bounded timer
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          sudo mv -T "/opt/fit/secrets/background-next-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env" /opt/fit/secrets/background.env
+          sudo install -d -m 755 /usr/local/libexec
+          sudo install -m 755 infra/cloudru/fit-cloudru-background /usr/local/libexec/fit-cloudru-background
+          sudo install -m 644 infra/cloudru/fit-background.service /etc/systemd/system/fit-background.service
+          sudo install -m 644 infra/cloudru/fit-background.timer /etc/systemd/system/fit-background.timer
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now fit-background.timer
+          sudo systemctl start fit-background.service
+          sudo systemctl is-active --quiet fit-background.timer
+          test "$(sudo systemctl show fit-background.service --property=Result --value)" = success
+          echo 'Cloud.ru push and session cleanup active; old notification history retained without delivery.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove unconsumed private staging
+        if: always()
+        run: |
+          sudo rm -f -- "/opt/fit/secrets/push-external-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env" \
+            "/opt/fit/secrets/background-next-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env" \
+            "/opt/fit/secrets/background-owner-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"

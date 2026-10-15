@@ -79,12 +79,13 @@ jobs:
           FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2 }}
           VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
           VITE_YANDEX_API_BASE_URL: https://fit-training.ru/api
+          VITE_SPEECHKIT_RELAY_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL || '' }}
           VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
           VITE_YANDEX_APP_SESSION_ENABLED: 'true'
           VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
           VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
           VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
-          VITE_ASSISTANT_PROGRAM_ENABLED: 'false'
+          VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}
           VITE_MAINTENANCE_MODE: 'false'
           # Временная плашка «Fit снова работает, ИИ восстанавливаем». Снять: 'false'.
           VITE_SERVICE_NOTICE_ENABLED: 'true'
@@ -101,6 +102,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/check-production-api-routing.mjs --web
           npm run build
           test -s dist/index.html
           grep -RqlF 'https://fit-training.ru/api' dist/assets
@@ -134,6 +136,15 @@ jobs:
           test "$(hostname)" = fit-stage-app
           sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
           curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18080/ready >/dev/null
+          # A same-origin build must not be promoted while /api/ still serves SPA HTML.
+          api_release=$(curl --fail --silent --show-error --max-time 10 \
+            http://127.0.0.1:18080/health | jq -er '.releaseId | select(test("^[a-f0-9]{40}$"))')
+          curl --fail --silent --show-error --max-time 10 \
+            --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/health |
+            jq -e --arg release "$api_release" '.status == "ok" and .releaseId == $release' >/dev/null
+          test "$(curl --silent --show-error --max-time 10 --output /dev/null \
+            --write-out '%{http_code}' --resolve fit-training.ru:443:127.0.0.1 \
+            https://fit-training.ru/api/v1/clients)" = 401
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.source.outputs.commit }}

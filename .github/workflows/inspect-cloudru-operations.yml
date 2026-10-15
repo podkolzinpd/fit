@@ -1,0 +1,109 @@
+name: Inspect Cloud.ru production operations
+
+on:
+  schedule:
+    - cron: '43 * * * *'
+  workflow_dispatch:
+    inputs:
+      renewal_check:
+        description: Also run a bounded Let's Encrypt staging renewal check
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 8
+    steps:
+      - name: Inspect runtime, workers, certificates and backup freshness without reading user data
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          failed=0
+          check() {
+            label=$1
+            shift
+            if "$@" >/dev/null 2>&1; then
+              printf '%s: passed\n' "$label" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              printf '%s: failed\n' "$label" | tee -a "$GITHUB_STEP_SUMMARY"
+              failed=1
+            fi
+          }
+          for unit in nginx certbot.timer fit-background.timer fit-speechkit.service; do
+            check "$unit" sudo systemctl is-active --quiet "$unit"
+          done
+          for domain in fit-training.ru api.fit-training.ru; do
+            check "Certificate $domain >=14 days" sudo openssl x509 -noout -checkend 1209600 \
+              -in "/etc/letsencrypt/live/$domain/fullchain.pem"
+          done
+          available=$(df -Pk / | awk 'NR == 2 {print $4}')
+          check 'Runner disk >=2 GiB' test "$available" -ge 2097152
+          check 'API ready' curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready
+          check 'Frontend available' curl --fail --silent --max-time 5 http://127.0.0.1:18081/auth
+          check 'Speech relay available' curl --fail --silent --max-time 5 http://127.0.0.1:18084/health
+          if sudo test -f /opt/fit/BACKUP_VERIFIED_AT; then
+            backup=$(sudo cat /opt/fit/BACKUP_VERIFIED_AT)
+            verified=$(date -d "$backup" +%s)
+            age=$(( $(date +%s) - verified ))
+            check 'Offsite backup restore verified within48h' test "$age" -ge 0
+            check 'Offsite backup restore freshness' test "$age" -lt 172800
+          else
+            echo 'Offsite backup restore: missing' | tee -a "$GITHUB_STEP_SUMMARY"
+            failed=1
+          fi
+          result=$(sudo systemctl show fit-background.service --property=Result --value)
+          check 'Background last run' test "$result" = success
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          image=$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')
+          check 'Running API marker matches container' test "$image" = "localhost/fit-api:$revision"
+          printf 'API release: %s; free disk: %s MiB\n' "$revision" "$((available / 1024))" >> "$GITHUB_STEP_SUMMARY"
+          exit "$failed"
+      - name: Inspect only private queue aggregates in a read-only transaction
+        if: always()
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          [[ "$id" =~ ^[0-9]+-[0-9]+$ ]]
+          owner="/opt/fit/secrets/queue-inspect-$id.env"
+          sudo test ! -e "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" \
+            "localhost/fit-api:$revision" node dist/cloudru-operations-health.js | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Verify certificate renewal against the staging CA
+        if: always() && inputs.renewal_check
+        run: |
+          set -euo pipefail
+          if sudo timeout 300 certbot renew --dry-run --non-interactive --no-random-sleep-on-renew >/dev/null 2>&1; then
+            echo 'Certificate renewal dry-run: passed' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Certificate renewal dry-run: failed' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

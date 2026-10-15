@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Fit Cloud.ru background dispatch every minute
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=5
+Unit=fit-background.service
+
+[Install]
+WantedBy=timers.target

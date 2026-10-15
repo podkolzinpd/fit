@@ -2,8 +2,10 @@
 
 ## Цель и срок жизни документа
 
-Production Fit уже использует Yandex ID, Yandex API и Managed PostgreSQL;
-frontend `fit-training.ru` публикуется через Yandex API Gateway/Object Storage.
+Production Fit использует внешний Yandex ID; app-session/API/PostgreSQL и media
+работают в Cloud.ru, frontend `fit-training.ru` публикуется через Cloud.ru Nginx.
+Названия Yandex API/migrations ниже обозначают сохранённые кодовые контракты.
+Старый Yandex-контур сохранён, обратной синхронизации записей Cloud.ru нет.
 Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
 Supabase остаётся временным legacy-источником для legacy linking, неперенесённых
 media, локальных тестов и rollback — не вторым production backend новых функций.
@@ -21,10 +23,11 @@ routing или переносимые продуктовые данные. Те�
 ## Текущее production-состояние и цель вывода legacy
 
 - новые и существующие пользователи входят только через Yandex ID;
-- все production-чтения и записи продуктовых данных идут через Yandex API в
-  Managed PostgreSQL и Yandex Object Storage;
+- актуальная web-сборка направляет продуктовые запросы в `api.fit-training.ru`
+  и Cloud.ru PostgreSQL/S3; старые cached/native writers ещё требуют проверки
+  и контролируемого закрытия: наличие старого API не означает dual-write;
 - frontend выпускается на `fit-training.ru` только проверенным
-  `.github/workflows/deploy-yandex-frontend.yml` после зелёного CI на `main`;
+  `.github/workflows/prepare-cloudru-frontend.yml` после зелёного CI на `main`;
 - production frontend больше не маршрутизирует продуктовые запросы в Supabase,
   web/Android/iOS production build больше не требует `VITE_SUPABASE_*` и
   не инициализирует Supabase SDK/Auth. Локальный SDK, server-side legacy linking/

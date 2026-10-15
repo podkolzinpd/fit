@@ -63,8 +63,9 @@ Workflow собирает exact-main образ, проверяет кандид
 `/opt/fit/RUNNING_SHA`; при неудаче после переключения пытается вернуть прежний
 образ. До запуска кандидата он применяет только новые numbered SQL-миграции
 из того же exact-main образа; DNS и публичный listener не меняет. Runtime берёт
-существующий `/opt/fit/secrets/api.env` и отказывается выпускать ревизию, если
-AI-функции там не выключены.
+существующий `/opt/fit/secrets/api.env`. Проверка runtime разрешает только
+Cloud.ru PostgreSQL с fit_api и либо явно выключенный AI, либо согласованные
+external AI credentials без Yandex VM metadata и старого function gateway.
 
 Миграции выпуска запускает `dist/cloudru-release-migrations.js` в одноразовом
 read-only Podman-контейнере без capabilities/публичного порта. Только этот
@@ -177,6 +178,85 @@ acceptance. После Cloud.ru writes возврат DNS на старый Yand
 workflow и вернуть прежние A, если выпуск сертификата не проходит. TLS-ключи
 остаются на VM, в GitHub/artifacts не выгружаются.
 
+## Cloud.ru: стабилизация и проверяемая эксплуатация
+
+14.10 ручные API/frontend38633109023/38633113898 выпустили d10c2d12;
+после public release/readiness readback включены оба CLOUDRU autodeploy-флага.
+Production web использует `https://fit-training.ru/api` через Nginx того же
+домена; новые native builds используют `https://api.fit-training.ru`. Технический
+Yandex origin не принимается production native validator. Старые установленные
+bundles этим не переписываются. Backend provider выбирается DNS/API, не новым
+доменных контрактом. Старые Yandex DNS/API пока не изменены; владелец разрешил их совместимость.
+Manual workflow `Route legacy Yandex addresses to Cloud.ru` сначала делает inspect,
+затем меняет только три A/CNAME записи старой зоны и отдельно revision старого API.
+API проксирует в Cloud.ru с сохранением CORS Origin и сессии; credentials/DB
+в image отсутствуют. Междоменный307 отвергнут реальным Chromium-тестом:
+браузер меняет Origin на null. Прокси не повторяет запрос при сетевой ошибке.
+Старые DB/resources/revisions сохраняются; предыдущая revision записана в summary.
+Перед запуском Cloud.ru background выполнить mode pause-background: он проверяет
+единственный старый fit-stage-push-dispatcher timer и его target/path, приостанавливает
+только этот timer и проверяет PAUSED. Ресурс не удаляется; не включать одновременно
+старый timer и Cloud.ru timer.
+Старая app-session может потребовать повторного входа в Cloud.ru. Это не объединяет
+независимые изменения двух БД. Повторный Yandex Terraform apply может вернуть
+старый writer, поэтому YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED должен оставаться off.
+
+Подготовленные main-only workflows включаются после их CI и ручной приёмки:
+
+- `Configure Cloud.ru external AI`: mode cors-only исправляет www/native CORS
+  отдельным candidate/rollback без внешних ключей и без включения AI. Mode
+  external-ai берёт только существующие YandexGPT key,
+  folder/model из pinned Lockbox version через GitHub OIDC; Supabase credentials
+  не копируются, Yandex ресурсы/IAM не меняются. Synthetic model call и API
+  candidate проверяются до замены root0600 runtime env, с rollback. Prompt и
+  matching прежние. После success устанавливается CLOUDRU_AI_ENABLED=true и
+  заново строится frontend; до этого программа Assistant выключена в сборке.
+- `Configure Cloud.ru authenticated SpeechKit relay`: отдельный непривилегированный
+  Podman relay на127.0.0.1:18084, текущая app-session проверяется через loopback
+  API до открытия SpeechKit stream. `/stt` проксируется через существующий API
+  HTTPS. Никаких DB/media credentials в relay; ограничения payload/auth buffer,
+  срока соединения и ресурсов, без текста/токенов в логах. До promotion —
+  synthetic upstream и unauthenticated guard. После success установить
+  CLOUDRU_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt и пересобрать web/native.
+- `Configure Cloud.ru fresh background delivery`: только существующая VAPID
+  identity, runtime DB role fit_api, systemd timer раз в минуту и flock без
+  параллельных batches. По прямому решению владельца старые unsent и uncertain
+  recovery receipts получают terminal history marker без удаления/повторной
+  отправки; первый BACKGROUND_STARTED_AT не сдвигается повторным запуском.
+  Обычные push и session cleanup работают в Cloud.ru; Telegram/Tracker feedback
+  credentials этим workflow не переносятся. Владелец15.10 явно оставил эту
+  доставку выключенной; обращения сохраняются без внешней отправки.
+- `Backup and restore-check Cloud.ru production`: отдельный приватный bucket
+  fit-cloudru-backups-c2ad3760. Разовый bootstrap, затем ежедневно05:35МСК.
+  Bootstrap также включает versioning приватного media bucket; ежедневная
+  проверка читает объекты и считает безопасный общий checksum без object paths.
+  Versioning защищает последующие изменения, не восстанавливает старые версии
+  задним числом. pg_dump17 custom archive шифруется AES-256-GCM до отправки; ключ v1 хранится
+  только в CLOUDRU_BACKUP_ENCRYPTION_KEY и защищённом временном runtime env.
+  Не перезаписывать/ротировать этот secret без сохранения старого ключа: иначе
+  предыдущие backups не восстановятся. Срок хранения объектов пока не ограничен;
+  контролировать объём. Лимит одного archive64MiB предотвращает расход памяти.
+  После S3 readback/checksum/decryption выполняется настоящий restore на той же
+  Cloud.ru VM в одноразовом PostgreSQL17 без сети/портов, с отдельным volume.
+  Backup сохраняет grants; restore проверяет fit_api SELECT, RLS/owner трёх
+  основных таблиц, число таблиц и migration history; пользовательские строки не
+  печатаются, не попадают в artifacts и не копируются локально. Временные dumps,
+  env и restore volume удаляются только в рамках свежего attempt. Native
+  managed PostgreSQL backups не считаются доказанными этим механизмом.
+- `Verify Cloud.ru production`: hosted read-only DNS/TLS/web/API/401 monitor
+  каждые15мин, certificate margin14дней, безопасный JSON artifact без bodies.
+- `Inspect Cloud.ru production operations`: ежечасно проверяет readiness,
+  worker/relay/renewal timer, disk>=2GiB, certificates>=14дней и возраст последнего
+  проверенного offsite restore<48часов. Manual renewal_check запускает bounded
+  staging renewal dry-run без выдачи нового production сертификата. Отдельный
+  short-lived owner container читает только counts push outbox в READ ONLY
+  transaction (statement timeout5s): pending, overdue>15min, stale lease>10min
+  и terminal failures за час; historical cutover marker исключён. Owner env
+  удаляется EXIT и не передаётся runtime/relay/background.
+
+Workflows сохраняют общий VM lock и не отменяют уже выполняющиеся операции.
+Bootstrap/configuration не означают пройденный реальный OAuth/voice E2E;
+приёмка двух тестовых ролей и свежие мобильные bundles фиксируются отдельно.
 Web ingress передаёт ответы stage Nginx потоково (`proxy_buffering off`), чтобы
 загрузка JS/CSS не зависела от записи больших ответов во временный каталог
 системного Nginx. После установки конфигурации workflow скачивает целиком все

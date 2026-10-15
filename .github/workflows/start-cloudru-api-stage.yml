@@ -71,7 +71,7 @@ jobs:
             printf 'YANDEX_OAUTH_CLIENT_ID=%s\n' "$YANDEX_OAUTH_CLIENT_ID"
             printf 'YANDEX_NATIVE_REGISTRATION_ENABLED=true\n'
             printf 'YANDEX_ONLY_AUTH_ENABLED=true\n'
-            printf 'CORS_ALLOWED_ORIGINS=https://fit-training.ru,https://fit-drab.vercel.app,capacitor://localhost,https://localhost\n'
+            printf 'CORS_ALLOWED_ORIGINS=https://fit-training.ru,https://www.fit-training.ru,https://fit-drab.vercel.app,capacitor://localhost,https://localhost\n'
           } >>"$runtime_file"
           sudo install -d -m 700 /opt/fit/secrets
           sudo install -m 600 "$runtime_file" /opt/fit/secrets/api.env

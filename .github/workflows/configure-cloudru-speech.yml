@@ -1,0 +1,84 @@
+name: Configure Cloud.ru authenticated SpeechKit relay
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: Successful CI run for current main
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  configure:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify green current main and configured external AI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" 'select(.path == ".github/workflows/ci.yml" and
+            .head_repository.full_name == $repo and .head_branch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success") | .head_sha' <<<"$run")
+          test "$commit" = "$GITHUB_SHA"
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          test "$(cat /opt/fit/RUNNING_SHA)" = "$commit"
+          sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+          sudo grep -qx 'FIT_AI_FUNCTIONS_ENABLED=true' /opt/fit/secrets/api.env
+      - name: Build and verify isolated relay before exposing the WebSocket route
+        run: |
+          set -euo pipefail
+          id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          next="/opt/fit/secrets/speech-next-$id.env"
+          candidate="fit-speech-candidate-$id"
+          sudo test ! -e "$next"
+          sudo install -m 600 /dev/null "$next"
+          sudo awk '/^YANDEX_CLOUD_(API_KEY|FOLDER_ID|MODEL_ID)=/' /opt/fit/secrets/api.env \
+            | sudo tee "$next" >/dev/null
+          test "$(sudo wc -l "$next" | awk '{print $1}')" -eq 3
+          trap 'sudo podman rm --force --ignore "$candidate" >/dev/null' EXIT
+          sudo podman build --pull=always -f services/speechkit-relay/Dockerfile.cloudru \
+            -t "localhost/fit-speechkit:$GITHUB_SHA" services/speechkit-relay
+          sudo podman run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --env-file "$next" "localhost/fit-speechkit:$GITHUB_SHA" node cloudru-smoke.mjs upstream
+          sudo podman run --detach --name "$candidate" --network=host --read-only --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$next" --env PORT=18085 \
+            "localhost/fit-speechkit:$GITHUB_SHA" >/dev/null
+          for attempt in {1..20}; do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:18085/health >/dev/null; then break; fi
+            test "$attempt" -lt 20
+            sleep 1
+          done
+          sudo podman run --rm --network=host --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --env PORT=18085 "localhost/fit-speechkit:$GITHUB_SHA" node cloudru-smoke.mjs guard
+      - name: Promote verified relay and API ingress with rollback
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          sudo bash scripts/promote-cloudru-speech.sh "$GITHUB_SHA" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Remove unconsumed private staging
+        if: always()
+        run: |
+          sudo podman rm --force --ignore "fit-speech-candidate-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >/dev/null
+          sudo rm -f -- "/opt/fit/secrets/speech-next-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"

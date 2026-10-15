@@ -290,8 +290,8 @@ test('Cloud.ru runtime and frontend releases require successful current-main CI'
     assert.match(release, /group: cloudru-stage-vm/)
     assert.doesNotMatch(release, /--publish 0\.0\.0\.0/)
   }
-  assert.match(cloudruApiRelease, /FIT_AI_FUNCTIONS_ENABLED=false/)
-  assert.match(cloudruApiRelease, /FIT_AI_SUMMARY_GENERATION_DISABLED=true/)
+  assert.ok(cloudruApiRelease.includes('scripts/check-cloudru-api-env.mjs'))
+  assert.doesNotMatch(cloudruApiRelease, /FIT_AI_FUNCTIONS_ENABLED=true|YANDEX_CLOUD_API_KEY=/)
   assert.match(cloudruApiRelease, /--publish 127\.0\.0\.1:18082:8080/)
   assert.match(cloudruApiRelease, /--publish 127\.0\.0\.1:18080:8080/)
   assert.match(cloudruApiRelease, /trap rollback ERR/)
