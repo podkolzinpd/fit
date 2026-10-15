@@ -197,12 +197,9 @@ export function AuthPage() {
 
   if (yandexOnlyAuthConfig !== null) return <ClientLimeStandaloneLayout authEntry>
     <main className="lime-auth-entry" aria-label="Вход в Fit">
-      <header className="lime-auth-header">
-        <FitLogo />
-      </header>
       <img className="lime-auth-photo" src="/assets/startup-photo-983c93dc4df8.jpg" width={940} height={1673} alt="" aria-hidden="true" fetchPriority="high" onError={(event) => { event.currentTarget.hidden = true }} />
       <section className="lime-auth-actions" aria-label="Авторизация через Yandex ID">
-        <h1>Добро пожаловать</h1>
+        <h1 className="lime-auth-title" aria-label="Добро пожаловать в ФИТ"><span>Добро пожаловать в</span><FitLogo /></h1>
         <p className="muted">Войдите, чтобы продолжить тренировки</p>
         {(hasPendingInvitationLink() || returnTo?.startsWith('/invite') || returnTo?.startsWith('/join'))
           && <p className="muted">Войдите, чтобы продолжить по приглашению.</p>}
