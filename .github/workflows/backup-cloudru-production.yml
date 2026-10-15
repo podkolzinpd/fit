@@ -45,6 +45,9 @@ jobs:
           test -n "$CLOUDRU_BACKUP_KEY_ID"
           test -n "$CLOUDRU_BACKUP_KEY_SECRET"
           test -n "$CLOUDRU_BACKUP_ACCOUNT_ID"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Back up only Cloud.ru PostgreSQL into encrypted private Cloud.ru S3
         run: |
           set -euo pipefail
@@ -96,7 +99,10 @@ jobs:
           directory="/opt/fit/backup-attempts/$id"
           container="fit-backup-restore-$id"
           volume="fit-backup-restore-$id"
-          image='public.ecr.aws/docker/library/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3'
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          image="localhost/fit-backup-restore:$GITHUB_SHA"
+          sudo podman build --pull=missing -t "$image" \
+            -f infra/cloudru/backup-restore.Dockerfile infra/cloudru
           if sudo podman container exists "$container" || sudo podman volume exists "$volume"; then exit 1; fi
           trap 'sudo podman rm --force --ignore "$container" >/dev/null; sudo podman volume rm --force "$volume" >/dev/null' EXIT
           echo 'cloudru_restore_stage=start'

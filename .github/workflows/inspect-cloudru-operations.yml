@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 8
     steps:
       - name: Inspect runtime, workers, certificates and backup freshness without reading user data
+        env:
+          SPEECH_EXPECTED_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL }}
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
@@ -39,7 +41,7 @@ jobs:
               failed=1
             fi
           }
-          for unit in nginx certbot.timer fit-background.timer fit-speechkit.service; do
+          for unit in nginx certbot.timer fit-background.timer; do
             check "$unit" sudo systemctl is-active --quiet "$unit"
           done
           for domain in fit-training.ru api.fit-training.ru; do
@@ -50,7 +52,13 @@ jobs:
           check 'Runner disk >=2 GiB' test "$available" -ge 2097152
           check 'API ready' curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready
           check 'Frontend available' curl --fail --silent --max-time 5 http://127.0.0.1:18081/auth
-          check 'Speech relay available' curl --fail --silent --max-time 5 http://127.0.0.1:18084/health
+          if test -n "$SPEECH_EXPECTED_URL"; then
+            check 'Speech relay configured URL' test "$SPEECH_EXPECTED_URL" = wss://api.fit-training.ru/stt
+            check 'Speech relay service' sudo systemctl is-active --quiet fit-speechkit.service
+            check 'Speech relay available' curl --fail --silent --max-time 5 http://127.0.0.1:18084/health
+          else
+            echo 'Speech relay disabled by configuration.' | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
           if sudo test -f /opt/fit/BACKUP_VERIFIED_AT; then
             backup=$(sudo cat /opt/fit/BACKUP_VERIFIED_AT)
             verified=$(date -d "$backup" +%s)
