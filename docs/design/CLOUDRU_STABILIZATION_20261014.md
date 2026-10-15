@@ -51,9 +51,9 @@ credential и доступность требуют отдельного фак�
 | --- | --- | --- |
 | 1 | Native canonical API, web same-origin, guards passed; old proxy deployed, forwarding503 | В работе |
 | 2 | Root/www/api и legacy authoritative DNS →87.242.117.210; DNS3/3, HTTP/TLS8/8 passed | Выполнен |
-| 3 | Main6aec6640 CI38777611359 green, API38779866056/frontend38781527433 success | Выполнен для6aec6640 |
-| 4 | GPT smoke passed/frontend AI on; voice отложен владельцем; old timer PAUSED, fresh worker start failed | Не завершён |
-| 5 | Пока только unauthenticated hosting/API guards | Не завершён |
+| 3 | Main ed7969d3 CI38787218058, API38787850227/frontend38787850409 success | Выполнен для ed7969d3 |
+| 4 | GPT smoke passed/frontend AI on; fresh push/session cleanup ACTIVE38788301745, old timer PAUSED; voice отложен владельцем | Серверный scope выполнен; voice отложен |
+| 5 | Hosting/API guards и Android build passed; Yandex login показал регистрацию, не отправляли; device/role delivery не проверены | Не завершён |
 | 6 | Реальный DB restore38777631050 passed; retention7145MiB, TLS renewal passed; media metadata403 оставлено владельцем | Частично выполнен |
 
 ## Дополнительные решения и фактура
@@ -422,3 +422,27 @@ Targeted29/29 passed. Изолированный локальный PG17 под�
 сброс SET LOCAL после commit/rollback; одноразовый контейнер удалён.
 Полный npm run check passed: frontend2697/API1420+159 localDB skips,
 infra313/hosting169 и builds. CI/production — следующие гейты.
+
+## Финальный серверный readback — 15.10
+
+PR1656 merged ed7969d3 после CI38786682017; main CI38787218058,
+API38787850227 и frontend38787850409 success. После переноса server timeout
+в SET LOCAL worker подключился и завершился успешно. Ops38788159966 и
+38788392205 success: nginx/timers/API/frontend/certificates/disk/backup freshness,
+worker Result=success/exit0 и queue pending/overdue/stale/terminal=0. В окне
+журнала15 минут ещё есть старый08P01; это история до исправления, не текущий
+результат службы. Повторная config38788301745 success явно удержала существующий
+cutoff и не изменила историю повторно. Launcher обновлён, voice/feedback OFF.
+
+Public monitor DNS3/3 и HTTP/TLS8/8 passed. Certbot staging renewal38781593349
+success. Android auth-smoke38787253845 создал APK с canonical Cloud.ru API и
+исходным публичным VAPID; установка/вход/уведомление на устройстве не проверены.
+Xcode отсутствует, iOS bundle не собран. Регистрацию тестового клиента не
+отправляли; authenticated client/trainer/AI/media/recipient-delivery acceptance
+остаётся открыта по решению продолжить без входа. Media403/versioning оставлены
+без изменений владельцем; DB restore proof не скрывает отдельную media failure.
+Старый technical Yandex API GET timeout; обе БД сохранены без reimport/merge.
+
+Этот docs-only readback фиксирует новые факты после merge. Следующий docs-only
+main сохраняет ту же реализацию runtime; отдельный новый продуктовый scope
+и обратное переключение в Yandex не начинаются.
