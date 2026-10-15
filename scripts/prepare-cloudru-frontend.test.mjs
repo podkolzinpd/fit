@@ -148,7 +148,7 @@ test('prepare workflow retains green-main and default-off automatic gate without
   assert.match(workflow, /contents: read\n  actions: read/)
   assert.match(workflow, /\.status == "completed" and .conclusion == "success"/)
   assert.match(workflow, /head_repository.full_name == \$repo/)
-  assert.match(workflow, /VITE_YANDEX_API_BASE_URL: https:\/\/api.fit-training.ru/)
+  assert.match(workflow, /VITE_YANDEX_API_BASE_URL: https:\/\/fit-training.ru\/api/)
   assert.match(workflow, /VITE_ASSISTANT_PROGRAM_ENABLED: 'false'/)
   assert.match(workflow, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(workflow, /group: cloudru-stage-vm\n\s+cancel-in-progress: false/)
