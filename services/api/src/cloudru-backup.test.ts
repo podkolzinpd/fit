@@ -69,6 +69,11 @@ it('reports only reviewed storage codes and HTTP status, never error payloads or
   const error = new S3ServiceException({ name: 'AccessDenied', $fault: 'client',
     $metadata: { httpStatusCode: 403, requestId: 'private-request' }, message: 'private object or credential' })
   expect(cloudruStorageFailure(error)).toEqual({ reason: 'AccessDenied', httpStatus: 403 })
+  for (const code of ['InvalidArgument', 'MalformedACLError', 'MissingContentMD5', 'BadDigest', 'InvalidDigest']) {
+    const badRequest = new S3ServiceException({ name: code, $fault: 'client',
+      $metadata: { httpStatusCode: 400 }, message: 'private ACL or credential payload' })
+    expect(cloudruStorageFailure(badRequest)).toEqual({ reason: code, httpStatus: 400 })
+  }
   error.name = 'private-object-name'
   expect(cloudruStorageFailure(error)).toEqual({ reason: 'storage_operation_failed', httpStatus: 403 })
   expect(cloudruStorageFailure(new Error('private-secret'))).toEqual({ reason: 'storage_operation_failed' })
