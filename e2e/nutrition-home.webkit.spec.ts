@@ -84,7 +84,8 @@ for (const mode of ['lime', 'identity', 'first-run']) test(`nutrition unmounts t
   })
   await page.goto('/me')
   await expect(page.locator('.phone-frame')).toHaveClass(mode === 'lime' ? /fit-client-lime/ : /client-home-identity/)
-  const card = page.getByRole('region', { name: 'Питание сегодня', exact: true })
+  // Count hidden DOM nodes too: workout input must unmount the summary.
+  const card = page.locator('section.nutrition-summary')
   await expect(card.getByText('228,3 ккал')).toBeVisible()
   await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
   await expect(page.locator('.voice-action-requesting')).toBeVisible()
