@@ -1,5 +1,6 @@
 import { pathToFileURL } from 'node:url'
 import { BackgroundDispatcher } from './background-dispatcher.js'
+import { backgroundDispatchDiagnostics } from './background-dispatch-error.js'
 import { DirectPushNotificationSender } from './push-notifications/direct-sender.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
@@ -29,5 +30,8 @@ export async function runCloudruBackground(): Promise<void> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runCloudruBackground().catch(() => { console.error('cloudru_background_failed'); process.exitCode = 1 })
+  runCloudruBackground().catch((error: unknown) => {
+    console.error(JSON.stringify({ event: 'cloudru_background_failed', ...backgroundDispatchDiagnostics(error) }))
+    process.exitCode = 1
+  })
 }

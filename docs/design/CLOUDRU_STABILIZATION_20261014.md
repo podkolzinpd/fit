@@ -50,11 +50,11 @@ credential и доступность требуют отдельного фак�
 | Пункт | Результат и проверка | Статус |
 | --- | --- | --- |
 | 1 | Native canonical API, web same-origin, guards passed; old proxy deployed, forwarding503 | В работе |
-| 2 | Public DNS/TLS8/8; old api87, root/www old IP; DNS operator403 | В работе |
-| 3 | Main619892be CI green, API/frontend released; backup/pending migrations passed | Выполнен для619892be |
-| 4 | External GPT smoke passed/frontend AI on; SpeechKit gRPC7; old timer PAUSED, fresh push OFF | Не завершён |
+| 2 | Root/www/api и legacy authoritative DNS →87.242.117.210; DNS3/3, HTTP/TLS8/8 passed | Выполнен |
+| 3 | Main6aec6640 CI38777611359 green, API38779866056/frontend38781527433 success | Выполнен для6aec6640 |
+| 4 | GPT smoke passed/frontend AI on; voice отложен владельцем; old timer PAUSED, fresh worker start failed | Не завершён |
 | 5 | Пока только unauthenticated hosting/API guards | Не завершён |
-| 6 | Disk/TLS/API/hosting passed; offsite S3 AccessDenied403, restore pending | Не завершён |
+| 6 | Реальный DB restore38777631050 passed; retention7145MiB, TLS renewal passed; media metadata403 оставлено владельцем | Частично выполнен |
 
 ## Дополнительные решения и фактура
 
@@ -379,3 +379,23 @@ Bootstrap38770947883 подтвердил приватность backup-баке
 PR1652 mergeda0551525 после CI38772568631. Drill38774616037 выявил pg_stat_statements и pgaudit в архиве; restore missing_extension. Готовится отдельный disposable PG17 образ с pinned pgaudit17.1-2.pgdg13+1 из подписанного PGDG repo и preload обеих extension libraries; архив/данные/ACL не исключаются. Audit/statement/error SQL logging выключен только в disposable restore, чтобы ошибки не публиковали row values. Production PostgreSQL не меняется. Образ собран локально; two-cluster rehearsal с обеими extensions прошла68 tables/151 migrations/API+analytics grants/core RLS+owner, analytics NOLOGIN. Реальный drill остаётся обязательным.
 
 API release38773421604 для8ecbb182 оборвался из-за полного диска runner; live API8f651b85 остался healthy. Штатная retention38773909661 частично удалила старые release/frontend dirs, затем остановилась на image in use by external container. Read-only inspect38774211200 подтвердил7098320KiB свободно (~6.8GiB). Новая обработка сохраняет такие referenced images и продолжает безопасные cache cleanup/freshness/readiness гейты; прочие ошибки остаются fatal, force/system/volume prune не добавляется. Монитор speech ожидает relay только при настроенном canonical WSS URL; пустая настройка отражает решение владельца OFF.
+
+## Production recovery and fresh-push activation — 15.10
+
+Main6aec6640 прошёл CI38777611359 и API38779866056. Drill38777631050
+успешно восстановил реальный offsite archive в изолированный PG17 и проверил
+таблицы, migration history, runtime grants/RLS и обе extensions. Общий job
+остался red из-за отдельного media acl_read403; владелец оставил media без
+изменений. Retention38777851242 success,7145MiB свободно.
+
+Old timer38780623283 PAUSED. Исходный публичный VAPID найден в summary
+bootstrap33191312202; Lockbox identity совпала, публичная repo variable
+восстановлена, frontend38781527433 success. Configure38781475448 сохранил
+историческую очередь без доставки и постоянную границу запуска, установил
+timer, но worker завершился с ошибкой. Следующий gate — безопасная диагностика
+без вывода journal message, SQL, подписок или credentials. Не считать push
+работающим только по active timer. Диагностика публикует только fixed flags
+и allowlisted DB error codes; runtime worker использует существующий sanitizer.
+
+Клиентская сессия не получена: владелец увидел регистрацию, форму не отправляли.
+Голос и feedback остаются OFF; media repair не запускался.

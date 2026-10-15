@@ -22,6 +22,18 @@ jobs:
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 8
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read bounded and sanitized background diagnostics
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl show fit-background.service --property=Result --property=ExecMainCode --property=ExecMainStatus
+          sudo journalctl --unit=fit-background.service --since="15 minutes ago" --lines=100 --output=json --no-pager |
+            python3 scripts/cloudru-background-diagnostics.py
       - name: Inspect runtime, workers, certificates and backup freshness without reading user data
         env:
           SPEECH_EXPECTED_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL }}
