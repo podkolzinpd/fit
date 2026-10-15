@@ -405,6 +405,9 @@ test('Lime auth entry stays dark after client logout without changing its saved 
   })
   await page.addInitScript((id) => {
     localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 's'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
+    // This is a returning athlete, as in the shared pilot fixtures. Its old
+    // Assistant intro must not cover the settings logout target in CI.
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-assistant-2026-09']))
     localStorage.setItem('fit.appTheme', 'light')
     localStorage.setItem(`fit.clientLime.theme.${id}`, 'light')
   }, clientId)
