@@ -2,8 +2,8 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutTemplateDraft } from '../src/shared/domain'
-import type { TrainerFinanceClientBundle, TrainerFinancePackageDraft, TrainerFinancePaymentDraft } from '../src/data/repositories/trainer-finance.repository'
-import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId, customExerciseId, sessionToken, coachGestureWorkout, revealCoachSetDelete, expectContainedButtonText, addEditorExercise, checkEditorAction, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, expectSwipeActionReadable, mockClientStreamingVoice, mockPublicTrainer } from './fit-lime-fixtures'
+import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic } from './fit-lime-fixtures'
+import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId, customExerciseId, coachGestureWorkout, revealCoachSetDelete, expectContainedButtonText, addEditorExercise, checkEditorAction, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, expectSwipeActionReadable, mockClientStreamingVoice, mockPublicTrainer } from './fit-lime-fixtures'
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
@@ -1390,71 +1390,26 @@ for (const [width, role] of [[390, 'client'], [430, 'client'], [1440, 'trainer']
   })
 }
 
+// Same themes/viewports: real error/copy hit targets and overflow. Slow health,
+// reload and command replay belong to the separate behavior acceptance.
 for (const [fitLime, theme] of [[false, 'light'], [false, 'dark'], [true, 'dark']] as const) for (const width of [390, 430, 1440]) {
-  test(`Template slow connection and diagnostic retry ${width} lime=${fitLime} ${theme}`, { tag: ["@lime-templates"] }, async ({ page }, info) => {
+  test(`Template diagnostic layout ${width} lime=${fitLime} ${theme}`, { tag: ["@lime-templates"] }, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
     await mockPilot(page, { fitLime, workouts: [{ ...restTimerWorkout(), status: 'planned' }] })
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
-    const rows = new Map<string, object>()
-    const commands: Array<{ draft: WorkoutTemplateDraft; expectedVersion: number | null }> = []
-    await page.route('http://127.0.0.1:4100/v1/workout-templates', async (route) => {
-      if (route.request().method() === 'GET') return route.fulfill({ json: { templates: [...rows.values()] } })
-      const command = route.request().postDataJSON() as typeof commands[number]
-      commands.push(command)
-      const row = rows.get(command.draft.id) ?? { ...command.draft, trainerId, notes: command.draft.notes ?? null, version: 1, createdAt: '2026-10-08T00:00:00Z', updatedAt: '2026-10-08T00:00:00Z' }
-      rows.set(command.draft.id, row)
-      if (commands.length === 1) return route.abort('connectionreset')
-      return route.fulfill({ json: { template: row } })
-    })
+    await mockTemplateUncertainSave(page)
     await page.goto(`/schedule/templates/new/editor?sourceWorkout=${workoutId}`)
     await page.getByLabel('Название шаблона').fill('Силовая тренировка с длинным названием без потери черновика')
-    await page.clock.install()
-    await page.clock.fastForward(46_000)
-    let probes = 0
-    let release = () => {}
-    const gate = new Promise<void>((resolve) => { release = resolve })
-    await page.route('http://127.0.0.1:4100/health', async (route) => {
-      probes += 1
-      await gate
-      await route.fallback()
-    })
-    try {
-      await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
-      await expect.poll(() => probes).toBe(1)
-      await expect(page.getByRole('button', { name: 'Сохраняем…', exact: true })).toBeDisabled()
-      await page.clock.fastForward(2192)
-      expect(probes).toBe(1)
-      expect(commands).toHaveLength(0)
-      release()
-      const alert = page.getByRole('alert')
-      await expect(alert).toContainText('Не удалось подключиться к серверу')
-      await expect(alert).toContainText('Код для поддержки: FIT-')
-      expect(commands).toHaveLength(1)
-      const copy = alert.getByRole('button', { name: 'Скопировать диагностику' })
-      await copy.scrollIntoViewIfNeeded()
-      expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44)
-      await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: (text: string) => { localStorage.setItem('template-test-diagnostics', text); return Promise.resolve() } } }))
-      await copy.click()
-      await expect(alert.getByRole('status')).toHaveText('Скопировано')
-      const diagnostic = await page.evaluate(() => localStorage.getItem('template-test-diagnostics'))
-      expect(diagnostic).toContain('POST /v1/workout-templates')
-      expect(diagnostic).toContain('Этап: network')
-      expect(diagnostic).not.toContain('mutation_preflight_failed')
-      expect(diagnostic).not.toContain(sessionToken)
-      expect(diagnostic).not.toContain('Силовая тренировка')
-      expect(commands).toHaveLength(1)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      await page.screenshot({ path: info.outputPath('template-error-diagnostics.png'), fullPage: true })
-      await page.reload()
-      await expect(page.getByLabel('Название шаблона')).toHaveValue('Силовая тренировка с длинным названием без потери черновика')
-      await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
-      await expect(page).toHaveURL(/\/schedule\/templates$/)
-      await expect(page.locator('.template-card')).toHaveCount(1)
-      expect(commands).toHaveLength(2)
-      expect(commands[1]).toEqual(commands[0])
-      expect(rows.size).toBe(1)
-      expect(await page.evaluate((key) => localStorage.getItem(key), `fit.workout-template-draft.${trainerId}.source:${workoutId}`)).toBeNull()
-    } finally { release() }
+    await page.getByRole('button', { name: 'Сохранить шаблон', exact: true }).click()
+    const alert = page.getByRole('alert')
+    await expect(alert).toContainText('Не удалось подключиться к серверу')
+    await expect(alert).toContainText('Код для поддержки: FIT-')
+    const copy = alert.getByRole('button', { name: 'Скопировать диагностику' })
+    await copy.scrollIntoViewIfNeeded()
+    expect((await copy.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await copyTemplateDiagnostic(page)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath('template-error-diagnostics.png'), fullPage: true })
   })
 }
 
@@ -1881,44 +1836,14 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   })
 }
 
+// Widths exercise the real keyboard/focus/save hit target; themes and Mono/Lime
+// retain every original visual state without replaying edit/delete/pay chains.
 for (const fitLime of [false, true]) for (const theme of ['light', 'dark']) for (const width of [320, 390, 430, 1440]) {
-  test(`Finance payment lifecycle compact ${fitLime ? 'Lime' : 'Mono'} ${theme} ${width}`, { tag: ["@lime-finance","@lime-critical"] }, async ({ page }, testInfo) => {
+  test(`Finance payment layout and keyboard ${fitLime ? 'Lime' : 'Mono'} ${theme} ${width}`, { tag: ["@lime-finance","@lime-critical"] }, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
     await mockPilot(page, { fitLime })
     await page.addInitScript((value) => localStorage.setItem('fit.appTheme', value), theme)
-    const ledger: TrainerFinanceClientBundle = { clientId, packages: [], payments: [], sessions: [] }
-    const receiptIds: string[] = []
-    const updateTotals = () => {
-      const service = ledger.packages[0]!
-      service.paidCents = ledger.payments.filter((payment) => !payment.voidedAt).reduce((sum, payment) => sum + payment.amountCents, 0)
-      service.dueCents = Math.max(0, service.priceCents - service.paidCents)
-      service.paymentStatus = service.dueCents === 0 ? 'paid' : service.paidCents ? 'partial' : 'unpaid'
-    }
-    await page.route(`**/v1/clients/${clientId}/finance`, (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ finance: ledger }) }))
-    await page.route(`**/v1/clients/${clientId}/finance/packages`, async (route) => {
-      const draft = route.request().postDataJSON() as TrainerFinancePackageDraft
-      expect(draft.openingReceivedOn).toBe('2026-08-27')
-      expect(draft.requestId).toBeTruthy()
-      ledger.packages.push({ ...draft, id: newWorkoutId, clientId, trainerId, sessionsUsed: 0, sessionsRemaining: draft.sessionsTotal, paidCents: draft.openingPaidCents, dueCents: draft.priceCents - draft.openingPaidCents, packageStatus: 'active', paymentStatus: 'partial', closedAt: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' })
-      ledger.payments.push({ id: messageId, packageId: newWorkoutId, amountCents: draft.openingPaidCents, receivedOn: draft.openingReceivedOn!, source: 'opening', comment: null, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' })
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ package: ledger.packages[0] }) })
-    })
-    await page.route(`**/v1/finance/packages/${newWorkoutId}/payments`, async (route) => {
-      const draft = route.request().postDataJSON() as TrainerFinancePaymentDraft
-      expect(draft.requestId).toBeTruthy()
-      receiptIds.push(draft.requestId!)
-      const payment = { ...draft, id: `20000000-0000-4000-8000-${String(receiptIds.length).padStart(12, '0')}`, packageId: newWorkoutId, source: 'manual' as const, voidedAt: null, voidReason: null, version: 1, createdAt: '2026-10-07T00:00:00Z', updatedAt: '2026-10-07T00:00:00Z' }
-      ledger.payments.push(payment)
-      updateTotals()
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ payment }) })
-    })
-    await page.route('**/v1/finance/payments/*', async (route) => {
-      const payment = ledger.payments.find((item) => item.id === new URL(route.request().url()).pathname.split('/').pop())!
-      if (route.request().method() === 'DELETE') payment.voidedAt = '2026-10-07T00:00:00Z'
-      else { Object.assign(payment, route.request().postDataJSON()); payment.version += 1 }
-      updateTotals()
-      await route.fulfill({ status: route.request().method() === 'DELETE' ? 204 : 200, contentType: 'application/json', body: route.request().method() === 'DELETE' ? '' : JSON.stringify({ payment }) })
-    })
+    const { ledger } = await mockFinancePaymentLifecycle(page)
     await page.goto(`/clients/${clientId}/finance`)
     await page.getByRole('button', { name: 'Новая', exact: true }).click()
     await page.getByLabel('Название', { exact: true }).fill('Персональные тренировки с длинным названием услуги')
@@ -1951,46 +1876,17 @@ for (const fitLime of [false, true]) for (const theme of ['light', 'dark']) for 
     await expect(facts).toContainText(/10\s000/)
     await expect(facts).toContainText(/20\s000/)
     await page.screenshot({ path: testInfo.outputPath('service-paid-due.png'), fullPage: true })
-    await card.getByRole('button', { name: 'Внести оплату', exact: true }).click()
-    await expect(page.getByLabel('Сумма, ₽', { exact: true })).toHaveValue('20000')
-    await page.getByLabel('Сумма, ₽', { exact: true }).fill('5000')
-    await save.click()
-    await expect(facts).toContainText(/15\s000/)
-    await card.locator('.finance-service-payments > summary').click()
-    const partial = card.locator('.finance-payment').filter({ hasText: /5\s000/ })
-    await partial.getByRole('button', { name: /Действия с оплатой/ }).click()
-    await page.getByRole('menuitem', { name: 'Изменить', exact: true }).click()
-    await expect(page.getByLabel('Сумма, ₽', { exact: true })).toHaveValue('5000')
-    await page.getByLabel('Сумма, ₽', { exact: true }).fill('3000')
-    await save.click()
-    await expect(facts).toContainText(/17\s000/)
-    await card.locator('.finance-service-payments > summary').click()
-    const edited = card.locator('.finance-payment').filter({ hasText: /3\s000/ })
-    await edited.getByRole('button', { name: /Действия с оплатой/ }).click()
-    await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
-    const dialog = page.getByRole('alertdialog')
-    await expect(dialog).toContainText(/3\s000/)
-    await expect(dialog).toContainText('от ')
-    await dialog.getByRole('button', { name: 'Отмена', exact: true }).click()
-    expect(ledger.payments[1]!.voidedAt).toBeNull()
-    await edited.getByRole('button', { name: /Действия с оплатой/ }).click()
-    await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
-    await dialog.getByRole('button', { name: 'Удалить', exact: true }).click()
-    await expect(facts).toContainText(/20\s000/)
-    await card.getByRole('button', { name: 'Внести оплату', exact: true }).click()
-    await expect(page.getByLabel('Сумма, ₽', { exact: true })).toHaveValue('20000')
-    await save.click()
+    seedPaidFinanceFixture(ledger)
+    await page.reload()
     await expect(card).toContainText('Оплачен')
     await expect(facts.locator('p').last()).toContainText('0')
-    expect(new Set(receiptIds).size).toBe(2)
+    await expect(facts).toContainText(/30\s000/)
     await card.locator('.finance-service-payments > summary').click()
     await expect(card.locator('.finance-payment')).toHaveCount(2)
     await page.screenshot({ path: testInfo.outputPath('payments-expanded.png'), fullPage: true })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.getByRole('tab', { name: 'Оплаты: 2', exact: true }).click()
     await expect(page.locator('.finance-payment-ledger .finance-payment')).toHaveCount(2)
-    await page.reload()
-    await expect(page.locator('.finance-service-money')).toContainText(/30\s000/)
   })
 }
 

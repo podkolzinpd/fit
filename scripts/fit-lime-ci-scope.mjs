@@ -8,9 +8,12 @@ import { changedPaths, requiresE2E } from './e2e-scope.mjs'
 export const scopedPrExpiresAt = '2026-10-25T21:00:00.000Z'
 export const scopedPrStartsAt = '2026-10-12T00:00:00.000Z'
 // Any edit to the reviewed inventory/fixtures fails closed until re-audited.
-// Explicit 14.10 re-audit: all 616 titles/tags, 235 callback bodies and shared
-// fixture declarations match the pre-split source. This is not auto-refreshed.
-export const reviewedInventoryDigest = 'dd5b538cfea6e0ac1df9a904e02ff63500c32d7306b44aab8726897cadde1beb'
+// Explicit 15.10 re-audit on main b35ce27f: 624 cases, 25 finance/template visual
+// configurations + 4 behavior cases; all 45 unique assertions retained,
+// 234 unrelated callbacks/original fixtures unchanged (including PR1631).
+// ClientPortal/shared UI/CSS changes still require full acceptance.
+// This digest is never auto-refreshed after spec edits.
+export const reviewedInventoryDigest = '4c66c8e2a32cb675d6489c9c80806ba2c5bbdf6da3b8e944db1a9d9ad7cdc021'
 export const reviewedInventoryFiles = [
   'e2e/fit-lime.behavior.spec.ts', 'e2e/trainer-schedule-v2.visual.spec.ts', 'e2e/fit-lime-fixtures.ts',
 ]
