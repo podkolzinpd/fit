@@ -21,6 +21,6 @@
 .lime-auth-actions h1 { margin: 0; font-size: 24px; line-height: 28px; font-weight: 500; }
 .lime-auth-actions p { margin: 0; font-size: 14px; line-height: 20px; font-weight: 400; }
 .fit-client-lime .lime-auth-actions button { width: 100%; min-height: 48px; font-size: 16px; line-height: 20px; font-weight: 500; }
-.lime-auth-actions .error { color: var(--danger-fg); }
+.lime-auth-actions .error { color: var(--danger); }
 .lime-auth-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; }
 .lime-auth-legal a { min-height: 44px; display: inline-flex; align-items: center; color: var(--lime-text-secondary); font-size: 12px; line-height: 16px; font-weight: 400; text-decoration: underline; text-underline-offset: 2px; }
