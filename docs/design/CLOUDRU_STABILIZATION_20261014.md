@@ -446,3 +446,8 @@ Xcode отсутствует, iOS bundle не собран. Регистраци
 Этот docs-only readback фиксирует новые факты после merge. Следующий docs-only
 main сохраняет ту же реализацию runtime; отдельный новый продуктовый scope
 и обратное переключение в Yandex не начинаются.
+
+Дополнительный readback38790329441 после >15 минут работы: Result=success/exit0,
+bounded journal100 записей не содержит worker/cleanup/launcher failures и DB
+error codes; queue pending/overdue/stale/terminal=0. Это операционная проверка,
+не закрытие observation/rollback window и не device-delivery acceptance.
