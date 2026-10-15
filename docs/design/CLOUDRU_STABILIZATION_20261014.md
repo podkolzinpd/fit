@@ -420,5 +420,5 @@ timeout setup failure отменяет cleanup до business query с ROLLBACK/r
 Существующие push/cleanup assertions сохранены, транзакционный порядок обновлён.
 Targeted29/29 passed. Изолированный локальный PG17 подтвердил server10s и
 сброс SET LOCAL после commit/rollback; одноразовый контейнер удалён.
-Полный npm run check passed: frontend2695/API1420+159 localDB skips,
+Полный npm run check passed: frontend2697/API1420+159 localDB skips,
 infra313/hosting169 и builds. CI/production — следующие гейты.
