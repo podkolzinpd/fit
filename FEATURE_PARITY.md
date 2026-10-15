@@ -159,6 +159,12 @@ token. Локальный SDK ленивый, production legacy call fail-closed
 fixtures остаются локальными. SDK package/server adapters/SQL history
 не удаляются этим изменением.
 
+Дополнение composition — 15.10.2026: release web/Android/iOS graph исключает
+Supabase SDK/client/local adapters; build guard проверяет все emitted chunks.
+Auth/DataBackend/Assistant используют native composition, development/test
+сохраняют local adapters. Helper imports и public-profile cache/transport
+разделены без изменения данных, parser или пользовательского контракта.
+
 Дополнение Auth/Navigation: HTML bootstrap и восстановление сессии используют
 одну оптимизированную фотографию из материалов владельца; nonblocking CSS не
 задерживает её первую отрисовку, но остаётся обязательным перед показом React.

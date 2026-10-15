@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { Gender } from '../../shared/domain'
 import { celebrationCopy, completionIcons, completionSubtitle, selectCompletionCelebration } from './workout-completion-celebration'
-import { tonnageLabel } from '../../data/repositories/workouts.repository'
+import { tonnageLabel } from '../../data/repositories/workout-rules'
 import { CheckIcon, CloseIcon, RecordIcon, ScheduleIcon, ShareIcon } from '../../shared/icons'
 import { formatLocalDate, localDate } from '../../shared/local-date'
 import { resultNumber, type WorkoutResult } from '../../shared/workout-results'

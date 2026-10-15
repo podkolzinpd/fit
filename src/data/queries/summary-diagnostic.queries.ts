@@ -1,5 +1,3 @@
-import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
-
 function diagnosticFailure(stage: string, requestId: string, details: string): Error {
   return new Error(`Этап ${stage} · ${details} · ID ${requestId}`)
 }
@@ -9,6 +7,10 @@ export async function legacySummaryDiagnosticQuery(
   periodStart: string,
   periodEnd: string,
 ): Promise<unknown> {
+  if (import.meta.env.MODE !== 'development' && import.meta.env.MODE !== 'test') {
+    throw new Error('Устаревший источник данных недоступен в этой сборке.')
+  }
+  const { invokeLegacyCloudFunction } = await import('./legacy-cloud-functions')
   const result = await invokeLegacyCloudFunction<Record<string, unknown>>('summarize-client-training', {
     client_id: clientId,
     period_start: periodStart,

@@ -1,3 +1,4 @@
+import { getLocalAssistantBackend } from '#fit/local-assistant'
 import { Link } from 'react-router-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,7 +7,6 @@ import { ChevronRightIcon } from '../../shared/icons'
 import { useAuth } from '../../app/auth-context'
 import { useAppViewport } from '../../app/app-viewport'
 import {
-  supabaseAssistantBackend,
   type AssistantBackend,
   type AssistantOrchestratorAction,
 } from '../../data/repositories/assistant.repository'
@@ -34,7 +34,7 @@ import { extractAssistantNavigationLinks } from './assistant-navigation-links'
 
 type FailedTurn = { turnId: string; message: string }
 
-export function AssistantHistoryPage({ backend = supabaseAssistantBackend }: {
+export function AssistantHistoryPage({ backend = getLocalAssistantBackend() }: {
   backend?: AssistantBackend
 }) {
   const { actor } = useAuth()

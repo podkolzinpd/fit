@@ -15,6 +15,17 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 - `queries` содержат явные select/insert/update/delete/RPC вызовы.
 - `shared` не импортирует features или data repositories.
 
+## Граница локальных legacy adapters
+
+Независимые Vite aliases `#fit/local-auth`, `#fit/local-data`, `#fit/local-assistant` выбирают local adapters только для
+`development`/`test`; остальные modes используют native-only composition.
+Auth/DataBackend/Assistant не импортируют legacy adapters напрямую.
+Production build проверяет каждый emitted chunk и отклоняет Supabase SDK,
+legacy client и local composition. Общие workout/template helpers и notification
+kinds импортируются напрямую из независимых модулей. Type-only legacy contracts
+не добавляют runtime dependencies. Отсутствующая native session не включает
+legacy backend. Server-side bridges и frozen local tests пока сохраняются.
+
 ## Состояние
 
 - URL: экран, UUID сущностей, выбранные дата/метрика.

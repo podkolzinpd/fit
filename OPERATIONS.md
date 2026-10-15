@@ -1117,6 +1117,14 @@ Production iOS guard проверяет `VITE_YANDEX_API_BASE_URL` как remote
 native registration/Yandex-only switches. Supabase config не заменяет их.
 CI Yandex-auth lane собирает production bundle и проверяет его через Vite
 preview/WebKit без Supabase env/services; локальные frozen legacy lanes остаются.
+
+С 15.10 release graph также исключает сам SDK: Vite alias
+`#fit/local-auth`, `#fit/local-data`, `#fit/local-assistant` выбирает local adapters только в точных modes
+`development`/`test`. Все остальные modes используют native-only composition;
+проверка emitted chunks отклоняет SDK/client/local composition. Отсутствующие
+flags или native session не разрешают legacy backend. Production flags/API
+origin по-прежнему должны быть настроены по native contract выше.
+
 Удаление env из workflow не удаляет GitHub Secrets или Supabase проект.
 Серверные bridge secrets/media/migration/rollback tooling пока сохраняются.
 
