@@ -8,9 +8,8 @@ import { bmiLabel } from '../../data/repositories/workout-rules'
 import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
-import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, MoreIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
-import { ChatStartButton } from '../chat'
-import { useChatThreads } from '../chat/use-chat-threads'
+import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
+import { canOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
 import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage'
 
@@ -58,7 +57,7 @@ function ClientSwipeCard({
 
   const startDrag = (event: ReactPointerEvent<HTMLElement>) => {
     if (pointer.current || event.isPrimary === false) return
-    // A new tap is independent of a previous swipe, including taps on ⋯/chat.
+    // A new tap on chat is independent of a previous swipe.
     suppressClick.current = false
     if (busy || event.button !== 0 || (event.target as Element).closest('input, textarea, select')) return
     pointer.current = { id: event.pointerId, x: event.clientX, y: event.clientY,
@@ -129,7 +128,7 @@ function ClientSwipeCard({
       suppressClick.current = false
       return
     }
-    if (open && !(event.target as Element).closest('.client-card-menu')) {
+    if (open && !(event.target as Element).closest('.client-chat-action')) {
       event.preventDefault()
       event.stopPropagation()
       onOpenChange(false)
@@ -160,9 +159,8 @@ function ClientSwipeCard({
       </Link>
       {canOpenChat && <ChatStartButton clientId={client.id} trainerId={trainerId}
         conversationId={conversationId} partnerName={client.fullName} unreadCount={unreadCount}
-        className="client-chat-action" iconOnly back="clients" onBeforeOpen={onBeforeOpen} />}
-      <button type="button" className="client-card-menu" aria-label={`Действия с клиентом ${client.fullName}`}
-        aria-expanded={open} disabled={busy} onClick={() => onOpenChange(!open)}><MoreIcon /></button>
+        className="client-chat-action" iconOnly back="clients"
+        onBeforeOpen={() => { onOpenChange(false); onBeforeOpen() }} />}
     </article>
   </div>
 }
@@ -293,6 +291,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       <button type="button" className="clients-archive-feedback-close" aria-label="Закрыть сообщение" onClick={() => setFeedback(null)}><CloseIcon /></button>
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
+    <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />
     {!archivedOnly && financeEnabled && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
       <span><strong>Финансы</strong><small>{finance.data ? `${new Intl.NumberFormat('ru-RU').format(finance.data.receivedCents / 100)} ₽ получено · ${finance.data.attentionCount} требуют внимания` : 'Абонементы, оплаты и занятия'}</small></span><ChevronRightIcon />
     </Link>}
@@ -309,7 +308,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         const thread = threadByClientId.get(client.id)
         const financeState = financeByClientId.get(client.id)
         const financeLabel = financeState ? trainerFinanceClientLabel(financeState) : undefined
-        const canOpenChat = Boolean(actor?.role === 'trainer' && (thread?.conversationId || (client.hasAccount && !client.archivedAt)))
+        const canOpenChat = actor?.role === 'trainer' && canOpenClientChat(client, thread)
         if (!client.canArchive) return <article className="card client-card" key={client.id}>
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
               <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
@@ -327,8 +326,11 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
           onArchiveChange={changeArchive}
           onBeforeOpen={rememberListPosition} />
         return !archivedOnly && client.id === firstArchiveClientId
-          ? <Coachmark key={client.id} id="clients-full-swipe-2026-10" userId={actor?.userId}
-            title="В архив одним свайпом" description="Смахните карточку далеко влево и отпустите; после архивации можно нажать «Вернуть».">{card}</Coachmark>
+          ? <Coachmark key={client.id} id="clients-chat-swipe-2026-10" userId={actor?.userId}
+            title={canOpenChat ? 'Чат — по нажатию, архив — свайпом' : 'Архив — свайпом'}
+            description={canOpenChat
+              ? 'Нажмите на значок сообщения для переписки или смахните карточку влево для архива; после архивации можно нажать «Вернуть».'
+              : 'Смахните карточку влево для архива; после архивации можно нажать «Вернуть». Архивирование кнопкой остаётся в профиле клиента.'}>{card}</Coachmark>
           : card
       })}</div> : <p className="clients-search-empty">По этому имени клиентов не найдено.</p>}
     </AsyncView>

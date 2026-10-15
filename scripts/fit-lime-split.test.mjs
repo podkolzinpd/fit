@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 624-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 626-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 624-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 624) // 616 + four upstream empty-entry + four separate finance/template behavior cases.
+    assert.equal(full.length, 626) // Previous625 + one disconnected-history case; no theme/size multiplication.
     assert.equal(full.filter((item) => item.includes('Client Lime empty workouts creation and equal controls ')).length, 4)
     // Original 16 finance + 9 template visual configurations remain; their
     // long chains now run just once per Mono/Lime surface in each engine.

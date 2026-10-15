@@ -751,11 +751,14 @@ export const limeClients = [
   { id: '10000000-0000-4000-8000-000000000025', fullName: 'Егор Панов', archivedAt: null, version: 1 },
 ]
 
-export async function beginClientGesture(page: Page, surface: Locator, browserName: string) {
+export async function beginClientGesture(page: Page, surface: Locator, browserName: string, origin?: Locator) {
   await surface.scrollIntoViewIfNeeded()
   const box = await surface.boundingBox()
   if (!box) throw new Error('Client surface is not visible')
-  const from = { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
+  const originBox = origin ? await origin.boundingBox() : null
+  if (origin && !originBox) throw new Error('Gesture origin is not visible')
+  const from = originBox ? { x: originBox.x + originBox.width / 2, y: originBox.y + originBox.height / 2 }
+    : { x: box.x + box.width * 0.88, y: box.y + box.height / 2 }
   expect(await surface.evaluate((element, point) => element.contains(document.elementFromPoint(point.x, point.y)), from)).toBe(true)
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : null
   if (cdp) await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] })
@@ -792,7 +795,7 @@ export async function openSwipeFixture(page: Page, fitLime: boolean, width = 390
   await page.addInitScript((theme) => localStorage.setItem('fit.appTheme', theme), theme)
   await page.goto('/clients')
   await expect(page.locator('.client-swipe-surface').first()).toBeVisible()
-  const tip = page.getByRole('status').filter({ hasText: 'В архив одним свайпом' })
+  const tip = page.getByRole('status').filter({ hasText: /В архив одним свайпом|Чат — по нажатию, архив — свайпом/ })
   if (await tip.isVisible()) await tip.getByRole('button', { name: 'Понятно' }).click()
   return page.locator(`[data-client-swipe-id="${clientId}"]`)
 }

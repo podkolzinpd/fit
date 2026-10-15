@@ -5,6 +5,33 @@ import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGest
 // Behavior-only acceptance. Visual/mixed state matrices live in the visual spec.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+// One 390px interaction case per engine: trusted touch capture in Chromium and
+// WebKit pointer bubbling from the nested SVG. Geometry stays in the existing matrix.
+test('Client chat tap stays separate from archive gestures', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page, browserName }) => {
+  const row = await openSwipeFixture(page, true)
+  const chat = row.getByRole('button', { name: /Сообщения с Алексей Смирнов/ })
+  await expect(chat).toBeVisible()
+  await expect(row.locator('.client-card-menu')).toHaveCount(0)
+  const gesture = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName, chat.locator('svg'))
+  await gesture.move(96)
+  await gesture.end()
+  await expect(page).toHaveURL(/\/clients$/)
+  await expect(row.getByRole('button', { name: 'В архив', exact: true })).toBeVisible()
+  await row.getByRole('button', { name: 'В архив', exact: true }).focus()
+  await page.keyboard.press('Escape')
+  await expect(row).not.toHaveClass(/is-open/)
+  const cancelled = await beginClientGesture(page, row.locator('.client-swipe-surface'), browserName, chat)
+  await cancelled.move(96)
+  await cancelled.end(true)
+  await expect(row).not.toHaveClass(/is-open/)
+  await expect(page).toHaveURL(/\/clients$/)
+  await chat.click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(/\/clients$/)
+})
+
 // Mono/Lime have distinct form surfaces; business chains run once per surface
 // in each required engine, not for every theme/viewport.
 for (const fitLime of [false, true]) {
@@ -808,13 +835,36 @@ test('trainer without Fit Lime keeps the queue outside the pilot portal scope', 
 
 test('Fit Lime questions remain visible when dialogs fail, and dialogs recover independently', { tag: ["@lime-chat"] }, async ({ page }) => {
   const backend = await mockPilot(page, { fitLime: true, questionWorkout: true, failThreads: true })
-  await page.goto('/chat')
+  const returnTo = '/schedule?week=2026-09-21'
+  await page.goto(returnTo)
+  await page.getByRole('link', { name: 'Сообщения', exact: true }).click()
   await expect(page.getByText('Можно заменить приседания?')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Сообщения', level: 2 })).toBeVisible()
   await expect(page.getByText('Не удалось загрузить данные')).toBeVisible({ timeout: 15_000 })
   backend.setThreadsFailure(false)
   await page.getByRole('button', { name: 'Повторить' }).click()
   await expect(page.getByRole('button', { name: /Алексей Смирнов.*Спасибо/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(returnTo.replace('?', '\\?') + '$'))
+})
+
+// One mobile interaction per engine: history access must match list and detail.
+test('Trainer client detail opens disconnected history without creating a dialog', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page, { fitLime: true })
+  await page.route((url) => url.pathname === '/v1/clients', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ clients: [{
+    id: clientId, canArchive: true, hasAccount: false, fullName: 'Алексей Смирнов', canonicalFullName: 'Алексей Смирнов',
+    gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+    currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: 1,
+  }] }) }))
+  let creations = 0
+  await page.route('**/v1/chat/conversations', (route) => { creations += 1; return route.abort() })
+  await page.goto(`/clients/${clientId}`)
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Написать', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/chat/${conversationId}$`))
+  await expect(page.getByRole('region', { name: 'Переписка' }).getByText('Спасибо!')).toBeVisible()
+  expect(creations).toBe(0)
 })
 
 test('Fit Lime dialog remains visible when questions fail', { tag: ["@lime-chat"] }, async ({ page }) => {
