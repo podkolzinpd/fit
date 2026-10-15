@@ -10,7 +10,7 @@ const hosts = ['fit-training.ru', 'www.fit-training.ru', 'api.fit-training.ru']
 // No response bodies, cookies, arbitrary URLs or transport error messages are
 // exported. The only body field retained is the public API release identifier.
 export function probeProduction(host, path) {
-  if (!hosts.includes(host) || !['/auth', '/health', '/ready', '/v1/clients'].includes(path)) {
+  if (!hosts.includes(host) || !['/auth', '/health', '/ready', '/v1/clients', '/api/health', '/api/ready', '/api/v1/clients'].includes(path)) {
     throw new Error('Unsupported production probe')
   }
   return new Promise(done => {
@@ -30,11 +30,11 @@ export function probeProduction(host, path) {
       response.on('data', chunk => {
         size += chunk.length
         if (size > 1_000_000) req.destroy()
-        else if (path === '/health') chunks.push(chunk)
+        else if (path.endsWith('/health')) chunks.push(chunk)
       })
       response.on('end', () => {
         let release
-        if (path === '/health') {
+        if (path.endsWith('/health')) {
           try {
             const value = JSON.parse(Buffer.concat(chunks).toString('utf8'))
             if (/^[a-f0-9]{40}$/.test(value.releaseId)) release = value.releaseId
@@ -68,10 +68,12 @@ export async function verifyCloudruProduction({ resolveHost = host => lookup(hos
     ['fit-training.ru', '/auth', 200], ['www.fit-training.ru', '/auth', 200],
     ['api.fit-training.ru', '/health', 200], ['api.fit-training.ru', '/ready', 200],
     ['api.fit-training.ru', '/v1/clients', 401],
+    ['fit-training.ru', '/api/health', 200], ['fit-training.ru', '/api/ready', 200],
+    ['fit-training.ru', '/api/v1/clients', 401],
   ]
   const checks = await Promise.all(cases.map(async ([host, path, expectedStatus]) => {
     const result = await probe(host, path)
-    const releasePassed = path !== '/health' ||
+    const releasePassed = !path.endsWith('/health') ||
       (/^[a-f0-9]{40}$/.test(result.release ?? '') && (!expectedRelease || result.release === expectedRelease))
     return { host, path, ...result, passed: result.status === expectedStatus
       && result.certificateValidDays >= 14 && releasePassed }

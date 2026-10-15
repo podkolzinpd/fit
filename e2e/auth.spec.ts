@@ -190,7 +190,7 @@ test('client registers, starts without a profile questionnaire and creates an ow
   await expect(page).toHaveURL(/\/me$/)
   await page.goto('/me/profile')
   await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('link', { name: 'Тренировки' }).click()
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByLabel('Поиск упражнения').fill('Жим лёжа')
   await page.getByRole('button', { name: /^(?:Выбрать|Добавить): Жим штанги лёжа$/ }).click()
@@ -245,7 +245,7 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await page.getByRole('button', { name: 'Создать аккаунт' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
   await page.goto('/clients')
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByLabel('Имя').fill('Клиент приглашения')
   await fillClientProfileDetails(page)
   await page.getByLabel('Начальный вес, кг').fill('60')
@@ -338,7 +338,7 @@ test('client safely switches trainers after an explicit disconnect', async ({ pa
 
   async function createClientInvitation(clientName: string) {
     await page.goto('/clients')
-    await page.getByRole('link', { name: 'Добавить' }).click()
+    await page.getByRole('link', { name: 'Добавить', exact: true }).click()
     await page.getByLabel('Имя').fill(clientName)
     await fillClientProfileDetails(page)
     await page.getByLabel('Начальный вес, кг').fill('60')
@@ -438,7 +438,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
     await expect(page).toHaveURL(/\/today$/, { timeout: 15_000 })
   }
   await page.goto('/clients')
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByLabel('Имя').fill('Связанный клиент')
   await fillClientProfileDetails(page)
   await page.getByLabel('Начальный вес, кг').fill('60')
@@ -500,7 +500,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   // самостоятельно. Его карточка и завершённый факт должны остаться
   // каноническими после ввода кода тренера.
   await page.goto('/me/workouts')
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Фильтры' }).click()
   await page.getByRole('button', { name: 'Бег', exact: true }).click()
@@ -548,7 +548,7 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('tab', { name: 'История' }).click()
   await expect(page.locator(`a[href="${preAttachWorkoutPath}"]`)).toBeVisible()
 
-  await page.getByRole('link', { name: 'Добавить' }).click()
+  await page.getByRole('link', { name: 'Добавить', exact: true }).click()
   await expect(page.getByLabel('Клиент')).toHaveCount(0)
   await page.getByRole('button', { name: 'Выбрать упражнения' }).click()
   await page.getByRole('button', { name: 'Фильтры' }).click()

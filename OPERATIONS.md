@@ -182,8 +182,8 @@ workflow и вернуть прежние A, если выпуск сертиф�
 
 14.10 ручные API/frontend38633109023/38633113898 выпустили d10c2d12;
 после public release/readiness readback включены оба CLOUDRU autodeploy-флага.
-Production web использует `https://api.fit-training.ru`; новые native builds
-получили тот же обязательный контракт. Технический
+Production web использует `https://fit-training.ru/api` через Nginx того же
+домена; новые native builds используют `https://api.fit-training.ru`. Технический
 Yandex origin не принимается production native validator. Старые установленные
 bundles этим не переписываются. Backend provider выбирается DNS/API, не новым
 доменных контрактом. Старые Yandex DNS/API пока не изменены; владелец разрешил их совместимость.
@@ -257,6 +257,10 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
 Workflows сохраняют общий VM lock и не отменяют уже выполняющиеся операции.
 Bootstrap/configuration не означают пройденный реальный OAuth/voice E2E;
 приёмка двух тестовых ролей и свежие мобильные bundles фиксируются отдельно.
+Web ingress передаёт ответы stage Nginx потоково (`proxy_buffering off`), чтобы
+загрузка JS/CSS не зависела от записи больших ответов во временный каталог
+системного Nginx. После установки конфигурации workflow скачивает целиком все
+JS/CSS, перечисленные текущим `index.html`; одного статуса HTTP 200 недостаточно.
 
 ## Диагностика пользовательской ошибки
 
@@ -634,6 +638,23 @@ workflow после read-only audit;
 production frontend или Supabase. Перенос на stage оплачивает только фактические
 холодные вызовы уже существующего Serverless Container; новый постоянно
 работающий или provisioned ресурс не создаётся.
+
+## Служебная плашка о восстановлении ИИ
+
+Временный build-time флаг сборки Cloud.ru (`.github/workflows/prepare-cloudru-frontend.yml`):
+
+```text
+VITE_SERVICE_NOTICE_ENABLED=true
+```
+
+Только точное `true` показывает над содержимым каждого экрана клиента и тренера
+(кроме Live и переписки) плашку «Fit снова работает» о том, что ИИ-функции
+восстанавливаются. Крестик скрывает её до конца текущего запуска
+(`sessionStorage`, ключ `fit.serviceNotice.dismissed`); следующий запуск
+приложения или новая вкладка показывают её снова. Это только уведомление: функции, авторизация и
+данные не меняются. Текст — `src/app/service-notice.tsx`. Чтобы снять плашку,
+выставить `'false'` и выпустить фронтенд Cloud.ru; старые сборки Yandex Cloud и
+уже установленные нативные приложения её не получают.
 
 ## Окно технических работ
 

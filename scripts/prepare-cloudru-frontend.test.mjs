@@ -148,11 +148,14 @@ test('prepare workflow retains green-main and default-off automatic gate without
   assert.match(workflow, /contents: read\n  actions: read/)
   assert.match(workflow, /\.status == "completed" and .conclusion == "success"/)
   assert.match(workflow, /head_repository.full_name == \$repo/)
-  assert.match(workflow, /VITE_YANDEX_API_BASE_URL: https:\/\/api.fit-training.ru/)
+  assert.match(workflow, /VITE_YANDEX_API_BASE_URL: https:\/\/fit-training.ru\/api/)
   assert.ok(workflow.includes("VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}"))
   assert.match(workflow, /runs-on: \[self-hosted, cloudru-stage\]/)
   assert.match(workflow, /group: cloudru-stage-vm\n\s+cancel-in-progress: false/)
   assert.match(workflow, /verify-cloudru-frontend.mjs/)
+  assert.match(workflow, /https:\/\/fit-training\.ru\/api\/health/)
+  assert.match(workflow, /\.releaseId == \$release/)
+  assert.match(workflow, /https:\/\/fit-training\.ru\/api\/v1\/clients\)" = 401/)
   assert.match(workflow, /scripts\/promote-cloudru-frontend.sh/)
   assert.ok(workflow.indexOf('Verify immutable candidate') < workflow.indexOf('Promote verified loopback'))
   assert.doesNotMatch(workflow, /ssh |SSH_|REGISTRATION_TOKEN|certbot|dns record|pg_restore|psql|podman run|DATABASE_PASSWORD|service_role/)
@@ -163,7 +166,7 @@ test('prepare workflow retains green-main and default-off automatic gate without
   }
 })
 
-test('candidate preserves every production VITE setting except explicitly approved API and AI program', async () => {
+test('candidate preserves every production VITE setting except explicitly approved API, AI program and AI-recovery notice', async () => {
   const [production, candidate] = await Promise.all([
     readFile(new URL('../.github/workflows/deploy-yandex-frontend.yml', import.meta.url), 'utf8'),
     readFile(new URL('../.github/workflows/prepare-cloudru-frontend.yml', import.meta.url), 'utf8'),
@@ -174,7 +177,8 @@ test('candidate preserves every production VITE setting except explicitly approv
   const next = settings(candidate)
   assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys()].sort())
   for (const [name, value] of original) {
-    if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED') continue
+    // VITE_SERVICE_NOTICE_ENABLED: временная плашка о восстановлении ИИ, решение владельца 14.10.
+    if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED' || name === 'VITE_SERVICE_NOTICE_ENABLED') continue
     assert.equal(next.get(name), value, name)
   }
 })

@@ -6,15 +6,22 @@ import { probeProduction, verifyCloudruProduction } from './verify-cloudru-produ
 const release = 'a'.repeat(40)
 const healthy = {
   resolveHost: async () => [{ address: '87.242.117.210' }],
-  probe: async (_host, path) => ({ status: path === '/v1/clients' ? 401 : 200,
-    certificateValidDays: 60, ...(path === '/health' ? { release } : {}) }),
+  probe: async (_host, path) => ({ status: path.endsWith('/v1/clients') ? 401 : 200,
+    certificateValidDays: 60, ...(path.endsWith('/health') ? { release } : {}) }),
 }
 
 test('verifies DNS, all web entry points, API readiness and authentication guard', async () => {
   const result = await verifyCloudruProduction({ ...healthy, expectedRelease: release })
   assert.equal(result.status, 'passed')
   assert.equal(result.dns.length, 3)
-  assert.equal(result.checks.length, 5)
+  assert.equal(result.checks.length, 8)
+})
+
+test('a web SPA fallback returning HTTP 200 cannot masquerade as a working API proxy', async () => {
+  const probe = async (host, path) => path.startsWith('/api/')
+    ? { status: 200, certificateValidDays: 60 }
+    : healthy.probe(host, path)
+  assert.equal((await verifyCloudruProduction({ ...healthy, probe })).status, 'failed')
 })
 
 test('detects stale or missing DNS even while HTTP appears healthy', async () => {

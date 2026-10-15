@@ -126,3 +126,12 @@ credential и доступность требуют отдельного фак�
 - Локально установлен только Command Line Tools: Xcode.app/Simulator отсутствуют
   (xcode-select и точный bundle-id lookup). iOS build/install/launch пока не
   выполнены; Android main auth-smoke build и роль/native-проверка после activation.
+
+- 15.10 maincb9799e8 интегрируется в PR1637: новый web same-origin
+  `https://fit-training.ru/api` — уточнение транспортного пути по прямой команде
+  владельца после проверки main; native сохраняет `https://api.fit-training.ru`.
+  Исходный acceptance выше сохранён дословно; оба маршрута ведут в один backend.
+  Старые и новые authoritative NS уже возвращают API87.242.117.210; повторная
+  DNS mutation не нужна. Ingress38706865195 success, фактические web health JSON200
+  и clients401, release совпадает с direct APIcb9799e8. Promotion guard и monitor
+  теперь обнаруживают SPA HTML200 вместо web API. CI нового merge ещё гейт.

@@ -2,12 +2,14 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const productionApiOrigin = 'https://api.fit-training.ru'
+export const productionWebApiOrigin = 'https://fit-training.ru/api'
 
 // DNS chooses the production provider. A native release must never pin a
 // provider's technical hostname or silently select the legacy data backend.
-export function validateProductionApiRouting(environment) {
+export function validateProductionApiRouting(environment, { web = false } = {}) {
   const errors = []
-  if (environment.VITE_YANDEX_API_BASE_URL?.replace(/\/$/, '') !== productionApiOrigin) {
+  const expectedOrigin = web ? productionWebApiOrigin : productionApiOrigin
+  if (environment.VITE_YANDEX_API_BASE_URL?.replace(/\/$/, '') !== expectedOrigin) {
     errors.push('Production API must use the canonical API origin')
   }
   if (environment.VITE_SPEECHKIT_RELAY_URL && environment.VITE_SPEECHKIT_RELAY_URL !== 'wss://api.fit-training.ru/stt') {
@@ -23,7 +25,7 @@ export function validateProductionApiRouting(environment) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const errors = validateProductionApiRouting(process.env)
+  const errors = validateProductionApiRouting(process.env, { web: process.argv[2] === '--web' })
   if (errors.length) {
     console.error(errors.join('; '))
     process.exitCode = 1
