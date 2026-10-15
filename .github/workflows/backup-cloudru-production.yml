@@ -112,7 +112,7 @@ jobs:
           sudo podman exec "$container" psql -U fit_owner -d fit_restore -v ON_ERROR_STOP=1 \
             -qc 'create role fit_api nologin;' >/dev/null 2>&1
           expected=$(sudo podman exec --user 0 "$container" pg_restore --list /backup/readback.dump \
-            | awk '/ TABLE / && !/ TABLE DATA / {count++} END {print count+0}')
+            | awk '$4 == "TABLE" && $5 != "DATA" && $5 != "ATTACH" {count++} END {print count+0}')
           test "$expected" -gt 0
           sudo podman exec --user 0 "$container" pg_restore --clean --if-exists --no-owner --exit-on-error \
             --username fit_owner --dbname fit_restore /backup/readback.dump >/dev/null 2>&1

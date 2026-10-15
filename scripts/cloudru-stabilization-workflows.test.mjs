@@ -79,6 +79,22 @@ test('offsite restore cannot connect to production or expose a database port and
   }
 })
 
+test('restore table inventory excludes ACL, table data and partition attachment entries', () => {
+  const workflow = read('.github/workflows/backup-cloudru-production.yml')
+  const program = workflow.match(/\| awk '([^']+)'/)[1]
+  const inventory = [
+    '1; 1259 123 TABLE public workouts fit_owner',
+    '2; 1259 124 TABLE app_private fit_migrations fit_owner',
+    '3; 0 123 TABLE DATA public workouts fit_owner',
+    '4; 0 0 ACL public TABLE workouts fit_owner',
+    '5; 0 0 COMMENT public TABLE workouts fit_owner',
+    '6; 0 0 TABLE ATTACH public workouts_partition fit_owner',
+  ].join('\n')
+  const result = spawnSync('awk', [program], { input: inventory, encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout.trim(), '2')
+})
+
 test('background delivery boundary is persistent and existing uncertain recovery receipts are not retried', () => {
   const workflow = read('.github/workflows/configure-cloudru-background.yml')
   assert.match(workflow, /test -f \/opt\/fit\/BACKGROUND_STARTED_AT/)

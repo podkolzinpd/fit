@@ -353,3 +353,9 @@ No file/container/upstream action executes in this test; no browser/theme matrix
 is added. An explicit failure exit handles macOS Bash3.2's intermediate [[ ]]
 errexit behavior as well as Linux Bash. Targeted workflow9/9 passed after this
 addition; final full npm run check passed for the expanded diff (frontend2680, API1418+159 DB skips, infra302, hosting169, calendar12, relay5 and builds).
+
+## Уточнение владельца и локальная restore-проверка — 15.10
+
+Владелец решил пока оставить голос выключенным. Новый STT-only аккаунт/ключ не создаётся; relay/WSS не включаются. Поддержка отдельного ключа в workflow остаётся fail-closed при его отсутствии.
+
+Полная локальная схема обнаружила ложный отказ проверки restore: TOC parser считал ACL TABLE вместе с таблицами (104 против 68). Подсчёт ограничен типом TABLE и исключает DATA/ATTACH. Новый короткий executable fixture проверяет этот отдельный риск; повторная полная rehearsal прошла: 68 таблиц, 151 запись истории миграций, fit_api SELECT и RLS/owner трёх core-таблиц сохранены. Production-данные в ней не используются.
