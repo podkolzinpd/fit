@@ -39,7 +39,7 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
   await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
   const card = page.getByRole('region', { name: 'Питание сегодня', exact: true })
   await expect(card.getByText('228,3 ккал', { exact: true })).toBeVisible()
-  await expect(card).not.toContainText('Записано')
+  await expect(card.getByText('Записано за день', { exact: true })).toBeVisible()
   await expect(card).toContainText('итог БЖУ неполный')
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 932 })
@@ -61,6 +61,7 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
   state.mode = 'empty'
   await page.reload()
   await expect(card.getByText('Сегодня записей нет')).toBeVisible()
+  await expect(card.getByText('Записано за день', { exact: true })).toHaveCount(0)
   await expect(card.getByText('228,3 ккал')).toHaveCount(0)
   state.mode = 'error'
   await page.reload()

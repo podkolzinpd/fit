@@ -150,6 +150,7 @@ it('home summary separates empty, partial data, loading and retry without fake z
   fixture.day.mockResolvedValue({ ...empty, entries: [entry], totals: { ...entry.totals, protein: null } })
   await cache.invalidateQueries({ queryKey: ['nutrition'] })
   expect(await within(card).findByText('228,3 ккал')).toBeVisible()
+  expect(within(card).getByText('Записано за день', { exact: true })).toBeVisible()
   expect(within(card).getByText('— нет данных; итог БЖУ неполный')).toBeVisible()
   expect(within(card).getByLabelText('Белки: —, нет данных')).toHaveTextContent('Б —')
   fixture.day.mockRejectedValue(new Error('Synthetic network failure'))

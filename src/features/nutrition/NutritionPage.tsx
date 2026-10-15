@@ -20,6 +20,7 @@ function selectedDate(text: string | null, today: LocalDate): LocalDate {
 }
 function Totals({ values, summary = false }: { values: NutritionValues; summary?: boolean }) {
   return <div className="nutrition-totals"><strong>{nutritionNumber(values.calories)} ккал</strong>
+    {summary && <small className="muted">Записано за день</small>}
     {summary ? <div className="nutrition-summary-macros">{([
       ['protein', 'Б', 'Белки'], ['fat', 'Ж', 'Жиры'], ['carbs', 'У', 'Углеводы'],
     ] as const).map(([key, label, name]) => <span key={key} aria-label={`${name}: ${nutritionNumber(values[key])}${values[key] === null ? ', нет данных' : ' г'}`}>
