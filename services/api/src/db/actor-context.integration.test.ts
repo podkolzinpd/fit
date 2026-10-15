@@ -3530,6 +3530,117 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    it('preserves original chat participants and history through unbinding, merge and reassignment', async () => {
+      if (!ownerPool) throw new Error('Owner pool is not ready')
+      const db = await ownerPool.connect()
+      const trainer = randomUUID(), athlete = randomUUID(), replacement = randomUUID(), stranger = randomUUID()
+      const oldCard = randomUUID(), canonical = randomUUID(), conversation = randomUUID()
+      const secondConversation = randomUUID()
+      const readMessage = randomUUID(), photoMessage = randomUUID()
+      const reader: DatabaseClient = { query: async <Row extends QueryResultRow>(sql: string, values?: readonly unknown[]) =>
+        (await db.query<Row>(sql, values ? [...values] : undefined)).rows }
+      const asActor = async <T>(id: string, work: () => Promise<T>) => {
+        await db.query('savepoint chat_history_actor')
+        try {
+          await db.query('set local role fit_api')
+          await db.query("select set_config('request.jwt.claim.sub',$1,true)", [id])
+          return await work()
+        } finally {
+          await db.query('rollback to savepoint chat_history_actor')
+          await db.query('release savepoint chat_history_actor')
+        }
+      }
+      const threads = (id: string) => asActor(id, () => readAccessibleChatThreads(reader))
+      const messages = () => reader.query('select * from public.list_chat_messages_v3($1,null,null,50)', [conversation])
+      const open = () => reader.query<{ id: string }>('select public.open_chat($1,$2) as id', [oldCard, trainer])
+      try {
+        await db.query('begin')
+        await db.query(`insert into public.profiles(id,first_name,account_role) values
+          ($1,'Synthetic trainer','trainer'),($2,'Original athlete','client'),
+          ($3,'Different athlete','client'),($4,'Stranger','trainer')`, [trainer, athlete, replacement, stranger])
+        await db.query('insert into public.trainers(profile_id) values($1),($2)', [trainer, stranger])
+        await db.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name) values
+          ($1,$3,$4,'Synthetic old chat card'),($2,$3,null,'Synthetic canonical card')`,
+        [oldCard, canonical, trainer, athlete])
+        await db.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)',
+          [conversation, oldCard, athlete, trainer])
+        await db.query(`insert into public.chat_messages(id,conversation_id,sender_id,body,created_at)
+          values($1,$2,$3,'Read message','2026-10-01T10:00:00Z')`, [readMessage, conversation, athlete])
+        await db.query(`insert into public.chat_messages(id,conversation_id,sender_id,body,created_at,
+          image_path,image_mime_type,image_width,image_height,image_size_bytes)
+          values($1,$2,$3,'','2026-10-01T10:01:00Z','chat-media/synthetic-history.jpg','image/jpeg',100,100,200)`,
+        [photoMessage, conversation, athlete])
+        await db.query(`update public.chat_conversations set trainer_last_read_at='2026-10-01T10:00:00Z',
+          trainer_last_read_message_id=$2 where id=$1`, [conversation, readMessage])
+        const storedBefore = (await db.query('select * from public.chat_conversations where id=$1', [conversation])).rows
+        const messagesBefore = (await db.query('select * from public.chat_messages where conversation_id=$1 order by id', [conversation])).rows
+        expect((await threads(trainer)).find(row => row.conversationId === conversation)).toMatchObject({
+          clientId: oldCard, partnerUserId: athlete, partnerName: 'Original athlete', unreadCount: 1, lastMessageBody: 'Фото',
+        })
+
+        await db.query('update public.clients set auth_user_id=null,archived_at=now() where id=$1', [oldCard])
+        for (const actor of [trainer, athlete]) {
+          expect((await threads(actor)).find(row => row.conversationId === conversation)).toBeDefined()
+          expect(await asActor(actor, messages)).toHaveLength(2)
+          expect(await asActor(actor, open)).toEqual([{ id: conversation }])
+        }
+
+        await db.query('update public.clients set auth_user_id=$2 where id=$1', [canonical, athlete])
+        await db.query('update public.clients set merged_into_client_id=$2 where id=$1', [oldCard, canonical])
+        for (const actor of [trainer, athlete]) {
+          const mergedThreads = await threads(actor)
+          expect(mergedThreads.find(row => row.conversationId === conversation)).toMatchObject({
+            clientId: canonical, partnerUserId: actor === trainer ? athlete : trainer,
+          })
+          expect(mergedThreads.filter(row => row.clientId === canonical && row.trainerId === trainer)).toHaveLength(1)
+        }
+        // Real separate conversations stay separate; only an empty connection
+        // candidate for the same canonical pair is suppressed.
+        await db.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)',
+          [secondConversation, canonical, athlete, trainer])
+        for (const actor of [trainer, athlete]) {
+          expect((await threads(actor)).filter(row => row.clientId === canonical).map(row => row.conversationId).sort())
+            .toEqual([conversation, secondConversation].sort())
+        }
+
+        // Exact Down reproduces the dropped history; Up repairs it without data writes.
+        const migration = await readFile(new URL('../../db/migrations/000145_chat_original_participant_history.sql', import.meta.url), 'utf8')
+        const [up, down] = migration.split('-- Down Migration')
+        if (!up || !down) throw new Error('Chat history migration sections missing')
+        await db.query(down)
+        expect((await threads(trainer)).find(row => row.conversationId === conversation)).toBeUndefined()
+        await db.query(up)
+        expect((await threads(trainer)).find(row => row.conversationId === conversation)?.clientId).toBe(canonical)
+
+        // A different canonical owner must not inherit this conversation or its preview.
+        await db.query('update public.clients set auth_user_id=$2 where id=$1', [canonical, replacement])
+        expect((await threads(trainer)).find(row => row.conversationId === conversation)?.clientId).toBe(oldCard)
+        await db.query('update public.clients set auth_user_id=null where id=$1', [canonical])
+        await db.query('update public.clients set auth_user_id=$2 where id=$1', [oldCard, replacement])
+        expect((await threads(trainer)).find(row => row.conversationId === conversation)).toMatchObject({
+          clientId: oldCard, partnerUserId: athlete, partnerName: 'Original athlete', unreadCount: 1,
+        })
+        expect((await threads(athlete)).find(row => row.conversationId === conversation)).toBeDefined()
+        for (const outsider of [replacement, stranger]) {
+          expect((await threads(outsider)).find(row => row.conversationId === conversation)).toBeUndefined()
+          expect(await asActor(outsider, () => reader.query('select id from public.chat_conversations where id=$1', [conversation]))).toEqual([])
+          expect(await asActor(outsider, () => reader.query('select id from public.chat_messages where conversation_id=$1', [conversation]))).toEqual([])
+          await expect(asActor(outsider, messages)).rejects.toMatchObject({ code: 'PT403' })
+          await expect(asActor(outsider, open)).rejects.toMatchObject({ code: 'PT403' })
+        }
+        for (const actor of [trainer, athlete]) expect(await asActor(actor, messages)).toHaveLength(2)
+        expect((await db.query('select * from public.chat_conversations where id=$1', [conversation])).rows).toEqual(storedBefore)
+        expect((await db.query('select * from public.chat_messages where conversation_id=$1 order by id', [conversation])).rows).toEqual(messagesBefore)
+        expect((await db.query(`select
+          has_function_privilege('fit_api','public.list_chat_threads()','execute') allowed,
+          has_function_privilege('public','public.list_chat_threads()','execute') public_allowed`)).rows)
+          .toEqual([{ allowed: true, public_allowed: false }])
+      } finally {
+        await db.query('rollback')
+        db.release()
+      }
+    })
+
     it('uses the active relationship for trainer and chat lists', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')

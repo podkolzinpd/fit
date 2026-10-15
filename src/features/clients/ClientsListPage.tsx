@@ -9,7 +9,7 @@ import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
 import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
-import { canOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
+import { canOpenClientChat, clientChatThreads, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
 import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage'
 
@@ -200,7 +200,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
   })
   const financeByClientId = useMemo(() => new Map((finance.data?.clients ?? []).map((item) => [item.clientId, item])), [finance.data?.clients])
   const search = searchParams.get('q') ?? ''
-  const threadByClientId = useMemo(() => new Map((threads.data ?? []).map((thread) => [thread.clientId, thread])), [threads.data])
+  const threadByClientId = useMemo(() => clientChatThreads(threads.data ?? []), [threads.data])
   // Порог считаем по всему списку, а не по отфильтрованному: иначе поле
   // исчезало бы прямо во время ввода, как только совпадений станет мало.
   const showSearch = (query.data?.length ?? 0) >= CLIENTS_SEARCH_MIN
