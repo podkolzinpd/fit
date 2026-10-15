@@ -35,6 +35,28 @@ Bounded live source search вернул7 обычных продуктов с в
 строки CURRENT_STATE побайтово сохранены; migration safety exact-base passed.
 Это локальные доказательства, не заявление об уже включённом production.
 
+Post-merge preflight15.10: PR1643 слит в main55c8ea52. Публичные OPTIONS к
+native API разрешают canonical `https://fit-training.ru`, `capacitor://localhost`
+и `https://localhost` (204 + точный Allow-Origin), но www даёт403. Питание не
+меняет этот чужой CORS-контракт. В новом scoped release ошибочно осталась
+скопированная проверка www; она исключена из nutrition-only activation,
+остальные canonical/native/auth/schema/rollback гейты сохранены. Добавлен
+регрессионный assertion на точные три релевантных origin. Конфигурация CORS,
+маршруты сайта и права пользователей не меняются; неуспешный enable не запускался.
+
+Тот же main CI38715304043 обнаружил существующую WebKit race в progress fixture:
+моментальный geometry read после переключения ПРО вернул `[0]`, следующий
+trace/AX snapshot уже содержит7 controls. Питание/UI/CSS не затрагивали экран
+прогресса. На macOS та же геометрия прошла3/3; весь диагностический scenario
+не зелёный из-за существующих Darwin screenshot differences (goldens не менялись).
+В follow-up ожидание геометрии переведено на стандартный bounded `expect.poll`:
+прежние nonempty и каждый control>=44px сохранены, timeout/retries/thresholds,
+набор случаев, spec inventory и продуктовый экран не меняются. Это ожидание
+готовности, не удаление проверки. Linux-подтверждение требуется fresh-head CI.
+После изменения существующий behavior WebKit case прошёл3/3 без retries,
+targeted lint/typecheck и workflow/shell checks11/11 зелёные. Новых кейсов0,
+новых матриц0, screenshot goldens и защищённый inventory не менялись.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
