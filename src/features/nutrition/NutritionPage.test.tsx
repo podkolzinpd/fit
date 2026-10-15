@@ -142,6 +142,8 @@ it('shows a dated latest-record link without presenting it as today', async () =
 it('home summary separates empty, partial data, loading and retry without fake zero totals', async () => {
   const { cache, user } = setup('/own-summary')
   const card = screen.getByRole('region', { name: 'Питание сегодня' })
+  expect(within(card).getByRole('status', { name: 'Загрузка' })).toBeVisible()
+  expect(within(card).queryByText('Сегодня записей нет')).toBeNull()
   expect(await within(card).findByText('Сегодня записей нет')).toBeVisible()
   expect(within(card).queryByText('0 ккал')).toBeNull()
   expect(within(card).getByRole('link', { name: 'Добавить еду' })).toHaveClass('button', 'secondary')

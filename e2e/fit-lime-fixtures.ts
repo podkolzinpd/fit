@@ -215,6 +215,7 @@ export type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'starte
 
 export async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number; showFeedbackNotice?: boolean } = {}) {
   const profileId = options.profileId ?? trainerId
+  const apiOrigin = process.env.VITE_YANDEX_API_BASE_URL ?? 'http://127.0.0.1:4100'
   let snoozedUntil: string | null = null
   let failClients = options.failClients ?? false
   let failTrainingData = options.failTrainingData ?? false
@@ -261,7 +262,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
   const sentMessages: Array<{ id: string; conversationId: string; senderId: string; body: string; createdAt: string; editedAt: null; replyTo: null; image: null }> = []
   let lastSavedStartTime: string | null = null
   let lastEditedStartTime: string | null = null
-  await page.route('http://127.0.0.1:4100/health', async (route) => {
+  await page.route(`${apiOrigin}/health`, async (route) => {
     await route.fulfill({ status: 200, headers: { 'x-fit-request-id': 'pilot-health-check', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-fit-request-id' }, contentType: 'application/json', body: '{"ok":true}' })
   })
   await page.addInitScript(({ token, profileId, showFeedbackNotice }) => {
@@ -289,7 +290,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       ...(showFeedbackNotice ? [] : ['workout-feedback-compact-2026-10']),
     ]))
   }, { token: sessionToken, profileId, showFeedbackNotice: options.showFeedbackNotice ?? false })
-  await page.route('http://127.0.0.1:4100/v1/**', async (route) => {
+  await page.route(`${apiOrigin}/v1/**`, async (route) => {
     const url = new URL(route.request().url())
     let body: unknown
     if (url.pathname === '/v1/auth/yandex/session' && route.request().method() === 'DELETE') {
