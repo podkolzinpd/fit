@@ -1076,7 +1076,7 @@ for (const width of [390, 430, 1440]) for (const [fitLime, theme] of [[false, 'l
     await page.goto('/clients')
     const single = page.locator(`[data-client-swipe-id="${clientId}"] .client-finance-state`)
     await expect(single).toContainText(/К оплате 2.*500.*₽/)
-    const tip = page.getByRole('status').filter({ hasText: 'В архив одним свайпом' })
+    const tip = page.getByRole('status').filter({ hasText: /В архив одним свайпом|Чат — по нажатию, архив — свайпом/ })
     if (await tip.isVisible()) await tip.getByRole('button', { name: 'Понятно' }).click()
     await expect(single).toContainText('· до 08.10')
     await expect(page.locator(`[data-client-swipe-id="${newWorkoutId}"] .client-finance-state`)).toContainText('Ближайший срок — 09.10')
