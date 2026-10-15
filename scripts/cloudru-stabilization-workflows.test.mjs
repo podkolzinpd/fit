@@ -263,3 +263,26 @@ test('speech ingress upgrades only the authenticated loopback relay and its runt
   assert.match(nginx, /proxy_pass http:\/\/127\.0\.0\.1:18084\/stt/)
   assert.match(nginx, /proxy_set_header Upgrade \$http_upgrade/)
 })
+
+
+test('background journal report keeps only fixed flags and allowlisted database codes', () => {
+  const messages = [
+    { event: 'cloudru_background_failed', errorCode: '42501', message: 'private-query-values' },
+    { event: 'database_pool_window', databaseErrorCode: 'private-code' },
+    { event: 'yandex_session_cleanup_failed', errorCode: 'ETIMEDOUT' },
+  ].map(entry => JSON.stringify({ MESSAGE: JSON.stringify(entry) }))
+  messages.push(JSON.stringify({ MESSAGE: 'cloudru_background_failed' }),
+    JSON.stringify({ MESSAGE: 'private-credential-value' }),
+    JSON.stringify({ MESSAGE: 'background_launcher_failed:container:125' }),
+    JSON.stringify({ MESSAGE: 'background_launcher_failed:private-data:125' }), 'invalid-json', '[]', 'null')
+  const result = spawnSync('python3', ['scripts/cloudru-background-diagnostics.py'], {
+    input: messages.join('\n'), encoding: 'utf8',
+  })
+  assert.equal(result.status, 0)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.workerFailed, true)
+  assert.equal(report.sessionCleanupFailed, true)
+  assert.deepEqual(report.databaseCodes, ['42501', 'ETIMEDOUT'])
+  assert.deepEqual(report.launcherFailures, [{ stage: 'container', exitCode: 125 }])
+  assert.doesNotMatch(result.stdout, /private-/)
+})

@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
+stage=identity
+trap 'printf "background_launcher_failed:%s:%s\n" "$stage" "$?" >&2' ERR
 test "$(id -u)" = 0
 test "$(hostname)" = fit-stage-app
+stage=lock
 exec 9>/run/lock/fit-cloudru-background.lock
 flock -n 9 || exit 0
+stage=runtime
 revision=$(cat /opt/fit/RUNNING_SHA)
 [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
 test "$(podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$revision"
+stage=boundary
 test -f /opt/fit/BACKGROUND_STARTED_AT
+stage=private_env
 test "$(stat -c '%u:%a' /opt/fit/secrets/background.env)" = 0:600
+stage=container
 podman run --rm --read-only --memory=256m --cpus=0.5 --pids-limit=128 --timeout=45 \
   --cap-drop=ALL --security-opt=no-new-privileges \
   --env-file /opt/fit/secrets/background.env \

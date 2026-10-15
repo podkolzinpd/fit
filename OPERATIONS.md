@@ -226,6 +226,12 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   Обычные push и session cleanup работают в Cloud.ru; Telegram/Tracker feedback
   credentials этим workflow не переносятся. Владелец15.10 явно оставил эту
   доставку выключенной; обращения сохраняются без внешней отправки.
+  Успех таймера не доказывает успех worker: проверяйте Result сервиса и queue
+  aggregates. Inspect workflow читает не более100 journal records за15 минут
+  через allowlist sanitizer; raw messages, SQL и ключи в job output не выводятся.
+  Launcher публикует только фиксированный этап/exit code, worker — существующие
+  безопасные dispatch diagnostics. Исходный публичный VAPID хранится в repo
+  variable VITE_VAPID_PUBLIC_KEY; после его изменения нужен rebuild frontend.
 - `Backup and restore-check Cloud.ru production`: отдельный приватный bucket
   fit-cloudru-backups-c2ad3760. Разовый bootstrap, затем ежедневно05:35МСК.
   Bootstrap также включает versioning приватного media bucket; ежедневная
