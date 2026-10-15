@@ -163,7 +163,7 @@ test('prepare workflow retains green-main and default-off automatic gate without
   }
 })
 
-test('candidate preserves every production VITE setting except explicitly approved API and AI program', async () => {
+test('candidate preserves every production VITE setting except explicitly approved API, AI program and AI-recovery notice', async () => {
   const [production, candidate] = await Promise.all([
     readFile(new URL('../.github/workflows/deploy-yandex-frontend.yml', import.meta.url), 'utf8'),
     readFile(new URL('../.github/workflows/prepare-cloudru-frontend.yml', import.meta.url), 'utf8'),
@@ -174,7 +174,8 @@ test('candidate preserves every production VITE setting except explicitly approv
   const next = settings(candidate)
   assert.deepEqual([...next.keys()].sort(), [...original.keys()].sort())
   for (const [name, value] of original) {
-    if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED') continue
+    // VITE_SERVICE_NOTICE_ENABLED: временная плашка о восстановлении ИИ, решение владельца 14.10.
+    if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED' || name === 'VITE_SERVICE_NOTICE_ENABLED') continue
     assert.equal(next.get(name), value, name)
   }
 })
