@@ -8,12 +8,259 @@ frontend. Безопасные локальные URL и publishable key хра�
 `.env.development`.
 
 Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и
-`127.0.0.1`. Legacy `VITE_SUPABASE_*` пока остаются в production Yandex frontend
-build из-за startup/recovery совместимости; текущая конфигурация находится в
+`127.0.0.1`. `VITE_SUPABASE_*` нужны только локальным legacy-сценариям, не production
+web/Android/iOS build. Текущая production-конфигурация находится в
 `.github/workflows/deploy-yandex-frontend.yml`, а не в Vercel Production.
 Production URL/ключи нельзя копировать в `.env.local`, `.env.development` или
 другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
 Supabase baseline, не Yandex PostgreSQL.
+
+## Cloud.ru stage: bootstrap и подготовка API
+
+На время переноса в Cloud.ru автоматический `Deploy Yandex stage` после push в
+`main` выполняет только локальную валидацию Terraform. `Review Terraform plan`,
+`deploy` и публикация Yandex deployment запускаются только при точном значении
+repository variable `YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED=true`; отсутствие
+переменной означает `false`. Ручной `workflow_dispatch` остаётся явным
+разовым запуском, включая `plan_only=true`. Это останавливает повторяющийся
+remote refresh двух Yandex Cloud Functions Triggers, не удаляет их из Terraform
+state и не планирует их уничтожение. Пока флаг выключен, изменения Yandex API
+и инфраструктуры **не попадают автоматически в Yandex stage**; перед возвратом
+туда требуется отдельный проверенный plan. Cloud.ru workflows этим флагом не
+затрагиваются.
+
+`.github/workflows/deploy-cloudru-stage.yml` — **Bootstrap Cloud.ru stage runner**,
+только аварийный ручной `workflow_dispatch`. Он может временно использовать
+SSH-ключ и `CLOUDRU_RUNNER_REGISTRATION_TOKEN`; после регистрации runner
+registration secret и временное правило TCP/22 удаляются. Это не обычный deploy.
+
+Обычные обновления готовит **Build Cloud.ru stage API** в
+`.github/workflows/deploy-cloudru-api-stage.yml`: `push` в `main` только для
+`services/api/**` или ручной `workflow_dispatch`. Job использует
+`[self-hosted, cloudru-stage]`, `contents: read` и общий lock
+`cloudru-stage-vm` без отмены выполняющегося задания. Автоматический запуск
+разрешён только при точном `CLOUDRU_STAGE_AUTODEPLOY_ENABLED=true`; отсутствие
+переменной/`false` оставляет только ручной запуск. Первую проверку выполняйте
+вручную на `main` при выключенном флаге; включайте его только после success.
+
+До checkout проверяются repository/main/SHA, hostname `fit-stage-app`, активный
+`actions.runner.podkolzinpd-fit.fit-cloudru-stage.service` и `sudo podman info`.
+Credentials checkout не сохраняются. Только versioned source из `git archive`
+попадает в отдельный каталог `/opt/fit/releases/<SHA>/<run-id>-<attempt>`.
+Образ `localhost/fit-api:<SHA>` собирается на VM через Podman и проверяется
+`podman image exists`. После success отдельно атомарно заменяются ссылка
+`/opt/fit/current` и файл `/opt/fit/DEPLOYED_SHA`; итог сверяется по readback.
+Ошибки preflight/build не меняют прежние SHA/current; старые releases/образы
+этот workflow не удаляет.
+
+Сборка **не запускает API-контейнер**: SHA в `/opt/fit/DEPLOYED_SHA` означает
+подготовленный образ, не работающий runtime. После завершения SQL-переноса и
+первого loopback smoke отдельный workflow `Release Cloud.ru stage API` принимает
+только зелёный CI текущего `main` (либо `workflow_dispatch` с ID такого CI).
+Его автоматический режим требует `CLOUDRU_API_AUTODEPLOY_ENABLED=true`.
+Workflow собирает exact-main образ, проверяет кандидата на `127.0.0.1:18082`,
+переключает runtime на `127.0.0.1:18080`, проверяет `/ready` и пишет
+`/opt/fit/RUNNING_SHA`; при неудаче после переключения пытается вернуть прежний
+образ. До запуска кандидата он применяет только новые numbered SQL-миграции
+из того же exact-main образа; DNS и публичный listener не меняет. Runtime берёт
+существующий `/opt/fit/secrets/api.env`. Проверка runtime разрешает только
+Cloud.ru PostgreSQL с fit_api и либо явно выключенный AI, либо согласованные
+external AI credentials без Yandex VM metadata и старого function gateway.
+
+Миграции выпуска запускает `dist/cloudru-release-migrations.js` в одноразовом
+read-only Podman-контейнере без capabilities/публичного порта. Только этот
+контейнер получает `MIGRATION_DATABASE_*` владельца `fit_owner` из существующего
+`CLOUDRU_STAGE_DATABASE_CONFIG_JSON`; API продолжает получать только свой
+`/opt/fit/secrets/api.env`. Target жёстко ограничен `10.70.10.67:5432/fit` с
+прежним согласованным `SSL_MODE=require`: TLS шифруется, CA/hostname в этом
+режиме не проверяются. Yandex, OIDC и source snapshot в этом выпуске не нужны.
+
+Перед apply проверяются owner/database, существующая непустая история
+`app_private.fit_migrations`, её PK и соответствие истории файлам образа.
+Это не initial bootstrap, не restore и не синхронизация данных между облаками.
+Стандартный advisory lock node-pg-migrate удерживается одной сессией непрерывно
+при планировании, backup и apply; конкурирующий migrator получает ошибку.
+Pending SQL выполняется одной транзакцией, без fake/down/no-lock. Явные
+transaction boundaries в Up отвергаются. Timeout SQL120s/lock3s ограничивает
+влияние DDL на работающий API. При отсутствии pending SQL backup/apply не нужны.
+
+Если изменения есть, до apply PostgreSQL17 `pg_dump` сохраняет custom archive
+`/opt/fit/db-backups/<SHA>/<run-id>-<attempt>/before-migrations.dump`;
+`pg_restore --list` проверяет его читаемость. Каталоги root0700, archive0600,
+backup не перезаписывается, не публикуется в GitHub artifacts и не удаляется
+автоматически. Это локальная аварийная копия на той же VM, не offsite backup
+и не доказательство восстановления production. Контролировать диск; retention
+и offsite/restore drill — отдельные задачи. Owner env root0600 и одноразовый
+контейнер удаляются EXIT trap; после SIGKILL/потери VM может понадобиться
+проверка оставшегося защищённого env/container. Копии данных не трогать.
+
+Ошибка backup/миграции останавливает выпуск до кандидата и замены старого API.
+После success проверяется отсутствие pending. Ошибка API возвращает предыдущий
+образ, **не** выполняет down/restore БД: forward-миграции обязаны сохранять
+совместимость со старым API. Первое ручное выполнение на зелёном текущем main
+проверяется до включения `CLOUDRU_API_AUTODEPLOY_ENABLED=true`; флаг запускает
+тот же gated workflow после успешного CI `main`, не отдельный apply.
+
+`Prepare Cloud.ru frontend without public routing` также требует зелёный CI
+текущего `main`; его автоматический режим требует
+`CLOUDRU_FRONTEND_AUTODEPLOY_ENABLED=true`. Он собирает frontend с
+build environment `fit-frontend-candidate`, где уже находятся публичные startup
+параметры и обязательные licensed fonts. Секреты не копируются в repository
+или на VM: environment подключён только к hosted build, не к self-hosted prepare.
+Сборка использует
+`https://api.fit-training.ru` и устанавливает его в отдельный nginx-сервис,
+слушающий только `127.0.0.1:18081`. В этой сборке программа Assistant выключена
+(`VITE_ASSISTANT_PROGRAM_ENABLED=false`); runtime AI остаётся выключенным.
+Сервис не меняет системный nginx, основной домен или DNS. Если отдельный public
+web ingress уже включён, новая сборка будет доступна через него: loopback сам
+по себе не означает отсутствия внешнего потребителя. Сначала нужны зелёные ручные
+прогоны обоих workflows, затем можно включать их автоматические флаги.
+Обычному job не нужны SSH, приватный ключ и registration token: runner получает
+задания через исходящее HTTPS-соединение с GitHub; входящий SSH не открывается.
+
+Frontend artifact — пакет с exact-main SHA, SHA-256/размерами и MIME/cache
+каждого файла. Он материализуется только в новый immutable каталог
+/opt/fit/frontend/candidates/<SHA>-<run>-<attempt>/site; existing paths и symlinks
+не переиспользуются. До изменения current отдельный непривилегированный Nginx
+на127.0.0.1:18083 проверяет все bytes/headers, SPA/OAuth callback, recovery старого
+JS и404 отсутствующих CSS/WASM/fonts. Probe не останавливает stage18081;
+public80/443 и API18080 не затрагиваются. Hosted fonts обязательны, без fallback.
+
+Promotion сохраняет previous current/config/systemd unit, проверяет Nginx syntax
+и повторяет полный HTTP-контракт на18081. При ERR/INT/TERM возвращает прежние
+файлы/указатель, перезапускает ранее активный stage и завершает job с ошибкой.
+Первый неудачный install убирает только созданные pointer/config/unit; releases
+и backups сохраняются. Failed rollback явно сообщается; SIGKILL/потеря VM
+не покрываются.
+
+Диск self-hosted runner обслуживает shell-only workflow **Maintain Cloud.ru
+runner disk**. Он не использует `actions/checkout`/`setup-node`, поэтому может
+запуститься даже когда свободного места недостаточно для скачивания GitHub
+Action. Ручной `inspect` только выводит `df`, inode, размеры строго известных
+каталогов и `podman system df`. Ручной `apply` требует подтверждение
+`APPLY_CLOUDRU_RUNNER_RETENTION`; тот же bounded apply запускается ежедневно в
+05:17 МСК под общим lock `cloudru-stage-vm`.
+
+Retention сохраняет SHA работающего API, подготовленный SHA, образы всех
+контейнеров и три последних API release SHA; для frontend сохраняются текущий
+candidate и три последних candidate. Удаляются только прошедшие строгую
+проверку старые `/opt/fit/releases/<sha>`, frontend candidates и их
+`localhost/fit-api:<sha>` tags, затем dangling image cache и воспроизводимые
+GitHub Actions/Node tool caches. Volumes, контейнеры, media, secrets и
+`/opt/fit/db-backups` не очищаются. После apply повторно проверяются оба current
+pointer, RUNNING_SHA, API/frontend loopback smoke и минимум 2 ГБ свободного
+места. Если проверка не проходит, workflow завершается ошибкой; удалённые
+артефакты восстанавливаются только новой сборкой, поэтому защищённые rollback
+версии являются обязательной границей.
+Unit/refusal/rollback входят в npm run frontend:hosting:test. Real Nginx:
+node --test scripts/cloudru-frontend-nginx.integration.test.mjs через Podman,
+без production URL/БД. Это hosting-проверка, не пользовательский OAuth E2E.
+
+Это откат frontend, не данных между облаками. Перед cutover нужны свежий
+согласованный DB/media snapshot, контроль всех writers и auth/data/media
+acceptance. После Cloud.ru writes возврат DNS на старый Yandex snapshot потеряет
+новые данные; reverse-transfer ещё не реализован/не испытан. Yandex ресурсы
+этим workflow не удаляются.
+
+`Configure Cloud.ru public HTTPS ingress` — отдельный **ручной** шаг после
+успешного CI текущего `main` и loopback smoke обоих сервисов. Вход `target=api`
+открывает только `api.fit-training.ru` → `127.0.0.1:18080`; `target=web` —
+`fit-training.ru`/`www` → `127.0.0.1:18081`. Перед изменением nginx workflow
+требует, чтобы системный DNS VM разрешал все имена выбранной цели **только** в
+`87.242.117.210`. Он получает Let's Encrypt сертификат через HTTP-01 на 80,
+после чего проверяет HTTPS на 443; certbot timer и nginx reload hook обеспечивают
+продление. Без валидного сертификата HTTPS-конфиг не ставится; при ошибке
+предыдущий nginx site восстанавливается. Для HTTP-01 публичная делегация NS
+должна уже вести в Cloud.ru и соответствующие A-записи — на VM. Прежде чем
+поменять A для apex/`www` на VM, необходимо установить frontend и проверить
+его на loopback, иначе сайт получит простой. Поскольку сертификат выдаётся
+после смены A, короткое окно до завершения HTTP-01 возможно: следить за
+workflow и вернуть прежние A, если выпуск сертификата не проходит. TLS-ключи
+остаются на VM, в GitHub/artifacts не выгружаются.
+
+## Cloud.ru: стабилизация и проверяемая эксплуатация
+
+14.10 ручные API/frontend38633109023/38633113898 выпустили d10c2d12;
+после public release/readiness readback включены оба CLOUDRU autodeploy-флага.
+Production web использует `https://fit-training.ru/api` через Nginx того же
+домена; новые native builds используют `https://api.fit-training.ru`. Технический
+Yandex origin не принимается production native validator. Старые установленные
+bundles этим не переписываются. Backend provider выбирается DNS/API, не новым
+доменных контрактом. Старые Yandex DNS/API пока не изменены; владелец разрешил их совместимость.
+Manual workflow `Route legacy Yandex addresses to Cloud.ru` сначала делает inspect,
+затем меняет только три A/CNAME записи старой зоны и отдельно revision старого API.
+API проксирует в Cloud.ru с сохранением CORS Origin и сессии; credentials/DB
+в image отсутствуют. Междоменный307 отвергнут реальным Chromium-тестом:
+браузер меняет Origin на null. Прокси не повторяет запрос при сетевой ошибке.
+Старые DB/resources/revisions сохраняются; предыдущая revision записана в summary.
+Перед запуском Cloud.ru background выполнить mode pause-background: он проверяет
+единственный старый fit-stage-push-dispatcher timer и его target/path, приостанавливает
+только этот timer и проверяет PAUSED. Ресурс не удаляется; не включать одновременно
+старый timer и Cloud.ru timer.
+Старая app-session может потребовать повторного входа в Cloud.ru. Это не объединяет
+независимые изменения двух БД. Повторный Yandex Terraform apply может вернуть
+старый writer, поэтому YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED должен оставаться off.
+
+Подготовленные main-only workflows включаются после их CI и ручной приёмки:
+
+- `Configure Cloud.ru external AI`: mode cors-only исправляет www/native CORS
+  отдельным candidate/rollback без внешних ключей и без включения AI. Mode
+  external-ai берёт только существующие YandexGPT key,
+  folder/model из pinned Lockbox version через GitHub OIDC; Supabase credentials
+  не копируются, Yandex ресурсы/IAM не меняются. Synthetic model call и API
+  candidate проверяются до замены root0600 runtime env, с rollback. Prompt и
+  matching прежние. После success устанавливается CLOUDRU_AI_ENABLED=true и
+  заново строится frontend; до этого программа Assistant выключена в сборке.
+- `Configure Cloud.ru authenticated SpeechKit relay`: отдельный непривилегированный
+  Podman relay на127.0.0.1:18084, текущая app-session проверяется через loopback
+  API до открытия SpeechKit stream. `/stt` проксируется через существующий API
+  HTTPS. Никаких DB/media credentials в relay; ограничения payload/auth buffer,
+  срока соединения и ресурсов, без текста/токенов в логах. До promotion —
+  synthetic upstream и unauthenticated guard. После success установить
+  CLOUDRU_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt и пересобрать web/native.
+- `Configure Cloud.ru fresh background delivery`: только существующая VAPID
+  identity, runtime DB role fit_api, systemd timer раз в минуту и flock без
+  параллельных batches. По прямому решению владельца старые unsent и uncertain
+  recovery receipts получают terminal history marker без удаления/повторной
+  отправки; первый BACKGROUND_STARTED_AT не сдвигается повторным запуском.
+  Обычные push и session cleanup работают в Cloud.ru; Telegram/Tracker feedback
+  credentials этим workflow не переносятся. Владелец15.10 явно оставил эту
+  доставку выключенной; обращения сохраняются без внешней отправки.
+- `Backup and restore-check Cloud.ru production`: отдельный приватный bucket
+  fit-cloudru-backups-c2ad3760. Разовый bootstrap, затем ежедневно05:35МСК.
+  Bootstrap также включает versioning приватного media bucket; ежедневная
+  проверка читает объекты и считает безопасный общий checksum без object paths.
+  Versioning защищает последующие изменения, не восстанавливает старые версии
+  задним числом. pg_dump17 custom archive шифруется AES-256-GCM до отправки; ключ v1 хранится
+  только в CLOUDRU_BACKUP_ENCRYPTION_KEY и защищённом временном runtime env.
+  Не перезаписывать/ротировать этот secret без сохранения старого ключа: иначе
+  предыдущие backups не восстановятся. Срок хранения объектов пока не ограничен;
+  контролировать объём. Лимит одного archive64MiB предотвращает расход памяти.
+  После S3 readback/checksum/decryption выполняется настоящий restore на той же
+  Cloud.ru VM в одноразовом PostgreSQL17 без сети/портов, с отдельным volume.
+  Backup сохраняет grants; restore проверяет fit_api SELECT, RLS/owner трёх
+  основных таблиц, число таблиц и migration history; пользовательские строки не
+  печатаются, не попадают в artifacts и не копируются локально. Временные dumps,
+  env и restore volume удаляются только в рамках свежего attempt. Native
+  managed PostgreSQL backups не считаются доказанными этим механизмом.
+- `Verify Cloud.ru production`: hosted read-only DNS/TLS/web/API/401 monitor
+  каждые15мин, certificate margin14дней, безопасный JSON artifact без bodies.
+- `Inspect Cloud.ru production operations`: ежечасно проверяет readiness,
+  worker/relay/renewal timer, disk>=2GiB, certificates>=14дней и возраст последнего
+  проверенного offsite restore<48часов. Manual renewal_check запускает bounded
+  staging renewal dry-run без выдачи нового production сертификата. Отдельный
+  short-lived owner container читает только counts push outbox в READ ONLY
+  transaction (statement timeout5s): pending, overdue>15min, stale lease>10min
+  и terminal failures за час; historical cutover marker исключён. Owner env
+  удаляется EXIT и не передаётся runtime/relay/background.
+
+Workflows сохраняют общий VM lock и не отменяют уже выполняющиеся операции.
+Bootstrap/configuration не означают пройденный реальный OAuth/voice E2E;
+приёмка двух тестовых ролей и свежие мобильные bundles фиксируются отдельно.
+Web ingress передаёт ответы stage Nginx потоково (`proxy_buffering off`), чтобы
+загрузка JS/CSS не зависела от записи больших ответов во временный каталог
+системного Nginx. После установки конфигурации workflow скачивает целиком все
+JS/CSS, перечисленные текущим `index.html`; одного статуса HTTP 200 недостаточно.
 
 ## Диагностика пользовательской ошибки
 
@@ -392,6 +639,23 @@ production frontend или Supabase. Перенос на stage оплачива�
 холодные вызовы уже существующего Serverless Container; новый постоянно
 работающий или provisioned ресурс не создаётся.
 
+## Служебная плашка о восстановлении ИИ
+
+Временный build-time флаг сборки Cloud.ru (`.github/workflows/prepare-cloudru-frontend.yml`):
+
+```text
+VITE_SERVICE_NOTICE_ENABLED=true
+```
+
+Только точное `true` показывает над содержимым каждого экрана клиента и тренера
+(кроме Live и переписки) плашку «Fit снова работает» о том, что ИИ-функции
+восстанавливаются. Крестик скрывает её до конца текущего запуска
+(`sessionStorage`, ключ `fit.serviceNotice.dismissed`); следующий запуск
+приложения или новая вкладка показывают её снова. Это только уведомление: функции, авторизация и
+данные не меняются. Текст — `src/app/service-notice.tsx`. Чтобы снять плашку,
+выставить `'false'` и выпустить фронтенд Cloud.ru; старые сборки Yandex Cloud и
+уже установленные нативные приложения её не получают.
+
 ## Окно технических работ
 
 Глобальный build-time switch остаётся default-off:
@@ -579,7 +843,7 @@ delete/replace и любые сопутствующие изменения datab
 - `SUPABASE_DB_PASSWORD` — пароль новой БД;
 - `SUPABASE_PROJECT_ID` — `xwfuzfkuhblswpdludbc`.
 
-Это **legacy Supabase secrets** для сохранённых recovery/media/rollback путей.
+Это **legacy Supabase secrets** для сохранённых legacy linking/media/rollback путей.
 Новые изменения схемы в `supabase/migrations` больше не добавляются. Workflow
 `.github/workflows/deploy-database.yml` пока технически существует и сработает,
 если изменить legacy migration-файлы в `main`; не используйте его для новой
@@ -826,25 +1090,24 @@ PR Preview, сначала спроектируйте отдельную Yandex-
 - build command: `npm run build`;
 - output directory: `dist`.
 
-На время диагностического отката #1144 для старой Vercel-сборки и Preview
-понадобились публичные frontend-переменные Supabase. Новых Vercel-сборок нет;
-в текущей Yandex production-сборке они также пока обязательны для startup/recovery
-совместимости и читаются GitHub workflow, а не Vercel Environment:
+Исторический startup rollback #1144 требовал Supabase env. Эта зависимость
+устранена: production web/Android/iOS собираются без `VITE_SUPABASE_*`.
+Frontend SDK не создаётся при импорте; production transport отклоняет любую
+legacy операцию локально даже при stale env. Yandex-only AuthProvider не
+подписывается на Supabase Auth и не вызывает legacy signOut/getSession для
+обновления/выхода из app-session. Таймауты Yandex session и UI states сохранены.
+Два legacy storage bucket API тоже ленивые; SDK создаётся только при явном
+локальном legacy обращении с локальной конфигурацией. Только явные modes
+`development`/`test` допускают legacy SDK; URL остаётся localhost даже когда
+Vite build выставляет `PROD=true`. Release modes закрыты. Dummy credentials нет.
 
-```text
-VITE_SUPABASE_URL=https://xwfuzfkuhblswpdludbc.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<publishable key>
-```
-
-SDK снова создаётся при импорте, а AuthProvider подписывается на auth events.
-Сохранённый legacy token может обновляться через Supabase Auth, но Yandex-only
-actor и data routing остаются Yandex: stale auth events не инициализируют
-Supabase-профиль, а отсутствие Yandex session не включает fallback. Таймаут
-восстановления Yandex session и последующие media/invitation fixes сохранены.
-Это была проверка гипотезы startup-регрессии, а не доказанное исправление
-сетевого таймаута Vercel. До удаления переменных из текущего Yandex build
-нужен отдельный проверенный Yandex-only startup release. Backend bridge
-secrets не удалять.
+Production iOS guard проверяет `VITE_YANDEX_API_BASE_URL` как remote HTTPS origin,
+публичный `VITE_YANDEX_OAUTH_CLIENT_ID` и точное `true` app-session/main routing/
+native registration/Yandex-only switches. Supabase config не заменяет их.
+CI Yandex-auth lane собирает production bundle и проверяет его через Vite
+preview/WebKit без Supabase env/services; локальные frozen legacy lanes остаются.
+Удаление env из workflow не удаляет GitHub Secrets или Supabase проект.
+Серверные bridge secrets/media/migration/rollback tooling пока сохраняются.
 
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client
 Secret во frontend build не добавляются.
@@ -1042,15 +1305,13 @@ handoff endpoints скрыты с `404`, пока `YANDEX_ONLY_AUTH_ENABLED` н�
 один из этих switches: stage Terraform читает отсутствующие repository
 variables как `false`.
 
-В эффективном Yandex-only режиме browser Supabase client не создаётся даже при
-наличии старых `VITE_SUPABASE_URL` и `VITE_SUPABASE_PUBLISHABLE_KEY`: legacy
-запрос завершается локальной ошибкой до сетевого вызова. Для авторизованного
-пользователя без подходящей Yandex app-session data backend тоже закрывается,
-а не переключается на Supabase. После deployment и проверки входа обеих ролей,
-публичной анкеты и приглашения эти две переменные можно удалить именно из
-Yandex frontend build workflow и сделать новый deployment. Серверные Supabase
-secrets не удалять: они ещё нужны для recovery старых аккаунтов и оставшегося
-media bridge. Локальная разработка сохраняет свои legacy настройки.
+Stale Supabase session не выбирает production auth/data backend. Новый bundle
+не инициализирует SDK, не обновляет legacy token и не обращается к Supabase даже
+при старых frontend env. Авторизованный пользователь без подходящей app-session
+остаётся в закрытом Yandex состоянии. Сборки web/Android/iOS не требуют Supabase
+переменных; rollout требует штатного выпуска соответствующих bundles. Серверные
+Supabase secrets сохраняются для legacy linking/media/migration/rollback.
+Локальная разработка сохраняет свои legacy настройки.
 
 Не включайте frontend раньше server revision. Порядок cutover: maintenance →
 fresh 35-table apply → repeat checksum → linked-ready assignments → server
@@ -1298,6 +1559,57 @@ Frontend redirect для разработки: `http://localhost:5173/auth/callb
 
 ## Release gates
 
+### Временный Fit Lime PR scope (12–25 октября 2026)
+
+По подтверждённому решению владельца только PR с явно известными узкими
+feature-файлами используют `@lime-critical` + tags каждого затронутого раздела
+в обоих прежних браузерах. Неизвестные/shared/CSS/auth/navigation и смешанные
+frontend/API изменения требуют full. Точный allowlist и expiry находятся в
+`scripts/fit-lime-ci-scope.mjs`; с 26.10.2026 00:00 МСК — автоматически full.
+Неверный clock, изменившийся SHA256 обоих spec/общей fixture или неполный inventory
+также возвращают full либо останавливают job, а не пропускают проверку.
+
+На main и ручном CI выполняется полный Fit Lime набор, когда browser gate
+требует E2E; инфраструктурные/не-browser diffs сохраняют штатный safe skip.
+Production frontend по-прежнему принимает только успешный CI текущего main,
+не сокращённый PR CI. Другие quality/browser/API/DB gates не сокращены.
+Ручной полный прогон: CI → Run workflow, нужная ветка; локально — прежняя
+Playwright команда или `FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-lime-ci.mjs <project> full`
+с подготовленными прежними fixture-env/fonts. Disabled acceptance останавливает
+runner, а не превращает skipped cases в зелёный job.
+Не передавайте пустой grep и не обновляйте digest без повторного аудита tags.
+План/приёмка: `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`.
+
+### Разделённая Fit Lime acceptance (обновлено 15 октября 2026)
+
+`e2e/fit-lime.behavior.spec.ts` содержит 98 поведенческих случаев без screenshot,
+CSS/font/geometry assertions. `e2e/trainer-schedule-v2.visual.spec.ts` содержит
+526 визуальных и смешанных interaction/state случаев. Общие page-scoped моки
+находятся в `e2e/fit-lime-fixtures.ts`; это browser UI acceptance, не проверка
+реальной облачной БД. Сохранены уникальные проверки исходного набора616;
+после выделения4 behavior cases оплат/шаблонов и включения4 новых случаев
+client empty-entry изPR1631 полный набор624 в обоих engine.
+Их25 visual-конфигураций сохраняют geometry/keyboard/focus/save/copy/overflow,
+но не повторяют полные edit/delete/payment и preflight/reload/replay цепочки.
+Mapping и локальный замер: `docs/design/FINANCE_TEMPLATE_TEST_DEDUPLICATION_20261015.md`.
+
+Full CI запускает behavior 1/1 и visual 1/4…4/4 независимо в Chromium и WebKit.
+Scoped feature-PR использует behavior 1/1 + visual 1/1 (4 jobs вместо 10),
+сохраняя union выбранных tags без дробления маленького набора.
+Required `e2e` требует успеха всей matrix; main/manual покрывают полный union.
+Локальная команда выше по-прежнему запускает оба spec; точный запуск части:
+`FIT_SCHEDULE_V2_VISUAL=1 node scripts/run-fit-lime-ci.mjs <project> full '' visual 1/4`
+или `... <project> full '' behavior 1/1`. Нужны прежние fixture-env/fonts.
+Временный feature scope выбирается до разбиения; expiry и allowlist прежние.
+После явного аудита переноса digest защищает оба spec и fixture.
+
+Каждый job сохраняет `fit-lime-timings-<engine>-<lane>-<job-index>` на 7 дней,
+включая успешный прогон. JSON содержит source location/case hash, duration,
+retry/status без названий, payload, ошибок и attachments; top-10 выводится в
+лог. Failure diagnostics имеют отдельное уникальное имя на каждую часть.
+Ускорение требует больше параллельных runners; очередь GitHub и setup могут
+ограничить выигрыш. План: `docs/design/FIT_LIME_ACCEPTANCE_SPLIT_20261014.md`.
+
 - GitHub branch protection для `main`: PR only, обязательные `app`, `database`, `e2e`.
 - Зелёный CI и воспроизводимый `supabase db reset`.
 - Закрытые пункты `FEATURE_PARITY.md` и visual comparison с baseline V1.
@@ -1501,3 +1813,16 @@ If calendar rollback is also requested, leave trainer all first, then inspect
 and choose target=trainer-schedule with mode=pilot and
 `SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
 The trainer workflow rejects client targets. No operation has been dispatched.
+
+## Удаление legacy password recovery — 14.10.2026
+
+`POST /v1/auth/yandex/recover` удалён из API и возвращает 404, включая запросы
+от старых web/native bundles. Они должны обновиться; новая версия сразу
+показывает регистрацию неизвестному Yandex ID. Уже связанные профили входят
+обычным способом. Старые email/пароль больше не проверяются в этом сценарии,
+непривязанная история не присоединяется к новому аккаунту автоматически.
+SQL migration history, профили и identity не удаляются. Supabase configuration
+пока нужна startup, legacy linking и media; удаление recovery ещё не разрешает
+удалить все Supabase secrets или проект. Проверка целевого production-поведения
+требует выпуска API и frontend/native вместе; один frontend deployment не
+доказывает удаление серверного endpoint.

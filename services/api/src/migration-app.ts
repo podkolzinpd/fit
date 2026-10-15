@@ -6,6 +6,14 @@ import {
   YandexIdentityUnavailableError,
 } from './auth/yandex-identity.js'
 import {
+  CloudDatabaseTransferError,
+  type CloudDatabaseExportService,
+} from './cloud-database-transfer.js'
+import {
+  SqlSnapshotError,
+  type YandexSqlSnapshotSource,
+} from './cloudru-sql-snapshot.js'
+import {
   PilotEnrollmentConflictError,
   type PilotAccountRole,
   type PilotEnroller,
@@ -67,6 +75,13 @@ interface PilotEnrollmentOptions {
 
 interface BuildMigrationAppOptions {
   calorieAudit?: StageCalorieAuditor
+  cloudDatabaseExport?: CloudDatabaseExportService
+  cloudDatabaseSourceInventory?: () => Promise<readonly {
+    schema: string
+    table: string
+    estimatedRows: number
+  }[]>
+  sqlSnapshotSource?: Pick<YandexSqlSnapshotSource, 'manifest' | 'chunk'>
   databaseReaderAccess?: StageDatabaseReaderAccessManager
   domainChangeAnnouncement?: DomainChangeAnnouncementManager
   logger?: boolean
@@ -105,6 +120,8 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const TENANT_FINGERPRINT_PATTERN = /^[0-9a-f]{16}$/
 const STAGE_TENANT_APPLY_CONFIRMATION = 'APPLY_TENANT_TO_YANDEX_STAGE'
+const CLOUD_DATABASE_EXPORT_CONFIRMATION = 'EXPORT_YANDEX_STAGE_TO_CLOUDRU'
+const CLOUD_DATABASE_EXPORT_CLEANUP_CONFIRMATION = 'DELETE_YANDEX_STAGE_EXPORT'
 const SAFE_TENANT_MIGRATION_ERROR_PATTERN = /^[a-z0-9_.:-]{1,96}$/
 const SAFE_DATABASE_ERROR_CODE_PATTERN = /^[A-Z0-9]{5}$/i
 const SAFE_MIGRATION_ERROR_MESSAGE_PATTERN = /^[\p{L}\p{N}\s._:(),'"-]{1,500}$/u
@@ -303,6 +320,144 @@ export function buildMigrationApp(
   const app = Fastify({ logger: options.logger ?? true })
 
   app.get('/health', () => ({ status: 'ok' }))
+
+  if (options.sqlSnapshotSource !== undefined) {
+    const source = options.sqlSnapshotSource
+    app.post('/stage/cloudru/sql-snapshot/manifest', async (request, reply) => {
+      if (request.headers['x-fit-sql-snapshot-confirmation']
+        !== 'READ_YANDEX_STAGE_SQL_SNAPSHOT') {
+        return reply.code(403).send({ status: 'sql_snapshot_not_confirmed' })
+      }
+      try {
+        return await source.manifest()
+      } catch (error) {
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          && error.code === '42501'
+          ? 'sql_source_permission_denied' : 'sql_snapshot_manifest_failed'
+        return reply.code(503).send({ status: 'sql_snapshot_manifest_failed', code })
+      }
+    })
+    app.post('/stage/cloudru/sql-snapshot/chunk', async (request, reply) => {
+      if (request.headers['x-fit-sql-snapshot-confirmation']
+        !== 'READ_YANDEX_STAGE_SQL_SNAPSHOT') {
+        return reply.code(403).send({ status: 'sql_snapshot_not_confirmed' })
+      }
+      const passphrase = readTenantMigrationPassphrase(
+        request.headers['x-fit-sql-snapshot-passphrase'],
+      )
+      const body = request.body
+      if (passphrase === undefined || typeof body !== 'object' || body === null
+        || !('schema' in body) || !('table' in body)
+        || !('offset' in body) || !('limit' in body)
+        || typeof body.schema !== 'string' || typeof body.table !== 'string'
+        || typeof body.offset !== 'number' || typeof body.limit !== 'number') {
+        return reply.code(400).send({ status: 'sql_snapshot_request_invalid' })
+      }
+      try {
+        const encrypted = await source.chunk(
+          body.schema, body.table, body.offset, body.limit, passphrase,
+        )
+        return reply.type('application/octet-stream').send(encrypted)
+      } catch (error) {
+        if (error instanceof SqlSnapshotError) {
+          return reply.code(409).send({ status: 'sql_snapshot_rejected', code: error.code })
+        }
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          && error.code === '42501'
+          ? 'sql_source_permission_denied' : 'sql_snapshot_chunk_failed'
+        return reply.code(503).send({ status: 'sql_snapshot_chunk_failed', code })
+      }
+    })
+  }
+
+  if (options.cloudDatabaseSourceInventory !== undefined) {
+    app.post('/stage/cloudru/database-source/inventory', async (request, reply) => {
+      if (
+        request.headers['x-fit-database-export-confirmation']
+          !== 'INVENTORY_YANDEX_STAGE_DATABASE'
+      ) return reply.code(403).send({ status: 'inventory_not_confirmed' })
+      try {
+        const tables = await options.cloudDatabaseSourceInventory?.()
+        return { status: 'database_source_inventory_ready', tables }
+      } catch {
+        return reply.code(503).send({ status: 'database_source_inventory_failed' })
+      }
+    })
+  }
+
+  if (options.cloudDatabaseExport !== undefined) {
+    const databaseExport = options.cloudDatabaseExport
+    if (databaseExport.preflightSource !== undefined) {
+      app.post('/stage/cloudru/database-export/preflight', async (request, reply) => {
+        if (
+          request.headers['x-fit-database-export-confirmation']
+            !== 'PREFLIGHT_YANDEX_STAGE_EXPORT'
+        ) return reply.code(403).send({ status: 'preflight_not_confirmed' })
+        try {
+          await databaseExport.preflightSource?.()
+          return { status: 'database_export_source_ready' }
+        } catch (error) {
+          const code = error instanceof CloudDatabaseTransferError
+            ? error.code
+            : 'database_export_source_dump_failed'
+          return reply.code(503).send({
+            status: 'database_export_source_not_ready',
+            code,
+            ...(error instanceof CloudDatabaseTransferError && error.diagnostic
+              ? { diagnostic: error.diagnostic }
+              : {}),
+          })
+        }
+      })
+    }
+    app.post('/stage/cloudru/database-export', async (request, reply) => {
+      const passphrase = readTenantMigrationPassphrase(
+        request.headers['x-fit-database-export-passphrase'],
+      )
+      if (passphrase === undefined) {
+        return reply.code(400).send({ status: 'invalid_request' })
+      }
+      if (
+        request.headers['x-fit-database-export-confirmation']
+          !== CLOUD_DATABASE_EXPORT_CONFIRMATION
+      ) return reply.code(403).send({ status: 'export_not_confirmed' })
+      try {
+        return {
+          status: 'database_export_ready',
+          ...(await databaseExport.create(passphrase)),
+        }
+      } catch (error) {
+        const code = error instanceof CloudDatabaseTransferError
+          ? error.code
+          : 'database_export_failed'
+        return reply.code(500).send({ status: 'database_export_failed', code })
+      }
+    })
+
+    app.post('/stage/cloudru/database-export/cleanup', async (request, reply) => {
+      if (
+        request.headers['x-fit-database-export-confirmation']
+          !== CLOUD_DATABASE_EXPORT_CLEANUP_CONFIRMATION
+      ) return reply.code(403).send({ status: 'cleanup_not_confirmed' })
+      if (
+        typeof request.body !== 'object'
+        || request.body === null
+        || !('exportId' in request.body)
+        || !('versionId' in request.body)
+        || typeof request.body.exportId !== 'string'
+        || typeof request.body.versionId !== 'string'
+      ) return reply.code(400).send({ status: 'invalid_request' })
+      try {
+        await databaseExport.remove(request.body.exportId, request.body.versionId)
+        return { status: 'database_export_deleted' }
+      } catch (error) {
+        const code = error instanceof CloudDatabaseTransferError
+          ? error.code
+          : 'database_export_cleanup_failed'
+        return reply.code(500).send({ status: 'database_export_cleanup_failed', code })
+      }
+    })
+  }
 
   if (options.calorieAudit !== undefined) {
     const calorieAudit = options.calorieAudit

@@ -6,10 +6,16 @@ const SAFE_WITHOUT_E2E = [
   /^docs\//,
   /^infra\/yandex\//,
   /^services\/api\//,
+  /^\.github\/workflows\/deploy-cloudru-stage\.yml$/,
+  /^\.github\/workflows\/migrate-yandex-(?:database|media)-to-cloudru\.yml$/,
+  /^\.github\/workflows\/transfer-yandex-sql-to-cloudru\.yml$/,
+  /^\.github\/workflows\/manage-cloudru-recovery-push\.yml$/,
   /^\.github\/(?:copilot-instructions\.md|pull_request_template\.md)$/,
   /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|manage-yandex-stage-identity-unlink|manage-trainer-schedule-v2-pilot|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
   /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
-  /^scripts\/(?:check-yandex-terraform-plan|deploy-yandex-serverless-revision|deploy-yandex-stage-workflow|e2e-scope|verify-yandex-stage-access|yandex-stage-smoke)(?:\.test)?\.mjs$/,
+  /^scripts\/(?:check-yandex-migration-container-plan|check-yandex-terraform-plan|cloudru-media-migration-workflow|deploy-yandex-serverless-revision|deploy-yandex-stage-workflow|e2e-scope|verify-yandex-stage-access|yandex-stage-smoke)(?:\.test)?\.mjs$/,
+  /^scripts\/ci-workflow\.test\.mjs$/,
+  /^scripts\/domain-change-push-workflow\.test\.mjs$/,
   /^vercel\.json$/,
 ]
 
@@ -38,4 +44,4 @@ function main() {
     : 'Only documentation, backend API or deployment infrastructure changed; browser runtime is unaffected.\n')
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()

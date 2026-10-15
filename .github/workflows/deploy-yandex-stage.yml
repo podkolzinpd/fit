@@ -118,7 +118,7 @@ jobs:
   plan:
     name: Review Terraform plan
     needs: validate
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')
     runs-on: ubuntu-24.04
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
@@ -257,7 +257,7 @@ jobs:
       - name: Create reviewed plan
         working-directory: infra/yandex
         run: |
-          terraform plan -out=stage.tfplan
+          bash ../../scripts/terraform-plan-with-transient-retry.sh -out=stage.tfplan
           terraform show -json stage.tfplan > stage.tfplan.json
       - name: Enforce plan policy and publish safe summary
         run: |
@@ -277,7 +277,7 @@ jobs:
   deploy:
     name: Migrate and deploy API
     needs: plan
-    if: github.ref == 'refs/heads/main' && inputs.plan_only != true
+    if: github.ref == 'refs/heads/main' && inputs.plan_only != true && (github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')
     runs-on: ubuntu-24.04
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.YC_TFSTATE_ACCESS_KEY_ID }}
@@ -468,7 +468,7 @@ jobs:
       - name: Deploy candidate only to the private migration runner
         working-directory: infra/yandex
         run: |
-          terraform plan -out=migration-candidate.tfplan \
+          bash ../../scripts/terraform-plan-with-transient-retry.sh -out=migration-candidate.tfplan \
             -target=yandex_serverless_container.migration \
             -target=yandex_serverless_container_iam_binding.migration_invocation
           terraform show -json migration-candidate.tfplan > migration-candidate.tfplan.json
@@ -556,7 +556,7 @@ jobs:
       - name: Re-plan after migration and enforce policy
         working-directory: infra/yandex
         run: |
-          terraform plan -out=stage-final.tfplan
+          bash ../../scripts/terraform-plan-with-transient-retry.sh -out=stage-final.tfplan
           terraform show -json stage-final.tfplan > stage-final.tfplan.json
           policy_args=(
             stage-final.tfplan.json
@@ -642,7 +642,7 @@ jobs:
             --plan stage-final.tfplan.json \
             --address yandex_serverless_container.api
           terraform apply -refresh-only -auto-approve
-          terraform plan -out=stage-post-revision.tfplan
+          bash ../../scripts/terraform-plan-with-transient-retry.sh -out=stage-post-revision.tfplan
           terraform show -json stage-post-revision.tfplan > stage-post-revision.tfplan.json
           policy_args=(
             stage-post-revision.tfplan.json
@@ -1995,7 +1995,7 @@ jobs:
   publish_deployment:
     name: Publish yandex-stage deployment status
     needs: [plan, deploy]
-    if: always() && github.ref == 'refs/heads/main' && inputs.plan_only != true
+    if: always() && github.ref == 'refs/heads/main' && inputs.plan_only != true && (github.event_name == 'workflow_dispatch' || vars.YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED == 'true')
     runs-on: ubuntu-24.04
     permissions:
       deployments: write

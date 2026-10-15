@@ -1,0 +1,103 @@
+name: Migrate Yandex media to Cloud.ru
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Audit current parity or copy current objects and verify'
+        required: true
+        type: choice
+        default: audit
+        options: [audit, apply, bootstrap-target, configure-target-acl]
+      migration_confirmation:
+        description: 'For apply: COPY_YANDEX_MEDIA_TO_CLOUDRU'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-stage-media-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Copy and verify current S3 objects
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 60
+    env:
+      CLOUDRU_MEDIA_KEY_ID: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_ID }}
+      CLOUDRU_MEDIA_KEY_SECRET: ${{ secrets.CLOUDRU_MEDIA_MIGRATION_KEY_SECRET }}
+      CLOUDRU_MEDIA_TARGET_BUCKET: fit-cloudru-stage-media-c2ad3760
+      CLOUDRU_PROJECT_ID: c2ad3760-941d-450d-8cf3-eb23f1b151bb
+      CLOUDRU_TENANT_ID: f071c7d5-cf0f-4538-9415-bbf9a9c94338
+      FIT_MEDIA_TRANSFER_MODE: ${{ inputs.mode }}
+      YANDEX_MEDIA_ACCESS_KEY_ID: ${{ secrets.YANDEX_MEDIA_MIGRATION_ACCESS_KEY_ID }}
+      YANDEX_MEDIA_SECRET_ACCESS_KEY: ${{ secrets.YANDEX_MEDIA_MIGRATION_SECRET_ACCESS_KEY }}
+      YANDEX_MEDIA_SOURCE_BUCKET: fit-chat-media-b1gt7dfq
+    steps:
+      - name: Verify trusted stage runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "podkolzinpd/fit"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$(hostname)" = "fit-stage-app"
+          sudo systemctl is-active --quiet \
+            actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+
+      - name: Check out the exact main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Validate and mask temporary credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            CLOUDRU_MEDIA_KEY_ID CLOUDRU_MEDIA_KEY_SECRET \
+            YANDEX_MEDIA_ACCESS_KEY_ID YANDEX_MEDIA_SECRET_ACCESS_KEY; do
+            value="${!name:-}"
+            test -n "$value"
+            echo "::add-mask::$value"
+          done
+          if test "$FIT_MEDIA_TRANSFER_MODE" = apply; then
+            test "${{ inputs.migration_confirmation }}" = COPY_YANDEX_MEDIA_TO_CLOUDRU
+          elif test "$FIT_MEDIA_TRANSFER_MODE" = bootstrap-target; then
+            test "${{ inputs.migration_confirmation }}" = CREATE_CLOUDRU_MEDIA_TARGET_BUCKET
+          elif test "$FIT_MEDIA_TRANSFER_MODE" = configure-target-acl; then
+            test "${{ inputs.migration_confirmation }}" = CONFIGURE_CLOUDRU_MEDIA_TARGET_ACL
+          fi
+
+      - run: npm ci --prefix services/api
+
+      - name: Audit or copy media without logging object paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          node services/api/src/migrate-yandex-media-to-cloudru.mjs \
+            | tee "$RUNNER_TEMP/media-migration.jsonl"
+
+      - name: Publish non-sensitive migration summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/media-migration.jsonl"
+          if test ! -s "$report"; then
+            echo 'Migration report was not produced.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          jq -s -r '
+            map(select(.event == "source_access_key_fingerprint" or .event == "target_access_key_fingerprint" or .event == "target_bucket_bootstrapped" or .event == "target_bootstrap_failed" or .event == "target_acl_configured" or .event == "source_inventory" or .event == "target_inventory" or .event == "parity" or .event == "verification" or .event == "complete"))[]
+            | "`" + (.event | tostring) + "`: " + (tojson)
+          ' "$report" >> "$GITHUB_STEP_SUMMARY"

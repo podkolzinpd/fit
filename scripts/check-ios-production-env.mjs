@@ -1,27 +1,20 @@
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { loadEnv } from 'vite'
+import { validateProductionApiRouting } from './check-production-api-routing.mjs'
 
 export function validateIosProductionEnv(environment) {
-  const errors = []
-  const supabaseUrl = environment.VITE_SUPABASE_URL?.trim()
-  const publishableKey = environment.VITE_SUPABASE_PUBLISHABLE_KEY?.trim()
-
-  if (!supabaseUrl) {
-    errors.push('VITE_SUPABASE_URL is missing')
-  } else {
-    try {
-      const parsed = new URL(supabaseUrl)
-      if (parsed.protocol !== 'https:') errors.push('VITE_SUPABASE_URL must use HTTPS')
-      if (['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) {
-        errors.push('VITE_SUPABASE_URL must not point to local Supabase')
-      }
-    } catch {
-      errors.push('VITE_SUPABASE_URL is invalid')
-    }
+  const errors = validateProductionApiRouting(environment)
+  const apiBaseUrl = environment.VITE_YANDEX_API_BASE_URL?.trim()
+  try {
+    const url = new URL(apiBaseUrl)
+    if (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+      || url.origin !== apiBaseUrl?.replace(/\/$/, '')) errors.push('VITE_YANDEX_API_BASE_URL must be a remote HTTPS origin')
+  } catch {
+    errors.push('VITE_YANDEX_API_BASE_URL must be a remote HTTPS origin')
   }
-
-  if (!publishableKey) errors.push('VITE_SUPABASE_PUBLISHABLE_KEY is missing')
+  const clientId = environment.VITE_YANDEX_OAUTH_CLIENT_ID?.trim()
+  if (!clientId || clientId.length > 200) errors.push('VITE_YANDEX_OAUTH_CLIENT_ID is missing or invalid')
   return errors
 }
 

@@ -1,0 +1,110 @@
+# Cloud.ru — проверка готовности без переключения, 14 октября
+
+Поток: `data-media`/инфраструктурная приёмка. Base main `be729b74`.
+Владелец поручил начать проверку актуальности БД, HTTPS и авторизации сейчас.
+
+## Acceptance и scope
+
+1. Сверить текущий main/CI и реальные публичные DNS/HTTPS без изменений.
+2. Сравнить полный SQL manifest существующей Yandex-БД и непустой Cloud.ru-БД:
+   все таблицы трёх схем, количество строк и SHA-256 тем же алгоритмом переноса.
+   Только READ ONLY; никаких chunks/дампов/импорта или пользовательских строк
+   в логах/артефактах. История миграций исключена существующим контрактом.
+3. Прочитать источник до и после target snapshot. Изменившийся источник даёт
+   inconclusive, несовпадение данных — отдельный результат, не ложный успех.
+4. Проверить loopback API health/ready/401, сохранённую ревизию, auth/CORS и
+   AI-off конфигурацию без вывода credential values. Это не реальный OAuth E2E.
+5. Сохранить предохранители initial apply: только пустой target, явные backup
+   и apply подтверждения, отсутствие API-контейнера. Нельзя обходить их ради
+   сравнения уже перенесённых данных.
+6. Не менять DNS/NS, публичный nginx, сертификаты/CA terms, IAM, API runtime,
+   БД/media/maintenance, флаги автодеплоя. Не останавливать writers.
+
+## Реализация
+
+Не создаётся параллельный deployment workflow. Существующий manual main-only
+`transfer-yandex-sql-to-cloudru.yml` получает независимый режим `audit`.
+Он использует существующий IAM-protected `/sql-snapshot/manifest` и target
+`YandexSqlSnapshotSource.manifest()` в одной bounded READ ONLY транзакции.
+Target BEGIN READ ONLY с проверкой transaction_read_only=on, один connection,
+транзакционные SET LOCAL timeout60s/lock2s. Existing immutable RUNNING_SHA image используется без сборки,
+остановки или переустановки API; reviewed TypeScript entrypoint mounted readonly.
+TLS require остаётся ранее согласованным Cloud.ru контрактом, не ослабляется.
+
+Отчёт содержит только table names/counts и причины несовпадения; ни row payload,
+ни per-table hashes не печатаются. Результат equal не разрешает cutover: после
+проверки новые source writes возможны. Даже стабильность before/after не
+доказывает, что запись не произошла и не была отменена между snapshot reads.
+Требуется отдельный финальный согласованный write-control/freshness gate.
+
+## Исходная фактура
+
+- Main CI38533857563 success, SHAbe729b74; ранних открытых PR нет.
+- Public NS остаются Yandex, root158.160.171.31, api A отсутствует.
+- Прямой HTTPS VM87.242.117.210:443 отвергает соединение; сертификат/вход не
+  подтверждены. Не запускались certbot/public-ingress workflow.
+- Yandex frontend38534376473 упал на read-only deployment API HTTP503 до
+  активации. Отдельный запрос с этой машины timeout на connect5s; это не
+  доказывает глобальную недоступность или её причину.
+- Cloud.ru private frontend38532114217 success/revision3f5bf3d8, API447c283e;
+  SQL import38415761657 уже состоялся13.10. Необходимость обновления данных
+  определяется аудитом, а не предположением, что перенос не был выполнен.
+
+## Локальная проверка
+
+Audit+snapshot10/10, workflow/scope32/32, API lint/typecheck/build, YAML/Bash
+syntax и diff check passed. Полный npm run check exit0: frontend2659/API1358
+(142 стандартных DB integration skipped), infra253/hosting137/build passed.
+Первый sandbox-прогон остановился на localhost listen EPERM старого curl-теста;
+повтор с разрешённым localhost прошёл, тесты/timeout не менялись.
+DB schema/API runtime/UI не меняются: local:verify/новая clean-chain и WebKit
+не запускались. Exact-head CI/merge/live audit ещё гейты. Реальный OAuth login
+не подменяется 401/config/CORS smoke.
+
+## Первый live audit и совместимость с pooler
+
+PR1618 merged/f085fdfc после полного exact-head CI38539670546. Режим audit
+38540417270 подтвердил существующий API447c283e: health/ready/401, auth/AI-off
+конфигурацию и CORS204 для fit-training.ru. Source manifest был прочитан;
+target connect остановился за35ms с08P01 до первого SQL/acquired0. Parity ещё
+не измерена; данных не меняли, повторный apply не запускали.
+
+Вероятная причина — nonstandard startup parameters statement_timeout/options,
+добавленные audit-client и потенциально не принимаемые Cloud.ru pooler.
+Они убраны из startup-пакета; bounded timeout задаётся SET LOCAL после BEGIN
+READ ONLY с отдельным server readback. Режим чтения/лимиты не ослабляются,
+API runtime/environment/DB-grants прежние. Сохранены rollback/release/end.
+Targeted12/12 покрывают порядок SQL, фактическую readonly-проверку и отказ
+на setup error. Следующий exact-head CI и повторный live audit обязательны;
+причина08P01 окончательно не подтверждена до успешного подключения.
+Повторный полный npm run check exit0: frontend2659/API1360+142DB штатно
+skipped, infra253/hosting137/build; targeted12/12, lint/typecheck/diff passed.
+
+## Подтверждённый live результат — 14 октября, 12:28 МСК
+
+PR1619 merged/ad1a77e1 после полного CI38541726506; main CI38542398320
+success. Read-only audit38542399640 завершился exit2/status different, не
+техническим сбоем: source63tables/51438rows, target67tables/51438rows. Все63
+исходные таблицы совпали по count и SHA-256; source before/after стабилен.
+Новый target connect acquired1/acquireErrors0, readonly readback и весь
+manifest прошли. После удаления audit startup parameters08P01 не повторился.
+
+Единственные различия — четыре дополнительные target-таблицы, все пустые:
+app_private.nutrition_food_catalog, app_private.nutrition_native_bindings,
+public.nutrition_consents, public.nutrition_entries. Они точно соответствуют
+additive миграциям142/143; не являются потерянными исходными строками. Их
+удаление/принудительное игнорирование red audit не выполнялось. Полная schema
+parity этим data-manifest не доказана. VITE_NUTRITION_ENABLED отсутствует в
+repository и fit-frontend-candidate, workflow default=false; target runtime
+NUTRITION_ENABLED напрямую этим запуском не инспектировался.
+
+API447c283e повторно подтвердил health/ready/401/auth/CORS204/AI-off, но это
+не real OAuth/authorized-user E2E. Public ingress runs по-прежнему отсутствуют;
+NS Yandex/root158.160.171.31/api A отсутствует. Прямой VM HTTPS ранее refused;
+сертификаты/CA terms/DNS/runtime/data/maintenance не изменены этой задачей.
+Media checksums/freshness этим SQL-аудитом не перепроверялись.
+
+На этот момент повторный SQL import не обоснован. Это не вечная гарантия:
+в согласованном cutover window нужна свежая проверка и контроль всех writers,
+без blind initial apply на непустую цель. Публичный HTTPS и реальный OAuth
+остаются отдельными гейтами/разрешениями; две БД не получают dual-write.

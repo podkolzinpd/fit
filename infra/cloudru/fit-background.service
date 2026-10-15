@@ -1,0 +1,10 @@
+[Unit]
+Description=Fit Cloud.ru push dispatch and session cleanup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/fit-cloudru-background
+TimeoutStartSec=55
+UMask=0077

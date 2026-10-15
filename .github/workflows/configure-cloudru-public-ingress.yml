@@ -1,0 +1,254 @@
+name: Configure Cloud.ru public HTTPS ingress
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'Successful CI run for current main'
+        required: true
+        type: string
+      target:
+        description: 'Expose only this prepared target'
+        required: true
+        type: choice
+        options: [api, web]
+      mode:
+        description: 'Sealed HTTPS preparation (503 only), or separately approved public cutover'
+        required: true
+        type: choice
+        default: sealed
+        options: [sealed, activate]
+      preparation_confirmation:
+        description: 'Sealed only: PREPARE_CLOUDRU_HTTPS_CLOSED, after owner approval'
+        required: false
+        type: string
+      dns_confirmation:
+        description: 'Sealed issuance only: TEMPORARY_FIT_ACME_DNS_WITH_RESTORE, after approval of exact DNS scope'
+        required: false
+        type: string
+      activation_confirmation:
+        description: 'Activate only: OPEN_CLOUDRU_PUBLIC_INGRESS, after writer-control/cutover approval'
+        required: false
+        type: string
+      ca_terms_confirmation:
+        description: 'Certbot only: ACCEPT_LETS_ENCRYPT_TERMS_FOR_CLOUDRU, after action-time approval'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.verify.outputs.commit }}
+    steps:
+      - name: Verify successful CI for current main
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
+            select(.path == ".github/workflows/ci.yml" and
+              .head_repository.full_name == $repo and .head_branch == "main" and
+              (.event == "push" or .event == "workflow_dispatch") and
+              .status == "completed" and .conclusion == "success") | .head_sha
+          ' <<<"$run")
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+  ingress:
+    if: inputs.mode == 'activate'
+    needs: source
+    runs-on: [self-hosted, cloudru-stage]
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 20
+    env:
+      RELEASE_SHA: ${{ needs.source.outputs.commit }}
+      TARGET: ${{ inputs.target }}
+      ACTIVATION_CONFIRMATION: ${{ inputs.activation_confirmation }}
+      CA_TERMS_CONFIRMATION: ${{ inputs.ca_terms_confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - name: Verify prepared runtime and DNS before public change
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$ACTIVATION_CONFIRMATION" = OPEN_CLOUDRU_PUBLIC_INGRESS
+          test "$(hostname)" = fit-stage-app
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          test "$TARGET" = api -o "$TARGET" = web
+          if [ "$TARGET" = api ]; then
+            curl --fail --silent --show-error http://127.0.0.1:18080/ready >/dev/null
+            test "$(sudo podman port fit-api-stage 8080/tcp)" = 127.0.0.1:18080
+            names=(api.fit-training.ru)
+          else
+            curl --fail --silent --show-error --header 'Host: fit-training.ru' \
+              http://127.0.0.1:18081/ >/dev/null
+            names=(fit-training.ru www.fit-training.ru)
+          fi
+          for name in "${names[@]}"; do
+            addresses=$(getent ahostsv4 "$name" | awk '{print $1}' | sort -u)
+            test "$addresses" = 87.242.117.210 || {
+              echo "Public DNS for $name does not exclusively point to the Cloud.ru VM: $addresses" >&2
+              exit 1
+            }
+          done
+          sudo test -r /etc/nginx/nginx.conf
+          sudo grep -Fq 'include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+          sudo nginx -t
+          if sudo test -e /etc/nginx/sites-enabled/fit-public-$TARGET &&
+             ! sudo test -L /etc/nginx/sites-enabled/fit-public-$TARGET; then
+            echo 'Refusing to replace a non-symlink ingress site.' >&2
+            exit 1
+          fi
+      - name: Obtain certificate and install only selected HTTPS proxy
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y certbot
+          sudo install -d -m 755 /var/www/fit-acme/.well-known/acme-challenge
+          sudo install -d -m 755 /etc/nginx/sites-available /etc/nginx/sites-enabled
+          if [ "$TARGET" = api ]; then
+            names=(api.fit-training.ru)
+            cert_name=api.fit-training.ru
+            config=infra/cloudru/nginx-public-api.conf
+            upstream=http://127.0.0.1:18080/ready
+          else
+            names=(fit-training.ru www.fit-training.ru)
+            cert_name=fit-training.ru
+            config=infra/cloudru/nginx-public-web.conf
+            upstream=http://127.0.0.1:18081/
+          fi
+          site="/etc/nginx/sites-available/fit-public-$TARGET"
+          backup="/etc/nginx/sites-available/.fit-public-$TARGET-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.backup"
+          had_site=false
+          if sudo test -f "$site"; then
+            sudo cp "$site" "$backup"
+            had_site=true
+          fi
+          rollback() {
+            if [ "$had_site" = true ]; then
+              sudo cp "$backup" "$site"
+            else
+              sudo rm -f "/etc/nginx/sites-enabled/fit-public-$TARGET" "$site"
+            fi
+            sudo nginx -t && sudo systemctl reload nginx || true
+          }
+          trap rollback ERR
+          if ! sudo test -s "/etc/letsencrypt/live/$cert_name/fullchain.pem" ||
+             ! sudo openssl x509 -checkend 604800 -noout \
+               -in "/etc/letsencrypt/live/$cert_name/fullchain.pem" >/dev/null; then
+            sed "s/DOMAIN_NAMES/${names[*]}/" infra/cloudru/nginx-public-challenge.conf |
+              sudo tee "$site" >/dev/null
+          fi
+          sudo ln -sfn "/etc/nginx/sites-available/fit-public-$TARGET" \
+            "/etc/nginx/sites-enabled/fit-public-$TARGET"
+          sudo nginx -t
+          sudo systemctl enable --now nginx
+          sudo systemctl reload nginx
+          domains=()
+          for name in "${names[@]}"; do domains+=(-d "$name"); done
+          if ! sudo test -s "/etc/letsencrypt/live/$cert_name/fullchain.pem" ||
+             ! sudo openssl x509 -checkend 604800 -noout \
+               -in "/etc/letsencrypt/live/$cert_name/fullchain.pem" >/dev/null; then
+            test "$CA_TERMS_CONFIRMATION" = ACCEPT_LETS_ENCRYPT_TERMS_FOR_CLOUDRU
+            sudo certbot certonly --webroot -w /var/www/fit-acme \
+              --non-interactive --agree-tos --register-unsafely-without-email \
+              --cert-name "$cert_name" "${domains[@]}"
+          fi
+          sudo test -s "/etc/letsencrypt/live/$cert_name/fullchain.pem"
+          sudo test -s "/etc/letsencrypt/live/$cert_name/privkey.pem"
+          sudo install -m 644 "$config" "/etc/nginx/sites-available/fit-public-$TARGET"
+          sudo install -m 755 infra/cloudru/fit-certbot-nginx-reload \
+            /etc/letsencrypt/renewal-hooks/deploy/fit-nginx-reload
+          sudo nginx -t
+          sudo systemctl reload nginx
+          sudo systemctl enable --now certbot.timer
+          if [ "$TARGET" = api ]; then
+            public_path=/ready
+          else
+            public_path=/
+          fi
+          curl --fail --silent --show-error --resolve "$cert_name:443:127.0.0.1" \
+            "https://$cert_name$public_path" >/dev/null
+          if [ "$TARGET" = web ]; then
+            mapfile -t frontend_assets < <(
+              curl --fail --silent --show-error --header 'Host: fit-training.ru' \
+                http://127.0.0.1:18081/ |
+                grep -oE '/assets/[^" ]+\.(js|css)' | sort -u
+            )
+            test "${#frontend_assets[@]}" -ge 2
+            for asset in "${frontend_assets[@]}"; do
+              curl --fail --silent --show-error \
+                --resolve "$cert_name:443:127.0.0.1" \
+                "https://$cert_name$asset" >/dev/null
+            done
+          fi
+          curl --fail --silent --show-error "$upstream" >/dev/null
+          trap - ERR
+          if [ "$had_site" = true ]; then sudo rm -f "$backup"; fi
+          echo "Cloud.ru public HTTPS ready for $TARGET at $RELEASE_SHA"
+
+  sealed:
+    if: inputs.mode == 'sealed'
+    needs: source
+    runs-on: [self-hosted, cloudru-stage]
+    permissions:
+      contents: read
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 40
+    env:
+      RELEASE_SHA: ${{ needs.source.outputs.commit }}
+      TARGET: ${{ inputs.target }}
+      PREPARE_CONFIRMATION: ${{ inputs.preparation_confirmation }}
+      DNS_CONFIRMATION: ${{ inputs.dns_confirmation }}
+      CA_TERMS_CONFIRMATION: ${{ inputs.ca_terms_confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - name: Verify trusted closed preparation, without public DNS change
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          test "$PREPARE_CONFIRMATION" = PREPARE_CLOUDRU_HTTPS_CLOSED
+          test "$(getent ahostsv4 fit-training.ru | awk '{print $1}' | sort -u)" = 158.160.171.31
+          test "$(getent ahostsv4 www.fit-training.ru | awk '{print $1}' | sort -u)" = 158.160.184.183
+          sudo nginx -t
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Obtain certificate locally using separately approved DNS proof
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y certbot dnsutils
+          sudo --preserve-env=GITHUB_REPOSITORY,GITHUB_REF,RELEASE_SHA,TARGET,DNS_CONFIRMATION,CA_TERMS_CONFIRMATION \
+            "$(command -v node)" scripts/issue-cloudru-sealed-certificate.mjs
+      - name: Prepare verified local certificates and closed HTTPS only
+        run: |
+          set -euo pipefail
+          sudo --preserve-env=GITHUB_REPOSITORY,GITHUB_REF,RELEASE_SHA,TARGET,PREPARE_CONFIRMATION \
+            "$(command -v node)" scripts/prepare-cloudru-sealed-https.mjs

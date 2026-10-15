@@ -23,7 +23,7 @@ export function shouldUsePrivateVitalStorage(source: string | undefined, backend
   if (!source) return false
   if (!source.startsWith(LOCAL_PREFIX) || import.meta.env.MODE === 'test') return false
   if (backendSource === 'yandex') return true
-  const configuredUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+  const configuredUrl = import.meta.env.DEV ? import.meta.env.VITE_SUPABASE_URL as string | undefined : undefined
   if (!configuredUrl) return false
   const hostname = new URL(configuredUrl).hostname
   return hostname !== '127.0.0.1' && hostname !== 'localhost'

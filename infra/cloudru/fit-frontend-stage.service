@@ -1,0 +1,13 @@
+[Unit]
+Description=Fit Cloud.ru loopback-only frontend preview
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/nginx -c /etc/nginx/fit-frontend-stage.conf -g 'daemon off;'
+ExecReload=/usr/sbin/nginx -c /etc/nginx/fit-frontend-stage.conf -s reload
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

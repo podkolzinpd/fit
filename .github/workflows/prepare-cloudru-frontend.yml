@@ -1,0 +1,184 @@
+name: Prepare Cloud.ru frontend without public routing
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'Successful CI run for current main'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source:
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+       (vars.CLOUDRU_FRONTEND_AUTODEPLOY_ENABLED == 'true' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.verify.outputs.commit }}
+    steps:
+      - name: Verify successful CI for current main
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
+            select(.path == ".github/workflows/ci.yml" and
+              .head_repository.full_name == $repo and .head_branch == "main" and
+              (.event == "push" or .event == "workflow_dispatch") and
+              .status == "completed" and .conclusion == "success") | .head_sha
+          ' <<<"$run")
+          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+  build:
+    needs: source
+    name: Build exact-main frontend for Cloud.ru API
+    runs-on: ubuntu-24.04
+    environment: fit-frontend-candidate
+    timeout-minutes: 20
+    steps:
+      - name: Require trusted main dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          [[ "${{ needs.source.outputs.commit }}" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build with reviewed public configuration and same-origin Cloud.ru API proxy
+        env:
+          FIT_LIME_FONTS_REQUIRED: 'true'
+          FIT_LIME_YS_GEO_REGULAR_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_REGULAR_BASE64_PART1 }}
+          FIT_LIME_YS_GEO_REGULAR_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_REGULAR_BASE64_PART2 }}
+          FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1 }}
+          FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2 }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          VITE_YANDEX_API_BASE_URL: https://fit-training.ru/api
+          VITE_SPEECHKIT_RELAY_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL || '' }}
+          VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
+          VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+          VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+          VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+          VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+          VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}
+          VITE_MAINTENANCE_MODE: 'false'
+          # Временная плашка «Fit снова работает, ИИ восстанавливаем». Снять: 'false'.
+          VITE_SERVICE_NOTICE_ENABLED: 'true'
+          VITE_CONTEST_WINNER_ENABLED: ${{ vars.VITE_CONTEST_WINNER_ENABLED || 'true' }}
+          VITE_CONTEST_WINNER_PILOT_USER_IDS: ${{ vars.VITE_CONTEST_WINNER_PILOT_USER_IDS || '092bfc1b-db7c-450d-9f60-aaf9ea4df975,50536f5c-e380-419e-8fa7-410a2c6b249c' }}
+          VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
+          VITE_TRAINER_FINANCE_ENABLED: ${{ vars.VITE_TRAINER_FINANCE_ENABLED || 'true' }}
+          VITE_TRAINER_FINANCE_PILOT_USER_IDS: ${{ vars.VITE_TRAINER_FINANCE_PILOT_USER_IDS || '' }}
+          VITE_NUTRITION_ENABLED: ${{ vars.VITE_NUTRITION_ENABLED || 'false' }}
+          VITE_NUTRITION_NATIVE_COHORT: ${{ vars.VITE_NUTRITION_NATIVE_COHORT || 'false' }}
+          VITE_NUTRITION_PILOT_USER_IDS: ${{ vars.VITE_NUTRITION_PILOT_USER_IDS || '' }}
+          VITE_COACH_WORKOUT_REDESIGN_ENABLED: ${{ vars.VITE_COACH_WORKOUT_REDESIGN_ENABLED || 'false' }}
+          VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: ${{ vars.VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-production-api-routing.mjs --web
+          npm run build
+          test -s dist/index.html
+          grep -RqlF 'https://fit-training.ru/api' dist/assets
+          if grep -RqlF 'https://bbat47es6kspjb3dvfn2.containers.yandexcloud.net' dist/assets; then
+            echo 'Frontend still embeds the old API origin.' >&2
+            exit 1
+          fi
+          node scripts/frontend-release.mjs dist "${{ needs.source.outputs.commit }}" cloudru-release.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloudru-frontend-${{ needs.source.outputs.commit }}
+          path: cloudru-release.json
+          if-no-files-found: error
+          retention-days: 7
+
+  prepare:
+    name: Install frontend on loopback-only stage port
+    needs: [source, build]
+    runs-on: [self-hosted, cloudru-stage]
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 15
+    steps:
+      - name: Verify trusted prepared VM and exact API revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          [[ "${{ needs.source.outputs.commit }}" =~ ^[0-9a-f]{40}$ ]]
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl is-active --quiet actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18080/ready >/dev/null
+          # A same-origin build must not be promoted while /api/ still serves SPA HTML.
+          api_release=$(curl --fail --silent --show-error --max-time 10 \
+            http://127.0.0.1:18080/health | jq -er '.releaseId | select(test("^[a-f0-9]{40}$"))')
+          curl --fail --silent --show-error --max-time 10 \
+            --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/health |
+            jq -e --arg release "$api_release" '.status == "ok" and .releaseId == $release' >/dev/null
+          test "$(curl --silent --show-error --max-time 10 --output /dev/null \
+            --write-out '%{http_code}' --resolve fit-training.ru:443:127.0.0.1 \
+            https://fit-training.ru/api/v1/clients)" = 401
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: cloudru-frontend-${{ needs.source.outputs.commit }}
+          path: cloudru-dist
+      - name: Verify immutable candidate before changing serving frontend
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          candidate="/opt/fit/frontend/candidates/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          test ! -e "$candidate" && test ! -L "$candidate"
+          workspace=$(mktemp -d "$RUNNER_TEMP/fit-cloudru-candidate.XXXXXX")
+          node scripts/prepare-cloudru-frontend.mjs cloudru-dist/cloudru-release.json \
+            "$workspace/prepared" "$RELEASE_SHA" "$candidate/site"
+          sudo install -d -m 755 /opt/fit/frontend/candidates
+          sudo cp -a "$workspace/prepared" "$candidate"
+          node scripts/verify-cloudru-frontend.mjs cloudru-dist/cloudru-release.json "$candidate" "$RELEASE_SHA"
+      - name: Promote verified loopback frontend with rollback
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$RELEASE_SHA"
+          bash scripts/promote-cloudru-frontend.sh cloudru-dist/cloudru-release.json \
+            "/opt/fit/frontend/candidates/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$RELEASE_SHA"
+          echo 'Cloud.ru frontend staged on 127.0.0.1:18081; public routing unchanged.'

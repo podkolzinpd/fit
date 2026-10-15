@@ -1,0 +1,283 @@
+name: Transfer Yandex stage SQL to Cloud.ru
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only parity audit, empty-target preflight/rehearsal, or guarded initial apply'
+        required: true
+        type: choice
+        default: preflight
+        options:
+          - audit
+          - preflight
+          - dry-run
+          - apply
+      backup_confirmation:
+        description: 'For dry-run/apply: initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready'
+        required: false
+        type: string
+      apply_confirmation:
+        description: 'For apply: APPLY_YANDEX_STAGE_SQL_TO_CLOUDRU'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+
+jobs:
+  transfer:
+    name: Guarded stage SQL snapshot
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 60
+    env:
+      CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+      YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+      YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+      YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+    steps:
+      - name: Verify trusted stage runner and exact image
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(hostname)" = fit-stage-app
+          sudo systemctl is-active --quiet \
+            actions.runner.podkolzinpd-fit.fit-cloudru-stage.service
+          if [[ "${{ inputs.mode }}" != audit ]]; then
+            sudo podman image exists "localhost/fit-api:$GITHUB_SHA"
+          fi
+
+      - name: Check out exact main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Load and mask private target database contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDRU_DATABASE_CONFIG_JSON"
+          expected='["DATABASE_HOST","DATABASE_NAME","DATABASE_PASSWORD","DATABASE_PORT","DATABASE_USER","MIGRATION_DATABASE_HOST","MIGRATION_DATABASE_NAME","MIGRATION_DATABASE_PASSWORD","MIGRATION_DATABASE_PORT","MIGRATION_DATABASE_USER"]'
+          test "$(jq -cer 'keys | sort' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = "$expected"
+          for name in DATABASE_HOST DATABASE_NAME DATABASE_PASSWORD DATABASE_PORT DATABASE_USER MIGRATION_DATABASE_HOST MIGRATION_DATABASE_NAME MIGRATION_DATABASE_PASSWORD MIGRATION_DATABASE_PORT MIGRATION_DATABASE_USER; do
+            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+            echo "::add-mask::$value"
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done
+          test "$(jq -r '.MIGRATION_DATABASE_HOST' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 10.70.10.67
+          test "$(jq -r '.MIGRATION_DATABASE_PORT' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = 5432
+          test "$(jq -r '.MIGRATION_DATABASE_NAME' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit
+          test "$(jq -r '.MIGRATION_DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_owner
+          test "$(jq -r '.DATABASE_USER' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")" = fit_api
+
+      - name: Verify target TLS identities and absence of application rows
+        if: inputs.mode != 'audit'
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" PGSSLMODE=require \
+            PGCONNECT_TIMEOUT=10 psql --no-psqlrc --tuples-only --no-align \
+            --host "$MIGRATION_DATABASE_HOST" --port "$MIGRATION_DATABASE_PORT" \
+            --username "$MIGRATION_DATABASE_USER" --dbname "$MIGRATION_DATABASE_NAME" \
+            --command "select case when current_user = 'fit_owner' and ssl then 'ok' else 'bad' end from pg_stat_ssl where pid=pg_backend_pid()")
+          test "$owner" = ok
+          runtime=$(PGPASSWORD="$DATABASE_PASSWORD" PGSSLMODE=require \
+            PGCONNECT_TIMEOUT=10 psql --no-psqlrc --tuples-only --no-align \
+            --host "$DATABASE_HOST" --port "$DATABASE_PORT" \
+            --username "$DATABASE_USER" --dbname "$DATABASE_NAME" \
+            --command 'select current_user')
+          test "$runtime" = fit_api
+          PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" PGSSLMODE=require \
+            PGCONNECT_TIMEOUT=10 psql --no-psqlrc --set ON_ERROR_STOP=1 \
+            --host "$MIGRATION_DATABASE_HOST" --port "$MIGRATION_DATABASE_PORT" \
+            --username "$MIGRATION_DATABASE_USER" --dbname "$MIGRATION_DATABASE_NAME" \
+            --quiet <<'SQL'
+          do $$
+          declare table_row record; row_count bigint; unexpected_count integer := 0;
+          begin
+            for table_row in
+              select schemaname, tablename from pg_tables
+              where schemaname in ('app_private', 'private', 'public')
+                and not (schemaname = 'app_private' and tablename = 'fit_migrations')
+            loop
+              execute format('select count(*) from %I.%I', table_row.schemaname, table_row.tablename)
+                into row_count;
+              if row_count > 0 then
+                if table_row.schemaname = 'app_private' and (
+                  (table_row.tablename in ('trainer_schedule_v2_allowlist', 'fit_lime_pilot_allowlist') and row_count = 2)
+                  or (table_row.tablename in ('experiment_claim_tokens', 'client_lime_pilot_allowlist',
+                    'assistant_feature_links_pilot_allowlist', 'lime_rollout_controls') and row_count = 1)
+                ) then
+                  raise notice 'expected migration seed table %.%: % rows',
+                    table_row.schemaname, table_row.tablename, row_count;
+                else
+                  raise notice 'unexpected nonempty target table %.%: % rows',
+                    table_row.schemaname, table_row.tablename, row_count;
+                  unexpected_count := unexpected_count + 1;
+                end if;
+              end if;
+            end loop;
+            if unexpected_count > 0 then
+              raise exception 'target has % unexpected nonempty application tables', unexpected_count;
+            end if;
+          end $$;
+          SQL
+          echo 'Target TLS, identities and only known migration seed data verified.'
+
+      - name: Stop after read-only preflight
+        if: inputs.mode == 'preflight'
+        run: echo 'No source or target data changed.'
+
+      - name: Validate backup and apply gates
+        if: inputs.mode == 'dry-run' || inputs.mode == 'apply'
+        shell: bash
+        env:
+          BACKUP_CONFIRMATION: ${{ inputs.backup_confirmation }}
+          APPLY_CONFIRMATION: ${{ inputs.apply_confirmation }}
+        run: |
+          set -euo pipefail
+          test "$BACKUP_CONFIRMATION" = initial-backup:4d767352-63f1-41ca-b1a2-b07e81afb028:ready
+          if [[ "${{ inputs.mode }}" = apply ]]; then
+            test "$APPLY_CONFIRMATION" = APPLY_YANDEX_STAGE_SQL_TO_CLOUDRU
+            test -z "$(sudo podman ps -a --filter name='^fit-api-stage$' --format '{{.Names}}')"
+          fi
+
+      - name: Prepare Yandex OIDC
+        if: inputs.mode != 'preflight'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            https://storage.yandexcloud.net/yandexcloud-yc/install.sh \
+            --output "$RUNNER_TEMP/install-yc.sh"
+          bash "$RUNNER_TEMP/install-yc.sh" -i "$RUNNER_TEMP/yandex-cloud" -n
+          echo "$RUNNER_TEMP/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Install Node for OIDC exchange
+        if: inputs.mode != 'preflight'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Exchange bounded Yandex deploy identity
+        if: inputs.mode != 'preflight'
+        run: scripts/yandex-github-oidc.sh
+
+      - name: Apply target schema and transfer verified SQL snapshot
+        if: inputs.mode == 'dry-run' || inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          migration_url=$(yc serverless container get \
+            --name fit-stage-migration --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          migration_url=${migration_url%/}
+          passphrase=$(openssl rand -base64 48)
+          echo "::add-mask::$passphrase"
+          secret_file=$(mktemp "$RUNNER_TEMP/fit-sql-transfer.XXXXXX")
+          chmod 600 "$secret_file"
+          trap 'rm -f "$secret_file"' EXIT
+          {
+            printf 'MIGRATION_DATABASE_HOST=%s\n' "$MIGRATION_DATABASE_HOST"
+            printf 'MIGRATION_DATABASE_PORT=%s\n' "$MIGRATION_DATABASE_PORT"
+            printf 'MIGRATION_DATABASE_NAME=%s\n' "$MIGRATION_DATABASE_NAME"
+            printf 'MIGRATION_DATABASE_USER=%s\n' "$MIGRATION_DATABASE_USER"
+            printf 'MIGRATION_DATABASE_PASSWORD=%s\n' "$MIGRATION_DATABASE_PASSWORD"
+            printf 'MIGRATION_DATABASE_SSL_MODE=require\n'
+            printf 'PGHOST=%s\n' "$MIGRATION_DATABASE_HOST"
+            printf 'PGPORT=%s\n' "$MIGRATION_DATABASE_PORT"
+            printf 'PGDATABASE=%s\n' "$MIGRATION_DATABASE_NAME"
+            printf 'PGUSER=%s\n' "$MIGRATION_DATABASE_USER"
+            printf 'PGPASSWORD=%s\n' "$MIGRATION_DATABASE_PASSWORD"
+            printf 'PGSSLMODE=require\n'
+            printf 'FIT_SQL_SOURCE_URL=%s\n' "$migration_url"
+            printf 'YC_IAM_TOKEN=%s\n' "$YC_IAM_TOKEN"
+            printf 'FIT_SQL_SNAPSHOT_PASSPHRASE=%s\n' "$passphrase"
+            printf 'FIT_SQL_SNAPSHOT_MODE=%s\n' "${{ inputs.mode }}"
+          } > "$secret_file"
+          sudo podman run --rm --network=host --env-file "$secret_file" \
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate:dry-run -- --no-reject-unauthorized
+          sudo podman run --rm --network=host --env-file "$secret_file" \
+            "localhost/fit-api:$GITHUB_SHA" npm run db:migrate -- --no-reject-unauthorized
+          sudo podman run --rm --network=host --env-file "$secret_file" \
+            "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-sql-transfer-cli.js
+
+      - name: Confirm data is present without external routing change
+        if: inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          profile_count=$(PGPASSWORD="$MIGRATION_DATABASE_PASSWORD" PGSSLMODE=require \
+            psql --no-psqlrc --tuples-only --no-align \
+              --host "$MIGRATION_DATABASE_HOST" --port "$MIGRATION_DATABASE_PORT" \
+              --username "$MIGRATION_DATABASE_USER" --dbname "$MIGRATION_DATABASE_NAME" \
+              --command 'select count(*) from public.profiles')
+          test "$profile_count" -gt 0
+          echo "Cloud.ru SQL snapshot applied; profiles=$profile_count. External routing unchanged."
+
+      - name: Read-only SQL parity and private runtime audit
+        if: inputs.mode == 'audit'
+        shell: bash
+        run: |
+          set -euo pipefail
+          running=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$running" =~ ^[0-9a-f]{40}$ ]]
+          test "$(sudo podman inspect --format '{{.ImageName}}' fit-api-stage)" = "localhost/fit-api:$running"
+          test "$(sudo podman port fit-api-stage 8080/tcp)" = 127.0.0.1:18080
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 30 \
+            http://127.0.0.1:18080/health >/dev/null
+          curl --fail --silent --show-error --connect-timeout 5 --max-time 30 \
+            http://127.0.0.1:18080/ready >/dev/null
+          status=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+            --output /dev/null --write-out '%{http_code}' http://127.0.0.1:18080/v1/profile)
+          test "$status" = 401
+          sudo podman exec fit-api-stage node -e '
+            const valid = process.env.YANDEX_ONLY_AUTH_ENABLED === "true" &&
+              process.env.YANDEX_NATIVE_REGISTRATION_ENABLED === "true" &&
+              Boolean(process.env.YANDEX_OAUTH_CLIENT_ID) &&
+              process.env.CORS_ALLOWED_ORIGINS?.split(",").includes("https://fit-training.ru") &&
+              process.env.FIT_AI_FUNCTIONS_ENABLED === "false" &&
+              process.env.FIT_AI_SUMMARY_GENERATION_DISABLED === "true";
+            if (!valid) process.exit(1);
+            console.log("Private API auth/CORS/AI-off configuration verified; no credential values emitted.");
+          '
+          headers=$(curl --silent --show-error --connect-timeout 5 --max-time 30 \
+            --request OPTIONS --header 'Origin: https://fit-training.ru' \
+            --header 'Access-Control-Request-Method: POST' \
+            --header 'Access-Control-Request-Headers: content-type,authorization' \
+            --dump-header - --output /dev/null http://127.0.0.1:18080/v1/auth/yandex/session)
+          tr -d '\r' <<<"$headers" | grep -Eq '^HTTP/[0-9.]+ 204( |$)'
+          tr -d '\r' <<<"$headers" | grep -Fqi 'access-control-allow-origin: https://fit-training.ru'
+          echo "Private API health/ready/401/CORS verified; running revision=$running."
+          migration_url=$(yc serverless container get \
+            --name fit-stage-migration --folder-id "$YC_FOLDER_ID" \
+            --format json | jq -er '.url')
+          umask 077
+          audit_env=$(mktemp "$RUNNER_TEMP/fit-sql-audit.XXXXXX")
+          trap 'rm -f "$audit_env"' EXIT
+          for name in MIGRATION_DATABASE_HOST MIGRATION_DATABASE_PORT MIGRATION_DATABASE_NAME MIGRATION_DATABASE_USER MIGRATION_DATABASE_PASSWORD; do
+            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" >>"$audit_env"
+          done
+          {
+            printf 'MIGRATION_DATABASE_SSL_MODE=require\n'
+            printf 'FIT_SQL_SOURCE_URL=%s\n' "${migration_url%/}"
+            printf 'YC_IAM_TOKEN=%s\n' "$YC_IAM_TOKEN"
+          } >>"$audit_env"
+          # Existing immutable runtime image supplies DB/manifest libraries;
+          # mount only this reviewed audit entrypoint, without rebuilding API.
+          sudo podman run --rm --read-only --network=host --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$audit_env" \
+            --volume "$GITHUB_WORKSPACE/services/api/src/cloudru-sql-audit.ts:/app/dist/cloudru-sql-audit.ts:ro" \
+            "localhost/fit-api:$running" node --experimental-strip-types dist/cloudru-sql-audit.ts

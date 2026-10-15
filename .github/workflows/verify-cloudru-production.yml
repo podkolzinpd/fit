@@ -1,0 +1,34 @@
+name: Verify Cloud.ru production
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudru-production-health
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check canonical DNS, HTTPS, API and authentication boundary
+        run: node scripts/verify-cloudru-production.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloudru-production-health-${{ github.run_id }}
+          path: cloudru-production-health.json
+          if-no-files-found: error
+          retention-days: 7

@@ -11,10 +11,20 @@ test('skips the browser runtime for explicit non-browser scopes', () => {
     'services/api/src/server.test.ts',
     'services/api/package-lock.json',
     '.github/workflows/deploy-yandex-stage.yml',
+    '.github/workflows/deploy-cloudru-stage.yml',
+    '.github/workflows/migrate-yandex-database-to-cloudru.yml',
+    '.github/workflows/migrate-yandex-media-to-cloudru.yml',
+    '.github/workflows/transfer-yandex-sql-to-cloudru.yml',
+    '.github/workflows/manage-cloudru-recovery-push.yml',
     '.github/workflows/manage-yandex-stage-identity-unlink.yml',
     'OPERATIONS.md',
     'scripts/check-yandex-terraform-plan.mjs',
     'scripts/check-yandex-terraform-plan.test.mjs',
+    'scripts/check-yandex-migration-container-plan.mjs',
+    'scripts/check-yandex-migration-container-plan.test.mjs',
+    'scripts/ci-workflow.test.mjs',
+    'scripts/domain-change-push-workflow.test.mjs',
+    'scripts/cloudru-media-migration-workflow.test.mjs',
     'scripts/deploy-yandex-serverless-revision.mjs',
     'scripts/deploy-yandex-serverless-revision.test.mjs',
     'scripts/deploy-yandex-stage-workflow.mjs',
@@ -38,6 +48,7 @@ test('runs E2E for browser application, Supabase, dependency and CI changes', ()
     'scripts/unknown-browser-helper.mjs',
     'playwright.config.ts',
     '.github/workflows/ci.yml',
+    '.github/workflows/deploy-cloudru-frontend.yml',
   ]) {
     assert.equal(requiresE2E([path]), true, path)
   }

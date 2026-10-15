@@ -3,6 +3,11 @@ import { fileURLToPath } from 'node:url'
 import { runner } from 'node-pg-migrate'
 
 import { YandexIdentityClient } from './auth/yandex-identity.js'
+import {
+  readDatabaseTransferConnection,
+  YandexCloudDatabaseExport,
+} from './cloud-database-transfer.js'
+import { YandexSqlSnapshotSource } from './cloudru-sql-snapshot.js'
 import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { PgDatabasePool } from './db/pg-pool.js'
 import { inspectRuntimeDomainReadiness } from './db/runtime-domain-readiness.js'
@@ -138,8 +143,41 @@ const vitalMediaDeployment = mediaStorageConfig === undefined
   || !vitalMediaDeploymentEnabled
   ? undefined
   : new YandexVitalMediaDeployment(mediaStorageConfig)
+const cloudDatabaseExport = mediaStorageConfig === undefined
+  || !stageTenantMigrationEnabled
+  ? undefined
+  : new YandexCloudDatabaseExport(
+      readDatabaseTransferConnection(process.env, 'MIGRATION_DATABASE'),
+      mediaStorageConfig,
+    )
+
+const cloudDatabaseSourceInventory = privateFeaturePool === undefined
+  || !stageTenantMigrationEnabled
+  ? undefined
+  : async () => {
+      const connection = await privateFeaturePool.connect()
+      try {
+        return await connection.query<{
+          schema: string
+          table: string
+          estimatedRows: number
+        }>(`select schemaname as schema,
+            relname as table,
+            n_live_tup::integer as "estimatedRows"
+          from pg_stat_user_tables
+          where schemaname in ('public', 'private', 'app_private')
+          order by schemaname, relname`)
+      } finally {
+        connection.release()
+      }
+    }
 
 const app = buildMigrationApp({
+  ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled
+    ? {} : { sqlSnapshotSource: new YandexSqlSnapshotSource(privateFeaturePool) }),
+  ...(cloudDatabaseExport === undefined ? {} : { cloudDatabaseExport }),
+  ...(cloudDatabaseSourceInventory === undefined
+    ? {} : { cloudDatabaseSourceInventory }),
   ...(privateFeaturePool === undefined || !stageRolloutAssignmentsEnabled
     ? {} : { calorieAudit: new DatabaseStageCalorieAuditor(privateFeaturePool) }),
   ...(privateFeaturePool === undefined || !stageTenantMigrationEnabled

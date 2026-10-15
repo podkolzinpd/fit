@@ -17,7 +17,8 @@ export type GoalCriteriaSuggestionResponse = {
 }
 
 const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'
-const isLocalSupabase = typeof import.meta.env.VITE_SUPABASE_URL === 'string'
+const isLocalSupabase = (import.meta.env.DEV || import.meta.env.MODE === 'development')
+  && typeof import.meta.env.VITE_SUPABASE_URL === 'string'
   && import.meta.env.VITE_SUPABASE_URL.includes('127.0.0.1:54321')
 
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {
@@ -94,7 +95,12 @@ export type CustomExerciseWriteValue = {
   image_size_bytes?: number | null
 }
 
-export const customExerciseMedia = supabase.storage.from('custom-exercise-media')
+type LegacyMediaBucket = ReturnType<typeof supabase.storage.from>
+export const customExerciseMedia = {
+  upload: (...args: Parameters<LegacyMediaBucket['upload']>) => supabase.storage.from('custom-exercise-media').upload(...args),
+  createSignedUrl: (...args: Parameters<LegacyMediaBucket['createSignedUrl']>) => supabase.storage.from('custom-exercise-media').createSignedUrl(...args),
+  remove: (...args: Parameters<LegacyMediaBucket['remove']>) => supabase.storage.from('custom-exercise-media').remove(...args),
+}
 
 export const exerciseQueries = {
   async createVitalMediaUrl(path: string, expiresIn: number) {

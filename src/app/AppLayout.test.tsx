@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout, appViewportMetrics } from './AppLayout'
 
 const authState = vi.hoisted(() => ({
@@ -69,6 +69,7 @@ afterEach(() => {
   authState.fitLime = false
   authState.clientLime = false
   vi.unstubAllEnvs()
+  vi.useRealTimers()
   document.documentElement.className = ''
   document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.remove()
 })
@@ -417,7 +418,61 @@ describe('AppLayout: вкладка ассистента', () => {
   })
 })
 
+describe('AppLayout: служебная плашка о восстановлении ИИ', () => {
+  afterEach(() => window.sessionStorage.clear())
+
+  it('крестик скрывает плашку до конца запуска, следующий запуск показывает её снова', () => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    const first = renderLayout('/me')
+    // Синхронный клик: кадр прокрутки каркаса отменяется при unmount и не
+    // вызывает отсутствующий в jsdom scrollTo.
+    fireEvent.click(screen.getByRole('button', { name: 'Скрыть сообщение' }))
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    first.unmount()
+    // Другой экран в том же запуске: плашка остаётся скрытой.
+    const sameLaunch = renderLayout('/me/workouts')
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    sameLaunch.unmount()
+    // Новый запуск приложения начинается с чистой sessionStorage.
+    window.sessionStorage.clear()
+    renderLayout('/me')
+    expect(screen.getByRole('status', { name: 'Состояние сервиса' })).toBeInTheDocument()
+  })
+
+  it('без флага сборки плашки нет', () => {
+    renderLayout('/me')
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+  })
+
+  // Две роли — два отдельных каркаса AppLayout, в каждом своя вставка плашки.
+  it.each([
+    ['client', '/me'],
+    ['trainer', '/today'],
+  ] as const)('%s видит плашку над содержимым %s', (role, path) => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    authState.role = role
+    renderLayout(path)
+    const notice = screen.getByRole('status', { name: 'Состояние сервиса' })
+    expect(notice).toHaveTextContent('Fit снова работает')
+    expect(notice).toHaveTextContent('ИИ-функции')
+    // Плашка идёт первой, до содержимого экрана.
+    expect(notice.compareDocumentPosition(screen.getByText('Содержимое')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  // Два независимых условия исключения: Live и переписка.
+  it.each(['/workouts/w1/live', '/chat'])('не мешает действию на %s', (path) => {
+    vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
+    renderLayout(path)
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+  })
+})
+
 describe('AppLayout: объявление победителю конкурса', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-29T12:00:00+03:00'))
+  })
+
   it('показывается только участнику пилота и не перебивает Live', () => {
     vi.stubEnv('VITE_CONTEST_WINNER_ENABLED', 'true')
     vi.stubEnv('VITE_CONTEST_WINNER_PILOT_USER_IDS', 'user-1')

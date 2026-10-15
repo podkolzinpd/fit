@@ -9,6 +9,9 @@ route/page → feature UI/hooks → repository → query → Supabase Data API/R
 - `app` собирает router/providers и не содержит бизнес-правил.
 - `features` владеют пользовательскими сценариями и экспортируют только публичный API.
 - `repositories` возвращают доменные DTO и нормализованные ошибки.
+- Общие parser/mapping/context helpers лежат в независимых модулях без
+  transport/SDK imports. Native repositories не импортируют legacy repositories
+  ради helpers; type-only контракты не создают runtime-зависимость.
 - `queries` содержат явные select/insert/update/delete/RPC вызовы.
 - `shared` не импортирует features или data repositories.
 

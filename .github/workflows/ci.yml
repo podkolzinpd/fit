@@ -51,9 +51,6 @@ jobs:
       - run: npm run frontend:hosting:test
       - run: node --test scripts/prepare-fit-lime-fonts.test.mjs
       - run: npm run build
-        env:
-          VITE_SUPABASE_URL: http://127.0.0.1:54321
-          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
 
       - name: Verify offline frontend package against the real build
         run: node scripts/frontend-release.mjs dist "$RELEASE_ID" frontend-release.json
@@ -142,9 +139,9 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        # Official Docker image mirrored by ECR, identical linux/amd64 digest
-        # verified against docker.io/library/postgres:17 on 2026-10-09.
-        image: public.ecr.aws/docker/library/postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
+        # Pull the same pinned official image directly: the public ECR mirror
+        # exhausted its shared data limit before this job could start.
+        image: postgres:17@sha256:3cec7eb015ba8adb28139fa5c83b8489cdf0e666e53dfdf20f598ae0cc8739e3
         env:
           POSTGRES_DB: fit_actor_test
           POSTGRES_PASSWORD: postgres
@@ -167,16 +164,35 @@ jobs:
         run: npm --prefix services/api run test:db
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
+          TEST_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+          TEST_POSTGRES_ENGINE: docker
       - name: Verify no pending API migrations remain
         run: npm --prefix services/api run db:migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/fit_actor_test
+      - name: Verify recovery push against a separate local PostgreSQL database
+        run: |
+          node --input-type=module <<'NODE'
+          import pg from './services/api/node_modules/pg/lib/index.js'
+          const client = new pg.Client({ connectionString: 'postgresql://postgres:postgres@127.0.0.1:5432/postgres' })
+          await client.connect()
+          try {
+            await client.query("create role fit_owner login password 'recovery-ci-local'")
+            await client.query('create database fit_recovery_test owner fit_owner')
+          } finally { await client.end() }
+          NODE
+          npm --prefix services/api test -- src/cloudru-recovery-push.test.ts
+        env:
+          TEST_RECOVERY_DATABASE_URL: postgresql://fit_owner:recovery-ci-local@127.0.0.1:5432/fit_recovery_test
 
   e2e-scope:
     runs-on: ubuntu-latest
     outputs:
       required: ${{ steps.scope.outputs.required }}
       database_required: ${{ steps.database-scope.outputs.required }}
+      lime_mode: ${{ steps.lime-scope.outputs.mode }}
+      lime_tags: ${{ steps.lime-scope.outputs.tags }}
+      lime_partitions: ${{ steps.lime-scope.outputs.partitions }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -195,6 +211,14 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+      - name: Select temporary PR Fit Lime acceptance scope
+        id: lime-scope
+        run: node scripts/fit-lime-ci-scope.mjs "$BASE_SHA" "$HEAD_SHA"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
   # Production auth uses Yandex. Keep this browser gate independent from the
   # frozen local Supabase stack still needed by the remaining legacy specs.
   e2e-yandex-auth:
@@ -207,8 +231,6 @@ jobs:
     env:
       FIT_YANDEX_E2E_REQUIRED: 'true'
       VITE_CLIENT_LIME_ENABLED: 'true'
-      VITE_SUPABASE_URL: http://127.0.0.1:54321
-      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
       VITE_YANDEX_API_BASE_URL: https://stage.example.test
       VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
@@ -231,10 +253,11 @@ jobs:
         run: |
           docker run --rm --init --ipc=host --network host \
             --env CI=true \
+            --env FIT_TEST_PRODUCTION_BUILD=true \
+            --env VITE_NUTRITION_ENABLED=true \
+            --env VITE_NUTRITION_NATIVE_COHORT=true \
             --env FIT_YANDEX_E2E_REQUIRED \
             --env VITE_CLIENT_LIME_ENABLED \
-            --env VITE_SUPABASE_URL \
-            --env VITE_SUPABASE_PUBLISHABLE_KEY \
             --env VITE_YANDEX_OAUTH_CLIENT_ID \
             --env VITE_YANDEX_API_BASE_URL \
             --env VITE_YANDEX_ONLY_AUTH_ENABLED \
@@ -244,7 +267,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests
+            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests'
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -462,6 +485,7 @@ jobs:
   # sessions/data or licensed font secrets enter untrusted PR jobs. Exact-font
   # rendering is separately verified locally and in the trusted release build.
   e2e-fit-lime:
+    name: e2e-fit-lime (${{ matrix.engine.browser }}, ${{ matrix.acceptance.lane }}, ${{ matrix.acceptance.shard }})
     permissions:
       contents: read
       actions: read
@@ -472,17 +496,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
+        engine:
           - project: mobile-chromium
             browser: chromium
           - project: lime-acceptance-webkit
             browser: webkit
+        acceptance: ${{ fromJSON(needs.e2e-scope.outputs.lime_partitions) }}
     env:
       FIT_SCHEDULE_V2_VISUAL: '1'
       FIT_LIME_FONTS_REQUIRED: 'true'
       VITE_CLIENT_LIME_ENABLED: 'true'
-      VITE_SUPABASE_URL: http://127.0.0.1:54321
-      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
       VITE_YANDEX_API_BASE_URL: http://127.0.0.1:4100
       VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id
       VITE_YANDEX_APP_SESSION_ENABLED: 'true'
@@ -505,14 +528,28 @@ jobs:
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright install --with-deps ${{ matrix.engine.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.
-      - run: npx playwright test e2e/trainer-schedule-v2.visual.spec.ts --project=${{ matrix.project }} --workers=2
+      - name: Run full release or scoped PR Fit Lime acceptance partition
+        run: node scripts/run-fit-lime-ci.mjs "$LIME_PROJECT" "$LIME_MODE" "$LIME_TAGS" "$LIME_LANE" "$LIME_SHARD"
+        env:
+          LIME_PROJECT: ${{ matrix.engine.project }}
+          LIME_MODE: ${{ needs.e2e-scope.outputs.lime_mode }}
+          LIME_TAGS: ${{ needs.e2e-scope.outputs.lime_tags }}
+          LIME_LANE: ${{ matrix.acceptance.lane }}
+          LIME_SHARD: ${{ matrix.acceptance.shard }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fit-lime-timings-${{ matrix.engine.browser }}-${{ matrix.acceptance.lane }}-${{ strategy.job-index }}
+          path: test-results/lime-timings.json
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: fit-lime-diagnostics-${{ matrix.project }}
+          name: fit-lime-diagnostics-${{ matrix.engine.browser }}-${{ matrix.acceptance.lane }}-${{ strategy.job-index }}
           path: test-results/
           retention-days: 7
 

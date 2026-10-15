@@ -2,10 +2,12 @@
 
 ## Цель и срок жизни документа
 
-Production Fit уже использует Yandex ID, Yandex API и Managed PostgreSQL;
-frontend `fit-training.ru` публикуется через Yandex API Gateway/Object Storage.
+Production Fit использует внешний Yandex ID; app-session/API/PostgreSQL и media
+работают в Cloud.ru, frontend `fit-training.ru` публикуется через Cloud.ru Nginx.
+Названия Yandex API/migrations ниже обозначают сохранённые кодовые контракты.
+Старый Yandex-контур сохранён, обратной синхронизации записей Cloud.ru нет.
 Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
-Supabase остаётся временным legacy-источником для recovery, неперенесённых
+Supabase остаётся временным legacy-источником для legacy linking, неперенесённых
 media, локальных тестов и rollback — не вторым production backend новых функций.
 
 Этот playbook обязателен для задач, которые до вывода Supabase затрагивают
@@ -21,16 +23,29 @@ routing или переносимые продуктовые данные. Те�
 ## Текущее production-состояние и цель вывода legacy
 
 - новые и существующие пользователи входят только через Yandex ID;
-- все production-чтения и записи продуктовых данных идут через Yandex API в
-  Managed PostgreSQL и Yandex Object Storage;
+- актуальная web-сборка направляет продуктовые запросы в `api.fit-training.ru`
+  и Cloud.ru PostgreSQL/S3; старые cached/native writers ещё требуют проверки
+  и контролируемого закрытия: наличие старого API не означает dual-write;
 - frontend выпускается на `fit-training.ru` только проверенным
-  `.github/workflows/deploy-yandex-frontend.yml` после зелёного CI на `main`;
+  `.github/workflows/prepare-cloudru-frontend.yml` после зелёного CI на `main`;
 - production frontend больше не маршрутизирует продуктовые запросы в Supabase,
-  но startup/recovery/media legacy-зависимости и `VITE_SUPABASE_*` пока могут
-  оставаться; их удаление — отдельная проверяемая задача;
+  web/Android/iOS production build больше не требует `VITE_SUPABASE_*` и
+  не инициализирует Supabase SDK/Auth. Локальный SDK, server-side legacy linking/
+  media и rollback tooling пока сохраняются;
 - Supabase Auth, Data API, Storage, Edge Functions и фоновые producer отключены
   только после подтверждённого окна стабилизации и сохранения rollback backup;
 - пользовательский контракт клиента и тренера не ухудшается при переключении.
+
+## Завершение password recovery — 14.10.2026
+
+По прямому решению владельца старый recovery через email/пароль удалён из UI,
+client transport и API. Непривязанный Yandex ID открывает текущую форму нового
+аккаунта; уже связанные identity продолжают обычный вход. Перенесённые профили
+не удаляются, но больше не привязываются через проверку Supabase credentials.
+Старый `/v1/auth/yandex/recover` возвращает 404. Исторические SQL migrations
+сохраняются без переписывания; они не являются доступным recovery API.
+Локальный Supabase SDK, server-side legacy linking и media adapters остаются
+для следующих отдельных задач; это ещё не полный decommission.
 
 ## Общая методика продуктовой разработки
 
@@ -59,7 +74,7 @@ route/feature -> domain repository contract -> Yandex API/PostgreSQL
 7. Tenant catalog/export/import меняются, только если требуется перенос
    **существующих** legacy-данных. Для новой Yandex-only таблицы не создавайте
    фиктивное Supabase mapping.
-8. Legacy recovery/media или старый локальный тестовый путь не расширяются
+8. Legacy linking/media или старый локальный тестовый путь не расширяются
    автоматически под новые фичи. Если новое поведение пока не проверено через
    Yandex, вход остаётся default-off до целевого теста и безопасного rollout.
 
@@ -90,7 +105,7 @@ remote apply, изменение production build-time variables и обратн
 Затрагиваемые таблицы/API и общие файлы:
 Общий repository-контракт:
 Yandex implementation:
-Зависимость от существующих legacy recovery/media путей (если есть):
+Зависимость от существующих legacy linking/media путей (если есть):
 Feature flag и default-off поведение:
 Локальная Yandex PostgreSQL/API/RLS проверка:
 Что запрещено включать или выкатывать из этой задачи:
@@ -142,7 +157,7 @@ migration либо восстановление согласованного che
 
 До отключения старого проекта необходимо:
 
-1. Закрыть оставшиеся recovery/media зависимости и проверить данные без
+1. Закрыть оставшиеся legacy linking/media зависимости и проверить данные без
    `allow-missing`; не удалять credentials, которые ещё используются мостом.
 2. Проверить Yandex ID, роли, mutation, Assistant, upload и push на
    согласованных тестовых учётках; контролировать auth errors, API 5xx,

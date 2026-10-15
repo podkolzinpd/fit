@@ -6,6 +6,10 @@ import {
   type YandexIdentityProvider,
 } from './auth/yandex-identity.js'
 import {
+  CloudDatabaseTransferError,
+  type CloudDatabaseExportService,
+} from './cloud-database-transfer.js'
+import {
   PilotEnrollmentConflictError,
   type PilotEnroller,
 } from './db/yandex-pilot-enrollment.js'
@@ -49,6 +53,207 @@ const STAGE_CLIENT_ID = '10000000-0000-4000-8000-000000000001'
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()))
+})
+
+describe('Cloud.ru database export', () => {
+  it('requires private confirmation before SQL manifest or encrypted row chunks', async () => {
+    const manifest = vi.fn().mockResolvedValue({
+      format: 'fit-cloudru-sql-snapshot-v1', tables: [],
+    })
+    const chunk = vi.fn().mockResolvedValue(Buffer.from('encrypted'))
+    const app = buildMigrationApp({
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+      sqlSnapshotSource: { manifest, chunk },
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST', url: '/stage/cloudru/sql-snapshot/manifest',
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(manifest).not.toHaveBeenCalled()
+    const accepted = await app.inject({
+      headers: { 'x-fit-sql-snapshot-confirmation': 'READ_YANDEX_STAGE_SQL_SNAPSHOT' },
+      method: 'POST', url: '/stage/cloudru/sql-snapshot/manifest',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(manifest).toHaveBeenCalledOnce()
+    const invalidChunk = await app.inject({
+      headers: { 'x-fit-sql-snapshot-confirmation': 'READ_YANDEX_STAGE_SQL_SNAPSHOT' },
+      method: 'POST', url: '/stage/cloudru/sql-snapshot/chunk',
+      payload: { schema: 'public', table: 'profiles', offset: 0, limit: 1 },
+    })
+    expect(invalidChunk.statusCode).toBe(400)
+    expect(chunk).not.toHaveBeenCalled()
+  })
+
+  it('keeps source inventory private and returns only aggregate table metadata', async () => {
+    const inventory = vi.fn().mockResolvedValue([
+      { schema: 'public', table: 'profiles', estimatedRows: 12 },
+    ])
+    const app = buildMigrationApp({
+      cloudDatabaseSourceInventory: inventory,
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/cloudru/database-source/inventory',
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(inventory).not.toHaveBeenCalled()
+    const accepted = await app.inject({
+      headers: { 'x-fit-database-export-confirmation': 'INVENTORY_YANDEX_STAGE_DATABASE' },
+      method: 'POST',
+      url: '/stage/cloudru/database-source/inventory',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toEqual({
+      status: 'database_source_inventory_ready',
+      tables: [{ schema: 'public', table: 'profiles', estimatedRows: 12 }],
+    })
+  })
+
+  const result = {
+    bytes: 123,
+    exportId: '0123456789abcdef0123456789abcdef',
+    sha256: 'a'.repeat(64),
+    url: 'https://storage.example/signed',
+    versionId: 'version-1',
+  }
+
+  it('is unavailable unless explicitly configured', async () => {
+    const app = buildMigrationApp({ logger: false, runMigrations: () => Promise.resolve([]) })
+    apps.push(app)
+    const response = await app.inject({
+      method: 'POST',
+      url: '/stage/cloudru/database-export',
+    })
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('requires both a passphrase and the exact export confirmation', async () => {
+    const create = vi.fn<CloudDatabaseExportService['create']>()
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create, remove: () => Promise.resolve() },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const response = await app.inject({
+      headers: { 'x-fit-database-export-passphrase': 'p'.repeat(32) },
+      method: 'POST',
+      url: '/stage/cloudru/database-export',
+    })
+    expect(response.statusCode).toBe(403)
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('runs a confirmed source-only pg_dump preflight without exporting or writing to S3', async () => {
+    const create = vi.fn<CloudDatabaseExportService['create']>()
+    const preflightSource = vi.fn<NonNullable<CloudDatabaseExportService['preflightSource']>>()
+      .mockResolvedValue(undefined)
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create, preflightSource, remove: () => Promise.resolve() },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/stage/cloudru/database-export/preflight',
+    })
+    expect(rejected.statusCode).toBe(403)
+    expect(preflightSource).not.toHaveBeenCalled()
+    const accepted = await app.inject({
+      headers: { 'x-fit-database-export-confirmation': 'PREFLIGHT_YANDEX_STAGE_EXPORT' },
+      method: 'POST',
+      url: '/stage/cloudru/database-export/preflight',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toEqual({ status: 'database_export_source_ready' })
+    expect(preflightSource).toHaveBeenCalledOnce()
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('returns a bounded private diagnostic on preflight failure', async () => {
+    const preflightSource = vi.fn<NonNullable<CloudDatabaseExportService['preflightSource']>>()
+      .mockRejectedValue(new CloudDatabaseTransferError(
+        'database_export_source_permission_denied',
+        'pg_dump: error: permission denied for table example',
+      ))
+    const app = buildMigrationApp({
+      cloudDatabaseExport: {
+        create: () => Promise.reject(new Error('must not export')),
+        preflightSource,
+        remove: () => Promise.resolve(),
+      },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const response = await app.inject({
+      headers: { 'x-fit-database-export-confirmation': 'PREFLIGHT_YANDEX_STAGE_EXPORT' },
+      method: 'POST',
+      url: '/stage/cloudru/database-export/preflight',
+    })
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toEqual({
+      status: 'database_export_source_not_ready',
+      code: 'database_export_source_permission_denied',
+      diagnostic: 'pg_dump: error: permission denied for table example',
+    })
+  })
+
+  it('returns only bounded transfer metadata', async () => {
+    const create = vi.fn<CloudDatabaseExportService['create']>()
+      .mockResolvedValue(result)
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create, remove: () => Promise.resolve() },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const response = await app.inject({
+      headers: {
+        'x-fit-database-export-confirmation': 'EXPORT_YANDEX_STAGE_TO_CLOUDRU',
+        'x-fit-database-export-passphrase': 'p'.repeat(32),
+      },
+      method: 'POST',
+      url: '/stage/cloudru/database-export',
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ status: 'database_export_ready', ...result })
+    expect(create).toHaveBeenCalledWith('p'.repeat(32))
+  })
+
+  it('requires exact cleanup confirmation and removes the exact version', async () => {
+    const remove = vi.fn<CloudDatabaseExportService['remove']>()
+      .mockResolvedValue(undefined)
+    const app = buildMigrationApp({
+      cloudDatabaseExport: { create: () => Promise.resolve(result), remove },
+      logger: false,
+      runMigrations: () => Promise.resolve([]),
+    })
+    apps.push(app)
+    const rejected = await app.inject({
+      method: 'POST',
+      payload: { exportId: result.exportId, versionId: result.versionId },
+      url: '/stage/cloudru/database-export/cleanup',
+    })
+    expect(rejected.statusCode).toBe(403)
+    const accepted = await app.inject({
+      headers: {
+        'x-fit-database-export-confirmation': 'DELETE_YANDEX_STAGE_EXPORT',
+      },
+      method: 'POST',
+      payload: { exportId: result.exportId, versionId: result.versionId },
+      url: '/stage/cloudru/database-export/cleanup',
+    })
+    expect(accepted.statusCode).toBe(200)
+    expect(remove).toHaveBeenCalledWith(result.exportId, result.versionId)
+  })
 })
 
 describe('stage calorie audit', () => {

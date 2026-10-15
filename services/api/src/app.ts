@@ -82,7 +82,6 @@ import {
   ExistingActorUnavailableError,
   YandexAccountLinkError,
   type ExistingActor,
-  type ExistingCredentialsProvider,
   type ExistingActorProvider,
   type YandexAccountLinker,
 } from './yandex-account-linking.js'
@@ -238,7 +237,6 @@ interface BuildAppOptions {
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
   existingActorProvider?: ExistingActorProvider
-  existingCredentialsProvider?: ExistingCredentialsProvider
   yandexAccountLinker?: YandexAccountLinker
   yandexAuthHandoffService?: YandexAuthHandoffService
   yandexOnlyAuthEnabled?: boolean
@@ -903,31 +901,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   }
 
-  function readLegacyRecoveryRequest(body: unknown) {
-    if (
-      typeof body !== 'object'
-      || body === null
-      || !('handoffToken' in body)
-      || !('email' in body)
-      || !('password' in body)
-    ) return undefined
-    const handoffToken = body.handoffToken
-    const email = body.email
-    const password = body.password
-    if (
-      typeof handoffToken !== 'string'
-      || !/^[A-Za-z0-9_-]{43}$/.test(handoffToken)
-      || typeof email !== 'string'
-      || email.trim().length < 3
-      || email.trim().length > 320
-      || !email.includes('@')
-      || typeof password !== 'string'
-      || password.length < 8
-      || password.length > 1_024
-    ) return undefined
-    return { handoffToken, email: email.trim(), password }
-  }
-
   function sendHandoffFailure(reply: FastifyReply, error: unknown) {
     if (!(error instanceof YandexAuthHandoffError)) return undefined
     if (error.failure === 'expired') {
@@ -1462,47 +1435,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           if (response !== undefined) return response
         }
       }
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-  })
-
-  app.post('/v1/auth/yandex/recover', async (request, reply) => {
-    if (!options.yandexOnlyAuthEnabled) {
-      return reply.code(404).send({ error: 'not_found' })
-    }
-    const command = readLegacyRecoveryRequest(request.body)
-    if (command === undefined) return reply.code(400).send({ error: 'invalid_request' })
-    if (
-      options.existingCredentialsProvider === undefined
-      || options.yandexAuthHandoffService === undefined
-    ) return reply.code(503).send({ error: 'service_unavailable' })
-
-    try {
-      await options.yandexAuthHandoffService.recordRecoveryAttempt(command.handoffToken)
-      const actor = await options.existingCredentialsProvider.resolveCredentials(
-        command.email,
-        command.password,
-      )
-      if (actor === undefined) {
-        request.log.warn({ failure: 'legacy_credentials_invalid' }, 'Yandex auth recovery rejected')
-        return reply.code(401).send({ error: 'legacy_credentials_invalid' })
-      }
-      const session = await options.yandexAuthHandoffService.recoverExisting(
-        command.handoffToken,
-        actor,
-      )
-      request.log.info({ accountRole: actor.profile.accountRole }, 'Yandex auth recovery completed')
-      return reply.header('cache-control', 'no-store').send(session)
-    } catch (error) {
-      if (error instanceof ExistingActorUnavailableError) {
-        return reply.code(503).send({ error: 'legacy_auth_unavailable' })
-      }
-      const response = sendHandoffFailure(reply, error)
-      if (response !== undefined) return response
-      if (error instanceof YandexAppSessionDeniedError) {
-        return reply.code(403).send({ error: 'migrated_profile_not_ready' })
-      }
-      request.log.error({ failure: 'unexpected' }, 'Yandex auth recovery unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })
