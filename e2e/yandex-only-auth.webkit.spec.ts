@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { z } from 'zod'
+import { clientId } from './fit-lime-fixtures'
 
 if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
   for (const name of [
@@ -297,7 +298,7 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
 
     await expect(page.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Авторизация через Yandex ID' })).toBeVisible()
-    await expect(page.getByText('Вход и регистрация выполняются через Yandex ID.')).toBeVisible()
+    await expect(page.getByRole('main', { name: 'Вход в Fit' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toHaveClass(/primary/)
     await expect(page.getByLabel('Email')).toHaveCount(0)
     await expect(page.getByLabel('Пароль')).toHaveCount(0)
@@ -329,6 +330,117 @@ test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page
     await page.goto('/auth/forgot')
     await expect(page).toHaveURL(/\/auth$/)
   }
+})
+
+for (const preference of ['light', 'dark'] as const) {
+  for (const width of [390, 430, 1440]) {
+    test(`Lime auth entry survives reopening ${preference} ${width}`, async ({ page }, testInfo) => {
+      test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires Yandex-only auth lane.')
+      await page.setViewportSize({ width, height: 844 })
+      await page.emulateMedia({ colorScheme: preference })
+      await page.route('**/v1/**', (route) => route.fulfill({ status: 503, json: { error: 'synthetic_no_real_api' } }))
+      await page.addInitScript(({ preference, clientId }) => {
+        localStorage.setItem('fit.appTheme', preference)
+        localStorage.setItem('fit.clientLime.theme.', preference)
+        localStorage.setItem(`fit.clientLime.theme.${clientId}`, preference)
+      }, { preference, clientId })
+      await page.goto('/auth')
+      const entry = page.getByRole('main', { name: 'Вход в Fit' })
+      await expect(entry).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+      await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+      const photo = page.locator('.lime-auth-photo')
+      await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(940)
+      await page.evaluate(async () => { await document.fonts.load('400 16px "YS Geo"'); await document.fonts.load('500 16px "YS Geo"') })
+      if (process.env.FIT_LIME_FONTS_REQUIRED === 'true') expect(await page.evaluate(() => document.fonts.check('500 16px "YS Geo"'))).toBe(true)
+      const action = page.getByRole('button', { name: 'Продолжить с Yandex ID' })
+      await expect(action).toHaveCSS('font-family', /YS Geo/)
+      await expect(action).toHaveCSS('min-height', '48px')
+      await expect(action).toHaveCSS('border-radius', '999px')
+      await action.focus()
+      await expect(action).toBeFocused()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await action.blur()
+      await page.screenshot({ path: testInfo.outputPath(`auth-entry-${preference}-${width}.png`), fullPage: true })
+      await page.reload()
+      await expect(entry).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+      expect(await page.evaluate((id) => localStorage.getItem(`fit.clientLime.theme.${id}`), clientId)).toBe(preference)
+      expect(await page.evaluate(() => localStorage.getItem('fit.appTheme'))).toBe(preference)
+      const reopened = await page.context().newPage()
+      await reopened.goto('/auth')
+      await expect(reopened.getByRole('main', { name: 'Вход в Fit' })).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+      await reopened.close()
+      await photo.evaluate((image: HTMLImageElement) => image.dispatchEvent(new Event('error')))
+      await expect(photo).toBeHidden()
+      await expect(action).toBeEnabled()
+      await expect(page.getByRole('link', { name: 'Условия использования' })).toHaveAttribute('href', '/legal/terms')
+      await page.getByRole('link', { name: 'Конфиденциальность' }).click()
+      await expect(page).toHaveURL(/\/legal\/privacy$/)
+      await page.goBack()
+      await expect(entry).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+    })
+  }
+}
+
+test('Lime auth entry stays dark after client logout without changing its saved theme', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires Yandex-only auth lane.')
+  await page.setViewportSize({ width: 390, height: 844 })
+  let revocations = 0
+  await page.route('**/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: { 'x-fit-request-id': 'synthetic-logout-health', 'access-control-expose-headers': 'x-fit-request-id' } }))
+  await page.route('**/v1/**', (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/v1/auth/yandex/session') {
+      if (route.request().method() === 'DELETE') {
+        revocations += 1
+        return route.fulfill({ status: 204 })
+      }
+      return route.fulfill({ json: { accessMode: 'read_write', profile: {
+        id: clientId, firstName: 'Тестовый спортсмен', lastName: null, timezone: 'Europe/Moscow', accountRole: 'client',
+        client: { id: clientId, trainerId: '10000000-0000-4000-8000-000000000001', fullName: 'Тестовый спортсмен' },
+        experiments: { clientLime: true, fitLime: false, trainerScheduleV2: false },
+      } } })
+    }
+    if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-10-01T00:00:00Z' } })
+    if (path === '/v1/clients') return route.fulfill({ json: { clients: [] } })
+    return route.fulfill({ status: 503, json: { error: 'synthetic_no_real_api' } })
+  })
+  await page.addInitScript((id) => {
+    localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 's'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
+    localStorage.setItem('fit.appTheme', 'light')
+    localStorage.setItem(`fit.clientLime.theme.${id}`, 'light')
+  }, clientId)
+  await page.goto('/me/settings')
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click()
+  await expect(page).toHaveURL(/\/auth$/)
+  await expect(page.getByRole('main', { name: 'Вход в Fit' })).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+  expect(await page.evaluate(() => localStorage.getItem('fit.yandexAppSession.v1'))).toBeNull()
+  await expect.poll(() => revocations).toBe(1)
+  expect(await page.evaluate((id) => localStorage.getItem(`fit.clientLime.theme.${id}`), clientId)).toBe('light')
+  await page.screenshot({ path: testInfo.outputPath('auth-entry-after-logout.png'), fullPage: true })
+  const reopened = await page.context().newPage()
+  await reopened.goto('/auth')
+  await expect(reopened.getByRole('main', { name: 'Вход в Fit' })).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+  await reopened.close()
+})
+
+test('Lime auth entry keeps pending and error actions readable without its photo', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires Yandex-only auth lane.')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    Object.defineProperty(crypto.subtle, 'digest', { value: () => new Promise((_resolve, reject) => {
+      window.addEventListener('test-pkce-reject', () => reject(new Error('synthetic PKCE error')), { once: true })
+    }) })
+  })
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Продолжить с Yandex ID' }).click()
+  await expect(page.getByRole('button', { name: 'Переходим в Yandex ID…' })).toBeDisabled()
+  await page.screenshot({ path: testInfo.outputPath('auth-entry-pending.png'), fullPage: true })
+  await page.evaluate(() => window.dispatchEvent(new Event('test-pkce-reject')))
+  await expect(page.getByRole('alert')).toHaveText('Не удалось начать вход через Yandex ID.')
+  await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeEnabled()
+  await page.locator('.lime-auth-photo').evaluate((image: HTMLImageElement) => image.dispatchEvent(new Event('error')))
+  await expect(page.locator('.lime-auth-photo')).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeInViewport()
+  await page.screenshot({ path: testInfo.outputPath('auth-entry-error-no-photo.png'), fullPage: true })
 })
 
 test('restored Yandex session completes the legal check after reload', async ({ page }) => {
@@ -515,7 +627,8 @@ for (const theme of ['dark', 'light']) {
       await form.getByRole('button', { name: 'Назад' }).click()
       await expect(page).toHaveURL(/\/auth$/)
       await expect(page.getByRole('button', { name: 'Продолжить с Yandex ID' })).toBeVisible()
-      await expect(page.locator('html')).not.toHaveClass(/fit-client-lime-document/)
+      await expect(page.getByRole('main', { name: 'Вход в Fit' })).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+      await expect(page.locator('html')).toHaveClass(/fit-client-lime-document/)
       expect(registrations).toBe(0)
       await page.goto('/auth/yandex/callback?code=test-code&state=test-state')
       await expect(form).toBeVisible()
