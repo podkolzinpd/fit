@@ -34,6 +34,7 @@ export function MyClientPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [voicePhase, setVoicePhase] = useState<VoiceInputPhase>('idle')
+  const [voiceEntryActive, setVoiceEntryActive] = useState(false)
   const query = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine() })
   const quickStart = useMutation({
     mutationFn: async (intent: FirstWorkoutIntent) => {
@@ -80,6 +81,8 @@ export function MyClientPage() {
             heroTitle="Составить тренировку"
             heroSubtitle="Голосом или вручную"
             onPhaseChange={setVoicePhase}
+            onStart={() => setVoiceEntryActive(true)}
+            onCancel={() => setVoiceEntryActive(false)}
             onTranscript={(transcript) => quickStart.mutateAsync({ mode: 'voice', transcript })}
             secondaryAction={voicePhase === 'idle' ? <button type="button" className="today-voice-text-inline" aria-label="Ввести текстом" disabled={quickStart.isPending} onClick={() => quickStart.mutate({ mode: 'text' })}><KeyboardIcon /></button> : undefined}
           />
@@ -88,7 +91,7 @@ export function MyClientPage() {
         <PresetWorkoutPicker onSelect={(presetId) => quickStart.mutate({ mode: 'preset', presetId })} pending={quickStart.isPending} />
       </section>} />
     </AsyncView>
-    <NutritionSummary />
+    {voicePhase === 'idle' && !voiceEntryActive && !quickStart.isPending && !quickStart.isError && !beginFirstLive.isPending && <NutritionSummary />}
   </Page>
 }
 

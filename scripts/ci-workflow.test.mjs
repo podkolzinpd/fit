@@ -109,6 +109,7 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
   assert.match(job, /npm run build && npx playwright test/)
   assert.match(job, /--env VITE_NUTRITION_ENABLED=true/)
   assert.match(job, /--env VITE_NUTRITION_NATIVE_COHORT=true/)
+  assert.match(job, /--env VITE_SPEECHKIT_RELAY_URL=wss:\/\/api\.fit-training\.ru\/stt/)
   assert.match(job, /VITE_YANDEX_OAUTH_CLIENT_ID: fixture-client-id/)
   assert.match(job, /VITE_YANDEX_API_BASE_URL: https:\/\/stage\.example\.test/)
   for (const flag of [
@@ -120,7 +121,7 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
     assert.match(job, new RegExp(`${flag}: 'true'`))
     assert.match(job, new RegExp(`--env ${flag}`))
   }
-  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts e2e\/nutrition-diary\.webkit\.spec\.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests/)
+  assert.match(job, /playwright test e2e\/yandex-only-auth\.webkit\.spec\.ts e2e\/nutrition-diary\.webkit\.spec\.ts e2e\/nutrition-home\.webkit\.spec\.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests/)
   assert.doesNotMatch(job, /VITE_SUPABASE_|supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
 })
 

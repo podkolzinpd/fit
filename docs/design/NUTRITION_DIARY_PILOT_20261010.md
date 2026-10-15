@@ -117,6 +117,85 @@ build/fonts2/2 passed. Первый прогон остановился толь
 также проверен с synthetic config: statement_timeout/options отсутствуют,
 client deadline сохранён. Live enable остаётся отдельной проверкой.
 
+## Согласованные исправления — два PR, 15.10.2026
+
+Владелец подтвердил план и разрешил реализацию/выпуск. Исходные9 пунктов
+ниже не переписываются. Текущий nutrition pilot уже включён на6 участников;
+прежние сообщения об off описывают исторический preflight, не новый замер.
+
+1. PR1 — только Client Home и общий NutritionSummary: mount только обычный
+   кабинет, без requesting/recording/preparing/loading/transcribing и любого
+   text/draft/review/save workflow тренировки, в том числе first-run. После
+   отмены возвращается обычный кабинет. Вертикальная scoped card: заголовок/
+   diary link, непрерывная пара kcal, группы БЖУ, secondary48px Add; voice
+   остаётся главным действием. Shared Fit surfaces/tokens/ChevronRightIcon,
+   compact loading/empty/error/retry/partial macros и cache refresh. Никаких
+   SpeechKit/LLM/schema/cohort/consent changes. Проверить trainer summary,
+   actual production CSS order, light/dark390/430 и узкий smoke, synthetic
+   WebKit home→voice→cancel плюс существующие diary flows. Документация,
+   CURRENT_STATE и приёмка в том же PR; зелёный exact-head/main CI и обычный
+   Cloud.ru выпуск/публичная проверка до перехода к PR2.
+2. PR2 — одна дополнительно одобренная учётка CURRENT Yandex sign-in, всего7.
+   Существующую роль не назначать/не менять; прежние6 сохраняют доступ.
+   Контакт/индивидуальные hashes только private input. Обновить exact cohort
+   preparation/проверки/capability и при необходимости следующую forward-only
+   migration admission ceiling; старые migrations immutable. Preserve role,
+   verified identity/domain/read-write, connection/consent guards; outsider
+   forbidden. Clean-chain/actor/grants/idempotence/config tests, полный check,
+   fresh CI/API backup/migration и atomic candidate runtime configure.
+   После server readback обновлённые web/native builds и публичная приёмка.
+   Не выдавать synthetic OAuth, simulator startup или созданный APK за реальные
+   входы владельцев/физические устройства/публикацию в магазины.
+
+Очередь: сначала PR1 выпускается на прежних6, потом PR2 подключает7-го к уже
+исправленному UI. Новых служебных/docs-only/release PR не планируется; новые
+внешние блокеры сначала диагностируются. Rollback не удаляет дневники.
+
+PR1 local acceptance: полный check exit0/frontend2698/API1420+159 штатных DB
+skips, lint/typecheck/infra/hosting/build passed. Component12/12, existing diary
+WebKit9/9, новые6 cases на real /me и trainer detail: обе темы320/390/430,
+requesting/recording/cancel/error/text в Lime/identity/first-run, locked trainer
+390/1440. Новых projects/matrices0, protected specs/goldens/timeouts/retries
+не менялись. Production build с native-only composition и тем же CSS load
+order прошёл6/6 отдельно; synthetic auth/API, canonical public relay полностью
+заменён FakeWebSocket, реального OAuth/remote speech не было. Первый production
+прогон3/6 установил, что localhost relay закономерно отвергается production
+guard; исправлена тестовая конфигурация, не ослаблен сам guard. Скриншоты
+light/dark и записи просмотрены: вертикальные цифры/actions, питания в записи
+нет. Подключение7-го/PR2 ещё не начиналось, CI/production PR1 ещё не заявлены.
+
+Новые6 cases включены в существующий production e2e-yandex-auth gate вместе
+с прежними auth/diary specs: локально40/40 при том же stage.example.test API
+origin. Общая fixture берёт origin из test env (default4100 сохранён), public
+speech URL полностью mock-only; production guards не менялись. CI policy46/46,
+component12/12, включая явную проверку loading без ложного empty. После
+включения main1641ff4f API1421+159 штатных DB skips также прошли. Fresh CI
+на итоговом head обязателен; прежний прогон не заменяет проверку этого diff.
+
+Финальная сверка с исходным UX-контрактом сохраняет подпись «Записано за день»
+отдельной компактной строкой под kcal, а не лишним столбцом старой карточки.
+Это не выдаёт неполный дневник за весь фактический рацион. Component12/12 и
+production WebKit6/6 повторены; light320/dark390 просмотрены, empty не показывает
+подпись/ложный ноль. Новых cases/projects не добавлено; final-main CI впереди.
+
+16.10, final-main integration: включены все более ранние1657–1661 и1663,
+итоговый main8da92981. Full local check exit0: frontend2703/API1421+160 штатных
+DB skips, infra315/hosting169/lint/typecheck/build passed. Наших DB/schema/role/
+cohort/consent изменений вPR1 нет; incoming145 не переписывается. Snapshot
+из main имел123 строки: весь чужой текст сохранён, два soft line breaks между
+соседними статусами чатов заменены пробелами и один пустой разделитель убран,
+получилось120. Это ровно3 форматных изменения, не удаление чужих фактов.
+Исходный9-пунктный блок сравнивается с оригиналом побайтово. Final production
+browser/CI/release ещё не объявлены. Дополнительный CURRENT Yandex login
+уточняется отдельно без угадывания другого адреса; PR1 от этого не зависит.
+
+Final production-native composition на main8da92981: тот же обязательный
+auth/diary/Home WebKit gate прошёл40/40 без flaky retries, policy46/46 passed,
+union626 Fit Lime cases сохранён без дублей/изменения матриц. Просмотрены
+итоговые dark390 Home и запись Lime: карточка читаема и отсутствует в записи.
+Реальные API/OAuth/speech/consents не имитировались: API fixtures и FakeWebSocket.
+Local check не заменяет fresh exact-head/main CI и живую Cloud.ru приёмку.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
