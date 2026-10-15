@@ -174,7 +174,10 @@ describe('Yandex app session auth flow', () => {
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 
-    expect(screen.getByRole('heading', { name: 'Добро пожаловать' })).toBeVisible()
+    const welcome = screen.getByRole('heading', { name: 'Добро пожаловать в ФИТ' })
+    expect(welcome).toBeVisible()
+    expect(welcome.querySelector('.brand')).toHaveAttribute('src', '/fit-logo.svg')
+    expect(screen.getByRole('main', { name: 'Вход в Fit' }).querySelectorAll('.brand')).toHaveLength(1)
     expect(screen.getByText('Войдите, чтобы продолжить тренировки')).toBeVisible()
     expect(screen.getByRole('region', { name: 'Авторизация через Yandex ID' })).toBeVisible()
     expect(screen.getByRole('main', { name: 'Вход в Fit' })).toHaveClass('lime-auth-entry')

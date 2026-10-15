@@ -352,7 +352,17 @@ for (const preference of ['light', 'dark'] as const) {
       await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(940)
       await page.evaluate(async () => { await document.fonts.load('400 16px "YS Geo"'); await document.fonts.load('500 16px "YS Geo"') })
       if (process.env.FIT_LIME_FONTS_REQUIRED === 'true') expect(await page.evaluate(() => document.fonts.check('500 16px "YS Geo"'))).toBe(true)
+      const welcome = page.getByRole('heading', { name: 'Добро пожаловать в ФИТ', exact: true })
+      await expect(welcome.locator('.brand')).toHaveAttribute('src', '/fit-logo.svg')
+      await expect(entry.locator('.brand')).toHaveCount(1)
+      await expect(photo).toHaveCSS('object-fit', 'contain')
+      await expect(photo).toHaveCSS('border-radius', '0px')
+      const photoBox = (await photo.boundingBox())!
+      const welcomeBox = (await welcome.boundingBox())!
+      expect(welcomeBox.y - photoBox.y - photoBox.height).toBeGreaterThanOrEqual(16)
+      expect(welcomeBox.y - photoBox.y - photoBox.height).toBeLessThanOrEqual(32)
       const action = page.getByRole('button', { name: 'Продолжить с Yandex ID' })
+      await expect(action).toBeInViewport()
       await expect(action).toHaveCSS('font-family', /YS Geo/)
       await expect(action).toHaveCSS('min-height', '48px')
       await expect(action).toHaveCSS('border-radius', '999px')
@@ -361,6 +371,16 @@ for (const preference of ['light', 'dark'] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await action.blur()
       await page.screenshot({ path: testInfo.outputPath(`auth-entry-${preference}-${width}.png`), fullPage: true })
+      if (preference === 'light' && width === 390) {
+        for (const viewport of [{ width: 375, height: 667 }, { width: 360, height: 568 }]) {
+          await page.setViewportSize(viewport)
+          await expect(welcome).toBeInViewport({ ratio: 1 })
+          await expect(action).toBeInViewport({ ratio: 1 })
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+          await page.screenshot({ path: testInfo.outputPath(`auth-entry-short-${viewport.width}.png`), fullPage: true })
+        }
+        await page.setViewportSize({ width, height: 844 })
+      }
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(entry).toHaveCSS('background-color', 'rgb(0, 0, 0)')
       expect(await page.evaluate((id) => localStorage.getItem(`fit.clientLime.theme.${id}`), clientId)).toBe(preference)
