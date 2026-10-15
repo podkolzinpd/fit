@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: inspect
-        options: [inspect, send]
+        options: [inspect, send, email-audit]
       confirmation:
         description: SEND_FIT_RECOVERY_2026_10_14 for send
         type: string
@@ -33,6 +33,8 @@ jobs:
       YC_DEPLOY_SA_ID: ${{ vars.YC_SUMMARY_DEPLOY_SA_ID }}
       YC_FOLDER_ID: ${{ vars.YC_SUMMARY_FOLDER_ID }}
       YC_OIDC_AUDIENCE: https://github.com/podkolzinpd
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       EXPECTED_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
     steps:
       - name: Verify bounded campaign on trusted main runner
@@ -43,7 +45,7 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
           case "$ACTION" in
-            inspect) test -z "$RECOVERY_CONFIRMATION" ;;
+            inspect|email-audit) test -z "$RECOVERY_CONFIRMATION" ;;
             send) test "$RECOVERY_CONFIRMATION" = SEND_FIT_RECOVERY_2026_10_14 ;;
             *) exit 1 ;;
           esac
@@ -73,6 +75,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Audit legacy email audience without exporting contacts
+        if: inputs.action == 'email-audit'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          runtime_file=$(mktemp "$RUNNER_TEMP/fit-email-audit.XXXXXX")
+          trap 'rm -f "$runtime_file"' EXIT
+          for name in MIGRATION_DATABASE_HOST MIGRATION_DATABASE_PORT MIGRATION_DATABASE_NAME MIGRATION_DATABASE_USER MIGRATION_DATABASE_PASSWORD; do
+            value=$(jq -er --arg name "$name" '.[$name] | select(type == "string" and length > 0)' <<<"$CLOUDRU_DATABASE_CONFIG_JSON")
+            echo "::add-mask::$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" >> "$runtime_file"
+          done
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID; do
+            value=${!name}
+            test -n "$value"
+            echo "::add-mask::$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" >> "$runtime_file"
+          done
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\n' >> "$runtime_file"
+          running=$(cat /opt/fit/RUNNING_SHA)
+          sudo podman run --rm --read-only --network=host --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$runtime_file" \
+            --volume "$GITHUB_WORKSPACE/services/api/src/email-audience-audit.ts:/app/dist/email-audience-audit.ts:ro" \
+            "localhost/fit-api:$running" node --experimental-strip-types dist/email-audience-audit.ts \
+            | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Read existing VAPID identity without changing Yandex resources
         if: inputs.action == 'send'
         shell: bash
@@ -87,6 +119,7 @@ jobs:
         if: inputs.action == 'send'
         run: scripts/yandex-github-oidc.sh
       - name: Inspect or send only the recovery campaign
+        if: inputs.action != 'email-audit'
         shell: bash
         run: |
           set -euo pipefail
