@@ -5,13 +5,19 @@ import { useAuth } from '../../app/auth-context'
 import { MessageIcon } from '../../shared/icons'
 import { useChatThreads } from './use-chat-threads'
 
-export function ChatHeaderAction() {
+export function ChatHeaderAction({ returnTo }: { returnTo?: string }) {
   const threads = useChatThreads()
   const unread = (threads.data ?? []).reduce((sum, item) => sum + item.unreadCount, 0)
-  return <Link className="chat-header-action" to="/chat" aria-label={unread ? `Сообщения, непрочитанных: ${unread}` : 'Сообщения'}>
+  return <Link className="chat-header-action" to="/chat" state={returnTo ? { chatBack: 'history', returnTo } : undefined} aria-label={unread ? `Сообщения, непрочитанных: ${unread}` : 'Сообщения'}>
     <MessageIcon />
     {unread > 0 && <span className="chat-unread-badge" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
   </Link>
+}
+
+export function ChatThreadsNotice({ loading, error, onRetry }: { loading: boolean; error: unknown; onRetry: () => void }) {
+  if (error) return <p className="error" role="alert">Не удалось загрузить переписки. <button type="button" className="link" onClick={onRetry}>Повторить</button></p>
+  if (loading) return <p role="status">Загружаем переписки…</p>
+  return null
 }
 
 export function ChatStartButton({ clientId, trainerId, conversationId = null, className = 'link', iconOnly = false,

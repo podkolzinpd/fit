@@ -370,6 +370,17 @@ describe('ClientsPage search', () => {
 })
 
 describe('ClientsPage chat actions', () => {
+  it('shows a failed history read and retries without hiding the client list', async () => {
+    backend.listThreads.mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue([thread('c1', 2, false)])
+    renderPage([client('c1', 'Анна Смирнова', false)])
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Не удалось загрузить переписки')
+    expect(screen.getByRole('link', { name: /Анна Смирнова/ })).toBeVisible()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByRole('button', { name: 'Сообщения с Анна Смирнова, непрочитанных: 2' })).toBeVisible()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
   it('replaces the menu with chat and suppresses the release click after a swipe from its icon', async () => {
     const root = { ...client('root', 'Анна Смирнова', true), canArchive: true }
     backend.listThreads.mockResolvedValue([thread('root', 4)])

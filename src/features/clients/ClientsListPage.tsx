@@ -9,8 +9,7 @@ import type { Client } from '../../shared/domain'
 import { todayInTimeZone } from '../../shared/local-date'
 import { AsyncView, Coachmark, Page } from '../../shared/ui'
 import { ArchiveIcon, CheckIcon, ChevronRightIcon, CloseIcon, HistoryIcon, ProfileIcon, SearchIcon } from '../../shared/icons'
-import { ChatStartButton } from '../chat'
-import { useChatThreads } from '../chat/use-chat-threads'
+import { canOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
 import { InviteAthleteButton } from '../auth/InvitationShareActions'
 import { trainerFinanceClientLabel } from '../finance/TrainerFinanceOverviewPage'
 
@@ -292,6 +291,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
       <button type="button" className="clients-archive-feedback-close" aria-label="Закрыть сообщение" onClick={() => setFeedback(null)}><CloseIcon /></button>
     </div>}
     {archive.error && <p className="error clients-archive-error" role="alert">{archive.error.message}</p>}
+    <ChatThreadsNotice loading={threads.isLoading} error={threads.error} onRetry={() => void threads.refetch()} />
     {!archivedOnly && financeEnabled && <Link className="clients-finance-entry" to="/finance" onClick={rememberListPosition}>
       <span><strong>Финансы</strong><small>{finance.data ? `${new Intl.NumberFormat('ru-RU').format(finance.data.receivedCents / 100)} ₽ получено · ${finance.data.attentionCount} требуют внимания` : 'Абонементы, оплаты и занятия'}</small></span><ChevronRightIcon />
     </Link>}
@@ -308,7 +308,7 @@ function ClientsListPage({ archivedOnly }: ClientsListPageProps) {
         const thread = threadByClientId.get(client.id)
         const financeState = financeByClientId.get(client.id)
         const financeLabel = financeState ? trainerFinanceClientLabel(financeState) : undefined
-        const canOpenChat = Boolean(actor?.role === 'trainer' && (thread?.conversationId || (client.hasAccount && !client.archivedAt)))
+        const canOpenChat = actor?.role === 'trainer' && canOpenClientChat(client, thread)
         if (!client.canArchive) return <article className="card client-card" key={client.id}>
             <Link className="client-card-main" to={`/clients/${client.id}`} onClick={rememberListPosition}>
               <span className="client-avatar" aria-hidden="true"><ProfileIcon /></span>
