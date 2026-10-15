@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 import { getYandexMainRoutingConfig, isYandexMainRoutingEnabled } from '../../app/feature-flags'
 import type { InvitationLinkPreview, InvitationLinkSource } from '../../shared/domain'
-import { invitationsRepository } from './invitations.repository'
 
 const previewSchema = z.object({
   invitation: z.object({
@@ -27,10 +26,18 @@ async function previewYandexInvitation(token: string): Promise<InvitationLinkPre
   return previewSchema.parse(await response.json()).invitation
 }
 
+async function previewLocalInvitation(token: string): Promise<InvitationLinkPreview | null> {
+  if (import.meta.env.MODE !== 'development' && import.meta.env.MODE !== 'test') {
+    throw new Error('Устаревший источник данных недоступен в этой сборке.')
+  }
+  const { invitationsRepository } = await import('./invitations.repository')
+  return invitationsRepository.previewLink(token)
+}
+
 export const publicInvitationLinksRepository = {
   preview(source: InvitationLinkSource, token: string): Promise<InvitationLinkPreview | null> {
     return source === 'yandex' || isYandexMainRoutingEnabled()
       ? previewYandexInvitation(token)
-      : invitationsRepository.previewLink(token)
+      : previewLocalInvitation(token)
   },
 }

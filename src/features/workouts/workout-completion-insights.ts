@@ -1,4 +1,4 @@
-import { workoutTonnage } from '../../data/repositories/workouts.repository'
+import { workoutTonnage } from '../../data/repositories/workout-rules'
 import type { Workout } from '../../shared/domain'
 import { resultNumber, type WorkoutResult } from '../../shared/workout-results'
 
