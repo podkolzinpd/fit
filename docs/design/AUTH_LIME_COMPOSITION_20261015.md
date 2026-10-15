@@ -63,3 +63,5 @@ Unit31/31; entry WebKit8/8 (27.7s), Chromium8/8 (30.3s). Дополнены asse
 Первый локальный browser запуск остановлен: порт5198 уже занят чужим процессом, Vite перешёл5199. Чужой процесс не менялся, приёмка повторена на собственном5216 с strictPort. Chromium config исправлен на абсолютный путь к существующему runtime; продукт/лимиты/проверки не менялись. Полный check и выпуск — отдельные обязательные гейты, пока выполняются.
 
 Все стадии npm run check локально прошли: lint/typecheck/frontend2697/305files, coverage82.87/77.01/82.83/87.24, DB-types/iOS permissions/media; infra/calendar/hosting169/API1418+159DBskip/build/startup. Единый запуск остановился только на loopback EPERM в unchanged speech relay fixtures; оставшийся стандартный хвост повторён с доступом к локальным портам и завершился exit0. Таймауты/thresholds/skip/gates не менялись.
+
+Перед PR включён mained7969d3 (#1656, только API background timeout/transaction tooling). Собственный frontend/e2e/build-config diff относительно проверенного f1746374 пуст; новые upstream API tests3files/18cases прошли. Protected CI fingerprint и конфигурация не менялись.
