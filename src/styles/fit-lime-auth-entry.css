@@ -1,4 +1,8 @@
 /* Public Yandex-only welcome: fixed dark Lime, independent of account themes. */
+.fit-client-lime-public > .content:has(> .lime-auth-entry) {
+  margin-top: 0;
+  padding-bottom: 0;
+}
 .fit-client-lime .lime-auth-entry {
   width: 100%;
   max-width: 430px;
@@ -13,12 +17,21 @@
   font-family: 'YS Geo', 'Onest Variable', sans-serif;
   font-synthesis: none;
 }
-.lime-auth-header { display: flex; justify-content: center; }
-.lime-auth-header .brand { width: 112px; height: 60px; border: 0; border-radius: 0; background: transparent; filter: brightness(0) invert(1); }
-.lime-auth-photo { display: block; width: 100%; height: clamp(180px, 42dvh, 420px); object-fit: cover; object-position: 50% 40%; border-radius: var(--lime-radius-card); }
+.lime-auth-photo {
+  display: block;
+  flex-shrink: 0;
+  width: calc(100% + 40px);
+  height: clamp(180px, min(62svh, calc(100svh - 256px - env(safe-area-inset-top) - env(safe-area-inset-bottom))), 560px);
+  margin: 0 -20px 8px;
+  object-fit: contain;
+  object-position: right center;
+  border-radius: 0;
+}
 .lime-auth-photo[hidden] { display: none; }
-.lime-auth-actions { display: grid; gap: 16px; margin-top: auto; }
+.lime-auth-actions { display: grid; gap: 16px; }
 .lime-auth-actions h1 { margin: 0; font-size: 24px; line-height: 28px; font-weight: 500; }
+.lime-auth-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lime-auth-title .brand { width: 68px; height: 36px; flex: 0 0 68px; border: 0; border-radius: 0; background: transparent; filter: brightness(0) invert(1); }
 .lime-auth-actions p { margin: 0; font-size: 14px; line-height: 20px; font-weight: 400; }
 .fit-client-lime .lime-auth-actions button { width: 100%; min-height: 48px; font-size: 16px; line-height: 20px; font-weight: 500; }
 .lime-auth-actions .error { color: var(--danger); }
