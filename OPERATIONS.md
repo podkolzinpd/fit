@@ -226,6 +226,10 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   Обычные push и session cleanup работают в Cloud.ru; Telegram/Tracker feedback
   credentials этим workflow не переносятся. Владелец15.10 явно оставил эту
   доставку выключенной; обращения сохраняются без внешней отправки.
+  Cloud.ru pooler не принимает startup statement_timeout: node-postgres query
+  deadline задаётся query_timeout=10000, server limit — SET LOCAL
+  statement_timeout='10s' после BEGIN каждой background transaction. Timeout
+  установки считается ошибкой и приводит к rollback до business query.
   Успех таймера не доказывает успех worker: проверяйте Result сервиса и queue
   aggregates. Inspect workflow читает не более100 journal records за15 минут
   через allowlist sanitizer; raw messages, SQL и ключи в job output не выводятся.

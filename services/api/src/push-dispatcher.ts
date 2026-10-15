@@ -1,5 +1,6 @@
 import { dispatchStage } from './background-dispatch-error.js'
-import type { DatabaseClient, DatabasePool } from './db/types.js'
+import type { DatabasePool } from './db/types.js'
+import { withBackgroundTransaction } from './background-transaction.js'
 import {
   claimPushNotifications,
   enqueueWorkoutReminders,
@@ -12,36 +13,6 @@ import type { PushNotificationResult } from './push-notifications/send.js'
 export interface PushDispatchSummary extends PushFinalizeSummary {
   claimed: number
   remindersEnqueued: number
-}
-
-async function withTransaction<Result>(
-  pool: DatabasePool,
-  work: (client: DatabaseClient) => Promise<Result>,
-): Promise<Result> {
-  const connection = await pool.connect()
-  let transactionStarted = false
-  try {
-    await connection.query('begin')
-    transactionStarted = true
-    const result = await work(connection)
-    await connection.query('commit')
-    return result
-  } catch (error) {
-    if (transactionStarted) {
-      try {
-        await connection.query('rollback')
-      } catch (rollbackError) {
-        throw new AggregateError(
-          [error, rollbackError],
-          'Push dispatcher transaction and rollback both failed',
-          { cause: rollbackError },
-        )
-      }
-    }
-    throw error
-  } finally {
-    connection.release()
-  }
 }
 
 function unavailableResults(ids: readonly string[]): PushNotificationResult[] {
@@ -63,7 +34,7 @@ export class PushDispatcher {
     if (!Number.isFinite(now.getTime())) throw new Error('Push dispatch time is invalid')
 
     const prepared = await dispatchStage('push', 'prepare', () =>
-      withTransaction(this.pool, async (client) => {
+      withBackgroundTransaction(this.pool, async (client) => {
         const remindersEnqueued = await enqueueWorkoutReminders(client, now)
         const batch = await claimPushNotifications(client, now)
         return { batch, remindersEnqueued }
@@ -89,7 +60,7 @@ export class PushDispatcher {
     }
 
     const finalized = await dispatchStage('push', 'finalize', () =>
-      withTransaction(this.pool, (client) =>
+      withBackgroundTransaction(this.pool, (client) =>
         finalizePushNotifications(client, batch.dispatchToken, results, now)))
     return {
       claimed: batch.notifications.length,
