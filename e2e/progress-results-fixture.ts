@@ -94,6 +94,9 @@ export async function verifyResultsSources(page: Page) {
   const center = page.locator('#results-center')
   await verifyAnalysisShortcutKeepsShell(page)
   await page.getByRole('tab', { name: 'ПРО' }).click()
+  // Both panels stay mounted. Wait for the tab commit before collecting visible
+  // controls, otherwise the old overview can become hidden during measurement.
+  await expect(page.getByRole('tabpanel', { name: 'ПРО', exact: true })).toBeVisible()
   await expect(page.locator('.progress-pro-list #results-center')).toHaveCount(1)
   const toggleHeights = await page.locator('.progress-details-toggle:visible').evaluateAll((controls) =>
     controls.map((control) => control.getBoundingClientRect().height))

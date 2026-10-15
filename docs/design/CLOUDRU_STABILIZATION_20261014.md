@@ -161,5 +161,16 @@ credential и доступность требуют отдельного фак�
   gh call в nutrition configuration он заменён тем же curl без изменения cohort;
   final workflow9/9 passed. Local DB migration chain не менялась этим fix.
 - Main55 CI38715304043 встретил pre-existing visual assertion Progress: высота
-  toggle0 вместо>=44 в progress-results-fixture.ts:101, три попытки. Ни UI-код,
-  ни этот test в fix не меняются; CI gates сохраняются, current-main rollout ждёт green.
+  toggle0 вместо>=44 в progress-results-fixture.ts:101, три попытки. UI-код
+  не меняется; причина и readiness fix ниже, current-main rollout ждёт green.
+
+- CI trace job116356537290 доказал race: before@call@92 у PRO hidden, после
+  evalOnSelectorAll уже hidden у overview; measurement вернул[0]. Count1 видел
+  всегда mounted DOM и не ждал React commit. В existing verifyResultsSources
+  добавлено ожидание видимого tabpanel ПРО до сбора controls. Все assertions,
+  minimum44, retries/timeouts и browser matrix прежние; новых случаев нет.
+- Local ESLint и Playwright list existing2 cases passed. Replay actual CI DOM/CSS
+  с delayed panel commit: WebKit390/Chromium430,7 controls/min63.6875 each passed,
+  network blocked. Это проверка race mechanism, не полный app E2E: локальный
+  Supabase auth54321 недоступен, общие базы не запускались/не сбрасывались.
+  Полный existing browser scenario остаётся обязательным final CI.
