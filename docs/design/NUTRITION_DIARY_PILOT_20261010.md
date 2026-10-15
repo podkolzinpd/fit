@@ -89,6 +89,34 @@ enable повторяется только через green exact-current-main w
 build зелёные. Новых SQL/schema/permission изменений нет, поэтому clean-chain
 и actor-проверка остаются прежними150/150 плюс реальный production apply144.
 
+## Совместимость read-only smoke с текущим Cloud.ru pooler — 15.10.2026
+
+Maincdc2a10e/CI38731455369, API38731933454 и frontend38731933617 прошли.
+Повтор configure38732779912 снова остановился до candidate/switch, generic
+reason; runtime не изменён, frontend flags остаются off. Классификатор не
+покрывал08P01. Уже зафиксированный в проекте live SQL audit38540417270 имел
+тот же быстрый отказ подключения08P01/acquired0; после переноса nonstandard
+startup parameters в SET LOCAL повтор38542399640 успешно прочитал target.
+См. CLOUDRU_READONLY_READINESS_20261014.md. Для nutrition точный SQLSTATE ещё
+не получен, поэтому это применяемое подтверждённое правило совместимости,
+а не выдуманный readback ошибки нового запуска.
+
+Nutrition smoke использует один dedicated Client, стандартный startup,
+connection/client query deadlines5s и BEGIN READ ONLY. Server statement5s/
+lock2s задаются только SET LOCAL; фактические readonly=on/timeout=5s читаются
+обратно перед прежними execute/cap4 проверками. Ошибка закрывает соединение
+с rollback незавершённой транзакции; commit возможен только после всех checks.
+08P01 теперь имеет отдельный статический reason. Привилегии, данные, schema,
+когорта4/2, admission/consent/rollback guards не меняются. Targeted9/9 проверяют
+также отсутствие startup statement_timeout/options, SQL ordering/readback и
+fail-closed setup. Новых UI случаев/матриц0; full check/CI и реальное enable
+ещё обязательны до заявления об открытом доступе. Финальный полный check exit0:
+frontend2680/API1410+159 стандартных DB skips, infra/hosting/lint/typecheck/
+build/fonts2/2 passed. Первый прогон остановился только на типах CLI mock;
+они исправлены, полный финальный прогон повторён. Реальный pg Client startup
+также проверен с synthetic config: statement_timeout/options отсутствуют,
+client deadline сохранён. Live enable остаётся отдельной проверкой.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
