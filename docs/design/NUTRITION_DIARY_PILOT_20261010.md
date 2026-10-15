@@ -1,5 +1,40 @@
 # Дневник питания — неизменяемый план и приёмка, 10.10.2026
 
+## Разрешение выпуска и актуальный контур — 15.10.2026
+
+Прямая команда владельца «раскати на выбранные учетки» отменяет запрет
+выкладки12.10. Scope: ровно4 клиентских и те же2 тренерских CURRENT Yandex
+аккаунта; точный private input проверяется фиксированным approved fingerprint.
+Исходный план из9 пунктов ниже неизменен; historical Yandex deployment steps
+не применяются: production теперь Cloud.ru, внешний вход остаётся Yandex ID.
+
+Порядок: актуальный main и очередь PR → чистая изолированная PostgreSQL17
+chain144/actor/RLS → точные config/native/WebKit проверки → full check → PR/CI
+→ штатный merge без обхода более ранних активных PR → зелёный exact-main CI
+→ Cloud.ru API release с backup/pending migrations → приватный exact-six secret
+и независимый nutrition configure workflow → проверка4/2 и schema/runtime
+→ два frontend nutrition flags и проверенный Cloud.ru frontend/native release
+→ публичные auth/health/bundle проверки и фактура в YAFIT-608.
+
+Новые уникальные проверки: сохранение чужих env-значений при enable/disable,
+отказ substituted cohort, current-main/candidate/rollback workflow guards и
+read-only runtime capability smoke до/после включения. Существующие actor и
+WebKit сценарии проверяют роли/согласие/дневник без новой тяжёлой UI-матрицы.
+Общий local:verify адресует shared DB и меняет её runtime/pending migrations;
+вместо вмешательства в чужую базу используется новый изолированный clean-chain
+actor test. Реальные пользовательские OAuth-входы не имитируются, согласия
+не выдаются. Итоговые доказательства добавляются после фактических проверок.
+
+Локальная приёмка15.10: изолированный чистый PostgreSQL17 на55447, цепочка144,
+actor/RLS и реальный backup/restore150/150; nutrition config17/17 и native/smoke
+10/10; WebKit9/9 — обе роли/темы, retry, source error, прямой outsider route.
+Полный `npm run check` exit0: frontend2676, API1403 (159 стандартных DB skips
+проверены отдельно), infra301, hosting169, lint/typecheck/build, fonts2/2.
+Bounded live source search вернул7 обычных продуктов с валидной100g КБЖУ;
+магазинные метаданные исключены. Исходные9 пунктов, historical143 и все чужие
+строки CURRENT_STATE побайтово сохранены; migration safety exact-base passed.
+Это локальные доказательства, не заявление об уже включённом production.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
