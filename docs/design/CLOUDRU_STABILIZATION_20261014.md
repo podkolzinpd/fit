@@ -49,12 +49,12 @@ credential и доступность требуют отдельного фак�
 
 | Пункт | Результат и проверка | Статус |
 | --- | --- | --- |
-| 1 | Canonical web/Android/iOS build guard и тесты; credential-free proxy для старого API подготовлен | В работе |
-| 2 | Публичная делегация исправна; stale resolver воспроизведён | В работе |
-| 3 | API/frontend d10c2d12 выпущены38633109023/38633113898; runtime readback200; autodeploy включён | Выполнен для исходного main; новый выпуск после CI |
-| 4 | Недостающие credentials/dispatch/relay проверяются | Не завершён |
+| 1 | Native canonical API, web same-origin, guards passed; old proxy deployed, forwarding503 | В работе |
+| 2 | Public DNS/TLS8/8; old api87, root/www old IP; DNS operator403 | В работе |
+| 3 | Main619892be CI green, API/frontend released; backup/pending migrations passed | Выполнен для619892be |
+| 4 | External GPT smoke passed/frontend AI on; SpeechKit gRPC7; old timer PAUSED, fresh push OFF | Не завершён |
 | 5 | Пока только unauthenticated hosting/API guards | Не завершён |
-| 6 | Disk retention работает; backup/restore/monitoring впереди | Не завершён |
+| 6 | Disk/TLS/API/hosting passed; offsite S3 AccessDenied403, restore pending | Не завершён |
 
 ## Дополнительные решения и фактура
 
@@ -205,3 +205,39 @@ credential и доступность требуют отдельного фак�
   postgres17 был Debian13, runtime node24-bookworm — Debian12. Donor заменён
   на официальный digest-pinned PostgreSQL17-bookworm; build проверяет запуск
   pg_dump и pg_restore, не ослабляя обязательный backup перед migrations.
+
+## Production readback после PR1645, 15.10
+
+- PR CI38723303705 и main CI38725081174 success на619892be; API38726558866
+  прошёл реальный backup/pending migrations/candidate/promotion. Frontend
+  38726558952 и AI rebuild38728031198 success. Public monitor DNS3/3 и HTTP/TLS8/8,
+  обе API health619892be, protected401; сертификаты89days.
+- CORS38726722970 success, www OPTIONS204; Nginx web38727056363/API38727148937
+  success, лимит50m/read120s/buffering off применены.
+- GPT38727264363 external smoke passed и runtime aiEnabled:true; GitHub
+  CLOUDRU_AI_ENABLED=true/readback. Это не замена authenticated AI acceptance.
+- Speech38727437613: image built/audit0, upstream gRPC7 PERMISSION_DENIED.
+  Cloud relay не активирован; прежний IAM-backed Yandex VM не переносится молча.
+- Offsite bootstrap38726879615: AccessDenied403, приватность и restore не доказаны.
+  Encryption keyv1 сохранён; privacy guards не ослаблялись.
+- Legacy inspect38726726653: container/timer доступны, DNS list403. Локальные
+  профили содержат ту же identity; старый статический ключ401, не обновлялся.
+  DNS root/www на обоих ns1/ns2 пока158.160.171.31/158.160.184.183; API87.
+- Old timer38726901087 success/PAUSED. API38727051982 deploy operation completed,
+  затем health timeout. New proxy OPTIONS204, GET503≈60s. Точный Node22 image
+  локально с реальным Cloud target возвращает200/619892be. Межоблачное соединение
+  не принято; прежний DB-код не возвращался, ресурсы/ревизии/обе БД сохранены.
+- Ops38727946166: Nginx, certbot.timer, disk>=2GiB, cert>=14days, API/hosting/marker
+  passed. Speech/background units/backup freshness не готовы. Queue read-only
+  pending22/overdue22/stale leases20/terminal0; доставка/архивация не запускались.
+  Certbot staging renewal не выполнен: предыдущие checks остановили workflow.
+- Тестовый callback показывает регистрацию, пользовательской формы не отправляли.
+  Владелец попросил пояснить запрос: приёмка аккаунта отложена до готовности.
+  Android production-routing38728035187 success, artifact fit-android-auth-smoke-apk;
+  установка/пользовательские сценарии не проверены. Xcode отсутствует, iOS не собран.
+
+Оставшиеся prerequisites доступа: восстановить разрешённый доступ operator к
+существующей legacy DNS-зоне; проверить private backup bucket/access key в Cloud.ru;
+для SpeechKit использовать действующий credential с ролью ai.speechkit-stt.user и
+scope yc.ai.speechkitStt.execute. Новые Yandex IAM/key resources и расширение прав
+не выполнялись. Требуется владелец либо уже разрешённый действующий доступ.
