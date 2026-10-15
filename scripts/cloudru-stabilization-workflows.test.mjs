@@ -151,6 +151,40 @@ test('restore table inventory excludes ACL, table data and partition attachment 
   assert.equal(result.stdout.trim(), '2')
 })
 
+test('disposable restore image includes the production audit extension without importing secrets', () => {
+  const image = read('infra/cloudru/backup-restore.Dockerfile')
+  assert.match(image, /postgres:17@sha256:[a-f0-9]{64}/)
+  assert.match(image, /postgresql-17-pgaudit=17\.1-2\.pgdg13\+1/)
+  assert.match(image, /shared_preload_libraries=pg_stat_statements,pgaudit/)
+  assert.match(image, /pgaudit\.log=none/)
+  assert.match(image, /log_min_messages=panic/)
+  assert.match(image, /log_min_error_statement=panic/)
+  assert.doesNotMatch(image, /^(COPY|ADD|ARG|ENV)\b/m)
+  const workflow = read('.github/workflows/backup-cloudru-production.yml')
+  assert.match(workflow, /image="localhost\/fit-backup-restore:\$GITHUB_SHA"/)
+  assert.match(workflow, /-f infra\/cloudru\/backup-restore\.Dockerfile infra\/cloudru/)
+})
+
+test('operations monitor expects speech only when its canonical endpoint is configured', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  assert.match(workflow, /SPEECH_EXPECTED_URL: \$\{\{ vars\.CLOUDRU_SPEECHKIT_RELAY_URL \}\}/)
+  const check = workflow.match(/          if test -n "\$SPEECH_EXPECTED_URL";[\s\S]*?\n          fi/)[0]
+  for (const [url, expected] of [['', 0], ['wss://api.fit-training.ru/stt', 0], ['wss://invalid.example/stt', 1]]) {
+    const script = `failed=0
+check() {
+  shift
+  if test "$1" = test; then "$@" || failed=1; fi
+}
+${check}
+exit "$failed"
+`
+    const result = spawnSync('bash', ['-c', script], { encoding: 'utf8',
+      env: { ...process.env, SPEECH_EXPECTED_URL: url, GITHUB_STEP_SUMMARY: '/dev/null' } })
+    assert.equal(result.status, expected, result.stderr)
+    assert.equal(result.stdout.includes('Speech relay disabled'), url === '')
+  }
+})
+
 test('restore extension diagnostics expose only allowlisted system names', () => {
   const workflow = read('.github/workflows/backup-cloudru-production.yml')
   const program = workflow.match(/\| awk '(\$4 == "EXTENSION"[^']+)'/)[1]

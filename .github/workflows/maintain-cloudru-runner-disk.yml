@@ -170,7 +170,14 @@ jobs:
           done
           for image in "${image_delete[@]}"; do
             [[ "$image" =~ ^localhost/fit-api:[a-f0-9]{40}$ ]]
-            sudo podman image rm "$image"
+            if ! removal=$(sudo podman image rm "$image" 2>&1); then
+              if [[ "$removal" == *'image is in use by a container'* ]]; then
+                printf 'Referenced API image retained: %s\n' "$image"
+              else
+                echo 'API image removal failed.' >&2
+                exit 1
+              fi
+            fi
           done
           sudo podman image prune --force
 
