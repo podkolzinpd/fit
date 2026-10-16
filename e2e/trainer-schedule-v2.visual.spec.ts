@@ -4183,11 +4183,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     })
     expect(controls.aligned).toBe(true)
     expect(controls.close).toBe(true)
-    const technique = circuit.locator('.circuit-round.current .live-technique .exercise-image-technique')
-    if (await technique.count()) {
-      await expect(technique).toHaveCSS('max-height', '100px')
-      await expect(circuit.locator('.circuit-round.current section').first().locator('.exercise-thumbnail')).toHaveCount(0)
-    }
+    const firstExercise = circuit.locator('.circuit-round.current section').first()
+    const technique = firstExercise.locator('.live-exercise-head .live-header-animation')
+    await expect(technique).toHaveCount(1)
+    await expect(technique).toHaveCSS('width', '44px')
+    await expect(technique).toHaveCSS('height', '44px')
+    await expect(technique.locator('.exercise-image-technique')).toHaveCount(1)
+    await expect(firstExercise.locator(':scope > .live-technique')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-live-circuit-${theme}-${width}.png`) })
   })
