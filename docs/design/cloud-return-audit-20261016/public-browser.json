@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-16T16:11:10.140Z",
+  "scope": "public auth only; fresh browser context; no login",
+  "results": [
+    {
+      "engine": "chromium",
+      "status": 200,
+      "loginButtons": 1,
+      "overflow": false,
+      "pageErrors": 0,
+      "passed": true
+    },
+    {
+      "engine": "webkit",
+      "status": 200,
+      "loginButtons": 1,
+      "overflow": false,
+      "pageErrors": 0,
+      "passed": true
+    }
+  ]
+}
