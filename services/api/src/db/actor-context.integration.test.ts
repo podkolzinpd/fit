@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { DatabaseNutritionDiary, type NutritionDraft } from '../nutrition-diary.js'
 import { parseCatalogFood, type NutritionCatalog } from '../nutrition-catalog.js'
 import { DatabaseNutritionAutoActivator, nutritionProfileAllowed, type NutritionPilot } from '../nutrition-pilot.js'
+import { inspectNutritionBindings } from '../cloudru-nutrition-bindings.js'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -9912,6 +9913,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           await expect(connection.query('select * from app_private.nutrition_native_bindings')).rejects.toThrow(/permission denied/)
         } finally { connection.release() }
         expect((await ownerPool.query('select count(*)::int count from app_private.nutrition_native_bindings where profile_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 7 }])
+        const auditConnection = await ownerPool.connect()
+        const auditClient: DatabaseClient = { query: async <Row extends QueryResultRow>(sql: string, values: readonly unknown[] = []) =>
+          (await auditConnection.query<Row>(sql, [...values])).rows }
+        try {
+          expect(await inspectNutritionBindings(auditClient, pilot.clients, pilot.trainers))
+            .toEqual({ boundClients: 5, boundTrainers: 2, outside: 0 })
+          // A replaced login cannot silently consume the fifth slot: audit
+          // refuses it and leaves all bindings and user records untouched.
+          await expect(inspectNutritionBindings(auditClient, [...pilot.clients.slice(0, 4), logins[7]!], pilot.trainers))
+            .rejects.toThrow('nutrition_binding_capacity_conflict')
+        } finally { auditConnection.release() }
         expect((await ownerPool.query('select count(*)::int count from public.nutrition_consents where owner_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 0 }])
         expect((await ownerPool.query("select count(*)::int count from app_private.auth_identities where profile_id=any($1::uuid[]) and provider='yandex'", [ids])).rows).toEqual([{ count: 9 }])
         expect((await ownerPool.query<{ id: string; account_role: string }>('select id, account_role from public.profiles where id=any($1::uuid[])', [ids])).rows)

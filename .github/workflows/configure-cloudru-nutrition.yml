@@ -60,6 +60,7 @@ jobs:
           test "$(sudo podman inspect fit-api-stage --format '{{.Config.Image}}')" = "localhost/fit-api:$commit"
           sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
       - name: Stage the exact approved cohort privately
+        id: cohort
         if: inputs.mode == 'enable'
         env:
           FIT_NUTRITION_ACCOUNT_COHORT: ${{ secrets.FIT_NUTRITION_ACCOUNT_COHORT }}
@@ -71,6 +72,32 @@ jobs:
           sudo test ! -e "$extra"
           sudo install -m 600 /dev/null "$extra"
           node scripts/configure-cloudru-nutrition.mjs prepare | sudo tee "$extra" >/dev/null
+          node --input-type=module -e 'console.log("audit_required=" + (JSON.parse(process.env.FIT_NUTRITION_ACCOUNT_COHORT).length === 7))' >> "$GITHUB_OUTPUT"
+      - name: Verify existing bindings fit the approved cohort without changing user data
+        # Prior-six rollback must still revoke the fifth admission without
+        # deleting its existing binding or changing the cap5 database function.
+        if: inputs.mode == 'enable' && steps.cohort.outputs.audit_required == 'true'
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          FIT_NUTRITION_ACCOUNT_COHORT: ${{ secrets.FIT_NUTRITION_ACCOUNT_COHORT }}
+        run: |
+          set -euo pipefail
+          owner="/opt/fit/secrets/nutrition-audit-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .MIGRATION_DATABASE_URL == null and
+            all(.[]; type == "string" and length > 0 and (test("[\u0000-\u001f\u007f]") | not))' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\n' | sudo tee -a "$owner" >/dev/null
+          node scripts/configure-cloudru-nutrition.mjs audit-cohort | sudo tee -a "$owner" >/dev/null
+          sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" \
+            "localhost/fit-api:$GITHUB_SHA" node dist/cloudru-nutrition-bindings.js
       - name: Verify nutrition schema, candidate and atomic runtime configuration with rollback
         run: |
           set -euo pipefail
@@ -143,4 +170,5 @@ jobs:
         run: |
           sudo podman rm --force --ignore "fit-nutrition-candidate-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >/dev/null
           sudo rm -f -- "/opt/fit/secrets/nutrition-input-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json" \
-            "/opt/fit/secrets/api-nutrition-next-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+            "/opt/fit/secrets/api-nutrition-next-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env" \
+            "/opt/fit/secrets/nutrition-audit-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"

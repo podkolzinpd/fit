@@ -26,12 +26,12 @@ export function mergeCloudruNutritionEnv(existing, raw, mode) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const mode = process.argv[2]
-    if (mode === 'prepare') {
+    if (mode === 'prepare' || mode === 'audit-cohort') {
       if (process.env.GITHUB_REF !== 'refs/heads/main' || process.env.GITHUB_REPOSITORY !== 'podkolzinpd/fit') throw new Error('rejected')
       // stdout is piped exclusively into a private root-owned file, never logs.
       const raw = process.env.FIT_NUTRITION_ACCOUNT_COHORT
-      prepareCloudruNutrition(raw)
-      process.stdout.write(raw)
+      const cohort = prepareCloudruNutrition(raw)
+      process.stdout.write(mode === 'prepare' ? raw : `NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=${cohort}\n`)
     } else {
       const id = process.argv[3]
       if (process.getuid() !== 0 || !/^[0-9]+-[0-9]+$/.test(id ?? '')) throw new Error('rejected')
