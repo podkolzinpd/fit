@@ -36,7 +36,7 @@ iPhone. Недоступная проверка не считается выпо
 | --- | --- | --- |
 | Правило перед каждой доработкой | Локальный коммит d567e7db; публикация ожидается в PR 1 | AGENTS.md и FIT_WORKFLOW.md; git diff --check |
 | PR 1 | В работе | До кода WebKit2/2: выполненный input disabled; baseline before-client/before-trainer. После: WebKit23/23, Chromium27/27; обе темы клиента390/430 и текущий пилот тренера; полный npm run check passed (unit2705/2705), PR1666: первый CI выявил Linux WebKit caret и устаревший editing-class assert; исправлено, локальный полный check повторно passed; CI38914737210 и Android38914737114 passed; merge/публикация ожидают решения по физическому iPhone |
-| PR 2 | Локальный кандидат, база PR1666/1dd797b0; выпуск после PR1 | Исходный дефект воспроизведён до кода; новая регрессия падает на старом коде, WebKit/Chromium8/8 passed; полный npm run check passed; CI/merge ещё не выполнены |
+| PR 2 | Локальный кандидат, база PR1666/1dd797b0; выпуск после PR1 | Исходный дефект воспроизведён до кода; новая регрессия падает на старом коде, WebKit/Chromium8/8 passed; полный check passed до CI; CI38916874888 выявил scroll anchoring Linux WebKit; узкая CSS-правка прошла точный Linux regression и WebKit/Chromium8/8, полный повтор check passed; новый CI ожидается |
 | PR 3 | Не начат | Повторная проверка после PR 2 |
 
 ## Исходная сверка кода PR 1
@@ -106,3 +106,13 @@ critical+finance97; защитный SHA не меняется, полный CI 
 PR2: [исходная обрезанная строка](live-input-20261016/keyboard-before-client.png),
 [минимальная прокрутка после правки](live-input-20261016/keyboard-after-client.png).
 На снимках эмуляция высоты viewport400px, не физическая клавиатура iOS.
+
+PR2 Linux WebKit: CI38916874888 воспроизвёл скачок при закрытии147→297px.
+Тот же дефект воспроизведён локально в изолированном Podman/WebKit1.61.1
+(исходный exact regression падает). Browser scroll anchoring после восстановления
+высоты добавляет второй scroll. Узкий overflow-anchor:none на content только
+Lime Live устраняет скачок; диагностические этапы0/16/104/240/40мс сохраняют147px.
+Форма, координатор и AppViewportProvider не меняются, исходная строгая проверка
+позиции при закрытии сохранена. Полный повтор check/CI обязателен.
+
+PR2 после anchoring: полный npm run check passed (2707 frontend/1425 API,160 существующих optional DB skipped); targeted8/8 и исходный Linux regression passed.
