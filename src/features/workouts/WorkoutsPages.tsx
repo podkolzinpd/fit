@@ -1,6 +1,8 @@
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
+import { LiveSetInput, liveNumberValue } from './LiveSetInput'
+import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
@@ -101,7 +103,6 @@ import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
-import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useTrainerWorkspace } from './use-trainer-workspace'
@@ -2488,40 +2489,15 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
-// Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
-// ввод: компактное число открывает цифровую клавиатуру и не разворачивает
-// строку в набор крупных степперов.
-function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false, selectZero = false }: {
-  name: string; label: string; placeholder: string; defaultValue: number | undefined
-  step: number | 'any'; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean; selectZero?: boolean
-}) {
-  return <input
-    key={inputKey}
-    className={`live-set-input${planHint ? ' plan-hint' : ''}`}
-    aria-label={label}
-    name={name}
-    type="number"
-    inputMode={decimal ? 'decimal' : 'numeric'}
-    min="0"
-    step={step}
-    disabled={disabled}
-    defaultValue={defaultValue}
-    placeholder={placeholder}
-    onFocus={(event) => { if (selectZero) prepareZeroReplacement(event.currentTarget) }}
-    onInput={(event) => event.currentTarget.classList.remove('plan-hint')}
-  />
-}
-
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean }) {
-  // После подтверждения показываем зафиксированный результат (факт, иначе план)
-  // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
-  // Правка по карандашику временно разблокирует поля (editing).
-  const locked = Boolean(set.confirmedAt) && !editing
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean }) {
+  // Lime keeps confirmed facts directly editable; completion is independent of
+  // field availability. The old UI retains its explicit editing mode.
+  const locked = Boolean(set.confirmedAt) && !editing && !directInput
   // Ключ ремоунтит поля при смене режима (подтверждён / правка / ввод), чтобы
   // неконтролируемый defaultValue пересчитался и показал нужное значение.
   // В key добавлена version: после правки подтверждённого подхода факт меняется
   // и версия бампится — иначе стабильный key оставил бы старое значение в поле.
-  const mode = locked ? 'locked' : editing ? 'editing' : 'edit'
+  const mode = directInput ? 'direct' : locked ? 'locked' : editing ? 'editing' : 'edit'
   // В обычном вводе ответ автосохранения меняет version, но не должен
   // пересоздавать активный input: на iOS это закрывает клавиатуру и сдвигает
   // текущий подход. Версия нужна в key только для уже зафиксированного факта.
@@ -2539,16 +2515,16 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
-  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />, 'кг')
+  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
     {weightField}
-    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />, 'повт.')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
     {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
-    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />, 'повт.')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'duration' && !distanceCapable) return <>
@@ -2589,6 +2565,8 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
 
 // Live elapsed workout time counting up from the start timestamp, "42:07".
 function liveDistanceIsValid(form: HTMLFormElement, report = false): boolean {
+  const invalid = [...form.querySelectorAll<HTMLInputElement>('input[data-live-direct]')].find((field) => !field.checkValidity())
+  if (invalid) { if (report) invalid.reportValidity(); return false }
   const input = form.querySelector<HTMLInputElement>('input[name="runDistance"]')
   return input ? (report ? input.reportValidity() : input.checkValidity()) : true
 }
@@ -2619,8 +2597,12 @@ export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const clientLime = isClientLimeEnabled(actor)
+  const directLiveInput = clientLime || isFitLimeEnabled(actor)
+  const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
+  const liveDrag = coachReference || clientLime
   const { keyboardOpen } = useAppViewport()
+  useLiveInputVisibility(directLiveInput)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const clientMode = actor?.role === 'client'
@@ -2664,7 +2646,7 @@ export function LiveWorkoutPage() {
   }, [])
   useClientRealtime(query.data?.clientId)
   useEffect(() => {
-    if (!keyboardOpen) return
+    if (!keyboardOpen || directLiveInput) return
     const target = document.activeElement
     if (!(target instanceof HTMLElement) || !target.matches('.live-set-input, .live-set-rpe')) return
 
@@ -2990,7 +2972,7 @@ export function LiveWorkoutPage() {
       acknowledgeLiveDraft(set.id, draft)
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
-        if (exercise && !editingSets.has(set.id)) setExpandedExercises((previous) => {
+        if (!directLiveInput && exercise && !editingSets.has(set.id)) setExpandedExercises((previous) => {
           if (!previous.has(exercise.id)) return previous
           const next = new Set(previous)
           next.delete(exercise.id)
@@ -3066,6 +3048,16 @@ export function LiveWorkoutPage() {
       queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft, true)
+      if (advanceAfterConfirm.current === set.id) {
+        advanceAfterConfirm.current = null
+        window.requestAnimationFrame(() => {
+          const workout = queryClient.getQueryData<Workout>(['workout', workoutId])
+          const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
+          const next = sets.slice(sets.findIndex((item) => item.id === set.id) + 1).find((item) => !item.confirmedAt)
+          const field = next && liveSetForms.current.get(next.id)?.querySelector<HTMLInputElement>('input.live-set-input:not(:disabled):not([type="hidden"])')
+          if (field && field.getClientRects().length) field.focus({ preventScroll: true })
+        })
+      }
       setExpandedSetId(null)
       const seconds = confirmationRestSeconds.current.get(set.id) ?? beginSetRest(set)
       confirmationRestSeconds.current.delete(set.id)
@@ -3076,7 +3068,7 @@ export function LiveWorkoutPage() {
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
-    onError: () => trackGoal('live_set_confirm_error'),
+    onError: () => { advanceAfterConfirm.current = null; trackGoal('live_set_confirm_error') },
   })
   async function retryPendingLiveDrafts() {
     if (!actor?.userId || !query.data || retryingSetDrafts.current
@@ -3534,7 +3526,7 @@ export function LiveWorkoutPage() {
     window.requestAnimationFrame(() => {
       const form = liveSetForms.current.get(cardioSetMissingTime.setId)
       form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      form?.querySelector<HTMLInputElement>('input[name="runDuration"], input[name="durationSec"]')?.focus()
+      form?.querySelector<HTMLElement>('button.workout-duration-trigger, input[name="runDuration"]:not([type="hidden"]), input[name="durationSec"]:not([type="hidden"])')?.focus({ preventScroll: true })
     })
   }
   function finishFromInactivityReminder() {
@@ -3549,8 +3541,8 @@ export function LiveWorkoutPage() {
     const runDistance = values.get('runDistance')
     const runUnit: RunDistanceUnit = values.get('runDistanceUnit') === 'm' ? 'm' : 'km'
     return {
-      weightKg: numberValue(values.get('weightKg')),
-      reps: numberValue(values.get('reps')),
+      weightKg: liveNumberValue(values.get('weightKg')),
+      reps: liveNumberValue(values.get('reps')),
       distanceKm: runDistance === null ? numberValue(values.get('distanceKm')) : runDistanceKmFromInput(String(runDistance), runUnit),
       durationSec: runDuration === null ? numberValue(values.get('durationSec')) : parseRunDurationInput(String(runDuration)),
       rpe: numberValue(values.get('rpe')),
@@ -3596,7 +3588,7 @@ export function LiveWorkoutPage() {
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
     return <OverflowMenu items={[
-      ...(canReorder && !coachReference && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+      ...(canReorder && !liveDrag && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...groupingItems,
@@ -3626,7 +3618,7 @@ export function LiveWorkoutPage() {
   function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false) {
     const localDraft = localSetDrafts.get(set.id)
     const displayedSet = setWithCarriedLiveWeight(exercise, set, localDraft)
-    const isEditing = editingSets.has(set.id)
+    const isEditing = !directLiveInput && editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
     const confirmationPending = (clientLime || coachReference) && confirm.isPending && confirm.variables?.set.id === set.id
@@ -3656,12 +3648,15 @@ export function LiveWorkoutPage() {
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
-      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) keepLiveSetFieldVisible(target)
+      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) {
+        if (directLiveInput) keepLiveInputVisible(target)
+        else keepLiveSetFieldVisible(target)
+      }
     }} onInput={(event) => {
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
-      if (set.confirmedAt && !isEditing) return
+      if (set.confirmedAt && !isEditing && !directLiveInput) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
@@ -3669,15 +3664,20 @@ export function LiveWorkoutPage() {
     }}>
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} directInput={directLiveInput} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
+            : set.confirmedAt && directLiveInput ? <span className="live-set-check done" role="img" aria-label="Подход выполнен">{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</span>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
-                onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onPointerDown={(event) => {
+                  prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id)
+                  const active = document.activeElement
+                  advanceAfterConfirm.current = directLiveInput && active instanceof HTMLInputElement && active.classList.contains('live-set-input') && active.form === event.currentTarget.form ? set.id : null
+                }}
                 onClick={(event) => {
                   prepareGong()
                   liveSetAutosave.clear(set.id)
@@ -3873,7 +3873,7 @@ export function LiveWorkoutPage() {
           </div>}
         </div>{coachReference && liveHeader}</>)
       })()}
-      {!coachReference && reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
+      {!liveDrag && reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
         const cards = liveBlocks.map((block, blockIndex) => {
         const renderBlock = () => {
@@ -3881,10 +3881,10 @@ export function LiveWorkoutPage() {
         const canGroup = dataSource === 'yandex' && !reordering && block.blockPreset === 'set' && Boolean(nextBlock && nextBlock.exercises.length === 1 && nextBlock.blockType === 'single' && nextBlock.blockPreset === 'set'
           && [...block.exercises, ...nextBlock.exercises].every((exercise) => exercise.sets.every((set) => !set.confirmedAt)))
         const groupingItems = groupActions(block.blockId, canGroup, block.exercises.length > 1)
-        // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
+        // Ручка переноса (legacy: ↑/↓) доступна при нескольких блоках; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1
-        const reorder = canReorder ? coachReference ? <WorkoutDragHandle id={block.blockId} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{block.exercises.length === 1 ? <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((exercise) => exercise.id === block.exercises[0]!.id) + 1}</span> : undefined}</WorkoutDragHandle> : liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        const reorder = canReorder ? liveDrag ? <WorkoutDragHandle id={block.blockId} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{coachReference && block.exercises.length === 1 ? <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((exercise) => exercise.id === block.exercises[0]!.id) + 1}</span> : undefined}</WorkoutDragHandle> : liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
         const referenceNumber = (exercise: WorkoutExerciseModel) => block.exercises.length === 1 && reorder ? reorder : <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((item) => item.id === exercise.id) + 1}</span>
         const blockDone = block.exercises.every((exercise) => exercise.sets.every((set) => set.confirmedAt))
         const blockStatus = blockDone ? 'done' : block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id) ? 'current' : 'upcoming'
@@ -3912,12 +3912,13 @@ export function LiveWorkoutPage() {
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
-              return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise)} />
-                <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
+              const completedCard = <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
                 leading={liveHeaderThumbnail(exercise)}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
-                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />)
+                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
+              return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise)} />
+                <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : clientLime ? <div className="live-completed-gesture-head">{completedCard}{reorder}</div> : completedCard)
             }
             if (blockStatus === 'upcoming') {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
@@ -3963,7 +3964,7 @@ export function LiveWorkoutPage() {
               <span className="circuit-counter">{blockDone ? `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'} · завершено` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
             </>}
             {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0 || (workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set')) && <OverflowMenu items={[
-              ...(canReorder && !coachReference ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+              ...(canReorder && !liveDrag ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
               ...groupingItems,
               ...(workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set' ? [{
                 label: 'Разделить суперсет',
@@ -4012,9 +4013,9 @@ export function LiveWorkoutPage() {
         </div>
         }
         const content = renderBlock()
-        return coachReference ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
+        return liveDrag ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
       })
-        return coachReference ? <><Coachmark id="coach-live-number-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте упражнение за номер, суперсет — за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark><WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
+        return liveDrag ? <>{coachReference && <Coachmark id="coach-live-number-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте упражнение за номер, суперсет — за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark>}<WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
@@ -4024,7 +4025,7 @@ export function LiveWorkoutPage() {
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}
         <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending || Boolean(removalRetryReason)} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>
       </>}
-      {coachReference && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
+      {liveDrag && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.

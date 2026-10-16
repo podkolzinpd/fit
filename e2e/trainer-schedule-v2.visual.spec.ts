@@ -427,18 +427,20 @@ for (const width of [375, 390, 430, 1440]) {
   })
 }
 
-test('Figma workout Coach reference touch drag autoscrolls and preserves draft', async ({ page, browserName }, info) => {
+for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Figma workout Coach reference touch drag autoscrolls and preserves draft' : 'Client Lime touch drag autoscrolls and preserves draft', { tag: role === 'client' ? ['@lime-critical'] : [] }, async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'Trusted touch dispatch is exposed by Chromium CDP, not mobile WebKit.')
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
   first.ref = 'vital-gym-pro-r007-0017'
   first.name = 'Жим гантелей над головой'
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-technique')).toHaveCount(0)
-  await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
+  if (role === 'trainer') {
+    await expect(page.locator('.live-technique')).toHaveCount(0)
+    await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
+  }
   await expect(page.locator('.live-technique')).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
@@ -474,6 +476,55 @@ test('Figma workout Coach reference touch drag autoscrolls and preserves draft',
   } finally { await cdp.detach() }
 })
 
+test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    const viewport = new EventTarget()
+    Object.defineProperties(viewport, { height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? innerHeight) }, offsetTop: { get: () => 0 } })
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  })
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [coachGestureWorkout(false, 8)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const field = page.locator('form[data-live-set-id]').nth(1).getByLabel('Фактический вес', { exact: true })
+  await page.evaluate(() => document.fonts.ready)
+  await page.clock.install()
+  await field.focus()
+  const content = page.locator('.content')
+  for (const height of [650, 550, 400]) {
+    const previous = await content.evaluate(element => element.scrollTop)
+    await page.evaluate(height => { document.documentElement.dataset.testVisibleHeight = String(height); window.visualViewport?.dispatchEvent(new Event('resize')) }, height)
+    // The final resize is later than the old one-shot 180ms correction.
+    await page.clock.runFor(200)
+    await expect.poll(() => field.evaluate(element => {
+      const bounds = element.getBoundingClientRect(), rest = document.querySelector('.live-pinned')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
+      return bounds.top >= rest.bottom && bounds.bottom <= content.bottom - 15
+    })).toBe(true)
+    const position = await content.evaluate(element => element.scrollTop)
+    // Header height changes when client drag actions are present. Verify the
+    // minimum required movement against the real row, not a prior layout's zero.
+    if (position > previous) expect(await field.evaluate(element => {
+      const row = element.closest('.live-set-grid')!.getBoundingClientRect()
+      return document.querySelector('.content')!.getBoundingClientRect().bottom - row.bottom
+    })).toBeCloseTo(16, 0)
+    if (position < previous) expect(await field.evaluate(element => {
+      const row = element.closest('.live-set-grid')!.getBoundingClientRect()
+      return row.top - document.querySelector('.live-pinned')!.getBoundingClientRect().bottom
+    })).toBeCloseTo(16, 0)
+  }
+  const scroll = await content.evaluate(element => element.scrollTop)
+  await field.fill('27.5')
+  await page.clock.runFor(700)
+  await expect(field).toBeFocused()
+  await expect(field).toHaveValue('27.5')
+  expect(await content.evaluate(element => element.scrollTop)).toBe(scroll)
+  await page.screenshot({ path: info.outputPath('client-live-gradual-keyboard.png') })
+  await field.blur()
+  await page.evaluate(() => { delete document.documentElement.dataset.testVisibleHeight; window.visualViewport?.dispatchEvent(new Event('resize')) })
+  await page.clock.runFor(400)
+  expect(await content.evaluate(element => element.scrollTop)).toBe(scroll)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
 test('Figma workout Coach reference rest and fields stay usable in the reduced keyboard viewport', async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => {
@@ -503,10 +554,10 @@ test('Figma workout Coach reference rest and fields stay usable in the reduced k
   await expect(field).toHaveValue('27.5')
 })
 
-test('Figma workout Coach reference pointer drag autoscrolls and preserves draft', async ({ page }) => {
+for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Figma workout Coach reference pointer drag autoscrolls and preserves draft' : 'Client Lime pointer drag autoscrolls and preserves draft', { tag: role === 'client' ? ['@lime-critical'] : [] }, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)
@@ -608,8 +659,8 @@ for (const width of [375, 390, 430, 1440]) {
     await mockPilot(page, { profileId: width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
     await page.goto(`/workouts/${workoutId}/live`)
     const row = page.locator(`[data-live-set-id="${set.id}"]`)
-    const weight = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
-    const reps = row.getByRole('spinbutton', { name: 'Фактические повторы', exact: true })
+    const weight = row.getByLabel('Фактический вес', { exact: true })
+    const reps = row.getByLabel('Фактические повторы', { exact: true })
     const check = row.locator('.live-set-check')
     await expect(check.locator('svg[data-original-icon="check"]')).toHaveCount(1)
     await expect(check.locator('svg')).toHaveCSS('width', '24px')
@@ -629,10 +680,12 @@ for (const width of [375, 390, 430, 1440]) {
     await check.click()
     await expect(row).toHaveClass(/confirmed/)
     await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
-    await check.click()
-    await expect(row.locator('.live-set-save svg[data-original-icon="check"]')).toHaveCount(1)
+    await expect(weight).toBeEnabled()
+    await expect(check.locator('svg[data-original-icon="check"]')).toHaveCount(1)
     await weight.fill('28')
-    await row.getByRole('button', { name: 'Сохранить', exact: true }).click()
+    const saved = page.waitForResponse(response => response.url().endsWith(`/workout-sets/${set.id}/draft`) && response.ok())
+    await weight.blur()
+    await saved
     await expect(row).toHaveClass(/confirmed/)
     await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
     await expect(weight).toHaveValue('28')
@@ -658,7 +711,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await page.goto(`/workouts/${workoutId}/live`)
     const row = page.locator(`[data-live-set-id="${set.id}"]`)
     const saveRequest = page.waitForRequest(request => request.url().endsWith(`/workout-sets/${set.id}/draft`))
-    const weight = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+    const weight = row.getByLabel('Фактический вес', { exact: true })
     await weight.focus()
     await weight.evaluate(element => element.blur())
     await saveRequest
@@ -667,7 +720,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     } finally { releaseSave() }
     await expect(page.locator('.live-sync-state[role="alert"]')).toContainText('Не удалось отправить')
     await expect(row).not.toHaveClass(/invalid/)
-    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('20')
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('20')
     expect(await page.evaluate(() => navigator.onLine)).toBe(true)
     await expect.poll(() => confirmations).toBe(1)
     await expect.poll(() => page.evaluate(({ profileId, workoutId, setId }) => {
@@ -785,7 +838,7 @@ for (const width of [375, 390, 430, 1440]) {
     await page.screenshot({ path: info.outputPath('coach-live-card-completion.png'), fullPage: true })
     for (const set of first.sets) {
       const row = card.locator(`[data-live-set-id="${set.id}"]`)
-      await row.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill(String(set.weightKg))
+      await row.getByLabel('Фактический вес', { exact: true }).fill(String(set.weightKg))
       await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
       await expect(row).toHaveClass(/confirmed/)
     }
@@ -825,7 +878,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       await row.getByRole('button', { name: /Удалить подход 2:/ }).tap()
       await expect(page.getByRole('alertdialog')).toBeVisible()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
-      const input = row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })
+      const input = row.getByLabel('Фактический вес', { exact: true })
       await input.tap(); await expect(input).toBeFocused(); await input.fill('31')
       await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
       await input.blur()
@@ -868,7 +921,7 @@ for (const width of [375, 390, 430, 1440]) {
     await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
     await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
     await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '48px')
-    await first.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill('27.5')
+    await first.getByLabel('Фактический вес', { exact: true }).fill('27.5')
     await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect(first).toHaveClass(/confirmed/)
     await revealCoachSetDelete(page, first)
@@ -888,7 +941,7 @@ for (const width of [375, 390, 430, 1440]) {
     expect(attempts).toBe(2)
     await page.reload()
     await page.getByRole('button', { name: `Исправить: ${exercise.name}`, exact: true }).click()
-    await expect(first.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('27.5')
+    await expect(first.getByLabel('Фактический вес', { exact: true })).toHaveValue('27.5')
     await revealCoachSetDelete(page, first)
     await expect(first.locator('.workout-swipe-action')).toHaveCount(0)
     await page.screenshot({ path: info.outputPath('coach-live-field-completion.png'), fullPage: true })
@@ -921,13 +974,13 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(row.locator('.workout-swipe-action:not(:disabled)')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Повторить удаление подхода', exact: true })).toBeDisabled()
     await expect(page.getByRole('status').filter({ hasText: 'чтобы сохранить результат' })).toBeVisible()
-    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('42.5')
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('42.5')
     expect(attempts).toBe(1)
     await page.getByRole('status').filter({ hasText: 'чтобы сохранить результат' }).scrollIntoViewIfNeeded()
     await page.screenshot({ path: info.outputPath('coach-live-deletion-conflict-preserved.png'), fullPage: true })
     await page.reload()
     await expect(row).toHaveClass(/confirmed/)
-    await expect(row.getByRole('spinbutton', { name: 'Фактический вес', exact: true })).toHaveValue('42.5')
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('42.5')
     expect(attempts).toBe(1)
   })
   for (const [kind, ref] of [['reps', 'squat'], ['duration', 'plank'], ['distance', 'running'], ['distance', 'rowing-machine'], ['distance', 'farmer-carry'], ['duration', 'vital-stair-climber']] as const) {
@@ -971,7 +1024,7 @@ for (const width of [375, 390, 430, 1440]) {
       else await route.fallback()
     })
     await page.goto(`/workouts/${workoutId}/live`)
-    await page.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).first().fill('27.5')
+    await page.getByLabel('Фактический вес', { exact: true }).first().fill('27.5')
     await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
     await expect(page.locator('.live-set.confirmed')).toHaveCount(1)
     const addSet = page.locator('.live-add-set').first()
@@ -1027,7 +1080,7 @@ for (const width of [375, 390, 430, 1440]) {
     await page.goto(`/workouts/${workoutId}/live`)
     for (const [index, set] of source.exercises[0]!.sets.entries()) {
       const row = page.locator(`[data-live-set-id="${set.id}"]`)
-      await row.getByRole('spinbutton', { name: 'Фактический вес', exact: true }).fill('27.5')
+      await row.getByLabel('Фактический вес', { exact: true }).fill('27.5')
       await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
       await expect(page.locator('.live-session-progress-copy')).toContainText(`Готово ${index + 1} из 2`)
       if (index === 0) {
@@ -3951,7 +4004,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(live.locator('.live-exercise-start')).toHaveCSS('border-radius', '999px')
     await expect(live.locator('.live-bottom-bar .workout-cta')).toHaveCSS('border-radius', '999px')
     await expect(live.locator('.live-exercise-note summary')).toHaveCSS('min-height', '44px')
-    const repsInput = live.locator('input.live-set-input[type="number"]').first()
+    const repsInput = live.locator('input.live-set-input[data-live-direct]').first()
     await expect(repsInput).toHaveCSS('appearance', 'textfield')
     await repsInput.fill('10')
     await expect(repsInput).toHaveValue('10')
