@@ -13,7 +13,8 @@ test('nutrition disable preserves every unrelated value, removes only own cohort
 
 test('Cloud.ru enable fails closed for malformed, substituted or differently sized private cohorts', () => {
   const synthetic = Array.from({ length: 6 }, (_, i) => ({ email: `synthetic-${i}@example.test`, role: i < 4 ? 'client' : 'trainer' }))
-  for (const raw of ['', '{}', '[]', JSON.stringify(synthetic), JSON.stringify(synthetic.slice(1))]) {
+  const seven = [...synthetic, { email: 'fifth_client@yandex.ru', role: 'client' }]
+  for (const raw of ['', '{}', '[]', JSON.stringify(synthetic), JSON.stringify(synthetic.slice(1)), JSON.stringify(seven)]) {
     assert.throws(() => prepareCloudruNutrition(raw))
     assert.throws(() => mergeCloudruNutritionEnv(base, raw, 'enable'))
   }

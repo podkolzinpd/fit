@@ -11,7 +11,7 @@ const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-
 export function readNutritionAccounts(raw, expected = approvedCohort, clientCount = 3) {
   let accounts
   try { accounts = JSON.parse(raw) } catch { throw new Error('Invalid private cohort') }
-  if (![3, 4].includes(clientCount) || !Array.isArray(accounts) || accounts.length !== clientCount + 2 || accounts.some(a => !a
+  if (![3, 4, 5].includes(clientCount) || !Array.isArray(accounts) || accounts.length !== clientCount + 2 || accounts.some(a => !a
     || Object.keys(a).sort().join(',') !== 'email,role'
     || !['client', 'trainer'].includes(a.role) || typeof a.email !== 'string'
     || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email))) throw new Error('Invalid private cohort')

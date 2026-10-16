@@ -196,6 +196,57 @@ union626 Fit Lime cases сохранён без дублей/изменения 
 Реальные API/OAuth/speech/consents не имитировались: API fixtures и FakeWebSocket.
 Local check не заменяет fresh exact-head/main CI и живую Cloud.ru приёмку.
 
+## PR1 выпущен; подтверждённый PR2 — 16.10.2026
+
+PR1#1662 выпущен на main7f5e926c: CI38811858305, API38813268874,
+frontend38813268715 и configure38813528784 success. Два runtime events
+до/после switch подтверждают4/2; public DNS3/HTTP-TLS-auth8/18 critical assets
+и4 nutrition401/no-store прошли. Android auth-smoke38811889459 и свежий
+iOS simulator build/install/launch passed; без реальных OAuth/Store release.
+Это уточняет исторические pending-статусы выше; исходные9 пунктов неизменны.
+
+Владелец подтвердил точный CURRENT Yandex login с literal underscore для
+дополнительного клиента. Контакт/индивидуальные hashes только private input;
+публичен лишь aggregate fingerprint exact7. PR2 от main7f5e926c, product flow:
+nutrition preparation/runtime config5clients/2trainers; прежние3/2 и4/2
+native configurations совместимы. Cloud.ru допускает лишь4/2 или5/2 с
+approved private fingerprints. Shared login hash/OAuth scopes/email fallback,
+экран, каталог, LLM/SpeechKit и чужие pilots не меняются.
+
+Migration146 меняет лишь admission ceiling4→5, historical143/144/145 immutable.
+Verified subject/actual role/domain/read_write/lock/immutable binding/grants/
+RLS/consent сохранены. Новая запись не назначает роль или согласие. Rollback
+конфигурации4/2 допускается на cap5 без SQL Down и без удаления данных;
+config5/2 на cap4 запрещена. Read-only dedicated smoke сохраняет SET LOCAL
+timeouts и статические безопасные причины ошибок; startup options не добавлены.
+
+Локально: unit/native/config18/18, API targeted22/22 с новым provider case;
+новая изолированная PG17 chain146/actor/grants/backup151/151. Existing exact-six
+actor case расширен до exact7 с9 synthetic identities, outsider6client/3trainer,
+role mismatch/collision/idempotence, старой config4/2, populated Down→Up/OID/
+grants и сохранением7bindings/9identities/zero consent. Historical144 проверяется
+в своей Up-транзакции. Новый provider case проверяет literal underscore login,
+не default_email и не изменение общего hash. Новых UI cases/матриц0.
+Full check/fresh CI/main/API backup/migration/atomic5/2/public/native rollout
+ещё обязательны; новая учётка пока не включена. Общая local:verify не запускается:
+она мутирует чужую shared DB; эквивалентная clean-chain/actor/backup выполнена
+в отдельном Podman PostgreSQL17 на55516, без production-секретов/данных.
+
+PR2 final local acceptance: полный check exit0 — frontend2703/API1422+160
+штатных DBskip/infra316/hosting169/calendar12/lint/typecheck/build passed.
+Migration safety exact-base7f5e926c passed (только новая146); private preflight
+подтвердил exact5/2, неизменные прежние6, unrelated env/idempotence/rollback.
+Исходный9-пунктный блок и все чужие строки snapshot побайтово сохранены,
+public diff без контактов/индивидуальных hashes, UI/e2e/workflows/infra без diff.
+Production-native diary WebKit9/9 (14.1s), light/dark320/390/430 и trainer1440;
+снимки client dark390/light430/trainer dark1440 просмотрены. Первый9-case
+прогон был nonzero:8 passed/1 flaky в manual search empty state; error snapshot
+показывал недостигнутое search state, retry прошёл. Причина не доказана,
+продукт/fixture/assertions/timeouts/retries не менялись. После чтения сбоя
+точный case diagnostic3/3 (11.6s) и весь final9/9 прошли с retries0.
+Новых UI cases/матриц0; реальные API/OAuth/consents не имитировались.
+Fresh-head/main CI и production5/2 остаются отдельными обязательными гейтами.
+
 ## Метаданные задачи
 
 - Базовый main после обновления: `6a4420fb`; ветка: `feat/nutrition-diary-pilot-20261010`. Первичная фиксация начиналась от `2c5cdc1a`; 10.10 включён `4c8da412`, затем 11.10 включены релиз регистрации `e793cb38` и компактный отчёт тренировки `6a4420fb` без изменения исходного плана. Обе стороны документации сохранены.
