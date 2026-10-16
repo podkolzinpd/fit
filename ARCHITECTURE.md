@@ -131,6 +131,21 @@ legacy backend. Server-side bridges и frozen local tests пока сохран�
   не передаёт email и не получает service role; связь появляется только после
   явного принятия кода уже аутентифицированным клиентом.
 
+## Native AI и legacy adapters
+
+Native summary использует `services/api/src/training-summary-core.ts`, native
+Assistant — `assistant-orchestrator/core.ts`. Они содержат общие model requests,
+промпты, validation, matching и deterministic aggregates без Supabase SDK.
+Legacy `legacy-summary/index.ts` и `assistant-orchestrator/index.ts` сохраняют
+Supabase transport и переэкспортируют прежние публичные AI-контракты из core.
+Error classes и request deduplication state имеют один общий экземпляр.
+
+Native summary/Assistant/parser должны импортироваться без загрузки SDK и
+legacy entry points; это проверяет `native-ai-import-boundary.test.ts`.
+Type-only Supabase contracts в program adapters стираются при сборке. Сам SDK
+пока остаётся зависимостью API для legacy endpoints и media adapters; отделение
+native AI не означает отключение старых ресурсов или изменение AI-поведения.
+
 ## AI-суммаризация прогресса
 
 ```text
