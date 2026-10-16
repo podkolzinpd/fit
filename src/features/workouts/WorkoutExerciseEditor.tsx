@@ -374,7 +374,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         { label: 'Настройки упражнения', disabled: referenceControlsDisabled, onClick: () => setSettingsExerciseIndex(exerciseIndex) },
         { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', disabled: referenceControlsDisabled, onClick: () => toggleRpe(exerciseIndex) },
         ...(reference && onOpenTechnique && (canOpenTechnique?.(exercise) ?? true) ? [{ label: 'Техника упражнения', disabled: referenceControlsDisabled, onClick: () => onOpenTechnique(exercise) }] : []),
-        ...(canMergeNext && !reordering ? [{ label: 'Создать суперсет со следующим', disabled: referenceControlsDisabled, onClick: () => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
+        ...(canMergeNext && !reordering ? [{ label: reference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled: referenceControlsDisabled, onClick: () => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex)) }] : []),
         { label: 'Заменить', disabled: referenceControlsDisabled, onClick: () => reference ? replaceReferenceExercise(exerciseIndex) : onReplaceExercise(exerciseIndex) },
         { label: 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(exerciseIndex) },
       ]} /></span>
