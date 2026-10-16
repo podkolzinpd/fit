@@ -3348,13 +3348,9 @@ export function LiveWorkoutPage() {
     },
   })
   const reorderBlock = useMutation({
-    mutationFn: async ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => {
-      if (clientLime) await liveSets.waitForIdle()
-      return runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction))
-    },
+    mutationFn: ({ blockId, direction }: { blockId: string; direction: -1 | 1 }) => runLiveWorkoutMutation(`reorder:${blockId}:${direction}`, (workout) => workoutsRepository.reorderLiveBlock(workout, blockId, direction)),
     onSuccess: async () => {
       const refreshed = await query.refetch()
-      if (clientLime) return
       const nextExercise = refreshed.data?.exercises.find((exercise) => exercise.sets.some((set) => !set.confirmedAt))
       const nextSet = nextExercise?.sets.find((set) => !set.confirmedAt)
       nextExerciseAnchor.current = nextSet?.id ?? null
@@ -3650,9 +3646,14 @@ export function LiveWorkoutPage() {
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
     if (!canManageLiveStructure || !reordering) return null
+    const move = (direction: -1 | 1) => {
+      if (!clientLime) { reorderBlock.mutate({ blockId, direction }); return }
+      const index = groupIntoBlocks(query.data?.exercises ?? []).findIndex((block) => block.blockId === blockId)
+      if (index >= 0) moveLiveBlock.mutate({ blockId, targetIndex: index + direction })
+    }
     return <span className="block-reorder">
-      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: -1 })}><ArrowUpIcon /></button>
-      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || rootMutationPending} onClick={() => reorderBlock.mutate({ blockId, direction: 1 })}><ArrowDownIcon /></button>
+      <button type="button" className="reorder-btn" aria-label="Вверх" disabled={isFirst || rootMutationPending} onClick={() => move(-1)}><ArrowUpIcon /></button>
+      <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || rootMutationPending} onClick={() => move(1)}><ArrowDownIcon /></button>
     </span>
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.

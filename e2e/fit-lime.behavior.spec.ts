@@ -312,6 +312,15 @@ test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: [
   await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
   await expect(field).toHaveValue('27.5')
   await expect(page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+  const active = await page.locator('.live-session-progress-copy').textContent()
+  await group.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок', exact: true }).click()
+  await group.getByRole('button', { name: 'Вверх', exact: true }).click()
+  await expect.poll(() => commands.length).toBe(3)
+  await expect(page.locator('[data-workout-block]').nth(1)).toHaveAttribute('data-workout-block', first.blockId)
+  await expect(page.locator('.live-session-progress-copy')).toHaveText(active!)
+  await page.getByRole('button', { name: 'Готово', exact: true }).click()
+  await expect(group.getByRole('button', { name: 'Вверх', exact: true })).toHaveCount(0)
 })
 
 test('Figma workout Coach reference actions completion retains cardio warning', async ({ page }) => {

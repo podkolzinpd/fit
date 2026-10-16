@@ -114,6 +114,9 @@
 - Полный npm run check exit0:2716 frontend,1426API,160 прежних optional DB
   skips; infra318/hosting169, typecheck, lint, coverage, production build passed.
 -31 целевая unit и26 Mac browser passed/2WebKitCDP skips.
-- Отдельный Linux WebKit прогон: компоновка проходит; reload пока встретил
-  падение процесса браузера в контейнере. Это не считается успешной проверкой.
-  Изолированный повтор и обязательный exact-head CI остаются гейтами выпуска.
+- Linux WebKit:10 уникальных cases passed (6 первоначально,4 reload после
+  выделения shm1g/одного worker; исходное падение браузера не засчитано).
+  Проверки не ослаблялись. Финальная перестановка через меню дополнительно
+  прошла2/2 Linux и2/2 Mac WebKit/Chromium: клиентский путь использует
+  moveLiveBlock и сохраняет выбранное упражнение; тренерский путь прежний.
+  Обязательный exact-head CI и публикация остаются гейтами выпуска.
