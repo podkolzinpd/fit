@@ -145,7 +145,7 @@ export function WorkoutDragBlock({ id, children, holdToDrag = false, label = '' 
   }, [disabled, holdToDrag])
   function isControl(target: EventTarget) {
     if (!(target instanceof Element)) return true
-    const control = target.closest('button,input,textarea,select,a,details,summary,video,[role="button"],[contenteditable="true"]')
+    const control = target.closest('button,input,textarea,select,a,details,summary,video,.exercise-thumbnail,.live-technique,[role="button"],[contenteditable="true"]')
     // A title/compact card keeps its short tap; holding its text may move it.
     return Boolean(control && !control.matches('.exercise-technique-trigger,.workout-exercise-compact'))
   }
