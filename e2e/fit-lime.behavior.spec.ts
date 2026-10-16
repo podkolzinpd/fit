@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { mockFinancePaymentLifecycle, mockTemplateUncertainSave, copyTemplateDiagnostic, sessionToken, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGestureWorkout, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, mockClientStreamingVoice, publicTrainerId, mockPublicTrainer } from './fit-lime-fixtures'
 
@@ -347,6 +347,11 @@ for (const [role, profileId, expected] of [
     await expect(page.locator('.live-rest-trigger')).toBeVisible()
     await expect(page.locator('.coach-live-digits')).toHaveCount(expected ? 1 : 0)
     await expect(page.locator('.coach-workout-reference')).toHaveCount(expected ? 1 : 0)
+    if (role === 'trainer') {
+      await page.goto('/schedule?week=2026-09-21')
+      await expect(page.locator('.coach-schedule-filter-options')).toHaveCount(expected ? 1 : 0)
+      if (expected) await checkCoachScheduleFilters(page)
+    }
   })
 }
 
@@ -547,6 +552,51 @@ test('Achievement collection restores earned badges after signing in again', asy
   await page.goto('/me/achievements')
   await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
 })
+
+async function checkCoachScheduleFilters(page: Page) {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+  const rows = scheduleVisibilityRows().map(row => ({ ...row, trainerId: profileId, createdBy: row.createdBy === trainerId ? profileId : row.createdBy }))
+  const backend = await mockPilot(page, { profileId, fitLime: true, workouts: rows, failClients: true })
+  await page.goto('/schedule?week=2026-09-21')
+  const filters = page.locator('.coach-schedule-filter-options')
+  const summary = filters.locator('summary')
+  await expect(summary).toContainText('ошибка')
+  await expect(filters).not.toHaveAttribute('open')
+  await expect(filters.getByLabel('Фильтр по клиенту')).not.toBeVisible()
+  await summary.click()
+  backend.setClientsFailure(false)
+  await filters.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(summary).not.toContainText('ошибка')
+  await filters.getByLabel('Фильтр по клиенту').selectOption(clientId)
+  await filters.getByLabel('Фильтр по статусу').selectOption('planned')
+  await filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' }).check()
+  await expect(summary).toHaveText('Фильтры · 3')
+  await summary.click()
+  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Список', exact: true }).click()
+  await expect(page).toHaveURL(/mode=list/)
+  await expect(summary).toHaveText('Фильтры · 3')
+  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Календарь', exact: true }).click()
+  await page.reload()
+  await expect(summary).toHaveText('Фильтры · 3')
+  await expect(filters).not.toHaveAttribute('open')
+  await page.locator('.schedule-v2-weekdays button').nth(3).click()
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(summary).toHaveText('Фильтры · 3')
+  await summary.click()
+  await expect(filters.getByLabel('Фильтр по клиенту')).toHaveValue(clientId)
+  await expect(filters.getByLabel('Фильтр по статусу')).toHaveValue('planned')
+  await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeChecked()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/schedule\?/)
+  await expect(summary).toHaveText('Фильтры · 3')
+  await expect(filters).not.toHaveAttribute('open')
+  await summary.click()
+  await expect(filters.getByLabel('Фильтр по клиенту')).toHaveValue(clientId)
+  await expect(filters.getByLabel('Фильтр по статусу')).toHaveValue('planned')
+  await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeChecked()
+}
 
 test('Lime schedule ownership empty retry preference and account isolation', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))

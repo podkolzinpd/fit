@@ -2,6 +2,7 @@ import type { PreviousExerciseResult } from '../../data/repositories/workouts.re
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
 import { CoachPlanTimeField } from './CoachPlanTimeField'
+import { FitLogo } from '../../shared/FitLogo'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
@@ -759,6 +760,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const showHomeActions = isDayView && selected === today
   const fitLimeToday = isDayView && isFitLimeEnabled(actor)
   const fitLimeSchedule = !isDayView && isFitLimeEnabled(actor)
+  const compactScheduleFilters = (fitLimeToday || fitLimeSchedule) && isCoachWorkoutRedesignEnabled(actor)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -872,6 +874,17 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     </button>
   </section>
 
+  function renderScheduleFilters(content: ReactNode) {
+    if (!compactScheduleFilters) return content
+    const count = Number(Boolean(clientFilter)) + Number(statusFilter !== 'all') + Number(independentPreference.enabled)
+    const error = homeClients.isError || independentPreference.storageError
+    return <><Coachmark id="coach-schedule-filters-2026-10-16" userId={actor?.userId} title="Фильтры собраны вместе" description="Клиент, статус и самостоятельные занятия — под кнопкой «Фильтры»."><span className="sr-only">Фильтры расписания</span></Coachmark>
+      <details className="coach-schedule-filter-options workout-options">
+        <summary>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></summary>
+        {content}
+      </details></>
+  }
+
   return <Page
     className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}`}
     title="Расписание"
@@ -901,7 +914,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
     </div>}
     {(fitLimeSchedule || fitLimeToday) && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
-    {(fitLimeSchedule || fitLimeToday) && <div className="fit-lime-schedule-filters">
+    {(fitLimeSchedule || fitLimeToday) && renderScheduleFilters(<div className="fit-lime-schedule-filters">
       {(fitLimeSchedule || clientFilter || statusFilter !== 'all') && <>
       <label>Клиент<select aria-label="Фильтр по клиенту" value={clientFilter} onChange={(event) => changeScheduleFilter('client', event.target.value)}>
         <option value="">Все клиенты</option>
@@ -915,7 +928,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       {independentPreference.storageError && <p role="alert">Выбор действует до ухода с экрана: не удалось сохранить настройку. <button type="button" className="link" onClick={() => independentPreference.change(independentPreference.enabled)}>Повторить</button></p>}
       {homeClients.isLoading && <p role="status">Загружаем клиентов…</p>}
       {homeClients.isError && <p role="alert">Не удалось загрузить клиентов. <button type="button" className="link" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
-    </div>}
+    </div>)}
     {densityPreference.status === 'error' && <p className="schedule-v2-density-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {isListView ? <FitLimeScheduleList workouts={filteredItems} today={today} returnTo={returnTo} onOpenDay={openDay} /> : !isDayView ? <>
@@ -3957,7 +3970,7 @@ export function LiveWorkoutPage() {
               return swipeLive(exercise, <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
                 <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise)} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
                 <div className="live-upcoming-row">{!coachReference && <p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>{!clientLime || completedSets > 0 ? 'План: ' : ''}{firstPlan}</span>}</p>}
-                  <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={`${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
+                  <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={coachReference ? `Показать подходы: ${exercise.name}` : `${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{coachReference ? 'Показать подходы' : completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
                 </div>
               </WorkoutExercise>)
             }
@@ -4048,6 +4061,7 @@ export function LiveWorkoutPage() {
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
+      {coachReference && <FitLogo className="coach-live-footer-brand" />}
       {error && <p className="error">{error.message}</p>}
       {coachReference && removeSet.isError && removeSet.variables && <>
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}

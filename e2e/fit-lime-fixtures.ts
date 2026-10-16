@@ -292,6 +292,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'coach-workout-gestures-2026-10',
       'coach-live-number-gestures-2026-10',
       'coach-live-set-swipe-2026-10-16',
+      'coach-schedule-filters-2026-10-16',
       'coach-live-finish-top-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',
