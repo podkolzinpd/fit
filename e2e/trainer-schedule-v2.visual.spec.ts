@@ -490,8 +490,8 @@ test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['
   await page.clock.install()
   await field.focus()
   const content = page.locator('.content')
-  const initial = await content.evaluate(element => element.scrollTop)
   for (const height of [650, 550, 400]) {
+    const previous = await content.evaluate(element => element.scrollTop)
     await page.evaluate(height => { document.documentElement.dataset.testVisibleHeight = String(height); window.visualViewport?.dispatchEvent(new Event('resize')) }, height)
     // The final resize is later than the old one-shot 180ms correction.
     await page.clock.runFor(200)
@@ -499,7 +499,17 @@ test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['
       const bounds = element.getBoundingClientRect(), rest = document.querySelector('.live-pinned')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
       return bounds.top >= rest.bottom && bounds.bottom <= content.bottom - 15
     })).toBe(true)
-    if (height > 400) expect(await content.evaluate(element => element.scrollTop)).toBe(initial)
+    const position = await content.evaluate(element => element.scrollTop)
+    // Header height changes when client drag actions are present. Verify the
+    // minimum required movement against the real row, not a prior layout's zero.
+    if (position > previous) expect(await field.evaluate(element => {
+      const row = element.closest('.live-set-grid')!.getBoundingClientRect()
+      return document.querySelector('.content')!.getBoundingClientRect().bottom - row.bottom
+    })).toBeCloseTo(16, 0)
+    if (position < previous) expect(await field.evaluate(element => {
+      const row = element.closest('.live-set-grid')!.getBoundingClientRect()
+      return row.top - document.querySelector('.live-pinned')!.getBoundingClientRect().bottom
+    })).toBeCloseTo(16, 0)
   }
   const scroll = await content.evaluate(element => element.scrollTop)
   await field.fill('27.5')

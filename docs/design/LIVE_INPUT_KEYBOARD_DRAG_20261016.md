@@ -37,7 +37,7 @@ iPhone. Недоступная проверка не считается выпо
 | Правило перед каждой доработкой | Локальный коммит d567e7db; публикация ожидается в PR 1 | AGENTS.md и FIT_WORKFLOW.md; git diff --check |
 | PR 1 | В работе | До кода WebKit2/2: выполненный input disabled; baseline before-client/before-trainer. После: WebKit23/23, Chromium27/27; обе темы клиента390/430 и текущий пилот тренера; полный npm run check passed (unit2705/2705), PR1666: первый CI выявил Linux WebKit caret и устаревший editing-class assert; исправлено, локальный полный check повторно passed; CI38914737210 и Android38914737114 passed; merge/публикация ожидают решения по физическому iPhone |
 | PR 2 | PR1667 head55b617f8, выпуск после PR1 | Baseline fails before/passes after; WebKit/Chromium8/8, fullcheck2707frontend/1425API passed; CI anchoring defect reproduced/fixed in Linux, новый CI ожидается |
-| PR 3 | Локальная реализация a2be2a37 + PR2 head55b617f8 | Baseline WebKit2/2, drag10passed/2WebKit touch skipped, client обе темы390/4304/4; полный check до CSS-исправления passed, итоговый повтор/CI ещё гейты |
+| PR 3 | Локальная реализация a2be2a37 + PR2 head55b617f8 | Baseline WebKit2/2, drag10passed/2WebKit touch skipped, client обе темы390/4304/4; итоговый полный check2707frontend/1425API passed; Mac browser18passed/2CDP skips, Linux WebKit5/5; CI/merge ещё гейты |
 
 ## Исходная сверка кода PR 1
 
@@ -147,3 +147,23 @@ Lime Live устраняет скачок; диагностические эта
 позиции при закрытии сохранена. Полный повтор check/CI обязателен.
 
 PR2 после anchoring: полный npm run check passed (2707 frontend/1425 API,160 существующих optional DB skipped); targeted8/8 и исходный Linux regression passed.
+
+Совместная Linux-проверка PR3: добавление ручки увеличивает высоту заголовка,
+поэтому прежнее ожидание нулевого scroll при550px больше неверно: строка уже
+обрезана и обязана сдвинуться. Geometry case теперь проверяет ровно16px gutter
+после любого положительного/отрицательного сдвига по реальной строке. Проверки
+видимости, фокуса, значения, сохранения позиции при autosave/закрытии и root0
+сохранены. Это адаптация к изменённой геометрии, а не допуск лишнего scroll.
+
+Финальный кандидат PR3: npm run check exit0 на стабильном наборе кода и тестов;
+Mac WebKit/Chromium18passed/2WebKit CDP skips; Linux WebKit5/5 совместных сценариев.
+Предыдущий fullcheck пересёкся с редактированием строки E2E и правильно отверг
+несовпадающие line-based inventory; окончательный повтор прошёл без ослабления
+policy. Новых правок UI после проверок нет.
+
+Очередь перед PR3 повторно проверена: main81bb2e57 не изменён; активны наши
+PR1666→1667 и более ранний относительно PR3 параллельный1668 (legacy workflow,
+UI не затрагивает). Третий выпуск ждёт их merge по действующему порядку.
+Все три пока не публикуются: физического iPhone нет, запрос о переносе проверки
+после публикации ожидает ответа. Simulator не считается физической проверкой;
+финальный fresh-main native build/install/launch требуется после merge.
