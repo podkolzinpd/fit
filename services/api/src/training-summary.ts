@@ -11,7 +11,7 @@ import {
   type ExerciseRow,
   type SetRow,
   type WorkoutRow,
-} from './legacy-summary/index.js'
+} from './training-summary-core.js'
 import { buildTrainingGoalContext } from './legacy-summary/summary-goal.js'
 import {
   buildSummaryFingerprintPayload,

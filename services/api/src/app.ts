@@ -144,7 +144,7 @@ import {
   type PilotWorkoutTemplates,
 } from './workout-templates.js'
 import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
-import { HttpError as SummaryModelError } from './legacy-summary/index.js'
+import { HttpError as SummaryModelError } from './training-summary-core.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
 import { readYandexActorSession } from './yandex-actor-session.js'
 import {
