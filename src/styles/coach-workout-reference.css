@@ -89,7 +89,7 @@
 /* Units live inside the original 48px fields; RPE stays on a secondary row. */
 .coach-workout-reference.live-identity .live-set-table-head { display: none }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid,
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.rpe-visible .live-set-grid { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 48px; gap: 4px; border: 0; overflow: visible }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.rpe-visible .live-set-grid { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 48px; gap: 4px; border: 0; overflow: visible }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid > :not(:first-child) { border-left: 0 }
 .coach-workout-reference.live-identity .coach-live-metric { position: relative; display: block; min-width: 0; height: 48px }
 .coach-workout-reference.live-identity .coach-live-field-unit { position: absolute; right: 6px; bottom: 3px; font-size: 10px; line-height: 12px; font-weight: 400; color: var(--lime-text-secondary); pointer-events: none }
@@ -316,6 +316,12 @@
 .coach-reference-form .compact-editor-exercise-fields { margin: 0 -16px; padding: 16px; border-color: #3b3b40 }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { height: 48px; min-height: 48px; border: 0; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
 .coach-reference-form .planned-set { gap: 2px; margin-bottom: 2px }
+.coach-reference-form .planned-set { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) }
+.coach-reference-form .planned-set.rpe-visible { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) minmax(48px, .6fr) }
+.coach-workout-reference .workout-set-number { min-width: 44px; min-height: 48px; display: grid; place-items: center; touch-action: pan-y; user-select: none; -webkit-user-select: none }
+.coach-workout-reference .workout-set-swipe { border-radius: 16px; overflow: clip }
+.coach-workout-reference .workout-set-swipe button.workout-swipe-action { border-radius: 16px; min-height: 48px }
+.coach-workout-reference .workout-set-swipe:focus-visible { outline: 1px solid var(--lime-accent); outline-offset: 1px }
 .coach-workout-reference .overflow-item:has(.overflow-item-description) { display: grid; gap: 4px; max-width: min(320px, calc(100vw - 32px)); white-space: normal; opacity: 1; color: var(--lime-text-secondary) }
 .coach-workout-reference .overflow-item-description { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--lime-text-secondary) }
 .coach-workout-reference :is(.exercise-block-head, .circuit-head:not(.pinned)) { gap: 8px; flex-wrap: wrap; align-items: center }

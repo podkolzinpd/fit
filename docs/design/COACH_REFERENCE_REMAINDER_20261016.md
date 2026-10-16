@@ -129,8 +129,8 @@ empty/loading/error/retry/pending, обе fixed2 identities, негативны�
 
 | Пункт | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
-| PR1 | Единое действие суперсета, причина недоступности, оформленные группы | Unit50/50; browser6/6 WebKit/Chromium390, обе synthetic identities; снимок inspected; полный check2707frontend/1425API+160standard DB skip/build passed | Локально готов; CI/merge/release впереди |
-| PR2 | Доступный свайп подхода в плане и Live | новая hit area, tap/scroll/cancel, guards | Ожидает PR1 |
+| PR1 | Единое действие суперсета, причина недоступности, оформленные группы | Unit50/50; browser6/6 и после main12passed+2CDPskip; typecheck/unit52; полный check2707frontend/1425API+160standard DBskip/build; exact-head CI38963809585 success | PR1672 слит48f8bf90; финальный общий выпуск впереди |
+| PR2 | Доступный свайп подхода в плане и Live | Unit57/57; browser10passed/2WebKit-CDPskip, оба движка; input/scroll/cancel/conflict/last-set, новый plan row; снимок inspected; все стадии check passed2708frontend/1425API+160standard DB skip/build | Локально готов, CI/merge/release впереди; после PR1 |
 | PR3 | Единый вид полей, времени и карточек плана | типы метрик, 24h, save/reload, focus | Ожидает PR2 |
 | PR4 | Верх Live и раскрытие карточек по референсу | rest/next/finish, длинный текст, safe area | Ожидает PR3 |
 | PR5 | Компактный календарь и доступные фильтры | filter/history/date/back, fixed2 boundary | Ожидает PR4 |
