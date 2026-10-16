@@ -22,7 +22,12 @@ configure38813528784 twice4/2, public18assets/native startup).
 PR2 поддерживает подтверждённого7-го участника: exact5clients/2trainers,
 nutrition-only literal underscore, forward migration146/cap5; прежние6,
 роли/согласия и rollback4/2 сохранены. Clean PG17 chain/actor/backup151/151;
-новый production rollout ещё не подтверждён. Исходные9пунктов и доказательства:
+production1664 подтверждён main6098ebf3/configure38848486808, затем владелец
+исправил7-й адрес. Ошибочный допуск снят configure38875447370, активны прежние4/2.
+Corrected-seven digest заменяет старый; read-only binding-capacity audit перед
+activation не меняет аккаунты/согласия/cap5. Новый corrected rollout ещё гейт.
+Общие original9 пункты5/9 (100ml/Assistant navigation) остаются открытыми.
+Исходные9пунктов и доказательства:
 `docs/design/NUTRITION_DIARY_PILOT_20261010.md`.
 
 Срок оплаты в клиентской рабочей очереди тренера: `/clients` и `/finance`

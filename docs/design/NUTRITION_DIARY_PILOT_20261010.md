@@ -1,5 +1,46 @@
 # Дневник питания — неизменяемый план и приёмка, 10.10.2026
 
+## Коррекция седьмого адреса владельцем — 16.10.2026
+
+PR1664/main6098ebf3 был выпущен на ранее переданный literal login:
+CI38845394241/API38846331481/FE38846331380/configure38848486808 success,
+twice5/2; public18assets и native startup проверены. Затем владелец исправил
+адрес7-го клиента. Это замена одной identity, не восьмой участник и не
+разрешение считать underscore эквивалентом hyphen. Контакты и индивидуальные
+хеши остаются только в private input; публичен aggregate fingerprint.
+
+Ошибочный допуск сначала снят: private secret08:42:07Z и штатный
+configure38875447370 success вернули прежние4clients/2trainers на том же
+green main. Данные/привязки/согласия не удалялись, production Down не запускался.
+Коррекция заменяет approved-seven digest, старый seven больше не принимается;
+прежние six и собственные роли/связи/согласия сохранены. Перед переключением
+конфигурации добавлен bounded owner audit: явная read-only транзакция,
+SET LOCAL timeout, только aggregate counts существующих feature bindings.
+Binding вне нового exact-seven cohort или исчерпанная ёмкость блокирует включение;
+данные не правятся автоматически и cap5 не расширяется. Owner credentials
+живут только в временном root0600 env одноразового audit-container, не API.
+Аудит относится к включению seven: возврат к прежним six по-прежнему допускает
+сохранённую неактивную fifth binding, иначе отзыв допуска был бы заблокирован.
+
+Уникальные новые проверки: замена ровно одного клиента без расширения/alias,
+старый private seven rejected; aggregate audit happy/retired/capacity/readonly/
+malformed input и существующий PG actor case с реально заполненными7 bindings.
+Новых UI/visual/e2e матриц нет; Home/voice/Assistant/100ml не меняются.
+Исходные9 пунктов ниже неизменны; общие пункты5/9 остаются открытыми.
+Новый correct-seven production ещё не подтверждён; фактура — в YAFIT-608.
+
+Локальная приёмка коррекции: private preflight exact5/2, old-seven/eighth
+rejected, previous-six/env/idempotency/rollback/original9/foreign snapshot passed;
+config/native19/19, audit3/3. Чистая собственная PostgreSQL17/55517:
+chain146/actor/release150passed+1environment-skip (local pg_dump toolchain),
+включая реально заполненные7 bindings и отказ заменённого login без мутаций.
+Первый повтор на старой55516:148passed/2старых session-cleanup failures/1skip;
+фактура сохранена, общую БД и assertions не меняли. Все стадии check прошли:
+frontend2703, API1425+160standardDBskip, lint/typecheck/infra/calendar/hosting/
+build; HTTP-стадии после sandbox EPERM запущены с локальными разрешениями.
+Это не single exit0 первого check и не production/OAuth доказательство.
+Новые UI/native исходники отсутствуют, проверка касается серверного допуска.
+
 ## Разрешение выпуска и актуальный контур — 15.10.2026
 
 Прямая команда владельца «раскати на выбранные учетки» отменяет запрет

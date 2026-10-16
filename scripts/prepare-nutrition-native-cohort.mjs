@@ -7,9 +7,10 @@ import { readNutritionAccounts } from './inspect-nutrition-pilot.mjs'
 // Owner-approved addition on 12.10.2026: four clients, same two trainers.
 // Contacts remain in the private candidate; no production secret update here.
 const expandedApprovedCohort = 'a75b87f06157423993065b3968a3e25c64a27373169ea82d036de299e92e0bd4'
-// Owner-confirmed seventh participant, 16.10.2026. Only the aggregate digest
-// is public; prior five/six configurations remain valid for safe rollback.
-const seventhApprovedCohort = 'e22f4eb66693a5469b000dc691d8a8dec6dd986f2fde9c20c1af88ac579cc1b1'
+// Owner-corrected seventh participant, 16.10.2026: replacement, not expansion.
+// Only the aggregate digest is public; the superseded seven is not accepted.
+// Prior five/six configurations remain valid for safe rollback.
+const seventhApprovedCohort = 'd50ba3441619bf1966ece88aae1004b086491f9f4b4962c7203b32a1cc89e214'
 
 export function nativeNutritionKey(value) {
   let key = value.trim().toLowerCase()

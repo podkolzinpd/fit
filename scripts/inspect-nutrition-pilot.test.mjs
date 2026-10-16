@@ -25,6 +25,19 @@ test('native cohort is derived only from the exact owner-approved private input,
   assert.notEqual(nativeNutritionKey('sample.name@example.test'), nativeNutritionKey('sample-name@example.test'))
   assert.notEqual(nativeNutritionKey('sample@example.test'), nativeNutritionKey('sample'))
 })
+test('correcting a seventh login replaces only that client and does not accept the superseded cohort', () => {
+  const six = [...accounts, { email: 'fourth@example.test', role: 'client' }]
+  const old = [...six, { email: 'fifth_client@yandex.ru', role: 'client' }]
+  const corrected = [...six, { email: 'fifth-client@yandex.ru', role: 'client' }]
+  const before = JSON.parse(prepareNativeNutritionCohort(JSON.stringify(old), digest(old)))
+  const after = JSON.parse(prepareNativeNutritionCohort(JSON.stringify(corrected), digest(corrected)))
+  assert.deepEqual(after.trainers, before.trainers)
+  assert.deepEqual(after.clients.slice(0, 4), before.clients.slice(0, 4))
+  assert.equal(after.clients.length, 5)
+  assert.notEqual(after.clients[4], before.clients[4])
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(old), digest(corrected)), /Unapproved/)
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify([...corrected, old[6]]), digest(corrected)), /Invalid/)
+})
 test('native release keeps trusted main, exact fingerprint, private server hashes and default-off public decisions', () => {
   const stage = readFileSync(new URL('../.github/workflows/deploy-yandex-stage.yml', import.meta.url), 'utf8')
   assert.equal(stage.split('run: node scripts/prepare-nutrition-native-cohort.mjs').length - 1, 2)
