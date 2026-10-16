@@ -74,7 +74,8 @@
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid { background: transparent; border-color: transparent; border-radius: 0 }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid > :not(:first-child) { border-left-color: transparent }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity :is(.live-set-input, .live-set-rpe) { height: 48px; min-height: 48px; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number'] { appearance: textfield }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number'],
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[data-live-direct] { appearance: textfield }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number']::-webkit-inner-spin-button,
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity input.live-set-input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity :is(.live-set-check, .live-set-save) { height: 48px; min-height: 48px; border-radius: 16px }

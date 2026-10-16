@@ -1,6 +1,7 @@
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
+import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
@@ -101,7 +102,6 @@ import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
 import { useAppViewport } from '../../app/app-viewport'
-import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { useTrainerWorkspace } from './use-trainer-workspace'
@@ -2488,40 +2488,15 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
-// Одна ячейка факта в таблице подходов. В live основной сценарий — прямой
-// ввод: компактное число открывает цифровую клавиатуру и не разворачивает
-// строку в набор крупных степперов.
-function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false, selectZero = false }: {
-  name: string; label: string; placeholder: string; defaultValue: number | undefined
-  step: number | 'any'; disabled: boolean; inputKey: string; decimal?: boolean; planHint?: boolean; selectZero?: boolean
-}) {
-  return <input
-    key={inputKey}
-    className={`live-set-input${planHint ? ' plan-hint' : ''}`}
-    aria-label={label}
-    name={name}
-    type="number"
-    inputMode={decimal ? 'decimal' : 'numeric'}
-    min="0"
-    step={step}
-    disabled={disabled}
-    defaultValue={defaultValue}
-    placeholder={placeholder}
-    onFocus={(event) => { if (selectZero) prepareZeroReplacement(event.currentTarget) }}
-    onInput={(event) => event.currentTarget.classList.remove('plan-hint')}
-  />
-}
-
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean }) {
-  // После подтверждения показываем зафиксированный результат (факт, иначе план)
-  // как обычное яркое значение в заблокированном поле, а не тусклый placeholder.
-  // Правка по карандашику временно разблокирует поля (editing).
-  const locked = Boolean(set.confirmedAt) && !editing
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean }) {
+  // Lime keeps confirmed facts directly editable; completion is independent of
+  // field availability. The old UI retains its explicit editing mode.
+  const locked = Boolean(set.confirmedAt) && !editing && !directInput
   // Ключ ремоунтит поля при смене режима (подтверждён / правка / ввод), чтобы
   // неконтролируемый defaultValue пересчитался и показал нужное значение.
   // В key добавлена version: после правки подтверждённого подхода факт меняется
   // и версия бампится — иначе стабильный key оставил бы старое значение в поле.
-  const mode = locked ? 'locked' : editing ? 'editing' : 'edit'
+  const mode = directInput ? 'direct' : locked ? 'locked' : editing ? 'editing' : 'edit'
   // В обычном вводе ответ автосохранения меняет version, но не должен
   // пересоздавать активный input: на iOS это закрывает клавиатуру и сдвигает
   // текущий подход. Версия нужна в key только для уже зафиксированного факта.
@@ -2539,16 +2514,16 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
-  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${carriedWeightKey}`} decimal selectZero />, 'кг')
+  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
     {weightField}
-    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />, 'повт.')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
     {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
-    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero />, 'повт.')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'duration' && !distanceCapable) return <>
@@ -2589,6 +2564,8 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
 
 // Live elapsed workout time counting up from the start timestamp, "42:07".
 function liveDistanceIsValid(form: HTMLFormElement, report = false): boolean {
+  const invalid = [...form.querySelectorAll<HTMLInputElement>('input[data-live-direct]')].find((field) => !field.checkValidity())
+  if (invalid) { if (report) invalid.reportValidity(); return false }
   const input = form.querySelector<HTMLInputElement>('input[name="runDistance"]')
   return input ? (report ? input.reportValidity() : input.checkValidity()) : true
 }
@@ -2619,6 +2596,8 @@ export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const clientLime = isClientLimeEnabled(actor)
+  const directLiveInput = clientLime || isFitLimeEnabled(actor)
+  const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
   const { keyboardOpen } = useAppViewport()
   const showRpeByDefault = useRpeDisplay(actor?.userId)
@@ -2990,7 +2969,7 @@ export function LiveWorkoutPage() {
       acknowledgeLiveDraft(set.id, draft)
       if (set.confirmedAt) {
         const exercise = query.data?.exercises.find((item) => item.sets.some((itemSet) => itemSet.id === set.id))
-        if (exercise && !editingSets.has(set.id)) setExpandedExercises((previous) => {
+        if (!directLiveInput && exercise && !editingSets.has(set.id)) setExpandedExercises((previous) => {
           if (!previous.has(exercise.id)) return previous
           const next = new Set(previous)
           next.delete(exercise.id)
@@ -3066,6 +3045,16 @@ export function LiveWorkoutPage() {
       queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft, true)
+      if (advanceAfterConfirm.current === set.id) {
+        advanceAfterConfirm.current = null
+        window.requestAnimationFrame(() => {
+          const workout = queryClient.getQueryData<Workout>(['workout', workoutId])
+          const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
+          const next = sets.slice(sets.findIndex((item) => item.id === set.id) + 1).find((item) => !item.confirmedAt)
+          const field = next && liveSetForms.current.get(next.id)?.querySelector<HTMLInputElement>('input.live-set-input:not(:disabled):not([type="hidden"])')
+          if (field && field.getClientRects().length) field.focus({ preventScroll: true })
+        })
+      }
       setExpandedSetId(null)
       const seconds = confirmationRestSeconds.current.get(set.id) ?? beginSetRest(set)
       confirmationRestSeconds.current.delete(set.id)
@@ -3076,7 +3065,7 @@ export function LiveWorkoutPage() {
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
-    onError: () => trackGoal('live_set_confirm_error'),
+    onError: () => { advanceAfterConfirm.current = null; trackGoal('live_set_confirm_error') },
   })
   async function retryPendingLiveDrafts() {
     if (!actor?.userId || !query.data || retryingSetDrafts.current
@@ -3549,8 +3538,8 @@ export function LiveWorkoutPage() {
     const runDistance = values.get('runDistance')
     const runUnit: RunDistanceUnit = values.get('runDistanceUnit') === 'm' ? 'm' : 'km'
     return {
-      weightKg: numberValue(values.get('weightKg')),
-      reps: numberValue(values.get('reps')),
+      weightKg: liveNumberValue(values.get('weightKg')),
+      reps: liveNumberValue(values.get('reps')),
       distanceKm: runDistance === null ? numberValue(values.get('distanceKm')) : runDistanceKmFromInput(String(runDistance), runUnit),
       durationSec: runDuration === null ? numberValue(values.get('durationSec')) : parseRunDurationInput(String(runDuration)),
       rpe: numberValue(values.get('rpe')),
@@ -3626,7 +3615,7 @@ export function LiveWorkoutPage() {
   function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false) {
     const localDraft = localSetDrafts.get(set.id)
     const displayedSet = setWithCarriedLiveWeight(exercise, set, localDraft)
-    const isEditing = editingSets.has(set.id)
+    const isEditing = !directLiveInput && editingSets.has(set.id)
     // «Закрыто» (подтверждён) — зелёный; «в работе» (текущий) — серый.
     const stateClass = set.confirmedAt && !isEditing ? 'confirmed' : current && !isEditing ? 'current' : ''
     const confirmationPending = (clientLime || coachReference) && confirm.isPending && confirm.variables?.set.id === set.id
@@ -3661,7 +3650,7 @@ export function LiveWorkoutPage() {
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
-      if (set.confirmedAt && !isEditing) return
+      if (set.confirmedAt && !isEditing && !directLiveInput) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
@@ -3669,15 +3658,20 @@ export function LiveWorkoutPage() {
     }}>
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} directInput={directLiveInput} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
+            : set.confirmedAt && directLiveInput ? <span className="live-set-check done" role="img" aria-label="Подход выполнен">{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</span>
             : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
-                onPointerDown={() => { prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
+                onPointerDown={(event) => {
+                  prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id)
+                  const active = document.activeElement
+                  advanceAfterConfirm.current = directLiveInput && active instanceof HTMLInputElement && active.classList.contains('live-set-input') && active.form === event.currentTarget.form ? set.id : null
+                }}
                 onClick={(event) => {
                   prepareGong()
                   liveSetAutosave.clear(set.id)

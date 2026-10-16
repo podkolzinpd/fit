@@ -252,7 +252,8 @@ html.fit-client-lime-document .sheet-overlay .modal-dialog {
   font-size: 16px;
   font-weight: 400;
 }
-.phone-frame.fit-client-lime.live-identity input.live-set-input[type='number'] { appearance: textfield; }
+.phone-frame.fit-client-lime.live-identity input.live-set-input[type='number'],
+.phone-frame.fit-client-lime.live-identity input.live-set-input[data-live-direct] { appearance: textfield; }
 .phone-frame.fit-client-lime.live-identity input.live-set-input[type='number']::-webkit-inner-spin-button,
 .phone-frame.fit-client-lime.live-identity input.live-set-input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
