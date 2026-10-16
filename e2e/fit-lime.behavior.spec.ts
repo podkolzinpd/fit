@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { mockFinancePaymentLifecycle, mockTemplateUncertainSave, copyTemplateDiagnostic, sessionToken } from './fit-lime-fixtures'
+import { mockFinancePaymentLifecycle, mockTemplateUncertainSave, copyTemplateDiagnostic, sessionToken, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGestureWorkout, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, mockClientStreamingVoice, publicTrainerId, mockPublicTrainer } from './fit-lime-fixtures'
 
 // Behavior-only acceptance. Visual/mixed state matrices live in the visual spec.
@@ -274,6 +274,7 @@ test('Figma workout Coach reference grouped drag retry has one unchanged receipt
 })
 
 test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(true), first = source.exercises[0]!
   first.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
   first.sets[0]!.fact = { weightKg: 25, reps: 9 }
@@ -289,11 +290,14 @@ test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: [
   await expect(page.locator('[data-workout-swipe]')).toHaveCount(0)
   const field = page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`).getByLabel('Фактический вес', { exact: true })
   await field.fill('27.5'); await field.blur()
-  const handle = page.getByRole('button', { name: 'Переместить: Приседания, Жим' })
-  await expect(handle).toBeEnabled()
-  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Escape')
+  const card = await holdClientLiveCard(page, first.blockId)
+  await page.keyboard.press('Escape'); await page.mouse.up()
+  await expect(card).not.toHaveClass(/dragging/)
   expect(commands).toHaveLength(0)
-  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Enter')
+  await holdClientLiveCard(page, first.blockId)
+  await page.mouse.move(24, 820, { steps: 12 })
+  await expect(page.locator('.workout-drag-preview')).toContainText('Позиция 3 из 3')
+  await page.mouse.up()
   await expect(page.getByRole('button', { name: 'Повторить сохранение порядка' })).toBeVisible()
   await expect(page.locator('[data-workout-block]').first()).toHaveAttribute('data-workout-block', first.blockId)
   await expect(field).toHaveValue('27.5')
@@ -308,6 +312,15 @@ test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: [
   await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
   await expect(field).toHaveValue('27.5')
   await expect(page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+  const active = await page.locator('.live-session-progress-copy').textContent()
+  await group.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок', exact: true }).click()
+  await group.getByRole('button', { name: 'Вверх', exact: true }).click()
+  await expect.poll(() => commands.length).toBe(3)
+  await expect(page.locator('[data-workout-block]').nth(1)).toHaveAttribute('data-workout-block', first.blockId)
+  await expect(page.locator('.live-session-progress-copy')).toHaveText(active!)
+  await page.getByRole('button', { name: 'Готово', exact: true }).click()
+  await expect(group.getByRole('button', { name: 'Вверх', exact: true })).toHaveCount(0)
 })
 
 test('Figma workout Coach reference actions completion retains cardio warning', async ({ page }) => {

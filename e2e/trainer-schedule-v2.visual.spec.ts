@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutTemplateDraft } from '../src/shared/domain'
-import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic } from './fit-lime-fixtures'
+import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId, customExerciseId, coachGestureWorkout, revealCoachSetDelete, expectContainedButtonText, addEditorExercise, checkEditorAction, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, expectSwipeActionReadable, mockClientStreamingVoice, mockPublicTrainer } from './fit-lime-fixtures'
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
@@ -484,24 +484,41 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
   const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input:not(:disabled)`).first()
   await field.fill('27.5'); await field.blur()
-  const handle = page.getByRole('button', { name: `Переместить: ${first.name}`, exact: true })
-  await expect(handle).toBeEnabled()
+  const handle = role === 'trainer' ? page.getByRole('button', { name: `Переместить: ${first.name}`, exact: true }) : page.locator(`[data-workout-block="${first.blockId}"] .live-exercise-head`)
+  if (role === 'trainer') await expect(handle).toBeEnabled()
   await handle.evaluate(element => element.scrollIntoView({ block: 'center' }))
   await expect.poll(() => handle.evaluate(element => {
     const rect = element.getBoundingClientRect()
     return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
   })).toBe(true)
   const box = (await handle.boundingBox())!
-  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  const cardBox = (await page.locator(`[data-workout-block="${first.blockId}"]`).boundingBox())!
+  let point = role === 'trainer' ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : { x: cardBox.x + 8, y: box.y + 8 }
   const cdp = await page.context().newCDPSession(page)
   try {
+    if (role === 'client') {
+      const before = await page.locator('.content').evaluate(element => element.scrollTop)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x, y: point.y - 80 }] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect.poll(() => page.locator('.content').evaluate(element => element.scrollTop)).toBeGreaterThan(before)
+      await expect(page.locator('.workout-drag-preview')).toHaveCount(0)
+      expect(moves).toHaveLength(0)
+      await handle.evaluate(element => element.scrollIntoView({ block: 'center' }))
+      // Wait for the native pan/scroll relocation to settle before starting a
+      // new held gesture. evaluate(scrollIntoView) alone does not await it.
+      await handle.scrollIntoViewIfNeeded()
+      const movedHeader = (await handle.boundingBox())!, movedCard = (await page.locator(`[data-workout-block="${first.blockId}"]`).boundingBox())!
+      point = { x: movedCard.x + 8, y: movedHeader.y + 8 }
+    }
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
-    await expect(handle).toHaveAttribute('aria-pressed', 'true')
+    if (role === 'trainer') await expect(handle).toHaveAttribute('aria-pressed', 'true')
+    else await expect(page.locator(`[data-workout-block="${first.blockId}"]`)).toHaveClass(/dragging/)
     await expect(page.locator('.workout-drag-preview')).toContainText(first.name)
     for (let step = 1; step <= 12; step += 1) await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchMove', touchPoints: [{ x: point.x, y: point.y + (820 - point.y) * step / 12 }],
     })
-    await expect.poll(() => page.locator('.workout-gesture-list > [role="status"]').textContent()).not.toBe('Перенос: позиция 1 из 8')
+    await expect(page.locator('.workout-gesture-list > [role="status"]')).toHaveText(/Перенос: позиция [2-8] из 8/)
     expect(moves).toHaveLength(0)
     await page.screenshot({ path: info.outputPath('coach-live-touch-drag.png') })
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
@@ -512,6 +529,58 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
     await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
     await expect(page.locator('.live-session-progress-copy')).toContainText(`Сейчас: ${first.name}`)
   } finally { await cdp.detach() }
+})
+
+// Layout-only axes: theme controls contrast; width controls Russian title wrap.
+// Drag/confirmation/network chains remain in the existing behavior cases.
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`Client Lime compact Live composition ${theme} ${width}`, { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 932 })
+  const source = coachGestureWorkout(false, 3), first = source.exercises[0]!
+  source.startedAt = '2026-10-08T09:00:00Z'
+  first.ref = 'vital-gym-pro-r007-0017'
+  first.name = 'Жим гантелей на наклонной скамье'
+  first.trainerComment = 'Комментарий тренера к упражнению. '.repeat(6)
+  source.exercises[2]!.name = 'Пуловер с гантелью с согнутыми руками'
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:31Z'))
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [source] })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.locator('.workout-drag-handle')).toHaveCount(0)
+  await expect(page.locator('.live-set-plan-caption')).toHaveCount(0)
+  const current = page.locator('.live-exercise.current')
+  const geometry = await current.evaluate(card => {
+    const note = card.querySelector('.live-exercise-note summary')!.getBoundingClientRect()
+    const add = card.querySelector('.live-add-set')!.getBoundingClientRect()
+    const media = card.querySelector('.exercise-thumbnail')!.getBoundingClientRect()
+    return { noteTop: note.top, addTop: add.top, noteHeight: note.height, addHeight: add.height, mediaWidth: media.width, mediaHeight: media.height }
+  })
+  expect(geometry.noteTop).toBe(geometry.addTop)
+  expect(geometry.noteHeight).toBe(44); expect(geometry.addHeight).toBe(44)
+  expect(geometry.mediaWidth).toBe(72); expect(geometry.mediaHeight).toBe(72)
+  for (const card of await page.locator('.live-exercise-upcoming').all()) {
+    expect(await card.evaluate(card => {
+      const menu = card.querySelector('.overflow-trigger')!, header = card.querySelector('.live-exercise-head')!, start = card.querySelector('.live-exercise-start')!
+      const m = menu.getBoundingClientRect(), s = start.getBoundingClientRect()
+      return header.contains(menu) && s.top - m.bottom >= 12 && getComputedStyle(menu).borderWidth === '0px' && getComputedStyle(menu).backgroundColor === 'rgba(0, 0, 0, 0)'
+    })).toBe(true)
+  }
+  await current.locator('.live-trainer-note summary').click()
+  await expect(current.locator('.live-trainer-note p')).toHaveText(first.trainerComment)
+  await current.locator('.live-exercise-note summary').click()
+  const note = current.getByLabel(`Заметка: ${first.name}`, { exact: true })
+  await expect(note).toBeVisible()
+  expect(await note.evaluate(field => Math.abs(field.getBoundingClientRect().width - field.closest('.live-exercise-utilities')!.getBoundingClientRect().width))).toBeLessThanOrEqual(1)
+  await current.locator('.live-trainer-note summary').click()
+  await current.locator('.live-exercise-note summary').click()
+  await current.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Показать план', exact: true }).click()
+  await expect(current.locator('.live-set-plan-caption')).toHaveCount(first.sets.length)
+  await current.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Скрыть план', exact: true }).click()
+  await expect(current.locator('.live-set-plan-caption')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('client-live-compact.png') })
 })
 
 test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['@lime-critical'] }, async ({ page }, info) => {
@@ -601,12 +670,14 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   await page.goto(`/workouts/${workoutId}/live`)
   const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input`).first()
   await field.fill('27.5'); await field.blur()
-  const handle = page.getByRole('button', { name: 'Переместить: Приседания' })
-  await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded()
+  const handle = role === 'trainer' ? page.getByRole('button', { name: 'Переместить: Приседания' }) : await holdClientLiveCard(page, first.blockId)
+  if (role === 'trainer') { await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded() }
   const box = (await handle.boundingBox())!
   const before = await page.locator('.content').evaluate((element) => element.scrollTop)
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
-  await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  if (role === 'trainer') {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
+    await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  } else await expect(handle).toHaveClass(/dragging/)
   await page.mouse.move(box.x + box.width / 2, 820, { steps: 12 })
   await expect.poll(() => page.locator('.content').evaluate((element) => element.scrollTop)).toBeGreaterThan(before + 100)
   // Wait for an actual insertion target, not merely the first scroll frame:
@@ -615,7 +686,8 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   expect(moves).toHaveLength(0)
   await page.locator('.workout-gesture-list').dispatchEvent('pointerup', { pointerId: 999, isPrimary: false, pointerType: 'touch' })
   await page.locator('.workout-gesture-list').dispatchEvent('pointercancel', { pointerId: 999, isPrimary: false, pointerType: 'touch' })
-  await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  if (role === 'trainer') await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  else await expect(handle).toHaveClass(/dragging/)
   expect(moves).toHaveLength(0)
   await page.mouse.up()
   await expect.poll(() => moves.length).toBe(1)
@@ -4111,11 +4183,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     })
     expect(controls.aligned).toBe(true)
     expect(controls.close).toBe(true)
-    const technique = circuit.locator('.circuit-round.current .live-technique .exercise-image-technique')
-    if (await technique.count()) {
-      await expect(technique).toHaveCSS('max-height', '100px')
-      await expect(circuit.locator('.circuit-round.current section').first().locator('.exercise-thumbnail')).toHaveCount(0)
-    }
+    const firstExercise = circuit.locator('.circuit-round.current section').first()
+    const technique = firstExercise.locator('.live-exercise-head .live-header-animation')
+    await expect(technique).toHaveCount(1)
+    await expect(technique).toHaveCSS('width', '44px')
+    await expect(technique).toHaveCSS('height', '44px')
+    await expect(technique.locator('.exercise-image-technique')).toHaveCount(1)
+    await expect(firstExercise.locator(':scope > .live-technique')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-live-circuit-${theme}-${width}.png`) })
   })

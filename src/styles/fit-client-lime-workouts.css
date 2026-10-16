@@ -342,7 +342,56 @@
 .phone-frame.fit-client-lime input.workout-rpe-slider { height:44px; min-height:44px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .phone-frame.fit-client-lime form.workout-feedback .workout-cta[data-variant='primary']:not(:disabled) { border-color:var(--lime-text); background:var(--lime-text); color:var(--lime-bg); }
 
-/* Reuse the pilot drag handle without narrowing the client exercise title. */
-.phone-frame.fit-client-lime.live-identity .live-exercise-head .exercise-head-actions:has(.workout-drag-handle) { flex-direction: column; gap: 0; align-self: flex-start; }
+/* Client Live: the approved compact composition, using existing Lime tokens. */
+.phone-frame.fit-client-lime.live-identity .workout-drag-block > :is(.live-exercise, .live-exercise-upcoming, .exercise-block.live) { margin: 0; }
+.phone-frame.fit-client-lime.live-identity .live-exercise { padding: 16px; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-upcoming { padding: 16px; gap: 12px; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-head { align-items: flex-start; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-head .exercise-head-actions { flex-direction: row; gap: 0; align-self: flex-start; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-head .workout-exercise-header-main { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; }
+.phone-frame.fit-client-lime.live-identity .live-exercise > .live-exercise-head .workout-exercise-header-main { grid-template-columns: 72px minmax(0, 1fr); }
+.phone-frame.fit-client-lime.live-identity .workout-exercise-header-copy { display: block; min-width: 0; }
+.phone-frame.fit-client-lime.live-identity .workout-exercise-header-copy .live-previous-result { margin: 6px 0 0; font-size: 13px; font-weight: 400; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-head .exercise-thumbnail { width: 44px; height: 44px; min-width: 0; min-height: 0; }
+.phone-frame.fit-client-lime.live-identity .live-exercise > .live-exercise-head .exercise-thumbnail { width: 72px; height: 72px; }
+.phone-frame.fit-client-lime.live-identity .live-header-animation { display: block; margin: 0; padding: 0; border: 0; border-radius: 12px; background: transparent; overflow: hidden; }
+.phone-frame.fit-client-lime.live-identity .live-header-animation .exercise-image-technique { display: block; width: 100%; height: 100%; min-height: 0; aspect-ratio: 1; border-radius: 12px; }
+.phone-frame.fit-client-lime.live-identity .live-header-animation .exercise-video-play { min-width: 44px; min-height: 44px; }
+.phone-frame.fit-client-lime.live-identity :is(.live-exercise-head, .live-completed-gesture-head) .overflow-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.phone-frame.fit-client-lime.live-identity .live-upcoming-row { align-items: center; gap: 12px; }
+.phone-frame.fit-client-lime.live-identity .live-upcoming-summary { min-width: 0; font-size: 13px; font-weight: 400; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-start { flex: 0 0 auto; padding-inline: 16px; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 12px; margin-top: 12px; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities > .live-exercise-note { display: block; grid-column: 1 / -1; grid-row: 1; margin: 0; padding: 0; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-exercise-note summary,
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-add-set { width: 100%; height: 44px; min-height: 44px; margin: 0; padding: 0 12px; border: 1px solid var(--lime-divider); border-radius: 999px; background: transparent; color: var(--lime-text); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-exercise-note summary { width: calc((100% - 12px) / 2); }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-add-set { grid-column: 2; grid-row: 1; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .fit-lime-add-label { display: inline-flex; align-items: center; justify-content: center; gap: 4px; line-height: 20px; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .fit-lime-add-label svg { width: 16px; height: 16px; color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities svg[data-original-icon='plus'] { background-color: var(--lime-accent-ink); mask: url('../../docs/design/figma-20261002/assets/plus.svg') center / contain no-repeat; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities svg[data-original-icon='plus'] > image { opacity: 0; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-note summary { list-style: none; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-note summary::-webkit-details-marker { display: none; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-note summary::after { content: none; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-note-preview { display: none; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .exercise-comment { width: 100%; margin: 12px 0 0; }
+.phone-frame.fit-client-lime.live-identity .live-exercise-note:is([open], [data-has-note]) summary { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-exercise-note[open] summary { border-color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.live-identity .live-exercise-utilities .live-add-set:disabled { color: var(--lime-text-tertiary); }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note { margin: 12px 0 8px; border-radius: 14px; background: color-mix(in srgb, var(--lime-accent) 7%, var(--lime-surface)); }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note summary { min-height: 44px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; list-style: none; color: var(--lime-accent-ink); font-size: 14px; font-weight: 500; }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note summary::-webkit-details-marker { display: none; }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note summary::after { content: none; }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note-read,
+.phone-frame.fit-client-lime.live-identity .live-trainer-note-hide { color: var(--lime-text-secondary); font-size: 12px; font-weight: 400; }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note-hide,
+.phone-frame.fit-client-lime.live-identity .live-trainer-note[open] .live-trainer-note-read { display: none; }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note[open] .live-trainer-note-hide { display: inline; }
+.phone-frame.fit-client-lime.live-identity .live-trainer-note p { margin: 0; padding: 0 12px 12px; color: var(--lime-text); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+.phone-frame.fit-client-lime.live-identity .workout-drag-block[data-card-drag] { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.phone-frame.fit-client-lime.live-identity .workout-drag-block[data-card-drag] :is(input, textarea, [contenteditable='true']) { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
 .phone-frame.fit-client-lime.live-identity .live-completed-gesture-head { padding: 14px 16px; border: 1px solid var(--lime-divider); border-radius: var(--lime-radius-card); background: var(--lime-surface); }
+.phone-frame.fit-client-lime.live-identity .live-completed-gesture-head { display: flex; align-items: flex-start; gap: 10px; }
 .phone-frame.fit-client-lime.live-identity .live-completed-gesture-head .workout-exercise-compact { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.phone-frame.fit-client-lime.live-identity .live-completed-gesture-head .workout-exercise-compact { flex: 1 1 auto; min-width: 0; }

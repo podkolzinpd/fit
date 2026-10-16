@@ -129,6 +129,17 @@ export async function revealCoachSetDelete(page: Page, row: Locator) {
   await page.mouse.move(Math.max(1, x - 36), y, { steps: 6 }); await page.mouse.up()
 }
 
+export async function holdClientLiveCard(page: Page, blockId: string) {
+  const card = page.locator(`[data-workout-block="${blockId}"]`)
+  const anchor = card.locator('.circuit-head, .live-exercise-head, .workout-exercise-compact').first()
+  await anchor.evaluate(element => element.scrollIntoView({ block: 'center' }))
+  const box = (await card.boundingBox())!, header = (await anchor.boundingBox())!
+  await page.mouse.move(box.x + 8, header.y + 8)
+  await page.mouse.down()
+  await expect(card).toHaveClass(/dragging/)
+  return card
+}
+
 export async function expectContainedButtonText(button: Locator) {
   const geometry = await button.evaluate((element) => {
     const bounds = element.getBoundingClientRect()
@@ -289,6 +300,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'lime-schedule-history-2026-10',
       'lime-schedule-ownership-2026-10',
       'client-live-multiple-exercises-2026-10',
+      'client-live-card-drag-2026-10',
       ...(showFeedbackNotice ? [] : ['workout-feedback-compact-2026-10']),
     ]))
   }, { token: sessionToken, profileId, showFeedbackNotice: options.showFeedbackNotice ?? false })
