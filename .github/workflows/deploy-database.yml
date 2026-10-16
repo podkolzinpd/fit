@@ -1,9 +1,6 @@
 name: Deploy database
 
 on:
-  push:
-    branches: [main]
-    paths: ['supabase/migrations/**']
   workflow_dispatch:
 
 permissions:
