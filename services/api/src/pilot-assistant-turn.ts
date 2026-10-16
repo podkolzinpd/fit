@@ -11,7 +11,7 @@ import {
   recordWorkoutTurn,
   validateAssistantTurnResponse,
   type AssistantTurnResponse,
-} from './assistant-orchestrator/index.js'
+} from './assistant-orchestrator/core.js'
 import {
   AssistantStateError,
   appendAssistantUserMessage,
