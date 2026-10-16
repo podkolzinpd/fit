@@ -36,8 +36,8 @@ iPhone. Недоступная проверка не считается выпо
 | --- | --- | --- |
 | Правило перед каждой доработкой | Локальный коммит d567e7db; публикация ожидается в PR 1 | AGENTS.md и FIT_WORKFLOW.md; git diff --check |
 | PR 1 | В работе | До кода WebKit2/2: выполненный input disabled; baseline before-client/before-trainer. После: WebKit23/23, Chromium27/27; обе темы клиента390/430 и текущий пилот тренера; полный npm run check passed (unit2705/2705), PR1666: первый CI выявил Linux WebKit caret и устаревший editing-class assert; исправлено, локальный полный check повторно passed; CI38914737210 и Android38914737114 passed; merge/публикация ожидают решения по физическому iPhone |
-| PR 2 | PR1667, локальный commit b481af9b, база PR1666/1dd797b0; выпуск после PR1 | Исходный дефект воспроизведён до кода; новая регрессия падает на старом коде, WebKit/Chromium8/8 passed; полный npm run check passed; CI/merge ещё не выполнены |
-| PR 3 | Локальная реализация, база PR1667/b481af9b | Baseline WebKit2/2, drag10passed/2WebKit touch skipped, client обе темы390/4304/4; полный npm run check passed; CI/merge ещё гейты |
+| PR 2 | PR1667 head55b617f8, выпуск после PR1 | Baseline fails before/passes after; WebKit/Chromium8/8, fullcheck2707frontend/1425API passed; CI anchoring defect reproduced/fixed in Linux, новый CI ожидается |
+| PR 3 | Локальная реализация a2be2a37 + PR2 head55b617f8 | Baseline WebKit2/2, drag10passed/2WebKit touch skipped, client обе темы390/4304/4; полный check до CSS-исправления passed, итоговый повтор/CI ещё гейты |
 
 ## Исходная сверка кода PR 1
 
@@ -138,4 +138,12 @@ client pointer autoscroll/foreign pointer/draft и client trusted-touch (Chromiu
 Снимки PR3: [исходный клиент](live-input-20261016/drag-before-client.png), [dark390](live-input-20261016/drag-after-dark-390.png), [light390](live-input-20261016/drag-after-light-390.png).
 
 PR3 fullcheck: исходный запуск в sandbox остановился на listen EPERM в неизменённых локальных relay-тестах; повтор всех неизменённых проверок на host прошёл полностью.
-PR2: CI38916874888 выявил при закрытии клавиатуры Linux WebKit scroll147→297; исправление и повтор CI обязательны, PR2 не готов к merge.
+PR2 Linux WebKit: CI38916874888 воспроизвёл скачок при закрытии147→297px.
+Тот же дефект воспроизведён локально в изолированном Podman/WebKit1.61.1
+(исходный exact regression падает). Browser scroll anchoring после восстановления
+высоты добавляет второй scroll. Узкий overflow-anchor:none на content только
+Lime Live устраняет скачок; диагностические этапы0/16/104/240/40мс сохраняют147px.
+Форма, координатор и AppViewportProvider не меняются, исходная строгая проверка
+позиции при закрытии сохранена. Полный повтор check/CI обязателен.
+
+PR2 после anchoring: полный npm run check passed (2707 frontend/1425 API,160 существующих optional DB skipped); targeted8/8 и исходный Linux regression passed.
