@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
 
@@ -6,11 +6,11 @@ beforeEach(() => {
   vi.stubGlobal('PointerEvent', MouseEvent)
   HTMLElement.prototype.setPointerCapture = vi.fn()
 })
-afterEach(() => vi.unstubAllGlobals())
-function setup(disabled = false) {
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
+function setup(disabled = false, holdToDrag = false) {
   const move = vi.fn(), remove = vi.fn(), replace = vi.fn()
-  render(<WorkoutGestureList blocks={['a', 'b', 'c']} disabled={disabled} onMove={move}>
-    {['a', 'b', 'c'].map((id) => <WorkoutDragBlock key={id} id={id}>
+  render(<WorkoutGestureList blocks={['a', 'b', 'c']} disabled={disabled} onMove={move} holdCards={holdToDrag}>
+    {['a', 'b', 'c'].map((id) => <WorkoutDragBlock key={id} id={id} holdToDrag={holdToDrag} label={id}>
       <WorkoutSwipe id={id} disabled={false} onDelete={() => { remove(id) }} onReplace={() => { replace(id) }}>
         <WorkoutDragHandle id={id} label={id} /><p data-testid={id}>Упражнение {id}</p><input aria-label={`Вес ${id}`} defaultValue="25" />
         <button type="button" aria-label={`Настройки ${id}`}>Настройки</button>
@@ -31,6 +31,87 @@ function pointer(target: Element, type: string, pointerId: number, isPrimary = t
   fireEvent(target, event)
   return event
 }
+it('holding a card activates the existing drag without remounting its edited input', () => {
+  vi.useFakeTimers()
+  const { move } = setup(false, true)
+  // This harness includes trainer swipe: hold a free block surface, not the
+  // swipe child, to exercise the client card activation independently.
+  const card = screen.getByTestId('a').closest('[data-workout-block]')!
+  const input = screen.getByRole('textbox', { name: 'Вес a' })
+  fireEvent.change(input, { target: { value: '27.5' } })
+  expect(pointer(card, 'pointerdown', 11).defaultPrevented).toBe(false)
+  act(() => vi.advanceTimersByTime(349))
+  expect(document.querySelector('.workout-drag-preview')).toBeNull()
+  act(() => vi.advanceTimersByTime(1))
+  expect(document.querySelector('.workout-drag-preview')).toHaveTextContent('a')
+  pointer(card, 'pointermove', 11)
+  expect(move).not.toHaveBeenCalled()
+  pointer(card, 'pointerup', 11)
+  expect(move).toHaveBeenCalledExactlyOnceWith('a', 2)
+  expect(screen.getByRole('textbox', { name: 'Вес a' })).toBe(input)
+  expect(input).toHaveValue('27.5')
+})
+it('moving or releasing before the hold leaves scrolling and order untouched', () => {
+  vi.useFakeTimers()
+  const { move } = setup(false, true)
+  const card = screen.getByTestId('a').closest('[data-workout-block]')!
+  pointer(card, 'pointerdown', 11)
+  expect(pointer(card, 'pointermove', 11, true, 112).defaultPrevented).toBe(false)
+  act(() => vi.advanceTimersByTime(400))
+  expect(document.querySelector('.workout-drag-preview')).toBeNull()
+  pointer(card, 'pointerup', 11)
+  pointer(card, 'pointerdown', 12)
+  pointer(card, 'pointerup', 12)
+  act(() => vi.advanceTimersByTime(400))
+  expect(move).not.toHaveBeenCalled()
+  expect(document.querySelector('.workout-drag-preview')).toBeNull()
+})
+it('holding inputs or actions never activates a card drag', () => {
+  vi.useFakeTimers()
+  const { move } = setup(false, true)
+  for (const target of [screen.getByRole('textbox', { name: 'Вес a' }), screen.getByRole('button', { name: 'Настройки a' })]) {
+    expect(pointer(target, 'pointerdown', 11).defaultPrevented).toBe(false)
+    act(() => vi.advanceTimersByTime(400))
+    pointer(target, 'pointerup', 11)
+    expect(document.querySelector('.workout-drag-preview')).toBeNull()
+  }
+  expect(move).not.toHaveBeenCalled()
+})
+it('a cancelled card hold cannot later start a drag or save a move', () => {
+  vi.useFakeTimers()
+  const { move } = setup(false, true)
+  const card = screen.getByTestId('a').closest('[data-workout-block]')!
+  pointer(card, 'pointerdown', 11)
+  pointer(card, 'pointercancel', 11)
+  act(() => vi.advanceTimersByTime(400))
+  expect(document.querySelector('.workout-drag-preview')).toBeNull()
+  pointer(card, 'pointerdown', 12)
+  act(() => vi.advanceTimersByTime(350))
+  expect(document.querySelector('.workout-drag-preview')).toHaveTextContent('a')
+  pointer(card, 'lostpointercapture', 12)
+  expect(document.querySelector('.workout-drag-preview')).toBeNull()
+  expect(move).not.toHaveBeenCalled()
+})
+it('only an active card hold owns touch movement and Escape cancels it', () => {
+  vi.useFakeTimers()
+  const { move } = setup(false, true)
+  const card = screen.getByTestId('a').closest('[data-workout-block]')!
+  const touchMove = () => {
+    const event = new Event('touchmove', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'touches', { value: [{}] })
+    fireEvent(card, event)
+    return event.defaultPrevented
+  }
+  expect(touchMove()).toBe(false)
+  pointer(card, 'pointerdown', 11)
+  act(() => vi.advanceTimersByTime(350))
+  expect(touchMove()).toBe(true)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(document.querySelector('.workout-drag-preview')).toBeNull()
+  expect(touchMove()).toBe(false)
+  pointer(card, 'pointerup', 11)
+  expect(move).not.toHaveBeenCalled()
+})
 it('swipe surface prevents native text drag without stealing editable controls', () => {
   setup()
   const item = screen.getByTestId('a')

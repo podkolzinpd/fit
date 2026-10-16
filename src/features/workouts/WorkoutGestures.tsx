@@ -1,12 +1,13 @@
-import { createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { GripIcon } from '../../shared/icons'
 
-type Drag = { id: string; target: number; keyboard: boolean; pointerId?: number; label: string }
+type Drag = { id: string; target: number; keyboard: boolean; pointerId?: number; label: string; held?: boolean }
+type DragPointer = Pick<PointerEvent<HTMLElement>, 'pointerId' | 'clientY' | 'isPrimary' | 'preventDefault'> & { currentTarget: HTMLElement }
 type GestureContext = {
   blocks: string[]; disabled: boolean; drag: Drag | null;
   open: { id: string; side: 'delete' | 'replace' } | null;
   setOpen: (value: GestureContext['open']) => void;
-  start: (id: string, event?: PointerEvent<HTMLButtonElement>) => void;
+  start: (id: string, event?: DragPointer, label?: string, held?: boolean) => void;
   keyboard: (id: string, key: string) => boolean;
   cancel: () => void;
 }
@@ -18,8 +19,8 @@ function useWorkoutGestures() {
 }
 
 /** No reordered tree before commit: failed writes leave inputs, facts and order intact. */
-export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
-  blocks: string[]; disabled: boolean; onMove: (id: string, targetIndex: number) => void; children: ReactNode
+export function WorkoutGestureList({ blocks, disabled, onMove, children, holdCards = false }: {
+  blocks: string[]; disabled: boolean; onMove: (id: string, targetIndex: number) => void; children: ReactNode; holdCards?: boolean
 }) {
   const root = useRef<HTMLDivElement>(null)
   const dragRef = useRef<Drag | null>(null)
@@ -29,11 +30,12 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
   const pointerY = useRef(0)
   const preview = useRef<HTMLDivElement>(null)
   const setCurrent = (value: Drag | null) => { dragRef.current = value; setDrag(value) }
-  const cancel = () => {
+  const cancel = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current)
     frame.current = null
-    setCurrent(null)
-  }
+    dragRef.current = null
+    setDrag(null)
+  }, [])
   const drop = () => {
     const current = dragRef.current
     cancel()
@@ -47,7 +49,7 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
     // A tall expanded exercise may extend below the viewport. Its header,
     // rather than its offscreen body midpoint, is the reachable drop anchor.
     const target = elements.filter((element) => {
-      const rect = (element.querySelector<HTMLElement>('.workout-drag-handle') ?? element).getBoundingClientRect()
+      const rect = (element.querySelector<HTMLElement>('.workout-drag-handle, .live-exercise-head, .workout-exercise-compact, .circuit-head') ?? element).getBoundingClientRect()
       return pointerY.current > rect.top + rect.height / 2
     }).length
     if (preview.current) preview.current.style.top = `${Math.max(100, Math.min(innerHeight - 140, pointerY.current))}px`
@@ -67,6 +69,21 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
   }
   useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current) }, [])
   useEffect(() => {
+    if (!holdCards) return
+    // Do not disable native pan on cards. Only an already activated hold owns
+    // touchmove; moving before the hold remains ordinary browser scrolling.
+    const move = (event: TouchEvent) => {
+      if (dragRef.current?.held && event.touches.length === 1 && event.cancelable && event.target instanceof Node && root.current?.contains(event.target)) event.preventDefault()
+    }
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && dragRef.current?.held) { event.preventDefault(); cancel() } }
+    // Register before the browser chooses its touch-scroll path, including a
+    // new hold immediately after a native pan. A local late listener can receive
+    // only non-cancelable moves once that fast scroll path has been selected.
+    window.addEventListener('touchmove', move, { passive: false, capture: true })
+    document.addEventListener('keydown', escape)
+    return () => { window.removeEventListener('touchmove', move, true); document.removeEventListener('keydown', escape) }
+  }, [cancel, holdCards])
+  useEffect(() => {
     if (!open) return
     const close = (event: globalThis.PointerEvent) => {
       const target = event.target
@@ -76,13 +93,13 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
     return () => document.removeEventListener('pointerdown', close, true)
   }, [open])
   const context: GestureContext = { blocks, disabled, drag, open, setOpen, cancel,
-    start(id, event) {
+    start(id, event, name, held = false) {
       if (disabled || blocks.length < 2 || dragRef.current || event?.isPrimary === false) return
       event?.preventDefault()
       event?.currentTarget.setPointerCapture(event.pointerId)
       setOpen(null)
-      const label = event?.currentTarget.getAttribute('aria-label')?.replace(/^Переместить: /, '') ?? ''
-      setCurrent({ id, target: blocks.indexOf(id), keyboard: !event, pointerId: event?.pointerId, label })
+      const label = name ?? event?.currentTarget.getAttribute('aria-label')?.replace(/^Переместить: /, '') ?? ''
+      setCurrent({ id, target: blocks.indexOf(id), keyboard: !event, pointerId: event?.pointerId, label, held })
       if (event) { pointerY.current = event.clientY; frame.current = requestAnimationFrame(scrollFrame) }
     },
     keyboard(id, key) {
@@ -114,13 +131,52 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children }: {
   </div></Context.Provider>
 }
 
-export function WorkoutDragBlock({ id, children }: { id: string; children: ReactNode }) {
-  const { drag, blocks } = useWorkoutGestures()
+export function WorkoutDragBlock({ id, children, holdToDrag = false, label = '' }: { id: string; children: ReactNode; holdToDrag?: boolean; label?: string }) {
+  const context = useWorkoutGestures()
+  const { drag, blocks, disabled } = context
+  const pending = useRef<{ pointerId: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null>(null)
+  const suppressClick = useRef(false)
+  const heldPointer = useRef<number | null>(null)
+  const releaseClick = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearHold = () => { if (pending.current) clearTimeout(pending.current.timer); pending.current = null }
+  useEffect(() => {
+    if (disabled || !holdToDrag) clearHold()
+    return () => { clearHold(); if (releaseClick.current) clearTimeout(releaseClick.current) }
+  }, [disabled, holdToDrag])
+  function isControl(target: EventTarget) {
+    if (!(target instanceof Element)) return true
+    const control = target.closest('button,input,textarea,select,a,details,summary,video,[role="button"],[contenteditable="true"]')
+    // A title/compact card keeps its short tap; holding its text may move it.
+    return Boolean(control && !control.matches('.exercise-technique-trigger,.workout-exercise-compact'))
+  }
   const index = blocks.indexOf(id)
   // Marker represents final insertion position without unmounting any form.
   const before = drag && drag.id !== id && index === (drag.target > blocks.indexOf(drag.id) ? drag.target + 1 : drag.target)
   const after = drag && drag.id !== id && drag.target === blocks.length - 1 && index === blocks.length - 1
-  return <div data-workout-block={id} className={`workout-drag-block${drag?.id === id ? ' dragging' : ''}${before ? ' drop-before' : ''}${after ? ' drop-after' : ''}`}>{children}</div>
+  return <div data-workout-block={id} data-card-drag={holdToDrag && !disabled && blocks.length > 1 || undefined} className={`workout-drag-block${drag?.id === id ? ' dragging' : ''}${before ? ' drop-before' : ''}${after ? ' drop-after' : ''}`}
+    onPointerDownCapture={(event) => {
+      if (!holdToDrag || disabled || blocks.length < 2 || drag || pending.current || event.isPrimary === false || event.button !== 0 || isControl(event.target)) return
+      const element = event.currentTarget, pointerId = event.pointerId, x = event.clientX, y = event.clientY
+      suppressClick.current = false
+      pending.current = { pointerId, x, y, timer: setTimeout(() => {
+        pending.current = null
+        suppressClick.current = true
+        heldPointer.current = pointerId
+        context.start(id, { currentTarget: element, pointerId, clientY: y, isPrimary: true, preventDefault() {} }, label, true)
+      }, 350) }
+    }}
+    onPointerMoveCapture={(event) => {
+      const hold = pending.current
+      if (hold && hold.pointerId === event.pointerId && Math.hypot(event.clientX - hold.x, event.clientY - hold.y) > 8) clearHold()
+    }}
+    onPointerUpCapture={(event) => {
+      if (pending.current?.pointerId === event.pointerId) clearHold()
+      if (heldPointer.current === event.pointerId) releaseClick.current = setTimeout(() => { suppressClick.current = false; heldPointer.current = null }, 0)
+    }}
+    onPointerCancel={(event) => { if (pending.current?.pointerId === event.pointerId) clearHold(); if (heldPointer.current === event.pointerId) { suppressClick.current = false; heldPointer.current = null } }}
+    onLostPointerCapture={(event) => { if (drag?.id === id && drag.held && drag.pointerId === event.pointerId) context.cancel() }}
+    onContextMenu={(event) => { if (holdToDrag && !isControl(event.target)) event.preventDefault() }}
+    onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false } }}>{children}</div>
 }
 
 export function WorkoutDragHandle({ id, label, children }: { id: string; label: string; children?: ReactNode }) {
