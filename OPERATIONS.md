@@ -1868,6 +1868,16 @@ and choose target=trainer-schedule with mode=pilot and
 `SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
 The trainer workflow rejects client targets. No operation has been dispatched.
 
+## Legacy database/parser deployments — manual-only, 16.10.2026
+
+`.github/workflows/deploy-database.yml` and
+`.github/workflows/deploy-yandex-workout-parser.yml` have only
+`workflow_dispatch`: merging changes to migrations, parser sources or API
+package files no longer deploys these legacy targets. A manual run still
+executes the existing deployment and requires a separate rollback decision.
+Supabase credentials, SQL history and remote resources remain available;
+Cloud.ru API/frontend release workflows are unchanged.
+
 ## Удаление legacy password recovery — 14.10.2026
 
 `POST /v1/auth/yandex/recover` удалён из API и возвращает 404, включая запросы
