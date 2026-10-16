@@ -67,7 +67,7 @@ function healthEndpoint(input: RequestInfo | URL): string | undefined {
     const value = typeof Request !== 'undefined' && input instanceof Request ? input.url : String(input)
     const url = new URL(value, globalThis.location?.origin ?? 'http://localhost')
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined
-    url.pathname = '/health'
+    url.pathname = url.pathname.startsWith('/api/') ? '/api/health' : '/health'
     url.search = ''
     url.hash = ''
     return url.toString()
