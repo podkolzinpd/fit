@@ -2,6 +2,7 @@ import type { PreviousExerciseResult } from '../../data/repositories/workouts.re
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
+import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
@@ -2600,6 +2601,7 @@ export function LiveWorkoutPage() {
   const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
   const { keyboardOpen } = useAppViewport()
+  useLiveInputVisibility(directLiveInput)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const clientMode = actor?.role === 'client'
@@ -2643,7 +2645,7 @@ export function LiveWorkoutPage() {
   }, [])
   useClientRealtime(query.data?.clientId)
   useEffect(() => {
-    if (!keyboardOpen) return
+    if (!keyboardOpen || directLiveInput) return
     const target = document.activeElement
     if (!(target instanceof HTMLElement) || !target.matches('.live-set-input, .live-set-rpe')) return
 
@@ -3645,7 +3647,10 @@ export function LiveWorkoutPage() {
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
-      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) keepLiveSetFieldVisible(target)
+      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) {
+        if (directLiveInput) keepLiveInputVisible(target)
+        else keepLiveSetFieldVisible(target)
+      }
     }} onInput={(event) => {
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)

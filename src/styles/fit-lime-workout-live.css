@@ -10,6 +10,10 @@
   font-weight: 500;
   letter-spacing: -.04em;
 }
+/* The inner list owns its position. Native anchoring otherwise adds a second
+   scroll when WebKit restores the height after keyboard dismissal. */
+.phone-frame.fit-client-lime.live-identity .content,
+.phone-frame.fit-lime-shell.live-identity .content { overflow-anchor: none }
 .fit-lime-shell.live-identity .live-session-progress-copy,
 .fit-lime-shell.live-identity .live-previous-result,
 .fit-lime-shell.live-identity .workout-set-table-head,
