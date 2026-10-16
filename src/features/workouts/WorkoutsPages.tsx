@@ -2,6 +2,7 @@ import type { PreviousExerciseResult } from '../../data/repositories/workouts.re
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
 import { CoachPlanTimeField } from './CoachPlanTimeField'
+import { FitLogo } from '../../shared/FitLogo'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
@@ -3931,7 +3932,7 @@ export function LiveWorkoutPage() {
               return swipeLive(exercise, <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
                 <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise)} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
                 <div className="live-upcoming-row">{!coachReference && <p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>План: {firstPlan}</span>}</p>}
-                  <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={`${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
+                  <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={coachReference ? `Показать подходы: ${exercise.name}` : `${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{coachReference ? 'Показать подходы' : completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
                 </div>
               </WorkoutExercise>)
             }
@@ -4023,6 +4024,7 @@ export function LiveWorkoutPage() {
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
+      {coachReference && <FitLogo className="coach-live-footer-brand" />}
       {error && <p className="error">{error.message}</p>}
       {coachReference && removeSet.isError && removeSet.variables && <>
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}
