@@ -5,6 +5,74 @@ import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGest
 // Behavior-only acceptance. Visual/mixed state matrices live in the visual spec.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+// Client and trainer have distinct confirmation markup and completion behavior.
+// One flow per role; theme/size are not multiplied into this behavior check.
+for (const role of ['client', 'trainer'] as const) test(`Lime Live direct input keeps confirmed facts editable ${role}`, { tag: ['@lime-critical'] }, async ({ page }) => {
+  const source = restTimerWorkout()
+  source.exercises[0]!.restBetweenSetsSec = 90
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, clientLime: role === 'client', workouts: [source] })
+  const drafts: Array<{ weightKg?: number; reps?: number }> = []
+  let confirmations = 0
+  page.on('request', (request) => {
+    if (/\/workout-sets\/[^/]+\/draft$/.test(request.url())) drafts.push((request.postDataJSON() as { draft: typeof drafts[number] }).draft)
+    if (/\/workout-sets\/[^/]+\/confirm$/.test(request.url())) confirmations += 1
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const first = page.locator('form[data-live-set-id]').first()
+  const second = page.locator('form[data-live-set-id]').nth(1)
+  const weight = first.getByLabel('Фактический вес', { exact: true })
+  const reps = first.getByLabel('Фактические повторы', { exact: true })
+  await weight.click()
+  await expect.poll(() => weight.evaluate((field: HTMLInputElement) => [field.selectionStart, field.selectionEnd])).toEqual([0, 2])
+  await page.keyboard.type('22,5')
+  await page.keyboard.press('Enter')
+  await expect(reps).toBeFocused()
+  await page.keyboard.type('8')
+  await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(first.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(second.getByLabel('Фактический вес', { exact: true })).toBeFocused()
+  await expect(weight).toBeEnabled()
+  await expect(weight).toHaveValue('22,5')
+  const deadline = await page.evaluate(() => sessionStorage.getItem('fit:live-rest-until:10000000-0000-4000-8000-000000000003'))
+  expect(deadline).not.toBeNull()
+  const savedEdit = page.waitForResponse((response) => /\/workout-sets\/[^/]+\/draft$/.test(response.url()) && response.ok()
+    && (response.request().postDataJSON() as { draft: { reps?: number } }).draft.reps === 9)
+  await weight.click()
+  await page.keyboard.type('25')
+  await page.keyboard.press('Enter')
+  await expect(reps).toBeFocused()
+  await page.keyboard.type('9')
+  await page.keyboard.press('Enter')
+  await expect(second.getByLabel('Фактический вес', { exact: true })).toBeFocused()
+  await expect.poll(() => drafts.some((draft) => draft.weightKg === 25 && draft.reps === 9)).toBe(true)
+  await savedEdit
+  await expect(first).toHaveClass(/confirmed/)
+  await expect(first.getByRole('button', { name: 'Редактировать подход' })).toHaveCount(0)
+  expect(await page.evaluate(() => sessionStorage.getItem('fit:live-rest-until:10000000-0000-4000-8000-000000000003'))).toBe(deadline)
+  expect(confirmations).toBe(1)
+  await page.reload()
+  await expect(weight).toHaveValue('25')
+  await expect(reps).toHaveValue('9')
+  await expect(first).toHaveClass(/confirmed/)
+  let failedSave = false
+  await page.route(`**/workout-sets/${source.exercises[0]!.sets[0]!.id}/draft`, async (route) => {
+    if (!failedSave) { failedSave = true; await route.fulfill({ status: 503, json: { error: 'service_unavailable' } }) }
+    else await route.fallback()
+  })
+  await weight.fill('30')
+  await weight.blur()
+  await expect(page.locator('.live-sync-state[role="alert"]')).toBeVisible()
+  await expect(weight).toHaveValue('30')
+  await expect(first).toHaveClass(/confirmed/)
+  await page.locator('.live-sync-state').getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.locator('.live-sync-state')).toHaveCount(0)
+  expect(confirmations).toBe(1)
+  expect(await page.evaluate(() => sessionStorage.getItem('fit:live-rest-until:10000000-0000-4000-8000-000000000003'))).toBe(deadline)
+  await page.reload()
+  await expect(weight).toHaveValue('30')
+  await expect(first).toHaveClass(/confirmed/)
+})
+
 // One 390px interaction case per engine: trusted touch capture in Chromium and
 // WebKit pointer bubbling from the nested SVG. Geometry stays in the existing matrix.
 test('Client chat tap stays separate from archive gestures', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page, browserName }) => {
@@ -217,7 +285,8 @@ test('Figma workout Coach reference actions completion retains cardio warning', 
   await expect(page.locator('.finish-confirm')).toContainText('нет фактического времени')
   await page.getByRole('button', { name: 'Внести время', exact: true }).click()
   await expect(page.locator('.finish-confirm')).toHaveCount(0)
-  await expect(page.locator('.live-set.editing')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Фактическое время:/ })).toBeEnabled()
+  await expect(page.getByRole('button', { name: /^Фактическое время:/ })).toBeFocused()
   expect(finishes).toBe(0)
   await page.reload()
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
