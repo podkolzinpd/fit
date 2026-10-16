@@ -36,10 +36,10 @@
 
 | Этап | Статус | Проверка |
 | --- | --- | --- |
-| Правило перед каждой доработкой | Локальный коммит d567e7db; публикация ожидается в PR 1 | AGENTS.md и FIT_WORKFLOW.md; git diff --check |
-| PR 1 | В работе | До кода WebKit2/2: выполненный input disabled; baseline before-client/before-trainer. После: WebKit23/23, Chromium27/27; обе темы клиента390/430 и текущий пилот тренера; полный npm run check passed (unit2705/2705), PR1666: первый CI выявил Linux WebKit caret и устаревший editing-class assert; исправлено, локальный полный check повторно passed; CI38914737210 и Android38914737114 passed; прежний CI зелёный; main обновился, новый CI обязателен |
-| PR 2 | PR1667 head55b617f8, выпуск после PR1 | Baseline fails before/passes after; WebKit/Chromium8/8, fullcheck2707frontend/1425API passed; CI anchoring defect reproduced/fixed in Linux, новый CI ожидается |
-| PR 3 | Локальная реализация a2be2a37 + PR2 head55b617f8 | Baseline WebKit2/2, drag10passed/2WebKit touch skipped, client обе темы390/4304/4; итоговый полный check2707frontend/1425API passed; Mac browser18passed/2CDP skips, Linux WebKit5/5; CI/merge ещё гейты |
+| Правило перед каждой доработкой | Закреплено локальным коммитом d567e7db и опубликовано PR1666/main54c23a56 | AGENTS.md и FIT_WORKFLOW.md; фактическая сверка исходников, компонентов и релевантных PR до реализации |
+| PR 1 | PR1666 слит; main54c23a56 опубликован | exact-head CI38932015805/Android38932015657, mainCI38951703937, Cloud.ru38953316688 success; публичные207/207 файлов совпали со сборкой; WebKit на опубликованных файлах с синтетическим API: ввод/Next/подтверждение/правка с галочкой passed; iOS production sync/build/install/launch,207 файлов bundle совпали; физический iPhone не проверен |
+| PR 2 | PR1667 слит; main008e673b, публикация ожидает current-main CI | fullcheck2707frontend/1425API passed, browser4/4; exact-head CI38952008327 и Android38952008222 success; mainCI38955673794 запущен |
+| PR 3 | PR1669 обновлён от main008e673b; новый CI обязателен | Merge squash-истории не изменил src/e2e/scripts относительно проверенного f7816f32; fullcheck2707frontend/1425API passed, Mac18passed/2CDP skips, Linux WebKit5/5, client обе темы390/4304/4; публикация после PR2 |
 
 ## Исходная сверка кода PR 1
 
