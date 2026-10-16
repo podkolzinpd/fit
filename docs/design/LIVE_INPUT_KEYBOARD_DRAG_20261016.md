@@ -36,8 +36,8 @@ iPhone. Недоступная проверка не считается выпо
 | --- | --- | --- |
 | Правило перед каждой доработкой | Локальный коммит d567e7db; публикация ожидается в PR 1 | AGENTS.md и FIT_WORKFLOW.md; git diff --check |
 | PR 1 | В работе | До кода WebKit2/2: выполненный input disabled; baseline before-client/before-trainer. После: WebKit23/23, Chromium27/27; обе темы клиента390/430 и текущий пилот тренера; полный npm run check passed (unit2705/2705), PR1666: первый CI выявил Linux WebKit caret и устаревший editing-class assert; исправлено, локальный полный check повторно passed; CI38914737210 и Android38914737114 passed; merge/публикация ожидают решения по физическому iPhone |
-| PR 2 | Локальный кандидат, база PR1666/1dd797b0; выпуск после PR1 | Исходный дефект воспроизведён до кода; новая регрессия падает на старом коде, WebKit/Chromium8/8 passed; полный npm run check passed; CI/merge ещё не выполнены |
-| PR 3 | Не начат | Повторная проверка после PR 2 |
+| PR 2 | PR1667, локальный commit b481af9b, база PR1666/1dd797b0; выпуск после PR1 | Исходный дефект воспроизведён до кода; новая регрессия падает на старом коде, WebKit/Chromium8/8 passed; полный npm run check passed; CI/merge ещё не выполнены |
+| PR 3 | Локальная реализация, база PR1667/b481af9b | Baseline WebKit2/2, drag10passed/2WebKit touch skipped, client обе темы390/4304/4; полный npm run check passed; CI/merge ещё гейты |
 
 ## Исходная сверка кода PR 1
 
@@ -106,3 +106,36 @@ critical+finance97; защитный SHA не меняется, полный CI 
 PR2: [исходная обрезанная строка](live-input-20261016/keyboard-before-client.png),
 [минимальная прокрутка после правки](live-input-20261016/keyboard-after-client.png).
 На снимках эмуляция высоты viewport400px, не физическая клавиатура iOS.
+
+## PR 3: повторная сверка и переиспользование
+
+Сверка16.10: origin/main81bb2e57 (fetch актуален), PR1666 — полный CI/Android
+успешны, PR1667 — в CI. Локальный UI — кандидат b481af9b на5216, синтетические
+Yandex fixtures: clientLime=true, coach pilot=true только у тестового тренера.
+Это не проверка уже опубликованного production. До каждого merge нужна
+повторная сверка с фактическим main и очередью после предыдущего выпуска.
+
+| Уже работает | Переиспользуем | Действительно меняем | Не проверено |
+| --- | --- | --- | --- |
+| В тренерском Live ручки/маркер/отмена: исходный WebKit case passed | WorkoutGestureList, WorkoutDragBlock, WorkoutDragHandle из PR1532 | Подключаем эти же компоненты при clientLime, без расширения coach pilot | Физический iPhone |
+| У клиента исходно0 ручек, у тренера3 — воспроизведено на маршруте | Клиентские WorkoutExercise/Compact/Header и Lime tokens | Ручки в текущих, будущих и завершённых карточках; sibling вне compact button | Production под реальным аккаунтом |
+| moveLiveBlock сериализует сохранение и повторяет operationId/version | Существующая mutation/repository/API/SQL140 | Кнопка retry доступна клиенту; групповой blockId не дробится | Сбой конкретного пользовательского устройства |
+| SQL authorize_live_workout допускает владельца-клиента; существующий actor test содержит client role | Прежние права и атомарный reorder | Нет изменений backend, RLS, миграций, rollout, фактов или отдыха | Физический touch WebKit (CDP там отсутствует) |
+
+Клиент не получает свайпы удаления/замены из тренерского пилота. Drag CSS
+расширяет только готовые жесты на client Lime Live. На390px меню и ручка стоят
+вертикально, чтобы не сжимать длинное название. Завершённая карточка и ручка —
+соседние кнопки, вложенных button нет. Карточка сохраняет прежнюю семантику.
+
+Добавлены3 неперемноженных случая: client grouped retry/facts/reload/cancel,
+client pointer autoscroll/foreign pointer/draft и client trusted-touch (Chromium).
+Прежние629 сохраняются, union632/engine, scoped100; защищённый digest не меняется.
+Тренерские исходные gesture cases продолжают выполняться. Targeted10passed,
+2touch WebKit skipped (ограничение CDP); отдельный WebKit UI4/4 на390/430 в обеих
+темах, без horizontal overflow или вложенных кнопок. Физический телефон не
+заменён ни этими проверками, ни будущим simulator.
+
+Снимки PR3: [исходный клиент](live-input-20261016/drag-before-client.png), [dark390](live-input-20261016/drag-after-dark-390.png), [light390](live-input-20261016/drag-after-light-390.png).
+
+PR3 fullcheck: исходный запуск в sandbox остановился на listen EPERM в неизменённых локальных relay-тестах; повтор всех неизменённых проверок на host прошёл полностью.
+PR2: CI38916874888 выявил при закрытии клавиатуры Linux WebKit scroll147→297; исправление и повтор CI обязательны, PR2 не готов к merge.

@@ -427,18 +427,20 @@ for (const width of [375, 390, 430, 1440]) {
   })
 }
 
-test('Figma workout Coach reference touch drag autoscrolls and preserves draft', async ({ page, browserName }, info) => {
+for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Figma workout Coach reference touch drag autoscrolls and preserves draft' : 'Client Lime touch drag autoscrolls and preserves draft', { tag: role === 'client' ? ['@lime-critical'] : [] }, async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'Trusted touch dispatch is exposed by Chromium CDP, not mobile WebKit.')
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
   first.ref = 'vital-gym-pro-r007-0017'
   first.name = 'Жим гантелей над головой'
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-technique')).toHaveCount(0)
-  await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
+  if (role === 'trainer') {
+    await expect(page.locator('.live-technique')).toHaveCount(0)
+    await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
+  }
   await expect(page.locator('.live-technique')).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
@@ -542,10 +544,10 @@ test('Figma workout Coach reference rest and fields stay usable in the reduced k
   await expect(field).toHaveValue('27.5')
 })
 
-test('Figma workout Coach reference pointer drag autoscrolls and preserves draft', async ({ page }) => {
+for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Figma workout Coach reference pointer drag autoscrolls and preserves draft' : 'Client Lime pointer drag autoscrolls and preserves draft', { tag: role === 'client' ? ['@lime-critical'] : [] }, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)
