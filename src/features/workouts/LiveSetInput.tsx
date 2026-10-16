@@ -40,16 +40,23 @@ export function LiveSetInput({ name, label, placeholder, defaultValue, step, dis
         const input = event.currentTarget
         selectAfterPointer.current = true
         input.select()
-        requestAnimationFrame(() => {
-          if (selectAfterPointer.current && document.activeElement === input) input.select()
-          selectAfterPointer.current = false
-        })
       }
       else if (selectZero) prepareZeroReplacement(event.currentTarget)
     }}
+    onPointerDown={(event) => {
+      if (!directInput || document.activeElement === event.currentTarget || event.button !== 0 || event.isPrimary === false) return
+      // Focus inside the trusted gesture, then suppress the native caret
+      // placement which otherwise overwrites select() in Linux/iOS WebKit.
+      event.preventDefault()
+      event.currentTarget.focus({ preventScroll: true })
+      event.currentTarget.select()
+    }}
+    onMouseUp={(event) => { if (directInput && selectAfterPointer.current) event.preventDefault() }}
     onClick={(event) => {
       if (!directInput || !selectAfterPointer.current) return
+      event.preventDefault()
       event.currentTarget.select()
+      selectAfterPointer.current = false
     }}
     onBeforeInput={(event) => {
       if (directInput && selectAfterPointer.current) event.currentTarget.select()
