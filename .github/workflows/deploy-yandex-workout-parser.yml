@@ -1,17 +1,6 @@
 name: Deploy production Yandex workout parser
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/deploy-yandex-workout-parser.yml'
-      - 'scripts/verify-yandex-function-release.mjs'
-      - 'scripts/verify-yandex-function-release.test.mjs'
-      - 'services/api/package.json'
-      - 'services/api/package-lock.json'
-      - 'services/api/src/legacy-workout-parser/**'
-      - 'services/api/src/ai-studio-usage-metrics.ts'
-      - 'services/api/src/yandex-workout-parser-function.ts'
   workflow_dispatch:
 
 permissions:
