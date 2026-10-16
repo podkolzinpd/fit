@@ -273,6 +273,43 @@ test('Figma workout Coach reference grouped drag retry has one unchanged receipt
   await expect(page.locator(`[data-workout-block="${first.blockId}"] .live-exercise-head`).filter({ hasText: 'Жим' }).first()).toBeVisible()
 })
 
+test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: ['@lime-critical'] }, async ({ page }) => {
+  const source = coachGestureWorkout(true), first = source.exercises[0]!
+  first.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
+  first.sets[0]!.fact = { weightKg: 25, reps: 9 }
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [source] })
+  const commands: unknown[] = []
+  await page.route('**/blocks/*/move', async (route) => {
+    commands.push(route.request().postDataJSON() as unknown)
+    if (commands.length === 1) await route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    else await route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-workout-reference')).toHaveCount(0)
+  await expect(page.locator('[data-workout-swipe]')).toHaveCount(0)
+  const field = page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`).getByLabel('Фактический вес', { exact: true })
+  await field.fill('27.5'); await field.blur()
+  const handle = page.getByRole('button', { name: 'Переместить: Приседания, Жим' })
+  await expect(handle).toBeEnabled()
+  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Escape')
+  expect(commands).toHaveLength(0)
+  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: 'Повторить сохранение порядка' })).toBeVisible()
+  await expect(page.locator('[data-workout-block]').first()).toHaveAttribute('data-workout-block', first.blockId)
+  await expect(field).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Повторить сохранение порядка' }).click()
+  await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
+  expect(commands).toHaveLength(2); expect(commands[1]).toEqual(commands[0])
+  const group = page.locator(`[data-workout-block="${first.blockId}"]`)
+  await expect(group.getByRole('heading', { name: 'Приседания', exact: true })).toHaveCount(1)
+  await expect(group.getByRole('heading', { name: 'Жим', exact: true })).toHaveCount(1)
+  await expect(page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+  await page.reload()
+  await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
+  await expect(field).toHaveValue('27.5')
+  await expect(page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+})
+
 test('Figma workout Coach reference actions completion retains cardio warning', async ({ page }) => {
   const source = restTimerWorkout(), exercise = source.exercises[0]!
   exercise.inputKind = 'distance'; exercise.ref = 'running'; exercise.muscleGroup = 'cardio'; exercise.name = 'Бег'

@@ -427,18 +427,20 @@ for (const width of [375, 390, 430, 1440]) {
   })
 }
 
-test('Figma workout Coach reference touch drag autoscrolls and preserves draft', async ({ page, browserName }, info) => {
+for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Figma workout Coach reference touch drag autoscrolls and preserves draft' : 'Client Lime touch drag autoscrolls and preserves draft', { tag: role === 'client' ? ['@lime-critical'] : [] }, async ({ page, browserName }, info) => {
   test.skip(browserName !== 'chromium', 'Trusted touch dispatch is exposed by Chromium CDP, not mobile WebKit.')
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
   first.ref = 'vital-gym-pro-r007-0017'
   first.name = 'Жим гантелей над головой'
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-technique')).toHaveCount(0)
-  await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
+  if (role === 'trainer') {
+    await expect(page.locator('.live-technique')).toHaveCount(0)
+    await page.getByRole('button', { name: `Показать анимацию: ${first.name}`, exact: true }).click()
+  }
   await expect(page.locator('.live-technique')).toBeVisible()
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
@@ -488,8 +490,8 @@ test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['
   await page.clock.install()
   await field.focus()
   const content = page.locator('.content')
-  const initial = await content.evaluate(element => element.scrollTop)
   for (const height of [650, 550, 400]) {
+    const previous = await content.evaluate(element => element.scrollTop)
     await page.evaluate(height => { document.documentElement.dataset.testVisibleHeight = String(height); window.visualViewport?.dispatchEvent(new Event('resize')) }, height)
     // The final resize is later than the old one-shot 180ms correction.
     await page.clock.runFor(200)
@@ -497,7 +499,17 @@ test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['
       const bounds = element.getBoundingClientRect(), rest = document.querySelector('.live-pinned')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
       return bounds.top >= rest.bottom && bounds.bottom <= content.bottom - 15
     })).toBe(true)
-    if (height > 400) expect(await content.evaluate(element => element.scrollTop)).toBe(initial)
+    const position = await content.evaluate(element => element.scrollTop)
+    // Header height changes when client drag actions are present. Verify the
+    // minimum required movement against the real row, not a prior layout's zero.
+    if (position > previous) expect(await field.evaluate(element => {
+      const row = element.closest('.live-set-grid')!.getBoundingClientRect()
+      return document.querySelector('.content')!.getBoundingClientRect().bottom - row.bottom
+    })).toBeCloseTo(16, 0)
+    if (position < previous) expect(await field.evaluate(element => {
+      const row = element.closest('.live-set-grid')!.getBoundingClientRect()
+      return row.top - document.querySelector('.live-pinned')!.getBoundingClientRect().bottom
+    })).toBeCloseTo(16, 0)
   }
   const scroll = await content.evaluate(element => element.scrollTop)
   await field.fill('27.5')
@@ -542,10 +554,10 @@ test('Figma workout Coach reference rest and fields stay usable in the reduced k
   await expect(field).toHaveValue('27.5')
 })
 
-test('Figma workout Coach reference pointer drag autoscrolls and preserves draft', async ({ page }) => {
+for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Figma workout Coach reference pointer drag autoscrolls and preserves draft' : 'Client Lime pointer drag autoscrolls and preserves draft', { tag: role === 'client' ? ['@lime-critical'] : [] }, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
-  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', (request) => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
   await page.goto(`/workouts/${workoutId}/live`)

@@ -341,3 +341,8 @@
 
 .phone-frame.fit-client-lime input.workout-rpe-slider { height:44px; min-height:44px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .phone-frame.fit-client-lime form.workout-feedback .workout-cta[data-variant='primary']:not(:disabled) { border-color:var(--lime-text); background:var(--lime-text); color:var(--lime-bg); }
+
+/* Reuse the pilot drag handle without narrowing the client exercise title. */
+.phone-frame.fit-client-lime.live-identity .live-exercise-head .exercise-head-actions:has(.workout-drag-handle) { flex-direction: column; gap: 0; align-self: flex-start; }
+.phone-frame.fit-client-lime.live-identity .live-completed-gesture-head { padding: 14px 16px; border: 1px solid var(--lime-divider); border-radius: var(--lime-radius-card); background: var(--lime-surface); }
+.phone-frame.fit-client-lime.live-identity .live-completed-gesture-head .workout-exercise-compact { margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }

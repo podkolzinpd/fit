@@ -36,10 +36,10 @@
 
 | Этап | Статус | Проверка |
 | --- | --- | --- |
-| Правило перед каждой доработкой | Локальный коммит d567e7db; публикация ожидается в PR 1 | AGENTS.md и FIT_WORKFLOW.md; git diff --check |
-| PR 1 | В работе | До кода WebKit2/2: выполненный input disabled; baseline before-client/before-trainer. После: WebKit23/23, Chromium27/27; обе темы клиента390/430 и текущий пилот тренера; полный npm run check passed (unit2705/2705), PR1666: первый CI выявил Linux WebKit caret и устаревший editing-class assert; исправлено, локальный полный check повторно passed; CI38914737210 и Android38914737114 passed; прежний CI зелёный; main обновился, новый CI обязателен |
-| PR 2 | Локальный кандидат, база PR1666/1dd797b0; выпуск после PR1 | Исходный дефект воспроизведён до кода; новая регрессия падает на старом коде, WebKit/Chromium8/8 passed; полный check passed до CI; CI38916874888 выявил scroll anchoring Linux WebKit; узкая CSS-правка прошла точный Linux regression и WebKit/Chromium8/8, полный повтор check passed; новый CI ожидается |
-| PR 3 | Не начат | Повторная проверка после PR 2 |
+| Правило перед каждой доработкой | Закреплено локальным коммитом d567e7db и опубликовано PR1666/main54c23a56 | AGENTS.md и FIT_WORKFLOW.md; фактическая сверка исходников, компонентов и релевантных PR до реализации |
+| PR 1 | PR1666 слит; main54c23a56 опубликован | exact-head CI38932015805/Android38932015657, mainCI38951703937, Cloud.ru38953316688 success; публичные207/207 файлов совпали со сборкой; WebKit на опубликованных файлах с синтетическим API: ввод/Next/подтверждение/правка с галочкой passed; iOS production sync/build/install/launch,207 файлов bundle совпали; физический iPhone не проверен |
+| PR 2 | PR1667 слит; main008e673b, публикация ожидает current-main CI | fullcheck2707frontend/1425API passed, browser4/4; exact-head CI38952008327 и Android38952008222 success; mainCI38955673794 запущен |
+| PR 3 | PR1669 обновлён от main008e673b; новый CI обязателен | Merge squash-истории не изменил src/e2e/scripts относительно проверенного f7816f32; fullcheck2707frontend/1425API passed, Mac18passed/2CDP skips, Linux WebKit5/5, client обе темы390/4304/4; публикация после PR2 |
 
 ## Исходная сверка кода PR 1
 
@@ -109,6 +109,37 @@ PR2: [исходная обрезанная строка](live-input-20261016/ke
 [минимальная прокрутка после правки](live-input-20261016/keyboard-after-client.png).
 На снимках эмуляция высоты viewport400px, не физическая клавиатура iOS.
 
+## PR 3: повторная сверка и переиспользование
+
+Сверка16.10: origin/main81bb2e57 (fetch актуален), PR1666 — полный CI/Android
+успешны, PR1667 — в CI. Локальный UI — кандидат b481af9b на5216, синтетические
+Yandex fixtures: clientLime=true, coach pilot=true только у тестового тренера.
+Это не проверка уже опубликованного production. До каждого merge нужна
+повторная сверка с фактическим main и очередью после предыдущего выпуска.
+
+| Уже работает | Переиспользуем | Действительно меняем | Не проверено |
+| --- | --- | --- | --- |
+| В тренерском Live ручки/маркер/отмена: исходный WebKit case passed | WorkoutGestureList, WorkoutDragBlock, WorkoutDragHandle из PR1532 | Подключаем эти же компоненты при clientLime, без расширения coach pilot | Физический iPhone |
+| У клиента исходно0 ручек, у тренера3 — воспроизведено на маршруте | Клиентские WorkoutExercise/Compact/Header и Lime tokens | Ручки в текущих, будущих и завершённых карточках; sibling вне compact button | Production под реальным аккаунтом |
+| moveLiveBlock сериализует сохранение и повторяет operationId/version | Существующая mutation/repository/API/SQL140 | Кнопка retry доступна клиенту; групповой blockId не дробится | Сбой конкретного пользовательского устройства |
+| SQL authorize_live_workout допускает владельца-клиента; существующий actor test содержит client role | Прежние права и атомарный reorder | Нет изменений backend, RLS, миграций, rollout, фактов или отдыха | Физический touch WebKit (CDP там отсутствует) |
+
+Клиент не получает свайпы удаления/замены из тренерского пилота. Drag CSS
+расширяет только готовые жесты на client Lime Live. На390px меню и ручка стоят
+вертикально, чтобы не сжимать длинное название. Завершённая карточка и ручка —
+соседние кнопки, вложенных button нет. Карточка сохраняет прежнюю семантику.
+
+Добавлены3 неперемноженных случая: client grouped retry/facts/reload/cancel,
+client pointer autoscroll/foreign pointer/draft и client trusted-touch (Chromium).
+Прежние629 сохраняются, union632/engine, scoped100; защищённый digest не меняется.
+Тренерские исходные gesture cases продолжают выполняться. Targeted10passed,
+2touch WebKit skipped (ограничение CDP); отдельный WebKit UI4/4 на390/430 в обеих
+темах, без horizontal overflow или вложенных кнопок. Физический телефон не
+заменён ни этими проверками, ни будущим simulator.
+
+Снимки PR3: [исходный клиент](live-input-20261016/drag-before-client.png), [dark390](live-input-20261016/drag-after-dark-390.png), [light390](live-input-20261016/drag-after-light-390.png).
+
+PR3 fullcheck: исходный запуск в sandbox остановился на listen EPERM в неизменённых локальных relay-тестах; повтор всех неизменённых проверок на host прошёл полностью.
 PR2 Linux WebKit: CI38916874888 воспроизвёл скачок при закрытии147→297px.
 Тот же дефект воспроизведён локально в изолированном Podman/WebKit1.61.1
 (исходный exact regression падает). Browser scroll anchoring после восстановления
@@ -118,6 +149,26 @@ Lime Live устраняет скачок; диагностические эта
 позиции при закрытии сохранена. Полный повтор check/CI обязателен.
 
 PR2 после anchoring: полный npm run check passed (2707 frontend/1425 API,160 существующих optional DB skipped); targeted8/8 и исходный Linux regression passed.
+
+Совместная Linux-проверка PR3: добавление ручки увеличивает высоту заголовка,
+поэтому прежнее ожидание нулевого scroll при550px больше неверно: строка уже
+обрезана и обязана сдвинуться. Geometry case теперь проверяет ровно16px gutter
+после любого положительного/отрицательного сдвига по реальной строке. Проверки
+видимости, фокуса, значения, сохранения позиции при autosave/закрытии и root0
+сохранены. Это адаптация к изменённой геометрии, а не допуск лишнего scroll.
+
+Финальный кандидат PR3: npm run check exit0 на стабильном наборе кода и тестов;
+Mac WebKit/Chromium18passed/2WebKit CDP skips; Linux WebKit5/5 совместных сценариев.
+Предыдущий fullcheck пересёкся с редактированием строки E2E и правильно отверг
+несовпадающие line-based inventory; окончательный повтор прошёл без ослабления
+policy. Новых правок UI после проверок нет.
+
+Очередь перед PR3 повторно проверена: main81bb2e57 не изменён; активны наши
+PR1666→1667 и более ранний относительно PR3 параллельный1668 (legacy workflow,
+UI не затрагивает). Третий выпуск ждёт их merge по действующему порядку.
+Ранее агент ошибочно удерживал публикацию по физическому iPhone; ниже записано
+уточнение владельца, отменяющее этот гейт. Simulator не считается физической проверкой;
+финальный fresh-main native build/install/launch требуется после merge.
 
 ## Уточнение владельца и повторный аудит16.10
 
