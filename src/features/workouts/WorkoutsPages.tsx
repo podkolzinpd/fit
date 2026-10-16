@@ -2,6 +2,7 @@ import type { PreviousExerciseResult } from '../../data/repositories/workouts.re
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
+import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
@@ -2599,7 +2600,9 @@ export function LiveWorkoutPage() {
   const directLiveInput = clientLime || isFitLimeEnabled(actor)
   const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
+  const liveDrag = coachReference || clientLime
   const { keyboardOpen } = useAppViewport()
+  useLiveInputVisibility(directLiveInput)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
   const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
   const clientMode = actor?.role === 'client'
@@ -2643,7 +2646,7 @@ export function LiveWorkoutPage() {
   }, [])
   useClientRealtime(query.data?.clientId)
   useEffect(() => {
-    if (!keyboardOpen) return
+    if (!keyboardOpen || directLiveInput) return
     const target = document.activeElement
     if (!(target instanceof HTMLElement) || !target.matches('.live-set-input, .live-set-rpe')) return
 
@@ -3586,7 +3589,7 @@ export function LiveWorkoutPage() {
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
     return <OverflowMenu items={[
-      ...(canReorder && !coachReference && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+      ...(canReorder && !liveDrag && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...groupingItems,
@@ -3646,7 +3649,10 @@ export function LiveWorkoutPage() {
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
-      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) keepLiveSetFieldVisible(target)
+      if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) {
+        if (directLiveInput) keepLiveInputVisible(target)
+        else keepLiveSetFieldVisible(target)
+      }
     }} onInput={(event) => {
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)
@@ -3868,7 +3874,7 @@ export function LiveWorkoutPage() {
           </div>}
         </div>{coachReference && liveHeader}</>)
       })()}
-      {!coachReference && reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
+      {!liveDrag && reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
         const cards = liveBlocks.map((block, blockIndex) => {
         const renderBlock = () => {
@@ -3877,10 +3883,10 @@ export function LiveWorkoutPage() {
         const canGroup = dataSource === 'yandex' && !reordering && block.blockPreset === 'set' && Boolean(nextBlock && nextBlock.exercises.length === 1 && nextBlock.blockType === 'single' && nextBlock.blockPreset === 'set'
           && (coachReference || !blockedByFacts))
         const groupingItems = groupActions(block.blockId, canGroup, block.exercises.length > 1, coachReference && blockedByFacts)
-        // ↑/↓ показываем только когда блоков больше одного; двигать можно любые
+        // Ручка переноса (legacy: ↑/↓) доступна при нескольких блоках; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1
-        const reorder = canReorder ? coachReference ? <WorkoutDragHandle id={block.blockId} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{block.exercises.length === 1 ? <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((exercise) => exercise.id === block.exercises[0]!.id) + 1}</span> : undefined}</WorkoutDragHandle> : liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
+        const reorder = canReorder ? liveDrag ? <WorkoutDragHandle id={block.blockId} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{coachReference && block.exercises.length === 1 ? <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((exercise) => exercise.id === block.exercises[0]!.id) + 1}</span> : undefined}</WorkoutDragHandle> : liveReorder(block.blockId, blockIndex === 0, blockIndex === liveBlocks.length - 1) : null
         const referenceNumber = (exercise: WorkoutExerciseModel) => block.exercises.length === 1 && reorder ? reorder : <span className="coach-live-exercise-number">{query.data!.exercises.findIndex((item) => item.id === exercise.id) + 1}</span>
         const blockDone = block.exercises.every((exercise) => exercise.sets.every((set) => set.confirmedAt))
         const blockStatus = blockDone ? 'done' : block.exercises.some((exercise) => exercise.id === activeLiveExercise?.id) ? 'current' : 'upcoming'
@@ -3908,12 +3914,13 @@ export function LiveWorkoutPage() {
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
-              return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise, canReorder, removableSet, groupingItems)} />
-                <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
+              const completedCard = <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
                 leading={liveHeaderThumbnail(exercise)}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
-                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />)
+                onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
+              return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise, canReorder, removableSet, groupingItems)} />
+                <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : clientLime ? <div className="live-completed-gesture-head">{completedCard}{reorder}</div> : completedCard)
             }
             if (blockStatus === 'upcoming') {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
@@ -3959,7 +3966,7 @@ export function LiveWorkoutPage() {
               <span className="circuit-counter">{blockDone ? `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'} · завершено` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
             </>}
             {canManageLiveStructure && !reordering && (canReorder || groupingItems.length > 0 || (workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set')) && <OverflowMenu items={[
-              ...(canReorder && !coachReference ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
+              ...(canReorder && !liveDrag ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
               ...groupingItems,
               ...(workoutsRepository.supportsLiveSupersetSplit && block.blockPreset === 'set' ? [{
                 label: 'Разделить суперсет',
@@ -4008,9 +4015,9 @@ export function LiveWorkoutPage() {
         </div>
         }
         const content = renderBlock()
-        return coachReference ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
+        return liveDrag ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
       })
-        return coachReference ? <><Coachmark id="coach-live-number-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте упражнение за номер, суперсет — за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark><WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
+        return liveDrag ? <>{coachReference && <Coachmark id="coach-live-number-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте упражнение за номер, суперсет — за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark>}<WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
@@ -4020,7 +4027,7 @@ export function LiveWorkoutPage() {
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}
         <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending || Boolean(removalRetryReason)} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>
       </>}
-      {coachReference && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
+      {liveDrag && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
       {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.

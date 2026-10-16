@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 628-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 632-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,9 @@ test('real Playwright partitions preserve the 628-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 628) // Previous626 + client/trainer direct-input flows; no new visual matrix.
+    assert.equal(full.length, 632) // Previous629 + grouped retry, pointer and trusted-touch client drag.
+    assert.equal(full.filter(key => key.endsWith('Client Lime Live gradual keyboard keeps the edited row visible')).length, 1)
+    for (const title of ['Client Lime grouped drag preserves facts drafts and exact retry', 'Client Lime pointer drag autoscrolls and preserves draft', 'Client Lime touch drag autoscrolls and preserves draft']) assert.equal(full.filter(key => key.endsWith(title)).length, 1)
     for (const role of ['client', 'trainer']) assert.equal(full.filter(key => key.endsWith(`Lime Live direct input keeps confirmed facts editable ${role}`)).length, 1)
     assert.equal(full.filter((item) => item.includes('Client Lime empty workouts creation and equal controls ')).length, 4)
     // Original 16 finance + 9 template visual configurations remain; their
@@ -124,7 +126,7 @@ test('real Playwright partitions preserve the 628-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 96) // The two new role-specific flows are critical.
+    assert.equal(scoped.length, 100) // Three client drag checks are also critical.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
