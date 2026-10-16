@@ -208,7 +208,7 @@ function ConfirmDialog({ message, confirmLabel = 'Подтвердить', cance
   )
 }
 
-export interface OverflowMenuItem { label: string; onClick: () => void; danger?: boolean; disabled?: boolean }
+export interface OverflowMenuItem { label: string; onClick: () => void; danger?: boolean; disabled?: boolean; description?: string }
 // Меню «три точки» для редких действий, чтобы они не конкурировали с основными.
 // Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
 export function OverflowMenu({ items, label = 'Ещё действия', trigger }: { items: OverflowMenuItem[]; label?: string; trigger?: ReactNode }) {
@@ -275,8 +275,9 @@ export function OverflowMenu({ items, label = 'Ещё действия', trigger
     <button type="button" className={`overflow-trigger${trigger ? ' overflow-trigger-text' : ''}`} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{trigger ?? <MoreIcon />}</button>
     {open && createPortal(<div ref={menuRef} className="overflow-list" role="menu" style={position ?? { visibility: 'hidden' }}>
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
+        aria-label={item.description ? item.label : undefined} aria-description={item.description}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
-        onClick={() => { setOpen(false); item.onClick() }}>{item.label}</button>)}
+        onClick={() => { setOpen(false); item.onClick() }}>{item.label}{item.description && <small className="overflow-item-description">{item.description}</small>}</button>)}
     </div>, host)}
   </div>
 }

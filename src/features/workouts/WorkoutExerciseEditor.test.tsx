@@ -420,4 +420,23 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Создать суперсет со следующим' }))
     expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
   })
+  it('uses the same adjacent superset action in the reference plan and keeps rounds and split', async () => {
+    function ReferencePlan() {
+      const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
+        exercises[0]!, { ...exercises[0]!, ref: 'bench', name: 'Жим', position: 1 },
+      ])
+      return <WorkoutExerciseEditor reference exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+    }
+    const user = userEvent.setup()
+    render(<ReferencePlan />)
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в суперсет' }))
+    expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
+    expect(screen.getByLabelText('Кругов')).toHaveValue(2)
+    expect(screen.getByText('Настройки блока')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Разделить суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Разделить' }))
+    expect(screen.queryByLabelText('Тип блока')).not.toBeInTheDocument()
+  })
 })

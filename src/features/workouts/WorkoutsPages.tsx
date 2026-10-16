@@ -3572,14 +3572,15 @@ export function LiveWorkoutPage() {
   }
   // Меню упражнения в live (⋯). Если упражнение уже начато, сервер отделит
   // подтверждённый факт в самостоятельную запись, а заменит лишь остаток.
-  function groupActions(blockId: string, canGroup: boolean, alreadyGrouped: boolean) {
+  function groupActions(blockId: string, canGroup: boolean, alreadyGrouped: boolean, blockedByFacts = false) {
     if (!canGroup) return []
-    const disabled = rootMutationPending || save.isPending || confirm.isPending
+    const disabled = blockedByFacts || rootMutationPending || save.isPending || confirm.isPending
+    const description = blockedByFacts ? 'Есть выполненные подходы — объединение недоступно.' : undefined
     return alreadyGrouped
-      ? [{ label: 'Добавить следующее в суперсет', disabled,
+      ? [{ label: 'Добавить следующее в суперсет', disabled, description,
           onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) }]
       : [
-          { label: coachReference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled,
+          { label: coachReference ? 'Объединить со следующим в суперсет' : 'Создать суперсет со следующим', disabled, description,
             onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
         ]
   }
@@ -3878,9 +3879,10 @@ export function LiveWorkoutPage() {
         const cards = liveBlocks.map((block, blockIndex) => {
         const renderBlock = () => {
         const nextBlock = liveBlocks[blockIndex + 1]
+        const blockedByFacts = Boolean(nextBlock && [...block.exercises, ...nextBlock.exercises].some((exercise) => exercise.sets.some((set) => set.confirmedAt)))
         const canGroup = dataSource === 'yandex' && !reordering && block.blockPreset === 'set' && Boolean(nextBlock && nextBlock.exercises.length === 1 && nextBlock.blockType === 'single' && nextBlock.blockPreset === 'set'
-          && [...block.exercises, ...nextBlock.exercises].every((exercise) => exercise.sets.every((set) => !set.confirmedAt)))
-        const groupingItems = groupActions(block.blockId, canGroup, block.exercises.length > 1)
+          && (coachReference || !blockedByFacts))
+        const groupingItems = groupActions(block.blockId, canGroup, block.exercises.length > 1, coachReference && blockedByFacts)
         // Ручка переноса (legacy: ↑/↓) доступна при нескольких блоках; двигать можно любые
         // блоки (в т.ч. с завершёнными подходами), кроме упора в границу.
         const canReorder = liveBlocks.length > 1
@@ -3917,7 +3919,7 @@ export function LiveWorkoutPage() {
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
                 onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
               return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise)} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise, canReorder, removableSet, groupingItems)} />
                 <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : clientLime ? <div className="live-completed-gesture-head">{completedCard}{reorder}</div> : completedCard)
             }
             if (blockStatus === 'upcoming') {

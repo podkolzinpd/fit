@@ -316,6 +316,15 @@
 .coach-reference-form .compact-editor-exercise-fields { margin: 0 -16px; padding: 16px; border-color: #3b3b40 }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { height: 48px; min-height: 48px; border: 0; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
 .coach-reference-form .planned-set { gap: 2px; margin-bottom: 2px }
+.coach-workout-reference .overflow-item:has(.overflow-item-description) { display: grid; gap: 4px; max-width: min(320px, calc(100vw - 32px)); white-space: normal; opacity: 1; color: var(--lime-text-secondary) }
+.coach-workout-reference .overflow-item-description { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-workout-reference :is(.exercise-block-head, .circuit-head:not(.pinned)) { gap: 8px; flex-wrap: wrap; align-items: center }
+.coach-workout-reference .exercise-block-head > select { min-height: 48px; border: 0; border-radius: 16px; padding: 8px 12px; background: var(--lime-surface-raised); color: var(--lime-text); font-size: 16px; font-weight: 400 }
+.coach-workout-reference .block-rounds { font-size: 13px; line-height: 18px; font-weight: 400 }
+.coach-workout-reference .block-rounds input { height: 48px; min-height: 48px; border: 0; border-radius: 16px; font-size: 16px; font-weight: 400; background: var(--lime-surface-raised); color: var(--lime-text) }
+.coach-workout-reference :is(.planned-round-label, .planned-round-exercise-name, .circuit-round-label, .circuit-counter) { font-weight: 400; font-size: 13px; line-height: 18px }
+.coach-workout-reference .planned-round-exercise { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px }
+.coach-workout-reference .planned-round-exercise-name { grid-column: 1 / -1; margin-block: 8px 4px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .set-add-row { justify-content: center; margin-top: 12px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .set-add-row > button { min-height: 48px; border: 0; background: transparent; font-size: 14px; font-weight: 400 }
 .coach-reference-form .set-add-row .add-action-label svg { color: var(--lime-accent) }
