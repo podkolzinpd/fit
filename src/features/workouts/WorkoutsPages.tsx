@@ -4017,7 +4017,7 @@ export function LiveWorkoutPage() {
         const content = renderBlock()
         return liveDrag ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
       })
-        return liveDrag ? <>{coachReference && <Coachmark id="coach-live-number-gestures-2026-10" userId={actor?.userId} title="Порядок — перетягиванием" description="Перетаскивайте упражнение за номер, суперсет — за точки. Свайп карточки открывает замену или удаление с подтверждением."><span className="sr-only">Жесты карточек</span></Coachmark>}<WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
+        return liveDrag ? <>{coachReference && <Coachmark id="coach-live-set-swipe-2026-10-16" userId={actor?.userId} title="Удаление подхода — свайпом" description="Проведите влево по номеру подхода. Номер в заголовке упражнения служит для переноса."><span className="sr-only">Жесты карточек</span></Coachmark>}<WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}

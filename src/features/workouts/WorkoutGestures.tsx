@@ -158,6 +158,14 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
     start.current = null; offsetRef.current = 0; setOffset(0)
   }
   return <div data-workout-swipe={id} className={`workout-swipe${variant === 'set' ? ' workout-set-swipe' : ''}`}
+    tabIndex={variant === 'set' && !inactive ? 0 : undefined}
+    role={variant === 'set' ? 'group' : undefined}
+    aria-label={variant === 'set' ? actionLabel : undefined}
+    onKeyDown={(event) => {
+      if (variant !== 'set' || inactive || event.target !== event.currentTarget) return
+      if (event.key === 'Delete') { event.preventDefault(); context.setOpen({ id, side: 'delete' }) }
+      if (event.key === 'Escape') { event.preventDefault(); context.setOpen(null) }
+    }}
     onPointerDown={(event) => {
       suppressClick.current = false
       // A set row owns its pointer stream; the exercise must not also swipe.

@@ -253,6 +253,18 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       sets: exercise.sets.filter((_, index) => index !== setIndex).map((set, position) => ({ ...set, position })),
     } : exercise))
   }
+  async function requestRemoveReferenceSet(exerciseIndex: number, setIndex: number) {
+    const exercise = latestExercises.current[exerciseIndex]
+    const set = exercise?.sets[setIndex]
+    if (disabled || structurePending.current || !exercise || !set || set.sourceSetId || exercise.sets.length <= 1) return
+    structurePending.current = true
+    setConfirmingStructure(true)
+    try {
+      const accepted = await confirm({ message: `Удалить подход ${setIndex + 1} упражнения «${exercise.name}»? Введённые значения этого подхода будут удалены.`, confirmLabel: 'Удалить подход', danger: true })
+      if (accepted && latestExercises.current[exerciseIndex]?.sets[setIndex] === set
+        && latestExercises.current[exerciseIndex]!.sets.length > 1 && !set.sourceSetId) removeSet(exerciseIndex, setIndex)
+    } finally { structurePending.current = false; setConfirmingStructure(false) }
+  }
   async function removeExercise(exerciseIndex: number) {
     if (reference) {
       if (disabled || structurePending.current) return
@@ -383,14 +395,19 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {(() => { const previous = previousResults.get(exercise.ref); const line = previous && previousResultLine(previous.sets, exercise.ref); return line ? <p className="exercise-prefill-note">В прошлый раз: {line}</p> : exercise.prefilledFromDate ? <p className="exercise-prefill-note">Значения с тренировки {formatLocalDate(exercise.prefilledFromDate)}</p> : null })()}
       {showRest && <label className="exercise-plan-rest-field">Отдых между подходами, с<ClampedNumberInput label={`Отдых между подходами, ${exercise.name}`} value={exercise.restBetweenSetsSec ?? 90} min={0} max={600} onCommit={(next) => { if (exercise.blockId) updateRestBetweenSets(exercise.blockId, next) }} /></label>}
       <WorkoutSetTable variant="planned" inputKind={distanceCapable ? 'distance' : exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={showRpe}>
-        {exercise.sets.map((_set, setIndex) => <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
+        {exercise.sets.map((set, setIndex) => { const row = <WorkoutSetRow state="planned" className={`planned-set ${distanceCapable ? 'planned-set-running' : ''} ${showRpe ? 'rpe-visible' : ''}`} key={setIndex}>
           <span className="workout-set-number planned-set-number" aria-hidden="true">{setIndex + 1}</span>
           <span className="sr-only">Подход {setIndex + 1}</span>
           {setFields(exercise, exerciseIndex, setIndex, showRpe)}
-          {exercise.sets.length > 1
+          {!reference && (exercise.sets.length > 1
             ? <button type="button" className="link planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}><CloseIcon /></button>
-            : <span className="planned-set-remove" aria-hidden="true" />}
-        </WorkoutSetRow>)}
+            : <span className="planned-set-remove" aria-hidden="true" />)}
+        </WorkoutSetRow>
+          return reference ? <WorkoutSwipe key={setIndex} id={`plan-set:${exerciseIndex}:${setIndex}`} variant="set"
+            disabled={referenceControlsDisabled || exercise.sets.length <= 1 || Boolean(set.sourceSetId)}
+            actionLabel={`Удалить подход ${setIndex + 1}: ${exercise.name}`}
+            onDelete={() => void requestRemoveReferenceSet(exerciseIndex, setIndex)}>{row}</WorkoutSwipe> : row
+        })}
       </WorkoutSetTable>
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}><AddActionLabel>Подход</AddActionLabel></button>

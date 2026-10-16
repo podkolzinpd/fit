@@ -439,4 +439,26 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getByRole('button', { name: 'Разделить' }))
     expect(screen.queryByLabelText('Тип блока')).not.toBeInTheDocument()
   })
+  it('reference set deletion is explicit, cancellable and protects the last set without a cross', async () => {
+    function ReferencePlan() {
+      const [draft, setDraft] = useState(exercises)
+      return <WorkoutExerciseEditor reference exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+    }
+    const user = userEvent.setup()
+    render(<ReferencePlan />)
+    expect(document.querySelector('.planned-set-remove')).toBeNull()
+    const second = screen.getByRole('group', { name: 'Удалить подход 2: Присед' })
+    second.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить подход 2: Присед' }))
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByLabelText('Повторы, подход 2')).toHaveValue(8)
+    second.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить подход 2: Присед' }))
+    await user.click(screen.getByRole('button', { name: 'Удалить подход' }))
+    expect(screen.queryByLabelText('Повторы, подход 2')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
+    expect(screen.getByRole('group', { name: 'Удалить подход 1: Присед' })).not.toHaveAttribute('tabindex')
+  })
 })

@@ -117,7 +117,7 @@ export function coachGestureWorkout(grouped = false, count = grouped ? 4 : 3): M
 }
 
 export async function revealCoachSetDelete(page: Page, row: Locator) {
-  const number = row.locator('.live-set-number')
+  const number = row.locator('.live-set-number, .planned-set-number')
   await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
   await expect.poll(() => number.evaluate(element => {
     const box = element.getBoundingClientRect()
@@ -280,6 +280,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'live-phase-timer-2026-10',
       'coach-workout-gestures-2026-10',
       'coach-live-number-gestures-2026-10',
+      'coach-live-set-swipe-2026-10-16',
       'coach-live-finish-top-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',

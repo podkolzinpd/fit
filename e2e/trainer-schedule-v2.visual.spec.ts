@@ -86,9 +86,23 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await picker.getByRole('button', { name: 'Добавить выбранные упражнения' }).click()
   await page.locator('.planned-exercise').first().getByLabel('Вес, подход 1').fill('27.5')
   await page.locator('.planned-exercise').first().getByLabel('Повторы, подход 1').fill('10')
+  const planExercise = page.locator('.planned-exercise').first()
+  await planExercise.getByRole('button', { name: 'Подход', exact: true }).click()
+  const planRow = planExercise.locator('.workout-set-swipe').nth(1)
+  await expect(planExercise.locator('.planned-set-remove')).toHaveCount(0)
+  expect((await planRow.locator('.planned-set-number').boundingBox())!.width).toBeGreaterThanOrEqual(44)
+  await revealCoachSetDelete(page, planRow)
+  await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(2)
+  await revealCoachSetDelete(page, planRow)
+  await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(1)
+  await expect(planExercise.getByLabel('Вес, подход 1')).toHaveValue('27.5')
   const handle = page.getByRole('button', { name: 'Переместить: Присед со штангой' })
   await handle.focus(); await handle.press('Space'); await handle.press('End'); await handle.press('Enter')
-  const swipes = page.locator('[data-workout-swipe]')
+  const swipes = page.locator('[data-workout-swipe]:not(.workout-set-swipe)')
   async function swipe(item: Locator, right: boolean) {
     // The rounded corner is not a reliable hit target. Use the inert card
     // padding at header mid-height; the title itself is a toggle button.
@@ -869,6 +883,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     const number = row.locator('.live-set-number')
     await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
     const box = (await number.boundingBox())!, point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    expect(box.width).toBeGreaterThanOrEqual(44)
     const cdp = await page.context().newCDPSession(page)
     try {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
