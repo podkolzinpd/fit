@@ -317,7 +317,27 @@
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { height: 48px; min-height: 48px; border: 0; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
 .coach-reference-form .planned-set { gap: 2px; margin-bottom: 2px }
 .coach-reference-form .planned-set { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) }
-.coach-reference-form .planned-set.rpe-visible { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) minmax(48px, .6fr) }
+.coach-reference-form .planned-set.rpe-visible { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) }
+.coach-reference-form .planned-set-table-head { display: none }
+.coach-reference-form .planned-set-table { border: 0 }
+.coach-reference-form .planned-set { border: 0; padding: 0; gap: 4px; margin-block: 4px; background: transparent }
+.coach-reference-form .planned-set > * { border-left: 0 }
+.coach-reference-form :is(.coach-plan-metric, .coach-live-metric) { position: relative; display: block; min-width: 0; height: 48px }
+.coach-reference-form .coach-plan-rpe { grid-column: 2 / 4; order: 9 }
+.coach-reference-form :is(.coach-plan-field-unit, .coach-live-field-unit) { position: absolute; right: 6px; bottom: 3px; pointer-events: none; color: var(--lime-text-secondary); font-size: 10px; line-height: 12px; font-weight: 400 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { width: 100%; padding: 0 5px; text-align: center; box-shadow: none; outline: 0 }
+.coach-reference-form input.planned-set-input[type='number'] { appearance: textfield }
+.coach-reference-form input.planned-set-input::-webkit-inner-spin-button,
+.coach-reference-form input.planned-set-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe):focus-visible { outline: 1px solid var(--lime-accent); outline-offset: -1px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe):invalid { outline: 1px solid var(--danger); outline-offset: -1px }
+.coach-reference-form .compact-editor-exercise-fields { border: 0 }
+.coach-reference-form .coach-plan-time-label { display: flex; flex: 1; align-items: center; gap: 16px; min-width: 0; min-height: 48px; padding: 0; border: 0; background: transparent; color: var(--lime-text-secondary); font-size: 14px; font-weight: 400 }
+.coach-reference-form .coach-plan-time-label svg { width: 24px; height: 24px; flex: 0 0 24px }
+.coach-reference-form .coach-plan-time input { min-width: 0; font-variant-numeric: tabular-nums }
+.coach-reference-form .coach-plan-time input:invalid { outline: 1px solid var(--danger); outline-offset: -1px }
+.coach-reference-form .planned-set-running .run-distance-control { height: 48px; border-radius: 16px; border: 0; background: var(--lime-surface-raised) }
+.coach-reference-form .planned-set-running .run-distance-unit { height: 48px; min-height: 48px; border: 0; background: transparent }
 .coach-workout-reference .workout-set-number { min-width: 44px; min-height: 48px; display: grid; place-items: center; touch-action: pan-y; user-select: none; -webkit-user-select: none }
 .coach-workout-reference .workout-set-swipe { border-radius: 16px; overflow: clip }
 .coach-workout-reference .workout-set-swipe button.workout-swipe-action { border-radius: 16px; min-height: 48px }

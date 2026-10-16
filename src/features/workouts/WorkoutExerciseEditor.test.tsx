@@ -6,6 +6,7 @@ import { useState } from 'react'
 import type { WorkoutExerciseDraft } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { adjustWorkoutLoad, clearWorkoutLoad, roundToStep, WorkoutExerciseEditor } from './WorkoutExerciseEditor'
+import { CoachPlanTimeField } from './CoachPlanTimeField'
 
 const exercises: WorkoutExerciseDraft[] = [{
   source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
@@ -70,6 +71,28 @@ function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
 }
 
 describe('workout exercise editor rules', () => {
+  it('reference clock edits HH:mm and applies or cancels the existing time wheels', async () => {
+    function Clock() {
+      const [value, setValue] = useState('23:45')
+      return <form><CoachPlanTimeField name="startTime" label="Начало" value={value} onChange={setValue} /></form>
+    }
+    const user = userEvent.setup()
+    render(<Clock />)
+    const input = screen.getByRole('textbox', { name: 'Начало' })
+    await user.clear(input); await user.type(input, '0730')
+    expect(input).toHaveValue('07:30')
+    await user.click(screen.getByRole('button', { name: 'Выбрать время: Начало' }))
+    screen.getByRole('listbox', { name: 'часы' }).focus()
+    await user.keyboard('[End]')
+    screen.getByRole('listbox', { name: 'минуты' }).focus()
+    await user.keyboard('[Home]')
+    await user.click(screen.getByRole('button', { name: 'Применить время' }))
+    expect(input).toHaveValue('23:00')
+    await user.click(screen.getByRole('button', { name: 'Выбрать время: Начало' }))
+    await user.keyboard('[Home][Escape]')
+    expect(input).toHaveValue('23:00')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
   it.each(['vital-barbell-hold-ex010', 'vital-gym-pro-r003-0006', 'vital-gym-pro-r289-1625'])('shows weight and duration for %s without repetitions', (ref) => {
     render(<LoadedEditorHarness exerciseRef={ref} inputKind="duration" />)
     expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(3.4)

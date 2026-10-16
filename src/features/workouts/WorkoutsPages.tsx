@@ -1,6 +1,7 @@
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
+import { CoachPlanTimeField } from './CoachPlanTimeField'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
@@ -1574,8 +1575,8 @@ export function WorkoutFormPage() {
           {clientSelectionError && <p className="error" role="alert">{clientSelectionError}</p>}
           {clients.error && <p className="error" role="alert">{clients.error.message} <button type="button" className="link" onClick={() => void clients.refetch()}>Повторить</button></p>}
           <div className="coach-plan-date"><FitLimeDatePicker reference disabled={mutation.isPending} triggerIcon={<img src={coachWorkoutReferenceAssets.date} alt="" width={24} height={24} />} value={entryDate} onChange={(date) => { setEntryDate(date); setFormTimeError(null) }} triggerLabel={entryDate === today ? 'Сегодня' : formatLocalDate(entryDate)} /></div>
-          <label className="coach-plan-time"><img src={coachWorkoutReferenceAssets.addMuted} alt="" width={24} height={24} /><span>Начало</span><input name="startTime" type="time" aria-label="Начало" value={startTime} onChange={(event) => { setStartTime(event.target.value); setFormTimeError(null); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></label>
-          <label className="coach-plan-time"><img src={coachWorkoutReferenceAssets.addMuted} alt="" width={24} height={24} /><span>Окончание</span><input name="endTime" type="time" aria-label="Окончание" value={endTime} onChange={(event) => { setEndTime(event.target.value); setShowEndTime(Boolean(event.target.value)); setFormTimeError(null); event.currentTarget.setCustomValidity('') }} /></label>
+          <CoachPlanTimeField name="startTime" label="Начало" value={startTime} onChange={(next, form) => { setStartTime(next); setFormTimeError(null); (form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} />
+          <CoachPlanTimeField name="endTime" label="Окончание" value={endTime} onChange={(next) => { setEndTime(next); setShowEndTime(Boolean(next)); setFormTimeError(null) }} />
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
         </div> : <>
         {limePlan && <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>}

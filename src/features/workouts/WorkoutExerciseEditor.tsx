@@ -313,30 +313,33 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const durationSec = set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
     const distanceCapable = !allowsDurationWeight(exercise) && (exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((item) => item.distanceKm !== undefined))))
     const inputClass = 'planned-set-input'
+    const metric = (content: ReactNode, unit: string) => reference ? <span className={`coach-plan-metric${unit === 'RPE' ? ' coach-plan-rpe' : ''}`}>{content}<span className="coach-plan-field-unit" aria-hidden="true">{unit}</span></span> : content
     const weightField = <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
     const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
       <option value="">—</option>
       {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
     </select> : null
     if (exercise.inputKind === 'strength') return <>
-      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
-      <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
-      {rpeField}
+      {metric(weightField, 'кг')}
+      {metric(<input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />, 'повт.')}
+      {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'reps') return <>
-      <WorkoutDurationField className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />
-      <input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
-      {rpeField}
+      {metric(<WorkoutDurationField compact={reference} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(<input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />, 'повт.')}
+      {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'duration' && !distanceCapable) return <>
-      {allowsDurationWeight(exercise) && weightField}
-      <WorkoutDurationField className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />
+      {allowsDurationWeight(exercise) && metric(weightField, 'кг')}
+      {metric(<WorkoutDurationField compact={reference} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
       {!allowsDurationWeight(exercise) && <span aria-hidden="true" />}
-      {rpeField}
+      {rpeField && metric(rpeField, 'RPE')}
     </>
     return <>
       <RunMetricsFields
-        loadField={isLoadedDistance(exercise) ? weightField : undefined}
+        reference={reference}
+        compactDuration={reference}
+        loadField={isLoadedDistance(exercise) ? metric(weightField, 'кг') : undefined}
         key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
         rowing={isRowingExerciseRef(exercise.ref)}
@@ -350,7 +353,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         distanceUnitLabel={`Единица расстояния, подход ${setIndex + 1}`}
         onCommit={(patch) => updateSet(exerciseIndex, setIndex, patch)}
       />
-      {rpeField}
+      {rpeField && metric(rpeField, 'RPE')}
     </>
   }
 
