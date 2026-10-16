@@ -7,7 +7,7 @@ import { prepareNativeNutritionCohort } from './prepare-nutrition-native-cohort.
 export function prepareCloudruNutrition(raw) {
   const cohort = prepareNativeNutritionCohort(raw)
   const parsed = JSON.parse(cohort)
-  if (parsed.clients.length !== 4 || parsed.trainers.length !== 2) throw new Error('nutrition_cohort_rejected')
+  if (![4, 5].includes(parsed.clients.length) || parsed.trainers.length !== 2) throw new Error('nutrition_cohort_rejected')
   return cohort
 }
 

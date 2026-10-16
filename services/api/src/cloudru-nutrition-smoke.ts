@@ -4,7 +4,7 @@ import { buildDatabaseConnectionConfig } from './db/connection-config.js'
 import { readNativeNutritionPilot } from './nutrition-pilot.js'
 
 const failureReasons = new Set(['cloudru_nutrition_target_rejected', 'cloudru_nutrition_cohort_rejected',
-  'cloudru_nutrition_probe_empty', 'cloudru_nutrition_bind_execute_missing', 'cloudru_nutrition_cap_four_missing',
+  'cloudru_nutrition_probe_empty', 'cloudru_nutrition_bind_execute_missing', 'cloudru_nutrition_capability_mismatch',
   'cloudru_nutrition_metadata_read_denied', 'cloudru_nutrition_readonly_required'])
 
 export function nutritionSmokeFailureReason(error: unknown): string {
@@ -20,12 +20,12 @@ export function nutritionSmokeFailureReason(error: unknown): string {
   return 'cloudru_nutrition_smoke_failed'
 }
 
-export async function smokeCloudruNutrition(): Promise<void> {
+export async function smokeCloudruNutrition(): Promise<{ clients: number; trainers: number }> {
   const config = buildDatabaseConnectionConfig('DATABASE')
   const pilot = readNativeNutritionPilot(process.env.NUTRITION_ENABLED, process.env.NUTRITION_LOGIN_COHORT)
   if (process.env.FIT_MEDIA_STORAGE_PROVIDER !== 'cloudru' || config?.host !== '10.70.10.67'
     || config.user !== 'fit_api' || config.database !== 'fit') throw new Error('cloudru_nutrition_target_rejected')
-  if (!pilot?.native || pilot.clients.length !== 4 || pilot.trainers.length !== 2) throw new Error('cloudru_nutrition_cohort_rejected')
+  if (!pilot?.native || ![4, 5].includes(pilot.clients.length) || pilot.trainers.length !== 2) throw new Error('cloudru_nutrition_cohort_rejected')
   // Cloud.ru's pooler rejects nonstandard startup parameters (see the verified
   // SQL audit). Keep server limits transaction-local, not in the startup packet.
   const client = new Client({ ...config, connectionTimeoutMillis: 5_000, query_timeout: 5_000 })
@@ -49,7 +49,10 @@ export async function smokeCloudruNutrition(): Promise<void> {
       const result = await client.query<{ definition: string }>(`select
         pg_get_functiondef('app_private.bind_nutrition_for_yandex_login(text,text,text)'::regprocedure) definition`)
       if (!result.rows[0]) throw new Error('cloudru_nutrition_probe_empty')
-      if (!/then\s+4\s+else\s+2\s+end/iu.test(result.rows[0].definition)) throw new Error('cloudru_nutrition_cap_four_missing')
+      const capacity = /case\s+when\s+p_role\s*=\s*'client'\s+then\s+([45])\s+else\s+2\s+end/iu.exec(result.rows[0].definition)?.[1]
+      // A prior four-client configuration may run on cap5 for rollback without
+      // Down or deleting data. A five-client configuration requires cap5.
+      if (!capacity || Number(capacity) < pilot.clients.length) throw new Error('cloudru_nutrition_capability_mismatch')
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error && error.code === '42501') {
         throw new Error('cloudru_nutrition_metadata_read_denied', { cause: error })
@@ -57,11 +60,12 @@ export async function smokeCloudruNutrition(): Promise<void> {
       throw error
     }
     await client.query('commit')
+    return { clients: pilot.clients.length, trainers: pilot.trainers.length }
   } finally { await client.end() }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  smokeCloudruNutrition().then(() => { console.log('{"event":"cloudru_nutrition_runtime_verified","clients":4,"trainers":2}') })
+  smokeCloudruNutrition().then(counts => { console.log(JSON.stringify({ event: 'cloudru_nutrition_runtime_verified', ...counts })) })
     .catch((error: unknown) => {
       console.error(JSON.stringify({ event: 'cloudru_nutrition_smoke_failed', reason: nutritionSmokeFailureReason(error) }))
       process.exitCode = 1

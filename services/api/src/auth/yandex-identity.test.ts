@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { createHash } from 'node:crypto'
 
 import {
   readBearerToken,
@@ -50,6 +51,18 @@ describe('YandexIdentityClient', () => {
     expect(fetchImplementation.mock.calls[0]?.[0]).not.toContain(
       'oauth-access-token',
     )
+  })
+
+  it('uses the provider-verified underscore login exactly, never a different mailbox or shared hash normalization', async () => {
+    const client = new YandexIdentityClient({ expectedClientId: CLIENT_ID,
+      fetchImplementation: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ id: 'synthetic-provider-id', psuid: 'synthetic-subject',
+        client_id: CLIENT_ID, login: ' SYNTHETIC_CLIENT@YANDEX.RU ',
+        default_email: 'synthetic-client@yandex.ru', emails: ['synthetic-client@yandex.ru'] })) })
+    const hash = (value: string) => createHash('sha256').update(value).digest('hex')
+    expect(await client.verifyAccessToken('synthetic-access-token')).toEqual({
+      subjectHash: hash('synthetic-subject'), loginHash: hash('synthetic_client@yandex.ru'),
+      nutritionLoginHash: hash('synthetic_client'),
+    })
   })
 
   it('rejects a token issued to another OAuth application', async () => {

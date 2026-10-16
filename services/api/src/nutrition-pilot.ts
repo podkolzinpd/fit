@@ -12,7 +12,8 @@ export function nutritionLoginHash(login: string): string | undefined {
   let key = login.trim().toLowerCase()
   if (key.endsWith('@yandex.ru')) key = key.slice(0, -10)
   if (!key.includes('@')) {
-    if (!/^[a-z0-9][a-z0-9.-]{0,63}$/.test(key)) return undefined
+    if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(key)) return undefined
+    // Verified legacy underscore identities are literal, not dot/hyphen aliases.
     key = key.replaceAll('.', '-')
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) return undefined
   return createHash('sha256').update(key).digest('hex')
@@ -27,7 +28,7 @@ export function readNativeNutritionPilot(enabled: string | undefined, raw: strin
   const clients: unknown = input.clients, trainers: unknown = input.trainers
   if (Object.keys(input).sort().join(',') !== 'clients,trainers'
     || !Array.isArray(clients) || !Array.isArray(trainers)
-    || ![3, 4].includes(clients.length) || trainers.length !== 2
+    || ![3, 4, 5].includes(clients.length) || trainers.length !== 2
     || (clients as unknown[]).concat(trainers as unknown[]).some(x => typeof x !== 'string' || !hashPattern.test(x))
     || new Set((clients as unknown[]).concat(trainers as unknown[])).size !== clients.length + trainers.length) return null
   return { clients: clients as string[], trainers: trainers as string[], native: true }

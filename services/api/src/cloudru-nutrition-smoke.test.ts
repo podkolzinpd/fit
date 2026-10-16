@@ -16,7 +16,7 @@ function queries(overrides: { allowed?: boolean; definition?: string; readOnly?:
     if (sql.includes('has_function_privilege')) return Promise.resolve({ rows: [{ allowed: overrides.allowed ?? true }] })
     if (sql.includes('pg_get_functiondef')) {
       if (overrides.catalogError) return Promise.reject(overrides.catalogError)
-      return Promise.resolve({ rows: [{ definition: overrides.definition ?? 'then 4 else 2 end' }] })
+      return Promise.resolve({ rows: [{ definition: overrides.definition ?? "case when p_role = 'client' then 4 else 2 end" }] })
     }
     return Promise.resolve({ rows: [] })
   })
@@ -35,7 +35,7 @@ afterEach(() => { vi.unstubAllEnvs(); vi.resetAllMocks() })
 describe('Cloud.ru nutrition release smoke', () => {
   it('verifies four/two runtime configuration and migrated capability using only read queries', async () => {
     environment()
-    await smokeCloudruNutrition()
+    expect(await smokeCloudruNutrition()).toEqual({ clients: 4, trainers: 2 })
     expect(database.constructed).toHaveBeenCalledWith(expect.objectContaining({ user: 'fit_api', query_timeout: 5_000, connectionTimeoutMillis: 5_000 }))
     expect(database.constructed.mock.calls[0]?.[0]).not.toHaveProperty('statement_timeout')
     expect(database.constructed.mock.calls[0]?.[0]).not.toHaveProperty('options')
@@ -47,12 +47,20 @@ describe('Cloud.ru nutrition release smoke', () => {
     ])
     expect(database.end).toHaveBeenCalledOnce()
   })
-  it('accepts only the same four/two admission capability regardless of SQL keyword case or whitespace', async () => {
+  it('accepts only cap4/5 with two trainers and permits prior-six config rollback without schema Down', async () => {
     environment()
-    queries({ definition: 'THEN\n  4 ELSE\t2 END' })
+    queries({ definition: "CASE WHEN p_role = 'client' THEN\n  4 ELSE\t2 END" })
     await smokeCloudruNutrition()
-    queries({ definition: 'THEN 5 ELSE 2 END' })
-    await expect(smokeCloudruNutrition()).rejects.toThrow('cloudru_nutrition_cap_four_missing')
+    queries({ definition: "case when p_role = 'client' then 5 else 2 end" })
+    expect(await smokeCloudruNutrition()).toEqual({ clients: 4, trainers: 2 })
+    vi.stubEnv('NUTRITION_LOGIN_COHORT', JSON.stringify({ clients: [1, 2, 3, 4, 7].map(x => String(x).repeat(64)), trainers: [5, 6].map(x => String(x).repeat(64)) }))
+    expect(await smokeCloudruNutrition()).toEqual({ clients: 5, trainers: 2 })
+    for (const definition of ["case when p_role = 'client' then 4 else 2 end",
+      "case when p_role = 'client' then 6 else 2 end", "case when p_role = 'trainer' then 5 else 2 end",
+      "case when p_role = 'client' then 5 else 3 end", 'then 5 else 2 end']) {
+      queries({ definition })
+      await expect(smokeCloudruNutrition()).rejects.toThrow('cloudru_nutrition_capability_mismatch')
+    }
   })
   it('distinguishes a missing execute grant from the wrong admission ceiling without exposing DB content', async () => {
     environment()
@@ -78,7 +86,7 @@ describe('Cloud.ru nutrition release smoke', () => {
   })
   it('rejects the previous admission ceiling, missing execute grants and database failure, always closing the connection', async () => {
     environment()
-    for (const row of [{ definition: 'then 3 else 2 end', allowed: true }, { definition: 'then 4 else 2 end', allowed: false }]) {
+    for (const row of [{ definition: "case when p_role = 'client' then 3 else 2 end", allowed: true }, { definition: "case when p_role = 'client' then 4 else 2 end", allowed: false }]) {
       queries(row)
       await expect(smokeCloudruNutrition()).rejects.toThrow()
     }

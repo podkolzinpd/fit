@@ -9860,6 +9860,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         from pg_proc p where p.oid='app_private.bind_nutrition_for_yandex_login(text,text,text)'::regprocedure`
       try {
         await client.query('begin')
+        // Historical144 is tested against its own Up, not the newest cap5.
+        await client.query(up)
         const before = (await client.query<{ oid: number; protected: boolean; definition: string; runtime: boolean; public_bind: boolean }>(inspect)).rows[0]!
         expect(before.definition).toContain('then 4 else 2 end')
         await client.query(down)
@@ -9874,46 +9876,77 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       } finally { await client.query('rollback'); client.release() }
     })
 
-    it('nutrition native bindings: verified subject, immutable role, exact six bounds, no consent or identity mutations', async () => {
+    it('nutrition native bindings: verified subject, immutable role, exact seven bounds, no consent or identity mutations', async () => {
       if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools not ready')
-      const ids = Array.from({ length: 8 }, () => randomUUID())
+      const ids = Array.from({ length: 9 }, () => randomUUID())
       const subjects = ids.map(() => randomBytes(32).toString('hex'))
       const logins = ids.map(() => randomBytes(32).toString('hex'))
       const clientCards = ids.map(() => randomUUID())
-      const pilot: NutritionPilot = { clients: logins.slice(0, 4), trainers: logins.slice(4, 6), native: true }
+      const pilot: NutritionPilot = { clients: logins.slice(0, 5), trainers: logins.slice(5, 7), native: true }
       const binder = new DatabaseNutritionAutoActivator(runtimePool, pilot)
       const token = randomBytes(32).toString('base64url')
       try {
         for (const [index, id] of ids.entries()) {
-          const role = index === 4 || index === 5 || index === 7 ? 'trainer' : 'client'
+          const role = index === 5 || index === 6 || index === 8 ? 'trainer' : 'client'
           await ownerPool.query('insert into public.profiles (id, first_name, account_role) values ($1, $2, $3)', [id, 'Nutrition native synthetic', role])
           if (role === 'trainer') await ownerPool.query('insert into public.trainers (profile_id) values ($1)', [id])
           else await ownerPool.query('insert into public.clients (id, trainer_id, auth_user_id, full_name) values ($1, $2, $2, $3)', [clientCards[index], id, 'Nutrition native synthetic'])
           await ownerPool.query("insert into app_private.auth_identities (provider, provider_subject_sha256, profile_id) values ('yandex', $1, $2)", [subjects[index], id])
           await ownerPool.query("insert into app_private.profile_rollout_assignments (profile_id, target_backend, access_mode, enabled) values ($1, 'yandex', 'read_write', true)", [id])
         }
-        expect(await binder.bind(subjects[7]!, logins[0]!)).toEqual({ bound: false })
-        expect(await binder.bind(subjects[0]!, logins[4]!)).toEqual({ bound: false })
-        expect(await binder.bind(subjects[6]!, logins[6]!)).toEqual({ bound: false })
-        for (let i = 0; i < 6; i++) expect(await binder.bind(subjects[i]!, logins[i]!)).toEqual({ bound: true })
+        expect(await binder.bind(subjects[8]!, logins[0]!)).toEqual({ bound: false })
+        expect(await binder.bind(subjects[0]!, logins[5]!)).toEqual({ bound: false })
+        expect(await binder.bind(subjects[7]!, logins[7]!)).toEqual({ bound: false })
+        const priorSix = { ...pilot, clients: pilot.clients.slice(0, 4) }
+        expect(await new DatabaseNutritionAutoActivator(runtimePool, priorSix).bind(subjects[4]!, logins[4]!)).toEqual({ bound: false })
+        for (let i = 0; i < 7; i++) expect(await binder.bind(subjects[i]!, logins[i]!)).toEqual({ bound: true })
         expect(await binder.bind(subjects[0]!, logins[0]!)).toEqual({ bound: true })
         expect(await binder.bind(subjects[1]!, logins[0]!)).toEqual({ bound: false })
         expect(await binder.bind(subjects[0]!, logins[1]!)).toEqual({ bound: false })
         const connection = await runtimePool.connect()
         try {
           expect(await connection.query('select app_private.bind_nutrition_for_yandex_login($1, $2, $3) bound',
-            [subjects[6], logins[6], 'client'])).toEqual([{ bound: false }])
+            [subjects[7], logins[7], 'client'])).toEqual([{ bound: false }])
           expect(await connection.query('select app_private.bind_nutrition_for_yandex_login($1, $2, $3) bound',
-            [subjects[7], logins[7], 'trainer'])).toEqual([{ bound: false }])
+            [subjects[8], logins[8], 'trainer'])).toEqual([{ bound: false }])
           await expect(connection.query('select * from app_private.nutrition_native_bindings')).rejects.toThrow(/permission denied/)
         } finally { connection.release() }
-        expect((await ownerPool.query('select count(*)::int count from app_private.nutrition_native_bindings where profile_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 6 }])
+        expect((await ownerPool.query('select count(*)::int count from app_private.nutrition_native_bindings where profile_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 7 }])
         expect((await ownerPool.query('select count(*)::int count from public.nutrition_consents where owner_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 0 }])
-        expect((await ownerPool.query("select count(*)::int count from app_private.auth_identities where profile_id=any($1::uuid[]) and provider='yandex'", [ids])).rows).toEqual([{ count: 8 }])
+        expect((await ownerPool.query("select count(*)::int count from app_private.auth_identities where profile_id=any($1::uuid[]) and provider='yandex'", [ids])).rows).toEqual([{ count: 9 }])
+        expect((await ownerPool.query<{ id: string; account_role: string }>('select id, account_role from public.profiles where id=any($1::uuid[])', [ids])).rows)
+          .toEqual(expect.arrayContaining(ids.map((id, index) => ({ id, account_role: [5, 6, 8].includes(index) ? 'trainer' : 'client' }))))
+        // Actual populated bindings survive cap5 -> cap4 -> cap5 with the same
+        // function OID and grants. Production rollback uses config only, not Down.
+        const [up, down] = (await readFile(new URL('../../db/migrations/000146_nutrition_fifth_client.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+        if (up === undefined || down === undefined) throw new Error('migration sections are missing')
+        const migrationClient = await ownerPool.connect()
+        try {
+          await migrationClient.query('begin')
+          const inspect = `select p.oid, p.prosecdef protected, pg_get_functiondef(p.oid) definition,
+            has_function_privilege('fit_api', p.oid, 'EXECUTE') runtime,
+            has_function_privilege('public', p.oid, 'EXECUTE') public_bind
+            from pg_proc p where p.oid='app_private.bind_nutrition_for_yandex_login(text,text,text)'::regprocedure`
+          const before = (await migrationClient.query<{ oid: number; definition: string; protected: boolean; runtime: boolean; public_bind: boolean }>(inspect)).rows[0]!
+          expect(before).toMatchObject({ protected: true, runtime: true, public_bind: false })
+          expect(before.definition).toContain('then 5 else 2 end')
+          await migrationClient.query(down)
+          const lower = (await migrationClient.query<{ oid: number; definition: string }>(inspect)).rows[0]!
+          expect(lower.oid).toBe(before.oid)
+          expect(lower.definition).toContain('then 4 else 2 end')
+          expect((await migrationClient.query('select count(*)::int count from app_private.nutrition_native_bindings where profile_id=any($1::uuid[])', [ids])).rows).toEqual([{ count: 7 }])
+          expect((await migrationClient.query('select app_private.bind_nutrition_for_yandex_login($1, $2, $3) bound', [subjects[4], logins[4], 'client'])).rows).toEqual([{ bound: true }])
+          await migrationClient.query(up)
+          expect((await migrationClient.query(inspect)).rows).toEqual([before])
+        } finally { await migrationClient.query('rollback'); migrationClient.release() }
         const fourthIssued = await new DatabaseYandexAppSessionIssuer(runtimePool, undefined, pilot).issue(subjects[3]!)
         expect(fourthIssued?.profile.experiments.nutrition).toBe(true)
         if (fourthIssued === undefined) throw new Error('Fourth synthetic client session was not issued')
         expect((await new DatabaseYandexAppSessionReader(runtimePool, { ...pilot, clients: pilot.clients.slice(0, 3) }).read(fourthIssued.session.token)).profile.experiments.nutrition).toBe(false)
+        const fifthIssued = await new DatabaseYandexAppSessionIssuer(runtimePool, undefined, pilot).issue(subjects[4]!)
+        if (fifthIssued === undefined) throw new Error('Fifth synthetic client session was not issued')
+        expect(fifthIssued.profile.experiments.nutrition).toBe(true)
+        expect((await new DatabaseYandexAppSessionReader(runtimePool, priorSix).read(fifthIssued.session.token)).profile.experiments.nutrition).toBe(false)
         const issued = await new DatabaseYandexAppSessionIssuer(runtimePool, undefined, pilot).issue(subjects[0]!)
         expect(issued?.profile.experiments.nutrition).toBe(true)
         if (issued === undefined) throw new Error('Synthetic native session was not issued')

@@ -19,6 +19,9 @@ test('native cohort is derived only from the exact owner-approved private input,
   assert.doesNotMatch(JSON.stringify(result), /email|example|synthetic|profile|subject/)
   assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(accounts)), /Unapproved/)
   assert.equal(nativeNutritionKey('sample.name@yandex.ru'), nativeNutritionKey('sample-name'))
+  assert.equal(nativeNutritionKey(' SAMPLE_NAME@yandex.ru '), nativeNutritionKey('sample_name'))
+  assert.notEqual(nativeNutritionKey('sample_name'), nativeNutritionKey('sample-name'))
+  assert.notEqual(nativeNutritionKey('sample_name'), nativeNutritionKey('sample.name'))
   assert.notEqual(nativeNutritionKey('sample.name@example.test'), nativeNutritionKey('sample-name@example.test'))
   assert.notEqual(nativeNutritionKey('sample@example.test'), nativeNutritionKey('sample'))
 })
@@ -35,7 +38,7 @@ test('native release keeps trusted main, exact fingerprint, private server hashe
     assert.doesNotMatch(text, /FIT_NUTRITION_ACCOUNT_COHORT/)
   }
 })
-test('expanded native preparation accepts exactly four clients/two trainers and rejects unauthorized additions or role swaps', () => {
+test('expanded native preparation preserves prior cohorts, admits exactly five clients/two trainers and rejects substitutions', () => {
   const expanded = [...accounts, { email: 'fourth-client@example.test', role: 'client' }]
   const result = JSON.parse(prepareNativeNutritionCohort(JSON.stringify(expanded), digest(expanded)))
   assert.equal(result.clients.length, 4)
@@ -46,9 +49,25 @@ test('expanded native preparation accepts exactly four clients/two trainers and 
   assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(expanded), digest(accounts)), /Unapproved/)
   const wrongRole = expanded.map((x, i) => i === 5 ? { ...x, role: 'trainer' } : x)
   assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(wrongRole), digest(wrongRole)), /Invalid/)
-  const extra = [...expanded, { email: 'fifth-client@example.test', role: 'client' }]
+  const seven = [...expanded, { email: 'fifth_client@yandex.ru', role: 'client' }]
+  const newest = JSON.parse(prepareNativeNutritionCohort(JSON.stringify(seven), digest(seven)))
+  assert.deepEqual(newest.clients.slice(0, 4), result.clients)
+  assert.deepEqual(newest.trainers, result.trainers)
+  assert.equal(newest.clients[4], nativeNutritionKey('fifth_client'))
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(seven)), /Unapproved/)
+  assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(seven), digest(expanded)), /Unapproved/)
+  const extra = [...seven, { email: 'sixth-client@example.test', role: 'client' }]
   assert.throws(() => prepareNativeNutritionCohort(JSON.stringify(extra), digest(extra)), /Invalid/)
   assert.throws(() => readNutritionAccounts(JSON.stringify(expanded), digest(expanded)), /Invalid/)
+})
+test('fifth-client forward migration changes only admission ceiling, with non-destructive rollback to four', () => {
+  const previous = readFileSync(new URL('../services/api/db/migrations/000144_nutrition_fourth_client.sql', import.meta.url), 'utf8').split('-- Down Migration')[0]
+  const migration = readFileSync(new URL('../services/api/db/migrations/000146_nutrition_fifth_client.sql', import.meta.url), 'utf8')
+  const [up, down] = migration.split('-- Down Migration')
+  const body = text => text.slice(text.indexOf('create or replace function')).trim()
+  assert.equal(body(up), body(previous).replace('then 4 else 2 end', 'then 5 else 2 end'))
+  assert.equal(body(down), body(previous))
+  assert.doesNotMatch(migration, /delete from|update public\.|insert into public\.|grant |drop table/i)
 })
 test('fourth-client migration preserves all prior identity/role/consent/grants guards and restores admission without deleting bindings', () => {
   const prior = readFileSync(new URL('../services/api/db/migrations/000143_nutrition_native_cohort.sql', import.meta.url), 'utf8')

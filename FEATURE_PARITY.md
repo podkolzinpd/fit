@@ -17,7 +17,12 @@ YAFIT-608 / дневник питания — согласованная нов�
 подтверждён15.10 (configure38738098678/FE38738308776); реальные входы владельцев
 не имитировались. Исправление home-summary отделяет обычный кабинет от любого
 workout input flow и сохраняет вертикальную scoped-композицию/состояния.
-Подключение7-го участника — отдельный PR2, пока не включено. Исходные9пунктов и доказательства:
+PR1#1662 выпущен7f5e926c (CI38811858305/API38813268874/frontend38813268715,
+configure38813528784 twice4/2, public18assets/native startup).
+PR2 поддерживает подтверждённого7-го участника: exact5clients/2trainers,
+nutrition-only literal underscore, forward migration146/cap5; прежние6,
+роли/согласия и rollback4/2 сохранены. Clean PG17 chain/actor/backup151/151;
+новый production rollout ещё не подтверждён. Исходные9пунктов и доказательства:
 `docs/design/NUTRITION_DIARY_PILOT_20261010.md`.
 
 Срок оплаты в клиентской рабочей очереди тренера: `/clients` и `/finance`
