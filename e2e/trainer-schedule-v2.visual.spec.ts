@@ -474,6 +474,45 @@ test('Figma workout Coach reference touch drag autoscrolls and preserves draft',
   } finally { await cdp.detach() }
 })
 
+test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    const viewport = new EventTarget()
+    Object.defineProperties(viewport, { height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? innerHeight) }, offsetTop: { get: () => 0 } })
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  })
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [coachGestureWorkout(false, 8)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const field = page.locator('form[data-live-set-id]').nth(1).getByLabel('Фактический вес', { exact: true })
+  await page.evaluate(() => document.fonts.ready)
+  await page.clock.install()
+  await field.focus()
+  const content = page.locator('.content')
+  const initial = await content.evaluate(element => element.scrollTop)
+  for (const height of [650, 550, 400]) {
+    await page.evaluate(height => { document.documentElement.dataset.testVisibleHeight = String(height); window.visualViewport?.dispatchEvent(new Event('resize')) }, height)
+    // The final resize is later than the old one-shot 180ms correction.
+    await page.clock.runFor(200)
+    await expect.poll(() => field.evaluate(element => {
+      const bounds = element.getBoundingClientRect(), rest = document.querySelector('.live-pinned')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
+      return bounds.top >= rest.bottom && bounds.bottom <= content.bottom - 15
+    })).toBe(true)
+    if (height > 400) expect(await content.evaluate(element => element.scrollTop)).toBe(initial)
+  }
+  const scroll = await content.evaluate(element => element.scrollTop)
+  await field.fill('27.5')
+  await page.clock.runFor(700)
+  await expect(field).toBeFocused()
+  await expect(field).toHaveValue('27.5')
+  expect(await content.evaluate(element => element.scrollTop)).toBe(scroll)
+  await page.screenshot({ path: info.outputPath('client-live-gradual-keyboard.png') })
+  await field.blur()
+  await page.evaluate(() => { delete document.documentElement.dataset.testVisibleHeight; window.visualViewport?.dispatchEvent(new Event('resize')) })
+  await page.clock.runFor(400)
+  expect(await content.evaluate(element => element.scrollTop)).toBe(scroll)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
 test('Figma workout Coach reference rest and fields stay usable in the reduced keyboard viewport', async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => {
