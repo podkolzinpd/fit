@@ -80,6 +80,15 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   expect(sent[0]!.exercises.map(exercise => exercise.name)).toEqual(['Планка', 'Присед со штангой'])
   expect(sent[0]!.exercises[1]!.sets[0]!.weightKg).toBe(27.5)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.goto('/schedule?week=2026-09-21')
+  const filters = page.locator('.coach-schedule-filter-options')
+  await expect(filters).toBeVisible()
+  await expect(filters).not.toHaveAttribute('open')
+  await page.screenshot({ path: info.outputPath('coach-schedule-filters-closed.png') })
+  await filters.locator('summary').click()
+  await expect(filters.getByLabel('Фильтр по клиенту')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-schedule-filters-open.png') })
 })
 
 test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
