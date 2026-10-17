@@ -389,9 +389,15 @@
 /* Fixed2 Live: one DOM/coordinator/timer, density-only overrides. Source SVG:
    card radius32, inset/gaps2, index40, rest60/radius20. Input/check48 is the
    approved exception. Dynamic text and the assembled header are adaptations. */
-.coach-workout-reference.live-identity .live-workout-page.coach-live-density { padding-inline: 2px }
-.coach-workout-reference.live-identity .coach-live-density > .page-header { margin: 0 14px; min-height: 44px }
-.coach-workout-reference.live-identity .coach-live-density .live-pinned { --coach-clock-space: 194px }
+.coach-workout-reference.live-identity .live-workout-page.coach-live-density { padding: 0 2px; background: #000 }
+.coach-workout-reference.live-identity .coach-live-density > .page-header { margin: 0; padding-inline: 14px; min-height: 44px; background: #000 var(--coach-live-halo) no-repeat scroll center 0 }
+/* Paint in each sticky block's own coordinate space: WebKit fixed backgrounds
+   inside clipped scrolling layers left rectangular stale glow tiles. Align the
+   halo at the initial header/clock join without introducing scroll state. */
+.coach-workout-reference.live-identity .coach-live-density .live-pinned { --coach-clock-space: 194px; padding-top: 0; background: #000 var(--coach-live-halo) no-repeat scroll center -44px }
+/* The reference has no second elapsed caption. Keep it available to the screen
+   reader without overflowing the reduced clock or peeking through sticky joins. */
+.coach-workout-reference.live-identity .coach-live-density .coach-live-elapsed { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%) }
 .coach-workout-reference.live-identity .coach-live-density .coach-live-clock { height: 194px; min-height: 194px; margin: 0 }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-session-header { min-height: 146px; margin: 0; padding: 20px 16px; display: flex; align-items: center; justify-content: center }
 .coach-workout-reference.live-identity .coach-live-density .coach-live-workout-note { min-height: 52px; margin: 0; padding: 8px 18px 16px; font-size: 14px; line-height: 20px; color: var(--lime-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere }

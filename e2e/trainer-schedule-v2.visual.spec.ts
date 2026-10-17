@@ -1027,6 +1027,9 @@ test('Figma workout Coach reference rest and fields stay usable in the reduced k
   await page.evaluate(() => { document.documentElement.dataset.testVisibleHeight = '400'; window.visualViewport?.dispatchEvent(new Event('resize')) })
   await expect(page.locator('.phone-frame')).toHaveClass(/keyboard-open/)
   await expect(field).toBeFocused()
+  await expect(page.locator('.coach-live-elapsed')).toHaveCSS('clip-path', 'inset(50%)')
+  await expect(page.locator('.live-pinned')).toHaveCSS('padding-top', '0px')
+  await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
   await page.screenshot({ path: info.outputPath('coach-live-keyboard-before.png') })
   await expect.poll(() => field.evaluate(element => {
     const rect = element.getBoundingClientRect(), rest = document.querySelector('.live-rest-trigger')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
@@ -1092,8 +1095,15 @@ for (const width of [375, 390, 430, 1440]) {
     await page.locator('.content').evaluate(element => { element.scrollTop = 700 })
     await expect.poll(() => page.locator('.live-rest-trigger').evaluate(button => {
       const rect = button.getBoundingClientRect(), header = document.querySelector('.page-header')!.getBoundingClientRect()
-      return rect.top >= header.bottom && rect.bottom <= header.bottom + 66
+      return Math.abs(rect.top - header.bottom) < 1 && rect.bottom <= header.bottom + 60
     })).toBe(true)
+    await expect(page.locator('.coach-live-elapsed')).toHaveCSS('clip-path', 'inset(50%)')
+    await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
+    expect(await page.locator('.page-header').evaluate(header => {
+      const h = header.getBoundingClientRect(), p = document.querySelector('.live-pinned')!.getBoundingClientRect()
+      return h.left === p.left && h.width === p.width
+    })).toBe(true)
+    await expect(page.locator('.page-header')).toHaveCSS('background-attachment', 'scroll')
     await page.screenshot({ path: info.outputPath('coach-live-scrolled-rest.png'), fullPage: true })
     await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
     const fields = page.locator('.live-set-input, .live-set-check')
@@ -1282,13 +1292,13 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(clock.locator('.coach-live-digits')).toHaveText('01:00')
     await expect(clock.locator('.coach-live-colon')).toHaveCount(1)
     const livePage = page.locator('.live-workout-page')
-    const halo = await livePage.evaluate(node => getComputedStyle(node).backgroundImage)
+    const halo = await page.locator('.live-pinned').evaluate(node => getComputedStyle(node).backgroundImage)
     expect(halo).toContain('radial-gradient')
-    await expect(livePage).toHaveCSS('background-attachment', 'fixed')
+    await expect(livePage).toHaveCSS('background-image', 'none')
     await expect(page.locator('.live-workout-page > .page-header')).toHaveCSS('background-image', halo)
-    await expect(page.locator('.live-workout-page > .page-header')).toHaveCSS('background-attachment', 'fixed')
+    await expect(page.locator('.live-workout-page > .page-header')).toHaveCSS('background-attachment', 'scroll')
     await expect(page.locator('.live-pinned')).toHaveCSS('background-image', halo)
-    await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'fixed')
+    await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
     expect(await clock.locator('.coach-live-colon').evaluate((node) => getComputedStyle(node, '::before').width)).not.toBe('0px')
     await expect(header.getByRole('heading')).toHaveCSS('text-align', 'center')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
