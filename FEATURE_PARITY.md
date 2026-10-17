@@ -658,6 +658,12 @@ PR2 того же плана: scoped PLAN_LAYOUT карточки получаю
 alpha mask и лаймовую диктовку. Структурные операции и сохранение прежние;
 поля48px, radii32/16 и gaps2 сохранены. Приёмка и выпуск ведутся в YAFIT-619.
 
+PR3 того же плана: оба существующих Live density-scoped вида используют
+original check-small stroke2.5 и white done state; quiet units opt-in, меньшую
+сводку и collapsed completed header без фиксированной минимальной высоты.
+Set progressbar остаётся доступным для assistive technology, видимыми остаются
+маркеры и тексты. Coordinator/save/rest/gestures/переключатель не меняются.
+
 ## Cloud.ru production stabilization — In progress
 
 План и неизменяемая приёмка: docs/design/CLOUDRU_STABILIZATION_20261014.md,

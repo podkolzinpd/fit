@@ -116,6 +116,22 @@ Figma MCP вновь отказал в доступе; используем не
 
 ## Статусы
 
+### Preflight PR3
+
+База bc4abf34 (слитый PR1683), чистый main до native sync/ветки. Current-main
+WebKit route и исходный SVG просмотрены заново; фактическая done check mint,
+дублирующиеся placeholders и min133/90 collapsed header подтверждены.
+Роль trainer/server Lime/original fixed2, независимый LIVE_DENSITY exact2.
+Переиспользуем LiveSetFields/LiveSetInput, WorkoutHeader/WorkoutExerciseHeader,
+48px fields/checks, progress semantics, notes, gesture/coordinator/deadline.
+Primary — верхняя галочка «Завершить тренировку», без второго Start/Pause.
+
+Меняются только density-scoped косметические правила и quietUnits defaultfalse.
+Маркеры остаются видимыми, точный progressbar clipped только визуально — role и
+значения сохранены. В collapsed card Edit остаётся ниже header, высота растёт
+с длинным текстом. Source check-small24×24/stroke2.5 не редактируется; Doto и
+непроверенный физический iPhone остаются ограничениями.
+
 ### Preflight PR2
 
 База aaacf048 (слитый PR1682), чистый main перед веткой. Роль trainer, server
@@ -133,9 +149,9 @@ RPE/time/distance/groups/notes могут увеличивать карточк�
 
 | PR | Реализация | Приёмка | Выпуск |
 |---|---|---|---|
-| 1 | Реализован, PR1682 merged aaacf048 | Unit39/39; WebKit95passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI success; Cloud.ru/public verification в работе; native207/207 |
-| 2 | Реализован | Unit54; WebKit106passed/3CDPskip; Chromium8/8; полный check exit0 | CI/merge/release впереди |
-| 3 | Впереди | Впереди | Не начат |
+| 1 | Реализован, PR1682 merged aaacf048 | Unit39/39; WebKit95passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI/Cloud.ru success; public207/207/health/compiled4closed2; native207/207 |
+| 2 | Реализован, PR1683 merged bc4abf34 | Unit54; WebKit106passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI success; Cloud.ru39053141855/public acceptance в работе; native207/207 |
+| 3 | Реализован | Unit41; final WebKit106passed/3CDPskip; Chromium18/18; final whole check exit0 | CI/merge/release впереди |
 | 4 | Впереди | Впереди | Не начат |
 
 PR1: прежний полный check остановлен5 worker-start timeout при2678passed;

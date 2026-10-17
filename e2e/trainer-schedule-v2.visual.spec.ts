@@ -284,6 +284,11 @@ for (const density of ['original', 'compact'] as const) for (const width of [375
   await expect(page.locator('.workout-gesture-list')).toHaveCSS('gap', '2px')
   const sizes = await first.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
   expect(sizes.length).toBeGreaterThan(0); expect(sizes.every(height => height === 48)).toBe(true)
+  await expect(first.getByLabel('Фактический вес', { exact: true }).first()).toHaveAttribute('placeholder', '—')
+  await expect(first.getByLabel('Фактические повторы', { exact: true }).first()).toHaveAttribute('placeholder', '—')
+  await expect(first.locator('.live-set-check svg').first()).toHaveCSS('mask-image', /check-small\.svg|Check%20small/)
+  await expect(page.locator('.live-session-header')).toHaveCSS('min-height', '0px')
+  await expect(page.getByRole('progressbar', { name: 'Выполненные подходы' })).toHaveCSS('clip-path', 'inset(50%)')
   await expect(first.locator('.live-exercise-note > summary')).toContainText('Заметка тренера')
   await expect(first.locator('.live-exercise-note > summary')).toContainText('Пятки не отрывать')
   const finish = page.getByRole('button', { name: 'Завершить тренировку', exact: true }).first()
@@ -1143,6 +1148,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await expect(row).toHaveClass(/confirmed/)
     await expect(page.locator('.live-sync-state')).toHaveCount(0)
     await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+    await expect(row.locator('.live-set-check.done')).toHaveCSS('color', 'rgb(255, 255, 255)')
   })
   test(`Figma workout Coach reference expiry keeps rest when deleting future exercise ${profileId}`, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
@@ -1529,9 +1535,11 @@ for (const width of [375, 390, 430, 1440]) {
     }
     await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
     await expect(page.locator('.workout-exercise-header-summary')).toContainText('Результат: 2 подхода · 27.5 кг')
+    await expect(page.locator('.live-exercise-collapsed .live-exercise-head')).toHaveCSS('min-height', '0px')
+    expect(await page.locator('.live-exercise-collapsed').evaluate(card => card.getBoundingClientRect().height)).toBeLessThan(180)
     expect(await page.locator('.live-exercise-collapsed').evaluate(card => {
       const header = card.querySelector('.live-exercise-head')!.getBoundingClientRect(), action = card.querySelector('.live-exercise-start')!.getBoundingClientRect()
-      return header.width >= card.getBoundingClientRect().width - 32 && action.top >= header.bottom
+      return header.width >= card.getBoundingClientRect().width - 32 && action.top >= header.bottom && action.bottom <= card.getBoundingClientRect().bottom - 8
     })).toBe(true)
     await expect.poll(() => page.locator('.live-session-progress-track').evaluate(track => track.firstElementChild!.getBoundingClientRect().width / track.getBoundingClientRect().width)).toBe(1)
     await page.screenshot({ path: info.outputPath('coach-live-actions-complete.png'), fullPage: true })
