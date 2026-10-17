@@ -8,6 +8,9 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
+const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']
+
 // Two engines are intentional: native implicit submit and pointer selection differ in Safari.
 function coachPlanInputFixture(profileId = 'c0ac0000-6010-4000-8000-000000000001') {
   const plan = coachGestureWorkout(false, 3)
@@ -17,9 +20,9 @@ function coachPlanInputFixture(profileId = 'c0ac0000-6010-4000-8000-000000000001
   plan.exercises[2] = { ...plan.exercises[2]!, ref: 'running', name: 'Бег', inputKind: 'distance', sets: plan.exercises[2]!.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 600, distanceKm: 1.5 })) }
   return plan
 }
-async function openCoachPlanInput(page: Page, profileId?: string) {
+async function openCoachPlanInput(page: Page, profileId?: string, unseenCoachmarks?: string[]) {
   const plan = coachPlanInputFixture(profileId)
-  await mockPilot(page, { profileId: plan.trainerId, fitLime: true, workouts: [plan] })
+  await mockPilot(page, { profileId: plan.trainerId, fitLime: true, workouts: [plan], unseenCoachmarks })
   await page.addInitScript(() => localStorage.setItem('fit.workoutTimeWheel', 'false'))
   page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss())
   await page.goto(`/workouts/${workoutId}/edit`)
@@ -117,11 +120,16 @@ test('Figma workout Coach plan input second identity creates and reloads a numer
 })
 
 test('Figma workout Coach plan input never leaks into a third Lime trainer', async ({ page }) => {
-  await openCoachPlanInput(page, 'c0ac0000-6010-4000-8000-000000000003')
+  await openCoachPlanInput(page, 'c0ac0000-6010-4000-8000-000000000003', scheduleCoachmarks)
   await expect(page.locator('.coach-reference-form')).toHaveCount(0)
   const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })
   await expect(weight).toHaveAttribute('type', 'number')
   await expect(weight).not.toHaveAttribute('data-live-direct')
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.locator('.coach-schedule-toolbar')).toHaveCount(0)
+  await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Вид и фильтры расписания' })).toHaveCount(0)
+  await expect(page.locator('.coachmark-bubble').filter({ hasText: 'История — в списке' })).toHaveCount(1)
+  await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Только ваши занятия' })).toHaveCount(1)
 })
 
 test('Figma workout Coach refined plan keeps RPE in a 48px metric row and duration labels quiet', async ({ page }, info) => {
@@ -299,8 +307,9 @@ for (const density of ['original', 'compact'] as const) for (const width of [375
 })
 
 for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference full editor ${width}`, async ({ page }, info) => {
+  const pilot = width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001'
   await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
-  await mockPilot(page, { profileId: width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [], failFirstSave: true })
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [], failFirstSave: true, unseenCoachmarks: scheduleCoachmarks })
   await page.goto('/workouts/new?date=2026-09-24')
   await expect(page.locator('.coach-reference-form')).toBeVisible()
   const title = page.getByRole('textbox', { name: 'Название тренировки' })
@@ -387,6 +396,29 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.goto('/schedule?week=2026-09-21')
   const filters = page.locator('.coach-schedule-filter-options')
+  const guide = page.locator('.coachmark-bubble')
+  await expect(guide).toHaveCount(1)
+  await expect(guide).toContainText('Вид и фильтры расписания')
+  await expect(guide).toBeInViewport({ ratio: 1 })
+  const view = page.getByRole('group', { name: 'Вид расписания', exact: true })
+  expect(await view.evaluate(node => {
+    const anchor = node.closest('.coachmark-anchor')!
+    const a = anchor.getBoundingClientRect(), r = node.getBoundingClientRect()
+    const bubble = document.querySelector('.coachmark-bubble')!.getBoundingClientRect()
+    return a.width > 0 && a.height > 0 && a.top <= r.top && a.bottom >= r.bottom && bubble.top >= r.bottom
+  })).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-schedule-first-guide.png') })
+  const understood = guide.getByRole('button', { name: 'Понятно', exact: true })
+  expect(await understood.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+  await understood.click()
+  await expect(guide).toHaveCount(0)
+  expect(await page.evaluate(({ id, key }) => {
+    const seen: unknown = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]')
+    return Array.isArray(seen) && seen.some((entry: unknown) => entry === key)
+  }, { id: pilot, key: scheduleGuideId })).toBe(true)
+  await page.reload()
+  await expect(view).toBeVisible()
+  await expect(guide).toHaveCount(0)
   await expect(page.locator('.coach-schedule-toolbar')).toHaveCSS('display', 'grid')
   expect(await page.locator('.coach-schedule-toolbar').evaluate(node => {
     const mode = node.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
@@ -400,6 +432,10 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(filters.getByLabel('Фильтр по клиенту')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: info.outputPath('coach-schedule-filters-open.png') })
+  await filters.locator('summary').click()
+  await view.getByRole('button', { name: 'Список', exact: true }).click()
+  await view.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await expect(guide).toHaveCount(0)
 })
 
 test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
