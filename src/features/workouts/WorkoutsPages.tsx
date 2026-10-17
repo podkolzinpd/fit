@@ -7,7 +7,7 @@ import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
-import { isCoachPlanInputEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { advancePlanField } from './plan-input-navigation'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
@@ -1316,6 +1316,7 @@ export function WorkoutFormPage() {
   const limePlan = isFitLimeEnabled(actor) && !completedMode
   const coachReference = limePlan && isCoachWorkoutRedesignEnabled(actor)
   const safePlanInput = coachReference && isCoachPlanInputEnabled(actor) && (!workoutId || source.data?.status === 'planned')
+  const refinedPlan = coachReference && isCoachPlanLayoutEnabled(actor) && (!workoutId || source.data?.status === 'planned')
   const planDraftKey = safePlanInput && workoutId ? workoutFormDraftKey(actor?.userId ?? 'anonymous', `edit-${workoutId}`) : draftKey
   const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen && !clientMode && !completedMode })
   function closeTemplatePicker() {
@@ -1611,7 +1612,7 @@ export function WorkoutFormPage() {
     if (pilotCalendarReturnTo) navigate(pilotCalendarReturnTo, { replace: true })
     else goBack()
   }
-  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
+  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${refinedPlan ? ' coach-plan-refined' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
     <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
@@ -1631,6 +1632,7 @@ export function WorkoutFormPage() {
           <CoachPlanTimeField name="startTime" label="Начало" value={startTime} onChange={(next, form) => { setStartTime(next); setFormTimeError(null); (form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} />
           <CoachPlanTimeField name="endTime" label="Окончание" value={endTime} onChange={(next) => { setEndTime(next); setShowEndTime(Boolean(next)); setFormTimeError(null) }} />
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
+          {refinedPlan && mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
         </div> : <>
         {limePlan && <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>}
         {clientMode
@@ -1680,10 +1682,10 @@ export function WorkoutFormPage() {
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} safePlanInput={safePlanInput} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} safePlanInput={safePlanInput} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
-      {mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
+      {!refinedPlan && mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
       {limePlan && params.get('entry') === 'quick' && <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(entryDate)} · {startTime ? `${startTime}${endTime ? `–${endTime}` : ''}` : 'Без времени'} · {workoutTrainingFormatLabel(trainingFormat ?? 'self')}</p>}
       {!coachReference && <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>}
       </CoachFormControls>

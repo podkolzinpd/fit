@@ -1174,6 +1174,8 @@ environment-level настройки сборки.
 ```text
 VITE_COACH_PLAN_INPUT_ENABLED=true
 VITE_COACH_PLAN_INPUT_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>
+VITE_COACH_PLAN_LAYOUT_ENABLED=true
+VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>
 ```
 
 Default-off: нужно точное `true`, ровно два разных ID и роль trainer с прежним
@@ -1184,6 +1186,10 @@ coach-workout-reference доступом. Другая учётка, трети�
 только для той же версии плана; ошибка сети сохраняет ввод. Откат: флаг false
 и новый deployment, без изменения тренировочных данных. Состав прежнего fixed2
 не расширять. План приёмки — docs/design/COACH_PLAN_AND_LIVE_FIXED2_20261017.md.
+Флаг PLAN_LAYOUT независим от PLAN_INPUT и имеет те же default-off/exact2
+правила. Он меняет только плановый trainer UI: геометрию, подписи и доступность
+существующего RPE в суперсетах. Оба списка задаются самостоятельно в
+fit-frontend-candidate; переключатель плотности планировщику не добавлен.
 
 Закрытый пилот Apple Health использует build-time переменные:
 

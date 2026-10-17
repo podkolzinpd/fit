@@ -109,6 +109,7 @@ interface WorkoutExerciseEditorProps {
   initialExercisesReady?: boolean
   reference?: boolean
   safePlanInput?: boolean
+  refinedPlan?: boolean
   disabled?: boolean
 }
 
@@ -128,7 +129,7 @@ function PlanNumberField({ label, placeholder, name, value, decimal, disabled, o
     defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, safePlanInput = false, disabled = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -501,6 +502,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         <div className="block-exercises">{block.items.map(({ exercise, index }) => {
           const row = <div className="block-exercise-row" key={exercise.blockId ? `${exercise.ref}-${index}` : index}><div className="block-exercise-head">{exerciseThumbnail(exercise)}<strong>{exercise.name}</strong><span className="exercise-head-actions"><OverflowMenu items={[
           { label: 'Заменить', disabled: referenceControlsDisabled, onClick: () => reference ? replaceReferenceExercise(index) : onReplaceExercise(index) },
+          ...(refinedPlan ? [{ label: isRpeVisible(index) ? 'Скрыть RPE' : 'Указать RPE', disabled: referenceControlsDisabled, onClick: () => toggleRpe(index) }] : []),
           { label: 'Удалить', danger: true, disabled: referenceControlsDisabled, onClick: () => removeExercise(index) },
         ]} /></span></div>{showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Комментарий" initialOpen={Boolean(exercise.trainerComment)}>
           {commentField(exercise, index)}
@@ -511,7 +513,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
           <div className="planned-round-label">Круг {round.round}</div>
           {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
             <span className="planned-round-exercise-name">{exercise.name}</span>
-            {setFields(exercise, exerciseIndex, setIndex)}
+            {setFields(exercise, exerciseIndex, setIndex, refinedPlan && isRpeVisible(exerciseIndex))}
           </div>)}
         </div>)}
         {blockMergeIndex >= 0 && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>Добавить следующее в {mergeTargetLabel}</button>}
