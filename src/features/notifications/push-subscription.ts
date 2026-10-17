@@ -1,3 +1,6 @@
+import { attachRequestDiagnostics, type RequestDiagnosticStage } from '../../shared/request-diagnostics'
+import { detectInstallPlatform, isAppInstalled } from '../install'
+
 export type BrowserPushSubscription = {
   endpoint: string
   p256dh: string
@@ -32,18 +35,66 @@ function toBrowserSubscription(subscription: PushSubscription): BrowserPushSubsc
   return { endpoint: subscription.endpoint, p256dh, authKey: auth }
 }
 
+function pushSetupError(cause: unknown, stage: RequestDiagnosticStage): Error {
+  const name = cause !== null && typeof cause === 'object' && 'name' in cause && typeof cause.name === 'string'
+    ? cause.name : 'UnknownError'
+  const safeName = /^[A-Za-z][A-Za-z0-9]{0,49}$/.test(name) ? name : 'UnknownError'
+  const category = cause !== null && typeof cause === 'object' && 'message' in cause && cause.message === 'Push service initialization failed'
+    ? 'push_service_initialization_failed'
+    : 'browser_error'
+  return attachRequestDiagnostics(
+    new Error('Не удалось подключить уведомления на этом устройстве. Повторите попытку или скопируйте диагностику для поддержки.'),
+    {
+      requestId: crypto.randomUUID(),
+      occurredAt: new Date().toISOString(),
+      backend: 'browser',
+      operation: 'push.enable',
+      stage,
+      errorCode: safeName,
+      errorCategory: category,
+      platform: detectInstallPlatform(),
+      appInstalled: isAppInstalled(),
+      ...(typeof Notification !== 'undefined' && ['granted', 'denied', 'default'].includes(Notification.permission)
+        ? { notificationPermission: Notification.permission }
+        : {}),
+    },
+  )
+}
+
 export async function subscribeToPush(vapidPublicKey: string): Promise<BrowserPushSubscription> {
   if (!isPushSupported()) throw new Error('Браузер не поддерживает push-уведомления')
-  const permission = await Notification.requestPermission()
+  let permission: NotificationPermission
+  try {
+    permission = await Notification.requestPermission()
+  } catch (error) {
+    throw pushSetupError(error, 'permission')
+  }
   if (permission !== 'granted') throw new Error('Уведомления не разрешены в браузере')
 
-  const registration = await navigator.serviceWorker.register('/sw.js')
-  await navigator.serviceWorker.ready
-  const existing = await registration.pushManager.getSubscription()
-  const subscription = existing ?? await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-  })
+  let registration: ServiceWorkerRegistration
+  try {
+    registration = await navigator.serviceWorker.register('/sw.js')
+    await navigator.serviceWorker.ready
+  } catch (error) {
+    throw pushSetupError(error, 'service-worker')
+  }
+  let existing: PushSubscription | null
+  try {
+    existing = await registration.pushManager.getSubscription()
+  } catch (error) {
+    throw pushSetupError(error, 'subscription-read')
+  }
+  let subscription = existing
+  if (subscription === null) {
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      })
+    } catch (error) {
+      throw pushSetupError(error, 'subscription-create')
+    }
+  }
   return toBrowserSubscription(subscription)
 }
 

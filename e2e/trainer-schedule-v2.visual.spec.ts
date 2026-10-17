@@ -2610,6 +2610,43 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   })
 }
 
+test('Lime notification settings show safe diagnostics when browser push initialization fails', { tag: ['@lime-profile'] }, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page, { profileId: trainerId, fitLime: true })
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    const notification = {
+      permission: 'default',
+      requestPermission: () => { notification.permission = 'granted'; return Promise.resolve('granted') },
+    }
+    Object.defineProperty(window, 'Notification', { value: notification, configurable: true })
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {
+      register: () => Promise.resolve({ pushManager: {
+        getSubscription: () => Promise.resolve(null),
+        subscribe: () => Promise.reject(new DOMException('Push service initialization failed', 'AbortError')),
+      } }),
+      ready: Promise.resolve(),
+      addEventListener() {}, removeEventListener() {},
+    } })
+  })
+  await page.route('http://127.0.0.1:4100/v1/push-notifications/**', route => route.fulfill({
+    status: 200,
+    json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } },
+  }))
+
+  await page.goto('/profile/settings')
+  await page.getByRole('button', { name: 'Включить', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось подключить уведомления' })).toBeVisible()
+  await expect(page.getByText(/Код для поддержки: FIT-/)).toBeVisible()
+  const copy = page.getByRole('button', { name: 'Скопировать диагностику' })
+  await expect(copy).toBeVisible()
+  const bounds = await copy.boundingBox()
+  expect(bounds?.height).toBeGreaterThanOrEqual(44)
+  await expect(page.getByText('Push service initialization failed')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('lime-push-diagnostic.png'), fullPage: true })
+})
+
 for (const width of [390, 430, 1440]) {
   test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
