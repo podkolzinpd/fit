@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutTemplateDraft } from '../src/shared/domain'
+import type { YandexPilotTrainingData } from '../src/data/repositories/yandex-pilot.repository'
 import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId, customExerciseId, coachGestureWorkout, revealCoachSetDelete, expectContainedButtonText, addEditorExercise, checkEditorAction, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, expectSwipeActionReadable, mockClientStreamingVoice, mockPublicTrainer } from './fit-lime-fixtures'
 
@@ -1240,6 +1241,94 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await expect(page.locator('.live-sync-state')).toHaveCount(0)
     await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
     await expect(row.locator('.live-set-check.done')).toHaveCSS('color', 'rgb(255, 255, 255)')
+    // The same retry contract also covers a note blur followed by the first
+    // add-set tap. One account suffices for this chain; storage unit tests
+    // separately prove account/workout isolation. No new matrix/case is added.
+    if (profileId.endsWith('1')) {
+      const snapshot = page.waitForResponse(response => response.request().method() === 'GET'
+        && new URL(response.url()).pathname.endsWith('/v1/training-data') && new URL(response.url()).searchParams.get('workoutId') === workoutId)
+      await page.reload()
+      const data = await (await snapshot).json() as YandexPilotTrainingData
+      let server = data.workouts.find(item => item.id === workoutId)!
+      const exerciseId = server.exercises[0]!.id, name = server.exercises[0]!.name
+      let noteWrites = 0, additions = 0, releaseNote = () => {}
+      const noteGate = new Promise<void>(resolve => { releaseNote = resolve })
+      await page.route('**/v1/training-data?*', async route => {
+        if (new URL(route.request().url()).searchParams.get('workoutId') !== workoutId) return route.fallback()
+        await route.fulfill({ json: { ...data, workouts: [server] } })
+      })
+      await page.route(`**/v1/workout-exercises/${exerciseId}/comment`, async route => {
+        const command = route.request().postDataJSON() as { comment: string; expectedVersion: number }
+        noteWrites++
+        if (noteWrites === 1) {
+          await noteGate
+          await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+          return
+        }
+        server = { ...server, version: Math.max(server.version, command.expectedVersion) + 1,
+          exercises: server.exercises.map(exercise => exercise.id === exerciseId ? { ...exercise, trainerComment: command.comment || null } : exercise) }
+        if (noteWrites === 3) {
+          // Lost acknowledgement: readback confirms the accepted text. No
+          // duplicate resend or stale retry/error should remain afterwards.
+          await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+          return
+        }
+        await route.fulfill({ json: { exercise: { version: server.version } } })
+      })
+      await page.route(`**/v1/workout-exercises/${exerciseId}/sets`, async route => {
+        additions++
+        const command = route.request().postDataJSON() as { expectedVersion: number }
+        server = { ...server, version: Math.max(server.version, command.expectedVersion) + 1,
+          exercises: server.exercises.map(exercise => exercise.id === exerciseId ? { ...exercise, sets: [...exercise.sets,
+            { ...exercise.sets.at(-1)!, id: '10000000-0000-4000-8000-000000009999', position: exercise.sets.length,
+              fact: { weightKg: null, reps: null, durationMin: null, durationSec: null, distanceKm: null, rpe: null }, confirmedAt: null, version: 1 }] } : exercise) }
+        await route.fulfill({ json: { set: { version: server.version } } })
+      })
+      const card = page.locator('.live-exercise.current'), note = card.getByLabel(`Заметка: ${name}`, { exact: true })
+      await card.locator('.live-exercise-note summary').click()
+      const text = 'Контролировать дыхание — черновик до подтверждения сервера'
+      await note.fill(text)
+      try {
+        const request = page.waitForRequest(request => request.url().endsWith(`/workout-exercises/${exerciseId}/comment`))
+        await card.getByRole('button', { name: 'Подход', exact: true }).click()
+        await request
+        expect(additions).toBe(0) // Structural command waits in the existing coordinator.
+      } finally { releaseNote() }
+      await expect.poll(() => additions).toBe(1)
+      await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toBeVisible()
+      await page.reload()
+      await card.locator('.live-exercise-note summary').click()
+      await expect(note).toHaveValue(text)
+      await note.focus(); await note.blur()
+      expect(noteWrites).toBe(1) // Opening a restored draft is not a new edit.
+      await page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true }).click()
+      await expect.poll(() => noteWrites).toBe(2)
+      await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toHaveCount(0)
+      await expect.poll(() => page.evaluate(({ profileId, workoutId, exerciseId }) => {
+        const pending = JSON.parse(localStorage.getItem(`fit.live-note-drafts.${profileId}.${workoutId}`) ?? '{}') as Record<string, unknown>
+        return Object.hasOwn(pending, exerciseId)
+      }, { profileId, workoutId, exerciseId })).toBe(false)
+      await page.reload()
+      await card.locator('.live-exercise-note summary').click()
+      await expect(note).toHaveValue(text)
+      expect(additions).toBe(1)
+      await note.fill(`${text} `)
+      await expect(note).toHaveValue(`${text} `) // Readback cleanup must not trim the active editor.
+      await note.pressSequentially('Дышать ровно')
+      await expect(note).toHaveValue(`${text} Дышать ровно`)
+      await note.blur()
+      await expect.poll(() => noteWrites).toBe(3)
+      await expect(note).toBeEnabled()
+      await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toHaveCount(0)
+      await expect(page.locator('.live-workout-page > p.error')).toHaveCount(0)
+      await note.fill('')
+      await note.blur()
+      await expect.poll(() => noteWrites).toBe(4)
+      await expect(note).toBeEnabled()
+      await page.reload()
+      await card.locator('.live-exercise-note summary').click()
+      await expect(note).toHaveValue('')
+    }
   })
   test(`Figma workout Coach reference expiry keeps rest when deleting future exercise ${profileId}`, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })

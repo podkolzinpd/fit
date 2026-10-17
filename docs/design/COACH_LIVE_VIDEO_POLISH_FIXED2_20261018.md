@@ -76,8 +76,8 @@ OAuth не считать проверенными по синтетически
 ## Статус
 
 - PR 1: #1688/main94552310 выпущен; mainCI39077893863/Cloud.ru39078700484 success, public207/207+health/compiled4closed2/native207/207 passed.
-- PR 2: #1690 перенесён на main210ee7b6 после более раннего1689; range-diff подтверждает неизменный patch, новые локальные проверки/CI/release обязательны.
-- PR 3: локальный d31970e8, подготовлен и проверен; публикация после выпуска PR2.
+- PR 2: #1690/main9ee5af25 полностью выпущен: PRCI39107082759/mainCI39108106161/Cloud.ru39108856277 success, public207/207+health/compiled4closed2/native207/207 sync/build/install/launch passed.
+- PR 3: перенос на выпущенный main9ee5af25, tree-identical проверенному ce4c6b29 до docs-статуса; публикация и exact-head CI по порядку.
 - PR 4: локальный83e61268, подготовлен и проверен; нативная панель контактов физически не проверена и исправленной не заявлена.
 - PR 5: локальный751b956a, target10/regression44/fullcheck exit0; публикация по порядку. Разрешение владельца на все пять этапов сохраняется, ожидание очереди не завершает задачу.
 
@@ -154,3 +154,57 @@ merge более раннего1689 перенесён на main210ee7b6. Его
 frontend2734/API1426+160standardDBskip/infra320/hosting169/calendar12/fonts2/
 build/startup. Inventory656 пришёл из двух upstream push cases1689; наш гейт
 и digest не ослаблялись. Exact-head CI, merge, release и native PR2 ещё впереди.
+
+## Сверка и приёмка PR 3
+
+Подготовка от локально проверенного PR2 `1335eb0b`; `/workouts/:id/live`,390px,
+trainer Lime, исходный WORKOUT_REDESIGN fixed2. До изменения повторно получено:
+первый тап не отправляет append, после503/reload текст пуст и retry отсутствует.
+Сценарий и снимок сохранены приватно. Работают и переиспользуются существующие
+comment mutation/retry, runLiveWorkoutMutation/coordinator и textarea/disclosure.
+Не меняются API/БД/права, сообщения, таймер, SVG, поля подходов и клиентский путь.
+
+| Пункт | Результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| Черновик | scoped account/workout, включая очистку заметки, сохраняется до readback | storage4 + restored textarea after503/reload | Локально пройден |
+| Ручной повтор | Тот же вход восстанавливается после reload, accepted text очищает draft | existing quiet-retry case extended on one account | Локально пройден |
+| Первый тап | Один append ждёт note command в прежнем координаторе, затем выполняется | delayed503 + exact one append + reload/retry | Локально пройден |
+| Без усложнения | Нет нового баннера, автоматической рассылки/фоновой синхронизации или новой команды | code + visual390, non-pilot defaults preserved | Локально пройден |
+
+Targeted storage/coordinator10/10; existing browser case4/4 в двух движках.
+Новых browser cases нет; повтор длинной note-chain добавлен только первому из
+двух существующих аккаунтов, изоляция учётки/тренировки проверена unit.
+Первый расширенный тест ожидал несуществующий GET/workouts/:id и остановился;
+заменён точным текущим read-контрактом GET/training-data?workoutId. Runtime
+ради ошибочного ожидания не менялся; timeout/retries/inventory654/digest прежние.
+Типизация пройдена. При storage denied форма держит текст только в текущей
+вкладке; физический iPhone/реальный OAuth не проверены. Full check, CI и выпуск
+обязательны до публикации результата PR3.
+
+После публикации PR2 его docs-only amend дал9ba7099d, src/e2e остались байт-в-байт
+как в1335eb0b. PR3 перенесён на этот источник без конфликтов runtime. Итоговая
+regression54/54; дополнительные edge4/4: focus/blur восстановленного текста без
+повторной отправки, сохранение пробела при вводе, потерянный ACK с подтверждённым
+readback (stale error снимается), намеренная очистка заметки и reload.
+Параметры таймаутов и654-case inventory не менялись. Перед full check runtime и
+tests стабилизированы; правки документации не подменяют завершение этого гейта.
+
+Финальный PR3 full check exit0: frontend2733/2733 (четыре новых focused storage
+unit), API1426+160standardDBskip, infra320/hosting169/calendar12/fonts2/build/startup.
+Inventory654 union и все прежние гейты прошли; digest/таймауты не менялись.
+PR3 пока локальный: публикация после merge/release PR2, без обхода более ранних PR.
+
+После1689 PR3 перенесён на PR2 aa40ecd1 (main210ee7b6): workout runtime/unit
+байт-в-байт прежние; конфликты были только в статусах документов и разрешены
+с сохранением актуального выпуска и полной приёмки PR3. Fresh browser4/4,
+fullcheck exit0 frontend2738/API1426+160standardDBskip/infra320/hosting169/
+calendar12/fonts2/build/startup. Inventory656 — два upstream push cases, не
+новая наша матрица; гейты/digest не ослаблялись. Публикация всё ещё по очереди.
+
+PR2#1690/main9ee5af25 полностью выпущен после PRCI39107082759/mainCI39108106161
+и Cloud.ru39108856277 success: public207/207 size/hash+health, web/native4closed2,
+native sync/build/install/launch и207/207 built/installed passed. PR3 перенесён
+на этот squash-main; до изменения docs `git diff ce4c6b29 HEAD` пуст по всему
+дереву. Проверенные2738/frontend/API1426+160standardDBskip и browser4 относятся
+к тем же runtime/tests; новый exact-head CI всё равно обязателен. Физическое
+устройство и настоящий OAuth не проверены; новых правок поведения при переносе нет.

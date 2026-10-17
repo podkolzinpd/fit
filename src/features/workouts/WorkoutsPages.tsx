@@ -23,7 +23,7 @@ import { useIndependentSchedule } from './use-independent-schedule'
 import { actualWorkoutDurationSeconds } from './actual-workout-duration'
 import { WorkoutActualDuration, WorkoutActualDurationField } from './WorkoutActualDuration'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -106,6 +106,7 @@ import { workoutFeedbackConfirmation } from './workout-feedback-copy'
 import { clearWorkoutInactivityReminder } from './workout-inactivity-reminder'
 import { useWorkoutInactivityReminder } from './use-workout-inactivity-reminder'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
+import { acknowledgePendingLiveNote, readPendingLiveNotes, writePendingLiveNote } from './live-note-draft-storage'
 import { useAppViewport } from '../../app/app-viewport'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
 import { isFitLimeEnabled } from '../../app/fit-lime'
@@ -2668,6 +2669,23 @@ export function LiveWorkoutPage() {
   const liveDrag = coachReference || clientLime
   const densityEnabled = isCoachLiveDensityEnabled(actor)
   const liveDensity = useCoachLiveDensity(actor?.userId)
+  const noteOwner = coachReference ? actor?.userId : undefined
+  const noteScope = `${noteOwner ?? ''}:${workoutId}`
+  const [noteState, setNoteState] = useState(() => ({ scope: noteScope, drafts: noteOwner ? readPendingLiveNotes(noteOwner, workoutId) : new Map<string, string>() }))
+  const [focusedNote, setFocusedNote] = useState<string | null>(null)
+  const editedNotes = useRef(new Set<string>())
+  useEffect(() => {
+    setNoteState({ scope: noteScope, drafts: noteOwner ? readPendingLiveNotes(noteOwner, workoutId) : new Map<string, string>() })
+    setFocusedNote(null)
+    editedNotes.current.clear()
+  }, [noteScope])
+  const pendingNotes = noteState.scope === noteScope ? noteState.drafts : new Map<string, string>()
+  function captureLiveNote(exerciseId: string, value: string) {
+    if (!noteOwner) return
+    editedNotes.current.add(exerciseId)
+    writePendingLiveNote(noteOwner, workoutId, exerciseId, value)
+    setNoteState(current => ({ scope: noteScope, drafts: new Map(current.scope === noteScope ? current.drafts : []).set(exerciseId, value) }))
+  }
   useEffect(() => {
     if (!densityEnabled) return
     const frame = requestAnimationFrame(() => {
@@ -2702,6 +2720,23 @@ export function LiveWorkoutPage() {
     const incoming = await workoutsRepository.get(workoutId)
     return reconcileLiveWorkout(queryClient.getQueryData<Workout>(['workout', workoutId]), incoming)
   } })
+  useEffect(() => {
+    const workout = query.data
+    if (!noteOwner || !workout || noteState.scope !== noteScope) return
+    const acknowledged = [...noteState.drafts].filter(([id, value]) => {
+      if (focusedNote === id) return false
+      const exercise = workout.exercises.find(item => item.id === id)
+      return !exercise || (exercise.trainerComment ?? '').trim() === value.trim()
+    })
+    if (!acknowledged.length) return
+    for (const [id, value] of acknowledged) acknowledgePendingLiveNote(noteOwner, workoutId, id, value)
+    setNoteState(current => {
+      if (current.scope !== noteScope) return current
+      const drafts = new Map(current.drafts)
+      for (const [id, value] of acknowledged) if (drafts.get(id) === value) drafts.delete(id)
+      return { ...current, drafts }
+    })
+  }, [noteOwner, noteScope, noteState, query.data, focusedNote])
   const reminderPreference = useQuery({
     queryKey: ['push-notifications-status', actor?.userId],
     queryFn: () => pushNotificationsRepository.status(actor!.userId),
@@ -3491,6 +3526,14 @@ export function LiveWorkoutPage() {
     },
   })
   const commentLive = useMutation({ mutationFn: ({ exerciseId, comment }: { exerciseId: string; comment: string }) => runLiveWorkoutMutation(`comment:${exerciseId}`, (workout) => workoutsRepository.setExerciseComment(workout, exerciseId, comment)), onSuccess: async () => { await query.refetch() } })
+  useEffect(() => {
+    const sent = commentLive.variables
+    if (!noteOwner || !commentLive.isError || !sent) return
+    const exercise = query.data?.exercises.find(item => item.id === sent.exerciseId)
+    // An uncertain response is resolved by the existing authoritative readback,
+    // not by sending the accepted text again or adding another status banner.
+    if (exercise && (exercise.trainerComment ?? '').trim() === sent.comment) commentLive.reset()
+  }, [noteOwner, commentLive.isError, commentLive.variables, query.data])
   function closePicker() { if (appendSelection.isPending) return; setPickerOpen(false); setReplaceExerciseId(null); setLivePickerSelection([]) }
   function liveExerciseEntry(children: ReactNode) {
     return clientLime ? <Coachmark id="client-live-multiple-exercises-2026-10" userId={actor?.userId} title="Добавляйте несколько упражнений" description="Выберите упражнения в каталоге и нажмите «Добавить».">{children}</Coachmark> : children
@@ -3614,8 +3657,16 @@ export function LiveWorkoutPage() {
     inactivityReminder.dismiss()
     setConfirmFinish(true)
   }
-  const rootMutationPending = appendSet.isPending || appendRound.isPending || removeRound.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending || appendSelection.isPending
-    || reorderBlock.isPending || moveLiveBlock.isPending || mergeBlock.isPending || splitSuperset.isPending || replaceLive.isPending || commentLive.isPending || finish.isPending
+  const structureMutationPending = appendSet.isPending || appendRound.isPending || removeRound.isPending || removeSet.isPending || removeExercise.isPending || appendExercise.isPending || appendSelection.isPending
+    || reorderBlock.isPending || moveLiveBlock.isPending || mergeBlock.isPending || splitSuperset.isPending || replaceLive.isPending || finish.isPending
+  const rootMutationPending = structureMutationPending || commentLive.isPending
+  const pendingNoteRetry = coachReference ? [...pendingNotes].find(([id, value]) => {
+    const exercise = query.data?.exercises.find(item => item.id === id)
+    return exercise && focusedNote !== id && (exercise.trainerComment ?? '').trim() !== value.trim()
+  }) : undefined
+  const noteRetry = coachReference
+    ? pendingNoteRetry ? { exerciseId: pendingNoteRetry[0], comment: pendingNoteRetry[1].trim() } : undefined
+    : commentLive.isError ? commentLive.variables : undefined
   function draftFrom(form: HTMLFormElement, set: WorkoutSet): LiveSetDraft {
     const values = new FormData(form)
     const runDuration = values.get('runDuration')
@@ -3644,11 +3695,14 @@ export function LiveWorkoutPage() {
   }
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name) {
-    const note = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
+    const serverNote = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
+    const note = pendingNotes.get(exercise.id) ?? serverNote
+    const preview = focusedNote === exercise.id ? serverNote : note
     return <details className="live-exercise-note" data-has-note={Boolean(note.trim()) || undefined}>
-      <summary>{clientLime ? 'Моя заметка' : clientMode ? 'Заметка' : 'Заметка тренера'}{note ? <span className="live-note-preview">{note}</span> : null}</summary>
-      <textarea className="exercise-comment" aria-label={`Заметка: ${displayName}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} defaultValue={note} disabled={rootMutationPending}
-        onBlur={(event) => { const next = event.target.value.trim(); if (next !== note) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
+      <summary>{clientLime ? 'Моя заметка' : clientMode ? 'Заметка' : 'Заметка тренера'}{preview ? <span className="live-note-preview">{preview}</span> : null}</summary>
+      <textarea className="exercise-comment" aria-label={`Заметка: ${displayName}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} disabled={rootMutationPending}
+        {...(coachReference ? { value: note, onChange: (event: ChangeEvent<HTMLTextAreaElement>) => captureLiveNote(exercise.id, event.currentTarget.value), onFocus: () => setFocusedNote(exercise.id) } : { defaultValue: note })}
+        onBlur={(event) => { const edited = !coachReference || editedNotes.current.delete(exercise.id); if (coachReference) setFocusedNote(null); const next = event.target.value.trim(); if (edited && next !== (coachReference ? serverNote.trim() : serverNote)) commentLive.mutate({ exerciseId: exercise.id, comment: next }) }} />
     </details>
   }
   function liveTrainerNote(exercise: WorkoutExerciseModel) {
@@ -3663,7 +3717,7 @@ export function LiveWorkoutPage() {
     return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null
   }
   function liveExerciseFooter(exercise: WorkoutExerciseModel) {
-    const add = canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>
+    const add = canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={coachReference ? structureMutationPending : rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>
     return clientLime
       ? <div className="live-exercise-utilities">{liveCommentField(exercise)}{add}</div>
       : densityEnabled
@@ -4133,7 +4187,7 @@ export function LiveWorkoutPage() {
         <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending || Boolean(removalRetryReason)} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>
       </>}
       {liveDrag && moveLiveBlock.isError && moveLiveBlock.variables && <button type="button" className="secondary" disabled={rootMutationPending} onClick={() => moveLiveBlock.mutate(moveLiveBlock.variables!)}>Повторить сохранение порядка</button>}
-      {commentLive.isError && commentLive.variables && <button type="button" className="secondary" onClick={() => commentLive.mutate(commentLive.variables!)}>Повторить сохранение заметки</button>}
+      {noteRetry && !commentLive.isPending && <button type="button" className="secondary" disabled={coachReference ? rootMutationPending : undefined} onClick={() => commentLive.mutate(noteRetry)}>Повторить сохранение заметки</button>}
       {/* Закреплённая нижняя панель: «Завершить» — вторичная, чтобы не
           конкурировать с primary-подтверждением подхода в карточке.
           Подтверждение частичного завершения — inline (не нативный confirm,
