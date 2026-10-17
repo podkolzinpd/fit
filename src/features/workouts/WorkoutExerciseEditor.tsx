@@ -14,6 +14,7 @@ import { allowsOptionalDistance, allowsDurationWeight, allowsRepetitionTimeChoic
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
 import { WorkoutDurationField } from './WorkoutDurationField'
+import { LiveSetInput } from './LiveSetInput'
 import { WorkoutExercise, WorkoutSetRow } from './WorkoutSurface'
 import { ExerciseThumbnail, findCatalogExercise } from '../exercises'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
@@ -107,6 +108,7 @@ interface WorkoutExerciseEditorProps {
   /** Родитель закончил восстановление исходного плана/черновика. */
   initialExercisesReady?: boolean
   reference?: boolean
+  safePlanInput?: boolean
   disabled?: boolean
 }
 
@@ -118,7 +120,15 @@ function draftExerciseKey(exercise: WorkoutExerciseDraft, index: number) {
   return exercise.blockId ?? `${exercise.source}:${exercise.ref}:${index}`
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, disabled = false }: WorkoutExerciseEditorProps) {
+function PlanNumberField({ label, placeholder, name, value, decimal, disabled, onChange }: {
+  label: string; placeholder: string; name: string; value?: number; decimal?: boolean; disabled: boolean
+  onChange: (value: number | undefined) => void
+}) {
+  return <LiveSetInput className="planned-set-input" name={name} inputKey={name} label={label} placeholder={placeholder}
+    defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
+}
+
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, safePlanInput = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -314,30 +324,36 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const distanceCapable = !allowsDurationWeight(exercise) && (exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((item) => item.distanceKm !== undefined))))
     const inputClass = 'planned-set-input'
     const metric = (content: ReactNode, unit: string) => reference ? <span className={`coach-plan-metric${unit === 'RPE' ? ' coach-plan-rpe' : ''}`}>{content}<span className="coach-plan-field-unit" aria-hidden="true">{unit}</span></span> : content
-    const weightField = <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
+    const weightField = safePlanInput
+      ? <PlanNumberField label={`Вес, подход ${setIndex + 1}`} placeholder="кг" name={`${exercise.blockId}-${set.position}-weight`} value={set.weightKg} decimal disabled={disabled} onChange={(next) => updateSet(exerciseIndex, setIndex, { weightKg: next })} />
+      : <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
+    const repsField = safePlanInput
+      ? <PlanNumberField label={`Повторы, подход ${setIndex + 1}`} placeholder="повт." name={`${exercise.blockId}-${set.position}-reps`} value={set.reps} disabled={disabled} onChange={(next) => updateSet(exerciseIndex, setIndex, { reps: next })} />
+      : <input className={inputClass} aria-label={`${entryMode === 'fact' && exercise.inputKind === 'strength' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
     const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
       <option value="">—</option>
       {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
     </select> : null
     if (exercise.inputKind === 'strength') return <>
       {metric(weightField, 'кг')}
-      {metric(<input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />, 'повт.')}
+      {metric(repsField, 'повт.')}
       {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'reps') return <>
-      {metric(<WorkoutDurationField compact={reference} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
-      {metric(<input className={inputClass} aria-label={`Повторы, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />, 'повт.')}
+      {metric(<WorkoutDurationField compact={reference} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(repsField, 'повт.')}
       {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'duration' && !distanceCapable) return <>
       {allowsDurationWeight(exercise) && metric(weightField, 'кг')}
-      {metric(<WorkoutDurationField compact={reference} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(<WorkoutDurationField compact={reference} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
       {!allowsDurationWeight(exercise) && <span aria-hidden="true" />}
       {rpeField && metric(rpeField, 'RPE')}
     </>
     return <>
       <RunMetricsFields
         reference={reference}
+        planInput={safePlanInput}
         compactDuration={reference}
         loadField={isLoadedDistance(exercise) ? metric(weightField, 'кг') : undefined}
         key={`${exercise.name}-${set.position}`}

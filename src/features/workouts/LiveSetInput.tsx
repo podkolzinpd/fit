@@ -16,10 +16,13 @@ export function focusNextLiveField(input: HTMLElement): void {
 
 /** Text + inputMode permits reliable whole-value selection in iOS Safari.
  * Native number controls remain unchanged outside the released Lime UI. */
-export function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false, selectZero = false, directInput = false }: {
+export function LiveSetInput({ name, label, placeholder, defaultValue, step, disabled, inputKey, decimal = false, planHint = false, selectZero = false, directInput = false, className = 'live-set-input', onValueChange }: {
   name: string; label: string; placeholder: string; defaultValue: number | undefined
   step: number | 'any'; disabled: boolean; inputKey: string; decimal?: boolean
   planHint?: boolean; selectZero?: boolean; directInput?: boolean
+  className?: string
+  /** Plan forms opt in to numeric drafts; Live continues to use its form coordinator. */
+  onValueChange?: (value: number | undefined) => void
 }) {
   const selectAfterPointer = useRef(false)
   const field = useRef<HTMLInputElement>(null)
@@ -30,7 +33,7 @@ export function LiveSetInput({ name, label, placeholder, defaultValue, step, dis
     if (liveNumberValue(input.value) === defaultValue) dirty.current = false
     else if (!dirty.current && document.activeElement !== input) input.value = String(defaultValue ?? '')
   }, [defaultValue, directInput])
-  return <input ref={field} key={inputKey} className={`live-set-input${planHint ? ' plan-hint' : ''}`}
+  return <input ref={field} key={inputKey} className={`${className}${planHint ? ' plan-hint' : ''}`}
     aria-label={label} name={name} type={directInput ? 'text' : 'number'} data-live-direct={directInput || undefined}
     inputMode={decimal ? 'decimal' : 'numeric'} enterKeyHint={directInput ? 'next' : undefined}
     min={directInput ? undefined : '0'} step={directInput ? undefined : step}
@@ -77,7 +80,9 @@ export function LiveSetInput({ name, label, placeholder, defaultValue, step, dis
       input.classList.remove('plan-hint')
       if (directInput) {
         const valid = input.value === '' || (decimal ? /^\d+(?:[.,]\d+)?$/ : /^\d+$/).test(input.value)
+          && (!onValueChange || Number.isFinite(liveNumberValue(input.value)))
         input.setCustomValidity(valid ? '' : decimal ? 'Введите неотрицательное число' : 'Введите целое неотрицательное число')
+        if (valid) onValueChange?.(liveNumberValue(input.value))
       }
     }} />
 }

@@ -1156,10 +1156,34 @@ frontend создаёт короткоживущие signed URL.
 ### Build-time флаги production frontend
 
 Текущий источник production-значений — шаг build в
-`.github/workflows/deploy-yandex-frontend.yml`: переменную нужно явно
+`.github/workflows/prepare-cloudru-frontend.yml`: переменную нужно явно
 передать в его `env` (из GitHub variable/secret либо фиксированного значения),
-а после изменения выполнить новый Yandex frontend deployment. Одной записи в
-Vercel Environment или GitHub Variables без подключения в workflow недостаточно.
+а после изменения выполнить штатный Cloud.ru frontend deployment с зелёного
+актуального main. Старый Yandex workflow — только сохранённый rollback-контур,
+не цель новых выпусков. Одной записи в GitHub Variables без подключения в build
+недостаточно.
+
+Закрытые исправления ввода плана (17.10) используют независимые переменные:
+
+Для этого выпуска они задаются в GitHub environment `fit-frontend-candidate`,
+где уже хранится действующий fixed2 reference-пилот. Сам reference allowlist
+не изменяется; новая функция получает собственные переменные с той же
+подтверждённой парой. Чтение только repository-level variables не показывает
+environment-level настройки сборки.
+
+```text
+VITE_COACH_PLAN_INPUT_ENABLED=true
+VITE_COACH_PLAN_INPUT_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>
+```
+
+Default-off: нужно точное `true`, ровно два разных ID и роль trainer с прежним
+coach-workout-reference доступом. Другая учётка, третий Lime-тренер, клиент,
+пустой/дублированный/расширенный список и старые сохранённые настройки не
+включают пилот. Это не авторизация данных; backend ownership/version прежние.
+План сохраняется явно. Локальный edit draft изолирован от копии и принимается
+только для той же версии плана; ошибка сети сохраняет ввод. Откат: флаг false
+и новый deployment, без изменения тренировочных данных. Состав прежнего fixed2
+не расширять. План приёмки — docs/design/COACH_PLAN_AND_LIVE_FIXED2_20261017.md.
 
 Закрытый пилот Apple Health использует build-time переменные:
 

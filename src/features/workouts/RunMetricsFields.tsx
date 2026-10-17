@@ -11,6 +11,7 @@ import { WorkoutDurationField } from './WorkoutDurationField'
 
 interface RunMetricsFieldsProps {
   reference?: boolean
+  planInput?: boolean
   loadField?: ReactNode
   idPrefix: string
   durationSec?: number
@@ -36,6 +37,7 @@ interface RunMetricsFieldsProps {
 
 export function RunMetricsFields({
   reference = false,
+  planInput = false,
   loadField,
   idPrefix,
   durationSec,
@@ -116,7 +118,7 @@ export function RunMetricsFields({
     window.requestAnimationFrame(() => form?.dispatchEvent(new Event('input', { bubbles: true })))
   }
 
-  const durationControl = <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} compact={compactDuration} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
+  const durationControl = <WorkoutDurationField durationSec={localDuration} name={durationName} label={durationLabel} className={inputClassName} planHint={planDurationHint} disabled={disabled} compact={compactDuration} planInput={planInput} onCommit={(next) => { setLocalDuration(next); onCommit?.({ durationSec: next, durationMin: undefined }) }} />
   const durationField = <div className={loadField ? 'run-duration-field loaded-distance-time' : 'run-duration-field'}>
       {loadField && <span>Время (необязательно)</span>}
       {reference ? <div className="coach-live-metric">{durationControl}<span className="coach-live-field-unit" aria-hidden="true">мин:с</span></div> : durationControl}
@@ -135,11 +137,24 @@ export function RunMetricsFields({
           aria-label={distanceLabel}
           type="text"
           inputMode="decimal"
+          enterKeyHint={planInput ? 'next' : undefined}
           pattern="[0-9]+([.,][0-9]+)?"
           placeholder="0"
           value={distanceText}
           disabled={disabled}
-          onChange={(event) => setDistanceText(event.target.value)}
+          onFocus={(event) => { if (planInput) event.currentTarget.select() }}
+          onPointerDown={(event) => {
+            if (!planInput || document.activeElement === event.currentTarget || event.button !== 0 || event.isPrimary === false) return
+            event.preventDefault()
+            event.currentTarget.focus({ preventScroll: true })
+            event.currentTarget.select()
+          }}
+          onChange={(event) => {
+            const value = event.target.value
+            setDistanceText(value)
+            const next = runDistanceKmFromInput(value, unit)
+            if (planInput && (value === '' || next !== undefined)) onCommit?.({ distanceKm: next })
+          }}
           onBlur={commitDistance}
         />
         <span className={`run-distance-unit-control${disabled ? ' disabled' : ''}`}>
@@ -166,12 +181,17 @@ export function RunMetricsFields({
           aria-label="Гребков в минуту"
           type="number"
           inputMode="numeric"
+          enterKeyHint={planInput ? 'next' : undefined}
           min="0"
           step="1"
           placeholder="—"
           value={strokeRateText}
           disabled={disabled}
-          onChange={(event) => setStrokeRateText(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value
+            setStrokeRateText(value)
+            if (planInput && (value === '' || /^\d+$/.test(value) && Number.isFinite(Number(value)))) onCommit?.({ reps: value === '' ? undefined : Number(value) })
+          }}
           onBlur={commitStrokeRate}
         />
       </label>}

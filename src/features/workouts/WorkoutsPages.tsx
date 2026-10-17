@@ -7,7 +7,8 @@ import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
-import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { isCoachPlanInputEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { advancePlanField } from './plan-input-navigation'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
 import { invalidateWorkoutResults } from '../../app/invalidate-workout-results'
@@ -76,7 +77,7 @@ import { useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { useRpeDisplay } from '../../app/rpe-display'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { prepareGong } from '../../shared/gong'
-import { readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
+import { readWorkoutEditDraft, readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft } from './workout-form-draft'
 import { plannedWorkoutActionLabels } from './workout-entry-rules'
 import { WorkoutSetTable } from './WorkoutSetTable'
 import { RunMetricsFields } from './RunMetricsFields'
@@ -1251,6 +1252,11 @@ export function WorkoutFormPage() {
   const [draftExercises, setDraftExercises] = useState<WorkoutDraft['exercises'] | null>(null)
   const [previousResultReferences, setPreviousResultReferences] = useState<ReadonlyMap<string, PreviousExerciseResult>>(() => new Map())
   const createRequestId = useRef<string>(crypto.randomUUID())
+  const editSourceVersion = useRef<number | undefined>(undefined)
+  const editBaseline = useRef<string | null>(null)
+  const editRestored = useRef(false)
+  const planSaved = useRef(false)
+  const [hasEditChanges, setHasEditChanges] = useState(false)
   const [recordCompleted, setRecordCompleted] = useState(false)
   const [entryDate, setEntryDate] = useState<LocalDate>(() => localDate(params.get('date') ?? today))
   const [startTime, setStartTime] = useState('')
@@ -1309,6 +1315,8 @@ export function WorkoutFormPage() {
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   const limePlan = isFitLimeEnabled(actor) && !completedMode
   const coachReference = limePlan && isCoachWorkoutRedesignEnabled(actor)
+  const safePlanInput = coachReference && isCoachPlanInputEnabled(actor) && (!workoutId || source.data?.status === 'planned')
+  const planDraftKey = safePlanInput && workoutId ? workoutFormDraftKey(actor?.userId ?? 'anonymous', `edit-${workoutId}`) : draftKey
   const templates = useQuery({ queryKey: ['workout-templates'], queryFn: () => workoutTemplates.list(), enabled: templatePickerOpen && !clientMode && !completedMode })
   function closeTemplatePicker() {
     setTemplatePickerOpen(false)
@@ -1325,8 +1333,12 @@ export function WorkoutFormPage() {
   }
   useEffect(() => {
     if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && favorites.isLoading) || formDraftReady) return
-    // Only creation persists drafts. An unfinished copy must never populate an edit.
-    const saved = workoutId ? null : readWorkoutFormDraft(draftKey)
+    // The closed pilot's edit uses a separate key and the exact source version.
+    const saved = workoutId ? safePlanInput ? readWorkoutEditDraft(planDraftKey, source.data?.version) : null : readWorkoutFormDraft(draftKey)
+    if (safePlanInput && workoutId) {
+      editSourceVersion.current = source.data?.version
+      editRestored.current = Boolean(saved)
+    }
     if (saved) {
       if (saved.requestId) createRequestId.current = saved.requestId
       setSelectedClientId(routeClientId || saved.clientId)
@@ -1365,7 +1377,7 @@ export function WorkoutFormPage() {
       trainingFormatTouched.current = Boolean(workoutId)
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, coachReference, draftKey, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.isLoading, templateId, templateSource.isLoading])
+  }, [actor, clientMode, coachReference, draftKey, planDraftKey, safePlanInput, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
 
   useEffect(() => {
     if (clientMode) { setTrainingFormat('self'); return }
@@ -1375,16 +1387,37 @@ export function WorkoutFormPage() {
   }, [clientMode, entryDate, finance.data, workoutId])
 
   useEffect(() => {
-    if (!formDraftReady || workoutId) return
-    writeWorkoutFormDraft(draftKey, { clientId, requestId: createRequestId.current, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat, prepSeconds })
-  }, [actualDurationMinutes, clientId, draftKey, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, workoutId])
+    if (!formDraftReady || safePlanInput && planSaved.current || workoutId && !safePlanInput) return
+    const draft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat, prepSeconds }
+    if (workoutId) {
+      const fingerprint = JSON.stringify(draft)
+      editBaseline.current ??= fingerprint
+      const changed = editRestored.current || fingerprint !== editBaseline.current
+      setHasEditChanges(changed)
+      if (!changed) {
+        // A stale draft must not populate the newer plan, but merely opening
+        // that plan is not permission to erase the user's older local input.
+        if (readWorkoutEditDraft(planDraftKey, editSourceVersion.current)) removeWorkoutFormDraft(planDraftKey)
+        return
+      }
+      writeWorkoutFormDraft(planDraftKey, { ...draft, sourceVersion: editSourceVersion.current })
+    } else writeWorkoutFormDraft(draftKey, { ...draft, requestId: createRequestId.current })
+  }, [actualDurationMinutes, clientId, draftKey, planDraftKey, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, workoutId])
+
+  useEffect(() => {
+    if (!safePlanInput || !hasEditChanges) return
+    const warn = (event: BeforeUnloadEvent) => { if (!planSaved.current) { event.preventDefault(); event.returnValue = '' } }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [safePlanInput, hasEditChanges])
 
   useEffect(() => {
     if (!initial || formDraftReady) return
     setEntryDate(initial.workoutDate)
   }, [formDraftReady, initial, source.data?.status])
   const mutation = useMutation({ mutationFn: (draft: WorkoutDraft) => recordPlannedResult ? workoutsRepository.recordPlannedResult(draft) : completedMode ? workoutsRepository.saveCompleted(draft) : workoutsRepository.save(draft), onSuccess: async (id) => {
-    if (!workoutId) removeWorkoutFormDraft(draftKey)
+    if (safePlanInput) planSaved.current = true
+    if (!workoutId || safePlanInput) removeWorkoutFormDraft(planDraftKey)
     // Перед переходом карточка должна получить новую optimistic-concurrency
     // version. Иначе пользователь успевает запустить только что изменённую
     // тренировку из устаревшего cache и получает ложный conflict.
@@ -1548,7 +1581,7 @@ export function WorkoutFormPage() {
       endTime: submittedEndTime || undefined,
       ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null }),
       ...(limePlan ? { title: title.trim() || null } : {}),
-      notes: notes || undefined, stageId: stageId || null, exercises, version: source.data?.version,
+      notes: notes || undefined, stageId: stageId || null, exercises, version: safePlanInput && workoutId ? editSourceVersion.current : source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
   }
   const availableClients = clientMode ? (mine.data ? [mine.data] : []) : clients.data
@@ -1563,6 +1596,9 @@ export function WorkoutFormPage() {
   const headerMeta = [copiedWorkout ? 'Скопировано' : templateId ? templateSource.data?.name : plannedFromFavorite ? 'Из избранного' : '', selectedClientName, exerciseMeta].filter(Boolean).join(' · ')
   const hasMeaningfulDraft = exercises.length > 0 || Boolean(title.trim() || notes.trim() || startTime || endTime || selectedClientId || recordCompleted || entryDate !== localDate(params.get('date') ?? today))
   async function leaveForm() {
+    if (safePlanInput && workoutId && hasEditChanges && !planSaved.current) {
+      if (!await confirmLeave({ message: 'Выйти без сохранения плана?', confirmLabel: 'Выйти' })) return
+    }
     if (limePlan && !workoutId && params.get('entry') === 'quick' && pilotCalendarReturnTo) {
       navigate(pilotCalendarReturnTo, { replace: true })
       return
@@ -1578,7 +1614,11 @@ export function WorkoutFormPage() {
   return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
-    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)}>
+    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
+      if (!safePlanInput || event.key !== 'Enter' || event.nativeEvent.isComposing || !(event.target instanceof HTMLInputElement)) return
+      event.preventDefault()
+      advancePlanField(event.target, event.currentTarget)
+    }} onInput={safePlanInput && workoutId ? () => setHasEditChanges(true) : undefined}>
       <CoachFormControls reference={coachReference} disabled={mutation.isPending}>
       <section className="workout-form-section">
         {coachReference ? <div className="coach-plan-details">
@@ -1640,7 +1680,7 @@ export function WorkoutFormPage() {
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} safePlanInput={safePlanInput} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}

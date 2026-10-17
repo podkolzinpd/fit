@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises'
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
 import type { WorkoutExercise, WorkoutTemplateDraft } from '../src/shared/domain'
 import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic, holdClientLiveCard } from './fit-lime-fixtures'
@@ -7,6 +7,122 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
+
+// Two engines are intentional: native implicit submit and pointer selection differ in Safari.
+function coachPlanInputFixture(profileId = 'c0ac0000-6010-4000-8000-000000000001') {
+  const plan = coachGestureWorkout(false, 3)
+  plan.status = 'planned'; plan.startedAt = null; plan.trainerId = profileId; plan.createdBy = profileId
+  plan.title = 'Плановые значения'
+  plan.exercises[1] = { ...plan.exercises[1]!, ref: 'plank', name: 'Планка', inputKind: 'duration', sets: plan.exercises[1]!.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 90 })) }
+  plan.exercises[2] = { ...plan.exercises[2]!, ref: 'running', name: 'Бег', inputKind: 'distance', sets: plan.exercises[2]!.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 600, distanceKm: 1.5 })) }
+  return plan
+}
+async function openCoachPlanInput(page: Page, profileId?: string) {
+  const plan = coachPlanInputFixture(profileId)
+  await mockPilot(page, { profileId: plan.trainerId, fitLime: true, workouts: [plan] })
+  await page.addInitScript(() => localStorage.setItem('fit.workoutTimeWheel', 'false'))
+  page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss())
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await expect(page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })).toBeVisible()
+  return plan
+}
+
+test('Figma workout Coach plan input keeps decimals, Next, active metrics and retry', async ({ page }, info) => {
+  await openCoachPlanInput(page)
+  const writes: Array<{ version: number; exercises: Array<{ sets: Array<{ weightKg?: number; durationSec?: number; distanceKm?: number }> }> }> = []
+  await page.route(`**/v1/workouts/${workoutId}`, async route => {
+    if (route.request().method() !== 'PUT') return route.fallback()
+    writes.push(route.request().postDataJSON() as typeof writes[number])
+    if (writes.length === 1) return route.fulfill({ status: 503, json: { error: 'Временная ошибка сохранения' } })
+    return route.fallback()
+  })
+  const first = page.locator('.planned-exercise').first()
+  const weight = first.getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill(''); await weight.pressSequentially('22,5')
+  await expect(weight).toHaveValue('22,5')
+  expect(await weight.evaluate((node: HTMLInputElement) => node.checkValidity())).toBe(true)
+  await weight.fill('50'); await first.getByLabel('Повторы, подход 1', { exact: true }).click()
+  await weight.click(); await weight.pressSequentially('25')
+  await expect(weight).toHaveValue('25')
+  await first.getByLabel('Повторы, подход 1', { exact: true }).press('Enter')
+  await expect(first.getByLabel('Вес, подход 2', { exact: true })).toBeFocused()
+  expect(writes).toHaveLength(0)
+  await weight.fill('-1'); await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  expect(await weight.evaluate((node: HTMLInputElement) => node.checkValidity())).toBe(false)
+  expect(writes).toHaveLength(0)
+  await weight.fill('22,5')
+  const plank = page.locator('.planned-exercise').nth(1)
+  await expect(plank.locator('.workout-duration-trigger')).toHaveCount(0)
+  await plank.getByLabel('Время, подход 1: секунды', { exact: true }).fill('42')
+  const distance = page.locator('.planned-exercise').nth(2).getByLabel('Расстояние, подход 1', { exact: true })
+  await distance.fill('2,75'); await distance.press('Enter')
+  expect(writes).toHaveLength(0)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/edit$`))
+  await distance.fill('3.25') // Save directly from the still-focused last metric.
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('временно недоступен')
+  await expect(weight).toHaveValue('22,5')
+  await page.screenshot({ path: info.outputPath('coach-plan-input-retry.png') })
+  expect(writes[0]!.exercises[0]!.sets[0]!.weightKg).toBe(22.5)
+  expect(writes[0]!.exercises[1]!.sets[0]!.durationSec).toBe(102)
+  expect(writes[0]!.exercises[2]!.sets[0]!.distanceKm).toBe(3.25)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).focus()
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).press('Enter')
+  await expect(page.locator('.coach-reference-form')).not.toBeVisible()
+  expect(writes).toHaveLength(2); expect(writes[1]).toEqual(writes[0])
+  expect(await page.evaluate(key => localStorage.getItem(key), `fit.workout-form-draft.c0ac0000-6010-4000-8000-000000000001.edit-${workoutId}`)).toBeNull()
+})
+
+test('Figma workout Coach plan input restores only same-version edits and guards Back', async ({ page }) => {
+  const plan = await openCoachPlanInput(page)
+  const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill('77.5'); await weight.press('Enter')
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  const confirm = page.getByRole('alertdialog')
+  await expect(confirm).toContainText('Выйти без сохранения плана?')
+  await confirm.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await page.reload(); await expect(weight).toHaveValue('77.5')
+  plan.version += 1 // Simulate a newer server version; never mix it with an old edit.
+  await page.reload(); await expect(weight).toHaveValue('20')
+  const retained = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}') as { sourceVersion?: number }, `fit.workout-form-draft.c0ac0000-6010-4000-8000-000000000001.edit-${workoutId}`)
+  expect(retained.sourceVersion).toBe(plan.version - 1)
+})
+
+test('Figma workout Coach plan input second identity creates and reloads a numeric draft', async ({ page }) => {
+  const id = 'c0ac0000-6010-4000-8000-000000000002'
+  await mockPilot(page, { profileId: id, fitLime: true, workouts: [], failFirstSave: true })
+  await page.goto(`/workouts/new?client=${clientId}&date=2026-10-17`)
+  await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Новый план без случайного сохранения')
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await picker.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await picker.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await picker.getByRole('button', { name: 'Добавить выбранные упражнения' }).click()
+  const card = page.locator('.planned-exercise').first()
+  const weight = card.getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill(''); await weight.pressSequentially('27,5')
+  await weight.press('Enter')
+  await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toBeFocused()
+  await card.getByLabel('Повторы, подход 1', { exact: true }).fill('12')
+  await page.reload(); await expect(weight).toHaveValue('27.5')
+  await card.getByRole('button', { name: 'Подход', exact: true }).click()
+  await expect(card.getByLabel('Вес, подход 2', { exact: true })).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(weight).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.locator('.coach-reference-form')).not.toBeVisible()
+  await page.goto(`/workouts/${newWorkoutId}/edit`)
+  await expect(weight).toHaveValue('27.5')
+})
+
+test('Figma workout Coach plan input never leaks into a third Lime trainer', async ({ page }) => {
+  await openCoachPlanInput(page, 'c0ac0000-6010-4000-8000-000000000003')
+  await expect(page.locator('.coach-reference-form')).toHaveCount(0)
+  const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })
+  await expect(weight).toHaveAttribute('type', 'number')
+  await expect(weight).not.toHaveAttribute('data-live-direct')
+})
 
 for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference full editor ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })

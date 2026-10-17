@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 636-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 640-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,8 @@ test('real Playwright partitions preserve the 636-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 636) // Previous632 + four layout-only client Live theme/width cases.
+    assert.equal(full.length, 640) // Previous636 + four closed coach-plan input regression cases.
+    assert.equal(full.filter(item => item.includes('Figma workout Coach plan input ')).length, 4)
     assert.equal(full.filter(key => key.includes('Client Lime compact Live composition ')).length, 4)
     assert.equal(full.filter(key => key.endsWith('Client Lime Live gradual keyboard keeps the edited row visible')).length, 1)
     for (const title of ['Client Lime grouped drag preserves facts drafts and exact retry', 'Client Lime pointer drag autoscrolls and preserves draft', 'Client Lime touch drag autoscrolls and preserves draft']) assert.equal(full.filter(key => key.endsWith(title)).length, 1)
