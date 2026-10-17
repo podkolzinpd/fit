@@ -665,6 +665,29 @@ production frontend или Supabase. Перенос на stage оплачива�
 холодные вызовы уже существующего Serverless Container; новый постоянно
 работающий или provisioned ресурс не создаётся.
 
+## DataLens после переезда на Cloud.ru
+
+Кластер `fit-stage-postgres` (`10.70.10.67:5432`, база `fit`) не имеет публичного
+адреса. Внешний DataLens (Yandex Cloud) читает схему `analytics` через ВМ
+`fit-stage-app`: nginx stream слушает `55432` и без разрыва TLS пробрасывает
+TCP к кластеру (`infra/cloudru/nginx-stream-datalens.conf`). Пускаются только
+адреса DataLens; тот же список нужен в группе безопасности публичного IP ВМ.
+
+1. Пользователь `fit_datalens` создаётся в консоли Cloud.ru (вкладка
+   «Пользователи» кластера); пароль хранится только у владельца и в DataLens.
+2. Миграция `000147` выдаёт ему только чтение схемы `analytics` (и права по
+   умолчанию на будущие представления); без роли ничего не делает.
+3. Проброс ставит ручной `configure-cloudru-datalens-proxy.yml`: сначала
+   `mode=inspect`, затем `mode=apply` с `confirmation=OPEN_DATALENS_DB_PROXY`.
+   Шаг проверяет доступность кластера, `nginx -t` с откатом и ответ PostgreSQL
+   на SSLRequest через проброс.
+4. В DataLens редактируется существующее подключение (не создаётся новое):
+   хост `87.242.117.210`, порт `55432`, база `fit`, пользователь
+   `fit_datalens`, TLS включён.
+
+Закрыть доступ: удалить `/etc/nginx/fit-stream.d/datalens.conf`, `nginx -t`,
+reload, и убрать правило `55432` из группы безопасности.
+
 ## Служебная плашка о восстановлении ИИ
 
 Временный build-time флаг сборки Cloud.ru (`.github/workflows/prepare-cloudru-frontend.yml`):
