@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 
@@ -35,4 +35,17 @@ it('updates untouched carry suggestions without replacing a focused or unsaved v
   rerender(<LiveSetInput {...props} defaultValue={27.5} />)
   rerender(<LiveSetInput {...props} defaultValue={30} />)
   expect(input.value).toBe('30')
+})
+
+it('opt-in plan consumer receives valid numeric drafts without replacing intermediate or invalid text', () => {
+  const change = vi.fn()
+  render(<LiveSetInput {...props} className="planned-set-input" onValueChange={change} />)
+  const input = screen.getByLabelText<HTMLInputElement>('Вес')
+  for (const value of ['22,5', '0.5', '']) fireEvent.input(input, { target: { value } })
+  expect(change.mock.calls).toEqual([[22.5], [0.5], [undefined]])
+  fireEvent.input(input, { target: { value: '22,' } })
+  expect(input.value).toBe('22,')
+  expect(input).toBeInvalid()
+  expect(change).toHaveBeenCalledTimes(3)
+  expect(input).toHaveClass('planned-set-input')
 })

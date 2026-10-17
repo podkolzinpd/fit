@@ -2,6 +2,7 @@ import type { WorkoutDraft, WorkoutTrainingFormat } from '../../shared/domain'
 import type { LocalDate } from '../../shared/local-date'
 
 export interface WorkoutFormDraft {
+  sourceVersion?: number
   title?: string
   requestId?: string
   composerText?: string
@@ -22,6 +23,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
   if (!value || typeof value !== 'object') return false
   const draft = value as Partial<WorkoutFormDraft>
   return typeof draft.clientId === 'string'
+    && (draft.sourceVersion === undefined || Number.isInteger(draft.sourceVersion) && draft.sourceVersion >= 0)
     && (draft.title === undefined || typeof draft.title === 'string')
     && (draft.requestId === undefined || typeof draft.requestId === 'string')
     && (draft.composerText === undefined || typeof draft.composerText === 'string')
@@ -49,6 +51,12 @@ export function readWorkoutFormDraft(key: string): WorkoutFormDraft | null {
   } catch {
     return null
   }
+}
+
+/** Edit drafts never share a key with a copy and never overwrite a newer plan. */
+export function readWorkoutEditDraft(key: string, version: number | undefined): WorkoutFormDraft | null {
+  const draft = readWorkoutFormDraft(key)
+  return version !== undefined && draft?.sourceVersion === version ? draft : null
 }
 
 export function writeWorkoutFormDraft(key: string, draft: WorkoutFormDraft): void {

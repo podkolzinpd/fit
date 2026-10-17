@@ -166,7 +166,7 @@ test('prepare workflow retains green-main and default-off automatic gate without
   }
 })
 
-test('candidate preserves every production VITE setting except explicitly approved API, AI program and AI-recovery notice', async () => {
+test('candidate preserves legacy VITE settings and adds only the reviewed Cloud.ru fixed2 plan pilot', async () => {
   const [production, candidate] = await Promise.all([
     readFile(new URL('../.github/workflows/deploy-yandex-frontend.yml', import.meta.url), 'utf8'),
     readFile(new URL('../.github/workflows/prepare-cloudru-frontend.yml', import.meta.url), 'utf8'),
@@ -175,7 +175,10 @@ test('candidate preserves every production VITE setting except explicitly approv
     .map((match) => [match[1], match[2]]))
   const original = settings(production)
   const next = settings(candidate)
-  assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys()].sort())
+  const planPilot = ['VITE_COACH_PLAN_INPUT_ENABLED', 'VITE_COACH_PLAN_INPUT_PILOT_USER_IDS']
+  assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys(), ...planPilot].sort())
+  assert.equal(next.get(planPilot[0]), "${{ vars.VITE_COACH_PLAN_INPUT_ENABLED || 'false' }}")
+  assert.equal(next.get(planPilot[1]), "${{ vars.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS || '' }}")
   for (const [name, value] of original) {
     // VITE_SERVICE_NOTICE_ENABLED: временная плашка о восстановлении ИИ, решение владельца 14.10.
     if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED' || name === 'VITE_SERVICE_NOTICE_ENABLED') continue
