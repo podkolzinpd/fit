@@ -9,8 +9,9 @@ const MINUTES = Array.from({ length: 60 }, (_, index) => index)
 const format = (hours: number, minutes: number) => `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 
 /** A time of day, not a set duration. Keep HH:mm and the existing form contract. */
-export function CoachPlanTimeField({ name, label, value, onChange }: {
+export function CoachPlanTimeField({ name, label, value, onChange, referencePolish = false }: {
   name: string; label: string; value: string
+  referencePolish?: boolean
   onChange: (next: string, form: HTMLFormElement | null) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -42,13 +43,14 @@ export function CoachPlanTimeField({ name, label, value, onChange }: {
     <button ref={trigger} type="button" className="coach-plan-time-label" aria-label={`Выбрать время: ${label}`} aria-haspopup="dialog" onClick={() => {
       draft.current = { hours: value ? Math.min(23, Number(value.slice(0, 2)) || 0) : 12, minutes: Math.min(59, Number(value.slice(3, 5)) || 0) }
       setHours(draft.current.hours); setMinutes(draft.current.minutes); setOpen(true)
-    }}><img src={coachWorkoutReferenceAssets.addMuted} alt="" width={24} height={24} /><span>{label}</span></button>
+    }}><img src={referencePolish ? coachWorkoutReferenceAssets.clock : coachWorkoutReferenceAssets.addMuted} alt="" width={24} height={24} />{!referencePolish && <span>{label}</span>}</button>
     <input ref={input} name={name} type="text" inputMode="numeric" autoComplete="off" aria-label={label}
       pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="ЧЧ:ММ" maxLength={5} value={value}
       onFocus={(event) => event.currentTarget.select()} onChange={(event) => {
         const raw = event.currentTarget.value.replace(/[^0-9:]/g, '')
         commit(raw.includes(':') ? raw : raw.length > 2 ? `${raw.slice(0, 2)}:${raw.slice(2, 4)}` : raw)
       }} />
+    {referencePolish && <span className="coach-plan-time-caption" aria-hidden="true">{label}</span>}
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet workout-duration-sheet" role="dialog" aria-modal="true" aria-label={`Время: ${label}`} onClick={(event) => event.stopPropagation()}>
         <header className="picker-header"><h2>{label}</h2><button type="button" className="picker-close" aria-label="Закрыть выбор времени" onClick={() => setOpen(false)}><CloseIcon /></button></header>

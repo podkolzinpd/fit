@@ -74,7 +74,7 @@ describe('workout exercise editor rules', () => {
   it('reference clock edits HH:mm and applies or cancels the existing time wheels', async () => {
     function Clock() {
       const [value, setValue] = useState('23:45')
-      return <form><CoachPlanTimeField name="startTime" label="Начало" value={value} onChange={setValue} /></form>
+      return <form><CoachPlanTimeField referencePolish name="startTime" label="Начало" value={value} onChange={setValue} /></form>
     }
     const user = userEvent.setup()
     render(<Clock />)

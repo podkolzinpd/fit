@@ -647,6 +647,12 @@ format/stage/template/comment/technique/duration/distance/RPE сохранены
 light/dark390/430 и непилотный trainer1440 WebKit5/5. CI, последовательный merge,
 финальное включение и production/native acceptance остаются отдельными гейтами.
 
+YAFIT-619 / fixed2 reference polish: план и неизменяемые acceptance cases в
+`docs/design/COACH_REFERENCE_POLISH_FIXED2_20261017.md`. Реквизиты плана используют
+инициалы (фото в Client DTO отсутствует), янтарную дату, часы и обычную заметку.
+48px ввод, сохранение, черновики и границы пилота сохранены; остальные три PR
+не считаются выполненными до собственной приёмки и выпуска.
+
 ## Cloud.ru production stabilization — In progress
 
 План и неизменяемая приёмка: docs/design/CLOUDRU_STABILIZATION_20261014.md,

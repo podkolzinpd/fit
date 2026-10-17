@@ -433,3 +433,18 @@
 .coach-workout-reference.live-identity.keyboard-open .coach-live-density .live-pinned { --coach-clock-space: 64px }
 .coach-workout-reference.live-identity.keyboard-open .coach-live-density .coach-live-clock { height: 64px; min-height: 64px; margin: 0 }
 .coach-workout-reference.live-identity.keyboard-open .coach-live-density .coach-live-digits { font-size: 48px; line-height: 56px }
+
+/* Source editor metadata; closed PLAN_LAYOUT fixed2 only. Client DTO has no
+   photo: initials are the approved fallback, never the designer's portrait. */
+.coach-plan-polish .coach-plan-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background: #3b3b40; color: #fff; font-size: 12px; line-height: 16px }
+.coach-workout-reference .coach-plan-polish .coach-plan-date .schedule-v2-calendar { color: #f8b021 }
+.coach-workout-reference .coach-plan-polish .coach-plan-date img { background: currentColor; mask: url('../../docs/design/figma-20261008/assets/coach-date-lime.svg') center / contain no-repeat; object-position: -9999px }
+.coach-plan-polish .coach-plan-time { display: grid; grid-template-columns: 44px 72px minmax(0, 1fr); gap: 4px; padding: 0; align-items: center }
+.coach-plan-polish .coach-plan-time-label { width: 44px; min-height: 48px; justify-content: center; color: var(--lime-text-secondary) }
+.coach-plan-polish .coach-plan-time-label img { opacity: .6 }
+.coach-workout-reference .coach-plan-polish .coach-plan-time > input { width: 72px; padding-inline: 0 }
+.coach-plan-polish .coach-plan-time-caption { color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; overflow-wrap: anywhere }
+.coach-plan-polish .coach-plan-note .voice-note-field { position: relative; margin: 0; gap: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .coach-plan-note textarea { min-height: 48px; padding: 14px 48px 14px 0; border: 0; border-radius: 0; background: transparent; font-size: 16px; line-height: 20px; resize: none }
+.coach-plan-polish .coach-plan-note .voice-input-icon { position: static; margin: 0; min-height: 0 }
+.coach-plan-polish .coach-plan-note .voice-input-icon > .assistant-icon-button { position: absolute; right: 0; top: 0; width: 44px; height: 48px }

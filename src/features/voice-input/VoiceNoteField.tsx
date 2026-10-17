@@ -20,9 +20,10 @@ interface VoiceNoteFieldProps {
   maxHeightPx?: number
   showVoice?: boolean
   showVoiceCancel?: boolean
+  compactVoice?: boolean
 }
 
-export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true, showVoiceCancel = false }: VoiceNoteFieldProps) {
+export function VoiceNoteField({ name, source, defaultValue, value, onValueChange, onManualValueChange, onTranscriptValueChange, onTranscriptAppended, label = 'Заметка', voiceLabel, voiceBeta, placeholder, hideLabel = false, autoResize = false, maxHeightPx = 264, showVoice = true, showVoiceCancel = false, compactVoice = false }: VoiceNoteFieldProps) {
   const id = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTranscriptProcessing, setIsTranscriptProcessing] = useState(false)
@@ -45,6 +46,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
       ref={textareaRef}
       id={id}
       name={name}
+      rows={compactVoice ? 1 : undefined}
       aria-label={hideLabel ? label : undefined}
       placeholder={placeholder}
       defaultValue={onValueChange ? undefined : defaultValue}
@@ -56,7 +58,7 @@ export function VoiceNoteField({ name, source, defaultValue, value, onValueChang
         window.requestAnimationFrame(resizeTextarea)
       } : undefined}
     />
-    {showVoice && <VoiceInputButton source={source} idleLabel={voiceLabel} beta={voiceBeta} showCancel={showVoiceCancel} onTranscript={(text) => {
+    {showVoice && <VoiceInputButton variant={compactVoice ? 'icon' : 'inline'} source={source} idleLabel={voiceLabel} beta={voiceBeta} showCancel={showVoiceCancel} onTranscript={(text) => {
       if (!textareaRef.current) return
       const previous = textareaRef.current.value
       const nextValue = appendTranscript(previous, text)
