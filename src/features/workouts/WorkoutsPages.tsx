@@ -2835,6 +2835,7 @@ export function LiveWorkoutPage() {
     const key = `${exercise.id}:${exercise.source}:${exercise.ref}`
     return <LiveExerciseTechnique
       exercise={meta}
+      reference={densityEnabled}
       collapsed={coachReference ? !collapsedLiveTechniques.has(key) : collapsedLiveTechniques.has(key)}
       onCollapsedChange={(collapsed) => setCollapsedLiveTechniques((current) => {
         const next = new Set(current)
@@ -3665,7 +3666,9 @@ export function LiveWorkoutPage() {
     const add = canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>
     return clientLime
       ? <div className="live-exercise-utilities">{liveCommentField(exercise)}{add}</div>
-      : <>{add}{liveCommentField(exercise)}</>
+      : densityEnabled
+        ? <div className="coach-live-exercise-utilities">{add}{liveCommentField(exercise)}</div>
+        : <>{add}{liveCommentField(exercise)}</>
   }
   // Меню упражнения в live (⋯). Если упражнение уже начато, сервер отделит
   // подтверждённый факт в самостоятельную запись, а заменит лишь остаток.

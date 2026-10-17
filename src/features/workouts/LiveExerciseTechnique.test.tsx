@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { LiveExerciseTechnique } from './LiveExerciseTechnique'
+import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 
 const exercise: ExerciseSnapshot = {
   source: 'system',
@@ -37,11 +38,17 @@ describe('LiveExerciseTechnique', () => {
   it('keeps a manual reopen action without mounting media while collapsed', async () => {
     const user = userEvent.setup()
     const onCollapsedChange = vi.fn()
-    const { container } = render(<LiveExerciseTechnique exercise={exercise} collapsed onCollapsedChange={onCollapsedChange} onOpenTechnique={() => undefined} />)
+    const { container, rerender } = render(<LiveExerciseTechnique exercise={exercise} collapsed onCollapsedChange={onCollapsedChange} onOpenTechnique={() => undefined} />)
 
     expect(container.querySelector('video')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Показать анимацию: Присед со штангой' }))
     expect(onCollapsedChange).toHaveBeenCalledWith(false)
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+    rerender(<LiveExerciseTechnique exercise={exercise} collapsed reference onCollapsedChange={onCollapsedChange} onOpenTechnique={() => undefined} />)
+    expect(container.querySelector('img')).toHaveAttribute('src', coachWorkoutReferenceAssets.play)
+    expect(container).not.toHaveTextContent('▶')
+    await user.click(screen.getByRole('button', { name: 'Показать анимацию: Присед со штангой' }))
+    expect(onCollapsedChange).toHaveBeenCalledTimes(2)
   })
 
   it('keeps instruction-only technique compact and opens the detail sheet', async () => {
