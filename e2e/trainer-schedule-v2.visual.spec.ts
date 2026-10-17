@@ -387,6 +387,12 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.goto('/schedule?week=2026-09-21')
   const filters = page.locator('.coach-schedule-filter-options')
+  await expect(page.locator('.coach-schedule-toolbar')).toHaveCSS('display', 'grid')
+  expect(await page.locator('.coach-schedule-toolbar').evaluate(node => {
+    const mode = node.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
+    const filter = node.querySelector('summary')!.getBoundingClientRect()
+    return Math.abs(mode.top - filter.top) < 1 && mode.right <= filter.left
+  })).toBe(true)
   await expect(filters).toBeVisible()
   await expect(filters).not.toHaveAttribute('open')
   await page.screenshot({ path: info.outputPath('coach-schedule-filters-closed.png') })
@@ -619,10 +625,32 @@ for (const width of [375, 390, 430, 1440]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
     await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [], failFirstSave: true })
     await page.goto('/today?date=2026-09-24')
+    if (width === 390) await page.evaluate(() => {
+      const key = 'fit.coachmarks-seen.c0ac0000-6010-4000-8000-000000000001'
+      const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+      localStorage.setItem(key, JSON.stringify(seen.filter(id => !['lime-quick-plan-2026-10', 'lime-direct-client-start-2026-10'].includes(id))))
+    })
     await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Новая тренировка', exact: true })).toHaveCSS('border-radius', '32px')
+    await expect(page.getByRole('dialog', { name: 'Новая тренировка', exact: true })).toHaveAttribute('role', 'dialog')
+    if (width === 390) {
+      await page.screenshot({ path: info.outputPath('coach-reference-first-entry.png') })
+      const entryCoachmark = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).locator('.coachmark-bubble')
+      await expect(entryCoachmark).toContainText('Начало без лишнего шага')
+      const entryClose = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('button', { name: 'Закрыть выбор действия', exact: true })
+      expect(await entryClose.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+      await entryCoachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
+    }
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
     const composer = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await expect(composer).toHaveClass(/coach-reference-composer/)
+    if (width === 390) {
+      const coachmark = composer.locator('.coachmark-bubble')
+      await expect(coachmark).toContainText('План можно сохранить сразу')
+      const close = composer.getByRole('button', { name: 'Закрыть создание', exact: true })
+      expect(await close.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+      await coachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
+    }
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '24px')
     await expect(composer.getByRole('button', { name: 'Сохранить план', exact: true })).toHaveCount(0)
     await composer.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая с длинным названием')
@@ -654,6 +682,15 @@ for (const width of [375, 390, 430, 1440]) {
     await dates.getByRole('button', { name: 'Применить дату' }).click()
     await composer.getByText('Настройки и способы ввода', { exact: true }).click()
     await composer.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+    await composer.getByRole('button', { name: 'Закрыть создание', exact: true }).click()
+    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    const recovery = page.getByRole('dialog', { name: 'Черновик плана' })
+    await expect(recovery).toHaveCSS('border-radius', '32px')
+    await expect(recovery).toContainText('Силовая с длинным названием')
+    await page.screenshot({ path: info.outputPath('coach-reference-draft-recovery.png') })
+    await recovery.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+    await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
     const sent: Array<{ requestId: string; trainingFormat: string; startTime: string; endTime: string; exercises: unknown[] }> = []
     page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number]) })
     await composer.getByRole('button', { name: 'Сохранить план' }).click()
@@ -3035,6 +3072,7 @@ for (const width of [390, 430, 1440]) {
     await mockPilot(page, { fitLime: true })
     await page.goto('/today?date=2026-09-24')
     await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Новая тренировка', exact: true })).not.toHaveAttribute('role')
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
     await page.getByRole('textbox', { name: 'Название тренировки' }).fill('План с очень длинным названием для проверки переноса')
     await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()

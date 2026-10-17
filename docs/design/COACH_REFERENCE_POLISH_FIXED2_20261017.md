@@ -116,6 +116,33 @@ Figma MCP вновь отказал в доступе; используем не
 
 ## Статусы
 
+### Preflight PR4
+
+Локальная подготовка от проверенного PR3HEAD77754beb; перед публикацией только
+собственный неопубликованный commit перенесён на main445ef3c4. Заново открыт
+current-main Schedule320px у обоих synthetic pilot actors; список/календарь,
+две недели и фильтр статуса проверены2/2, исходный week SVG просмотрен.
+Первый private diagnostic не дождался async карточек и упал2/2; после ожидания
+видимой карточки прошёл, продукт по этому падению не менялся.
+
+Роль trainer/server Lime/original exact2. Переиспользуем существующие view/filter
+handlers и native dialog/showModal/close/focus/inert, DraftChoice и Coachmark,
+RunMetricsFields/единицы/parse. Primary расписания — прежний плюс «Новая тренировка».
+Никаких новых фильтров/режимов/компонентной семьи/API/БД/LLM/auth/списков пилота.
+Непилотный путь получает прежние fragment/атрибуты, Day toolbar не меняется.
+
+Меняются presentation2slots, отступы и chooser/draft surface359/r32/#252529.
+После переноса repeat320×2 прошёл2/2, первая карточка выше на60px, overflowfalse,
+режимы и фильтр сохраняются. First-time chooser Coachmark воспроизведён red1/1:
+portal искал explicit dialog role, отсутствовавший у native chooser. Narrow
+exact2 role исправил host без изменения общего примитива; послеfix case1/1passed,
+скриншот просмотрен. Все реквизиты восстанавливаются через прежний черновик.
+
+Autocomplete off добавлен только reference distance/stroke inputs, default
+не меняется. У weight/reps/time он уже был. Глобальный Swift/WK override не
+добавляется: физический iPhone/его accessory не подтверждены. Условный пункт
+проверен на доступном уровне, удаление системной панели не объявляется фактом.
+
 ### Preflight PR3
 
 База bc4abf34 (слитый PR1683), чистый main до native sync/ветки. Current-main
@@ -150,9 +177,9 @@ RPE/time/distance/groups/notes могут увеличивать карточк�
 | PR | Реализация | Приёмка | Выпуск |
 |---|---|---|---|
 | 1 | Реализован, PR1682 merged aaacf048 | Unit39/39; WebKit95passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI/Cloud.ru success; public207/207/health/compiled4closed2; native207/207 |
-| 2 | Реализован, PR1683 merged bc4abf34 | Unit54; WebKit106passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI success; Cloud.ru39053141855/public acceptance в работе; native207/207 |
-| 3 | Реализован | Unit41; final WebKit106passed/3CDPskip; Chromium18/18; final whole check exit0 | CI/merge/release впереди |
-| 4 | Впереди | Впереди | Не начат |
+| 2 | Реализован, PR1683 merged bc4abf34 | Unit54; WebKit106passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI/Cloud.ru39053141855/public207/207/health/guards/native207/207 passed |
+| 3 | Реализован, PR1684 merged445ef3c4 | Unit41; final WebKit106passed/3CDPskip; Chromium18/18; final whole check exit0 | CI/mainCI success; native207/207/guards passed; Cloud.ru39055415467/public acceptance в работе |
+| 4 | Реализован | Unit13; final WebKit109passed/3CDPskip; Chromium15/15; final whole check exit0;320×2passed | CI/merge/release впереди |
 
 PR1: прежний полный check остановлен5 worker-start timeout при2678passed;
 повторён целиком с VITEST_MAX_WORKERS=2,2729frontend/1426API+160standardDBskip

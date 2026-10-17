@@ -481,3 +481,21 @@
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed > .live-exercise-start { min-height: 44px; margin: 0 auto; padding: 8px 12px }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header { padding-block: 8px }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-collapsed .live-exercise-head { padding-block: 12px 4px }
+
+/* Schedule controls reuse their existing handlers, filters and modes. Only the
+   original reference pair gets the denser presentation; Day stays untouched. */
+.coach-workout-reference .coach-schedule-polish .schedule-v2-topbar { margin-bottom: 16px }
+.coach-schedule-polish .coach-schedule-toolbar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 4px 8px; align-items: start; margin: 0 16px 8px }
+.coach-schedule-polish :is(.coach-schedule-view-slot, .coach-schedule-filter-slot) { min-width: 0 }
+.coach-schedule-polish .coach-schedule-view-slot .schedule-v2-range-toggle { justify-content: flex-start; margin: 0 }
+.coach-schedule-polish .coach-schedule-view-slot .schedule-v2-range-toggle > button { min-width: 0; flex: 1; padding-inline: 8px }
+.coach-workout-reference .coach-schedule-polish .coach-schedule-filter-options { margin: 0 }
+.coach-workout-reference .coach-schedule-polish .coach-schedule-filter-options > summary { padding: 8px; font-weight: 400; flex-wrap: wrap }
+.coach-schedule-polish .coach-schedule-filter-slot:has(details[open]) { grid-column: 1 / -1 }
+.coach-workout-reference .coach-schedule-polish > .schedule-v2-range-toggle { margin-bottom: 4px }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-period { margin-bottom: 4px }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-period-summary { margin-block: 8px 12px }
+/* No separate source screen exists for chooser/draft recovery. Reuse the
+   measured quick-plan surface, retaining native dialog and existing controls. */
+.phone-frame.fit-lime-shell.coach-workout-reference .fit-lime-workout-entry { width: min(calc(100% - 16px), 359px); border-radius: 32px; background: #252529; padding: 24px 20px 16px }
+.coach-workout-reference .fit-lime-workout-entry .fit-lime-plan-close { top: 12px; right: 8px }
