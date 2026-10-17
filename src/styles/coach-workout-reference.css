@@ -387,8 +387,8 @@
 .coach-workout-reference .coach-schedule-filter-options .fit-lime-schedule-filters { margin-top: 8px }
 
 /* Fixed2 Live: one DOM/coordinator/timer, density-only overrides. Source SVG:
-   card radius32, inset/gaps2, index40, rest60/radius20. Input/check48 is the
-   approved exception. Dynamic text and the assembled header are adaptations. */
+   card radius32, inset/gaps2, index40, rest60/radius20. Original input/check54;
+   compact48 per owner18.10. Dynamic content is never fixed-height. */
 .coach-workout-reference.live-identity .live-workout-page.coach-live-density { padding: 0 2px; background: #000 }
 .coach-workout-reference.live-identity .coach-live-density > .page-header { margin: 0; padding-inline: 14px; min-height: 44px; background: #000 var(--coach-live-halo) no-repeat scroll center 0 }
 /* Paint in each sticky block's own coordinate space: WebKit fixed backgrounds
@@ -414,6 +414,30 @@
 .coach-workout-reference.live-identity .coach-live-density .live-exercise-note > summary::-webkit-details-marker { display: none }
 .coach-workout-reference.live-identity .coach-live-density .live-note-preview { min-width: 0; max-width: 100%; overflow-wrap: anywhere }
 .coach-workout-reference.live-identity .coach-live-density .live-set-rpe { appearance: none; -webkit-appearance: none }
+
+/* Source editor2221/2224/2227: at375, metrics84.5x54, action54x54,
+   row pitch56, radius16. The removed cross column remains blank in the
+   original composition, not an invisible control. Distance+unit is an explicit
+   wider adaptation: both native controls retain at least44px usable width. */
+.coach-workout-reference.live-identity .coach-live-density-original { --coach-live-field-height: 54px; --coach-live-number-width: 54px; --coach-live-row-tail: 56px }
+.coach-workout-reference.live-identity .coach-live-density-compact { --coach-live-field-height: 48px; --coach-live-number-width: 44px; --coach-live-row-tail: 0px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-grid, .live-set.rpe-visible .live-set-grid) { grid-template-columns: var(--coach-live-number-width) minmax(0, 1fr) minmax(0, 1fr) var(--coach-live-field-height); min-height: var(--coach-live-field-height); padding-right: var(--coach-live-row-tail) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set-grid:has(.run-distance-control) { padding-right: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-input, .live-set-rpe, .live-set-check, .live-set-save, .coach-live-metric, .run-duration-field, .workout-duration-trigger, .run-distance-control, .run-distance-unit, .run-distance-unit-control) { height: var(--coach-live-field-height); min-height: var(--coach-live-field-height) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-check, .live-set-save) { width: var(--coach-live-field-height); min-width: var(--coach-live-field-height) }
+.coach-workout-reference.live-identity .coach-live-density .live-set-confirm { min-height: var(--coach-live-field-height) }
+.coach-workout-reference.live-identity .coach-live-density .live-technique-collapsed { display: flex; align-items: center; gap: 8px }
+/* Preserve the original53.4121x55.3104 export including its20px shadow margin;
+   scaling the entire export to18px would make the actual play contour tiny. */
+.coach-workout-reference.live-identity .coach-live-density .live-technique-collapsed img { flex-shrink: 0; width: 53.4121px; height: 55.3104px; margin: -20px; pointer-events: none }
+/* The compact view keeps visible exercise markers instead of repeating the
+   current exercise/set and completed count immediately above the same card. */
+.coach-workout-reference.live-identity .coach-live-density-compact .live-session-progress-copy { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%) }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-exercise-utilities { display: contents }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-utilities { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 8px; align-items: start }
+/* Empty closed note shares the add-set row, not another54px footer. Filled or
+   opened notes regain the full width; no text is truncated or unmounted. */
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-utilities:has(.live-exercise-note[open], .live-exercise-note[data-has-note]) { grid-template-columns: minmax(0, 1fr) }
 
 /* Compact adapts density, never shrinks input/check or gesture hit targets. */
 .coach-workout-reference.live-identity .coach-live-density-compact .live-pinned { --coach-clock-space: 84px }

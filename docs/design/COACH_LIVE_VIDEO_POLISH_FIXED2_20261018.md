@@ -75,8 +75,9 @@ OAuth не считать проверенными по синтетически
 
 ## Статус
 
-- PR 1: в работе, база `3bdf1acd`; исходный сценарий воспроизведён в WebKit.
-- PR 2–5: ожидают выполнения по порядку; разрешение владельца на весь выпуск есть.
+- PR 1: #1688/main94552310 выпущен; mainCI39077893863/Cloud.ru39078700484 success, public207/207+health/compiled4closed2/native207/207 passed.
+- PR 2: подготовка от PR1, перенесён на main94552310 без изменения src/e2e; локальная приёмка пройдена, CI/merge/release далее.
+- PR 3–5: ожидают выполнения по порядку; разрешение владельца на весь выпуск есть.
 
 ## Сверка и приёмка PR 1
 
@@ -104,3 +105,45 @@ DB skips, infra320/hosting169/calendar12/fonts2/build/startup. Визуальн�
 padding14, legacy верхний page-padding убран, фон теперь непрерывен по ширине.
 Добавлена проверка совпадения левых краёв и ширины; финальная геометрия и полный
 check повторяются на этом исправленном diff перед merge.
+
+Финальный full check `a65097af` — exit0, те же2729/1426+160DBskip;
+fonts/build/startup passed. Дополнительная геометрия16/16 и оба вида2/2 пройдены.
+
+## Сверка и приёмка PR 2
+
+Локальная подготовка от `a65097af`, предыдущий PR ещё на CI. `/workouts/:id/live`,
+trainer Lime, исходные WORKOUT_REDESIGN + LIVE_DENSITY exact2. Baseline390px
+воспроизведён и просмотрен в обоих видах, затем сравнивается после нового main.
+Работают и переиспользуются LiveSetFields/Input, WorkoutSetRow, прежние save/confirm,
+WorkoutGestures/суперсеты, AppViewport и LiveExerciseTechnique. Primary — галочка
+подхода, не новый запуск. Не проверены настоящий OAuth и физический iPhone.
+
+| Пункт | Видимый результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| Размеры54/48 | Вся строка, RPE/время/дистанция/правка и галочка; план48 неизменён | Existing density composition + metric/field/keyboard cases | Локально в проверке |
+| Оригинальная геометрия |375px: вес/повторы84,5×54, check54, gap2/radius16; другие ширины адаптивны | Source workout-editor-catalog2221/2224/2227, width assertion375 | Локально в проверке |
+| Компактный вид | Меньше повторов над карточкой; пустая закрытая заметка рядом с «Подход», заполненная/открытая на всю ширину | Composition notes + accessible summary/markers, density-switch footer bounds | Локально в проверке |
+| Вход в анимацию | Оригинальный Play без emoji, прежние действия | Existing component rerender + browser card completion | Локально в проверке |
+| Спецификация | Private approvedOverrides original54/compact48/plan48, originals unchanged | validate:9 attachments,7 originals,6612elements, hashes all match | Пройден |
+
+Дистанция с м/км — явно обозначенная адаптация, её поля не сжимаются до84,5px.
+В оригинальном виде сохраняется свободное место удалённого крестика, сам крестик
+и скрытая кнопка не возвращаются. Высота всей карточки не фиксируется. Doto и
+измерения исходного SVG не меняются. Новых browser/unit cases нет: расширены
+существующие assertions, protected inventory/digest не обновляется.
+
+Исходный PR2 unit5/6 остановился на неверном ожидании имени файла: Vite
+инлайнит оригинальный SVG как data URI. Проверка сравнивает точный импорт,
+а не путь; итог6/6. Runtime ради этого не менялся. До финального footer
+browser122/122; финальный footer/density18/18 и private375/4402/2. Первый full
+check остановился на сравнении line-number inventory, поскольку файл теста
+редактировался во время collection. Количество654 и гейт не менялись;
+итоговый check запущен на стабилизированном исходнике без параллельных правок
+runtime или tests. Исходные SVG и коммерческие файлы в публичный PR не добавляются.
+
+Финальный PR2 full check exit0: frontend2729/API1426+160standardDBskip,
+infra320/hosting169/calendar12/fonts2/build/startup passed; inventory654 union
+проверен без изменения гейта. Отдельно supersets6/6 в обоих движках; footer18/18,
+private375/4402/2. PR1#1688 уже merged в main94552310 после CI39077068481 и
+Android39077068439 success; mainCI39077893863 ещё выполняется, production/native
+первого выпуска ещё не объявлены завершёнными. PR2 остаётся локальным.
