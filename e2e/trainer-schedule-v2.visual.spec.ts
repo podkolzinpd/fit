@@ -1099,6 +1099,10 @@ for (const width of [375, 390, 430, 1440]) {
     })).toBe(true)
     await expect(page.locator('.coach-live-elapsed')).toHaveCSS('clip-path', 'inset(50%)')
     await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
+    expect(await page.locator('.page-header').evaluate(header => {
+      const h = header.getBoundingClientRect(), p = document.querySelector('.live-pinned')!.getBoundingClientRect()
+      return h.left === p.left && h.width === p.width
+    })).toBe(true)
     await expect(page.locator('.page-header')).toHaveCSS('background-attachment', 'scroll')
     await page.screenshot({ path: info.outputPath('coach-live-scrolled-rest.png'), fullPage: true })
     await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
