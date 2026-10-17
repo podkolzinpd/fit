@@ -462,3 +462,22 @@
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .coach-plan-entry-controls > .quick-workout-expand { background: var(--lime-accent); color: var(--lime-text-on-accent) }
 .coach-plan-polish .quick-workout-expand svg[data-original-icon='microphone'] { background-color: currentColor; mask: url('../../docs/design/figma-20261002/assets/microphone.svg') center / contain no-repeat }
 .coach-plan-polish .quick-workout-expand svg[data-original-icon='microphone'] > image { opacity: 0 }
+
+/* Both released Live densities: source check-small has the measured 2.5px
+   stroke. Reuse its bytes; retain the existing coordinator and 48px targets. */
+.coach-workout-reference.live-identity .coach-live-density :is(.live-set-check, .live-set-save) svg[data-original-icon='check'] { mask-image: url('../../docs/design/figma-20261002/assets/check-small.svg') }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done { color: #fff }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-session-header { min-height: 0; padding: 16px 16px 12px }
+.coach-workout-reference.live-identity .coach-live-density .live-session-header .workout-header-copy { gap: 4px }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-exercise-markers { margin-block: 4px }
+.coach-workout-reference.live-identity .coach-live-density .live-session-progress-copy { gap: 2px 8px }
+.coach-workout-reference.live-identity .coach-live-density .live-session-progress-copy > strong { font-weight: 400 }
+/* Markers remain the visible progress; the exact set progressbar stays
+   available to assistive technology without a second competing track. */
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-session-progress-track { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%) }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-workout-note { min-height: 44px; padding: 8px 16px 12px; overflow-wrap: anywhere }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed .live-exercise-head { min-height: 0; padding: 16px 16px 8px; margin-bottom: 0; border-bottom: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed { padding-bottom: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed > .live-exercise-start { min-height: 44px; margin: 0 auto; padding: 8px 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header { padding-block: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-collapsed .live-exercise-head { padding-block: 12px 4px }

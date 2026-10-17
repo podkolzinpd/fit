@@ -2548,7 +2548,7 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean }) {
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false, quietUnits = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean; quietUnits?: boolean }) {
   // Lime keeps confirmed facts directly editable; completion is independent of
   // field availability. The old UI retains its explicit editing mode.
   const locked = Boolean(set.confirmedAt) && !editing && !directInput
@@ -2574,16 +2574,16 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
-  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder="кг" defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
+  const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder={quietUnits ? '—' : 'кг'} defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
     {weightField}
-    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder={quietUnits ? '—' : 'повт.'} defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
     {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
-    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder="повт." defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
+    {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder={quietUnits ? '—' : 'повт.'} defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
   if (inputKind === 'duration' && !distanceCapable) return <>
@@ -3761,7 +3761,7 @@ export function LiveWorkoutPage() {
     }}>
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} directInput={directLiveInput} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} directInput={directLiveInput} quietUnits={densityEnabled} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
