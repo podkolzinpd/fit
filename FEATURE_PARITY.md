@@ -671,6 +671,12 @@ draft surface сверена с quick-plan, первого Coachmark не скр
 draft/requestId/save503 retry сохранены. Numeric autocomplete hint выключен для
 reference distance/stroke rate; системная iOS панель физически не проверена.
 
+YAFIT-620: fixed2 Schedule использует один существующий Coachmark, привязанный
+к видимому переключателю календаря/списка, вместо трёх перекрывающихся подсказок.
+Per-user dismiss/reload, первый вход и непилотный контроль проверяются в прежних
+browser cases; новых inventory cases нет. Общий Coachmark/Day/flags и механика
+Live/плана не меняются. План: design/COACH_SCHEDULE_FIRST_GUIDE_FIXED2_20261017.md.
+
 ## Cloud.ru production stabilization — In progress
 
 План и неизменяемая приёмка: docs/design/CLOUDRU_STABILIZATION_20261014.md,
