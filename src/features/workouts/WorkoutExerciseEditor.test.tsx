@@ -448,10 +448,13 @@ describe('workout exercise editor rules', () => {
       const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
         exercises[0]!, { ...exercises[0]!, ref: 'bench', name: 'Жим', position: 1 },
       ])
-      return <WorkoutExerciseEditor reference exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+      return <WorkoutExerciseEditor reference safePlanInput refinedPlan exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
     }
     const user = userEvent.setup()
     render(<ReferencePlan />)
+    expect(screen.getAllByLabelText('Вес, подход 1')[0]).toHaveAttribute('placeholder', '—')
+    expect(screen.getAllByLabelText('Повторы, подход 1')[0]).toHaveAttribute('placeholder', '—')
+    expect(screen.getAllByLabelText('Вес, подход 1')[0]).toHaveValue('52.5')
     await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
     await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в суперсет' }))
     expect(screen.getByLabelText('Тип блока')).toHaveValue('set')

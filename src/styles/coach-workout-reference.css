@@ -448,3 +448,17 @@
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .coach-plan-note textarea { min-height: 48px; padding: 14px 48px 14px 0; border: 0; border-radius: 0; background: transparent; font-size: 16px; line-height: 20px; resize: none }
 .coach-plan-polish .coach-plan-note .voice-input-icon { position: static; margin: 0; min-height: 0 }
 .coach-plan-polish .coach-plan-note .voice-input-icon > .assistant-icon-button { position: absolute; right: 0; top: 0; width: 44px; height: 48px }
+
+/* Card polish stays inside the independent PLAN_LAYOUT fixed2 opt-in. The
+   source 32/16/2 geometry is retained, while notes and extra metrics can grow. */
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .planned-exercise { padding-top: 0; padding-bottom: 0 }
+.coach-plan-polish .compact-editor-exercise-head { margin: 0 -16px; padding: 28px 16px 16px; align-items: start }
+.coach-plan-polish .compact-editor-exercise-fields { border-top: 1px solid #3b3b40 }
+.coach-plan-polish .exercise-comment-options { margin: 0; padding: 0; border: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-comment-options > summary { min-height: 44px; padding-block: 8px; line-height: 20px }
+.coach-plan-polish .set-add-row .fit-lime-add-label { justify-content: center; gap: 8px }
+.coach-plan-polish .set-add-row svg[data-original-icon='plus'] { background-color: var(--lime-accent); mask: url('../../docs/design/figma-20261002/assets/plus.svg') center / contain no-repeat }
+.coach-plan-polish .set-add-row svg[data-original-icon='plus'] > image { opacity: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .coach-plan-entry-controls > .quick-workout-expand { background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.coach-plan-polish .quick-workout-expand svg[data-original-icon='microphone'] { background-color: currentColor; mask: url('../../docs/design/figma-20261002/assets/microphone.svg') center / contain no-repeat }
+.coach-plan-polish .quick-workout-expand svg[data-original-icon='microphone'] > image { opacity: 0 }
