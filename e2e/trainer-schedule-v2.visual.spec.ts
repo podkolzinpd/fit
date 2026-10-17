@@ -247,6 +247,11 @@ test('Figma workout Coach Live density switches without remounting fields or res
   }, pilot)
   await page.clock.runFor(250) // Flush viewport/visibility RAF while keeping Date deterministic.
   await expect(page.locator('.coach-live-density-compact')).toBeVisible()
+  const utilities = page.locator('.coach-live-exercise-utilities').first()
+  expect(await utilities.evaluate(node => {
+    const add = node.querySelector('.live-add-set')!.getBoundingClientRect(), note = node.querySelector('summary')!.getBoundingClientRect()
+    return add.top === note.top && note.left >= add.right
+  })).toBe(true)
   await expect(field).toBeFocused(); await expect(field).toHaveValue('29.5')
   expect(await element!.evaluate(node => node.isConnected && node === document.activeElement)).toBe(true)
   expect(await page.locator('[data-live-set-id]').count()).toBe(forms)
@@ -291,7 +296,10 @@ for (const density of ['original', 'compact'] as const) for (const width of [375
   await expect(first).toHaveCSS('border-radius', '32px')
   await expect(page.locator('.workout-gesture-list')).toHaveCSS('gap', '2px')
   const sizes = await first.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
-  expect(sizes.length).toBeGreaterThan(0); expect(sizes.every(height => height === 48)).toBe(true)
+  expect(sizes.length).toBeGreaterThan(0); expect(sizes.every(height => height === (density === 'original' ? 54 : 48))).toBe(true)
+  await expect(first.locator('.live-set-check').first()).toHaveCSS('width', density === 'original' ? '54px' : '48px')
+  if (density === 'original' && width === 375) await expect(first.locator('.live-set-input').first()).toHaveCSS('width', '84.5px')
+  if (density === 'compact') await expect(page.locator('.live-session-progress-copy')).toHaveCSS('clip-path', 'inset(50%)')
   await expect(first.getByLabel('Фактический вес', { exact: true }).first()).toHaveAttribute('placeholder', '—')
   await expect(first.getByLabel('Фактические повторы', { exact: true }).first()).toHaveAttribute('placeholder', '—')
   await expect(first.locator('.live-set-check svg').first()).toHaveCSS('mask-image', /check-small\.svg|Check%20small/)
@@ -1033,7 +1041,7 @@ test('Figma workout Coach reference rest and fields stay usable in the reduced k
   await page.screenshot({ path: info.outputPath('coach-live-keyboard-before.png') })
   await expect.poll(() => field.evaluate(element => {
     const rect = element.getBoundingClientRect(), rest = document.querySelector('.live-rest-trigger')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
-    return rect.top >= rest.bottom && rect.bottom <= content.bottom && content.bottom <= 400 && rect.height === 48
+    return rect.top >= rest.bottom && rect.bottom <= content.bottom && content.bottom <= 400 && rect.height === 54
   })).toBe(true)
   await page.screenshot({ path: info.outputPath('coach-live-keyboard.png') })
   await field.fill('27.5')
@@ -1107,7 +1115,7 @@ for (const width of [375, 390, 430, 1440]) {
     await page.screenshot({ path: info.outputPath('coach-live-scrolled-rest.png'), fullPage: true })
     await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
     const fields = page.locator('.live-set-input, .live-set-check')
-    expect(await fields.evaluateAll(elements => elements.every(element => element.getBoundingClientRect().height === 48))).toBe(true)
+    expect(await fields.evaluateAll(elements => elements.every(element => element.getBoundingClientRect().height === 54))).toBe(true)
     await expect(page.locator('.live-set-input:not(:disabled)').first()).toHaveCSS('border-radius', '16px')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
@@ -1127,7 +1135,7 @@ for (const width of [375, 390, 430, 1440]) {
       height: field.getBoundingClientRect().height, font: getComputedStyle(field).fontSize,
     })))
     expect(sizes.length).toBeGreaterThan(0)
-    expect(sizes.every((field) => field.height === 48)).toBe(true)
+    expect(sizes.every((field) => field.height === 54)).toBe(true)
     expect(await page.locator('.coach-live-digits').evaluate((field) => getComputedStyle(field).fontFamily)).toContain('Doto')
     await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
     await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
@@ -1168,7 +1176,7 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(weight).toHaveCSS('font-size', '16px')
     await expect(weight).toHaveCSS('padding-top', '0px')
     await expect(weight).toHaveCSS('padding-bottom', '0px')
-    expect(await row.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 48))).toBe(true)
+    expect(await row.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 54))).toBe(true)
     await check.click()
     await expect(row).toHaveClass(/invalid/)
     await expect(weight).toHaveCSS('outline-width', '1px')
@@ -1443,11 +1451,11 @@ for (const width of [375, 390, 430, 1440]) {
     const expectedFieldGap = await page.locator('.coach-live-density').count() ? 2 : 4
     expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll((elements, gap) => {
       const boxes = elements.map(el => el.getBoundingClientRect())
-      return boxes.every(box => box.height === 48) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + gap)
+      return boxes.every(box => box.height === 54) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + gap)
     }, expectedFieldGap)).toBe(true)
     await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
     await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
-    await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '48px')
+    await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '54px')
     await first.getByLabel('Фактический вес', { exact: true }).fill('27.5')
     await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect(first).toHaveClass(/confirmed/)
@@ -1521,14 +1529,14 @@ for (const width of [375, 390, 430, 1440]) {
       await expect(page.locator('.coach-live-field-unit').first()).toBeVisible()
       const row = page.locator('.live-set').first()
       const fields = row.locator('.live-set-input, .live-set-check')
-      expect(await fields.evaluateAll(elements => elements.every(el => el.getBoundingClientRect().height === 48))).toBe(true)
+      expect(await fields.evaluateAll(elements => elements.every(el => el.getBoundingClientRect().height === 54))).toBe(true)
       expect(await row.evaluate(el => { const box = el.getBoundingClientRect(); return [...el.querySelectorAll('.live-set-grid > *:not(input[type="hidden"])')].every(child => { const rect = child.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right }) })).toBe(true)
       await expect(row.locator('.coach-live-field-unit').filter({ hasText: 'мин:с' })).toBeVisible()
       expect(await row.locator('.coach-live-field-unit').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(), parent = el.parentElement!.getBoundingClientRect(); return rect.top >= parent.top && rect.bottom <= parent.bottom && rect.left >= parent.left && rect.right <= parent.right }))).toBe(true)
       if (kind === 'distance' || ref === 'vital-stair-climber') {
         await expect(row.getByRole('combobox', { name: 'Единица фактической дистанции', exact: true })).toBeVisible()
         await expect(row.getByRole('textbox', { name: 'Фактическая дистанция', exact: true })).toBeVisible()
-        expect(await row.locator('.run-distance-control :is(input,select)').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(); return rect.height === 48 && rect.width >= 44 }))).toBe(true)
+        expect(await row.locator('.run-distance-control :is(input,select)').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(); return rect.height === 54 && rect.width >= 44 }))).toBe(true)
       }
       await row.evaluate(el => el.scrollIntoView({ block: 'center' }))
       await page.screenshot({ path: info.outputPath(`coach-live-${ref}-completion.png`), fullPage: true })

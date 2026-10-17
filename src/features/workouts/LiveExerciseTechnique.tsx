@@ -1,18 +1,20 @@
 import type { ExerciseSnapshot } from '../../shared/domain'
 import { ExerciseImage } from '../exercises'
 import { hasExerciseMedia, hasExerciseTechnique } from '../exercises/ExerciseTechnique'
+import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 
-export function LiveExerciseTechnique({ exercise, collapsed, onCollapsedChange, onOpenTechnique }: {
+export function LiveExerciseTechnique({ exercise, collapsed, onCollapsedChange, onOpenTechnique, reference = false }: {
   exercise: ExerciseSnapshot
   collapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
   onOpenTechnique: () => void
+  reference?: boolean
 }) {
   if (!hasExerciseTechnique(exercise)) return null
 
   if (collapsed) {
     return <button type="button" className="live-technique-collapsed" aria-label={`Показать анимацию: ${exercise.name}`} onClick={() => onCollapsedChange(false)}>
-      <span aria-hidden="true">▶</span> Показать анимацию
+      {reference ? <img src={coachWorkoutReferenceAssets.play} alt="" /> : <span aria-hidden="true">▶</span>} Показать анимацию
     </button>
   }
 
