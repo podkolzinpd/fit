@@ -1613,7 +1613,7 @@ export function WorkoutFormPage() {
     if (pilotCalendarReturnTo) navigate(pilotCalendarReturnTo, { replace: true })
     else goBack()
   }
-  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${refinedPlan ? ' coach-plan-refined' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
+  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
     <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
@@ -1626,12 +1626,12 @@ export function WorkoutFormPage() {
         {coachReference ? <div className="coach-plan-details">
           <label className="coach-plan-title"><span className="sr-only">Название тренировки</span><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></label>
           <input type="hidden" name="clientId" value={clientId} />
-          <button type="button" className="coach-plan-client" aria-label={`Клиент: ${selectedClientName ?? 'Выберите клиента'}`} disabled={clientContextLocked || mutation.isPending} onClick={() => setReferenceClientPickerOpen(true)}><img src={coachWorkoutReferenceAssets.clients} alt="" width={24} height={24} /><span>{selectedClientName ?? (clients.isLoading ? 'Загрузка клиента…' : 'Клиент')}</span></button>
+          <button type="button" className="coach-plan-client" aria-label={`Клиент: ${selectedClientName ?? 'Выберите клиента'}`} disabled={clientContextLocked || mutation.isPending} onClick={() => setReferenceClientPickerOpen(true)}>{refinedPlan && selectedClientName ? <span className="coach-plan-avatar" aria-hidden="true">{clientInitials(selectedClientName)}</span> : <img src={coachWorkoutReferenceAssets.clients} alt="" width={24} height={24} />}<span>{selectedClientName ?? (clients.isLoading ? 'Загрузка клиента…' : 'Клиент')}</span></button>
           {clientSelectionError && <p className="error" role="alert">{clientSelectionError}</p>}
           {clients.error && <p className="error" role="alert">{clients.error.message} <button type="button" className="link" onClick={() => void clients.refetch()}>Повторить</button></p>}
           <div className="coach-plan-date"><FitLimeDatePicker reference disabled={mutation.isPending} triggerIcon={<img src={coachWorkoutReferenceAssets.date} alt="" width={24} height={24} />} value={entryDate} onChange={(date) => { setEntryDate(date); setFormTimeError(null) }} triggerLabel={entryDate === today ? 'Сегодня' : formatLocalDate(entryDate)} /></div>
-          <CoachPlanTimeField name="startTime" label="Начало" value={startTime} onChange={(next, form) => { setStartTime(next); setFormTimeError(null); (form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} />
-          <CoachPlanTimeField name="endTime" label="Окончание" value={endTime} onChange={(next) => { setEndTime(next); setShowEndTime(Boolean(next)); setFormTimeError(null) }} />
+          <CoachPlanTimeField referencePolish={refinedPlan} name="startTime" label="Начало" value={startTime} onChange={(next, form) => { setStartTime(next); setFormTimeError(null); (form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} />
+          <CoachPlanTimeField referencePolish={refinedPlan} name="endTime" label="Окончание" value={endTime} onChange={(next) => { setEndTime(next); setShowEndTime(Boolean(next)); setFormTimeError(null) }} />
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
           {refinedPlan && mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
         </div> : <>
@@ -1669,10 +1669,12 @@ export function WorkoutFormPage() {
           </select>
         </Field>}
         </CoachPlanOptions>
-        <details ref={notesDetailsRef} className="workout-notes" open={Boolean(initial?.notes)}>
+        {refinedPlan ? <div className="workout-notes coach-plan-note">
+          <VoiceNoteField name="notes" source="workout_form" value={notes} onValueChange={setNotes} label="Заметка для спортсмена" placeholder="Заметка" hideLabel autoResize compactVoice />
+        </div> : <details ref={notesDetailsRef} className="workout-notes" open={Boolean(initial?.notes)}>
           <summary>Заметка для спортсмена <span>Необязательно</span></summary>
           <VoiceNoteField name="notes" source="workout_form" value={notes} onValueChange={setNotes} hideLabel />
-        </details>
+        </details>}
       </section>
       <section className="workout-form-section workout-form-exercises">
         <div className={`workout-form-section-head workout-form-exercise-heading${coachReference ? ' sr-only' : ''}`}><h2>{completedMode ? 'Что выполнено' : 'Упражнения'}</h2>{!coachReference && !clientMode && !completedMode && <button ref={templateTriggerRef} type="button" className="secondary workout-form-template-trigger" onClick={() => setTemplatePickerOpen(true)}><CopyIcon />Добавить шаблон</button>}</div>
