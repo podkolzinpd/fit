@@ -211,7 +211,7 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
 
 test('Figma workout Coach Live density switches without remounting fields or resetting rest', async ({ page }) => {
   const pilot = 'c0ac0000-6010-4000-8000-000000000001'
-  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await page.clock.install({ time: new Date('2026-10-08T08:59:00Z') })
   await page.addInitScript(() => {
     const viewport = new EventTarget()
     Object.defineProperties(viewport, { height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? innerHeight) }, offsetTop: { get: () => 0 } })
@@ -223,6 +223,7 @@ test('Figma workout Coach Live density switches without remounting fields or res
   page.on('request', request => { if (request.url().endsWith('/confirm')) confirmations++ })
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.coach-live-density-original')).toBeVisible()
+  await page.clock.pauseAt(new Date('2026-10-08T09:00:00Z'))
   await expect(page.getByLabel('Заметка к тренировке', { exact: true })).toHaveText(source.notes)
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
@@ -236,6 +237,7 @@ test('Figma workout Coach Live density switches without remounting fields or res
     document.documentElement.dataset.testVisibleHeight = '400'
     window.visualViewport?.dispatchEvent(new Event('resize'))
   }, pilot)
+  await page.clock.runFor(250) // Flush viewport/visibility RAF while keeping Date deterministic.
   await expect(page.locator('.coach-live-density-compact')).toBeVisible()
   await expect(field).toBeFocused(); await expect(field).toHaveValue('29.5')
   expect(await element!.evaluate(node => node.isConnected && node === document.activeElement)).toBe(true)
@@ -246,6 +248,7 @@ test('Figma workout Coach Live density switches without remounting fields or res
   await expect(page.locator('.coach-live-digits')).toHaveText('1:00:04')
   expect(confirmations).toBe(1)
   await page.evaluate(id => { const key = `fit.coachLiveDensity.${id}`; localStorage.setItem(key, 'original'); window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'original' })) }, pilot)
+  await page.clock.runFor(100)
   await expect(page.locator('.coach-live-density-original')).toBeVisible()
   expect(await element!.evaluate(node => node.isConnected && node === document.activeElement)).toBe(true)
   await expect(field).toHaveValue('29.5')
@@ -1230,8 +1233,9 @@ for (const width of [375, 390, 430, 1440]) {
     const blocks = page.locator('.workout-gesture-list > .workout-drag-block')
     await expect(blocks).toHaveCount(3)
     await expect(card).toHaveCSS('margin', '0px')
-    expect(await blocks.evaluateAll(items => items.slice(1).every((item, i) =>
-      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - 4) < .5))).toBe(true)
+    const expectedGap = await page.locator('.coach-live-density').count() ? 2 : 4
+    expect(await blocks.evaluateAll((items, gap) => items.slice(1).every((item, i) =>
+      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - gap) < .5), expectedGap)).toBe(true)
     await expect(page.locator('.live-technique')).toHaveCount(0)
     await card.getByRole('button', { name: /Показать анимацию:/ }).click()
     await expect(card.locator('.live-technique')).toBeVisible()
@@ -1249,8 +1253,8 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
     await expect(page.locator('.live-exercise-collapsed .coach-live-exercise-number')).toHaveText('1')
     await expect(card).toHaveCSS('margin', '0px')
-    expect(await blocks.evaluateAll(items => items.slice(1).every((item, i) =>
-      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - 4) < .5))).toBe(true)
+    expect(await blocks.evaluateAll((items, gap) => items.slice(1).every((item, i) =>
+      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - gap) < .5), expectedGap)).toBe(true)
     await page.getByRole('button', { name: `Исправить: ${first.name}`, exact: true }).click()
     await expect(page.locator('.live-exercise.done .live-set')).toHaveCount(first.sets.length)
     if (width === 390) {
@@ -1332,10 +1336,11 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.coach-live-remove-set')).toHaveCount(0)
     await expect(page.locator('.live-set-table-head')).not.toBeVisible()
     expect(await first.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(await second.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor))
-    expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll(elements => {
+    const expectedFieldGap = await page.locator('.coach-live-density').count() ? 2 : 4
+    expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll((elements, gap) => {
       const boxes = elements.map(el => el.getBoundingClientRect())
-      return boxes.every(box => box.height === 48) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + 4)
-    })).toBe(true)
+      return boxes.every(box => box.height === 48) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + gap)
+    }, expectedFieldGap)).toBe(true)
     await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
     await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
     await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '48px')

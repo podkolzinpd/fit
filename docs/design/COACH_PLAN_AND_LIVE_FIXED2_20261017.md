@@ -98,8 +98,8 @@
 | Пункт | Реализация | Локальная приёмка | CI и PR | Production |
 | --- | --- | --- | --- | --- |
 | PR1 | Реализован | Targeted67/67; browser/полный check passed | PR1679 CI39030597907; merged3d42f69c; mainCI39031361618 success | Cloud.ru39032231713 success; public207/207 hashes+health passed |
-| PR2 | Реализован | unit37/37; geometry8/8; final input/RPE/swipe14/14; full check exit0 | PR1680 CI39031740044 success; merged2554c9a9 | mainCI/Cloud.ru/readback впереди |
-| PR3 | Реализован локально | Unit11/11; new browser24/24, preference roundtrip4/4; original/compact regression34passed+2knownCDPskip each; full check exit0 | PR/CI впереди | Впереди |
+| PR2 | Реализован | unit37/37; geometry8/8; final input/RPE/swipe14/14; full check exit0 | PR1680 CI39031740044/main39032681293 success; merged2554c9a9 | Cloud.ru39033561681 success; public207/207 hashes+health passed |
+| PR3 | Реализован локально | Unit11/11; new browser24/24; complete reference203passed/3CDPskip; final full check exit0 | PR1681; после исправления тестовых ожиданий нужен новый exact-head CI | Впереди |
 
 Релевантные прежние планы: COACH_REFERENCE_REMAINDER_20261016.md и COACH_LIVE_SIMPLE_POLISH_20261010.md. Полные исходные SVG и коммерческий пакет шрифта не публикуются. Независимые флаги default-off требуют ровно двух разных profile IDs, серверной роли trainer и прежнего reference-пилота; отсутствие/ошибка настройки не расширяет доступ. Откат возвращает прежний UI, не меняет тренировочные данные.
 
@@ -214,3 +214,29 @@ Full check exit0:2729frontend/1426API+160standardDBskip/318infra/169hosting/
 12calendar/fonts2/2/lint/typecheck/build. После переноса на main — exact-head CI,
 штатный Cloud.ru release, public hashes/health и новый native bundle. Реальный
 OAuth/физический iPhone не проверены и не выдаются за синтетическую приёмку.
+
+### Уточнение после первого CI PR3
+
+CI39032894145 обнаружил два несоответствия тестовых ожиданий новому контракту:
+старый card-completion дважды проверял legacy gap4 вместо нового2, а новый
+clock-case отсчитывал realtime загрузки runner до fastForward. В продукте
+таймер/порядок/данные по этим сбоям не изменены. Gap проверяется exact2 только
+с новым density-class; legacy exact4 и tolerance0.5 сохранены. Вместе с прежним
+height-assert80/compact56 это три расширенных callback (карточки и поля), остальные старые
+callbacks неизменны. Clock заранее установлен08:59, остановлен09:00 перед
+сценарием; RAF явно пропускаются runFor250/100ms, без зависимости от загрузки
+CI и без роста timeout/retries. Точечный прогон обоих исправлений4/4 passed.
+Полный reference-набор/новый exact-head CI — следующие гейты; красный PR не слит.
+Первый полный локальный reference206-case прогон дополнительно выявил старый
+horizontal field-gap4 в том же контракте: он также проверяет2 только внутри
+нового класса, сохраняя legacy4 и48px height. После этого тестовый исходник
+заморожен для финального полного повторного прогона; предыдущий диагностический
+прогон не объявляется финальной зелёной приёмкой. Runtime продукт по CI-сбоям
+не менялся.
+Финальный неизменяемый reference-прогон206 cases:203passed/3штатных CDPskip,
+retry0,3.1m. Окончательный полный check повторён после CI-сигнала и завершился
+exit0:2729frontend/1426API+160standardDBskip/318infra/169hosting/12calendar/
+fonts2/2/lint/typecheck/build. Diff после исходного PR3CI не меняет src runtime.
+Сверка AST:160 прежних callback, изменены только3 geometry callback по
+описанным exact density/legacy правилам; таймауты/ретраи/уникальные assertions
+сохранены. Новый exact-head CI и release остаются гейтами, не обходятся.
