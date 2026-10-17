@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { attachRequestDiagnostics } from '../../shared/request-diagnostics'
 
 const repository = vi.hoisted(() => ({
   status: vi.fn(),
@@ -255,6 +256,27 @@ describe('NotificationsSetting', () => {
     await user.click(await screen.findByRole('button', { name: 'Включить' }))
 
     expect(await screen.findByText('Push-уведомления сейчас недоступны')).toBeVisible()
+  })
+
+  it('offers a copyable stage code when the device cannot create a push subscription', async () => {
+    primeDefaults()
+    const user = userEvent.setup()
+    repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
+    repository.enable.mockRejectedValue(attachRequestDiagnostics(new Error('Не удалось подключить уведомления на этом устройстве.'), {
+      requestId: '11111111-2222-4333-8444-555555555555',
+      occurredAt: '2026-10-18T00:00:00.000Z',
+      backend: 'browser',
+      operation: 'push.enable',
+      stage: 'subscription-create',
+      errorCode: 'AbortError',
+      errorCategory: 'push_service_initialization_failed',
+    }))
+
+    render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
+    await user.click(await screen.findByRole('button', { name: 'Включить' }))
+
+    expect(await screen.findByText('Код для поддержки:', { exact: false })).toBeVisible()
+    expect(screen.getByRole('button', { name: /Скопировать диагностику/ })).toBeVisible()
   })
 
   it('uses local notifications in the native app and cancels them when reminders are disabled', async () => {

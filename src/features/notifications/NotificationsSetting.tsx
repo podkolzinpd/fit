@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
 import { CHAT_MESSAGE_KIND, WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../shared/notification-kinds'
-import { Switch } from '../../shared/ui'
+import { InlineRequestError, Switch } from '../../shared/ui'
 import { detectInstallPlatform, isAppInstalled } from '../install'
 import {
   cancelAllNativeWorkoutInactivityReminders,
@@ -139,7 +139,9 @@ export function NotificationsSetting({ userId, role = 'client', detailed = false
       {detailed && state === 'needs-connection' && <small role="alert">Подписка устройства не подключена. Повторите проверку; если это не поможет, обратитесь в поддержку.</small>}
       {detailed && working && !nativeLocalSupported && <small>Подписка этого устройства подтверждена. Доставка зависит также от настроек телефона.</small>}
       {detailed && <button type="button" className="link" disabled={checking || enable.isPending || category.isPending} onClick={recheck}>{checking ? 'Проверяем…' : 'Повторить проверку'}</button>}
-      {enable.error && <small className="error">{enable.error instanceof Error ? enable.error.message : 'Не удалось включить уведомления.'}</small>}
+      {enable.error && (enable.error instanceof Error
+        ? <InlineRequestError error={enable.error} />
+        : <small className="error">Не удалось включить уведомления.</small>)}
       {working && !nativeLocalSupported && source === 'supabase' && <div className="push-status-actions">
         <button type="button" className="link" disabled={testPhase === 'sending'} aria-busy={testPhase === 'sending'} onClick={() => void sendTest()}>{testPhase === 'sending' ? 'Отправляем…' : 'Проверить уведомления'}</button>
         {testPhase === 'confirmed' && <small className="push-test-result success">Пришло.</small>}
