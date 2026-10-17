@@ -116,10 +116,25 @@ Figma MCP вновь отказал в доступе; используем не
 
 ## Статусы
 
+### Preflight PR2
+
+База aaacf048 (слитый PR1682), чистый main перед веткой. Роль trainer, server
+Lime, неизменённый reference exact2 и независимый PLAN_LAYOUT exact2. Новый
+current-main WebKit route просмотрен рядом с неизменённым SVG: divider отсутствует,
+white plus из-за неверного селектора, note55px и gray Dictate подтверждены.
+Переиспользуем WorkoutExerciseEditor, PlanNumberField/LiveSetInput,
+WorkoutDurationField, RunMetricsFields, OptionalDetails, AddActionLabel,
+WorkoutSwipe/Drag. Primary прежний — верхнее «Сохранить план».
+
+Меняется только scoped геометрия и placeholder opt-in refinedPlan. Extra
+RPE/time/distance/groups/notes могут увеличивать карточку; фиксированная высота
+из статичного SVG не обрезает реальные данные. Полные source SVG/шрифт не
+публикуются, exact typography по контурам недоказуема. Физический iPhone не проверен.
+
 | PR | Реализация | Приёмка | Выпуск |
 |---|---|---|---|
-| 1 | Реализован | Unit39/39; WebKit95passed/3CDPskip; Chromium8/8; полный check exit0 | CI/merge/release впереди |
-| 2 | Впереди | Впереди | Не начат |
+| 1 | Реализован, PR1682 merged aaacf048 | Unit39/39; WebKit95passed/3CDPskip; Chromium8/8; полный check exit0 | CI/mainCI success; Cloud.ru/public verification в работе; native207/207 |
+| 2 | Реализован | Unit54; WebKit106passed/3CDPskip; Chromium8/8; полный check exit0 | CI/merge/release впереди |
 | 3 | Впереди | Впереди | Не начат |
 | 4 | Впереди | Впереди | Не начат |
 
