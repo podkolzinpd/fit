@@ -1191,6 +1191,14 @@ coach-workout-reference доступом. Другая учётка, трети�
 существующего RPE в суперсетах. Оба списка задаются самостоятельно в
 fit-frontend-candidate; переключатель плотности планировщику не добавлен.
 
+Два вида тренерского Live включаются независимо в том же environment:
+`VITE_COACH_LIVE_DENSITY_ENABLED=true` и
+`VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>`.
+Точное true/exact2/trainer/server Lime/прежний reference обязательны; пустая или
+расширенная конфигурация закрыта. Состав прежней пары не менять. Локальный
+per-user/device выбор original/compact сам по себе доступа не даёт. Kill switch:
+LIVE_DENSITY_ENABLED=false и deployment, без мутации данных/плана/таймера.
+
 Закрытый пилот Apple Health использует build-time переменные:
 
 ```text

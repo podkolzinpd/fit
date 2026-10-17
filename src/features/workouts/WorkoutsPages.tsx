@@ -7,7 +7,8 @@ import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
 import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
-import { isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { isCoachLiveDensityEnabled, isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
+import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { advancePlanField } from './plan-input-navigation'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
@@ -2657,6 +2658,16 @@ export function LiveWorkoutPage() {
   const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
   const liveDrag = coachReference || clientLime
+  const densityEnabled = isCoachLiveDensityEnabled(actor)
+  const liveDensity = useCoachLiveDensity(actor?.userId)
+  useEffect(() => {
+    if (!densityEnabled) return
+    const frame = requestAnimationFrame(() => {
+      const target = document.activeElement
+      if (target instanceof HTMLElement && target.closest('.live-workout-page') && target.matches('.live-set-input, .live-set-rpe')) keepLiveInputVisible(target)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [densityEnabled, liveDensity])
   const { keyboardOpen } = useAppViewport()
   useLiveInputVisibility(directLiveInput)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
@@ -3911,7 +3922,7 @@ export function LiveWorkoutPage() {
   </div> : null}</>} />
   // Back returns to the entry screen without finishing. A direct Live link
   // falls back to its workout detail because the tab bar is hidden here.
-  return <Page title="Live-тренировка" hideTitle className="live-workout-page workout-focused-page" back={`/workouts/${workoutId}`} onBack={goBack}
+  return <Page title="Live-тренировка" hideTitle className={`live-workout-page workout-focused-page${densityEnabled ? ` coach-live-density coach-live-density-${liveDensity}` : ''}`} back={`/workouts/${workoutId}`} onBack={goBack}
     action={coachReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
       <Coachmark id="coach-live-finish-top-2026-10" userId={actor?.userId} title="Завершение — вверху" description="Галочка справа закреплена при прокрутке. Если остались незавершённые подходы, сначала попросим подтверждение.">
@@ -3955,7 +3966,7 @@ export function LiveWorkoutPage() {
             <span className="circuit-counter">Круг {circuitRounds[circuitCurrent]?.round ?? 1} из {circuitRounds.length}</span>
             <span className="circuit-dots" aria-hidden="true">{circuitRounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === circuitCurrent ? 'current' : ''}`} />)}</span>
           </div>}
-        </div>{coachReference && liveHeader}</>)
+        </div>{coachReference && liveHeader}{densityEnabled && query.data.notes?.trim() && <p className="coach-live-workout-note" aria-label="Заметка к тренировке">{query.data.notes}</p>}</>)
       })()}
       {(!liveDrag || clientLime) && reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);

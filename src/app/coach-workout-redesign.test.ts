@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SessionActor } from '../shared/domain'
-import { isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from './coach-workout-redesign'
+import { isCoachLiveDensityEnabled, isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from './coach-workout-redesign'
 
 afterEach(() => vi.unstubAllEnvs())
 const actor = (id = 'trainer-1', role = 'trainer', fitLime = true) => ({ userId: id, role, experiments: { fitLime } }) as SessionActor
@@ -32,6 +32,7 @@ describe('independent coach workout reference pilot', () => {
 describe.each([
   ['input', isCoachPlanInputEnabled, 'VITE_COACH_PLAN_INPUT'],
   ['layout', isCoachPlanLayoutEnabled, 'VITE_COACH_PLAN_LAYOUT'],
+  ['live density', isCoachLiveDensityEnabled, 'VITE_COACH_LIVE_DENSITY'],
 ] as const)('closed coach plan %s pilot', (_label, enabledFor, prefix) => {
   it('requires an independent switch, exactly two IDs and the original trainer pilot', () => {
     vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'true')
