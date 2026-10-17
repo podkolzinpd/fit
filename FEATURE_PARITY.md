@@ -81,6 +81,12 @@ YAFIT-593 / PR2: единое завершение календарного пл
 
 YAFIT-593 / PR1: изоляция календарного plan/voice draft по requestId, синхронизация упражнений с исходной формой с проверкой ID, сохранение идентичности между review/save/reload. Legacy draft и непилотный поток не меняются. Полный план пяти PR: docs/design/FIT_LIME_VIDEO_FIXES_20261004.md.
 
+17.10 trainer fixed2 planning: independent PLAN_INPUT/PLAN_LAYOUT preserve explicit
+save, comma decimals/Next/version-bound drafts and 48px metric geometry. RPE in
+superset rounds follows existing display setting and survives splitting into
+singles. Legacy/client/third trainer unchanged. Acceptance and release gates:
+docs/design/COACH_PLAN_AND_LIVE_FIXED2_20261017.md. No plan density setting.
+
 Client Lime pilot (2026-10-04): existing client routes and workout lifecycle retain
 behavior under an independent single-account flag. Light/dark/system preferences
 are isolated per actor. Local WebKit verifies 390/430 route inventory, workout

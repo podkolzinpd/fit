@@ -124,6 +124,61 @@ test('Figma workout Coach plan input never leaks into a third Lime trainer', asy
   await expect(weight).not.toHaveAttribute('data-live-direct')
 })
 
+test('Figma workout Coach refined plan keeps RPE in a 48px metric row and duration labels quiet', async ({ page }, info) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(id => localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'), pilot)
+  await openCoachPlanInput(page)
+  await expect(page.locator('.coach-plan-refined')).toBeVisible()
+  const row = page.locator('.planned-set').first()
+  const boxes = await row.locator('input, select').evaluateAll(nodes => nodes.map(node => {
+    const rect = node.getBoundingClientRect()
+    return { y: rect.y, height: rect.height, width: rect.width }
+  }))
+  expect(boxes).toHaveLength(3)
+  expect(boxes.every(box => box.height === 48 && box.width >= 44)).toBe(true)
+  expect(new Set(boxes.map(box => box.y)).size).toBe(1)
+  const rpe = row.getByLabel('Целевой RPE, подход 1', { exact: true })
+  expect(await rpe.evaluate(node => getComputedStyle(node).appearance)).toBe('none')
+  await rpe.selectOption('8')
+  const minutes = page.locator('.planned-exercise').nth(1).getByLabel('Время, подход 1: минуты', { exact: true })
+  await minutes.click()
+  await page.setViewportSize({ width: 390, height: 400 }) // Keyboard-sized viewport: input must remain reachable.
+  await expect(minutes).toBeInViewport()
+  expect(await minutes.evaluate(node => node.getBoundingClientRect().height)).toBe(48)
+  const duplicate = page.locator('.planned-exercise').nth(1).locator('.coach-plan-metric:has(.workout-duration-parts) > .coach-plan-field-unit').first()
+  await expect(duplicate).toBeHidden()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+  await page.screenshot({ path: info.outputPath('coach-refined-plan-keyboard.png') })
+})
+
+test('Figma workout Coach refined plan retains RPE inside supersets and after split', async ({ page }) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+  const plan = coachGestureWorkout(true, 3)
+  plan.status = 'planned'; plan.startedAt = null; plan.trainerId = pilot; plan.createdBy = pilot
+  await page.addInitScript(id => localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'), pilot)
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [plan] })
+  const writes: Array<{ exercises: Array<{ blockType: string; sets: Array<{ rpe?: number }> }> }> = []
+  page.on('request', request => { if (request.method() === 'PUT' && new URL(request.url()).pathname === `/v1/workouts/${workoutId}`) writes.push(request.postDataJSON() as typeof writes[number]) })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  const group = page.locator('.exercise-block').first()
+  await expect(group.getByLabel(/Целевой RPE, подход/)).toHaveCount(4)
+  await group.getByLabel('Целевой RPE, подход 1', { exact: true }).first().selectOption('8')
+  const groupRow = group.locator('.planned-round-exercise').first()
+  const rects = await groupRow.locator('input, select').evaluateAll(nodes => nodes.filter(node => (node as HTMLInputElement).type !== 'hidden').map(node => { const r = node.getBoundingClientRect(); return { y: r.y, height: r.height } }))
+  expect(rects.every(r => r.height === 48)).toBe(true)
+  expect(new Set(rects.map(r => r.y)).size).toBe(1)
+  await group.locator('.exercise-block-head .overflow-trigger').click()
+  await page.getByRole('menuitem', { name: 'Разделить суперсет', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить', exact: true }).click()
+  await expect(page.locator('.exercise-block')).toHaveCount(0)
+  await expect(page.locator('.planned-exercise').first().getByLabel('Целевой RPE, подход 1', { exact: true })).toHaveValue('8')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.locator('.coach-reference-form')).not.toBeVisible()
+  expect(writes).toHaveLength(1)
+  expect(writes[0]!.exercises[0]!.sets[0]!.rpe).toBe(8)
+  expect(writes[0]!.exercises.every(exercise => exercise.blockType === 'single')).toBe(true)
+})
+
 for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference full editor ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
   await mockPilot(page, { profileId: width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [], failFirstSave: true })

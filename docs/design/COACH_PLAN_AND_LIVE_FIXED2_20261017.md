@@ -97,8 +97,8 @@
 
 | Пункт | Реализация | Локальная приёмка | CI и PR | Production |
 | --- | --- | --- | --- | --- |
-| PR1 | Реализован локально | Targeted67/67; новые browser8/8, прежние10/10; финальные10/10+keyboard-save2/2+stale draft2/2; полный check exit0 | PR/CI — следующие гейты | Впереди |
-| PR2 | Не начат | Впереди | Впереди | Впереди |
+| PR1 | Реализован | Targeted67/67; новые browser8/8, прежние10/10; финальные10/10+keyboard-save2/2+stale draft2/2; полный check exit0 | PR1679 CI39030597907 success; merged3d42f69c | mainCI39031361618/официальный release впереди |
+| PR2 | Реализован локально | unit37/37; geometry375/390/430/1440×2 passed; final input/RPE/swipe14/14; full check exit0 | PR/CI впереди | Впереди |
 | PR3 | Не начат | Впереди | Впереди | Впереди |
 
 Релевантные прежние планы: COACH_REFERENCE_REMAINDER_20261016.md и COACH_LIVE_SIMPLE_POLISH_20261010.md. Полные исходные SVG и коммерческий пакет шрифта не публикуются. Независимые флаги default-off требуют ровно двух разных profile IDs, серверной роли trainer и прежнего reference-пилота; отсутствие/ошибка настройки не расширяет доступ. Откат возвращает прежний UI, не меняет тренировочные данные.
@@ -124,3 +124,38 @@
 Figma MCP design-context вернул отказ доступа к исходному файлу. Для оформления следующих PR используется переданный владельцем неизменённый SVG и сохранённая локальная измерительная спецификация; размеры не объявляются полученными из недоступного MCP. Исходные static assets остаются уже разрешёнными файлами проекта.
 
 Окончательный PR1 source проверен полным npm run check с exit0: frontend2724/2724, API1426/1426+160 стандартных local DB skips, infra318/318, hosting169/169, calendar12/12, lint/typecheck/fonts2/2/build/startup passed. Предыдущие остановки были на ожидаемом числе inventory636→640 и строгом перечне build settings; учтены только четыре добавленных случая и две независимые переменные, старые assertions/digest/таймауты сохранены. Отдельный sandbox HTTP-test с EPERM не считался продуктовой ошибкой; итоговый полный прогон с loopback-разрешением прошёл. Реальные OAuth/физический телефон остаются НЕ ПРОВЕРЕНО.
+
+## Preflight и приёмка PR2
+
+Локальная подготовка начата от проверенного PR1 d08cc68f; PR1 слит штатно в
+main3d42f69c, перед публикацией PR2 переносится на этот main. Роль trainer,
+server Lime, прежний fixed2 и отдельный PLAN_LAYOUT exact2. Primary прежний:
+верхняя галочка «Сохранить план». Компоненты WorkoutExerciseEditor,
+WorkoutDurationField, RunMetricsFields, ClientPicker, FitLimeDatePicker,
+CoachPlanTimeField, WorkoutGestureList/WorkoutSwipe, useConfirm и Lime tokens.
+
+Уже работает → переиспользуем: суперсеты/rounds/rest, reorder, свайп/подтверждение,
+комментарии/шаблоны/previous results, ClientPicker и часы. Реально меняем:
+конфликт4px→2px только в новой class; RPE48px рядом с метриками без native
+chevrons, quiet units и единый клавиатурный блок48px. В реальном локальном
+маршруте обоих движков подтверждено groupRpe0 при4set-rows и singleRpe2 с
+включённой общей настройкой. Это восстанавливается opt-in refinedPlan и тем
+же isRpeVisible, индивидуальным menu toggle; вне флага прежний default.
+Ошибка save переносится к реквизитам, без второго экземпляра/нового экрана.
+
+Проверены существующие полный редактор375/390/430/1440×2: название, выбор
+клиента, дата/время/ошибка времени, настройки, каталог, drag, reload, save/retry;
+существующий свайп и ввод после PR1; два новых случая×2: геометрия RPE/48px и
+keyboard-sized viewport, и group RPE→split→payload. Новая матрица длинных
+цепочек не создаётся. Inventory640→642, SHA256 не обновлён/full CI.
+
+Первый новый group-тест ошибочно ожидал persistence от mock PUT, который
+сохраняет только дату/время и не моделирует exercises. Реальный outgoing
+payload проверен вместо ложного reopening: RPE8 и blockType single; значения
+в UI перед save сохранены. Продукт по этому падению не менялся. Итог14/14
+retry0; скриншот WebKit просмотрен. Физический телефон/реальный OAuth не
+проверены; сохранение API покрывается прежними contract tests, не этим mock.
+Полный check PR2 exit0: frontend2725/2725, API1426/1426+160standardDBskip,
+infra318/318, hosting169/169, calendar12/12, fonts2/2, lint/typecheck/build
+passed. Новые production-переменные пока не включены; CI/merge/release/readback
+и окончательный native — ещё гейты.

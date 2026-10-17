@@ -339,6 +339,27 @@
 .coach-reference-form .coach-plan-time input:invalid { outline: 1px solid var(--danger); outline-offset: -1px }
 .coach-reference-form .planned-set-running .run-distance-control { height: 48px; border-radius: 16px; border: 0; background: var(--lime-surface-raised) }
 .coach-reference-form .planned-set-running .run-distance-unit { height: 48px; min-height: 48px; border: 0; background: transparent }
+/* Measured plan refinement is independent of the existing reference cohort.
+   Fields stay 48px; the two-view preference belongs to Live, not this editor. */
+.coach-plan-refined .planned-set { gap: 2px; margin: 0 0 2px; align-items: start }
+.coach-plan-refined .planned-set.rpe-visible { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) 48px }
+.coach-plan-refined .coach-plan-rpe { grid-column: auto; order: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-refined .planned-set-rpe { appearance: none; -webkit-appearance: none; border-radius: 16px; font-size: 16px; line-height: 20px; cursor: pointer }
+.coach-plan-refined :is(.coach-plan-field-unit, .coach-live-field-unit) { right: 6px; bottom: 3px; font-size: 10px; line-height: 12px }
+.coach-plan-refined .workout-duration-parts { height: 48px; gap: 2px }
+.coach-plan-refined .workout-duration-part { position: relative; display: block; height: 48px }
+.coach-plan-refined .workout-duration-part > span { position: absolute; right: 5px; bottom: 3px; font-size: 10px; line-height: 12px; pointer-events: none }
+.coach-plan-refined :is(.coach-plan-metric, .coach-live-metric):has(.workout-duration-parts) > :is(.coach-plan-field-unit, .coach-live-field-unit) { display: none }
+.coach-plan-refined .run-distance-control { grid-template-columns: minmax(0, 1fr) 44px; gap: 0; overflow: hidden }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-refined .run-distance-unit { min-width: 44px; padding: 0 3px; font-size: 11px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-plan-refined .planned-round-exercise { gap: 2px; margin-bottom: 8px }
+.coach-plan-refined .planned-round-exercise:has(.coach-plan-rpe) { grid-template-columns: repeat(2, minmax(0, 1fr)) 48px }
+.coach-plan-refined .planned-round-exercise-name { margin-block: 8px 4px; overflow-wrap: anywhere }
+.coach-plan-refined .loaded-distance-time { grid-column: 2 / -1; margin-top: 2px }
+.coach-plan-refined .planned-round-exercise .loaded-distance-time { grid-column: 1 / -1 }
+.coach-plan-refined .rowing-stroke-rate-field { margin-top: 4px }
+.coach-plan-refined .rowing-stroke-rate-field > span { font-size: 10px; line-height: 14px; color: var(--lime-text-secondary) }
+.coach-plan-refined .coach-plan-details .error { margin: 4px 0; font-size: 14px; line-height: 20px }
 .coach-workout-reference .workout-set-number { min-width: 44px; min-height: 48px; display: grid; place-items: center; touch-action: pan-y; user-select: none; -webkit-user-select: none }
 .coach-workout-reference .workout-set-swipe { border-radius: 16px; overflow: clip }
 .coach-workout-reference .workout-set-swipe button.workout-swipe-action { border-radius: 16px; min-height: 48px }
