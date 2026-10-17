@@ -664,6 +664,13 @@ original check-small stroke2.5 и white done state; quiet units opt-in, мень
 Set progressbar остаётся доступным для assistive technology, видимыми остаются
 маркеры и тексты. Coordinator/save/rest/gestures/переключатель не меняются.
 
+PR4 того же плана: закрытые view/filters собраны вместе только в fixed2 Schedule,
+открытые filters fullwidth; Day toolbar/другие тренеры остаются прежними. Native chooser/
+draft surface сверена с quick-plan, первого Coachmark не скрывает top-layer
+(scoped explicit dialog role, общий Coachmark не меняется). Переходы, поля,
+draft/requestId/save503 retry сохранены. Numeric autocomplete hint выключен для
+reference distance/stroke rate; системная iOS панель физически не проверена.
+
 ## Cloud.ru production stabilization — In progress
 
 План и неизменяемая приёмка: docs/design/CLOUDRU_STABILIZATION_20261014.md,

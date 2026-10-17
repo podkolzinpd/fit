@@ -137,6 +137,7 @@ export function RunMetricsFields({
           aria-label={distanceLabel}
           type="text"
           inputMode="decimal"
+          autoComplete={reference ? 'off' : undefined}
           enterKeyHint={planInput ? 'next' : undefined}
           pattern="[0-9]+([.,][0-9]+)?"
           placeholder="0"
@@ -181,6 +182,7 @@ export function RunMetricsFields({
           aria-label="Гребков в минуту"
           type="number"
           inputMode="numeric"
+          autoComplete={reference ? 'off' : undefined}
           enterKeyHint={planInput ? 'next' : undefined}
           min="0"
           step="1"

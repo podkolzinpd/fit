@@ -887,8 +887,13 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       </details></>
   }
 
+  function renderScheduleToolbar(view: ReactNode, filters: ReactNode) {
+    if (!compactScheduleFilters || !fitLimeSchedule) return <>{view}{filters}</>
+    return <div className="coach-schedule-toolbar"><div className="coach-schedule-view-slot">{view}</div><div className="coach-schedule-filter-slot">{filters}</div></div>
+  }
+
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}`}
     title="Расписание"
     hideTitle
   >
@@ -911,10 +916,10 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     {homeActions}
     {!fitLimeToday && daySummary}
     {fitLimeSchedule && <Coachmark id="lime-schedule-history-2026-10" userId={actor?.userId} title="История — в списке" description="Переключитесь на список, чтобы найти проведённые тренировки за все даты. Фильтры сохраняются при переходе в день."><span className="sr-only">История тренировок</span></Coachmark>}
-    {fitLimeSchedule && <div className="schedule-v2-range-toggle" role="group" aria-label="Вид расписания">
+    {renderScheduleToolbar(fitLimeSchedule && <div className="schedule-v2-range-toggle" role="group" aria-label="Вид расписания">
       <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
-    </div>}
+    </div>, <>
     {(fitLimeSchedule || fitLimeToday) && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
     {(fitLimeSchedule || fitLimeToday) && renderScheduleFilters(<div className="fit-lime-schedule-filters">
       {(fitLimeSchedule || clientFilter || statusFilter !== 'all') && <>
@@ -930,7 +935,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       {independentPreference.storageError && <p role="alert">Выбор действует до ухода с экрана: не удалось сохранить настройку. <button type="button" className="link" onClick={() => independentPreference.change(independentPreference.enabled)}>Повторить</button></p>}
       {homeClients.isLoading && <p role="status">Загружаем клиентов…</p>}
       {homeClients.isError && <p role="alert">Не удалось загрузить клиентов. <button type="button" className="link" onClick={() => void homeClients.refetch()}>Повторить</button></p>}
-    </div>)}
+    </div>)}</>)}
     {densityPreference.status === 'error' && <p className="schedule-v2-density-error" role="alert">Не удалось сохранить плотность сетки. <button type="button" onClick={densityPreference.retry}>Повторить</button></p>}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       {isListView ? <FitLimeScheduleList workouts={filteredItems} today={today} returnTo={returnTo} onOpenDay={openDay} /> : !isDayView ? <>
