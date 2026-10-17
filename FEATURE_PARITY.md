@@ -86,6 +86,10 @@ save, comma decimals/Next/version-bound drafts and 48px metric geometry. RPE in
 superset rounds follows existing display setting and survives splitting into
 singles. Legacy/client/third trainer unchanged. Acceptance and release gates:
 docs/design/COACH_PLAN_AND_LIVE_FIXED2_20261017.md. No plan density setting.
+Тот же закрытый fixed2 получает независимый LIVE_DENSITY: original/compact в
+настройках, один Live DOM/coordinator/rest,48px inputs/checks в обоих видах,
+notes/RPE/supersets/swipe/drag и отрицательный отдых сохранены. Default original,
+per-account/device; client/third trainer denied, stale preference не даёт доступа.
 
 Client Lime pilot (2026-10-04): existing client routes and workout lifecycle retain
 behavior under an independent single-account flag. Light/dark/system preferences

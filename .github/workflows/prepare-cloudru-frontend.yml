@@ -103,6 +103,8 @@ jobs:
           VITE_COACH_PLAN_INPUT_PILOT_USER_IDS: ${{ vars.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS || '' }}
           VITE_COACH_PLAN_LAYOUT_ENABLED: ${{ vars.VITE_COACH_PLAN_LAYOUT_ENABLED || 'false' }}
           VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS: ${{ vars.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS || '' }}
+          VITE_COACH_LIVE_DENSITY_ENABLED: ${{ vars.VITE_COACH_LIVE_DENSITY_ENABLED || 'false' }}
+          VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS: ${{ vars.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS || '' }}
         shell: bash
         run: |
           set -euo pipefail

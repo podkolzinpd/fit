@@ -97,9 +97,9 @@
 
 | Пункт | Реализация | Локальная приёмка | CI и PR | Production |
 | --- | --- | --- | --- | --- |
-| PR1 | Реализован | Targeted67/67; новые browser8/8, прежние10/10; финальные10/10+keyboard-save2/2+stale draft2/2; полный check exit0 | PR1679 CI39030597907 success; merged3d42f69c | mainCI39031361618/официальный release впереди |
-| PR2 | Реализован локально | unit37/37; geometry375/390/430/1440×2 passed; final input/RPE/swipe14/14; full check exit0 | PR/CI впереди | Впереди |
-| PR3 | Не начат | Впереди | Впереди | Впереди |
+| PR1 | Реализован | Targeted67/67; browser/полный check passed | PR1679 CI39030597907; merged3d42f69c; mainCI39031361618 success | Cloud.ru39032231713 success; public207/207 hashes+health passed |
+| PR2 | Реализован | unit37/37; geometry8/8; final input/RPE/swipe14/14; full check exit0 | PR1680 CI39031740044/main39032681293 success; merged2554c9a9 | Cloud.ru39033561681 success; public207/207 hashes+health passed |
+| PR3 | Реализован локально | Unit11/11; new browser24/24; complete reference203passed/3CDPskip; final full check exit0 | PR1681; после исправления тестовых ожиданий нужен новый exact-head CI | Впереди |
 
 Релевантные прежние планы: COACH_REFERENCE_REMAINDER_20261016.md и COACH_LIVE_SIMPLE_POLISH_20261010.md. Полные исходные SVG и коммерческий пакет шрифта не публикуются. Независимые флаги default-off требуют ровно двух разных profile IDs, серверной роли trainer и прежнего reference-пилота; отсутствие/ошибка настройки не расширяет доступ. Откат возвращает прежний UI, не меняет тренировочные данные.
 
@@ -128,7 +128,7 @@ Figma MCP design-context вернул отказ доступа к исходн�
 ## Preflight и приёмка PR2
 
 Локальная подготовка начата от проверенного PR1 d08cc68f; PR1 слит штатно в
-main3d42f69c, перед публикацией PR2 переносится на этот main. Роль trainer,
+main3d42f69c, перед публикацией PR2 перенесён на этот main. Роль trainer,
 server Lime, прежний fixed2 и отдельный PLAN_LAYOUT exact2. Primary прежний:
 верхняя галочка «Сохранить план». Компоненты WorkoutExerciseEditor,
 WorkoutDurationField, RunMetricsFields, ClientPicker, FitLimeDatePicker,
@@ -159,3 +159,84 @@ retry0; скриншот WebKit просмотрен. Физический те�
 infra318/318, hosting169/169, calendar12/12, fonts2/2, lint/typecheck/build
 passed. Новые production-переменные пока не включены; CI/merge/release/readback
 и окончательный native — ещё гейты.
+
+## Preflight и приёмка PR3
+
+Подготовка от проверенного PR2e0261307; PR2 слит2554c9a9, перед публикацией
+PR3 переносится на этот main. Отдельный LIVE_DENSITY exact2/default-off с
+trainer/server Lime/прежним reference guard. До изменений существующие Live
+rest/keyboard реально воспроизведены в WebKit2/2: возврат общего таймера и
+отрицательный отдых уже работают, не переписаны. Переиспользованы LiveWorkoutPage,
+LiveRestTimer, coordinator, LiveSetInput, keepLiveInputVisible/AppViewport,
+WorkoutGestureList/WorkoutSwipe, WorkoutExercise/SetRow, useConfirm и
+SettingsSection/schedule-density controls. Primary — верхняя галочка завершения.
+
+Один DOM/query/coordinator/timer, только class на Page. Preference per-account/device
+с original default, неизвестное значение→original; при запрещённом storage выбор
+работает в сессии отдельно по аккаунтам. В настройках radiogroup с roving tab,
+стрелками/Home/End. Смена class не включена в React keys; прежний helper двигает
+лишь обрезанную часть сфокусированного поля. Вне пилота нет настройки/классов,
+даже со stale compact. PLAN_INPUT/PLAN_LAYOUT не переиспользуются как allowlist.
+
+| Геометрия | Оригинальный | Компактный | Основание |
+| --- | --- | --- | --- |
+| Карточки | radius32/inset2/gap2 | те же | SVG editor2207/2243 |
+| Поле/галочка |48px/radius16|те же|согласованное исключение вместо SVG54 |
+| Номер |40px внутри44px hit target|32px внутри44px hit target|source2211/compact adaptation |
+| Отдых |60px/radius20|48px/radius20|source live-header18/touch adaptation |
+| Таймерный блок |194px|84px|сборка утверждённого эскиза, не единый SVG |
+| Контекст |min146px| min98px|адаптация с сохранением client/progress |
+| Заголовок карточки |min133px| min90px|derived/source composition и adaptation |
+| Добавить подход/упражнение |68/80px|48/56px|source нижнее действие80/compact adaptation |
+
+Динамический длинный текст/метрики увеличивают блоки, не обрезаются жёсткой
+высотой. При клавиатуре timer-space/height64px синхронны, без анимации геометрии
+или нового viewport-owner. YS Geo/Doto и оригинальные иконки не заменены, OS bar
+не рисуется. SVG-текст был контурами, размеры редактируемого шрифта — адаптация.
+Непустая сохранённая workout.notes видна над карточками обычным текстом, без
+новой mutation. Заметки упражнения сохраняют blur/mutation/disclosure и preview,
+только без добавленной стрелки и с44px summary. Суперсеты/rounds/rest, reorder,
+swipe, RPE/time/distance/animation/completion остаются общей реализацией.
+Нет новых Start/Technique/phase.
+
+Новые12 browser cases/движок: 8 статических composition (2density×4width),
+setting second pilot+route roundtrip, focused-node/rest preservation, outside
+trainer/client. Длинные цепочки не размножены на размеры/темы. Existing mechanics
+проверены в обеих density: original34passed/2CDPskip, compact32passed/2skip,
+затем completion retry2/2. Первое compact-падение — ожидание80px вместо56px;
+строгий original80px сохранён, exact56 проверяется только с compact-class.
+Другие старые сценарии/пороги/таймауты сохранены. Inventory642→654, digest не
+обновлялся/full CI. Снимки WebKit просмотрены; верхняя галочка дополнительно
+проверяется hit-testing. MockWorkout.notes расширен сnull доstring|null согласно
+домену, без изменения mock transport.
+
+Full check exit0:2729frontend/1426API+160standardDBskip/318infra/169hosting/
+12calendar/fonts2/2/lint/typecheck/build. После переноса на main — exact-head CI,
+штатный Cloud.ru release, public hashes/health и новый native bundle. Реальный
+OAuth/физический iPhone не проверены и не выдаются за синтетическую приёмку.
+
+### Уточнение после первого CI PR3
+
+CI39032894145 обнаружил два несоответствия тестовых ожиданий новому контракту:
+старый card-completion дважды проверял legacy gap4 вместо нового2, а новый
+clock-case отсчитывал realtime загрузки runner до fastForward. В продукте
+таймер/порядок/данные по этим сбоям не изменены. Gap проверяется exact2 только
+с новым density-class; legacy exact4 и tolerance0.5 сохранены. Вместе с прежним
+height-assert80/compact56 это три расширенных callback (карточки и поля), остальные старые
+callbacks неизменны. Clock заранее установлен08:59, остановлен09:00 перед
+сценарием; RAF явно пропускаются runFor250/100ms, без зависимости от загрузки
+CI и без роста timeout/retries. Точечный прогон обоих исправлений4/4 passed.
+Полный reference-набор/новый exact-head CI — следующие гейты; красный PR не слит.
+Первый полный локальный reference206-case прогон дополнительно выявил старый
+horizontal field-gap4 в том же контракте: он также проверяет2 только внутри
+нового класса, сохраняя legacy4 и48px height. После этого тестовый исходник
+заморожен для финального полного повторного прогона; предыдущий диагностический
+прогон не объявляется финальной зелёной приёмкой. Runtime продукт по CI-сбоям
+не менялся.
+Финальный неизменяемый reference-прогон206 cases:203passed/3штатных CDPskip,
+retry0,3.1m. Окончательный полный check повторён после CI-сигнала и завершился
+exit0:2729frontend/1426API+160standardDBskip/318infra/169hosting/12calendar/
+fonts2/2/lint/typecheck/build. Diff после исходного PR3CI не меняет src runtime.
+Сверка AST:160 прежних callback, изменены только3 geometry callback по
+описанным exact density/legacy правилам; таймауты/ретраи/уникальные assertions
+сохранены. Новый exact-head CI и release остаются гейтами, не обходятся.
