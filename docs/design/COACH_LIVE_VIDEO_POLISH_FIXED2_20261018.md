@@ -77,8 +77,8 @@ OAuth не считать проверенными по синтетически
 
 - PR 1: #1688/main94552310 выпущен; mainCI39077893863/Cloud.ru39078700484 success, public207/207+health/compiled4closed2/native207/207 passed.
 - PR 2: #1690/main9ee5af25 полностью выпущен: PRCI39107082759/mainCI39108106161/Cloud.ru39108856277 success, public207/207+health/compiled4closed2/native207/207 sync/build/install/launch passed.
-- PR 3: перенос на выпущенный main9ee5af25, tree-identical проверенному ce4c6b29 до docs-статуса; публикация и exact-head CI по порядку.
-- PR 4: локальный83e61268, подготовлен и проверен; нативная панель контактов физически не проверена и исправленной не заявлена.
+- PR 3: #1691/main22d237e1 merged, PRCI39109269478 attempt2/mainCI39110267065/Android success; native207/207 и4closed2 passed; Cloud.ru39111035966 публикуется.
+- PR 4: публикация на main22d237e1, non-docs checked324c4194; его CI может идти параллельно проверке web3, но merge4 только после подтверждённого release3. Contact panel не объявляется исправленной.
 - PR 5: локальный751b956a, target10/regression44/fullcheck exit0; публикация по порядку. Разрешение владельца на все пять этапов сохраняется, ожидание очереди не завершает задачу.
 
 ## Сверка и приёмка PR 1
@@ -208,3 +208,50 @@ native sync/build/install/launch и207/207 built/installed passed. PR3 пере�
 дереву. Проверенные2738/frontend/API1426+160standardDBskip и browser4 относятся
 к тем же runtime/tests; новый exact-head CI всё равно обязателен. Физическое
 устройство и настоящий OAuth не проверены; новых правок поведения при переносе нет.
+
+## Сверка и приёмка PR 4
+
+Подготовка от локального PR3 `d31970e8`. Новый quick-plan открыт при390px с
+реальным выбором упражнения, trainer Lime: pilot и третий trainer. До правки
+нижняя сводка есть у обоих; в пилоте кнопки уже80px/gap2, поля48px с type=text,
+inputMode=decimal и autocomplete=off. «Изменить все» слева: одиночный оставшийся
+элемент попадает в первую колонку прежнего grid, justify-content:flex-end
+не перемещает его. Это воспроизведено кодом и приватным снимком, не гипотеза.
+
+| Пункт | Результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| Дубль реквизитов | Нет только в reference fixed2 quick-plan; верхние реквизиты остались | summary0 pilot/1 outside; existing full-editor390 quick entry | Локально пройден |
+| Нижние действия/bulk | Footer flex с прежними16px inset/8px margin; bulk справа и меню доступно;80/2 без изменения | full-editor375/390/430/1440 bounds/menu assertions | Локально пройден |
+| iPhone contact autofill | App не создаёт такую панель; текущие numeric-поля уже off + numeric/decimal | DOM/source; пользовательское видео подтверждает наличие OS-панели | Физический результат НЕ ПРОВЕРЕН, исправление панели не заявлено |
+| Дроби/очистка/Next/save | Прежний SAFE_PLAN_INPUT,48px, тот же submit/retry | Existing plan-input и полный editor/save/reload | Browser20/20 пройден |
+
+Не отключается autofill глобально и не назначается ложное textContentType /
+one-time-code ради подавления панели. Не добавляются native bridge/новая
+клавиатура без воспроизводимого физического сценария. Независимые подтверждённые
+косметические правки продолжаются по правилу preflight; limitation сохраняется
+в handoff. Target WebKit5/5 и private2/2; обновлён один существующий маршрут
+390px, новые browser cases/digest/таймауты не добавлялись. Остальные ширины
+сохраняют обычное создание плана. Полная проверка и CI обязательны до выпуска.
+
+Итоговая browser regression PR4 —20/20 в WebKit/Chromium: create/edit/decimal,
+Next, метрики/RPE, retry/save/reload и outside-cohort. Full check запущен после
+просмотра финального390px снимка: дубликата нет, bulk справа,80/2/48 сохранены.
+Полный прогон дошёл до успешного build/startup: frontend2733, API1426 +160
+standardDBskip. Вывод завершения сохранён; публикация и CI ещё впереди.
+
+После1689 PR4 перенесён на актуальный PR3 ce4c6b29. Workout/CSS код идентичен
+проверенному83e61268; docs-конфликты разрешены с сохранением прежней приёмки
+и новых фактов. Fresh WebKit/Chromium20/20 и fullcheck exit0 frontend2738/
+API1426+160standardDBskip/infra320/hosting169/calendar12/fonts2/build/startup.
+Свежий390px снимок просмотрен: нижнего дубля нет, bulk справа,80/2/48 сохранены.
+Inventory656 и стандартные гейты прежние; CI/merge/release/native далее по порядку.
+
+PR3#1691 merged/main22d237e1, PRCI39109269478 attempt2/mainCI39110267065 и
+Android39109269466 success. У первого PR-CI один inherited nutrition-layout
+case прошёл retry и был правильно marked flaky; failed-only attempt2 чистый,
+без source/test/gate edits. Native3 sync/build/install/launch207/207 и4closed2
+проверены на точном main; physical/OAuth не заявляются. На момент открытия PR4
+Cloud.ru39111035966 в работе. Для сокращения ожидания CI4 идёт параллельно
+верификации web3; merge4 запрещён до success/public readback предыдущего релиза.
+До status-docs non-docs PR4 совпали с checked324c4194; прежние browser20/fullcheck
+2738 относятся к тем же runtime/tests. Новый exact-head CI4 обязателен.

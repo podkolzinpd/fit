@@ -126,6 +126,8 @@ test('Figma workout Coach plan input never leaks into a third Lime trainer', asy
   const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })
   await expect(weight).toHaveAttribute('type', 'number')
   await expect(weight).not.toHaveAttribute('data-live-direct')
+  await page.goto(`/workouts/new?entry=quick&date=2026-09-24&client=${clientId}`)
+  await expect(page.locator('.today-plan-summary')).toBeVisible()
   await page.goto('/schedule?week=2026-09-21')
   await expect(page.locator('.coach-schedule-toolbar')).toHaveCount(0)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Вид и фильтры расписания' })).toHaveCount(0)
@@ -319,7 +321,9 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   const pilot = width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001'
   await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
   await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [], failFirstSave: true, unseenCoachmarks: scheduleCoachmarks })
-  await page.goto('/workouts/new?date=2026-09-24')
+  // One existing width covers the real quick entry; the others retain the
+  // normal creation route. No extra visual/behavior matrix is introduced.
+  await page.goto(`/workouts/new?date=2026-09-24${width === 390 ? '&entry=quick' : ''}`)
   await expect(page.locator('.coach-reference-form')).toBeVisible()
   const title = page.getByRole('textbox', { name: 'Название тренировки' })
   await title.fill('На всё тело: силовая тренировка')
@@ -375,6 +379,21 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await squat.getByLabel('Повторы, подход 1').fill('10')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveCSS('height', '48px')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveCSS('font-size', '16px')
+  await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('autocomplete', 'off')
+  await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('inputmode', 'decimal')
+  await expect(page.locator('.today-plan-summary')).toHaveCount(0)
+  const lower = page.locator('.coach-plan-entry-controls'), bulk = page.locator('.workout-editor-footer .overflow-trigger')
+  await expect(lower).toHaveCSS('gap', '2px')
+  expect(await lower.locator(':scope > button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 80))).toBe(true)
+  await bulk.scrollIntoViewIfNeeded()
+  expect(await bulk.evaluate(button => {
+    const rect = button.getBoundingClientRect(), footer = button.closest('.workout-editor-footer')!.getBoundingClientRect()
+    const controls = document.querySelector('.coach-plan-entry-controls')!.getBoundingClientRect()
+    return Math.abs(footer.right - rect.right - 16) < 1 && controls.top >= rect.bottom + 8 && rect.height >= 44
+  })).toBe(true)
+  await bulk.click()
+  await expect(page.getByRole('menuitem', { name: 'Сбросить значения', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
   await expect(squat.locator('.planned-set-table-head')).not.toBeVisible()
   await expect(squat.locator('.coach-plan-field-unit')).toHaveText(['кг', 'повт.'])
   await expect(squat).toHaveCSS('border-radius', '32px')

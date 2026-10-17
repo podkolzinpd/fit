@@ -378,7 +378,7 @@
 .coach-reference-form .set-add-row .add-action-label svg { color: var(--lime-accent) }
 .coach-reference-form .exercise-comment-options { margin-top: 8px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .exercise-comment-options > summary { font-size: 14px; font-weight: 400; color: var(--lime-text-secondary) }
-.coach-reference-form .workout-editor-footer { justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }
+.coach-reference-form .workout-editor-footer { display: flex; justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }
 .coach-workout-reference .coach-schedule-filter-options { margin: 4px 0 8px; padding: 0; border: 0; background: transparent }
 .coach-workout-reference .coach-schedule-filter-options > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 8px 18px; list-style: none; color: var(--lime-text-secondary); font-size: 14px; font-weight: 500; cursor: pointer }
 .coach-workout-reference .coach-schedule-filter-options > summary::-webkit-details-marker { display: none }
