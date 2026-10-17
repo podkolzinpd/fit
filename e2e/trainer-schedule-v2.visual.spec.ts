@@ -10,6 +10,7 @@ import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
 const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
+const dayGuideId = 'lime-day-workspace-2026-10'
 const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']
 
 // Two engines are intentional: native implicit submit and pointer selection differ in Safari.
@@ -193,7 +194,7 @@ test('Figma workout Coach refined plan retains RPE inside supersets and after sp
 test('Figma workout Coach Live density setting persists for the second pilot only', async ({ page }) => {
   const pilot = 'c0ac0000-6010-4000-8000-000000000002'
   await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
-  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()] })
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
   await page.goto('/profile/settings')
   const group = page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })
   await expect(group.getByRole('radio', { name: 'Оригинальный', exact: true })).toHaveAttribute('aria-checked', 'true')
@@ -208,6 +209,21 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   expect(await page.evaluate(() => localStorage.getItem('fit.coachLiveDensity.c0ac0000-6010-4000-8000-000000000001'))).toBeNull()
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.coach-live-density-compact')).toBeVisible()
+  const guide = page.locator('.coachmark-bubble')
+  await expect(guide).toHaveCount(1)
+  await expect(guide).toContainText('Управление тренировкой')
+  await expect(guide).toBeInViewport({ ratio: 1 })
+  expect(await page.locator('.live-timer-toolbar .coachmark-anchor').evaluate(node => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0 })).toBe(true)
+  await guide.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await expect(guide).toHaveCount(0)
+  await page.reload()
+  await expect(page.locator('.coach-live-density-compact')).toBeVisible()
+  await expect(guide).toHaveCount(0)
+  expect(await page.evaluate(id => {
+    const seen: unknown = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]')
+    return Array.isArray(seen) && seen.some((entry: unknown) => entry === 'live-timer-2026-09')
+  }, pilot)).toBe(true)
+  expect(await page.evaluate(() => localStorage.getItem('fit.coachmarks-seen.c0ac0000-6010-4000-8000-000000000001'))).toBeNull()
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
@@ -320,7 +336,7 @@ for (const density of ['original', 'compact'] as const) for (const width of [375
 for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference full editor ${width}`, async ({ page }, info) => {
   const pilot = width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001'
   await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
-  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [], failFirstSave: true, unseenCoachmarks: scheduleCoachmarks })
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [], failFirstSave: true, unseenCoachmarks: [...scheduleCoachmarks, dayGuideId] })
   // One existing width covers the real quick entry; the others retain the
   // normal creation route. No extra visual/behavior matrix is introduced.
   await page.goto(`/workouts/new?date=2026-09-24${width === 390 ? '&entry=quick' : ''}`)
@@ -464,6 +480,27 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await view.getByRole('button', { name: 'Список', exact: true }).click()
   await view.getByRole('button', { name: 'Календарь', exact: true }).click()
   await expect(guide).toHaveCount(0)
+  await page.goto('/today?date=2026-09-24')
+  await expect(guide).toHaveCount(1)
+  await expect(guide).toContainText('Все дела — в календаре')
+  await expect(guide).toBeInViewport({ ratio: 1 })
+  expect(await filters.evaluate(node => {
+    const anchor = node.closest('.coachmark-anchor')!.getBoundingClientRect()
+    const control = node.querySelector('summary')!.getBoundingClientRect()
+    return anchor.width > 0 && anchor.height > 0 && anchor.top <= control.top && anchor.bottom >= control.bottom
+  })).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-day-first-guide.png') })
+  await guide.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await expect(guide).toHaveCount(0)
+  expect(await page.evaluate(({ id, key }) => {
+    const seen: unknown = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]')
+    return Array.isArray(seen) && seen.some((entry: unknown) => entry === key)
+  }, { id: pilot, key: dayGuideId })).toBe(true)
+  await page.reload()
+  await expect(filters).toBeVisible()
+  await expect(guide).toHaveCount(0)
+  await filters.locator('summary').click()
+  await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeVisible()
 })
 
 test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {

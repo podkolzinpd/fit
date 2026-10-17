@@ -765,6 +765,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const fitLimeSchedule = !isDayView && isFitLimeEnabled(actor)
   const compactScheduleFilters = (fitLimeToday || fitLimeSchedule) && isCoachWorkoutRedesignEnabled(actor)
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
+  const singleDayGuide = compactScheduleFilters && fitLimeToday
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -882,11 +883,12 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     if (!compactScheduleFilters) return content
     const count = Number(Boolean(clientFilter)) + Number(statusFilter !== 'all') + Number(independentPreference.enabled)
     const error = homeClients.isError || independentPreference.storageError
-    return <>{!singleScheduleGuide && <Coachmark id="coach-schedule-filters-2026-10-16" userId={actor?.userId} title="Фильтры собраны вместе" description="Клиент, статус и самостоятельные занятия — под кнопкой «Фильтры»."><span className="sr-only">Фильтры расписания</span></Coachmark>}
-      <details className="coach-schedule-filter-options workout-options">
+    const filters = <details className="coach-schedule-filter-options workout-options">
         <summary>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></summary>
         {content}
-      </details></>
+      </details>
+    if (singleDayGuide) return <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Незавершённые действия — под колокольчиком. Самостоятельные занятия — в «Фильтрах».">{filters}</Coachmark>
+    return <>{!singleScheduleGuide && <Coachmark id="coach-schedule-filters-2026-10-16" userId={actor?.userId} title="Фильтры собраны вместе" description="Клиент, статус и самостоятельные занятия — под кнопкой «Фильтры»."><span className="sr-only">Фильтры расписания</span></Coachmark>}{filters}</>
   }
 
   function renderScheduleToolbar(view: ReactNode, filters: ReactNode) {
@@ -913,7 +915,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       <Link to={`/workouts/${savedPlanId}`} state={{ returnTo }}>Открыть</Link>
       <button type="button" className="link" aria-label="Скрыть подтверждение" onClick={() => navigate(returnTo, { replace: true, state: null })}>Закрыть</button>
     </section>}
-    {fitLimeToday && <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Начатые тренировки и черновик доступны в незавершённых действиях."><span className="sr-only">Рабочий день</span></Coachmark>}
+    {fitLimeToday && !singleDayGuide && <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Начатые тренировки и черновик доступны в незавершённых действиях."><span className="sr-only">Рабочий день</span></Coachmark>}
     {fitLimeToday && daySummary}
     {homeActions}
     {!fitLimeToday && daySummary}
@@ -922,7 +924,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
     </div>, <>
-    {(fitLimeSchedule || fitLimeToday) && !singleScheduleGuide && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
+    {(fitLimeSchedule || fitLimeToday) && !singleScheduleGuide && !singleDayGuide && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
     {(fitLimeSchedule || fitLimeToday) && renderScheduleFilters(<div className="fit-lime-schedule-filters">
       {(fitLimeSchedule || clientFilter || statusFilter !== 'all') && <>
       <label>Клиент<select aria-label="Фильтр по клиенту" value={clientFilter} onChange={(event) => changeScheduleFilter('client', event.target.value)}>
@@ -3990,9 +3992,7 @@ export function LiveWorkoutPage() {
   return <Page title="Live-тренировка" hideTitle className={`live-workout-page workout-focused-page${densityEnabled ? ` coach-live-density coach-live-density-${liveDensity}` : ''}`} back={`/workouts/${workoutId}`} onBack={goBack}
     action={coachReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
-      <Coachmark id="coach-live-finish-top-2026-10" userId={actor?.userId} title="Завершение — вверху" description="Галочка справа закреплена при прокрутке. Если остались незавершённые подходы, сначала попросим подтверждение.">
         <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}><CheckIcon /></button>
-      </Coachmark>
     </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
       {!coachReference && liveHeader}
@@ -4016,7 +4016,7 @@ export function LiveWorkoutPage() {
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <><div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} />}
-            <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
+            <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
                 referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} onReferenceRestActiveChange={coachReference ? setReferenceRestActive : undefined} />
@@ -4175,7 +4175,7 @@ export function LiveWorkoutPage() {
         const content = renderBlock()
         return liveDrag ? <WorkoutDragBlock key={block.blockId} id={block.blockId} holdToDrag={clientLime && canManageLiveStructure && !reordering} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{content}</WorkoutDragBlock> : content
       })
-        return liveDrag ? <>{clientLime && canManageLiveStructure && liveBlocks.length > 1 && <Coachmark id="client-live-card-drag-2026-10" userId={actor?.userId} title="Меняйте порядок упражнений" description="Удерживайте карточку за название или свободное место, затем перетащите. Поля и кнопки работают как обычно. В меню также есть «Изменить порядок»."><span className="sr-only">Перенос карточек</span></Coachmark>}{coachReference && <Coachmark id="coach-live-set-swipe-2026-10-16" userId={actor?.userId} title="Удаление подхода — свайпом" description="Проведите влево по номеру подхода. Номер в заголовке упражнения служит для переноса."><span className="sr-only">Жесты карточек</span></Coachmark>}<WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled} holdCards={clientLime}
+        return liveDrag ? <>{clientLime && canManageLiveStructure && liveBlocks.length > 1 && <Coachmark id="client-live-card-drag-2026-10" userId={actor?.userId} title="Меняйте порядок упражнений" description="Удерживайте карточку за название или свободное место, затем перетащите. Поля и кнопки работают как обычно. В меню также есть «Изменить порядок»."><span className="sr-only">Перенос карточек</span></Coachmark>}<WorkoutGestureList blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled} holdCards={clientLime}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
