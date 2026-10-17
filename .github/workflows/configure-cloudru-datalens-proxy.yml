@@ -1,0 +1,128 @@
+name: Configure Cloud.ru DataLens database proxy
+
+# Пробрасывает только DataLens (Yandex Cloud) к закрытому кластеру PostgreSQL
+# через ВМ fit-stage-app: порт 55432, TLS не разрывается, nginx пускает только
+# адреса DataLens. Группа безопасности публичного IP настраивается в консоли.
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: 'Successful CI run for current main'
+        required: true
+        type: string
+      mode:
+        description: 'inspect — только проверки; apply — установить проброс'
+        required: true
+        type: choice
+        default: inspect
+        options: [inspect, apply]
+      confirmation:
+        description: 'Apply only: OPEN_DATALENS_DB_PROXY, after owner approval'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.verify.outputs.commit }}
+    steps:
+      - name: Verify successful CI for current main
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+          commit=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
+            select(.path == ".github/workflows/ci.yml" and
+              .head_repository.full_name == $repo and .head_branch == "main" and
+              (.event == "push" or .event == "workflow_dispatch") and
+              .status == "completed" and .conclusion == "success") | .head_sha
+          ' <<<"$run")
+          test "$commit" = "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+  proxy:
+    needs: source
+    runs-on: [self-hosted, cloudru-stage]
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ needs.source.outputs.commit }}
+      MODE: ${{ inputs.mode }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+          persist-credentials: false
+      - name: Verify VM, database reachability and nginx
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$(hostname)" = fit-stage-app
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$MODE" = inspect -o "$MODE" = apply
+          if [ "$MODE" = apply ]; then test "$CONFIRMATION" = OPEN_DATALENS_DB_PROXY; fi
+          timeout 5 bash -c '</dev/tcp/10.70.10.67/5432'
+          echo 'cloudru_datalens_proxy=database_reachable'
+          sudo nginx -t
+          if sudo test -e /usr/lib/nginx/modules/ngx_stream_module.so; then
+            echo 'cloudru_datalens_proxy=stream_module_available'
+          else
+            echo 'cloudru_datalens_proxy=stream_module_missing'
+          fi
+          if sudo ss -ltn '( sport = :55432 )' | grep -q LISTEN; then
+            echo 'cloudru_datalens_proxy=port_in_use'
+          fi
+      - name: Install DataLens stream proxy with rollback
+        if: inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! sudo test -e /usr/lib/nginx/modules/ngx_stream_module.so; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libnginx-mod-stream
+          fi
+          backup=$(mktemp -d)
+          sudo cp -a /etc/nginx/nginx.conf "$backup/nginx.conf"
+          sudo install -d -m 755 /etc/nginx/fit-stream.d
+          sudo install -m 644 infra/cloudru/nginx-stream-datalens.conf /etc/nginx/fit-stream.d/datalens.conf
+          if ! sudo grep -Fqx 'include /etc/nginx/fit-stream.conf;' /etc/nginx/nginx.conf; then
+            printf 'stream {\n    include /etc/nginx/fit-stream.d/*.conf;\n}\n' | sudo tee /etc/nginx/fit-stream.conf >/dev/null
+            printf '\ninclude /etc/nginx/fit-stream.conf;\n' | sudo tee -a /etc/nginx/nginx.conf >/dev/null
+          fi
+          if ! sudo nginx -t; then
+            sudo cp -a "$backup/nginx.conf" /etc/nginx/nginx.conf
+            sudo rm -f /etc/nginx/fit-stream.d/datalens.conf
+            sudo nginx -t
+            echo 'nginx config rejected; restored previous configuration.' >&2
+            exit 1
+          fi
+          sudo systemctl reload nginx
+      - name: Verify PostgreSQL TLS through the proxy
+        if: inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 2
+          sudo ss -ltn '( sport = :55432 )' | grep -q LISTEN
+          # PostgreSQL SSLRequest: ответ S значит, что TLS доступен через проброс.
+          answer=$(python3 - <<'PY'
+          import socket
+          with socket.create_connection(('127.0.0.1', 55432), timeout=5) as connection:
+              connection.sendall(bytes([0, 0, 0, 8, 4, 210, 22, 47]))
+              print(connection.recv(1).decode('ascii', 'replace'))
+          PY
+          )
+          test "$answer" = S
+          echo 'cloudru_datalens_proxy=tls_ready'
