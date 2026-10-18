@@ -5276,6 +5276,15 @@ for (const theme of ['light', 'dark']) {
           await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
           await dates.getByLabel('Начало', { exact: true }).fill('12:30')
           await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
+          if (theme === 'light' && width === 390) {
+            // The stored app height can lag a reduced viewport during keyboard recovery.
+            await page.setViewportSize({ width, height: 450 })
+            await dates.getByLabel('Начало', { exact: true }).focus()
+            await expect.poll(async () => (await dates.boundingBox())!.y).toBeGreaterThanOrEqual(0)
+            await dates.getByRole('button', { name: 'Применить дату' }).scrollIntoViewIfNeeded()
+            await expect(dates.getByRole('button', { name: 'Применить дату' })).toBeInViewport()
+            await page.setViewportSize({ width, height: 844 })
+          }
           await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
           await expect(control).toHaveText(before, { useInnerText: true })
           if (theme === 'light' && width === 390) {

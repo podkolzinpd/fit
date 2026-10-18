@@ -27,7 +27,7 @@
   inset: auto 0 0;
   width: min(100%, 440px);
   max-width: 100%;
-  max-height: calc(var(--app-visible-height, 100dvh) - 12px);
+  max-height: calc(min(var(--app-visible-height, 100dvh), 100dvh) - 12px);
   margin: auto auto 0;
   padding: 0 20px max(20px, env(safe-area-inset-bottom));
   border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
@@ -48,3 +48,8 @@
 .phone-frame.fit-client-lime .client-lime-date-sheet .fit-lime-date-times input { min-width: 130px; min-height: 48px; font-size: 16px; padding: 8px 12px; border: 1px solid var(--lime-divider); border-radius: 16px; appearance: none; -webkit-appearance: none; box-shadow: none; background: var(--lime-surface-raised); color: var(--lime-text); }
 
 .phone-frame.fit-client-lime .client-lime-date-sheet .fit-lime-month-outside { display: grid; place-items: center; height: 44px; color: var(--lime-text-secondary); font-size: 14px; opacity: .45; }
+
+/* Reuse the existing viewport contract when the keyboard reduces the visible area. */
+.app-keyboard-open .phone-frame.fit-client-lime .client-lime-date-sheet {
+  bottom: calc(100% - var(--app-viewport-offset-top, 0px) - var(--app-visible-height, 100dvh));
+}
