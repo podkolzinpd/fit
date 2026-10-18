@@ -80,10 +80,71 @@ API1426+160штатныхDBskip, policy/hosting/calendar/build/startup passed. �
 диагностический WebKit390 и просмотр source/after подтвердили композицию и assets.
 CI/merge/deploy/native остаются обязательными; PR1 пока не объявлен выпущенным.
 
+## PR 3 — Рабочий свайп без конфликтов
+
+База7e56b8b8/PR1701 после переноса code-only9234d0ba; runtime tree не менялся
+при переносе документации. На исходном Live390 Chromium CDP воспроизведено:
+свайп с поля оставлял actionCount0/inputFocusedtrue. После изменения тем же
+жестом actionCount1/inputFocusedfalse. Артефакты приватные pr3-before/pr3-after.
+
+| Проверка существующего | Решение |
+| --- | --- |
+| Уже работает | Свайп номера, перенос/автоскролл, подтверждение/отмена, coordinator, last/confirmed guards |
+| Переиспользуем | WorkoutSwipe opt-in, LiveSetInput, Live form change detection, changeRoundCount и removeLastLiveRound |
+| Меняем | Различение tap/pan/swipe на неактивном поле, WebKit compatibility mousedown, utility focus/blur без ложного fact |
+| Не меняем | Активное редактирование/выделение, checkbox/select, клиентские жесты, серверные команды/права/лимиты |
+
+Primary — прежняя галочка подхода, удаление остаётся вторичным явным действием.
+Фокус отложен до trusted pointer-up только у opted-in неактивного поля;
+горизонтальный жест не открывает клавиатуру, вертикальный не блокирует прокрутку.
+Кнопка времени получает ровно прежнее действие. Client/default потребители
+WorkoutSwipe opt-in не получают. Вложенная строка не запускает удаление упражнения.
+
+| Пункт | Проверка | Статус |
+| --- | --- | --- |
+| PR3 начало с поля | Before/after CDP + existing set-touch обе identities; gutter сценарий сохранён | Локально пройден |
+| PR3 tap/pan/cancel/edit | Два целевых unit; existing trusted touch field pan, tap/select/Next и native duration dialog | Локально пройден |
+| PR3 вложенность/защита | Existing field completion/remote-confirm conflict/retry/last guards | Локально пройден |
+| PR3 суперсет | Merge/append/cancel/delete whole last empty round/split; после cancel facts остаются{} | Локально пройден |
+| PR3 перенос/стабильность | Existing touch drag и plan-input/confirmed edit сценарии | Локально пройден |
+
+Обнаруженный в WebKit соседний источник ложного fact подтверждён browser assertion:
+выход из нетронутой формы мог записывать отображённый план. Scoped guard использует
+уже существующий liveFormChanged/local drafts; utility focus/blur исключён из ввода.
+Настоящий ввод, autosave, validation и coordinator не заменены.
+
+Targeted unit62/62; итоговый fullcheck exit0 frontend2745/API1426+160штатныхDBskip,
+policy/build/startup passed. Browser41passed/3 штатных CDP-only skip; эти3 не
+засчитаны как passed. CDP field pan и swipe реально прошли в Chromium, WebKit
+проверен отдельно mouse/native focus и формами. Физический iPhone не проверен.
+Первый клиентский browser отказ был fixture-флагом CLIENT_LIME в новой worktree,
+не продуктом: исправлен только приватный harness. Контракт server round API
+прежний: произвольные круги и факты не разрешаются. Новых browser cases/осей нет,
+добавлены два unit на отличающиеся риски. CI/merge/release/native впереди.
+
 ## Следующие PR
 
+### Интеграционная перепроверка PR3 — 19.10
+
+После штатного выпуска PR1/#1700 и слияния PR2/#1701 ветка PR3 перенесена
+на фактический main c8e72357. Linux Chromium воспроизвёл настоящий дефект,
+которого не показал macOS: после горизонтального жеста браузер мог проглотить
+первый native tap по «Удалить». Локальный non-passive touchmove предотвращает
+только уже определённое горизонтальное движение; вертикаль, multitouch и
+активные поля остаются браузеру. Включение — только прежний reference fixed2.
+
+Отдельная проверка заголовка упражнения обнаружила потерю implicit pointer
+capture при передаче дочерний заголовок → swipe surface. Игнорируется только
+всплывшая потеря дочернего capture, настоящая отмена поверхности сохраняется.
+Публичные source-тесты расширены внутри прежних двух случаев без новых осей,
+таймаутов, sleeps, JS-forced clicks или ослабления проверок. На реальном native
+touch Chromium Linux оба случая (включая Delete/Cancel, поля, tap/fill,
+вертикальный pan и swipe упражнения) прошли 2/2; компонентные тесты 30/30.
+Финальный полный check и двухбраузерная проверка запускаются на замороженном
+source tree. Это локальное подтверждение, не заявление о выпуске PR3.
+
 2. Live-композиция и существующая настройка анимации — локально реализован, выпуск впереди.
-3. Свайп/перетягивание — не реализован, PR1 использует прежний обработчик.
+3. Свайп/перетягивание — локально реализован и проверен, выпуск впереди.
 4. Непрерывная шапка Live/отдыха — не реализован.
 5. Недельное расписание — не реализован.
 6. День/направленный переход — не реализован; соседний PR1697 убирает фильтр.

@@ -7,9 +7,9 @@ beforeEach(() => {
   HTMLElement.prototype.setPointerCapture = vi.fn()
 })
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
-function setup(disabled = false, holdToDrag = false) {
+function setup(disabled = false, holdToDrag = false, nativeSwipe = false) {
   const move = vi.fn(), remove = vi.fn(), replace = vi.fn()
-  render(<WorkoutGestureList blocks={['a', 'b', 'c']} disabled={disabled} onMove={move} holdCards={holdToDrag}>
+  render(<WorkoutGestureList blocks={['a', 'b', 'c']} disabled={disabled} onMove={move} holdCards={holdToDrag} nativeSwipe={nativeSwipe}>
     {['a', 'b', 'c'].map((id) => <WorkoutDragBlock key={id} id={id} holdToDrag={holdToDrag} label={id}>
       <WorkoutSwipe id={id} disabled={false} onDelete={() => { remove(id) }} onReplace={() => { replace(id) }}>
         <WorkoutDragHandle id={id} label={id} /><p data-testid={id}>Упражнение {id}</p><input aria-label={`Вес ${id}`} defaultValue="25" />
@@ -272,12 +272,12 @@ it('pending structural writes block swipe and drag', () => {
   expect(move).not.toHaveBeenCalled(); expect(remove).not.toHaveBeenCalled()
 })
 
-function setupRows(disabled = false) {
+function setupRows(disabled = false, swipeFromFields = false) {
   const removeExercise = vi.fn(), removeSet = vi.fn(), replace = vi.fn()
   render(<WorkoutGestureList blocks={['exercise']} disabled={false} onMove={vi.fn()}>
     <WorkoutSwipe id="exercise" disabled={false} onDelete={removeExercise} onReplace={replace}>
       <p data-testid="exercise">Упражнение</p>
-      <WorkoutSwipe id="row" variant="set" disabled={disabled} onDelete={removeSet} actionLabel="Удалить подход 2">
+      <WorkoutSwipe id="row" variant="set" disabled={disabled} swipeFromFields={swipeFromFields} onDelete={removeSet} actionLabel="Удалить подход 2">
         <span data-testid="row">2</span><input aria-label="Повторы строки" defaultValue="10" />
       </WorkoutSwipe>
     </WorkoutSwipe>
@@ -304,7 +304,7 @@ it('a row has no right-swipe replacement; reverse swipe simply closes deletion',
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 it('protected row and row inputs never fall through to exercise deletion', () => {
-  setupRows(true)
+  setupRows(true, true)
   swipe('row', -90)
   const input = screen.getByRole('textbox', { name: 'Повторы строки' })
   pointer(input, 'pointerdown', 11)
@@ -314,6 +314,42 @@ it('protected row and row inputs never fall through to exercise deletion', () =>
   swipe('exercise', -90)
   expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible()
 })
+it('opt-in field swipe reveals only its row without focusing or deleting it', () => {
+  const { removeExercise, removeSet } = setupRows(false, true)
+  const input = screen.getByRole('textbox', { name: 'Повторы строки' })
+  expect(pointer(input, 'pointerdown', 11).defaultPrevented).toBe(true)
+  expect(input).not.toHaveFocus()
+  pointer(input, 'pointermove', 11, true, 100, 70)
+  pointer(input, 'pointerup', 11, true, 100, 70)
+  expect(screen.getByRole('button', { name: 'Удалить подход 2' })).toBeVisible()
+  expect(input).not.toHaveFocus()
+  expect(removeSet).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Удалить подход 2' }))
+  expect(removeSet).toHaveBeenCalledTimes(1)
+  expect(removeExercise).not.toHaveBeenCalled()
+})
+it('opt-in field tap retains selection while vertical and cancelled gestures never focus', () => {
+  setupRows(false, true)
+  const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Повторы строки' })
+  pointer(input, 'pointerdown', 11)
+  pointer(input, 'pointerup', 11)
+  expect(input).toHaveFocus()
+  expect([input.selectionStart, input.selectionEnd]).toEqual([0, 2])
+  input.setSelectionRange(1, 1)
+  expect(pointer(input, 'pointerdown', 12).defaultPrevented).toBe(false)
+  expect([input.selectionStart, input.selectionEnd]).toEqual([1, 1])
+  pointer(input, 'pointerup', 12)
+  input.blur()
+  pointer(input, 'pointerdown', 13)
+  pointer(input, 'pointermove', 13, true, 150)
+  pointer(input, 'pointerup', 13, true, 150)
+  expect(input).not.toHaveFocus()
+  pointer(input, 'pointerdown', 14)
+  pointer(input, 'pointercancel', 14)
+  pointer(input, 'pointerup', 14)
+  expect(input).not.toHaveFocus()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+})
 it('a new pointer on an editable field is not swallowed after a finished swipe', () => {
   setupRows()
   swipe('exercise', -90)
@@ -322,4 +358,59 @@ it('a new pointer on an editable field is not swallowed after a finished swipe',
   const click = new MouseEvent('click', { bubbles: true, cancelable: true })
   fireEvent(input, click)
   expect(click.defaultPrevented).toBe(false)
+})
+
+function nativeTouchMove(target: Element, x: number, y = 100, count = 1) {
+  const event = new Event('touchmove', { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'touches', { value: Array.from({ length: count }, () => ({ clientX: x, clientY: y })) })
+  fireEvent(target, event)
+  return event.defaultPrevented
+}
+it('opt-in rows stop native horizontal recognition without blocking vertical or multi-touch', () => {
+  setupRows(false, true)
+  const input = screen.getByRole('textbox', { name: 'Повторы строки' })
+  pointer(input, 'pointerdown', 11)
+  expect(nativeTouchMove(input, 130)).toBe(true)
+  pointer(input, 'pointermove', 11, true, 100, 70)
+  expect(nativeTouchMove(input, 68)).toBe(true)
+  expect(nativeTouchMove(input, 68, 100, 2)).toBe(false)
+  pointer(input, 'pointercancel', 11)
+  expect(nativeTouchMove(input, 68)).toBe(false)
+  pointer(input, 'pointerdown', 12)
+  expect(nativeTouchMove(input, 160, 150)).toBe(false)
+  pointer(input, 'pointermove', 12, true, 150)
+  expect(nativeTouchMove(input, 160, 180)).toBe(false)
+})
+it('legacy rows keep native touch behavior without the fixed2 opt-in', () => {
+  setupRows()
+  const gutter = screen.getByTestId('row')
+  pointer(gutter, 'pointerdown', 11)
+  pointer(gutter, 'pointermove', 11, true, 100, 70)
+  expect(nativeTouchMove(gutter, 68)).toBe(false)
+})
+it('fixed2 exercise capture handoff keeps the swipe but actual capture loss cancels it', () => {
+  setup(false, false, true)
+  const heading = screen.getByTestId('a'), surface = heading.closest('[data-workout-swipe]')!
+  pointer(heading, 'pointerdown', 11)
+  expect(nativeTouchMove(heading, 100)).toBe(true)
+  pointer(heading, 'pointermove', 11, true, 100, 60)
+  pointer(heading, 'lostpointercapture', 11)
+  pointer(surface, 'pointerup', 11, true, 100, 60)
+  expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Удалить' }))
+  pointer(heading, 'pointerdown', 12)
+  pointer(heading, 'pointermove', 12, true, 100, 60)
+  pointer(surface, 'lostpointercapture', 12)
+  pointer(surface, 'pointerup', 12, true, 100, 60)
+  expect(screen.queryByRole('button', { name: 'Удалить' })).not.toBeInTheDocument()
+})
+it('fixed2 exercise native ownership leaves vertical movement and controls alone', () => {
+  setup(false, false, true)
+  const heading = screen.getByTestId('a')
+  pointer(heading, 'pointerdown', 11)
+  expect(nativeTouchMove(heading, 160, 150)).toBe(false)
+  pointer(heading, 'pointercancel', 11)
+  const input = screen.getByRole('textbox', { name: 'Вес a' })
+  pointer(input, 'pointerdown', 12)
+  expect(nativeTouchMove(input, 100)).toBe(false)
 })
