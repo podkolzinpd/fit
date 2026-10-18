@@ -34,4 +34,17 @@ describe('live exercise animation preference', () => {
     act(() => setLiveExerciseAnimation('user-a', false))
     expect(result.current).toBe(false)
   })
+
+  it('accepts a scoped default without replacing either explicit choice or another user', () => {
+    const { result, rerender } = renderHook(({ id }) => useLiveExerciseAnimation(id, false), { initialProps: { id: 'fixed-two-a' } })
+    expect(result.current).toBe(false)
+    expect(getLiveExerciseAnimation('ordinary-user')).toBe(true)
+    act(() => setLiveExerciseAnimation('fixed-two-a', true))
+    expect(result.current).toBe(true)
+    rerender({ id: 'fixed-two-b' })
+    expect(result.current).toBe(false)
+    expect(getLiveExerciseAnimation('fixed-two-a', false)).toBe(true)
+    act(() => setLiveExerciseAnimation('fixed-two-b', false))
+    expect(getLiveExerciseAnimation('fixed-two-b')).toBe(false)
+  })
 })

@@ -42,9 +42,47 @@ API1426+160штатныхDBskip, policy/build/startup passed. После rebase 
 ожидал результат async-confirm слишком рано; добавлен waitFor, продукт не менялся
 ради этого сбоя. CI/merge/deploy ещё не выполнены.
 
+## PR 2 — Live-композиция и анимация
+
+База b521f9c5/PR1700, включающий mainе2d931d4. В отдельной worktree воспроизведён
+исходный Live390 в original/compact с исходными YS Geo2/2 и синтетическими данными.
+Первый запуск без локально подготовленных шрифтов не принят за визуальную приёмку;
+шрифты подготовлены из уже предоставленных файлов, правильный baseline повторён.
+Figma недоступна; контуры сверены с сохранёнными исходными SVG. Два новых cropped
+assets сохраняют исходный path byte-for-byte; полные доски не публикуются.
+
+| Проверка существующего | Решение |
+| --- | --- |
+| Уже работает | Density setting, original54/compact48, единый Live/timer/drafts/notes |
+| Переиспользуем | LiveSetInput/Fields, WorkoutSetRow, CheckSmallIcon, useLiveExerciseAnimation, Switch, четыре независимых fixed2 guards |
+| Меняем | Баланс пустого хвоста, исходные верхняя галочка/многоточие/отдых, scoped default анимации off |
+| Не проверено | Физический iPhone, реальная пользовательская сессия; Doto остаётся известным приближением |
+
+Primary — прежнее подтверждение подхода. В оригинале54px/compact48px;
+на375px ширина силового поля84,5px сохранена, бывший tail56 стал inset28+28.
+Единицы оригинала вторичны9px; editable digits16px и touch targets не уменьшены.
+Верхний видимый круг40 внутри target44, исходный check-small2,5px. Сохранённые
+true/false настройки анимации имеют приоритет, default-off передаётся только
+закрытым trainer density guard; shared default остальных потребителей прежний.
+
+| Пункт | Проверка | Статус |
+| --- | --- | --- |
+| PR2 строка54/48 и баланс | Existing density composition375/390/430/1440, обе стороны inset, ширина84,5 на375 | Локально пройден |
+| PR2 поля разных метрик/состояний | Existing metric completion: сила/планка/бег/гребля/проходка/лестница, quiet fields retry | Локально пройден |
+| PR2 оригинальные значки | Exact path comparison2/2; browser check-small/visible circle40/target44, rest16 decoded | Локально пройден |
+| PR2 настройка анимации | Existing second-pilot settings persistence, composition default-off, outside trainer/client guards; explicit-on in existing animation cases | Локально пройден |
+| PR2 сохранённая механика | Existing card/top completion и focus/density flow | Локально пройден |
+
+Targeted unit23/23 и typecheck/lint passed; browser92/92 WebKit+Chromium passed.
+Новых browser cases/осей нет; существующие анимационные случаи явно включают
+настройку вместо прежнего неявного default. Полный check exit0: frontend2743,
+API1426+160штатныхDBskip, policy/hosting/calendar/build/startup passed. Финальный
+диагностический WebKit390 и просмотр source/after подтвердили композицию и assets.
+CI/merge/deploy/native остаются обязательными; PR1 пока не объявлен выпущенным.
+
 ## Следующие PR
 
-2. Live-композиция и существующая настройка анимации — не реализован.
+2. Live-композиция и существующая настройка анимации — локально реализован, выпуск впереди.
 3. Свайп/перетягивание — не реализован, PR1 использует прежний обработчик.
 4. Непрерывная шапка Live/отдыха — не реализован.
 5. Недельное расписание — не реализован.

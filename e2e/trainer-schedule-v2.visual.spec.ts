@@ -207,10 +207,15 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
   await page.goto('/profile/settings')
   const group = page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })
+  const animation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
+  await expect(animation).not.toBeChecked()
+  await animation.click()
+  await expect(animation).toBeChecked()
   await expect(group.getByRole('radio', { name: 'Оригинальный', exact: true })).toHaveAttribute('aria-checked', 'true')
   await group.getByRole('radio', { name: 'Компактный', exact: true }).click()
   await page.reload()
   await expect(group.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(animation).toBeChecked()
   await group.getByRole('radio', { name: 'Компактный', exact: true }).focus()
   await page.keyboard.press('ArrowLeft')
   await expect(group.getByRole('radio', { name: 'Оригинальный', exact: true })).toBeFocused()
@@ -303,6 +308,7 @@ for (const role of ['trainer', 'client'] as const) test(`Figma workout Coach Liv
   await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
   await page.goto('/profile/settings')
   await expect(page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })).toHaveCount(0)
+  if (role === 'trainer') await expect(page.getByRole('switch', { name: 'Анимация упражнения', exact: true })).toBeChecked()
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.live-workout-page')).toBeVisible()
   await expect(page.locator('.coach-live-density')).toHaveCount(0)
@@ -318,6 +324,7 @@ for (const density of ['original', 'compact'] as const) for (const width of [375
   await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator(`.coach-live-density-${density}`)).toBeVisible()
+  await expect(page.locator('.live-technique, .live-technique-collapsed')).toHaveCount(0)
   await page.evaluate(() => document.fonts.ready)
   await expect(page.locator('.coach-live-clock')).toHaveCSS('height', density === 'original' ? '194px' : '84px')
   await expect(page.locator('.live-rest-trigger')).toHaveCSS('height', density === 'original' ? '60px' : '48px')
@@ -328,6 +335,14 @@ for (const density of ['original', 'compact'] as const) for (const width of [375
   expect(sizes.length).toBeGreaterThan(0); expect(sizes.every(height => height === (density === 'original' ? 54 : 48))).toBe(true)
   await expect(first.locator('.live-set-check').first()).toHaveCSS('width', density === 'original' ? '54px' : '48px')
   if (density === 'original' && width === 375) await expect(first.locator('.live-set-input').first()).toHaveCSS('width', '84.5px')
+  await expect(first.locator('.live-set-grid').first()).toHaveCSS('padding-left', density === 'original' ? '28px' : '0px')
+  await expect(first.locator('.live-set-grid').first()).toHaveCSS('padding-right', density === 'original' ? '28px' : '0px')
+  await expect(page.locator('.coach-live-finish svg')).toHaveAttribute('data-original-icon', 'check-small')
+  await expect(page.locator('.coach-live-finish')).toHaveCSS('width', '44px')
+  expect(await page.locator('.coach-live-finish').evaluate(node => getComputedStyle(node, '::before').width)).toBe('40px')
+  const restIcon = page.locator('.live-rest-trigger > img')
+  await expect(restIcon).toHaveAttribute('width', '16')
+  expect(await restIcon.evaluate(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth === 16)).toBe(true)
   if (density === 'compact') await expect(page.locator('.live-session-progress-copy')).toHaveCSS('clip-path', 'inset(50%)')
   await expect(first.getByLabel('Фактический вес', { exact: true }).first()).toHaveAttribute('placeholder', '—')
   await expect(first.getByLabel('Фактические повторы', { exact: true }).first()).toHaveAttribute('placeholder', '—')
@@ -927,6 +942,7 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
   first.ref = 'vital-gym-pro-r007-0017'
   first.name = 'Жим гантелей над головой'
+  if (role === 'trainer') await page.addInitScript(() => localStorage.setItem('fit.liveExerciseAnimation.c0ac0000-6010-4000-8000-000000000001', 'true'))
   await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
@@ -1242,7 +1258,7 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(check.locator('svg')).toHaveCSS('width', '24px')
     await expect(check.locator('svg')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     expect(await check.locator('svg').evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none')
-    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '10px')
+    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '9px')
     await expect(weight).toHaveCSS('font-size', '16px')
     await expect(weight).toHaveCSS('padding-top', '0px')
     await expect(weight).toHaveCSS('padding-bottom', '0px')
@@ -1487,6 +1503,7 @@ for (const width of [375, 390, 430, 1440]) {
     first.name = 'Жим гантелей над головой с длинным названием упражнения'
     first.ref = 'vital-gym-pro-r007-0017'
     first.sets[1]!.weightKg = 25
+    await page.addInitScript(() => localStorage.setItem('fit.liveExerciseAnimation.c0ac0000-6010-4000-8000-000000000002', 'true'))
     await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
     await page.goto(`/workouts/${workoutId}/live`)
     const card = page.locator(`[data-workout-block="${first.blockId}"] .workout-exercise-contract`), head = card.locator('.live-exercise-head')

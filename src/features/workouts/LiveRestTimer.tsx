@@ -5,6 +5,7 @@ import { playGong, prepareGong } from '../../shared/gong'
 import type { LivePhaseTimer } from './live-phase'
 import { wasNativeRestTimerNotificationScheduled } from './rest-timer-notification'
 import { TimeWheel } from './TimeWheel'
+import coachRestIcon from '../../../docs/design/figma-20261008/assets/coach-rest.svg'
 
 const LONG_PRESS_MS = 500
 const MINUTES = Array.from({ length: 61 }, (_, index) => index)
@@ -266,7 +267,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
       onClick={onPrimary ? tap : openPicker}>
-      <TimerIcon /><span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
+      {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>

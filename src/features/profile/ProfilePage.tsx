@@ -43,7 +43,7 @@ export function TrainerProfileSettingsPage() {
   const showRpe = useRpeDisplay(actor?.userId)
   const useTimeWheel = useWorkoutTimeWheel()
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
-  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
+  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId, !isCoachLiveDensityEnabled(actor))
   const liveDensity = useCoachLiveDensity(actor?.userId)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
