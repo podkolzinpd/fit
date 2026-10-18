@@ -416,13 +416,19 @@
 .coach-workout-reference.live-identity .coach-live-density .live-set-rpe { appearance: none; -webkit-appearance: none }
 
 /* Source editor2221/2224/2227: at375, metrics84.5x54, action54x54,
-   row pitch56, radius16. The removed cross column remains blank in the
-   original composition, not an invisible control. Distance+unit is an explicit
+   row pitch56, radius16. The owner's no-cross adaptation balances its former
+   56px space across both sides; original field widths remain unchanged. Distance+unit is an explicit
    wider adaptation: both native controls retain at least44px usable width. */
-.coach-workout-reference.live-identity .coach-live-density-original { --coach-live-field-height: 54px; --coach-live-number-width: 54px; --coach-live-row-tail: 56px }
-.coach-workout-reference.live-identity .coach-live-density-compact { --coach-live-field-height: 48px; --coach-live-number-width: 44px; --coach-live-row-tail: 0px }
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-grid, .live-set.rpe-visible .live-set-grid) { grid-template-columns: var(--coach-live-number-width) minmax(0, 1fr) minmax(0, 1fr) var(--coach-live-field-height); min-height: var(--coach-live-field-height); padding-right: var(--coach-live-row-tail) }
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set-grid:has(.run-distance-control) { padding-right: 0 }
+.coach-workout-reference.live-identity .coach-live-density-original { --coach-live-field-height: 54px; --coach-live-number-width: 54px; --coach-live-row-inset: 28px }
+.coach-workout-reference.live-identity .coach-live-density-compact { --coach-live-field-height: 48px; --coach-live-number-width: 44px; --coach-live-row-inset: 0px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-grid, .live-set.rpe-visible .live-set-grid) { grid-template-columns: var(--coach-live-number-width) minmax(0, 1fr) minmax(0, 1fr) var(--coach-live-field-height); min-height: var(--coach-live-field-height); padding-inline: var(--coach-live-row-inset) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set-grid:has(.run-distance-control) { padding-inline: 0 }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-finish { position: relative; background: transparent }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-finish::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: #1a1a1c }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-finish svg { position: relative; width: 24px; height: 24px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .overflow-trigger svg[data-icon='more'] { width: 24px; height: 24px; background: var(--lime-text); mask: url('../../docs/design/figma-20261008/assets/coach-more.svg') center / contain no-repeat }
+.coach-workout-reference.live-identity .coach-live-density .overflow-trigger svg[data-icon='more'] > * { opacity: 0 }
+.coach-workout-reference.live-identity .coach-live-density-original .coach-live-field-unit { font-size: 9px; line-height: 10px; bottom: 4px }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-input, .live-set-rpe, .live-set-check, .live-set-save, .coach-live-metric, .run-duration-field, .workout-duration-trigger, .run-distance-control, .run-distance-unit, .run-distance-unit-control) { height: var(--coach-live-field-height); min-height: var(--coach-live-field-height) }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-check, .live-set-save) { width: var(--coach-live-field-height); min-width: var(--coach-live-field-height) }
 .coach-workout-reference.live-identity .coach-live-density .live-set-confirm { min-height: var(--coach-live-field-height) }
