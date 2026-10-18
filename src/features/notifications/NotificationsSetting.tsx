@@ -110,7 +110,7 @@ export function NotificationsSetting({ userId, role = 'client' }: { userId: stri
       {state === 'denied' && <small>Разрешите уведомления для Fit в настройках телефона, затем вернитесь в приложение.</small>}
       {state === 'ios-not-installed' && <small>Добавьте Fit на экран «Домой», затем откройте приложение с его значка.</small>}
       {state === 'error' && error && <InlineRequestError error={error} message="Не удалось проверить разрешение и подключение. Проверьте интернет и повторите попытку." />}
-      {(state === 'error' || state === 'denied' || (working && native)) && <button type="button" className="link" disabled={busy} onClick={recheck}>{checking ? 'Проверяем…' : 'Повторить'}</button>}
+      {(state === 'error' || state === 'denied' || (working && native)) && <div className="push-status-actions"><button type="button" className="link" disabled={busy} onClick={recheck}>{checking ? 'Проверяем…' : 'Повторить'}</button></div>}
       {working && !native && <div className="push-status-actions"><button type="button" className="link" disabled={busy} aria-busy={testPush.isPending} onClick={() => testPush.mutate()}>{testPush.isPending ? 'Отправляем…' : 'Отправить тестовое уведомление'}</button></div>}
       {working && testPush.isSuccess && <small role="status">Тестовое уведомление отправлено в очередь. Дождитесь уведомления на телефоне.</small>}
       {testPush.error && <InlineRequestError error={testPush.error} />}

@@ -2769,8 +2769,10 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     await expect(page.getByRole('alert').filter({ hasText: 'Проверьте интернет' })).toBeVisible()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+    const retry = page.getByRole('button', { name: 'Повторить', exact: true })
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     fail = false
-    await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+    await retry.click()
     await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
