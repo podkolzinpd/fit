@@ -2802,7 +2802,7 @@ test('Lime notification settings show safe diagnostics when browser push initial
 })
 
 for (const width of [390, 430, 1440]) {
-  test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
+  test(`Lime history preserves completed and untimed rows while Day ignores its filters at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     const otherClient = '10000000-0000-4000-8000-000000000099'
     const profileId = width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId
@@ -2826,7 +2826,9 @@ for (const width of [390, 430, 1440]) {
     await expect(list.getByRole('link')).toHaveCount(1)
     await list.getByRole('button', { name: '24 сентября 2026 г.' }).click()
     await expect(page).toHaveURL(/date=2026-09-24/)
-    await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+    await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+    await expect(page).not.toHaveURL(/client=|status=|mode=/)
+    await expect(page.getByRole('combobox', { name: 'Фильтр по статусу' })).toHaveCount(0)
     await page.goBack()
     await expect(list.getByRole('link')).toHaveCount(1)
     await page.reload()
