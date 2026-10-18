@@ -10,6 +10,7 @@ import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachLiveDensityEnabled, isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { useCoachLiveDensity } from '../../app/coach-live-density'
 import { useCoachLiveHalo } from './use-coach-live-halo'
+import { CoachDayHeading, useCoachDaySwipe } from './CoachDayNavigation'
 import { advancePlanField } from './plan-input-navigation'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
@@ -768,6 +769,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const compactScheduleFilters = fitLimeSchedule && isCoachWorkoutRedesignEnabled(actor)
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
   const singleDayGuide = fitLimeToday && isCoachWorkoutRedesignEnabled(actor)
+  const daySwipeRef = useCoachDaySwipe(singleDayGuide, selected, openDay)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -898,12 +900,12 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   }
 
   return <Page
-    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}`}
+    className={`schedule-page schedule-v2 ${isDayView ? 'schedule-day-view' : 'schedule-week-view'}${isDayView && densityPreference.density === 'compact' ? ' schedule-density-compact' : ''}${fitLimeToday ? ' fit-lime-today' : ''}${fitLimeSchedule ? ' fit-lime-schedule' : ''}${compactScheduleFilters && fitLimeSchedule ? ' coach-schedule-polish' : ''}${singleDayGuide ? ' coach-day-swipe' : ''}`}
     title="Расписание"
     hideTitle
   >
-    <header className={`schedule-v2-topbar${isDayView ? ' schedule-v2-topbar-day' : ''}`}>
-      {isDayView ? <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
+    <header ref={daySwipeRef} className={`schedule-v2-topbar${isDayView ? ' schedule-v2-topbar-day' : ''}`}>
+      {isDayView ? singleDayGuide ? <CoachDayHeading date={selected} title={scheduleV2DayTitle(selected)} weekday={scheduleV2Weekday(selected)} /> : <div><h1>{scheduleV2DayTitle(selected)}</h1><p>{scheduleV2Weekday(selected)}</p></div> : <h1 aria-hidden="true">Расписание</h1>}
       {(fitLimeToday || fitLimeSchedule)
         ? <div className="schedule-v2-day-actions">{!isDayView && <ChatHeaderAction returnTo={returnTo} />}<FitLimeDatePicker value={selected} onChange={openDay} /><OverflowMenu label="Настройки расписания" trigger={<SettingsIcon />} items={menuItems} /></div>
         : isDayView

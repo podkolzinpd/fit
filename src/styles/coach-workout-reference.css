@@ -550,6 +550,19 @@
 .coach-workout-reference .coach-schedule-polish .schedule-v2-range-toggle[aria-label='Период расписания'] button { min-height: 44px; padding-block: 6px }
 .coach-workout-reference .coach-schedule-polish .schedule-v2-period { margin-bottom: 4px }
 .coach-workout-reference .coach-schedule-polish .schedule-v2-period-summary { margin-block: 8px 12px }
+.coach-day-swipe { touch-action: pan-y }
+.coach-day-heading { display: grid; min-width: 0; overflow: hidden; -webkit-user-select: none; user-select: none; --day-enter: 18px; --day-exit: -18px }
+.coach-day-heading[data-direction='previous'] { --day-enter: -18px; --day-exit: 18px }
+.coach-day-heading > div { grid-area: 1 / 1; min-width: 0 }
+.coach-day-heading-outgoing { pointer-events: none }
+.coach-day-heading[data-animating] .coach-day-heading-current { animation: coach-day-in 220ms ease-out both }
+.coach-day-heading[data-animating] .coach-day-heading-outgoing { animation: coach-day-out 220ms ease-out both }
+@keyframes coach-day-in { from { opacity: 0; transform: translateX(var(--day-enter)) } to { opacity: 1; transform: translateX(0) } }
+@keyframes coach-day-out { from { opacity: 1; transform: translateX(0) } to { opacity: 0; transform: translateX(var(--day-exit)) } }
+@media (prefers-reduced-motion: reduce) {
+  .coach-day-heading[data-animating] > div { animation: none }
+  .coach-day-heading-outgoing { display: none }
+}
 /* No separate source screen exists for chooser/draft recovery. Reuse the
    measured quick-plan surface, retaining native dialog and existing controls. */
 .phone-frame.fit-lime-shell.coach-workout-reference .fit-lime-workout-entry { width: min(calc(100% - 16px), 359px); border-radius: 32px; background: #252529; padding: 24px 20px 16px }

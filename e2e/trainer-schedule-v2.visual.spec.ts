@@ -134,6 +134,9 @@ test('Figma workout Coach plan input never leaks into a third Lime trainer', asy
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Вид и фильтры расписания' })).toHaveCount(0)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'История — в списке' })).toHaveCount(1)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Только ваши занятия' })).toHaveCount(1)
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.locator('.schedule-day-view')).toBeVisible()
+  await expect(page.locator('.coach-day-swipe, .coach-day-heading')).toHaveCount(0)
 })
 
 test('Figma workout Coach refined plan keeps RPE in a 48px metric row and duration labels quiet', async ({ page }, info) => {
@@ -538,6 +541,37 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await page.goto('/schedule?week=2026-09-21')
   await filters.locator('summary').click()
   await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeVisible()
+  // Fixed2 Day uses the same openDay/URL model; free-surface drag never replaces
+  // a calendar button or a workout tap. The heading moves date+weekday together.
+  await page.goto('/today?date=2026-09-24')
+  const dayDrag = async (next: boolean, dy = 0) => {
+    await page.locator('.coach-day-heading').scrollIntoViewIfNeeded()
+    const rect = await page.locator('.coach-day-heading').boundingBox()
+    const y = rect!.y + rect!.height / 2, left = Math.max(32, rect!.x + 12), right = Math.min(rect!.x + rect!.width - 12, left + 140)
+    const from = next ? right : left, to = next ? left : right
+    await page.mouse.move(from, y); await page.mouse.down()
+    await page.mouse.move(to, y + dy, { steps: 10 }); await page.mouse.up()
+  }
+  await dayDrag(true)
+  await expect(page).toHaveURL(/date=2026-09-25/)
+  await expect(page.getByRole('heading', { name: '25 сентября', exact: true })).toBeVisible()
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(0)
+  await dayDrag(false)
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+  await dayDrag(true, 180)
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await page.goto('/today?date=2026-12-31')
+  await dayDrag(true)
+  await expect(page).toHaveURL(/date=2027-01-01/)
+  await page.goBack()
+  await expect(page).toHaveURL(/date=2026-12-31/)
+  await expect(page.getByRole('heading', { name: '31 декабря', exact: true })).toBeVisible()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await dayDrag(false)
+  await expect(page).toHaveURL(/date=2026-12-30/)
+  await expect(page.locator('.coach-day-heading-outgoing')).toHaveCount(0)
+  await expect(filters).toHaveCount(0)
 })
 
 test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
