@@ -1655,6 +1655,14 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       await expect.poll(() => page.locator('.content').evaluate((element, before) => Math.abs(element.scrollTop - before), fieldScroll)).toBeGreaterThan(4)
       await expect(input).not.toBeFocused()
       await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
+      const outer = page.locator('.workout-drag-block > .workout-swipe').first()
+      const heading = outer.locator('.live-exercise-head h2, .live-exercise-head h3').first()
+      const exerciseGesture = await beginClientGesture(page, outer, browserName, heading)
+      await exerciseGesture.move(100); await exerciseGesture.end()
+      await expect(outer.getByRole('button', { name: 'Удалить', exact: true })).toBeVisible()
+      await outer.getByRole('button', { name: 'Удалить', exact: true }).tap()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
     } finally { await cdp.detach() }
   })
 }

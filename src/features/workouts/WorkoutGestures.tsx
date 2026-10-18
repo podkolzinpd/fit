@@ -4,7 +4,7 @@ import { GripIcon } from '../../shared/icons'
 type Drag = { id: string; target: number; keyboard: boolean; pointerId?: number; label: string; held?: boolean }
 type DragPointer = Pick<PointerEvent<HTMLElement>, 'pointerId' | 'clientY' | 'isPrimary' | 'preventDefault'> & { currentTarget: HTMLElement }
 type GestureContext = {
-  blocks: string[]; disabled: boolean; drag: Drag | null;
+  blocks: string[]; disabled: boolean; drag: Drag | null; nativeSwipe: boolean;
   open: { id: string; side: 'delete' | 'replace' } | null;
   setOpen: (value: GestureContext['open']) => void;
   start: (id: string, event?: DragPointer, label?: string, held?: boolean) => void;
@@ -19,8 +19,8 @@ function useWorkoutGestures() {
 }
 
 /** No reordered tree before commit: failed writes leave inputs, facts and order intact. */
-export function WorkoutGestureList({ blocks, disabled, onMove, children, holdCards = false }: {
-  blocks: string[]; disabled: boolean; onMove: (id: string, targetIndex: number) => void; children: ReactNode; holdCards?: boolean
+export function WorkoutGestureList({ blocks, disabled, onMove, children, holdCards = false, nativeSwipe = false }: {
+  blocks: string[]; disabled: boolean; onMove: (id: string, targetIndex: number) => void; children: ReactNode; holdCards?: boolean; nativeSwipe?: boolean
 }) {
   const root = useRef<HTMLDivElement>(null)
   const dragRef = useRef<Drag | null>(null)
@@ -92,7 +92,7 @@ export function WorkoutGestureList({ blocks, disabled, onMove, children, holdCar
     document.addEventListener('pointerdown', close, true)
     return () => document.removeEventListener('pointerdown', close, true)
   }, [open])
-  const context: GestureContext = { blocks, disabled, drag, open, setOpen, cancel,
+  const context: GestureContext = { blocks, disabled, drag, open, setOpen, cancel, nativeSwipe,
     start(id, event, name, held = false) {
       if (disabled || blocks.length < 2 || dragRef.current || event?.isPrimary === false) return
       event?.preventDefault()
@@ -199,11 +199,27 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
 }) {
   const context = useWorkoutGestures()
   const start = useRef<{ x: number; y: number; pointerId: number; horizontal: boolean; side: 'delete' | 'replace' | null; field?: HTMLInputElement | HTMLButtonElement } | null>(null)
+  const surface = useRef<HTMLDivElement>(null)
   const [offset, setOffset] = useState(0)
   const offsetRef = useRef(0)
   const suppressClick = useRef(false)
   const side = context.open?.id === id ? context.open.side : null
   const inactive = disabled || context.disabled || !!context.drag
+  useEffect(() => {
+    const element = surface.current
+    if (!element || !(context.nativeSwipe || swipeFromFields && variant === 'set') || inactive) return
+    // Pointer preventDefault alone does not stop Chromium's native touch
+    // recognizer: it can swallow the next rail tap after a horizontal swipe.
+    // Own only our committed direction; vertical/pinch remain native.
+    const move = (event: TouchEvent) => {
+      const origin = start.current, touch = event.touches[0]
+      if (!origin || event.touches.length !== 1 || !touch || !event.cancelable) return
+      const dx = touch.clientX - origin.x, dy = touch.clientY - origin.y
+      if (origin.horizontal || Math.abs(dx) > 16 && Math.abs(dx) > Math.abs(dy) * 1.4) event.preventDefault()
+    }
+    element.addEventListener('touchmove', move, { passive: false })
+    return () => element.removeEventListener('touchmove', move)
+  }, [context.nativeSwipe, inactive, swipeFromFields, variant])
   const threshold = variant === 'set' ? 24 : 48
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (!start.current || start.current.pointerId !== event.pointerId) return
@@ -226,7 +242,7 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
       suppressClick.current = true
     }
   }
-  return <div data-workout-swipe={id} className={`workout-swipe${variant === 'set' ? ' workout-set-swipe' : ''}`}
+  return <div ref={surface} data-workout-swipe={id} className={`workout-swipe${variant === 'set' ? ' workout-set-swipe' : ''}`}
     tabIndex={variant === 'set' && !inactive ? 0 : undefined}
     role={variant === 'set' ? 'group' : undefined}
     aria-label={variant === 'set' ? actionLabel : undefined}
@@ -271,7 +287,13 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
       }
       if (origin.horizontal) { event.preventDefault(); offsetRef.current = Math.max(-96, Math.min(onReplace || origin.side === 'delete' ? 96 : 0, dx)); setOffset(offsetRef.current) }
     }} onPointerUp={finish} onPointerCancel={(event) => { if (start.current?.pointerId === event.pointerId) { start.current = null; offsetRef.current = 0; setOffset(0) } }}
-    onLostPointerCapture={(event) => { if (start.current?.pointerId === event.pointerId) { start.current = null; offsetRef.current = 0; setOffset(0) } }}
+    onLostPointerCapture={(event) => {
+      // Native touch initially captures the heading/field implicitly. Moving
+      // capture to the swipe surface bubbles that child's loss; it is not a
+      // cancellation of the surface's newly captured pointer.
+      if (context.nativeSwipe && event.target !== event.currentTarget) return
+      if (start.current?.pointerId === event.pointerId) { start.current = null; offsetRef.current = 0; setOffset(0) }
+    }}
     onClickCapture={(event) => { if (suppressClick.current && !(event.target as Element).closest('.workout-swipe-action')) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false } }}>
     {side && <button type="button" className={`workout-swipe-action ${side}`} disabled={inactive}
       aria-label={side === 'delete' ? actionLabel : undefined}

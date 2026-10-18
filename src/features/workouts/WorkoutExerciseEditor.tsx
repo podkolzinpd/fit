@@ -531,7 +531,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   return <ReferenceEditorControls reference={reference} disabled={disabled || confirmingStructure}><section className="workout-exercise-editor">
     {reference && roundError && <p className="error" role="alert">{roundError}</p>}
     {!reference && reordering && <div className="workout-editor-toolbar"><div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div></div>}
-    {reference ? <WorkoutGestureList blocks={blocks.map((block) => block.blockId)} disabled={disabled || confirmingStructure || settingsExerciseIndex !== null} onMove={moveReferenceBlock}>{exerciseBlocks}</WorkoutGestureList> : exerciseBlocks}
+    {reference ? <WorkoutGestureList nativeSwipe blocks={blocks.map((block) => block.blockId)} disabled={disabled || confirmingStructure || settingsExerciseIndex !== null} onMove={moveReferenceBlock}>{exerciseBlocks}</WorkoutGestureList> : exerciseBlocks}
     {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer">{!reference && <button type="button" className="secondary" onClick={onOpenPicker}><AddActionLabel>Упражнение</AddActionLabel></button>}{hasExercises && <OverflowMenu label="Действия с планом" trigger="Изменить все" items={planActions} />}</div>}
     {settingsExerciseIndex !== null && exercises[settingsExerciseIndex] && (() => {
       const exercise = exercises[settingsExerciseIndex]!
