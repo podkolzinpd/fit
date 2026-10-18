@@ -66,9 +66,9 @@ Baseline реального Live → каталога → настроек в We
 | Пункт | Статус | Проверка |
 | --- | --- | --- |
 | PR 1: капсула / выбор / геометрия / прежние действия / client-only | Выпущен #1694 / main dcae0cd9 | Official public207/207, mainCI39116685423/release39117362043 success, native207/207 + install/launch; baseline WebKit; CSS14/14 light/dark390/430 Chromium/WebKit; real route2/2 preview→select→technique→back; trainer styles сохранены |
-| PR 2: стабильный pending / блокировка / частичный успех / ошибка | Локально принят; CI/публикация впереди | Unit61/61; WebKit/Chromium16/16 light/dark390/430: медленный readback, сохранённые галочки/счётчик, частичная ошибка и повтор без дублей |
-| PR 3: вкл/выкл / хранение / без медиаблока / компоновка / виды карточек | Ожидает PR 2 | Будет проверено перед собственной доработкой |
-| Общая регрессия / темы / размеры / движки / trainer | В работе | Разделять поведенческие случаи и визуальные состояния |
+| PR 2: стабильный pending / блокировка / частичный успех / ошибка | Выпущен #1695 / main71dd4289 | Unit61/61; WebKit/Chromium16/16 light/dark390/430: медленный readback, сохранённые галочки/счётчик, частичная ошибка и повтор без дублей |
+| PR 3: вкл/выкл / хранение / без медиаблока / компоновка / виды карточек | Реализован; локально принят; финальный выпуск — YAFIT-624 | Actual-route18/18 WebKit/Chromium light/dark390/430: current/upcoming/completed/circuit, длинное/короткое имя, previous/no previous, меню/notes/add-set geometry; settings ON↔OFF+reload |
+| Общая регрессия / темы / размеры / движки / trainer | Локально принято | Existing input/confirmed/drag/rest20/20 + composition/gradual keyboard10/10 двух движков; visual18/18; full check exit0 |
 
 ## Проверка существующего перед PR 2
 
@@ -79,3 +79,17 @@ Baseline реального Live → каталога → настроек в We
 - Unit61/61 и actual-route16/16 WebKit/Chromium light/dark390/430 проверяют одиночный успех, два выбранных упражнения, медленный GET и частичный отказ второго POST с успешным повтором; fixture подтверждает отсутствие дублей. Физический iPhone не проверен.
 
 PR2: полный `npm run check` exit0 — frontend2740/API1426+160standardDBskip, infra320/hosting169/build/startup/fonts2/2; неизменённые Live regression20/20 (оба движка, client/trainer input, confirmed edit, drag, rest). Снимки pending просмотрены.
+
+## Проверка существующего перед PR 3
+
+- Fresh main `71dd4289`, PR2 полностью опубликован: mainCI39119982676/Cloud.ru39120710346 success, official public207/207, actual-route16/16 двух движков/тем/ширин; native207/207 build/install/launch. YAFIT-623 закрыт. Очередь перепроверена: только старый неактивный #1671.
+- Actual-route baseline WebKit2/2 на390: настройки → OFF → одиночные/суперсет → reload; настройка false сохраняется, по4 медиаминиатюры остаются в DOM. Снимки просмотрены.
+- Уже работает/переиспользуем: Switch, per-user live-exercise-animation storage/event/hook, условная ведущая часть WorkoutExerciseHeader, действующие title/menu/table/notes/drag. `WorkoutExerciseCompact` при undefined подставляет mark; явный false подавляет и его без изменения общего компонента.
+- Меняем только clientLime: подпись «Анимация в Live» без пояснения; OFF возвращает false до монтирования медиа у current/upcoming/completed/circuit; существующий copy занимает свободную ширину. ON, trainer/legacy и все обработчики сохраняются.
+- Primary Live — прежнее подтверждение подхода; кнопка завершения не меняется. Не проверен физический iPhone.
+
+PR3: UI-правка состоит из client-only подписи Switch, раннего false вместо монтирования media/fallback mark и flex существующего copy. Shared-компоненты/хранение/обработчики не переписываются. Existing unit30/30 (storage, header, surface, settings); visual18/18 принят. Матрица отделена от единственного поведенческого ON↔OFF/reload-сценария, чтобы не размножать его по темам/размерам. Новые дубли тяжёлого frozen inventory не добавлены; SHA/пороги CI неизменны. Скриншоты диагностические, геометрию/отсутствие DOM проверяют assertions.
+
+PR3: полный `npm run check` exit0: frontend2740/API1426+160standardDBskip/infra320/calendar12/hosting169/build/startup/fonts2/2. Неизменённые composition/gradual-keyboard10/10 и input/confirmed-edit/drag/rest20/20 прошли после правки. Финальные exact-head CI, main CI, Cloud.ru release, official public SHA/size+actual UI и fresh native build/install/launch фиксируются в YAFIT-624 и описании PR; локальные проверки не выдаются за эти результаты.
+
+Дополнительный уникальный риск OFF (изменённая геометрия без media): существующие input/confirmed-edit и grouped-card-drag сценарии переиспользованы с отключённой анимацией —4/4 WebKit/Chromium. Оригинальные specs/inventory не изменялись.

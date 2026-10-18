@@ -2856,6 +2856,8 @@ export function LiveWorkoutPage() {
     return hasExerciseTechnique(meta) ? () => setTechniqueExercise(meta) : undefined
   }
   function liveHeaderThumbnail(exercise: WorkoutExerciseModel, active = false) {
+    // false also suppresses the compact card’s fallback mark, leaving no media slot.
+    if (clientLime && !showLiveExerciseAnimation) return false
     const meta = exerciseMetaFor(exercise)
     if (active && showLiveExerciseAnimation && hasExerciseMedia(meta)) {
       if (!clientLime) return undefined

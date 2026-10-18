@@ -90,7 +90,7 @@ export function ClientProfileSettingsPage() {
 
     <SettingsSection title="Тренировки">
       <div className="profile-settings">
-        <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
+        <Switch label={isClientLimeEnabled(actor) ? 'Анимация в Live' : 'Анимация упражнения'} checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
         <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
       </div>
     </SettingsSection>
