@@ -7,6 +7,7 @@ import {
   deletePushSubscription,
   hasPushSubscription,
   readPushNotificationStatus,
+  requestTestPushNotification,
   setNotificationPreference,
   type PushNotificationStatus,
   upsertPushSubscription,
@@ -17,6 +18,7 @@ import type {
 } from './push-notifications-request.js'
 
 export interface PilotPushNotifications {
+  requestTest(session: YandexActorSessionInput, endpoint: string): Promise<void>
   readStatus(session: YandexActorSessionInput): Promise<PushNotificationStatus>
   hasSubscription(
     session: YandexActorSessionInput,
@@ -39,6 +41,10 @@ export interface PilotPushNotifications {
 
 export class DatabasePilotPushNotifications implements PilotPushNotifications {
   constructor(private readonly pool: DatabasePool) {}
+
+  requestTest(session: YandexActorSessionInput, endpoint: string): Promise<void> {
+    return this.withSession(session, client => requestTestPushNotification(client, endpoint))
+  }
 
   private withSession<Result>(
     session: YandexActorSessionInput,

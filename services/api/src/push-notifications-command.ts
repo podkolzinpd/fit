@@ -15,7 +15,7 @@ interface PushNotificationStatusRow extends QueryResultRow {
   status: unknown
 }
 
-export type PushNotificationCommandFailure = 'forbidden' | 'invalid'
+export type PushNotificationCommandFailure = 'forbidden' | 'invalid' | 'not_subscribed' | 'rate_limited'
 
 export class PushNotificationCommandError extends Error {
   constructor(readonly failure: PushNotificationCommandFailure) {
@@ -34,6 +34,8 @@ function commandError(error: unknown): PushNotificationCommandError | undefined 
   if (error.message === 'push_notifications_invalid') {
     return new PushNotificationCommandError('invalid')
   }
+  if (error.message === 'push_subscription_missing') return new PushNotificationCommandError('not_subscribed')
+  if (error.message === 'push_test_rate_limited') return new PushNotificationCommandError('rate_limited')
   return undefined
 }
 
@@ -105,6 +107,14 @@ export async function hasPushSubscription(
       throw new Error('Push subscription status returned an unsupported format')
     }
     return rows[0].subscribed
+  } catch (error) {
+    throw commandError(error) ?? error
+  }
+}
+
+export async function requestTestPushNotification(client: DatabaseClient, endpoint: string): Promise<void> {
+  try {
+    await client.query('select public.request_test_push_notification($1)', [endpoint])
   } catch (error) {
     throw commandError(error) ?? error
   }

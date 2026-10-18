@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useDataBackend } from '../../app/data-backend-context'
-import { CHAT_MESSAGE_KIND, WORKOUT_REMINDER_KIND, WORKOUT_SCHEDULED_KIND } from '../../shared/notification-kinds'
 import { detectInstallPlatform, installPromptDismissed, isAppInstalled } from '../install'
 import { trackGoal } from '../../shared/yandex-metrika'
 import { markPushOnboardingSeen, pushOnboardingSeen } from './notification-onboarding-storage'
@@ -36,7 +35,7 @@ export function NotificationOnboarding({ userId, role = 'client' }: { userId: st
     enabled: nativeSupported && !dismissed,
   })
   const alreadyWorking = nativeSupported
-    ? nativePermission.data === 'granted' && statusQuery.data?.workoutReminderEnabled !== false
+    ? nativePermission.data === 'granted'
     : statusQuery.data?.state === 'working'
 
   // Уже включено (сам добрался до Настроек раньше, или это не первый визит
@@ -65,15 +64,12 @@ export function NotificationOnboarding({ userId, role = 'client' }: { userId: st
     try {
       if (nativeSupported) {
         if (!await requestWorkoutInactivityNotificationPermission()) throw new Error('Уведомления не разрешены в настройках телефона')
-        await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_REMINDER_KIND, true)
         await queryClient.invalidateQueries({ queryKey: ['push-notifications-status', userId] })
-        setMessage('Напомним, если активная тренировка останется незавершённой.')
+        setMessage('Разрешение на уведомления получено. Настройки напоминаний сохранены.')
         setPhase('success')
         return
       }
       await pushNotificationsRepository.enable(userId)
-      if (role === 'client') await pushNotificationsRepository.setCategoryEnabled(userId, WORKOUT_SCHEDULED_KIND, true)
-      await pushNotificationsRepository.setCategoryEnabled(userId, CHAT_MESSAGE_KIND, true)
 
       if (source === 'supabase') {
         const local = await getCurrentPushSubscription()
@@ -89,7 +85,7 @@ export function NotificationOnboarding({ userId, role = 'client' }: { userId: st
           return
         }
       }
-      setMessage('Уведомления включены.')
+      setMessage('Уведомления настроены.')
       setPhase('success')
     } catch (error) {
       trackGoal('push_onboarding_failed')

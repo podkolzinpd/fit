@@ -1236,6 +1236,11 @@ describe('Yandex main repository', () => {
     vi.stubGlobal('Notification', { permission: 'granted' })
     expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false, chatMessageEnabled: true })
     await repository.pushNotifications.enable(actor.userId)
+    expect(fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname.startsWith('/v1/push-notifications/preferences/'))).toHaveLength(0)
+    await repository.pushNotifications.sendTestPush('https://push.example/pilot-device')
+    expect(fetchMock).toHaveBeenCalledWith(`${apiBaseUrl}/v1/push-notifications/test`, expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ endpoint: 'https://push.example/pilot-device' }),
+    }))
     await repository.pushNotifications.disable(actor.userId)
     const pushRequests = fetchMock.mock.calls.filter(([input]) =>
       new URL(String(input)).pathname.startsWith('/v1/push-notifications/'))

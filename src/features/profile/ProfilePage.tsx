@@ -54,7 +54,7 @@ export function TrainerProfileSettingsPage() {
   return <Page title="Настройки" back="/profile" swipeBack className="profile-page profile-settings-page settings-page">
     {fitLimeSettings && <SettingsSection title="Приложение"><FitLimeInstallSetting /></SettingsSection>}
     <SettingsSection title="Уведомления">
-      <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" detailed={fitLimeSettings} /></div>
+      <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" /></div>
     </SettingsSection>
 
     <SettingsSection title="Тренировки">

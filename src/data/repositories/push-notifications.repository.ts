@@ -16,9 +16,8 @@ export type NotificationStatus = {
 
 export const pushNotificationsRepository = {
   async status(userId: string): Promise<NotificationStatus> {
-    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
     const [state, reminderPreference, scheduledPreference, chatPreference] = await Promise.all([
-      reconcilePushSubscription(vapidPublicKey, {
+      reconcilePushSubscription({
         hasServerSubscription: async (endpoint) => {
           const result = await pushNotificationsQueries.getSubscriptionByEndpoint(userId, endpoint)
           if (result.error) throw repositoryError(result.error)
@@ -52,13 +51,9 @@ export const pushNotificationsRepository = {
     const subscription = await subscribeToPush(vapidPublicKey)
     const result = await pushNotificationsQueries.upsertSubscription(userId, subscription)
     if (result.error) throw repositoryError(result.error)
-    const preference = await pushNotificationsQueries.setPreference(userId, WORKOUT_REMINDER_KIND, true)
-    if (preference.error) throw repositoryError(preference.error)
   },
 
-  // Отдельно от enable() (который всегда включает и подписку, и
-  // workout_reminder разом) — категорийные тумблеры в профиле переключают
-  // ровно один вид уведомлений, не трогая подписку устройства.
+  // Подключение устройства и выбор категорий независимы.
   async setCategoryEnabled(userId: string, kind: string, enabled: boolean): Promise<void> {
     const preference = await pushNotificationsQueries.setPreference(userId, kind, enabled)
     if (preference.error) throw repositoryError(preference.error)

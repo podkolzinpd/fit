@@ -60,6 +60,22 @@ function primeDefaults() {
 }
 
 describe('NotificationsSetting', () => {
+  it('keeps saved opt-outs visible and disabled when a refresh fails', async () => {
+    primeDefaults()
+    repository.status.mockRejectedValue(new Error('offline'))
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    cache.setQueryData(['push-notifications-status', USER_ID], {
+      state: 'working', workoutReminderEnabled: false, workoutScheduledEnabled: true, chatMessageEnabled: false,
+    })
+    render(<QueryClientProvider client={cache}><NotificationsSetting userId={USER_ID} /></QueryClientProvider>)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Проверьте интернет')
+    expect(screen.getByRole('switch', { name: 'Напоминания о тренировках' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Новые тренировки' })).toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+    expect(screen.queryByText('Уведомления настроены')).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     repository.status.mockReset()
     repository.enable.mockReset()
@@ -79,7 +95,7 @@ describe('NotificationsSetting', () => {
   it('Lime does not mistake loading for missing permission or invent category preferences', () => {
     primeDefaults()
     repository.status.mockImplementation(() => new Promise(() => undefined))
-    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    render(<NotificationsSetting userId={USER_ID} role="trainer" />, { wrapper: wrapper() })
     expect(screen.getByText('Проверяем уведомления…')).toBeVisible()
     expect(screen.queryByText('Нужно разрешение')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Включить' })).not.toBeInTheDocument()
@@ -91,13 +107,11 @@ describe('NotificationsSetting', () => {
     vi.stubGlobal('Notification', { permission: 'granted' })
     repository.status.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ state: 'working', workoutReminderEnabled: false, chatMessageEnabled: true })
     const user = userEvent.setup()
-    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    render(<NotificationsSetting userId={USER_ID} role="trainer" />, { wrapper: wrapper() })
     expect(await screen.findByRole('alert')).toHaveTextContent('Проверьте интернет')
-    expect(screen.getByText('Разрешено')).toBeVisible()
     expect(screen.queryByText('Нужно разрешение')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Повторить проверку' }))
-    expect(await screen.findByText('Уведомления включены')).toBeVisible()
-    expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).not.toBeChecked()
+    await user.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(await screen.findByText('Уведомления настроены')).toBeVisible()
     expect(repository.enable).not.toHaveBeenCalled()
   })
 
@@ -105,10 +119,11 @@ describe('NotificationsSetting', () => {
     primeDefaults()
     vi.stubGlobal('Notification', { permission: 'granted' })
     repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, chatMessageEnabled: true })
-    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
-    expect(await screen.findByText('Разрешение есть, подключение не готово')).toBeVisible()
+    render(<NotificationsSetting userId={USER_ID} role="trainer" />, { wrapper: wrapper() })
+    expect(await screen.findByText('Нужно восстановить подключение')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Включить' })).not.toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Восстановить' })).toBeVisible()
   })
 
   it('Lime explains iOS installation even when PushManager is absent before installation', () => {
@@ -116,7 +131,7 @@ describe('NotificationsSetting', () => {
     detectInstallPlatform.mockReturnValue('ios')
     isAppInstalled.mockReturnValue(false)
     isPushSupported.mockReturnValue(false)
-    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
+    render(<NotificationsSetting userId={USER_ID} role="trainer" />, { wrapper: wrapper() })
     expect(screen.getByText('Сначала установите Fit')).toBeVisible()
     expect(repository.status).not.toHaveBeenCalled()
     expect(screen.queryByRole('switch')).not.toBeInTheDocument()
@@ -126,19 +141,18 @@ describe('NotificationsSetting', () => {
     primeDefaults()
     vi.stubGlobal('Notification', { permission: 'denied' })
     repository.status.mockResolvedValueOnce({ state: 'denied' }).mockResolvedValue({ state: 'working', workoutReminderEnabled: true, chatMessageEnabled: true })
-    render(<NotificationsSetting userId={USER_ID} role="trainer" detailed />, { wrapper: wrapper() })
-    await screen.findByText('Уведомления выключены')
+    render(<NotificationsSetting userId={USER_ID} role="trainer" />, { wrapper: wrapper() })
+    await screen.findByText('Уведомления запрещены в настройках телефона')
     vi.stubGlobal('Notification', { permission: 'granted' })
     window.dispatchEvent(new Event('focus'))
-    expect(await screen.findByText('Уведомления включены')).toBeVisible()
-    expect(screen.getByText('Разрешено')).toBeVisible()
+    expect(await screen.findByText('Уведомления настроены')).toBeVisible()
   })
 
   it('shows that notifications are unavailable when the device has no supported channel', () => {
     primeDefaults()
     isPushSupported.mockReturnValue(false)
     const { container } = render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
-    expect(container).toHaveTextContent('Уведомления недоступны на этом устройстве.')
+    expect(container).toHaveTextContent('Уведомления недоступны на этом устройстве')
   })
 
   it('shows the install-first state on iOS before the app is added to the home screen, without querying status', () => {
@@ -150,7 +164,7 @@ describe('NotificationsSetting', () => {
     expect(repository.status).not.toHaveBeenCalled()
   })
 
-  it('shows needs-permission with an enable button, and enables the subscription plus the scheduled category on click', async () => {
+  it('shows needs-permission with an enable button, and connects without resetting category preferences', async () => {
     primeDefaults()
     const user = userEvent.setup()
     repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
@@ -162,8 +176,7 @@ describe('NotificationsSetting', () => {
     await user.click(screen.getByRole('button', { name: 'Включить' }))
 
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
-    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_scheduled', true)
-    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'chat_message', true)
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
   })
 
   it('gives a trainer message notifications without a client workout category', async () => {
@@ -177,7 +190,7 @@ describe('NotificationsSetting', () => {
     await user.click(await screen.findByRole('button', { name: 'Включить' }))
 
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
-    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'chat_message', true)
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
     expect(repository.setCategoryEnabled).not.toHaveBeenCalledWith(USER_ID, 'workout_scheduled', true)
     expect(screen.queryByRole('switch', { name: 'Новые тренировки' })).not.toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Новые сообщения' })).toBeVisible()
@@ -187,8 +200,8 @@ describe('NotificationsSetting', () => {
     primeDefaults()
     repository.status.mockResolvedValue({ state: 'denied', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
-    await screen.findByText('Уведомления выключены')
-    expect(screen.getByText('Разрешите уведомления для Fit в настройках телефона.')).toBeVisible()
+    await screen.findByText('Уведомления запрещены в настройках телефона')
+    expect(screen.getByText('Разрешите уведомления для Fit в настройках телефона, затем вернитесь в приложение.')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Включить' })).not.toBeInTheDocument()
   })
 
@@ -196,7 +209,7 @@ describe('NotificationsSetting', () => {
     primeDefaults()
     repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false, chatMessageEnabled: true })
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
-    await screen.findByText('Уведомления включены')
+    await screen.findByText('Уведомления настроены')
     const switches = screen.getAllByRole('switch')
     expect(switches[0]).toBeChecked()
     expect(switches[1]).not.toBeChecked()
@@ -209,13 +222,13 @@ describe('NotificationsSetting', () => {
     repository.setCategoryEnabled.mockResolvedValue(undefined)
 
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
-    await user.click(screen.getByRole('switch', { name: 'Новые тренировки' }))
+    await user.click(await screen.findByRole('switch', { name: 'Новые тренировки' }))
 
     expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_scheduled', false)
     expect(repository.enable).not.toHaveBeenCalled()
   })
 
-  it('sends a test push and shows a confirmed result once the service worker responds', async () => {
+  it('requests a test for this device without claiming delivery', async () => {
     primeDefaults()
     const user = userEvent.setup()
     repository.status.mockResolvedValue({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
@@ -230,9 +243,10 @@ describe('NotificationsSetting', () => {
     })
 
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
-    await user.click(await screen.findByRole('button', { name: 'Проверить уведомления' }))
+    await user.click(await screen.findByRole('button', { name: 'Отправить тестовое уведомление' }))
 
-    expect(await screen.findByText('Пришло.')).toBeVisible()
+    expect(await screen.findByRole('status')).toHaveTextContent('отправлено в очередь')
+    expect(screen.queryByText('Пришло.')).not.toBeInTheDocument()
     expect(repository.sendTestPush).toHaveBeenCalledWith(LOCAL_SUBSCRIPTION.endpoint)
 
     Reflect.deleteProperty(navigator, 'serviceWorker')
@@ -243,7 +257,7 @@ describe('NotificationsSetting', () => {
     repository.status.mockResolvedValue({ state: 'needs-permission', workoutReminderEnabled: true, workoutScheduledEnabled: true, chatMessageEnabled: true })
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
     await screen.findByText('Нужно разрешение')
-    expect(screen.queryByRole('button', { name: 'Проверить уведомления' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Отправить тестовое уведомление' })).not.toBeInTheDocument()
   })
 
   it('shows an error message when enabling fails', async () => {
@@ -289,10 +303,10 @@ describe('NotificationsSetting', () => {
     repository.setCategoryEnabled.mockResolvedValue(undefined)
 
     render(<NotificationsSetting userId={USER_ID} />, { wrapper: wrapper() })
-    await screen.findByText('Напоминания включены')
-    const reminderSwitch = screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })
+    await screen.findByText('Напоминания настроены')
+    const reminderSwitch = screen.getByRole('switch', { name: 'Напоминания о тренировках' })
     expect(screen.queryByRole('switch', { name: 'Новые тренировки' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Проверить уведомления' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Отправить тестовое уведомление' })).not.toBeInTheDocument()
     expect(screen.getByText('Пока только внутри Fit.')).toBeVisible()
 
     await user.click(reminderSwitch)

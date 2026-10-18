@@ -30,6 +30,7 @@ import {
   deletePushSubscription,
   hasPushSubscription,
   readPushNotificationStatus,
+  requestTestPushNotification,
   setNotificationPreference,
   upsertPushSubscription,
 } from '../push-notifications-command.js'
@@ -7933,6 +7934,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )).rows).toEqual([{ enabled: true }])
         await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           setNotificationPreference(client, 'workout_reminder', false))
+        await withActorTransaction(runtimePool, ACTOR_ID, client =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/actor',
+            p256dh: 'actor-public-key', authKey: 'actor-auth-secret',
+          }))
 
         const actorStatus = await withActorTransaction(
           runtimePool,
@@ -8059,6 +8065,41 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'delete from public.push_subscriptions where user_id = any($1::uuid[])',
           [[ACTOR_ID, OTHER_ACTOR_ID]],
         )
+      }
+    })
+
+    it('enqueues an explicit test for one owned device, preserves opt-outs and bounds repeat requests', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      try {
+        await ownerPool.query('delete from app_private.push_notifications_outbox where user_id = $1', [ACTOR_ID])
+        for (const endpoint of ['https://push.example/test-phone', 'https://push.example/test-tablet']) {
+          await withActorTransaction(runtimePool, ACTOR_ID, client => upsertPushSubscription(client, { endpoint, p256dh: 'p', authKey: 'a' }))
+        }
+        await withActorTransaction(runtimePool, ACTOR_ID, client => setNotificationPreference(client, 'workout_reminder', false))
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, client =>
+          requestTestPushNotification(client, 'https://push.example/test-phone'))).rejects.toMatchObject({ failure: 'not_subscribed' })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, client =>
+          requestTestPushNotification(client, 'http://invalid'))).rejects.toMatchObject({ failure: 'invalid' })
+        await withActorTransaction(runtimePool, ACTOR_ID, client => requestTestPushNotification(client, 'https://push.example/test-phone'))
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, client =>
+          requestTestPushNotification(client, 'https://push.example/test-tablet'))).rejects.toMatchObject({ failure: 'rate_limited' })
+        const rows = await ownerPool.query(
+          `select notification.kind, notification.data, subscription.endpoint
+           from app_private.push_notifications_outbox notification
+           join public.push_subscriptions subscription on subscription.id = notification.subscription_id
+           where notification.user_id = $1`, [ACTOR_ID],
+        )
+        expect(rows.rows).toHaveLength(1)
+        expect(rows.rows[0]).toMatchObject({ kind: 'test', endpoint: 'https://push.example/test-phone', data: { test: true, url: '/profile/settings' } })
+        const status = await withActorTransaction(runtimePool, ACTOR_ID, readPushNotificationStatus)
+        expect(status.preferences.workout_reminder).toBe(false)
+        await ownerPool.query("update app_private.push_notifications_outbox set created_at = now() - interval '2 minutes' where user_id = $1", [ACTOR_ID])
+        await withActorTransaction(runtimePool, ACTOR_ID, client => requestTestPushNotification(client, 'https://push.example/test-tablet'))
+        expect((await ownerPool.query('select id from app_private.push_notifications_outbox where user_id = $1', [ACTOR_ID])).rowCount).toBe(2)
+      } finally {
+        await ownerPool.query('delete from app_private.push_notifications_outbox where user_id = $1', [ACTOR_ID])
+        await ownerPool.query('delete from public.push_subscriptions where user_id = $1', [ACTOR_ID])
+        await ownerPool.query('delete from public.notification_preferences where user_id = $1', [ACTOR_ID])
       }
     })
 
