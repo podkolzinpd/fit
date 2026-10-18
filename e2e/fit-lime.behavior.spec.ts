@@ -578,6 +578,23 @@ async function checkCoachScheduleFilters(page: Page) {
   backend.setClientsFailure(false)
   await filters.getByRole('button', { name: 'Повторить', exact: true }).click()
   await expect(summary).not.toContainText('ошибка')
+  // A pair of changes in one browser task must not lose the first filter
+  // while the router is committing the second. Native selection checks below
+  // remain separate and unchanged.
+  await expect(filters.getByLabel('Фильтр по клиенту').locator(`option[value="${clientId}"]`)).toHaveCount(1)
+  await filters.evaluate((node, id) => {
+    const client = node.querySelector<HTMLSelectElement>('select[aria-label="Фильтр по клиенту"]')!
+    const status = node.querySelector<HTMLSelectElement>('select[aria-label="Фильтр по статусу"]')!
+    client.value = id; client.dispatchEvent(new Event('change', { bubbles: true }))
+    status.value = 'planned'; status.dispatchEvent(new Event('change', { bubbles: true }))
+  }, clientId)
+  await expect.poll(() => new URL(page.url()).searchParams.get('client')).toBe(clientId)
+  await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('planned')
+  await expect(summary).toHaveText('Фильтры · 2')
+  await filters.getByLabel('Фильтр по клиенту').selectOption('')
+  await expect.poll(() => new URL(page.url()).searchParams.get('client')).toBeNull()
+  await filters.getByLabel('Фильтр по статусу').selectOption('all')
+  await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBeNull()
   await filters.getByLabel('Фильтр по клиенту').selectOption(clientId)
   await filters.getByLabel('Фильтр по статусу').selectOption('planned')
   await filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' }).check()

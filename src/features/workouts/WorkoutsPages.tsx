@@ -726,7 +726,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     const next = new URLSearchParams(location.search)
     if (value && value !== 'all' && value !== 'calendar') next.set(key, value)
     else next.delete(key)
-    navigate(`${location.pathname}?${next}`)
+    // Commit this fixed2 filter URL before the next control reads location;
+    // otherwise consecutive selections can overwrite one another's params.
+    navigate(`${location.pathname}?${next}`, compactScheduleFilters ? { flushSync: true } : undefined)
   }
   const dateInputRef = useRef<HTMLInputElement>(null)
   const actionTriggerRef = useRef<HTMLButtonElement>(null)
