@@ -89,7 +89,7 @@
   const fitCore=q('span',children[1]);if(fitCore)fitCore.textContent='FIT';
   const conceptLabel=document.createElement('span');conceptLabel.className='m-concept-label';conceptLabel.textContent='КОНЦЕПЦИЯ РАЗВИТИЯ';cc.append(conceptLabel);
   const categories=[...children[3].children];
-  // Trainer: fixed context rail; only the selected working fragment is revealed.
+  // Trainer: left narration selects a screen on the shared client/trainer axis.
   const trainer=scope[4], gallery=q('.content>div:last-child',trainer), trainerCopy=q('.content>div:first-child',trainer);
   trainer.classList.add('m-trainer-lime','m-trainer-four','m-trainer-approved');
   gallery.classList.add('m-trainer-gallery');trainerCopy.classList.add('m-trainer-copy');
@@ -97,6 +97,11 @@
   const trainerCaptions=['Поиск клиентов','Расписание и оплата','Клиенты и связь','Программа с ИИ'];
   const trainerBlocks=qa(':scope>div',trainerCopy);
   [3,2,0,1].forEach(i=>trainerCopy.append(trainerBlocks[i]));
+  qa(':scope>div',trainerCopy).forEach((block,i)=>{
+    block.setAttribute('role','button');block.tabIndex=0;
+    block.setAttribute('aria-label',trainerCaptions[i]);
+    block.addEventListener('click',()=>window.FIT_MOTION.transitionTo(4,i));
+  });
   gallery.replaceChildren();
   trainerScreens.forEach((name,i)=>{const f=document.createElement('figure');f.innerHTML=`<div class="m-screen-window"><img src="assets/trainer-approved/${name}.png" alt="Иллюстрация сценария Fit: ${trainerCaptions[i]}. Демонстрационные данные."></div><figcaption><span>0${i+1}</span> ${trainerCaptions[i]}</figcaption>`;gallery.append(f);});
   const figures=qa('figure',gallery);
@@ -281,7 +286,7 @@
       children[1].style.opacity=n||staticMode?'1':'.12';children[1].style.transform=n||staticMode?'scale(1)':'scale(.9)';
     }
     if(index===4){
-      const focus=staticMode||scene===0?-1:scene-1;
+      const focus=scene===0?0:scene-1;
       trainer.classList.toggle('m-trainer-overview',focus<0);
       figures.forEach((f,i)=>{
         f.style.transform=focus<0?`translate(${i%2*390}px,${Math.floor(i/2)*380}px)`:`translate(520px,${i*183}px)`;
@@ -290,9 +295,12 @@
       });
       qa('.m-proof-panel',proof).forEach((el,i)=>{
         el.classList.toggle('is-visible',i===focus);el.setAttribute('aria-hidden',String(i!==focus));
-        if(i===focus&&motion&&previousScene!==scene)animate(el,[{opacity:0},{opacity:1}],380);
+        if(i===focus&&motion&&previousScene!==scene)animate(q('.tc-screen',el),[{opacity:0},{opacity:1}],380);
       });
-      qa(':scope>div',trainerCopy).forEach((el,i)=>el.style.opacity=focus<0||i===focus?'1':'.7');
+      qa(':scope>div',trainerCopy).forEach((el,i)=>{
+        el.style.opacity=i===focus?'1':'.7';
+        el.setAttribute('aria-pressed',String(i===focus));
+      });
       q('span',route).style.width=(focus<0?100:(focus+1)/4*100)+'%';
       if(trainerScreens[focus]==='ai'&&!document.hidden)qa('video',proof).forEach(video=>video.play().catch(()=>{}));
     }
@@ -315,6 +323,8 @@
   document.addEventListener('keydown',e=>{
     if(e.ctrlKey||e.metaKey||e.altKey)return;
     const key=e.key.toLowerCase();
+    const trainerButton=e.target.closest('.m-trainer-copy>[role="button"]');
+    if(trainerButton&&(key===' '||key==='enter')){e.preventDefault();e.stopImmediatePropagation();trainerButton.click();return;}
     // Keep native field/button interactions, but never leak their keys to the
     // legacy slide-level handler (which otherwise skips the current motion).
     if(e.target.closest('select,input,textarea,[contenteditable="true"]')){e.stopImmediatePropagation();return;}

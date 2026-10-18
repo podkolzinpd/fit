@@ -1,0 +1,37 @@
+/* One proof-object axis across the approved trainer/client sequence.
+   Single-feature composition: one dominant UI, narration on the left.
+   Existing Fit typography, screen content and internal transitions stay intact. */
+#deck .m-trainer-approved,
+#deck .client-story,
+#deck .ca-phone {
+  --product-phone-left:980px;
+  --product-phone-top:43px;
+}
+#deck .client-story .fit-unified,
+#deck .ca-phone .fit-unified {
+  left:var(--product-phone-left);
+  top:var(--product-phone-top);
+}
+#deck .m-trainer-approved .m-trainer-gallery {
+  left:var(--product-phone-left)!important;
+  top:var(--product-phone-top)!important;
+  width:384px;
+  height:808px;
+  overflow:visible;
+}
+#deck .m-trainer-approved .m-trainer-gallery>figure {display:none!important}
+#deck .m-trainer-approved .m-trainer-copy {left:76px;width:720px}
+#deck .m-trainer-approved .m-trainer-copy>[role=button] {cursor:pointer}
+#deck .m-trainer-approved .m-trainer-copy>[role=button]:focus-visible {
+  outline:2px solid #b6ef4d;outline-offset:7px;border-radius:4px;
+}
+/* Feedback uses the narration column, so the phone never needs to move. */
+#deck>.cs-coach>h2 {width:760px}
+#deck .cs-coach .cs-lead {width:730px}
+#deck .cs-coach .cs-feedback {
+  left:76px;top:468px;width:800px;
+  display:grid;grid-template-columns:185px 1fr;gap:20px;
+  align-items:start;
+}
+#deck .cs-coach .cs-coach-person {flex-wrap:wrap;gap:12px;margin:0}
+#deck .cs-coach .cs-coach-link {display:none}
