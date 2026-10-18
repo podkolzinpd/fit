@@ -1081,6 +1081,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .push-status-text.warning { color: var(--warning-fg) }
 .push-status-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
 .push-status-actions .secondary, .push-status-actions .link { min-height: var(--control-height-standard) }
+.push-status-row .request-error-inline .request-diagnostic-copy { min-height: var(--control-height-standard) }
 .push-unavailable { margin:0; padding:14px; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .notification-channel-note { min-height:58px; display:grid; align-content:center; gap:2px; margin:0; padding:10px 14px; border-top:1px solid var(--border) }
 .notification-channel-note strong { color:var(--fg); font-size:var(--text-ui); font-weight:var(--weight-medium) }

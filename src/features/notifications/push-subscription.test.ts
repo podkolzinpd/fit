@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { formatRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { getCurrentPushSubscription, isPushSupported, subscribeToPush, unsubscribeFromPush } from './push-subscription'
 
 const VAPID_PUBLIC_KEY = 'BMjedldt2YoR1q15MG53VqwpPgYbdFd163qczlmo4aaor7lLON0t_5LPoVh-KMJ1EP_mLxZnyizrp0nzvDaX3WA'
@@ -39,7 +40,7 @@ describe('isPushSupported', () => {
 describe('subscribeToPush', () => {
   function stubNotification(permission: NotificationPermission) {
     Object.defineProperty(window, 'Notification', {
-      value: { requestPermission: vi.fn().mockResolvedValue(permission) },
+      value: { permission, requestPermission: vi.fn().mockResolvedValue(permission) },
       configurable: true,
     })
   }
@@ -93,6 +94,68 @@ describe('subscribeToPush', () => {
 
     expect(pushManager.subscribe).toHaveBeenCalledWith(expect.objectContaining({ userVisibleOnly: true }))
     expect(result).toEqual({ endpoint: 'https://push.example/new', p256dh: 'new-p256dh', authKey: 'new-auth' })
+  })
+
+  it('identifies a browser push-service failure without copying subscription data into support diagnostics', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    stubNotification('granted')
+    const pushManager = {
+      getSubscription: vi.fn().mockResolvedValue(null),
+      subscribe: vi.fn().mockRejectedValue(new DOMException('Push service initialization failed', 'AbortError')),
+    }
+    stubServiceWorker({ register: vi.fn().mockResolvedValue({ pushManager }) })
+
+    let failure: unknown
+    try { await subscribeToPush(VAPID_PUBLIC_KEY) } catch (error) { failure = error }
+    const diagnostics = getRequestDiagnostics(failure)
+
+    expect(diagnostics).toMatchObject({ backend: 'browser', operation: 'push.enable', stage: 'subscription-create', errorCode: 'AbortError', errorCategory: 'push_service_initialization_failed' })
+    expect(formatRequestDiagnostics(diagnostics!)).not.toContain(VAPID_PUBLIC_KEY)
+    expect(formatRequestDiagnostics(diagnostics!)).toContain('Разрешение: granted')
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).not.toContain('Push service initialization failed')
+  })
+
+  it('distinguishes service worker registration failure from push subscription failure', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    stubNotification('granted')
+    stubServiceWorker({ register: vi.fn().mockRejectedValue(new DOMException('registration failed', 'SecurityError')) })
+
+    let failure: unknown
+    try { await subscribeToPush(VAPID_PUBLIC_KEY) } catch (error) { failure = error }
+
+    expect(getRequestDiagnostics(failure)).toMatchObject({ backend: 'browser', stage: 'service-worker', errorCode: 'SecurityError', errorCategory: 'browser_error' })
+  })
+
+  it('identifies permission request failure before service worker registration', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    const serviceWorker = stubServiceWorker()
+    Object.defineProperty(window, 'Notification', {
+      value: { permission: 'default', requestPermission: vi.fn().mockRejectedValue(new DOMException('blocked', 'NotAllowedError')) },
+      configurable: true,
+    })
+
+    let failure: unknown
+    try { await subscribeToPush(VAPID_PUBLIC_KEY) } catch (error) { failure = error }
+
+    expect(getRequestDiagnostics(failure)).toMatchObject({ backend: 'browser', stage: 'permission', errorCode: 'NotAllowedError', notificationPermission: 'default' })
+    expect(serviceWorker.register).not.toHaveBeenCalled()
+  })
+
+  it('identifies failure reading the existing subscription before creating a new one', async () => {
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    stubNotification('granted')
+    const pushManager = {
+      getSubscription: vi.fn().mockRejectedValue(new DOMException('storage unavailable', 'InvalidStateError')),
+      subscribe: vi.fn(),
+    }
+    stubServiceWorker({ register: vi.fn().mockResolvedValue({ pushManager }) })
+
+    let failure: unknown
+    try { await subscribeToPush(VAPID_PUBLIC_KEY) } catch (error) { failure = error }
+
+    expect(getRequestDiagnostics(failure)).toMatchObject({ backend: 'browser', stage: 'subscription-read', errorCode: 'InvalidStateError' })
+    expect(pushManager.subscribe).not.toHaveBeenCalled()
   })
 
   it('throws when the browser subscription is missing keys', async () => {
