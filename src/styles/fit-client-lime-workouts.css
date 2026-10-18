@@ -342,6 +342,26 @@
 .phone-frame.fit-client-lime input.workout-rpe-slider { height:44px; min-height:44px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 .phone-frame.fit-client-lime form.workout-feedback .workout-cta[data-variant='primary']:not(:disabled) { border-color:var(--lime-text); background:var(--lime-text); color:var(--lime-bg); }
 
+/* Client catalogue: playback does not change selection or row geometry. */
+.phone-frame.fit-client-lime .exercise-picker .picker-item.playing {
+  min-height: 78px;
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+.phone-frame.fit-client-lime .exercise-picker .picker-item.selected {
+  border-color: var(--accent-surface-border);
+  background: var(--accent-surface);
+}
+.phone-frame.fit-client-lime .exercise-picker .picker-item-technique,
+.phone-frame.fit-client-lime .exercise-picker .picker-item-technique:is(:hover, :active) {
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime .exercise-picker .picker-item.playing .exercise-image-picker { width: 62px; }
+/* The animation itself shows the preview state; inserting another line would
+   move the following selection controls on a touch screen. */
+.phone-frame.fit-client-lime .exercise-picker .picker-item-playing-note { display: none; }
+
 /* Client Live: the approved compact composition, using existing Lime tokens. */
 .phone-frame.fit-client-lime.live-identity .workout-drag-block > :is(.live-exercise, .live-exercise-upcoming, .exercise-block.live) { margin: 0; }
 .phone-frame.fit-client-lime.live-identity .live-exercise { padding: 16px; }

@@ -1,5 +1,49 @@
 import { expect, test } from '@playwright/test'
 
+// Theme surfaces and narrow wrapping are independent visual risks. Behavior
+// uses the real catalogue route separately; this matrix exercises CSS states.
+for (const theme of ['light', 'dark'] as const) for (const width of [390, 430]) {
+  test(`Client Lime catalogue states keep geometry ${theme} ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/auth')
+    await page.evaluate(({ theme, width }) => {
+      const frame = document.createElement('div')
+      frame.id = 'client-picker-geometry'
+      frame.className = `phone-frame fit-lime fit-client-lime ${theme === 'light' ? 'theme-light' : ''}`
+      frame.style.width = `${width}px`
+      frame.innerHTML = `<section class="exercise-picker"><article class="picker-item">
+        <button type="button" class="picker-item-technique"><span class="picker-item-media"><span class="exercise-image exercise-image-picker"></span></span><span class="picker-item-copy"><span class="picker-item-name">Румынская тяга со штангой с длинным названием</span><small>Штанга · Ноги</small></span></button>
+        <button type="button" class="picker-select-mark" aria-label="Выбрать упражнение">+</button>
+      </article></section>`
+      document.body.append(frame)
+    }, { theme, width })
+    const frame = page.locator('#client-picker-geometry')
+    const row = frame.locator('.picker-item')
+    const original = await row.boundingBox()
+    expect(original).not.toBeNull()
+    const neutral = await row.evaluate(element => getComputedStyle(element).backgroundColor)
+    await row.evaluate(element => {
+      element.classList.add('playing')
+      const note = document.createElement('small')
+      note.className = 'picker-item-playing-note'
+      note.textContent = 'Нажмите ещё раз, чтобы открыть технику'
+      element.querySelector('.picker-item-copy')!.append(note)
+    })
+    await expect(row).toHaveCSS('background-color', neutral)
+    expect((await row.boundingBox())!.height).toBe(original!.height)
+    await expect(row.locator('.exercise-image-picker')).toHaveCSS('width', '62px')
+    await row.locator('.picker-item-technique').hover()
+    await expect(row.locator('.picker-item-technique')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await row.evaluate(element => element.classList.add('selected'))
+    await expect(row).not.toHaveCSS('background-color', neutral)
+    expect((await row.boundingBox())!.height).toBe(original!.height)
+    // The trainer shares the component, but must retain its existing styling.
+    await frame.evaluate(element => element.classList.remove('fit-client-lime'))
+    await expect(row).toHaveCSS('min-height', '132px')
+    await expect(row.locator('.exercise-image-picker')).toHaveCSS('width', '116px')
+  })
+}
+
 test('Fit Lime component variants stay inert outside the scoped trainer fixture', async ({ page }) => {
   await page.goto('/auth')
   await page.evaluate(() => {
