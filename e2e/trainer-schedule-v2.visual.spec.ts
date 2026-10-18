@@ -484,9 +484,10 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await expect(guide).toHaveCount(1)
   await expect(guide).toContainText('Все дела — в календаре')
   await expect(guide).toBeInViewport({ ratio: 1 })
-  expect(await filters.evaluate(node => {
+  await expect(filters).toHaveCount(0)
+  expect(await page.locator('.schedule-v2-summary').evaluate(node => {
     const anchor = node.closest('.coachmark-anchor')!.getBoundingClientRect()
-    const control = node.querySelector('summary')!.getBoundingClientRect()
+    const control = node.getBoundingClientRect()
     return anchor.width > 0 && anchor.height > 0 && anchor.top <= control.top && anchor.bottom >= control.bottom
   })).toBe(true)
   await page.screenshot({ path: info.outputPath('coach-day-first-guide.png') })
@@ -497,8 +498,9 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
     return Array.isArray(seen) && seen.some((entry: unknown) => entry === key)
   }, { id: pilot, key: dayGuideId })).toBe(true)
   await page.reload()
-  await expect(filters).toBeVisible()
+  await expect(filters).toHaveCount(0)
   await expect(guide).toHaveCount(0)
+  await page.goto('/schedule?week=2026-09-21')
   await filters.locator('summary').click()
   await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeVisible()
 })
@@ -2464,20 +2466,19 @@ for (const width of [390, 430, 1440]) {
       await expect(page.getByText('По этим фильтрам тренировок нет.')).toBeVisible()
       await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('all')
       await page.locator('.fit-lime-history h2 button').click()
-      await expect(toggle).toBeChecked()
+      await expect(toggle).toHaveCount(0)
       await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
       const independent = page.getByRole('region', { name: 'Самостоятельные тренировки' })
-      await expect(independent.locator('a')).toHaveCount(2)
-      await expect(independent).toContainText('10:00–11:00')
-      await expect(independent).toContainText('Без времени')
+      await expect(independent).toHaveCount(0)
       await page.screenshot({ path: info.outputPath('schedule-day.png'), fullPage: true })
       await page.reload()
-      await expect(toggle).toBeChecked()
-      await expect(independent.locator('a')).toHaveCount(2)
-      await assertCoachLimeTheme()
-      await toggle.uncheck()
+      await expect(toggle).toHaveCount(0)
       await expect(independent).toHaveCount(0)
-      await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+      await assertCoachLimeTheme()
+      await page.goto('/schedule?week=2026-09-21')
+      await expect(toggle).toBeChecked()
+      await toggle.uncheck()
+      await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(2)
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
       await page.goto(`/clients/${clientId}/workouts`)
       await expect(page.locator(`a[href="/workouts/10000000-0000-4000-8000-000000000008"]`)).toBeVisible()
@@ -2801,7 +2802,7 @@ test('Lime notification settings show safe diagnostics when browser push initial
 })
 
 for (const width of [390, 430, 1440]) {
-  test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
+  test(`Lime history preserves completed and untimed rows while Day ignores its filters at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     const otherClient = '10000000-0000-4000-8000-000000000099'
     const profileId = width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId
@@ -2825,7 +2826,9 @@ for (const width of [390, 430, 1440]) {
     await expect(list.getByRole('link')).toHaveCount(1)
     await list.getByRole('button', { name: '24 сентября 2026 г.' }).click()
     await expect(page).toHaveURL(/date=2026-09-24/)
-    await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+    await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+    await expect(page).not.toHaveURL(/client=|status=|mode=/)
+    await expect(page.getByRole('combobox', { name: 'Фильтр по статусу' })).toHaveCount(0)
     await page.goBack()
     await expect(list.getByRole('link')).toHaveCount(1)
     await page.reload()

@@ -178,10 +178,10 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
   const isTwoWeekView = scheduleRange === '2w'
   const isDayView = forceDayView || Boolean(dateParam)
   const lime = pilot && isFitLimeEnabled(actor)
-  const independentPreference = useIndependentSchedule(lime ? actor?.userId : undefined)
+  const independentPreference = useIndependentSchedule(lime && !isDayView ? actor?.userId : undefined)
   const isListView = lime && !isDayView && params.get('mode') === 'list'
-  const clientFilter = lime ? params.get('client') ?? '' : ''
-  const statusFilter = lime ? scheduleStatusFilter(params.get('status')) : 'all'
+  const clientFilter = lime && !isDayView ? params.get('client') ?? '' : ''
+  const statusFilter = lime && !isDayView ? scheduleStatusFilter(params.get('status')) : 'all'
   const overviewDayCount = isTwoWeekView ? 14 : 7
   const selected = dateParam ?? (forceDayView ? today : weekParam ?? today)
   const validWeekStart = weekParam ? mondayWeekStart(weekParam) : null
@@ -199,7 +199,6 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
       ? weekStart : mondayWeekStart(date))
     const next = new URLSearchParams({ date, week: anchor })
     if (isTwoWeekView) next.set('range', '2w')
-    if (lime) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next.set(key, value) }
     if (pilot) navigate(`/today?${next}`)
     else setParams(next)
   }
@@ -208,7 +207,7 @@ function useTrainerScheduleModel(forceDayView = false, hourHeight = HOUR_HEIGHT)
     const next: Record<string, string> = {}
     if (pilot || start !== todayWeekStart) next.week = start
     if (range === '2w') next.range = '2w'
-    if (lime) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
+    if (lime && !isDayView) for (const key of ['client', 'status', 'mode']) { const value = params.get(key); if (value) next[key] = value }
     if (pilot) navigate(`/schedule?${new URLSearchParams(next)}`)
     else setParams(next)
   }
@@ -763,9 +762,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
   const showHomeActions = isDayView && selected === today
   const fitLimeToday = isDayView && isFitLimeEnabled(actor)
   const fitLimeSchedule = !isDayView && isFitLimeEnabled(actor)
-  const compactScheduleFilters = (fitLimeToday || fitLimeSchedule) && isCoachWorkoutRedesignEnabled(actor)
+  const compactScheduleFilters = fitLimeSchedule && isCoachWorkoutRedesignEnabled(actor)
   const singleScheduleGuide = compactScheduleFilters && fitLimeSchedule
-  const singleDayGuide = compactScheduleFilters && fitLimeToday
+  const singleDayGuide = fitLimeToday && isCoachWorkoutRedesignEnabled(actor)
   const homeClients = useQuery({
     queryKey: ['clients', false],
     queryFn: () => clientsRepository.list(false),
@@ -887,7 +886,6 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
         <summary>Фильтры{count > 0 ? ` · ${count}` : ''}{error ? ' · ошибка' : homeClients.isLoading ? ' · загрузка' : ''}<ChevronRightIcon /></summary>
         {content}
       </details>
-    if (singleDayGuide) return <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Незавершённые действия — под колокольчиком. Самостоятельные занятия — в «Фильтрах».">{filters}</Coachmark>
     return <>{!singleScheduleGuide && <Coachmark id="coach-schedule-filters-2026-10-16" userId={actor?.userId} title="Фильтры собраны вместе" description="Клиент, статус и самостоятельные занятия — под кнопкой «Фильтры»."><span className="sr-only">Фильтры расписания</span></Coachmark>}{filters}</>
   }
 
@@ -916,16 +914,16 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
       <button type="button" className="link" aria-label="Скрыть подтверждение" onClick={() => navigate(returnTo, { replace: true, state: null })}>Закрыть</button>
     </section>}
     {fitLimeToday && !singleDayGuide && <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Начатые тренировки и черновик доступны в незавершённых действиях."><span className="sr-only">Рабочий день</span></Coachmark>}
-    {fitLimeToday && daySummary}
+    {fitLimeToday && (singleDayGuide ? <Coachmark id="lime-day-workspace-2026-10" userId={actor?.userId} title="Все дела — в календаре" description="Незавершённые действия и черновики — в рабочей очереди.">{daySummary}</Coachmark> : daySummary)}
     {homeActions}
     {!fitLimeToday && daySummary}
-    {fitLimeSchedule && !singleScheduleGuide && <Coachmark id="lime-schedule-history-2026-10" userId={actor?.userId} title="История — в списке" description="Переключитесь на список, чтобы найти проведённые тренировки за все даты. Фильтры сохраняются при переходе в день."><span className="sr-only">История тренировок</span></Coachmark>}
+    {fitLimeSchedule && !singleScheduleGuide && <Coachmark id="lime-schedule-history-2026-10" userId={actor?.userId} title="История — в списке" description="Переключитесь на список, чтобы найти проведённые тренировки за все даты. Фильтры действуют только в расписании."><span className="sr-only">История тренировок</span></Coachmark>}
     {renderScheduleToolbar(fitLimeSchedule && <div className="schedule-v2-range-toggle" role="group" aria-label="Вид расписания">
       <button type="button" aria-pressed={!isListView} onClick={() => changeScheduleFilter('mode', 'calendar')}>Календарь</button>
       <button type="button" aria-pressed={isListView} onClick={() => changeScheduleFilter('mode', 'list')}>Список</button>
     </div>, <>
-    {(fitLimeSchedule || fitLimeToday) && !singleScheduleGuide && !singleDayGuide && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
-    {(fitLimeSchedule || fitLimeToday) && renderScheduleFilters(<div className="fit-lime-schedule-filters">
+    {fitLimeSchedule && !singleScheduleGuide && <Coachmark id="lime-schedule-ownership-2026-10" userId={actor?.userId} title="Только ваши занятия" description="Самостоятельные планы включаются галочкой. Созданные спортсменом тренировки остаются в его карточке."><span className="sr-only">Отображение тренировок</span></Coachmark>}
+    {fitLimeSchedule && renderScheduleFilters(<div className="fit-lime-schedule-filters">
       {(fitLimeSchedule || clientFilter || statusFilter !== 'all') && <>
       <label>Клиент<select aria-label="Фильтр по клиенту" value={clientFilter} onChange={(event) => changeScheduleFilter('client', event.target.value)}>
         <option value="">Все клиенты</option>
