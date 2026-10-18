@@ -124,6 +124,14 @@ policy/build/startup passed. Browser41passed/3 штатных CDP-only skip; э�
 
 ## PR 4 — Непрерывная шапка
 
+Интеграция19.10: собственные изменения PR4 перенесены на фактический main
+d236e4ab после штатного merge PR1702. Исправление native-touch/capture PR3
+сохранено; новый source tree заморожен для повторных проверок. Выпуск PR2
+подтверждён public207/207, health, compiled4closed2/originalpair и native207/207;
+PR3 проходит mainCI/автовыпуск. Слияние PR4 — только после production readback PR3
+и собственного свежего exact-head CI. Исторические результаты ниже не заменяют
+этих интеграционных гейтов.
+
 База PR1702/2cc1252c. В WebKit390 воспроизведены четыре сочетания
 original/compact × Live/rest на промежуточных позициях0/40/100/194 и0/20/50/84.
 Причина полосы: фон pinned оставался на -44px даже при изменении его viewport top,
