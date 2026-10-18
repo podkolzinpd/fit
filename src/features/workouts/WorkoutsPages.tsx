@@ -9,6 +9,7 @@ import { coachLiveSetRemovalError } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachLiveDensityEnabled, isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { useCoachLiveDensity } from '../../app/coach-live-density'
+import { useCoachLiveHalo } from './use-coach-live-halo'
 import { advancePlanField } from './plan-input-navigation'
 import { coachWorkoutReferenceAssets } from '../../shared/coach-workout-reference-assets'
 import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe } from './WorkoutGestures'
@@ -2668,6 +2669,7 @@ export function LiveWorkoutPage() {
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
   const liveDrag = coachReference || clientLime
   const densityEnabled = isCoachLiveDensityEnabled(actor)
+  const haloRef = useCoachLiveHalo(densityEnabled)
   const liveDensity = useCoachLiveDensity(actor?.userId)
   const noteOwner = coachReference ? actor?.userId : undefined
   const noteScope = `${noteOwner ?? ''}:${workoutId}`
@@ -4019,7 +4021,7 @@ export function LiveWorkoutPage() {
         const circuitCurrent = circuitRounds ? currentRoundIndex(circuitRounds) : 0
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
-        <><div className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
+        <><div ref={haloRef} className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} />}
             <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}

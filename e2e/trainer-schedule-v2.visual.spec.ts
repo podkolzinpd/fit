@@ -1233,6 +1233,26 @@ for (const width of [375, 390, 430, 1440]) {
     })).toBe(true)
     await expect(page.locator('.coach-live-elapsed')).toHaveCSS('clip-path', 'inset(50%)')
     await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
+    if (width === 390) {
+      const livePage = page.locator('.live-workout-page')
+      const field = page.locator('.live-set-input').first()
+      const identity = await field.evaluate(node => { node.setAttribute('data-halo-identity', 'retained'); return node.getAttribute('data-halo-identity') })
+      let previous = 1
+      for (const scroll of [40, 100, 194]) {
+        await page.locator('.content').evaluate((node, value) => { node.scrollTop = value }, scroll)
+        await expect.poll(async () => livePage.evaluate(node => Number(getComputedStyle(node).getPropertyValue('--coach-live-halo-fade')))).toBeLessThan(previous)
+        await expect.poll(async () => page.locator('.live-pinned').evaluate(node => {
+          const head = document.querySelector('.live-workout-page > .page-header')!
+          return Math.abs(node.getBoundingClientRect().top + parseFloat(getComputedStyle(node).backgroundPositionY) - head.getBoundingClientRect().top)
+        })).toBeLessThan(.5)
+        previous = await livePage.evaluate(node => Number(getComputedStyle(node).getPropertyValue('--coach-live-halo-fade')))
+      }
+      expect(previous).toBe(0)
+      expect(await field.getAttribute('data-halo-identity')).toBe(identity)
+      await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
+      await expect.poll(async () => livePage.evaluate(node => Number(getComputedStyle(node).getPropertyValue('--coach-live-halo-fade')))).toBe(1)
+      await page.locator('.content').evaluate(node => { node.scrollTop = 700 })
+    }
     expect(await page.locator('.page-header').evaluate(header => {
       const h = header.getBoundingClientRect(), p = document.querySelector('.live-pinned')!.getBoundingClientRect()
       return h.left === p.left && h.width === p.width
