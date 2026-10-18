@@ -68,7 +68,7 @@ export function ClientWorkoutHistoryCalendar({
           todayDate ? 'today' : '',
         ].filter(Boolean).join(' ')
         const content = <>
-          <span className="client-history-calendar-day-number">{day.day}</span>
+          <span className="client-history-calendar-day-number lime-calendar-day-marker">{day.day}</span>
           {selectable && <span className="client-history-calendar-day-mark" aria-hidden="true">{day.workouts.length > 1 ? day.workouts.length : ''}</span>}
         </>
         return <span className={classes} role="gridcell" key={day.date}>

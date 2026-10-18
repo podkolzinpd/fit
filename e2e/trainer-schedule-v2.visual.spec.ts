@@ -4877,10 +4877,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime workout list and calendar actions ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { role: 'client', profileId: clientId, workouts: [
       { ...workout, createdBy: clientId, trainingFormat: 'self' },
       { ...workout, id: newWorkoutId, createdBy: clientId, trainingFormat: 'self', status: 'done',
         completedAt: '2026-09-23T12:00:00Z', workoutDate: '2026-09-23' },
+      { ...workout, id: '10000000-0000-4000-8000-000000000097', createdBy: clientId, trainingFormat: 'self', status: 'done', completedAt: '2026-09-24T09:00:00Z', workoutDate: '2026-09-24' },
+      { ...workout, id: '10000000-0000-4000-8000-000000000098', createdBy: clientId, trainingFormat: 'self', status: 'done', completedAt: '2026-09-23T10:00:00Z', workoutDate: '2026-09-23' },
     ] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     await page.goto('/me')
@@ -4891,7 +4894,6 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(currentToggle).toHaveCSS('border-radius', '28px')
     await currentToggle.getByRole('button', { name: 'Календарь' }).click()
     await expect(workoutsPage.getByRole('grid', { name: /Актуальные тренировки за/ })).toBeVisible()
-    await workoutsPage.getByRole('button', { name: 'Предыдущий месяц' }).click()
     await expect(workoutsPage.getByRole('button', { name: /24 сентября/ })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`client-planned-calendar-${theme}-${width}.png`) })
     await page.getByRole('tab', { name: 'История' }).click()
@@ -4902,8 +4904,43 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(workoutsPage.locator('#workouts-history-panel .client-history-calendar')).toBeVisible()
     await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
     await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveCSS('border-radius', '24px')
+    const calendar = workoutsPage.locator('#workouts-history-panel .client-history-calendar')
+    await calendar.getByRole('button', { name: '23 сентября 2026 г., 2 тренировки' }).click()
+    const marker = calendar.locator('.selected .lime-calendar-day-marker')
+    await expect(marker).toHaveCSS('width', '36px')
+    await expect(marker).toHaveCSS('height', '36px')
+    await expect(marker).toHaveCSS('box-shadow', 'none')
+    const geometry = await calendar.locator('.selected > button').evaluate((button) => {
+      const hit = button.getBoundingClientRect(), visual = button.querySelector('.lime-calendar-day-marker')!.getBoundingClientRect()
+      return { width: hit.width, height: hit.height, deltaX: visual.x + visual.width / 2 - hit.x - hit.width / 2, deltaY: visual.y + visual.height / 2 - hit.y - hit.height / 2 }
+    })
+    expect(geometry.width).toBeGreaterThanOrEqual(44)
+    expect(geometry.height).toBeGreaterThanOrEqual(44)
+    expect(Math.abs(geometry.deltaX)).toBeLessThan(1)
+    expect(Math.abs(geometry.deltaY)).toBeLessThan(1)
+    await expect(calendar.locator('.today .lime-calendar-day-marker')).toHaveCSS('width', '36px')
+    await expect(calendar.locator('.today > button')).toHaveCSS('box-shadow', 'none')
+    await expect(calendar.locator('.selected .client-history-calendar-day-mark')).toHaveText('2')
+    await page.screenshot({ path: testInfo.outputPath(`client-calendar-today-and-selected-${theme}-${width}.png`) })
+    await calendar.getByRole('button', { name: '24 сентября 2026 г., 1 тренировка' }).click()
+    await expect(calendar.locator('.today.selected .lime-calendar-day-marker')).toHaveCSS('border-top-color', 'rgba(0, 0, 0, 0)')
+    await expect(calendar.locator('.today.selected > button')).toHaveCSS('box-shadow', 'none')
+    await calendar.getByRole('button', { name: 'Предыдущий месяц' }).click()
+    await expect(calendar).toContainText('В этом месяце тренировок нет.')
+    await calendar.getByRole('button', { name: 'Следующий месяц' }).click()
+    await expect(calendar.getByRole('button', { name: 'Следующий месяц' })).toBeDisabled()
+    await calendar.getByRole('button', { name: '24 сентября 2026 г., 1 тренировка' }).click()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-workout-calendar-${theme}-${width}.png`) })
+    if (theme === 'light' && width === 390) {
+      const returnUrl = page.url()
+      await calendar.getByRole('link', { name: 'Открыть тренировку за 24 сентября 2026 г.' }).click()
+      await expect(page.locator('.workout-detail-page')).toBeVisible()
+      await page.getByRole('button', { name: 'Назад', exact: true }).click()
+      await expect(page).toHaveURL(returnUrl)
+      await expect(calendar.locator('.today.selected .lime-calendar-day-marker')).toHaveText('24')
+    }
+
   })
 }
 
