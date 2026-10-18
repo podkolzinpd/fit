@@ -137,6 +137,13 @@ hook только синхронизирует paint-origin и долю види
 новой фазы/кнопки. Reduced motion не запускает перемещений/таймлайнов.
 Primary прежний — подтверждение подхода. Client/outside-cohort не затронуты.
 Физический iPhone и реальный аккаунт не проверены. Публичный выпуск впереди.
+Проверка:2/2 новых unit;30/30 существующих browser WebKit/Chromium375/390/430/1440,
+включая промежуточный origin/fade/DOM identity и отдых через ноль. Все ступени
+check пройдены: coverage2747, API1426+160standardDBskip, policy/calendar/hosting,
+build/startup. Первый performance поиск1638ms при лимите1500 повторён с2workers
+без изменения порога; sandbox EPERM bind relay снят повтором оставшихся ступеней
+с разрешённым тестовым портом. После обновления parent от mainb38b76e1 обязательны
+exact-head CI и production readback; старые результаты не выданы за их прохождение.
 
 ## Следующие PR
 
