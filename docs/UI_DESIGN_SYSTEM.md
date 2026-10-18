@@ -1,22 +1,29 @@
 # Fit UI design system
 
-This document maps the production implementation of Foundation UI Identity v1.
+For active Client Lime and approved Trainer Lime scopes, first read
+[FIT_LIME_DESIGN_CODE](design/FIT_LIME_DESIGN_CODE.md) and
+[the SVG source catalog](design/FIT_LIME_SOURCE_CATALOG.json). Their scoped
+foundation uses the existing YS Geo, Lime tokens, original assets and role
+variants. Do not restore the historical Monochrome typography or palette below
+on Lime screens. Documented future adoption is not yet runtime implementation.
+
+The foundation tables below map the historical Foundation UI Identity v1.
 The visual contract lives in `docs/UI_IDENTITY.md`; the task contract lives in
 `docs/UI_TASK_PROMPT.md`. Runtime components and `src/styles.css` remain the
 implementation source of truth.
 
 ## Production foundation
 
-- Foundation UI Identity v1 is the only production UI. There is no visual
-  preview allowlist, rollout mode, legacy route branch, or dark-pilot theme.
+- Foundation UI Identity v1 describes the earlier Monochrome contour; later
+  Lime rollout and pilot gates remain governed by current code and approvals.
 - Stack: React 19, TypeScript, React Router, TanStack Query, React Hook Form,
   Recharts, Vite, Capacitor, and plain global CSS.
-- Onest is the product font with the system fallback declared in
-  `docs/UI_IDENTITY.md`.
+- Onest is the historical Monochrome font. Active Lime uses the licensed
+  YS Geo 400/500 foundation and its existing scoped numerical accents.
 - Client and Trainer use the same mobile-first shell and semantic token system.
   Light and dark share markup and geometry; only token values change.
-- Route identity classes scope screen-specific composition. They do not select
-  between old and new UI.
+- Route identity classes scope composition; Lime role/gate assignment is owned
+  by the existing AppLayout rather than inferred from these historical tables.
 
 ## Tokens
 

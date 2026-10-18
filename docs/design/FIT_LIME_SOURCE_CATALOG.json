@@ -1,0 +1,1725 @@
+{
+  "schemaVersion": 1,
+  "title": "Fit Lime approved SVG reuse contract",
+  "approvedOn": "2026-10-18",
+  "runtimeChange": false,
+  "contract": "FIT_LIME_DESIGN_CODE.md",
+  "clientPlan": "CLIENT_LIME_SVG_ADOPTION_20261018.md",
+  "codeBaseline": "39f82d06",
+  "localArchive": "Project root (outside checkout): docs/design/fit-lime-svg-reference",
+  "sourceCounts": {
+    "attachments": 9,
+    "uniqueSVGs": 7,
+    "duplicateAttachments": 2,
+    "measuredElements": 6612,
+    "visibleRectangles": 784,
+    "namedFigmaNodes": 66,
+    "namedFamilies": 26
+  },
+  "sources": [
+    {
+      "name": "quick-create",
+      "file": "sources/quick-create.svg",
+      "sha256": "f21cf47ed9562a757da47bd906658c42e18b3874fae77c3381681e08300c5f4d",
+      "canvas": {
+        "width": 4545,
+        "height": 1278
+      },
+      "provenance": "original-svg"
+    },
+    {
+      "name": "week-schedule",
+      "file": "sources/week-schedule.svg",
+      "sha256": "9ff64f0a545aad4f7bdafeb11d831add7fa45f633ea69ae8fb5d2fd990c2e94f",
+      "canvas": {
+        "width": 695,
+        "height": 1452
+      },
+      "provenance": "original-svg"
+    },
+    {
+      "name": "day-schedule",
+      "file": "sources/day-schedule.svg",
+      "sha256": "b71bd7d24858998992715e8c40a0a7231ff084d8d10949b63557c0fdc925b270",
+      "canvas": {
+        "width": 2460,
+        "height": 1582
+      },
+      "provenance": "original-svg"
+    },
+    {
+      "name": "components",
+      "file": "sources/components.svg",
+      "sha256": "e3ec4265cf07feac7b109e023a970dd6600ab1a432eac1e75e5472e75a54b4e7",
+      "canvas": {
+        "width": 4847,
+        "height": 3276
+      },
+      "provenance": "original-svg"
+    },
+    {
+      "name": "live-rest-header",
+      "file": "sources/live-rest-header.svg",
+      "sha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "canvas": {
+        "width": 375,
+        "height": 379
+      },
+      "provenance": "original-svg"
+    },
+    {
+      "name": "live-header",
+      "file": "sources/live-header.svg",
+      "sha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "canvas": {
+        "width": 375,
+        "height": 379
+      },
+      "provenance": "original-svg"
+    },
+    {
+      "name": "workout-editor-catalog",
+      "file": "sources/workout-editor-catalog.svg",
+      "sha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "canvas": {
+        "width": 5860,
+        "height": 4215
+      },
+      "provenance": "original-svg"
+    }
+  ],
+  "namedFigmaNodes": {
+    "provenance": "Previously saved Figma metadata; NOT inferred from SVG paths",
+    "sha256": "6df5dcadef10a02ddd72319cb5b8279caecc84928fb8e2b3d3298d39a9e06c87",
+    "components": [
+      {
+        "id": "188:284",
+        "name": "Tab Bar",
+        "width": "394",
+        "height": "416"
+      },
+      {
+        "id": "188:273",
+        "name": "Активная вкладка=Расписание",
+        "width": "346",
+        "height": "68"
+      },
+      {
+        "id": "188:272",
+        "name": "Активная вкладка=Сегодня",
+        "width": "346",
+        "height": "68"
+      },
+      {
+        "id": "188:274",
+        "name": "Активная вкладка=Клиенты",
+        "width": "346",
+        "height": "68"
+      },
+      {
+        "id": "188:279",
+        "name": "Активная вкладка=Ассистент",
+        "width": "346",
+        "height": "68"
+      },
+      {
+        "id": "191:270",
+        "name": "Userpick",
+        "width": "294",
+        "height": "78"
+      },
+      {
+        "id": "191:267",
+        "name": "Фото=Миша",
+        "width": "30",
+        "height": "30"
+      },
+      {
+        "id": "191:269",
+        "name": "Фото=Даня",
+        "width": "30",
+        "height": "30"
+      },
+      {
+        "id": "193:127",
+        "name": "Фото=Даша",
+        "width": "30",
+        "height": "30"
+      },
+      {
+        "id": "193:129",
+        "name": "Фото=Антон",
+        "width": "30",
+        "height": "30"
+      },
+      {
+        "id": "246:2454",
+        "name": "Фото=Александра",
+        "width": "30",
+        "height": "30"
+      },
+      {
+        "id": "191:295",
+        "name": "Workout Card",
+        "width": "327",
+        "height": "178"
+      },
+      {
+        "id": "191:281",
+        "name": "Состояние=Выполнена",
+        "width": "279",
+        "height": "50"
+      },
+      {
+        "id": "191:293",
+        "name": "Состояние=Запланирована",
+        "width": "279",
+        "height": "50"
+      },
+      {
+        "id": "196:299",
+        "name": "Day Timeline",
+        "width": "375",
+        "height": "1212"
+      },
+      {
+        "id": "196:607",
+        "name": "Current Time",
+        "width": "375",
+        "height": "16"
+      },
+      {
+        "id": "199:398",
+        "name": "Appbar",
+        "width": "423",
+        "height": "184"
+      },
+      {
+        "id": "199:384",
+        "name": "Вид=С подзаголовком",
+        "width": "375",
+        "height": "64"
+      },
+      {
+        "id": "199:391",
+        "name": "Вид=Без подзаголовка",
+        "width": "375",
+        "height": "40"
+      },
+      {
+        "id": "204:390",
+        "name": "Activity Card",
+        "width": "232",
+        "height": "354"
+      },
+      {
+        "id": "204:380",
+        "name": "Состояние=Нет событий",
+        "width": "184",
+        "height": "128"
+      },
+      {
+        "id": "204:387",
+        "name": "Состояние=Есть события",
+        "width": "184",
+        "height": "128"
+      },
+      {
+        "id": "206:508",
+        "name": "Floating Action Button",
+        "width": "68",
+        "height": "68"
+      },
+      {
+        "id": "176:21642",
+        "name": "logo",
+        "width": "154.9580078125",
+        "height": "82.890625"
+      },
+      {
+        "id": "212:958",
+        "name": "Week Calendar",
+        "width": "423",
+        "height": "1341"
+      },
+      {
+        "id": "212:671",
+        "name": "Текущий день=Понедельник",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "212:712",
+        "name": "Текущий день=Вторник",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "212:753",
+        "name": "Текущий день=Среда",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "212:794",
+        "name": "Текущий день=Четверг",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "212:835",
+        "name": "Текущий день=Пятница",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "212:876",
+        "name": "Текущий день=Суббота",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "212:917",
+        "name": "Текущий день=Воскресенье",
+        "width": "375",
+        "height": "99"
+      },
+      {
+        "id": "216:771",
+        "name": "Schedule Day",
+        "width": "232",
+        "height": "468"
+      },
+      {
+        "id": "216:719",
+        "name": "Текущий день=false",
+        "width": "184",
+        "height": "198"
+      },
+      {
+        "id": "216:745",
+        "name": "Текущий день=true",
+        "width": "184",
+        "height": "198"
+      },
+      {
+        "id": "219:729",
+        "name": "Schedule Workout",
+        "width": "192",
+        "height": "138"
+      },
+      {
+        "id": "219:722",
+        "name": "Состояние=Обычная",
+        "width": "144",
+        "height": "14"
+      },
+      {
+        "id": "219:723",
+        "name": "Состояние=Сегодня",
+        "width": "144",
+        "height": "14"
+      },
+      {
+        "id": "219:726",
+        "name": "Состояние=Прошедшая",
+        "width": "144",
+        "height": "14"
+      },
+      {
+        "id": "235:1220",
+        "name": "Workout Client Button",
+        "width": "146",
+        "height": "152"
+      },
+      {
+        "id": "235:1211",
+        "name": "Состояние=Пусто",
+        "width": "97",
+        "height": "40"
+      },
+      {
+        "id": "235:1218",
+        "name": "Состояние=Выбран",
+        "width": "97",
+        "height": "40"
+      },
+      {
+        "id": "239:11385",
+        "name": "Workout Base Button",
+        "width": "119",
+        "height": "88"
+      },
+      {
+        "id": "239:11386",
+        "name": "Property 1=Default",
+        "width": "71",
+        "height": "40"
+      },
+      {
+        "id": "235:1235",
+        "name": "Workout Date Button",
+        "width": "152",
+        "height": "152"
+      },
+      {
+        "id": "235:1224",
+        "name": "Дата=Сегодня",
+        "width": "104",
+        "height": "40"
+      },
+      {
+        "id": "235:1231",
+        "name": "Дата=Другая",
+        "width": "104",
+        "height": "40"
+      },
+      {
+        "id": "235:1247",
+        "name": "Workout Action Button",
+        "width": "88",
+        "height": "152"
+      },
+      {
+        "id": "235:1238",
+        "name": "State=default",
+        "width": "40",
+        "height": "40"
+      },
+      {
+        "id": "235:1244",
+        "name": "State=active",
+        "width": "40",
+        "height": "40"
+      },
+      {
+        "id": "235:1251",
+        "name": "Add Exercises Button",
+        "width": "131",
+        "height": "56"
+      },
+      {
+        "id": "235:1262",
+        "name": "Workout Name Input",
+        "width": "367",
+        "height": "152"
+      },
+      {
+        "id": "235:1256",
+        "name": "Состояние=Пусто",
+        "width": "319",
+        "height": "40"
+      },
+      {
+        "id": "235:1259",
+        "name": "Состояние=Заполнено",
+        "width": "319",
+        "height": "40"
+      },
+      {
+        "id": "235:1263",
+        "name": "Workout Composer",
+        "width": "359",
+        "height": "189"
+      },
+      {
+        "id": "241:2384",
+        "name": "Sheet Icon Button",
+        "width": "40",
+        "height": "40"
+      },
+      {
+        "id": "241:2388",
+        "name": "Clients Sheet",
+        "width": "375",
+        "height": "752"
+      },
+      {
+        "id": "243:2415",
+        "name": "Sheet Header",
+        "width": "375",
+        "height": "88"
+      },
+      {
+        "id": "248:2480",
+        "name": "Client Row",
+        "width": "335",
+        "height": "40"
+      },
+      {
+        "id": "252:2464",
+        "name": "Calendar Day",
+        "width": "264",
+        "height": "84"
+      },
+      {
+        "id": "252:2454",
+        "name": "Состояние=Выбранный",
+        "width": "36",
+        "height": "36"
+      },
+      {
+        "id": "252:2457",
+        "name": "Состояние=Прошедший",
+        "width": "36",
+        "height": "36"
+      },
+      {
+        "id": "252:2460",
+        "name": "Состояние=Будущий",
+        "width": "36",
+        "height": "36"
+      },
+      {
+        "id": "252:2463",
+        "name": "Состояние=Пустая клетка",
+        "width": "36",
+        "height": "36"
+      },
+      {
+        "id": "252:2466",
+        "name": "Month Calendar",
+        "width": "343",
+        "height": "232"
+      },
+      {
+        "id": "256:3010",
+        "name": "Picker",
+        "width": "375",
+        "height": "48"
+      }
+    ]
+  },
+  "svgGeometry": [
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 9,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 319,
+        "y": 71,
+        "width": 40,
+        "height": 40
+      },
+      "rolePath": "components.liveHeader.finishButton",
+      "attributes": {
+        "x": "319",
+        "y": "71",
+        "width": "40",
+        "height": "40",
+        "rx": "20",
+        "fill": "#1A1A1C"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 10,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 332.001007,
+        "y": 86.7061,
+        "width": 13.998993,
+        "height": 8.587799
+      },
+      "rolePath": "components.liveHeader.finishCheck",
+      "attributes": {
+        "stroke-width": "2.5",
+        "stroke": "white"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 3,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 28,
+        "y": 83,
+        "width": 16,
+        "height": 16
+      },
+      "rolePath": "components.liveHeader.backGlyph",
+      "attributes": {
+        "fill": "white"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 23,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 16,
+        "y": 71,
+        "width": 40,
+        "height": 40
+      },
+      "rolePath": "components.liveHeader.backClipFrame",
+      "attributes": {
+        "width": "40",
+        "height": "40",
+        "fill": "white"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 4,
+      "tag": "circle",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 157.5,
+        "y": 82,
+        "width": 18,
+        "height": 18
+      },
+      "rolePath": "components.liveHeader.statusHalo",
+      "attributes": {
+        "opacity": "0.2",
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 5,
+      "tag": "circle",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 162.5,
+        "y": 87,
+        "width": 8,
+        "height": 8
+      },
+      "rolePath": "components.liveHeader.statusDot",
+      "attributes": {
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 6,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 182.621002,
+        "y": 84.543999,
+        "width": 26.544342,
+        "height": 11.616005
+      },
+      "rolePath": "components.liveHeader.statusTextContours",
+      "attributes": {
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 11,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 62.1455,
+        "y": 178.951996,
+        "width": 101.2425,
+        "height": 64.800003
+      },
+      "rolePath": "components.liveHeader.clockContours[0]",
+      "attributes": {
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 12,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 186.5,
+        "y": 193,
+        "width": 8,
+        "height": 36
+      },
+      "rolePath": "components.liveHeader.clockContours[1]",
+      "attributes": {
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 13,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 216.026001,
+        "y": 178.951996,
+        "width": 95.481995,
+        "height": 64.800003
+      },
+      "rolePath": "components.liveHeader.clockContours[2]",
+      "attributes": {
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 14,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 2,
+        "y": 319,
+        "width": 184.5,
+        "height": 60
+      },
+      "rolePath": "components.liveHeader.referencePauseButton",
+      "attributes": {
+        "x": "2",
+        "y": "319",
+        "width": "184.5",
+        "height": "60",
+        "rx": "20",
+        "fill": "#252529"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 18,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 188.5,
+        "y": 319,
+        "width": 184.5,
+        "height": 60
+      },
+      "rolePath": "components.liveHeader.referenceRestButton",
+      "attributes": {
+        "x": "188.5",
+        "y": "319",
+        "width": "184.5",
+        "height": "60",
+        "rx": "20",
+        "fill": "#F8B021",
+        "fill-opacity": "0.2"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 19,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 205.399994,
+        "y": 342.56601,
+        "width": 14.200012,
+        "height": 13.100006
+      },
+      "rolePath": "components.liveHeader.restGlyph",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-header",
+      "sourceSha256": "c1b21c1e9321da59c072ca39a596faa19b43a4637addfbedbec0e3bbeb33762a",
+      "elementIndex": 20,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 267.821014,
+        "y": 343.835999,
+        "width": 40.312988,
+        "height": 12.235992
+      },
+      "rolePath": "components.liveHeader.restTextContours",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 9,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 319,
+        "y": 71,
+        "width": 40,
+        "height": 40
+      },
+      "rolePath": "components.restHeader.finishButton",
+      "attributes": {
+        "x": "319",
+        "y": "71",
+        "width": "40",
+        "height": "40",
+        "rx": "20",
+        "fill": "#1A1A1C"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 4,
+      "tag": "circle",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 148.5,
+        "y": 82,
+        "width": 18,
+        "height": 18
+      },
+      "rolePath": "components.restHeader.statusHalo",
+      "attributes": {
+        "opacity": "0.2",
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 5,
+      "tag": "circle",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 153.5,
+        "y": 87,
+        "width": 8,
+        "height": 8
+      },
+      "rolePath": "components.restHeader.statusDot",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 6,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 172.723999,
+        "y": 84.384003,
+        "width": 46.072006,
+        "height": 13.983994
+      },
+      "rolePath": "components.restHeader.statusTextContours",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 11,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 62.1455,
+        "y": 178.951996,
+        "width": 101.2425,
+        "height": 64.800003
+      },
+      "rolePath": "components.restHeader.clockContours[0]",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 12,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 186.5,
+        "y": 193,
+        "width": 8,
+        "height": 36
+      },
+      "rolePath": "components.restHeader.clockContours[1]",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "live-rest-header",
+      "sourceSha256": "71b57a6c96c589b284eb830f15fecc175f9ca6960324e129692ea2654231382f",
+      "elementIndex": 13,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 216.026001,
+        "y": 178.951996,
+        "width": 95.481995,
+        "height": 64.800003
+      },
+      "rolePath": "components.restHeader.clockContours[2]",
+      "attributes": {
+        "fill": "#F8B021"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2177,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3237.5,
+        "y": 2608,
+        "width": 375,
+        "height": 1407
+      },
+      "rolePath": "components.fullEditor.screen",
+      "attributes": {
+        "x": "3237.5",
+        "y": "2608",
+        "width": "375",
+        "height": "1407",
+        "rx": "40",
+        "fill": "black"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2185,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3556.5,
+        "y": 2679,
+        "width": 40,
+        "height": 40
+      },
+      "relativeBounds": {
+        "x": 319,
+        "y": 71,
+        "width": 40,
+        "height": 40
+      },
+      "rolePath": "components.fullEditor.topFinish",
+      "attributes": {
+        "x": "3556.5",
+        "y": "2679",
+        "width": "40",
+        "height": "40",
+        "rx": "20",
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2206,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3258.139893,
+        "y": 3024.379883,
+        "width": 58.280029,
+        "height": 11.780029
+      },
+      "relativeBounds": {
+        "x": 20.639893,
+        "y": 416.379883,
+        "width": 58.280029,
+        "height": 11.780029
+      },
+      "rolePath": "components.fullEditor.noteContours",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2207,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3239.5,
+        "y": 3083,
+        "width": 371,
+        "height": 327
+      },
+      "relativeBounds": {
+        "x": 2,
+        "y": 475,
+        "width": 371,
+        "height": 327
+      },
+      "rolePath": "components.fullEditor.card",
+      "attributes": {
+        "x": "3239.5",
+        "y": "3083",
+        "width": "371",
+        "height": "327",
+        "rx": "32",
+        "fill": "#252529"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2211,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3255.5,
+        "y": 3115,
+        "width": 40,
+        "height": 40
+      },
+      "relativeBounds": {
+        "x": 16,
+        "y": 32,
+        "width": 40,
+        "height": 40
+      },
+      "rolePath": "components.fullEditor.numberCircle",
+      "attributes": {
+        "x": "3255.5",
+        "y": "3115",
+        "width": "40",
+        "height": "40",
+        "rx": "20",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2212,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3272.909912,
+        "y": 3128.530029,
+        "width": 4.350098,
+        "height": 11.469971
+      },
+      "relativeBounds": {
+        "x": 33.409912,
+        "y": 45.530029,
+        "width": 4.350098,
+        "height": 11.469971
+      },
+      "rolePath": "components.fullEditor.numberContours",
+      "attributes": {
+        "fill": "white"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2213,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3346.649902,
+        "y": 3111.820068,
+        "width": 158.120117,
+        "height": 45.419922
+      },
+      "relativeBounds": {
+        "x": 107.149902,
+        "y": 28.820068,
+        "width": 158.120117,
+        "height": 45.419922
+      },
+      "rolePath": "components.fullEditor.titleContours",
+      "attributes": {
+        "fill": "white"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2214,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3565,
+        "y": 3133,
+        "width": 19,
+        "height": 4
+      },
+      "relativeBounds": {
+        "x": 325.5,
+        "y": 50,
+        "width": 19,
+        "height": 4
+      },
+      "rolePath": "components.fullEditor.ellipsisContours",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2215,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3340.459961,
+        "y": 3181.820068,
+        "width": 61.910156,
+        "height": 12.25
+      },
+      "relativeBounds": {
+        "x": 100.959961,
+        "y": 98.820068,
+        "width": 61.910156,
+        "height": 12.25
+      },
+      "rolePath": "components.fullEditor.summaryContours[0]",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2216,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3410.100098,
+        "y": 3186.860107,
+        "width": 1.809814,
+        "height": 1.779785
+      },
+      "relativeBounds": {
+        "x": 170.600098,
+        "y": 103.860107,
+        "width": 1.809814,
+        "height": 1.779785
+      },
+      "rolePath": "components.fullEditor.summaryContours[1]",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2217,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3419.399902,
+        "y": 3181.840088,
+        "width": 31.340088,
+        "height": 10.299805
+      },
+      "relativeBounds": {
+        "x": 179.899902,
+        "y": 98.840088,
+        "width": 31.340088,
+        "height": 10.299805
+      },
+      "rolePath": "components.fullEditor.summaryContours[2]",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2218,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3458.100098,
+        "y": 3186.860107,
+        "width": 1.809814,
+        "height": 1.779785
+      },
+      "relativeBounds": {
+        "x": 218.600098,
+        "y": 103.860107,
+        "width": 1.809814,
+        "height": 1.779785
+      },
+      "rolePath": "components.fullEditor.summaryContours[3]",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2219,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3467.5,
+        "y": 3181.840088,
+        "width": 41.909912,
+        "height": 10.299805
+      },
+      "relativeBounds": {
+        "x": 228,
+        "y": 98.840088,
+        "width": 41.909912,
+        "height": 10.299805
+      },
+      "rolePath": "components.fullEditor.summaryContours[4]",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2210,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3239.5,
+        "y": 3215,
+        "width": 371,
+        "height": 2
+      },
+      "relativeBounds": {
+        "x": 0,
+        "y": 132,
+        "width": 371,
+        "height": 2
+      },
+      "rolePath": "components.fullEditor.divider",
+      "attributes": {
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2221,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3311.5,
+        "y": 3232,
+        "width": 84.5,
+        "height": 54
+      },
+      "relativeBounds": {
+        "x": 72,
+        "y": 149,
+        "width": 84.5,
+        "height": 54
+      },
+      "rolePath": "components.fullEditor.firstRow.weight",
+      "attributes": {
+        "x": "3311.5",
+        "y": "3232",
+        "width": "84.5",
+        "height": "54",
+        "rx": "16",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2222,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3345.669922,
+        "y": 3253.840088,
+        "width": 15.870117,
+        "height": 10.299805
+      },
+      "relativeBounds": {
+        "x": 106.169922,
+        "y": 170.840088,
+        "width": 15.870117,
+        "height": 10.299805
+      },
+      "rolePath": "components.fullEditor.firstRow.weightValueContours",
+      "attributes": {
+        "fill": "white"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2223,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3377.540039,
+        "y": 3272.820068,
+        "width": 8.22998,
+        "height": 5.179932
+      },
+      "relativeBounds": {
+        "x": 138.040039,
+        "y": 189.820068,
+        "width": 8.22998,
+        "height": 5.179932
+      },
+      "rolePath": "components.fullEditor.firstRow.weightUnitContours",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2224,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3398,
+        "y": 3232,
+        "width": 84.5,
+        "height": 54
+      },
+      "relativeBounds": {
+        "x": 158.5,
+        "y": 149,
+        "width": 84.5,
+        "height": 54
+      },
+      "rolePath": "components.fullEditor.firstRow.repetitions",
+      "attributes": {
+        "x": "3398",
+        "y": "3232",
+        "width": "84.5",
+        "height": "54",
+        "rx": "16",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2225,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3433.209961,
+        "y": 3253.840088,
+        "width": 13.929932,
+        "height": 10.299805
+      },
+      "relativeBounds": {
+        "x": 193.709961,
+        "y": 170.840088,
+        "width": 13.929932,
+        "height": 10.299805
+      },
+      "rolePath": "components.fullEditor.firstRow.repetitionValueContours",
+      "attributes": {
+        "fill": "white"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2226,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3454.76001,
+        "y": 3272.709961,
+        "width": 17.310059,
+        "height": 5.390137
+      },
+      "relativeBounds": {
+        "x": 215.26001,
+        "y": 189.709961,
+        "width": 17.310059,
+        "height": 5.390137
+      },
+      "rolePath": "components.fullEditor.firstRow.repetitionUnitContours",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2227,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3484.5,
+        "y": 3232,
+        "width": 54,
+        "height": 54
+      },
+      "relativeBounds": {
+        "x": 245,
+        "y": 149,
+        "width": 54,
+        "height": 54
+      },
+      "rolePath": "components.fullEditor.firstRow.squareAction",
+      "attributes": {
+        "x": "3484.5",
+        "y": "3232",
+        "width": "54",
+        "height": "54",
+        "rx": "16",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2228,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3504.5,
+        "y": 3254.709961,
+        "width": 14,
+        "height": 8.580078
+      },
+      "relativeBounds": {
+        "x": 265,
+        "y": 171.709961,
+        "width": 14,
+        "height": 8.580078
+      },
+      "rolePath": "components.fullEditor.firstRow.checkContours",
+      "attributes": {
+        "stroke-width": "2.5",
+        "stroke": "white"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2229,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3569.550049,
+        "y": 3254.050049,
+        "width": 9.899902,
+        "height": 9.899902
+      },
+      "relativeBounds": {
+        "x": 330.050049,
+        "y": 171.050049,
+        "width": 9.899902,
+        "height": 9.899902
+      },
+      "rolePath": "components.fullEditor.firstRow.referenceDeleteGlyph",
+      "attributes": {
+        "fill": "white",
+        "fill-opacity": "0.6"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2231,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3311.5,
+        "y": 3288,
+        "width": 84.5,
+        "height": 54
+      },
+      "relativeBounds": {
+        "x": 72,
+        "y": 205,
+        "width": 84.5,
+        "height": 54
+      },
+      "rolePath": "components.fullEditor.secondRow.weight",
+      "attributes": {
+        "x": "3311.5",
+        "y": "3288",
+        "width": "84.5",
+        "height": "54",
+        "rx": "16",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2234,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3398,
+        "y": 3288,
+        "width": 84.5,
+        "height": 54
+      },
+      "relativeBounds": {
+        "x": 158.5,
+        "y": 205,
+        "width": 84.5,
+        "height": 54
+      },
+      "rolePath": "components.fullEditor.secondRow.repetitions",
+      "attributes": {
+        "x": "3398",
+        "y": "3288",
+        "width": "84.5",
+        "height": "54",
+        "rx": "16",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2237,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3484.5,
+        "y": 3288,
+        "width": 54,
+        "height": 54
+      },
+      "relativeBounds": {
+        "x": 245,
+        "y": 205,
+        "width": 54,
+        "height": 54
+      },
+      "rolePath": "components.fullEditor.secondRow.squareAction",
+      "attributes": {
+        "x": "3484.5",
+        "y": "3288",
+        "width": "54",
+        "height": "54",
+        "rx": "16",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2241,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3385,
+        "y": 3368,
+        "width": 12,
+        "height": 12
+      },
+      "relativeBounds": {
+        "x": 145.5,
+        "y": 285,
+        "width": 12,
+        "height": 12
+      },
+      "rolePath": "components.fullEditor.addSetGlyph",
+      "attributes": {
+        "fill": "#B6EF4D"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2242,
+      "tag": "path",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3409.909912,
+        "y": 3368.97998,
+        "width": 48.090088,
+        "height": 12.090088
+      },
+      "relativeBounds": {
+        "x": 170.409912,
+        "y": 285.97998,
+        "width": 48.090088,
+        "height": 12.090088
+      },
+      "rolePath": "components.fullEditor.addSetTextContours",
+      "attributes": {
+        "fill": "white"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2243,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3239.5,
+        "y": 3412,
+        "width": 371,
+        "height": 327
+      },
+      "relativeBounds": {
+        "x": 2,
+        "y": 804,
+        "width": 371,
+        "height": 327
+      },
+      "rolePath": "components.fullEditor.secondCard",
+      "attributes": {
+        "x": "3239.5",
+        "y": "3412",
+        "width": "371",
+        "height": "327",
+        "rx": "32",
+        "fill": "#252529"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2279,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3239.5,
+        "y": 3741,
+        "width": 184.5,
+        "height": 80
+      },
+      "relativeBounds": {
+        "x": 2,
+        "y": 1133,
+        "width": 184.5,
+        "height": 80
+      },
+      "rolePath": "components.fullEditor.bottomSecondaryAction",
+      "attributes": {
+        "x": "3239.5",
+        "y": "3741",
+        "width": "184.5",
+        "height": "80",
+        "rx": "20",
+        "fill": "#3B3B40"
+      }
+    },
+    {
+      "source": "workout-editor-catalog",
+      "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+      "elementIndex": 2282,
+      "tag": "rect",
+      "status": "exact-svg",
+      "bounds": {
+        "x": 3426,
+        "y": 3741,
+        "width": 184.5,
+        "height": 80
+      },
+      "relativeBounds": {
+        "x": 188.5,
+        "y": 1133,
+        "width": 184.5,
+        "height": 80
+      },
+      "rolePath": "components.fullEditor.bottomPrimaryAction",
+      "attributes": {
+        "x": "3426",
+        "y": "3741",
+        "width": "184.5",
+        "height": "80",
+        "rx": "20",
+        "fill": "#B6EF4D"
+      }
+    }
+  ],
+  "existingFoundation": {
+    "tokens": "src/styles/fit-lime-components.css",
+    "clientThemes": "src/styles/fit-client-lime.css",
+    "type": "src/styles/fit-lime-type.css",
+    "clientType": "src/styles/fit-client-lime-type.css",
+    "icons": "src/shared/fit-lime-icons.ts",
+    "extraOriginalAssets": "src/shared/coach-workout-reference-assets.ts",
+    "picker": "src/features/exercises/ExercisePicker.tsx",
+    "datePicker": "src/shared/FitLimeDatePicker.tsx",
+    "composer": "src/features/workouts/WorkoutComposer.tsx"
+  },
+  "approvedClientCorrections": {
+    "C1": {
+      "origin": "approved-adaptation; 36x36 visual is also present in separate Calendar Day Figma metadata",
+      "visualMarker": {
+        "width": 36,
+        "height": 36
+      },
+      "hitTargetMin": {
+        "width": 44,
+        "height": 44
+      },
+      "rule": "Separate visual marker from hit target; selected fill, today outline; selected wins when both; no inherited min-height or old inset shadow on marker; event count cannot stretch marker"
+    },
+    "C2": {
+      "origin": "User approval after reviewing prototype; NOT a literal SVG measurement",
+      "visibleSearchInFilters": true,
+      "focusClosesFilters": false,
+      "preserveQueryAndFacetsOnReturn": true,
+      "searchAlgorithmChanges": false
+    }
+  },
+  "typography": {
+    "svgTextNodes": 0,
+    "fontFamilyFromSeparatePackage": "YS Geo",
+    "existingWeights": [
+      400,
+      500
+    ],
+    "clientLiveNumericFont": "REM (existing code)",
+    "unresolved": [
+      "Exact editable font size/line-height/spacing per outlined label",
+      "Full original timer font including all digits and minus"
+    ]
+  },
+  "limits": [
+    "No raw SVG, path d, embedded images, licensed fonts or complete boards are included in this index",
+    "Figma metadata is not exact-svg provenance",
+    "Source canvas sizes are not component dimensions",
+    "Trainer fixed2 gates are not changed",
+    "Static SVG does not define interaction, rights, data, keyboard behavior or motion timing",
+    "Existing success/warning/error semantics and client light theme remain"
+  ],
+  "clientMigrationIDs": [
+    "L1",
+    "L2",
+    "C2",
+    "L3",
+    "C1",
+    "L4",
+    "L5",
+    "L6",
+    "L7"
+  ]
+}
