@@ -67,6 +67,47 @@ function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (ex
 }
 
 describe('ExercisePicker', () => {
+  it('client Lime filters retain search, consecutive facets and selection until applied', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker clientLime multiple catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Выбрать: Присед (Штанга)' }))
+    await openFilters(user)
+    expect(screen.getByRole('heading', { name: 'Фильтры' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Выберите упражнения' })).not.toBeInTheDocument()
+    const search = screen.getByRole('textbox', { name: 'Поиск упражнения' })
+    expect(screen.getByLabelText('Название упражнения')).toBe(search)
+    await user.type(search, 'Присед')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Оборудование' }), 'Штанга')
+    expect(screen.getByRole('region', { name: 'Фильтры упражнений' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Показать упражнения' }))
+    expect(screen.getByRole('textbox', { name: 'Поиск упражнения' })).toHaveValue('Присед')
+    expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')
+    await openFilters(user)
+    expect(screen.getByRole('button', { name: 'Ноги' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('combobox', { name: 'Оборудование' })).toHaveValue('Штанга')
+    await user.click(screen.getByRole('button', { name: 'Очистить поиск' }))
+    expect(search).toHaveValue('')
+    expect(screen.getByRole('region', { name: 'Фильтры упражнений' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Оборудование' })).toHaveValue('Штанга')
+    await user.click(screen.getByRole('button', { name: 'Назад к упражнениям' }))
+    expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
+  })
+
+  it('client Lime keeps an empty search in filters and returns with Escape', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker clientLime catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await openFilters(user)
+    await user.type(screen.getByRole('textbox', { name: 'Поиск упражнения' }), 'несуществующее упражнение')
+    await user.click(screen.getByRole('button', { name: 'Показать упражнения' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Ничего не найдено')
+    await openFilters(user)
+    await user.click(screen.getByRole('combobox', { name: 'Оборудование' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: 'Фильтры упражнений' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Поиск упражнения' })).toHaveValue('несуществующее упражнение')
+  })
+
   it('reference filters stay open until confirmed and keep equipment and search', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker reference catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
