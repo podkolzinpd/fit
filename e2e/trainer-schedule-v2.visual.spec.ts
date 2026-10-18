@@ -1258,7 +1258,7 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(check.locator('svg')).toHaveCSS('width', '24px')
     await expect(check.locator('svg')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     expect(await check.locator('svg').evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none')
-    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '10px')
+    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '9px')
     await expect(weight).toHaveCSS('font-size', '16px')
     await expect(weight).toHaveCSS('padding-top', '0px')
     await expect(weight).toHaveCSS('padding-bottom', '0px')
