@@ -2178,18 +2178,37 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.getByRole('button', { name: 'Далее', exact: true }).click()
     for (const mode of ['Запланировать', 'Записать выполненную']) {
       await page.getByRole('button', { name: mode, exact: true }).click()
-      const date = page.getByLabel('Дата тренировки', { exact: true })
-      const time = page.getByLabel('Время тренировки', { exact: true })
-      for (const field of [date, time]) {
-        await expect(field).toHaveCSS('border-radius', '16px')
-        expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(48)
-        await expect(field).toHaveCSS('font-family', /YS Geo/)
-        await expect(field).toHaveCSS('font-size', '16px')
+      const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+      for (const row of await control.locator('.client-lime-date-row').all()) {
+        expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+        await expect(row).toHaveCSS('font-family', /YS Geo/)
+        await expect(row).toHaveCSS('font-size', '16px')
       }
-      const d = (await date.boundingBox())!, t = (await time.boundingBox())!
-      expect(t.x - (d.x + d.width)).toBeGreaterThanOrEqual(12)
-      await time.fill('12:30'); await expect(time).toHaveValue('12:30')
-      await time.fill(''); await expect(time).toHaveValue('')
+      const before = await control.innerText()
+      await control.click()
+      const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+      const timeLabel = mode === 'Запланировать' ? 'Время' : 'Время начала'
+      const time = dates.getByLabel(timeLabel, { exact: true })
+      await expect(time).toHaveCSS('border-radius', '16px')
+      await expect(time).toHaveCSS('font-size', '16px')
+      expect((await time.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+      await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
+      await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
+      await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('height', '36px')
+      await time.fill('12:30')
+      await expect(time).toHaveValue('12:30')
+      await page.screenshot({ path: info.outputPath(`date-window-${mode}.png`) })
+      await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
+      await expect(control).toHaveText(before, { useInnerText: true })
+      await control.click()
+      await expect(time).toHaveValue('')
+      await time.fill('12:30')
+      await dates.getByRole('button', { name: 'Применить дату' }).click()
+      await expect(control).toContainText('12:30')
+      await control.click()
+      await time.fill('')
+      await dates.getByRole('button', { name: 'Применить дату' }).click()
+      await expect(control).toContainText('Без времени')
       await page.screenshot({ path: info.outputPath(`save-${mode}.png`) })
     }
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
@@ -5235,7 +5254,7 @@ test('Client Lime logout resets document scope and return preserves only its own
 
 for (const theme of ['light', 'dark']) {
   test(`Client Lime editor and exercise history ${theme}`, async ({ page }, testInfo) => {
-    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self' }] })
+    const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 844 })
@@ -5249,6 +5268,58 @@ for (const theme of ['light', 'dark']) {
         await expect(page.locator(surface)).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
         await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
+        if (route.endsWith('/edit')) {
+          const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+          const before = await control.innerText()
+          await control.click()
+          const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+          await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
+          await dates.getByLabel('Начало', { exact: true }).fill('12:30')
+          await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
+          await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
+          await expect(control).toHaveText(before, { useInnerText: true })
+          if (theme === 'light' && width === 390) {
+            const updates: Array<{ workoutDate: string; startTime?: string | null; endTime?: string | null }> = []
+            // Unlike the generic visual fixture's 10:00/11:00 fallback, this
+            // contract check must read back cleared optional times as null.
+            await page.route(`**/v1/workouts/${workoutId}`, async (requestRoute) => {
+              if (requestRoute.request().method() !== 'PUT') return requestRoute.fallback()
+              const command = requestRoute.request().postDataJSON() as typeof updates[number]
+              updates.push(command)
+              const current = backend.getWorkouts().find((item) => item.id === workoutId)!
+              Object.assign(current, { workoutDate: command.workoutDate, startTime: command.startTime ?? null, endTime: command.endTime ?? null, version: current.version + 1 })
+              await requestRoute.fulfill({ json: { workout: { id: workoutId } } })
+            })
+            const addEnd = page.getByRole('button', { name: 'Добавить время окончания', exact: true })
+            if (await addEnd.isVisible()) await addEnd.click()
+            await control.click()
+            await dates.getByLabel('Начало', { exact: true }).fill('')
+            await dates.getByLabel('Окончание', { exact: true }).fill('14:00')
+            await dates.getByRole('button', { name: 'Применить дату' }).click()
+            const attempts = updates.length
+            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+            await expect(page.getByRole('alert')).toContainText('Укажите время начала тренировки')
+            expect(updates).toHaveLength(attempts)
+            await control.click()
+            await dates.getByLabel('Начало', { exact: true }).fill('23:30')
+            await dates.getByLabel('Окончание', { exact: true }).fill('00:15')
+            await dates.getByRole('button', { name: 'Применить дату' }).click()
+            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+            await page.goto(route)
+            await expect(control).toContainText('23:30')
+            await expect(control).toContainText('00:15')
+            await page.getByRole('button', { name: 'Убрать окончание', exact: true }).click()
+            await control.click()
+            await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
+            await dates.getByRole('button', { name: 'Применить дату' }).click()
+            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+            await page.goto(route)
+            await expect(page.getByRole('button', { name: 'Добавить время окончания', exact: true })).toBeVisible()
+          }
+        }
+
       }
     }
   })
