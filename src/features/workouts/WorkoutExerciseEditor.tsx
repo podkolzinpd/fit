@@ -24,14 +24,14 @@ import { WorkoutDragBlock, WorkoutDragHandle, WorkoutGestureList, WorkoutSwipe }
 // заменой выделенного). Держим локальный черновик-строку: во время ввода поле
 // может быть пустым (коммита нет). Валидное число фиксируем сразу (чтобы, напр.,
 // круги перерисовывались по мере ввода), а пустое поле зажимаем в min на blur.
-function ClampedNumberInput({ value, min, max, label, onCommit, commitOnBlur = false }: {
-  value: number; min: number; max?: number; label: string; commitOnBlur?: boolean
+function ClampedNumberInput({ value, min, max, label, onCommit, commitOnBlur = false, disabled = false }: {
+  value: number; min: number; max?: number; label: string; commitOnBlur?: boolean; disabled?: boolean
   onCommit: (next: number) => void | boolean | Promise<void | boolean>
 }) {
   const [draft, setDraft] = useState(String(value))
   useEffect(() => { setDraft(String(value)) }, [value])
   function clamp(n: number) { return Math.min(max ?? Infinity, Math.max(min, n)) }
-  return <input aria-label={label} type="number" min={min} max={max} value={draft}
+  return <input aria-label={label} type="number" min={min} max={max} value={draft} disabled={disabled}
     onFocus={(event) => event.target.select()}
     onChange={(event) => {
       const raw = event.target.value
@@ -474,12 +474,12 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       const mergeTargetLabel = 'суперсет'
       const content = <div className="exercise-block" key={block.blockId}>
         <div className="exercise-block-head">
-          <select aria-label="Тип блока" value={block.blockPreset} onChange={(event) => commitExercises(setBlockPreset([...latestExercises.current], block.blockId, event.target.value as BlockPreset))}>
+          <select aria-label="Тип блока" disabled={referenceControlsDisabled} value={block.blockPreset} onChange={(event) => commitExercises(setBlockPreset([...latestExercises.current], block.blockId, event.target.value as BlockPreset))}>
             <option value="set">Суперсет</option>
             {block.blockPreset === 'circuit' && <option value="circuit" disabled>Круговая (ранее)</option>}
             <option value="interval">Интервалы</option>
           </select>
-          <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} commitOnBlur onCommit={(next) => changeRoundCount(block.blockId, next)} /></label>
+          <label className="block-rounds">Кругов<ClampedNumberInput label="Кругов" value={block.blockRounds} min={1} max={20} disabled={referenceControlsDisabled} commitOnBlur onCommit={(next) => changeRoundCount(block.blockId, next)} /></label>
           {reference ? <WorkoutDragHandle id={block.blockId} label="Суперсет" /> : blocks.length > 1 && reorderButtons(block.blockId, isFirst, isLast)}
           <OverflowMenu items={[
             ...(blocks.length > 1 && !reference && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
@@ -509,13 +509,20 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         </OptionalDetails>}</div>
           return reference ? <WorkoutSwipe key={`${block.blockId}-${index}`} id={`${block.blockId}-${index}`} disabled={disabled} onDelete={() => void removeExercise(index)} onReplace={() => replaceReferenceExercise(index)}>{row}</WorkoutSwipe> : row
         })}</div>
-        {rounds.map((round) => <div className="planned-round" key={round.round}>
+        {rounds.map((round) => { const content = <div className="planned-round" key={round.round}>
           <div className="planned-round-label">Круг {round.round}</div>
           {round.items.map(({ exercise, exerciseIndex, setIndex }) => <div className="planned-round-exercise" key={`${exercise.ref}-${exerciseIndex}`}>
             <span className="planned-round-exercise-name">{exercise.name}</span>
             {setFields(exercise, exerciseIndex, setIndex, refinedPlan && isRpeVisible(exerciseIndex))}
           </div>)}
-        </div>)}
+        </div>
+          // A superset is changed as a whole round, never by removing one member's set.
+          // Reuse the existing resize/confirmation and completed-source protection.
+          return reference ? <WorkoutSwipe key={round.round} id={`plan-round:${block.blockId}:${round.round}`} variant="set"
+            disabled={referenceControlsDisabled || rounds.length <= 1 || round.round !== rounds.length || round.items.some(({ exercise, setIndex }) => Boolean(exercise.sets[setIndex]?.sourceSetId))}
+            actionLabel={`Удалить круг ${round.round}: суперсет`}
+            onDelete={() => void changeRoundCount(block.blockId, rounds.length - 1)}>{content}</WorkoutSwipe> : content
+        })}
         {blockMergeIndex >= 0 && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], blockMergeIndex))}>Добавить следующее в {mergeTargetLabel}</button>}
       </div>
       return reference ? <WorkoutDragBlock key={block.blockId} id={block.blockId}>{content}</WorkoutDragBlock> : content
