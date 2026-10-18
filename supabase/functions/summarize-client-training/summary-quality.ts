@@ -18,6 +18,51 @@ const topicPrefix = /^[А-ЯЁ][^:]{1,28}:\s+\S/u
 const gapConcern = /(?:избег(?:ать|ай)|сократ|не\s+допуска|больш(?:ой|их|ие)|длительн).{0,48}(?:перерыв|пауз|без тренировок)|(?:перерыв|пауз|без тренировок).{0,48}(?:избег|сократ|больш|длительн)/iu
 const techniqueAssessment = /(?:(?:улучшил(?:ась|ся|ось|ись)?|улучшен(?:а|о|ы)?|ухудшил(?:ась|ся|ось|ись)?|ухудшен(?:а|о|ы)?|изменил(?:ась|ся|ось|ись)?|исправлен(?:а|о|ы)?|стабилизировал(?:ась|ся|ось|ись)?|нарушен(?:а|о|ы)?).{0,30}техник|техник.{0,30}(?:улучшил(?:ась|ся|ось|ись)?|улучшен(?:а|о|ы)?|ухудшил(?:ась|ся|ось|ись)?|ухудшен(?:а|о|ы)?|изменил(?:ась|ся|ось|ись)?|исправлен(?:а|о|ы)?|стабилизировал(?:ась|ся|ось|ись)?|нарушен(?:а|о|ы)?|стал(?:а|о|и)?\s+(?:лучше|хуже)|оста[её]тся\s+стабильн))/iu
 const CURRENT_ANALYSIS_VERSION = "trainer-summary-v3"
+
+// This is a bounded direct-address guard, not a Russian morphology engine.
+// Only reviewed modifiers can connect "ты" to a predicate: an unrelated
+// subject in "ты видишь, что вес вырос" must not be rewritten or rejected.
+const addressModifier = "(?:не|уже|ещ[её]|хорошо|уверенно|успешно|стабильно|регулярно|последовательно|заметно|значительно|немного|также|тоже|вновь|снова|пока|раньше|теперь|всегда|самостоятельно|постепенно|легко|действительно|(?:за|в)\\s+(?:(?:этот|этом|прошлый|прошлом|текущий|текущем)\\s+)?(?:[0-9]+\\s+)?(?:период|периоде|месяц|месяце|неделю|неделе|недели|недель|дня|дней))"
+const neutralPredicates = [
+  ["увеличил|увеличила", "удалось увеличить"],
+  ["повысил|повысила", "удалось повысить"],
+  ["снизил|снизила", "удалось снизить"],
+  ["улучшил|улучшила", "удалось улучшить"],
+  ["показал|показала", "удалось показать"],
+  ["провёл|провела|провел", "удалось провести"],
+  ["выполнил|выполнила", "удалось выполнить"],
+  ["сделал|сделала", "удалось сделать"],
+  ["поддерживал|поддерживала", "удавалось поддерживать"],
+  ["сохранял|сохраняла", "удавалось сохранять"],
+  ["делал|делала", "удавалось делать"],
+  ["тренировался|тренировалась", "удавалось тренироваться"],
+  ["занимался|занималась", "удавалось заниматься"],
+  ["добился|добилась", "удалось добиться"],
+  ["смог|смогла", "удалось"],
+] as const
+const neutralPredicateByForm = new Map(neutralPredicates.flatMap(([forms, replacement]) =>
+  forms.split("|").map((form) => [form, replacement] as const)))
+const genderedPredicate = [...neutralPredicateByForm.keys(),
+  "был", "была", "стал", "стала", "готов", "готова", "активен", "активна",
+  "доволен", "довольна", "уверен", "уверена", "устал", "устала",
+].join("|")
+const directAddressSource = `(?<!\\p{L})ты\\s+((?:${addressModifier}[,\\s]+){0,8})(${genderedPredicate})(?!\\p{L})`
+
+function genderedClientAddress(value: string): boolean {
+  return new RegExp(directAddressSource, "iu").test(value)
+}
+
+function neutralClientAddress(value: string): string {
+  return value.replace(new RegExp(directAddressSource, "giu"), (match: string, modifiers: string, predicate: string, offset: number) => {
+    const replacement = neutralPredicateByForm.get(predicate.toLocaleLowerCase("ru-RU"))
+    const remainingClause = value.slice(offset + match.length).split(/[.!?;\n]/u)[0] ?? ""
+    // Do not turn a compound address or slash alternatives into half-repaired
+    // text. Keep it detectable so the existing post-repair gate rejects it.
+    const coordinated = new RegExp(`(?<!\\p{L})(?:и|но)\\s+(?:${addressModifier}\\s+){0,8}(?:${genderedPredicate})(?!\\p{L})`, "iu")
+    if (!replacement || /^[/(]/u.test(remainingClause.trimStart()) || coordinated.test(remainingClause)) return match
+    return `${match.startsWith("Т") ? "Тебе" : "тебе"} ${modifiers}${replacement}`
+  })
+}
 function numericRestatement(value: string): boolean {
   return /\d/u.test(value) && /(?:вес|повтор|объ[её]м|темп|дистанц).{0,50}(?:вырос|увелич|сниз|уменьш|измен)/iu.test(value) && !interpretation.test(value)
 }
@@ -152,13 +197,13 @@ export function repairSummaryQuality<T>(summary: T, trainingData: unknown): T {
       attention: [...summary.trainer.attention],
     },
     client: {
-      headline: summary.client.headline,
-      achievements: [...summary.client.achievements],
-      consistency: summary.client.consistency,
-      encouragement: summary.client.encouragement,
-      goalAlignment: summary.client.goalAlignment,
-      nextSteps: [...summary.client.nextSteps],
-      missingContext: [...summary.client.missingContext],
+      headline: neutralClientAddress(summary.client.headline),
+      achievements: summary.client.achievements.map(neutralClientAddress),
+      consistency: neutralClientAddress(summary.client.consistency),
+      encouragement: neutralClientAddress(summary.client.encouragement),
+      goalAlignment: neutralClientAddress(summary.client.goalAlignment),
+      nextSteps: summary.client.nextSteps.map(neutralClientAddress),
+      missingContext: summary.client.missingContext.map(neutralClientAddress),
       analysisVersion: CURRENT_ANALYSIS_VERSION,
     },
   }
@@ -237,6 +282,7 @@ export function summaryQualityIssueCodes(issues: string[]): string[] {
     if (issue.includes("выводы о боли")) return "unsupported_injury_claim"
     if (issue.includes("изменение техники")) return "unsupported_technique_claim"
     if (issue.includes("короткий обычный перерыв")) return "unsupported_gap_concern"
+    if (issue.includes("зависящее от рода обращение")) return "gendered_client_address"
     return "unknown_quality_issue"
   })
   return [...new Set(codes)]
@@ -305,11 +351,10 @@ export function assessSummaryQuality(
     )
   }
   if (
-    /ты\s+(?:увеличил(?:а)?|показал(?:а)?|пров[её]л(?:а)?|выполнил(?:а)?|сделал(?:а)?|поддерживал(?:а)?|сохранял(?:а)?|тренировал(?:ся|ась)|добил(?:ся|ась)|смог(?:ла)?|был(?:а)?)(?:\s|[,.!?]|$)/iu
-      .test(clientText)
+    genderedClientAddress(clientText)
   ) {
-    advisories.push(
-      "В client есть зависящая от рода форма; используй нейтральную конструкцию.",
+    blockingIssues.push(
+      "В client есть зависящее от рода обращение к человеку; используй нейтральную конструкцию.",
     )
   }
   if (clientText.includes("**") || clientText.includes("__")) {
