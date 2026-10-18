@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { useState } from 'react'
@@ -460,6 +460,19 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
     expect(screen.getByLabelText('Кругов')).toHaveValue(2)
     expect(screen.getByText('Настройки блока')).toBeInTheDocument()
+    const lastRound = screen.getByRole('group', { name: 'Удалить круг 2: суперсет' })
+    lastRound.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить круг 2: суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByLabelText('Кругов')).toHaveValue(2)
+    lastRound.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить круг 2: суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Удалить круги' }))
+    await waitFor(() => expect(screen.getByLabelText('Кругов')).toHaveValue(1))
+    expect(screen.getByRole('group', { name: 'Удалить круг 1: суперсет' })).not.toHaveAttribute('tabindex')
+    expect(screen.getAllByLabelText('Вес, подход 1')[0]).toHaveValue('52.5')
     await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
     await user.click(screen.getByRole('menuitem', { name: 'Разделить суперсет' }))
     await user.click(screen.getByRole('button', { name: 'Разделить' }))

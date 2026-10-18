@@ -482,8 +482,22 @@
 /* Card polish stays inside the independent PLAN_LAYOUT fixed2 opt-in. The
    source 32/16/2 geometry is retained, while notes and extra metrics can grow. */
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .planned-exercise { padding-top: 0; padding-bottom: 0 }
-.coach-plan-polish .compact-editor-exercise-head { margin: 0 -16px; padding: 28px 16px 16px; align-items: start }
+.coach-plan-polish .compact-editor-exercise-head { margin: 0 -16px; padding: 26px 16px 16px; align-items: start }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .compact-editor-exercise-toggle { padding-block: 0 }
+.coach-plan-polish .compact-editor-exercise-head .workout-drag-handle { margin-top: 6px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-block-head > select,
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .block-rounds input { height: 48px; min-height: 48px; padding: 8px 12px; border: 0; border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font: inherit; font-size: 16px; appearance: none; -webkit-appearance: none }
+.coach-plan-polish .exercise-block-head > select { flex: 1; min-width: 120px; cursor: pointer }
+.coach-plan-polish .block-rounds { display: flex; align-items: center; gap: 8px; color: var(--lime-text-secondary); font-size: 13px }
+.coach-plan-polish .block-rounds input { width: 56px; text-align: center }
+.coach-plan-polish .block-rounds input::-webkit-inner-spin-button,
+.coach-plan-polish .block-rounds input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+.coach-plan-polish .block-rounds input[type='number'] { appearance: textfield }
+.coach-plan-polish .workout-set-swipe:has(> .workout-swipe-content > .planned-round) { border-radius: 16px }
 .coach-plan-polish .compact-editor-exercise-fields { border-top: 1px solid #3b3b40 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .overflow-trigger svg[data-icon='more'] { width: 24px; height: 24px; background: var(--lime-text); mask: url('../../docs/design/figma-20261008/assets/coach-more.svg') center / contain no-repeat }
+.coach-plan-polish .overflow-trigger svg[data-icon='more'] > * { opacity: 0 }
 .coach-plan-polish .exercise-comment-options { margin: 0; padding: 0; border: 0 }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-comment-options > summary { min-height: 44px; padding-block: 8px; line-height: 20px }
 .coach-plan-polish .set-add-row .fit-lime-add-label { justify-content: center; gap: 8px }
