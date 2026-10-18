@@ -75,7 +75,9 @@ true/false настройки анимации имеют приоритет, de
 
 Targeted unit23/23 и typecheck/lint passed; browser92/92 WebKit+Chromium passed.
 Новых browser cases/осей нет; существующие анимационные случаи явно включают
-настройку вместо прежнего неявного default. Полный check выполняется.
+настройку вместо прежнего неявного default. Полный check exit0: frontend2743,
+API1426+160штатныхDBskip, policy/hosting/calendar/build/startup passed. Финальный
+диагностический WebKit390 и просмотр source/after подтвердили композицию и assets.
 CI/merge/deploy/native остаются обязательными; PR1 пока не объявлен выпущенным.
 
 ## Следующие PR
