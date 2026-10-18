@@ -153,8 +153,7 @@ describe('NotificationOnboarding', () => {
 
     expect(await screen.findByText('Уведомления работают.')).toBeVisible()
     expect(repository.enable).toHaveBeenCalledWith(USER_ID)
-    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_scheduled', true)
-    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'chat_message', true)
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
     expect(repository.sendTestPush).toHaveBeenCalledWith(LOCAL_SUBSCRIPTION.endpoint)
     expect(markPushOnboardingSeen).toHaveBeenCalledWith(USER_ID)
 
@@ -198,8 +197,8 @@ describe('NotificationOnboarding', () => {
     await user.click(screen.getByRole('button', { name: 'Включить уведомления' }))
 
     expect(nativeReminder.requestPermission).toHaveBeenCalledOnce()
-    expect(repository.setCategoryEnabled).toHaveBeenCalledWith(USER_ID, 'workout_reminder', true)
+    expect(repository.setCategoryEnabled).not.toHaveBeenCalled()
     expect(repository.enable).not.toHaveBeenCalled()
-    expect(await screen.findByRole('status')).toHaveTextContent('Напомним, если активная тренировка останется незавершённой.')
+    expect(await screen.findByRole('status')).toHaveTextContent('Разрешение на уведомления получено. Настройки напоминаний сохранены.')
   })
 })

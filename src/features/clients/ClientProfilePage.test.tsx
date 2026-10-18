@@ -21,7 +21,9 @@ vi.mock('../../data/repositories/athlete-sport-profile.repository', () => ({
   athleteSportProfileRepository: { supportsSportInterests: true, getMine: getOwnSport, saveOwn: vi.fn() },
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: 'yandex', clients: { getMine }, athleteSportProfile: { supportsSportInterests: true, getMine: getOwnSport } }),
+  useDataBackend: () => ({ source: 'yandex', clients: { getMine }, athleteSportProfile: { supportsSportInterests: true, getMine: getOwnSport },
+    pushNotifications: { status: notificationsStatus, enable: vi.fn(), setCategoryEnabled: vi.fn(), sendTestPush: vi.fn() },
+  }),
 }))
 
 vi.mock('./ClientTrainerConnections', () => ({ ClientTrainerConnections: ({ finance }: { finance?: ReactNode }) => <div>{finance}</div> }))
@@ -87,7 +89,7 @@ describe('ClientProfilePage', () => {
 
   it('renders notification controls on the client settings page', async () => {
     render(<ClientProfileSettingsPage />, { wrapper: wrapper() })
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).toBeVisible())
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Напоминания о тренировках' })).toBeVisible())
     expect(screen.queryByRole('link', { name: 'Ввести код приглашения' })).not.toBeInTheDocument()
   })
 

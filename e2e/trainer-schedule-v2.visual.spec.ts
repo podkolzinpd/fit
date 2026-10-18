@@ -2721,8 +2721,9 @@ for (const width of [320, 390, 430, 1440]) {
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   test(`Lime notification settings separate permission, device connection and retry for ${profileId}`, { tag: ["@lime-profile"] }, async ({ page }, testInfo) => {
+    const clientRole = profileId !== trainerId
     await page.setViewportSize({ width: 390, height: 844 })
-    await mockPilot(page, { profileId, fitLime: true })
+    await mockPilot(page, { role: clientRole ? 'client' : 'trainer', profileId, fitLime: true, clientLime: clientRole })
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
       Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
@@ -2734,33 +2735,59 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     })
     let fail = false
     let endpointChecks = 0
+    let testRequests = 0
     await page.route('http://127.0.0.1:4100/v1/push-notifications/**', async (route) => {
       if (fail) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
       const path = new URL(route.request().url()).pathname
+      if (path.endsWith('/test')) {
+        expect(route.request().postDataJSON()).toEqual({ endpoint: 'https://push.example/device' })
+        testRequests += 1
+        return route.fulfill({ status: 202 })
+      }
       if (path.endsWith('/subscription/status')) {
         endpointChecks += 1
         expect(route.request().postDataJSON()).toEqual({ endpoint: 'https://push.example/device' })
       }
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: true } } }) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: false } } }) })
     })
-    await page.goto('/profile/settings')
-    await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+    await page.goto(clientRole ? '/me/settings' : '/profile/settings')
+    if (!clientRole) await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Как установить Fit' })).toHaveCount(0)
-    await expect(page.getByText('Разрешено', { exact: true })).toBeVisible()
-    await expect(page.getByText('Уведомления включены', { exact: true })).toBeVisible()
+    await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Включить', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).not.toBeChecked()
+    if (clientRole) await expect(page.getByRole('switch', { name: 'Напоминания о тренировках' })).not.toBeChecked()
+    else await expect(page.getByRole('switch', { name: 'Напоминания о тренировках' })).toHaveCount(0)
+    await expect(page.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
+    await expect(page.getByRole('switch', { name: 'Новые тренировки' })).toHaveCount(clientRole ? 1 : 0)
+    await page.getByRole('button', { name: 'Отправить тестовое уведомление' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'отправлено в очередь' })).toBeVisible()
+    expect(testRequests).toBe(1)
     expect(endpointChecks).toBeGreaterThan(0)
     await page.screenshot({ path: testInfo.outputPath('lime-notification-settings.png'), fullPage: true })
     fail = true
-    await page.getByRole('button', { name: 'Повторить проверку' }).click()
-    await expect(page.getByRole('alert').filter({ hasText: 'подписку устройства' })).toBeVisible({ timeout: 15000 })
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(page.getByRole('alert').filter({ hasText: 'Проверьте интернет' })).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+    const retry = page.getByRole('button', { name: 'Повторить', exact: true })
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     fail = false
-    await page.getByRole('button', { name: 'Повторить проверку' }).click()
-    await expect(page.getByText('Уведомления включены', { exact: true })).toBeVisible()
+    await retry.click()
+    await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    // Geometry only: client 390/430 in both themes; trainer Lime is dark-only.
+    for (const width of clientRole ? [390, 430] : [390, 1440]) {
+      await page.setViewportSize({ width, height: 1000 })
+      for (const theme of clientRole ? ['light', 'dark'] : ['dark']) {
+        if (clientRole) await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption(theme)
+        await expect(page.locator('html')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+        const action = page.getByRole('button', { name: 'Отправить тестовое уведомление' })
+        expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        await page.screenshot({ path: testInfo.outputPath(`notifications-${clientRole ? 'client' : 'trainer'}-${width}-${theme}.png`), fullPage: true })
+      }
+    }
   })
 }
 

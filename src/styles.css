@@ -1086,6 +1086,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .notification-channel-note { min-height:58px; display:grid; align-content:center; gap:2px; margin:0; padding:10px 14px; border-top:1px solid var(--border) }
 .notification-channel-note strong { color:var(--fg); font-size:var(--text-ui); font-weight:var(--weight-medium) }
 .notification-channel-note span { color:var(--muted); font-size:var(--type-caption-size) }
+.notification-reminder-note { min-height:0; padding-top:0; border-top:0 }
 .notification-settings-error { display:block; padding:0 14px 14px }
 
 .settings-page { align-content:start }

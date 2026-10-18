@@ -1,6 +1,6 @@
-import { type BrowserPushSubscription, getCurrentPushSubscription, isPushSupported, subscribeToPush } from './push-subscription'
+import { type BrowserPushSubscription, getCurrentPushSubscription, isPushSupported } from './push-subscription'
 
-export type PushSubscriptionState = 'working' | 'needs-permission' | 'denied' | 'unsupported'
+export type PushSubscriptionState = 'working' | 'needs-permission' | 'needs-connection' | 'denied' | 'unsupported'
 
 export type PushSubscriptionServerAdapter = {
   hasServerSubscription: (endpoint: string) => Promise<boolean>
@@ -13,13 +13,13 @@ export type PushSubscriptionServerAdapter = {
 // показывать «включено» до первого проваленного напоминания. Здесь сверяются
 // все три источника правды: Notification.permission, локальная подписка
 // браузера и серверная запись — и, где это возможно без участия пользователя,
-// расхождение чинится само, без переключения тумблера туда-обратно.
+// серверная запись восстанавливается из существующей локальной подписки.
+// Новую браузерную подписку создаёт только явное «Включить/Восстановить».
 //
 // Backend-специфичные операции (есть ли у сервера эта подписка, сохранить её)
 // приходят параметром — Supabase и Yandex-пилот реализуют их по-разному, а
 // сама логика сверки одна и та же для обоих.
 export async function reconcilePushSubscription(
-  vapidPublicKey: string | undefined,
   adapter: PushSubscriptionServerAdapter,
 ): Promise<PushSubscriptionState> {
   if (!isPushSupported()) return 'unsupported'
@@ -29,17 +29,8 @@ export async function reconcilePushSubscription(
   if (permission === 'default') return 'needs-permission'
 
   // permission === 'granted' отсюда и до конца.
-  let local = await getCurrentPushSubscription()
-  if (local === null) {
-    // Разрешение уже есть, но браузер потерял PushManager-подписку (сброс
-    // хранилища сайта, переустановка и т.п.) — subscribeToPush не переспросит
-    // разрешение повторно (оно уже решено), поэтому безопасно вызывать из
-    // useEffect на mount, а не только по явному тапу пользователя.
-    if (!vapidPublicKey) return 'needs-permission'
-    local = await subscribeToPush(vapidPublicKey)
-    await adapter.saveSubscription(local)
-    return 'working'
-  }
+  const local = await getCurrentPushSubscription()
+  if (local === null) return 'needs-connection'
 
   const hasServerRow = await adapter.hasServerSubscription(local.endpoint)
   if (!hasServerRow) {
