@@ -1,3 +1,6 @@
+> **ARCHIVED / MONOCHROME.** Исторический документ. Не является текущим планом или стилем Lime.
+> Текущий контракт: [FIT_LIME_DESIGN_CODE](FIT_LIME_DESIGN_CODE.md). Исходный текст ниже сохранён для истории.
+
 # Fit — production rollout Foundation UI Identity v1
 
 Статус: **server flag и authenticated runtime read доставлены; Client Home,

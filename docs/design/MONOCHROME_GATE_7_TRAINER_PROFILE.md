@@ -1,3 +1,6 @@
+> **ARCHIVED / MONOCHROME.** Исторический документ. Не является текущим планом или стилем Lime.
+> Текущий контракт: [FIT_LIME_DESIGN_CODE](FIT_LIME_DESIGN_CODE.md). Исходный текст ниже сохранён для истории.
+
 # Gate 7 — профиль тренера
 
 Статус: **merged and deployed to production in PR #671**.

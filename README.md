@@ -110,10 +110,12 @@ npm run check
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — границы слоёв и работа с БД.
 - [FEATURE_PARITY.md](./FEATURE_PARITY.md) — контракт переноса V1.
 - [docs/YANDEX_CUTOVER_PLAYBOOK.md](./docs/YANDEX_CUTOVER_PLAYBOOK.md) — временный контракт параллельной разработки и переключения на Yandex Cloud/Yandex ID.
-- [docs/UI_IDENTITY.md](./docs/UI_IDENTITY.md) — утверждённая целевая айдентика MONOCHROME PERFORMANCE: палитры, Onest, плотная типографика, компоненты и приёмка.
+- [docs/UI_IDENTITY.md](./docs/UI_IDENTITY.md) — действующий визуальный контракт, общие продуктовые инварианты и доступность.
+- [docs/design/FIT_LIME_DESIGN_CODE.md](./docs/design/FIT_LIME_DESIGN_CODE.md) — утверждённый Lime-дизайн-код: существующие компоненты, SVG-параметры и согласованные адаптации.
 - [docs/UI_TASK_PROMPT.md](./docs/UI_TASK_PROMPT.md) — обязательный дизайн-контракт и готовый промпт для любых изменений интерфейса.
 - [docs/UI_DESIGN_SYSTEM.md](./docs/UI_DESIGN_SYSTEM.md) — карта текущей реализации, используемая для безопасной миграции без изменения продукта.
-- [docs/design/MONOCHROME_REDESIGN_PLAN.md](./docs/design/MONOCHROME_REDESIGN_PLAN.md) — план перехода: Foundation UI Identity v1 принята, продуктовые экраны мигрируют поэтапно.
+- [docs/design/CLIENT_LIME_SVG_ADOPTION_20261018.md](./docs/design/CLIENT_LIME_SVG_ADOPTION_20261018.md) — план подготовки документации и согласованных клиентских доработок; запланированное отделено от реализованного.
+- [docs/archive/monochrome/README.md](./docs/archive/monochrome/README.md) — исторические Monochrome-спецификации и планы; не обязательный стиль новых Lime-экранов.
 - [docs/AI_AGENT_ONBOARDING.md](./docs/AI_AGENT_ONBOARDING.md) — выдача доступа к GitHub и полная локальная настройка ИИ-агента.
 - [OPERATIONS.md](./OPERATIONS.md) — secrets, Google OAuth, автодеплой БД и release gates.
 
