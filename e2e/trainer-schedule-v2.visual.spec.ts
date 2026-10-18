@@ -1344,7 +1344,8 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     const row = page.locator(`[data-live-set-id="${set.id}"]`)
     const saveRequest = page.waitForRequest(request => request.url().endsWith(`/workout-sets/${set.id}/draft`))
     const weight = row.getByLabel('Фактический вес', { exact: true })
-    await weight.focus()
+    // Only real input autosaves: merely focusing the displayed plan is not a fact.
+    await weight.fill('21')
     await weight.evaluate(element => element.blur())
     await saveRequest
     try {
@@ -1352,7 +1353,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     } finally { releaseSave() }
     await expect(page.locator('.live-sync-state[role="alert"]')).toContainText('Не удалось отправить')
     await expect(row).not.toHaveClass(/invalid/)
-    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('20')
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('21')
     expect(await page.evaluate(() => navigator.onLine)).toBe(true)
     await expect.poll(() => confirmations).toBe(1)
     await expect.poll(() => page.evaluate(({ profileId, workoutId, setId }) => {
