@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppLayout, appViewportMetrics } from './AppLayout'
+import { ServiceNotice } from './service-notice'
 
 const authState = vi.hoisted(() => ({
   role: 'client' as 'client' | 'trainer',
@@ -419,9 +420,9 @@ describe('AppLayout: вкладка ассистента', () => {
 })
 
 describe('AppLayout: служебная плашка о восстановлении ИИ', () => {
-  afterEach(() => window.sessionStorage.clear())
+  afterEach(() => { window.sessionStorage.clear(); window.localStorage.clear() })
 
-  it('крестик скрывает плашку до конца запуска, следующий запуск показывает её снова', () => {
+  it('крестик скрывает объявление после перехода и нового запуска приложения', () => {
     vi.stubEnv('VITE_SERVICE_NOTICE_ENABLED', 'true')
     const first = renderLayout('/me')
     // Синхронный клик: кадр прокрутки каркаса отменяется при unmount и не
@@ -433,10 +434,29 @@ describe('AppLayout: служебная плашка о восстановлен
     const sameLaunch = renderLayout('/me/workouts')
     expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
     sameLaunch.unmount()
-    // Новый запуск приложения начинается с чистой sessionStorage.
+    // Новый запуск очищает sessionStorage, но сохраняет закрытие объявления.
     window.sessionStorage.clear()
     renderLayout('/me')
-    expect(screen.getByRole('status', { name: 'Состояние сервиса' })).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+  })
+
+  it('закрытие относится только к текущему аккаунту и объявлению', () => {
+    const view = render(<ServiceNotice userId="user-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Скрыть сообщение' }))
+    view.rerender(<ServiceNotice userId="user-2" />)
+    expect(screen.getByRole('status', { name: 'Состояние сервиса' })).toBeVisible()
+    view.rerender(<ServiceNotice userId="user-1" />)
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    view.rerender(<ServiceNotice userId="user-1" noticeId="next-announcement" />)
+    expect(screen.getByRole('status', { name: 'Состояние сервиса' })).toBeVisible()
+  })
+
+  it('закрытие работает при недоступном хранилище', () => {
+    const store = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('storage unavailable') })
+    render(<ServiceNotice userId="user-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Скрыть сообщение' }))
+    expect(screen.queryByRole('status', { name: 'Состояние сервиса' })).not.toBeInTheDocument()
+    store.mockRestore()
   })
 
   it('без флага сборки плашки нет', () => {

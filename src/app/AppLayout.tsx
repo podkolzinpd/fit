@@ -158,7 +158,7 @@ export function AppLayout() {
   ].filter(Boolean).join(' ')
   // Объявление победителю конкурса не перебивает Live, форму тренировки и чат.
   // Над содержимым любого экрана обеих ролей; в Live и переписке не мешаем действию.
-  const serviceNotice = isServiceNoticeEnabled() && !liveSession && !chat ? <ServiceNotice /> : null
+  const serviceNotice = actor && isServiceNoticeEnabled() && !liveSession && !chat ? <ServiceNotice userId={actor.userId} /> : null
   const contestWinnerDialog = actor && <ContestWinnerDialog userId={actor.userId} suppressed={immersive} />
   const trainerAssistantNav = actor?.role === 'trainer' && isAssistantNavPilotEnabled(actor.userId, actor.email) && <Coachmark
     id="assistant-all-trainers-2026-09"

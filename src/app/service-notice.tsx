@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { CloseIcon } from '../shared/icons'
 
-// Временная плашка после переезда инфраструктуры: приложение работает,
-// ИИ-функции ещё восстанавливаются. Текст держим здесь, чтобы снять её одной правкой.
-// Крестик скрывает плашку до конца текущего запуска (sessionStorage): переходы
-// между экранами её не возвращают, а следующий запуск приложения — возвращает.
-const DISMISSED_KEY = 'fit.serviceNotice.dismissed'
+// Stable campaign identity: ordinary rebuilds/copy edits must not show a closed notice again.
+export const SERVICE_NOTICE_ID = 'ai-recovery-2026-10-14'
 
-function readDismissed(): boolean {
-  try { return window.sessionStorage.getItem(DISMISSED_KEY) === '1' } catch { return false }
+function dismissalKey(userId: string, noticeId: string): string {
+  return `fit.serviceNotice.dismissed.${noticeId}.${userId}`
 }
 
-export function ServiceNotice() {
-  const [dismissed, setDismissed] = useState(readDismissed)
-  if (dismissed) return null
+export function ServiceNotice({ userId, noticeId = SERVICE_NOTICE_ID }: { userId: string; noticeId?: string }) {
+  const key = dismissalKey(userId, noticeId)
+  const [closedKey, setClosedKey] = useState<string | null>(null)
+  let persisted = false
+  try { persisted = window.localStorage.getItem(key) === '1' } catch { /* Closing still works for this mounted screen. */ }
+  if (closedKey === key || persisted) return null
   const dismiss = () => {
-    try { window.sessionStorage.setItem(DISMISSED_KEY, '1') } catch { /* Без хранилища плашка скрывается до перезагрузки. */ }
-    setDismissed(true)
+    try { window.localStorage.setItem(key, '1') } catch { /* Storage may be unavailable. */ }
+    setClosedKey(key)
   }
   return <section className="service-notice" role="status" aria-label="Состояние сервиса">
     <div className="service-notice-text">
