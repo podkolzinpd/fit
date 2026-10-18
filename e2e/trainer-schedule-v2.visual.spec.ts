@@ -835,7 +835,7 @@ for (const width of [375, 390, 430, 1440]) {
 }
 
 for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
-  test(`Figma workout Coach reference adjacent superset ${profileId}`, async ({ page }, info) => {
+  test(`Figma workout Coach reference adjacent superset ${profileId}`, async ({ page, browserName }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
     const source = coachGestureWorkout(), first = source.exercises[0]!, second = source.exercises[1]!
@@ -863,6 +863,28 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       current.version++
       await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
     })
+    const roundCommands: string[] = []
+    if (profileId.endsWith('1')) {
+      await page.route('**/blocks/*/rounds', async route => {
+        const current = backend.getWorkouts()[0]!
+        expect(route.request().method()).toBe('POST')
+        expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+        const members = current.exercises.filter(exercise => exercise.blockId === first.blockId)
+        members.forEach((exercise, index) => { exercise.sets.push({ ...exercise.sets.at(-1)!, id: `c0ac0000-6010-4000-8000-0000000008${index}2`, position: 2, fact: {}, confirmedAt: null }); exercise.blockRounds = 3 })
+        current.version++; roundCommands.push('append')
+        await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+      })
+      await page.route('**/blocks/*/rounds/2', async route => {
+        const current = backend.getWorkouts()[0]!
+        expect(route.request().method()).toBe('DELETE')
+        expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+        const members = current.exercises.filter(exercise => exercise.blockId === first.blockId)
+        expect(members.every(exercise => exercise.sets.at(-1)?.position === 2 && !exercise.sets.at(-1)?.confirmedAt && Object.keys(exercise.sets.at(-1)!.fact).length === 0)).toBe(true)
+        members.forEach(exercise => { exercise.sets = exercise.sets.filter(set => set.position !== 2); exercise.blockRounds = 2 })
+        current.version++; roundCommands.push('remove')
+        await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+      })
+    }
     await page.goto(`/workouts/${workoutId}/live`)
     await page.locator(`[data-workout-block="${first.blockId}"]`).getByRole('button', { name: 'Ещё действия', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Объединить со следующим в суперсет', exact: true }).click()
@@ -870,6 +892,24 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await expect(page.locator('.circuit-round')).toHaveCount(2)
     await expect(page.getByRole('button', { name: 'Круг', exact: true })).toBeVisible()
     const group = page.locator('.exercise-block.live')
+    if (profileId.endsWith('1')) {
+      await group.getByRole('button', { name: 'Круг', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(3)
+      const lastRound = group.locator('.circuit-round').last()
+      await lastRound.getByRole('button', { name: /Круг 3/ }).click()
+      const row = lastRound.locator('[data-live-set-id]').first()
+      const swipeRound = async () => { const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true })); await gesture.move(60); await gesture.end() }
+      await swipeRound()
+      await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(3)
+      expect(backend.getWorkouts()[0]!.exercises.filter(exercise => exercise.blockId === first.blockId).map(exercise => exercise.sets.at(-1)!.fact)).toEqual([{}, {}])
+      await swipeRound()
+      await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Убрать', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(2)
+      expect(roundCommands).toEqual(['append', 'remove'])
+    }
     await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
     await expect(page.locator(`[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
     await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
@@ -1588,6 +1628,12 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       await expect(page.getByRole('alertdialog')).toBeVisible()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
       const input = row.getByLabel('Фактический вес', { exact: true })
+      const fieldGesture = await beginClientGesture(page, row, browserName, input)
+      await fieldGesture.move(60); await fieldGesture.end()
+      await expect(row.getByRole('button', { name: /Удалить подход 2:/ })).toBeVisible()
+      await expect(input).not.toBeFocused()
+      await row.getByRole('button', { name: /Удалить подход 2:/ }).tap()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
       await input.tap(); await expect(input).toBeFocused(); await input.fill('31')
       await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
       await input.blur()
@@ -1601,12 +1647,19 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       await expect.poll(() => page.locator('.content').evaluate(element => element.scrollTop)).toBeLessThan(startScroll)
       await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
       await expect(input).toHaveValue('31')
+      await expect(row.locator('.workout-set-swipe')).toHaveAttribute('tabindex', '0')
+      const fieldPan = await beginClientGesture(page, row, browserName, input)
+      const fieldScroll = await page.locator('.content').evaluate(element => element.scrollTop)
+      await fieldPan.move(0, fieldScroll > 40 ? 80 : -80); await fieldPan.end()
+      await expect.poll(() => page.locator('.content').evaluate((element, before) => Math.abs(element.scrollTop - before), fieldScroll)).toBeGreaterThan(4)
+      await expect(input).not.toBeFocused()
+      await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
     } finally { await cdp.detach() }
   })
 }
 
 for (const width of [375, 390, 430, 1440]) {
-  test(`Figma workout Coach reference field completion ${width}`, async ({ page }, info) => {
+  test(`Figma workout Coach reference field completion ${width}`, async ({ page, browserName }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
     const source = restTimerWorkout(), exercise = source.exercises[0]!
     await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
@@ -1631,6 +1684,15 @@ for (const width of [375, 390, 430, 1440]) {
     await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
     await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
     await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '54px')
+    if (width === 390) {
+      const gesture = await beginClientGesture(page, second, browserName, second.getByLabel('Фактический вес', { exact: true }))
+      await gesture.move(60); await gesture.end()
+      await expect(second.getByRole('button', { name: /Удалить подход 2:/ })).toBeVisible()
+      await expect(second.getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
+      await second.getByRole('button', { name: /Удалить подход 2:/ }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+      expect(attempts).toBe(0)
+    }
     await first.getByLabel('Фактический вес', { exact: true }).fill('27.5')
     await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect(first).toHaveClass(/confirmed/)
@@ -1712,6 +1774,13 @@ for (const width of [375, 390, 430, 1440]) {
         await expect(row.getByRole('combobox', { name: 'Единица фактической дистанции', exact: true })).toBeVisible()
         await expect(row.getByRole('textbox', { name: 'Фактическая дистанция', exact: true })).toBeVisible()
         expect(await row.locator('.run-distance-control :is(input,select)').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(); return rect.height === 54 && rect.width >= 44 }))).toBe(true)
+      }
+      if (ref === 'plank' && width === 390) {
+        await row.locator('.workout-duration-trigger').click()
+        const dialog = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+        await expect(dialog).toBeVisible()
+        await dialog.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+        await expect(dialog).toHaveCount(0)
       }
       await row.evaluate(el => el.scrollIntoView({ block: 'center' }))
       await page.screenshot({ path: info.outputPath(`coach-live-${ref}-completion.png`), fullPage: true })

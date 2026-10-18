@@ -3777,7 +3777,7 @@ export function LiveWorkoutPage() {
     </span>
   }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
-  function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false) {
+  function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false, roundRemoval?: { label: string; remove: () => void }) {
     const localDraft = localSetDrafts.get(set.id)
     const displayedSet = setWithCarriedLiveWeight(exercise, set, localDraft)
     const isEditing = !directLiveInput && editingSets.has(set.id)
@@ -3802,12 +3802,13 @@ export function LiveWorkoutPage() {
     const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
     const validationError = validationErrorSetIds.has(set.id)
     const swipeSet = (content: ReactNode) => coachReference && canManageLiveStructure
-      ? <WorkoutSwipe id={`set:${set.id}`} variant="set"
-          disabled={Boolean(set.confirmedAt) || exercise.blockType !== 'single' || exercise.sets.length <= 1 || gestureDisabled}
-          actionLabel={`Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`}
-          onDelete={() => void requestRemoveLiveSet(exercise, set)}>{content}</WorkoutSwipe>
+      ? <WorkoutSwipe id={`set:${set.id}`} variant="set" swipeFromFields
+          disabled={Boolean(set.confirmedAt) || !roundRemoval && (exercise.blockType !== 'single' || exercise.sets.length <= 1) || gestureDisabled}
+          actionLabel={roundRemoval?.label ?? `Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`}
+          onDelete={() => roundRemoval ? roundRemoval.remove() : void requestRemoveLiveSet(exercise, set)}>{content}</WorkoutSwipe>
       : content
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
+      if (coachReference && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
       if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) {
@@ -3818,9 +3819,13 @@ export function LiveWorkoutPage() {
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+      // A utility action is not an edited metric. Closing its confirmation must
+      // never turn untouched plan placeholders into a saved Live result.
+      if (coachReference && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
       if (set.confirmedAt && !isEditing && !directLiveInput) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+      if (coachReference && !liveFormChanged(event.currentTarget) && !localSetDrafts.has(set.id)) return
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
@@ -4112,6 +4117,10 @@ export function LiveWorkoutPage() {
         const canUndoAddedRound = lastAddedRound?.blockId === block.blockId && latestRound?.round === lastAddedRound.position + 1
           && Boolean(latestRound?.items.length === block.exercises.length
             && latestRound.items.every(({ set }) => !set.confirmedAt && !hasLiveSetResult(set.fact)))
+        const requestRemoveAddedRound = async () => {
+          if (!canUndoAddedRound || !latestRound || rootMutationPending || save.isPending || confirm.isPending) return
+          if (await askConfirm({ message: 'Убрать последний пустой круг?', confirmLabel: 'Убрать', danger: true })) removeRound.mutate({ blockId: block.blockId, position: latestRound.round - 1 })
+        }
         const activeCircuitSetId = blockStatus === 'current'
           ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
           : undefined
@@ -4142,7 +4151,7 @@ export function LiveWorkoutPage() {
             <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
               onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : <AddActionLabel>Круг</AddActionLabel>}</button>
             {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
-              onClick={async () => { if (await askConfirm({ message: 'Убрать последний пустой круг?', confirmLabel: 'Убрать', danger: true })) removeRound.mutate({ blockId: block.blockId, position: latestRound!.round - 1 }) }}>Убрать добавленный круг</button>}
+              onClick={() => void requestRemoveAddedRound()}>Убрать добавленный круг</button>}
           </div>}
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt)
             const roundKey = `${block.blockId}:${round.round}`
@@ -4166,7 +4175,10 @@ export function LiveWorkoutPage() {
                   : undefined} />
               {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {showNote && liveTrainerNote(exercise)}
-              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt)}
+              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt,
+                coachReference && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
+                  ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
+                  : undefined)}
               {showNote && liveCommentField(exercise, displayName)}
             </section>, set.id)})}
           </div> })}

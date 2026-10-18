@@ -423,7 +423,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
             ? <button type="button" className="link planned-set-remove" aria-label={`Удалить подход ${setIndex + 1}`} onClick={() => removeSet(exerciseIndex, setIndex)}><CloseIcon /></button>
             : <span className="planned-set-remove" aria-hidden="true" />)}
         </WorkoutSetRow>
-          return reference ? <WorkoutSwipe key={setIndex} id={`plan-set:${exerciseIndex}:${setIndex}`} variant="set"
+          return reference ? <WorkoutSwipe key={setIndex} id={`plan-set:${exerciseIndex}:${setIndex}`} variant="set" swipeFromFields
             disabled={referenceControlsDisabled || exercise.sets.length <= 1 || Boolean(set.sourceSetId)}
             actionLabel={`Удалить подход ${setIndex + 1}: ${exercise.name}`}
             onDelete={() => void requestRemoveReferenceSet(exerciseIndex, setIndex)}>{row}</WorkoutSwipe> : row
@@ -518,7 +518,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         </div>
           // A superset is changed as a whole round, never by removing one member's set.
           // Reuse the existing resize/confirmation and completed-source protection.
-          return reference ? <WorkoutSwipe key={round.round} id={`plan-round:${block.blockId}:${round.round}`} variant="set"
+          return reference ? <WorkoutSwipe key={round.round} id={`plan-round:${block.blockId}:${round.round}`} variant="set" swipeFromFields
             disabled={referenceControlsDisabled || rounds.length <= 1 || round.round !== rounds.length || round.items.some(({ exercise, setIndex }) => Boolean(exercise.sets[setIndex]?.sourceSetId))}
             actionLabel={`Удалить круг ${round.round}: суперсет`}
             onDelete={() => void changeRoundCount(block.blockId, rounds.length - 1)}>{content}</WorkoutSwipe> : content

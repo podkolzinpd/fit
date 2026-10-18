@@ -272,12 +272,12 @@ it('pending structural writes block swipe and drag', () => {
   expect(move).not.toHaveBeenCalled(); expect(remove).not.toHaveBeenCalled()
 })
 
-function setupRows(disabled = false) {
+function setupRows(disabled = false, swipeFromFields = false) {
   const removeExercise = vi.fn(), removeSet = vi.fn(), replace = vi.fn()
   render(<WorkoutGestureList blocks={['exercise']} disabled={false} onMove={vi.fn()}>
     <WorkoutSwipe id="exercise" disabled={false} onDelete={removeExercise} onReplace={replace}>
       <p data-testid="exercise">Упражнение</p>
-      <WorkoutSwipe id="row" variant="set" disabled={disabled} onDelete={removeSet} actionLabel="Удалить подход 2">
+      <WorkoutSwipe id="row" variant="set" disabled={disabled} swipeFromFields={swipeFromFields} onDelete={removeSet} actionLabel="Удалить подход 2">
         <span data-testid="row">2</span><input aria-label="Повторы строки" defaultValue="10" />
       </WorkoutSwipe>
     </WorkoutSwipe>
@@ -304,7 +304,7 @@ it('a row has no right-swipe replacement; reverse swipe simply closes deletion',
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 it('protected row and row inputs never fall through to exercise deletion', () => {
-  setupRows(true)
+  setupRows(true, true)
   swipe('row', -90)
   const input = screen.getByRole('textbox', { name: 'Повторы строки' })
   pointer(input, 'pointerdown', 11)
@@ -313,6 +313,42 @@ it('protected row and row inputs never fall through to exercise deletion', () =>
   expect(screen.queryByRole('button')).not.toBeInTheDocument()
   swipe('exercise', -90)
   expect(screen.getByRole('button', { name: 'Удалить' })).toBeVisible()
+})
+it('opt-in field swipe reveals only its row without focusing or deleting it', () => {
+  const { removeExercise, removeSet } = setupRows(false, true)
+  const input = screen.getByRole('textbox', { name: 'Повторы строки' })
+  expect(pointer(input, 'pointerdown', 11).defaultPrevented).toBe(true)
+  expect(input).not.toHaveFocus()
+  pointer(input, 'pointermove', 11, true, 100, 70)
+  pointer(input, 'pointerup', 11, true, 100, 70)
+  expect(screen.getByRole('button', { name: 'Удалить подход 2' })).toBeVisible()
+  expect(input).not.toHaveFocus()
+  expect(removeSet).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Удалить подход 2' }))
+  expect(removeSet).toHaveBeenCalledTimes(1)
+  expect(removeExercise).not.toHaveBeenCalled()
+})
+it('opt-in field tap retains selection while vertical and cancelled gestures never focus', () => {
+  setupRows(false, true)
+  const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Повторы строки' })
+  pointer(input, 'pointerdown', 11)
+  pointer(input, 'pointerup', 11)
+  expect(input).toHaveFocus()
+  expect([input.selectionStart, input.selectionEnd]).toEqual([0, 2])
+  input.setSelectionRange(1, 1)
+  expect(pointer(input, 'pointerdown', 12).defaultPrevented).toBe(false)
+  expect([input.selectionStart, input.selectionEnd]).toEqual([1, 1])
+  pointer(input, 'pointerup', 12)
+  input.blur()
+  pointer(input, 'pointerdown', 13)
+  pointer(input, 'pointermove', 13, true, 150)
+  pointer(input, 'pointerup', 13, true, 150)
+  expect(input).not.toHaveFocus()
+  pointer(input, 'pointerdown', 14)
+  pointer(input, 'pointercancel', 14)
+  pointer(input, 'pointerup', 14)
+  expect(input).not.toHaveFocus()
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
 })
 it('a new pointer on an editable field is not swallowed after a finished swipe', () => {
   setupRows()
