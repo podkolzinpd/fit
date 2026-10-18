@@ -225,7 +225,15 @@ non-editable дате, что блокировало следующий свай
 loss при передаче implicit capture корню: это больше не считается отменой. Root
 loss/cancel проверяются по pointerId, чужой старый pointer не отменяет новый жест.
 Приватные pointer JSON сохраняют воспроизведение; fake mouse не выдан за touch.
-Физический iPhone и OAuth не проверены. Финальные проверки/выпуск впереди.
+Физический iPhone и OAuth не проверены. Frozen3c39f2ef:4/4 unit,18/18 existing
+browser WebKit/Chromium375/390/430/1440 (включая third refusal и history/Day filters),
+private2/2 с настоящим Chromium CDP touch: оба направления, cancel, native vertical
+pan. Все ступени check на обновлённой базе passed: frontend2752/API1441+161skip,
+policy/calendar/hosting/build/startup. Отдельных browser cases/осей не добавлено.
+Первый real partitions отказ был гонкой самой диагностики: e2e-файл менялся между
+последовательными list-командами. Финальный source заморожен до запуска, union и
+protected digest/gates прошли без изменений. Полные logs/контуры/шрифты остаются
+приватными. Exact-head CI/merge/Cloud.ru/public readback/native — следующие гейты.
 
 ## Следующие PR
 
