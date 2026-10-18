@@ -77,9 +77,9 @@ OAuth не считать проверенными по синтетически
 
 - PR 1: #1688/main94552310 выпущен; mainCI39077893863/Cloud.ru39078700484 success, public207/207+health/compiled4closed2/native207/207 passed.
 - PR 2: #1690/main9ee5af25 полностью выпущен: PRCI39107082759/mainCI39108106161/Cloud.ru39108856277 success, public207/207+health/compiled4closed2/native207/207 sync/build/install/launch passed.
-- PR 3: #1691/main22d237e1 merged, PRCI39109269478 attempt2/mainCI39110267065/Android success; native207/207 и4closed2 passed; Cloud.ru39111035966 публикуется.
-- PR 4: публикация на main22d237e1, non-docs checked324c4194; его CI может идти параллельно проверке web3, но merge4 только после подтверждённого release3. Contact panel не объявляется исправленной.
-- PR 5: локальный751b956a, target10/regression44/fullcheck exit0; публикация по порядку. Разрешение владельца на все пять этапов сохраняется, ожидание очереди не завершает задачу.
+- PR 3: #1691/main22d237e1 полностью выпущен: PRCI39109269478 attempt2/mainCI39110267065/Cloud.ru39111035966 success; public207/207+health/frozen original pair/web-native4closed2/native207/207 launch passed.
+- PR 4: #1692/mainf87135dc merged после PRCI39111157234/Android39111157240 success; native207/207 и4closed2 passed, mainCI39112080639 идёт. Contact panel не объявляется исправленной.
+- PR 5: финальный PR на mainf87135dc, non-docs checkedc960d699 (fresh52/fullcheck2738). CI5 параллелен main/release4, но merge5 только после подтверждённого web4 readback. Итоговые факты — YAFIT-621; ожидание не завершает задачу.
 
 ## Сверка и приёмка PR 1
 
@@ -255,3 +255,54 @@ Cloud.ru39111035966 в работе. Для сокращения ожидани�
 верификации web3; merge4 запрещён до success/public readback предыдущего релиза.
 До status-docs non-docs PR4 совпали с checked324c4194; прежние browser20/fullcheck
 2738 относятся к тем же runtime/tests. Новый exact-head CI4 обязателен.
+
+## Сверка и приёмка PR 5
+
+База локального PR4 `83e61268`, существующие Coachmark/storage/portal остаются.
+До изменений свежий390px WebKit показал одновременно три подсказки в Day и
+три в Live. В Day все три anchor имели нулевую высоту; в Live третий был
+невидимой строкой жестов. Before DOM/log и after-снимки сохранены приватно. Ошибки частного
+диагностического harness (portal не является потомком anchor, загрузочные main)
+исправлены в harness, не в продукте. Исходный сценарий затем прошёл2/2.
+
+| Пункт | Уже есть | Изменение | Статус |
+| --- | --- | --- | --- |
+| Day | Действующий Coachmark/seen-id рабочей области | Один прежний id у видимого details «Фильтры»; два старых дублирующих hint не выводятся только fixed2 | Target10/10 пройден |
+| Live | Один существующий Coachmark вокруг таймера | Короткое общее описание; убраны два coach-only дубля, кнопка завершения и жесты сохранены | Target10/10, regression44/44 пройдены |
+| Закрытие | Per-user localStorage, Escape/Понятно, портал и позиционирование | Не менялись; reload и изоляция учётки проверяются существующими cases | Target10/10 пройден |
+| Расписание | Выпущенный PR1686 | Не переделывается; прежний первый guide и view/filter приёмка сохранены | Без новой реализации |
+
+Новых id/тура/библиотеки/принудительного повторного показа нет. Клиентские
+подсказки и третий тренер прежние. Целевые проверки расширяют существующие
+cases, не добавляют матрицу и не меняют654-case inventory или таймауты.
+
+WebKit/Chromium target10/10 и regression44/44:375/390/430/1440, обе плотности,
+сохранение rest/deadline, поля/повтор, outside trainer/client. На первом target
+ошибочно ожидался status-select в Day без активного фильтра: его там раньше не
+было, runtime не расширялся; ожидание исправлено на реальную checkbox, текст
+подсказки уточнён. Первый full check остановил ESLint из-за any в новых test
+assertions; заменены на unknown/Array.isArray, гейты не ослаблялись.
+Исходный SVG validator:9attachments/7unique/6612elements/784rectangles,
+measurementErrors0, original hashes и linked source components совпали.
+Финальный стабильный full check exit0: frontend2733/2733, API1426+160standardDBskip,
+infra320/hosting169/calendar12/fonts2/build/startup. Inventory654 и все прежние
+гейты прошли без обхода. Изначальная приёмка была до1689; после его штатного выпуска
+PR3–5 перенесены на новую основу. CI/merge/release/native ещё впереди; локальная
+готовность не выдаётся за опубликованные изменения.
+
+На основе PR4 324c4194 (через PR3 ce4c6b29/PR2 aa40ecd1/main210ee7b6)
+workout runtime идентичен первоначальному751b956a. Fresh target+regression52/52
+WebKit/Chromium: единичный guide, per-user dismissal/reload, обе плотности,
+поля/отдых/заметки/сохранение плана и outside. Fresh fullcheck exit0:
+frontend2738/API1426+160standardDBskip/infra320/hosting169/calendar12/fonts2/
+build/startup. Inventory656 только от1689, гейт не менялся. Все пять этапов
+подготовлены; штатные CI/merge/production/native ещё выполняются по порядку.
+
+Финальный перенос на PR4/mainf87135dc сохранил non-docs checkedc960d699 без
+изменений. PR4#1692/PRCI39111157234 и Android39111157240 success, native4
+sync/build/install/launch207/207/4closed2 passed. При открытии PR5 mainCI4
+39112080639 ещё выполняется; CI5 идёт параллельно, merge5 ждёт CI/main/release4
+и точного public readback. Три первых этапа полностью выпущены, включая web3
+39111035966/public207/207+health/frozen-pair; реальный OAuth/physical не заявляются.
+Геометрия/заметки/жесты/сохранение плана не менялись при переносах. Сохраняются
+согласованные размеры Live54/48 и plan48, исходные SVG, четыре closed guards.
