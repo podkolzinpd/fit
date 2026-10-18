@@ -1,0 +1,29 @@
+/* Compact review reuses the existing editor, ordering and Lime token contracts. */
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review { gap: 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-review-head { margin: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .workout-header-contract { padding-bottom: 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-review-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 12px; min-height: 44px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-review-meta > .link { min-height: 44px; padding: 8px 0; color: var(--lime-text); font-size: 12px; white-space: nowrap; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-review-meta .reorder-mode { flex-wrap: wrap; gap: 8px; font-size: 12px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise-list { padding: 0 16px; border: 0; border-radius: var(--lime-radius-card); background: var(--lime-surface); }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-review-block { margin: 0; padding: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise {
+  margin: 0;
+  padding: 12px 0;
+  gap: 0;
+  border: 0;
+  border-bottom: 1px solid var(--lime-divider);
+  border-radius: 0;
+  background: transparent;
+}
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-review-block:last-child .today-exercise:last-child { border-bottom: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise .exercise-thumbnail { width: 48px; height: 48px; flex: 0 0 48px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise-title { gap: 8px; margin: 0; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .workout-exercise-header-main { gap: 12px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise-title strong { font-size: 16px; line-height: 20px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise-title .overflow-trigger { width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise > p { margin: 4px 0 0 60px; font-size: 14px; line-height: 20px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-exercise-editor > summary { margin-left: 60px; min-height: 44px; padding: 10px 0; font-size: 14px; line-height: 20px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-prep-field { margin-top: 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-prep-field small { font-size: 12px; line-height: 16px; }
+.phone-frame.fit-client-lime.workout-create-edit-identity .client-lime-review .today-review-next { margin-top: 16px; }
