@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -797,6 +797,38 @@ describe('ExercisePicker', () => {
     expect(onClose).not.toHaveBeenCalled()
     finish!()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Добавить 0' })).toBeDisabled())
+  })
+
+  for (const fail of [false, true]) it(`keeps acknowledged items visible while Live is adding, then ${fail ? 'shows only remaining retries' : 'clears after success'}`, async () => {
+    let finish: ((error?: Error) => void) | undefined
+    function LiveSelection() {
+      const [draft, setDraft] = useState<ExerciseSnapshot[]>([])
+      return <ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} multiple showEmptySelection keepSelectionWhileAdding
+        selectionDraft={draft} onSelectionDraftChange={setDraft} onClose={vi.fn()}
+        onPickMany={(chosen) => {
+          setDraft(chosen.slice(1))
+          return new Promise<void>((resolve, reject) => { finish = (error) => error ? reject(error) : resolve() })
+        }} />
+    }
+    render(<LiveSelection />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: /Выбрать: Жим лёжа/ }))
+    await user.click(screen.getByRole('button', { name: 'Добавить 2' }))
+    expect(screen.getByRole('button', { name: 'Добавляем…' })).toBeDisabled()
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Убрать: Присед/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Убрать: Жим лёжа/ })).toHaveAttribute('aria-pressed', 'true')
+    await act(async () => { finish!(fail ? new Error('network') : undefined); await Promise.resolve() })
+    if (fail) {
+      expect(screen.getByRole('alert')).toHaveTextContent('повторите добавление остальных')
+      expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Выбрать: Присед/ })).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByRole('button', { name: /Убрать: Жим лёжа/ })).toHaveAttribute('aria-pressed', 'true')
+    } else {
+      expect(screen.getByText('Выбрано: 0')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Добавить 0' })).toBeDisabled()
+    }
   })
 
   it('selects several exercises and adds them in one action', async () => {
