@@ -42,9 +42,9 @@ PR: подготовительного PR0 и клиентских PR1–4. Пр
 | L1 | Каталог: общий заголовок, оригинальная иконка фильтра, облегчённые строки, все текущие действия | YAFIT-629 closed/fixed: PR1707/main638 опубликован,public16/16/native207 |
 | L2 | Фильтры: отдельная компоновка без повторного заголовка каталога, все существующие параметры и возврат к результатам | YAFIT-629 closed/fixed: PR1707/main638 опубликован,public16/16/native207 |
 | C2 | Поле «Название упражнения» видно в фильтрах, ввод/параметры сохраняются, фокус не закрывает окно | YAFIT-629 closed/fixed: PR1707/main638 опубликован,public16/16/native207 |
-| L3 | История: согласованное оформление календаря, вкладки/маршруты/данные сохранены | PR1708 слит/main6a7d5bae; публикация/main CI/native выполняются |
-| C1 | Одинаковые видимые круги36×36 и независимый hit target44×44; selected/today без конфликтующих рамок, цифра и метка корректны | PR1708 слит/main6a7d5bae; публикация/main CI/native выполняются |
-| L4 | Проверка плана: компактная композиция, порядок рядом с метаданными, простое меню, все действия доступны | YAFIT-631: реализовано локально, перенесено наmain6a7; freshCI/выпуск продолжаются |
+| L3 | История: согласованное оформление календаря, вкладки/маршруты/данные сохранены | YAFIT-630 closed/fixed: PR1708/main6a7 опубликован;public8/8/native207 |
+| C1 | Одинаковые видимые круги36×36 и независимый hit target44×44; selected/today без конфликтующих рамок, цифра и метка корректны | YAFIT-630 closed/fixed: PR1708/main6a7 опубликован;public8/8/native207 |
+| L4 | Проверка плана: компактная композиция, порядок рядом с метаданными, простое меню, все действия доступны | PR1709/main006ebbc7 слит после green CI; native207 passed, main CI/publication продолжаются |
 | L5 | Сохранение: строки даты/времени и информационная строка без лишней вложенности, оба режима записи | YAFIT-632: локальная приёмка passed; fresh CI/публикация впереди |
 | L6 | Клиентское окно даты/времени на существующем компоненте; подтверждение/отмена не повреждают форму | YAFIT-632: локальная приёмка passed; fresh CI/публикация впереди |
 | L7 | Редактирование: те же дата/начало/окончание; заметка, подготовка и сохранение плана сохранены | YAFIT-632: локальная приёмка passed; fresh CI/публикация впереди |
@@ -384,3 +384,57 @@ WebKit: шестинедельный август и короткий февра
 переиспользует прежнее смещение над клавиатурой. Общий AppViewport не менялся;
 регрессия встроена в существующий light390 editor case без новых test IDs.
 После этой CSS-правки12/12 WebKit/Chromium, lint/typecheck/build passed.
+
+
+PR4 перед выпуском19.10: сохранение и редактор повторно открыты на
+опубликованном93f449c6 в WebKit390/dark, синтетические данные. Прежние native
+поля/вложенная плашка ещё видны; baseline сохранён в
+`outputs/client-lime-adoption-implementation/pr4/release-preflight/`.
+Все четыре ветки перенесены на93f449c6 с сохранением новых тренерских правок.
+Файлы четырёх клиентских CSS, FitLimeDatePicker и ClientWorkoutDateControl
+побайтно совпадают с уже проверенным0575b47b: визуальный вариант не переписан.
+
+После переноса: PR1 повторно63unit/16browser/typecheck passed. На совокупном
+коде PR1–4 WebKit/Chromium29passed/1 CDP-only skip: календарь, reparse/reload,
+сохранение/редактор, перенос и постепенная клавиатура. При OFF отдельно2/2
+подтвердили сохранность редактирования подтверждённых значений. Inventory
+сверен с93f449c6: все655 имён и порядок одинаковы, split guards8/8 passed;
+protected baseline не менялся. Доказательства: stack-rebase-ui/,
+stack-rebase-browser.log,stack-live-off.log,rebase-inventory-map.json в
+`outputs/client-lime-adoption-implementation/` корня проекта.
+
+Физический iPhone не проверен. Клиентские PR ещё не слиты/опубликованы.
+Для выпуска перед1705/1706 нужен ответ на запрос изменения очереди; соседний
+чат завершился ошибкой недоступности модели, его незавершённые PR не удалялись
+и не объявлялись неактивными.
+
+
+Финальный совокупный check на базе93f449c6 после обновления всех четырёх
+веток завершён exit0:2758 frontend tests/coverage,1441 API tests
+(161 стандартных DB-skip), lint/typecheck/types/iOS permissions/media/
+infra320/calendar12/hosting169 и production build/startup. Лог:
+`outputs/client-lime-adoption-implementation/stack-rebase-full-check.log`.
+PR0 фактически выпущен93f449c6: PRCI39170964486/mainCI39171978854/
+Cloud.ru39172281381/public207/207; YAFIT-628 closed/fixed.
+UI1707–1710 ещё не слиты и не опубликованы. После разрешения очереди каждый
+получит свежий CI на окончательной базе, public readback и необходимый native.
+
+### PR4: актуальная основа последнего этапа, 19.10.2026
+
+PR1709 слит в main006ebbc7 после exact-head CI39219406385 attempt2 и
+Android39219406380 success. Повторялись только failed gates: unchanged mono
+profile Retry прошёл встроенный повтор, строгий fail-on-flaky не ослаблялся.
+PR1708 полностью выпущен: mainCI39218079373/Cloud.ru39219323557 success,
+official207/207; календарь8/8 WebKit+Chromium/light/dark390/430, native207
+build/install/launch passed; YAFIT-630 closed/fixed.
+
+Перед PR4 опубликованный save снова открыт в WebKit390/dark с синтетическими
+данными на6a7d5bae: отдельные native-поля и вложенная плашка ещё существуют.
+Screenshot/provenance: outputs/client-lime-adoption-implementation/pr4/main6a-preflight/.
+Разница006ebbc7 затрагивает review, но не save/editor/picker; это сверено с Git.
+Три собственных коммита PR1710 перенесены на006ebbc7; FitLimeDatePicker,
+ClientWorkoutDateControl, SheetHeader и final viewport CSS побайтно идентичны
+проверенному e42d4e1d. Прежние calendar/query/setters/права переиспользуются,
+новая механика записи не вводится. Native006ebbc7 уже собран/установлен/запущен,
+207files matched. Новый exact-head CI4 обязателен; merge4 только после
+main CI/trusted public/UI3. Физический iPhone не проверен.
