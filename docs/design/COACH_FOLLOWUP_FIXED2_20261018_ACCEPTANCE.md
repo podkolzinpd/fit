@@ -166,7 +166,16 @@ Primary прежний — «Новая тренировка», не добав�
 After375/390/430: summary x/y/width неизменны, скриншоты открыты и проверены.
 Первый вариант grid на details дал наложение native details-content: обнаружен
 визуально и заменён обычным потоком; не принят как готовый по одним координатам.
-Физический телефон/пользовательский вход не проверены. Полные проверки и выпуск впереди.
+Физический телефон/пользовательский вход не проверены. Локально28/28 существующих
+browser WebKit/Chromium: four-width fixed2 editor/guide/filter geometry,
+calendar/list/fortnight/selected date, history status/untimed и text/voice/manual
+return-to-filtered-calendar;320px outside-cohort сохранён. Private geometry3/3.
+Все ступени check: coverage2747/API1426+160standardDBskip/policies/build/startup
+passed; sandbox port EPERM повторён с разрешённым тестовым портом. Широкий
+диагностический запуск не принят как green: обнаружил старые unit10px и no-input
+blur assumptions; они исправлены в родительских PR1701/1702, их отдельные проверки
+8/8 и4/4 passed. После обновления parent от mainb38b76e1 нужен exact-head CI.
+Merge/Cloud.ru/readback/native впереди; новых browser cases/осей нет.
 
 ## Следующие PR
 
