@@ -1,3 +1,6 @@
+> **ARCHIVED / MONOCHROME.** Исторический документ. Не является текущим планом или стилем Lime.
+> Текущий контракт: [FIT_LIME_DESIGN_CODE](FIT_LIME_DESIGN_CODE.md). Исходный текст ниже сохранён для истории.
+
 # Gate 7 — Trainer Client Create/Edit
 
 Статус: **production preview** — PR #665, commit `1ab79b71`, deployment

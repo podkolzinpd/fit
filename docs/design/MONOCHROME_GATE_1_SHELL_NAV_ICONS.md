@@ -1,3 +1,6 @@
+> **ARCHIVED / MONOCHROME.** Исторический документ. Не является текущим планом или стилем Lime.
+> Текущий контракт: [FIT_LIME_DESIGN_CODE](FIT_LIME_DESIGN_CODE.md). Исходный текст ниже сохранён для истории.
+
 # Fit — Gate 1, задача 7: shell, navigation и icons
 
 Статус: **принято в Foundation UI Identity v1**.

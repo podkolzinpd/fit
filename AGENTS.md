@@ -48,7 +48,10 @@ repositories/queries, media, Assistant, SpeechKit, push, backend routing или
 Это обязательный preflight, а не рекомендация. Нельзя начинать UI-код или
 генерировать макет до его выполнения. Нельзя создавать локальную айдентику,
 палитру, типографическую шкалу, набор радиусов, библиотеку компонентов или
-вариант навигации, параллельные Foundation UI Identity v1. Если существующая
+вариант навигации, параллельные действующей утверждённой айдентике Fit. Для
+Lime обязателен `docs/design/FIT_LIME_DESIGN_CODE.md`; исторические Foundation /
+Monochrome документы не назначают палитру, шрифт и геометрию новых Lime-экранов.
+Если существующая
 система не покрывает реальную продуктовую потребность, сначала зафиксируйте
 конкретный gap и вынесите расширение общего контракта на отдельное решение.
 
@@ -404,10 +407,12 @@ code must be reduced to Fit tokens, accessibility conventions, and actual need.
 
 ## DO NOT INVENT A NEW DESIGN LANGUAGE
 
-Use the approved MONOCHROME PERFORMANCE direction from `docs/UI_IDENTITY.md`:
-warm graphite `#242426` in light, background `#111214` and milk `#F1EDE6` in
-dark, Onest, compact typography and semantic color only for real state or data.
-Apply it through the existing semantic token and component system. Preserve
+For active Lime scopes, use `docs/design/FIT_LIME_DESIGN_CODE.md`, its SVG source
+catalog and the existing Lime components/tokens. Inspect the actual role, route
+and gate first. Historical Monochrome colors, typography and radii are not the
+target for new Lime work; they remain archived evidence. Outside Lime preserve
+the current working contour unless its migration is explicitly authorized.
+Apply the selected contour through the existing token and component system. Preserve
 the current screen's information architecture and behavior using
 `docs/UI_DESIGN_SYSTEM.md` and real baselines. Do not create feature-local
 palettes, a second token system, Tailwind, an unrelated font, a new brand color,
