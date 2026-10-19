@@ -15,6 +15,7 @@ test('skips the browser runtime for explicit non-browser scopes', () => {
     'services/speechkit-relay/cloudru-server.mjs',
     'services/speechkit-relay/cloudru-server.test.mjs',
     '.github/workflows/inspect-cloudru-operations.yml',
+    '.github/workflows/maintain-cloudru-runner-disk.yml',
     '.github/workflows/deploy-yandex-stage.yml',
     '.github/workflows/deploy-cloudru-stage.yml',
     '.github/workflows/migrate-yandex-database-to-cloudru.yml',

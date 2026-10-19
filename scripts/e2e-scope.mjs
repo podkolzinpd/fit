@@ -9,6 +9,7 @@ const SAFE_WITHOUT_E2E = [
   /^services\/api\//,
   /^services\/speechkit-relay\//,
   /^\.github\/workflows\/inspect-cloudru-operations\.yml$/,
+  /^\.github\/workflows\/maintain-cloudru-runner-disk\.yml$/,
   /^\.github\/workflows\/deploy-cloudru-stage\.yml$/,
   /^\.github\/workflows\/migrate-yandex-(?:database|media)-to-cloudru\.yml$/,
   /^\.github\/workflows\/transfer-yandex-sql-to-cloudru\.yml$/,
