@@ -530,6 +530,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(`
         do $$
         begin
+          perform pg_advisory_xact_lock(193635, 1);
           if not exists (select 1 from pg_roles where rolname = 'fit_api') then
             create role fit_api login password '${RUNTIME_PASSWORD}';
           else

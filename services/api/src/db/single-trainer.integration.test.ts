@@ -28,6 +28,14 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
       throw new Error('local_fit_actor_test_database_required')
     }
     admin = new Pool({ connectionString: url.href, max: 1 })
+    // A new PostgreSQL cluster has no runtime role yet. Do not depend on the
+    // other test file starting first; both bootstraps take this same local lock.
+    await admin.query(`do $$ begin
+      perform pg_advisory_xact_lock(193635, 1);
+      if not exists (select 1 from pg_roles where rolname = 'fit_api') then
+        create role fit_api login;
+      end if;
+    end $$;`)
     await admin.query(`create database ${database}`)
     created = true
     url.pathname = `/${database}`
