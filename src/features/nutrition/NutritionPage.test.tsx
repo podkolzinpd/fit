@@ -85,7 +85,7 @@ it('normalizes a single free-text product before searching and keeps its grams',
   expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('300')
 })
 
-it('shows barcode camera entry only for the server-authorized barcode cohort', async () => {
+it('shows barcode camera entry only for the server-authorized barcode cohort', () => {
   fixture.barcodeEnabled = true
   setup()
   expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeVisible()
