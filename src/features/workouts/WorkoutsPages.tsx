@@ -43,7 +43,8 @@ import {
   addDays, currentTimeInTimeZone, dayOfMonth, daysBetween, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
   type LocalDate,
 } from '../../shared/local-date'
-import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
+import { AsyncView, Coachmark, EmptyState, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
+import { getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { ExerciseImage, ExercisePicker, ExerciseTechniqueSheet, ExerciseThumbnail, findCatalogExercise, hasExerciseAnimation, hasExerciseMedia, hasExerciseTechnique, recentExercisesForClient, useExerciseCatalog } from '../exercises'
 import { clientWorkoutAuthorLabel, ClientPicker, ClientWorkoutHistoryCalendar, useWorkoutHistoryCalendar, type ClientPickerSelection } from '../clients'
 import { hasWorkoutBackEntry, safeWorkoutReturnTo, useWorkoutBack, workoutListFallback, type WorkoutNavigationState } from './workout-navigation'
@@ -1499,7 +1500,7 @@ export function WorkoutFormPage() {
           ? [...exercises, ...selectedDrafts]
           : [
               ...exercises.slice(0, replaceIndex),
-              ...selectedDrafts.map((draft) => source.data?.status === 'done' ? { ...draft, clearFact: true } : draft),
+              ...selectedDrafts.map((draft) => workoutId && source.data?.status === 'done' ? { ...draft, clearFact: true } : draft),
               ...exercises.slice(replaceIndex + 1),
             ]
         setDraftExercises(next.map((exercise, position) => ({ ...exercise, position })))
@@ -1511,11 +1512,11 @@ export function WorkoutFormPage() {
     rememberPreviousResults(results)
     const previous = results.get(selected.ref)
     if (replaceIndex !== null) {
-      const clearFact = source.data?.status === 'done'
+      const clearFact = Boolean(workoutId) && source.data?.status === 'done'
       // Если в истории этого упражнения ещё нет, сохраняем привычное поведение
       // замены: при одинаковом типе остаются уже набранные значения формы.
-      // В завершённой тренировке значения нельзя приписать новому упражнению:
-      // замена всегда начинается без факта.
+      // Только при редактировании завершённой тренировки нельзя приписать факт
+      // новому упражнению. Копия — уже новый план, а не правка старого факта.
       const draft = !clearFact && previous ? exerciseDraft(selected, replaceIndex, previous) : undefined
       setDraftExercises(replaceExercise(exercises, replaceIndex, selected, draft, { clearFact }))
     }
@@ -1627,6 +1628,9 @@ export function WorkoutFormPage() {
     if (pilotCalendarReturnTo) navigate(pilotCalendarReturnTo, { replace: true })
     else goBack()
   }
+  const saveErrorMessage = (getRequestDiagnostics(mutation.error)?.status ?? 0) >= 500
+    ? 'Не удалось сохранить тренировку. Введённые данные остались в форме. Попробуйте сохранить ещё раз.'
+    : undefined
   return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
@@ -1647,7 +1651,7 @@ export function WorkoutFormPage() {
           <CoachPlanTimeField referencePolish={refinedPlan} name="startTime" label="Начало" value={startTime} onChange={(next, form) => { setStartTime(next); setFormTimeError(null); (form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} />
           <CoachPlanTimeField referencePolish={refinedPlan} name="endTime" label="Окончание" value={endTime} onChange={(next) => { setEndTime(next); setShowEndTime(Boolean(next)); setFormTimeError(null) }} />
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
-          {refinedPlan && mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
+          {refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
         </div> : <>
         {limePlan && <Field label="Название тренировки"><input name="title" value={title} maxLength={120} placeholder="Название тренировки" onChange={(event) => setTitle(event.target.value)} /></Field>}
         {clientMode
@@ -1703,7 +1707,7 @@ export function WorkoutFormPage() {
           showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} safePlanInput={safePlanInput} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
-      {!refinedPlan && mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
+      {!refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
       {limePlan && !coachReference && params.get('entry') === 'quick' && <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(entryDate)} · {startTime ? `${startTime}${endTime ? `–${endTime}` : ''}` : 'Без времени'} · {workoutTrainingFormatLabel(trainingFormat ?? 'self')}</p>}
       {!coachReference && <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>}
       </CoachFormControls>

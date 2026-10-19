@@ -58,7 +58,9 @@ export function diagnosticsForResponse(
     ...base,
     stage,
     status: response.status,
-    ...(errorCode === undefined ? {} : { errorCode }),
+    // A generic body (service_unavailable) must not hide the sanitized SQLSTATE
+    // supplied by the API. The UI error code and support diagnostics are distinct.
+    ...(base.errorCode !== undefined || errorCode === undefined ? {} : { errorCode }),
   }
 }
 

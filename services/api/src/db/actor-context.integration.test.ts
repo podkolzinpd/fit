@@ -5231,6 +5231,57 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       }
     })
 
+    // Two distinct payloads: copying unchanged and replacing a strength exercise.
+    it.each([false, true])('persists copied plan and replay without changing its source (replacement=%s)', async (replacement) => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const db = runtimePool
+      const pilotHash = 'd'.repeat(64)
+      const savedIds: string[] = []
+      await ownerPool.query(`insert into app_private.fit_lime_pilot_allowlist
+        (login_sha256, profile_id, enabled) values ($1, $2, true)`, [pilotHash, ACTOR_ID])
+      const source: PlannedWorkoutDraft = {
+        id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'План',
+        workoutDate: '2026-10-19', startTime: '10:00', endTime: '11:00',
+        notes: null, trainingFormat: 'with_trainer', exercises: [
+          { ref: 'walking', name: 'Ходьба на дорожке', muscleGroup: 'cardio', inputKind: 'distance' as const,
+            sets: [{ position: 0, weightKg: null, reps: null, durationMin: null, durationSec: 690, distanceKm: 1, rpe: null }] },
+          { ref: 'wrist-curl', name: 'Сгибание кистей с гантелями', muscleGroup: 'arms', inputKind: 'strength' as const,
+            sets: Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 12.5, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null })) },
+          { ref: 'cable-crunch', name: 'Скручивания в блоке', muscleGroup: 'core', inputKind: 'strength' as const,
+            sets: Array.from({ length: 2 }, (_, position) => ({ position, weightKg: 26, reps: 20, durationMin: null, durationSec: null, distanceKm: null, rpe: null })) },
+        ].map((exercise, position) => ({ ...exercise, position, source: 'system', customExerciseId: null,
+          blockId: randomUUID(), blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, trainerComment: null })),
+      }
+      try {
+        const original = await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, source, null))
+        savedIds.push(original.id)
+        const before = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        const sourceBefore = before.workouts.find(item => item.id === original.id)!
+        const copy: PlannedWorkoutDraft = { ...source, requestId: randomUUID(),
+          exercises: source.exercises.map((exercise, position) => ({ ...exercise, blockId: randomUUID(),
+            ...(replacement && position === 1 ? { ref: 'bench-press', name: 'Жим штанги лёжа' } : {}) })) }
+        const created = await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, copy, null))
+        savedIds.push(created.id)
+        expect(await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, copy, null))).toEqual(created)
+        const after = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        expect(after.workouts.find(item => item.id === original.id)).toEqual(sourceBefore)
+        const savedCopy = after.workouts.find(item => item.id === created.id)!
+        expect(savedCopy).toMatchObject({ status: 'planned', trainingFormat: 'with_trainer', exercises: [
+          { ref: 'walking', sets: [{ plan: { durationSec: 690, distanceKm: 1 } }] },
+          { ref: replacement ? 'bench-press' : 'wrist-curl', sets: Array.from({ length: 3 }, () => ({ plan: { weightKg: 12.5, reps: 10 } })) },
+          { ref: 'cable-crunch', sets: Array.from({ length: 2 }, () => ({ plan: { weightKg: 26, reps: 20 } })) },
+        ] })
+        expect(savedCopy.exercises.map(item => item.id)).not.toEqual(sourceBefore.exercises.map(item => item.id))
+        const receipts = await ownerPool.query<{ count: number }>('select count(*)::int as count from app_private.lime_plan_create_requests where actor_id=$1 and request_id=$2', [ACTOR_ID, copy.requestId])
+        expect(receipts.rows).toEqual([{ count: 1 }])
+        await expect(withActorTransaction(db, OUTSIDE_TRAINER_ID, client => savePlannedWorkout(client, copy, null))).rejects.toMatchObject({ failure: 'forbidden' })
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [savedIds])
+        await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])
+      }
+    })
+
     it('saves planned aggregates atomically with versions and actor attribution', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
