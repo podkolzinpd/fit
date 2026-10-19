@@ -31,6 +31,7 @@ test('skips the browser runtime for explicit non-browser scopes', () => {
     'scripts/ci-workflow.test.mjs',
     'scripts/domain-change-push-workflow.test.mjs',
     'scripts/cloudru-media-migration-workflow.test.mjs',
+    'scripts/cloudru-stabilization-workflows.test.mjs',
     'scripts/deploy-yandex-serverless-revision.mjs',
     'scripts/deploy-yandex-serverless-revision.test.mjs',
     'scripts/deploy-yandex-stage-workflow.mjs',
