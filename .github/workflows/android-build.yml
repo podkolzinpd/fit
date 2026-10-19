@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   assemble:
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/codex/android-ota'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,9 +43,11 @@ jobs:
           java-version: '21'
       - run: npm ci
       - run: npm run android:sync:local
-      - run: ./gradlew assembleDebug
+      - run: node scripts/generate-android-ota-native-fixtures.mjs
+      - run: ./gradlew testDebugUnitTest assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'workflow_dispatch'
         with:
           name: fit-android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk

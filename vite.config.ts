@@ -1,9 +1,11 @@
+import { androidOtaPolicy } from './scripts/android-ota-contract.mjs'
 import { fileURLToPath } from 'node:url'
 import { isLocalLegacyBuild, assertNativeFrontendModules } from './src/app/composition-build-boundary'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => ({
+  define: { __FIT_ANDROID_OTA_POLICY__: JSON.stringify(androidOtaPolicy()) },
   resolve: { alias: {
     '#fit/local-auth': fileURLToPath(new URL(isLocalLegacyBuild(mode)
       ? './src/app/local-auth-composition.ts'
@@ -19,6 +21,11 @@ export default defineConfig(({ mode }) => ({
     name: 'fit-native-composition-boundary',
     apply: 'build',
     generateBundle(_options, bundle) {
+      const policy = androidOtaPolicy()
+      this.emitFile({ type: 'asset', fileName: 'android-ota-build.json', source: JSON.stringify({
+        abi: policy.abi, enabled: policy.enabled, sourceCommit: process.env.FIT_SOURCE_COMMIT ?? '',
+        apiBaseUrl: process.env.VITE_YANDEX_API_BASE_URL ?? '',
+      }) })
       if (isLocalLegacyBuild(mode)) return
       assertNativeFrontendModules(Object.values(bundle).flatMap((item) => item.type === 'chunk' ? Object.keys(item.modules) : []))
     },

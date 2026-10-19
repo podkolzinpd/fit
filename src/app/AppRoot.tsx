@@ -1,3 +1,4 @@
+import { NativeUpdateLifecycle } from '../native/NativeUpdateLifecycle'
 import { App } from './App'
 import { AppErrorBoundary } from './error-boundary'
 import { isMaintenanceModeEnabled } from './feature-flags'
@@ -16,6 +17,7 @@ export function AppRoot() {
         <AuthProvider>
           <DataBackendProvider>
             <App />
+            <NativeUpdateLifecycle />
           </DataBackendProvider>
         </AuthProvider>
       </YandexAppSessionProvider>
