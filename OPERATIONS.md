@@ -4,6 +4,8 @@
 
 `scripts/e2e-scope.mjs` определяет frontend/browser scope по полному diff PR.
 Ручная просьба в промпте, метка PR или bypass-флаг не нужны и не разрешают skip.
+Documentation-only — только Markdown: SVG в `docs/design` импортируются
+напрямую из TS/CSS. Assets и неизвестные data-файлы не пропускают frontend.
 Для проверенных documentation/API-only/operations-only путей пропускаются
 frontend typecheck/build/coverage, frontend Terraform и браузерные матрицы.
 Общие lint, policy/hosting-контракты, API и PostgreSQL остаются обязательными.

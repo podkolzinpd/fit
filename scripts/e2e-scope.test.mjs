@@ -78,6 +78,19 @@ test('runs E2E defensively when a diff contains no paths', () => {
   assert.equal(requiresE2E([]), true)
 })
 
+test('docs assets and data are frontend inputs, not prose-only changes', () => {
+  for (const path of [
+    'docs/design/figma-20261002/assets/plus.svg',
+    'docs/design/figma-20261008/assets/coach-rest.svg',
+    'docs/design/achievement-art-source/regularity.png',
+    'docs/design/build-input.json',
+  ]) {
+    const scope = selectCheckScope([path, 'docs/CURRENT_STATE.md'], { eventName: 'pull_request' })
+    assert.equal(scope.frontendRequired, true, path)
+    assert.equal(scope.browserRequired, true, path)
+  }
+})
+
 test('PR frontend and browser scope share the same reviewed policy and per-file reasons', () => {
   const paths = ['docs/CURRENT_STATE.md', '.github/workflows/inspect-cloudru-operations.yml', 'scripts/cloudru-stabilization-workflows.test.mjs']
   const scope = selectCheckScope(paths, { eventName: 'pull_request' })

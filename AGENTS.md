@@ -230,6 +230,9 @@ Monochrome документы не назначают палитру, шрифт
   пропустить frontend build/unit, visual/browser/WebView и пересборку native.
   Сами изменённые серверные и служебные контракты всё равно проверяются;
   repository lint/policy, API и PostgreSQL gates не отключаются.
+- Documentation-only здесь означает Markdown, не всю папку `docs/`:
+  `docs/design` содержит SVG и другие inputs frontend. Изменение таких assets
+  или неизвестных data-файлов требует frontend/browser проверки.
 - Auth, routing, API-контракты, frontend/native, общие зависимости, CI-конфиги,
   неизвестные пути, diff со frontend/shared и недоступная история требуют полного
   набора. Не добавляйте blanket skip для `scripts/`, workflows или всей infra:

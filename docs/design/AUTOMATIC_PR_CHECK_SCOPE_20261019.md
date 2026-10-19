@@ -98,6 +98,17 @@ media2/calendar12/lint/typecheck/build; целевые69/69, YAML/dependencies �
 diff-check passed. Базы не сбрасывались, production не менялся. Следующий
 полный CI проверяет объединённый head; старый красный CI не обходится.
 
+Финальная dependency-сверка выявила реальные TS/CSS imports из
+`docs/design/figma-20261002/assets` и `figma-20261008/assets` в shared icons,
+LiveRestTimer и стилях. Documentation whitelist сужен до Markdown; SVG/PNG/JSON
+и неизвестные docs inputs full, отдельный regression test сохраняет границу.
+Это необходимое исправление безопасности skip; продуктовые assets не меняются.
+После исправления полный `npm run check` завершился exit0: frontend2772,
+API1447+183 штатных localDBskip, SpeechKit7, infra329, hosting170, media2,
+calendar12, lint/typecheck/build. Отдельный infra policy run также329/329;
+финальный CI запускается после публикации этой правки, старые отменённые
+прогоны не являются её приёмкой.
+
 Изолированный Git fixture сначала ошибался из-за отсутствующей папки после
 checkout и попадания output/summary в fixture commit; изоляция исправлена,
 повтор69/69 passed, продуктовые assertions не менялись. Эти промежуточные ошибки

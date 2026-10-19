@@ -4,7 +4,8 @@ import { pathToFileURL } from 'node:url'
 
 // Explicitly reviewed paths, not blanket scripts/workflows/infra exclusions.
 const DOCUMENTATION = [
-  /^docs\//,
+  // docs/design also owns SVGs imported by TS/CSS; only prose is skippable.
+  /^docs\/.+\.md$/,
   /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
   /^\.github\/(?:copilot-instructions\.md|pull_request_template\.md)$/,
 ]
