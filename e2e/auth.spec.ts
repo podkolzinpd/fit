@@ -745,6 +745,29 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await page.getByRole('button', { name: 'История замеров · 2' }).click()
   await expect(page.getByRole('paragraph').filter({ hasText: '59,5 кг' })).toBeVisible()
 
+  // Change coaches sequentially. The former fixture invited a second active
+  // trainer and therefore contradicted the single-coach product contract.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/me/profile')
+  const trainerActions = page.getByRole('button', { name: 'Действия с тренером Тренер', exact: true })
+  await expect(trainerActions).toBeVisible()
+  await trainerActions.click()
+  await page.getByRole('menuitem', { name: 'Отключить' }).click()
+  const disconnectDialog = page.getByRole('alertdialog')
+  await expect(disconnectDialog).toContainText('Ваш аккаунт, история тренировок, замеры и цели сохранятся.')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await disconnectDialog.getByRole('button', { name: 'Отмена' }).click()
+
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/me/settings')
+  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
+  await page.goto('/me/profile')
+  await trainerActions.click()
+  await page.getByRole('menuitem', { name: 'Отключить' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
+  await expect(page.getByRole('status')).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранены.')
+  await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
+
   await page.goto('/me/profile')
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
@@ -768,18 +791,17 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page.getByText('Карточка клиента и доступная история тренировок готовы к работе.')).toBeVisible()
   await page.getByRole('button', { name: 'Открыть карточку' }).click()
   await expect(page).toHaveURL(/\/clients\/[0-9a-f-]+$/)
-  const leaveButton = page.getByRole('button', { name: 'Покинуть пространство клиента' })
+  const leaveButton = page.getByRole('button', { name: 'Отключиться от спортсмена' })
   await expect(leaveButton).toBeVisible()
   await page.keyboard.press('Escape')
   await leaveButton.click()
   // In-app confirm (useConfirm) вместо нативного window.confirm — подтверждаем
   // кнопкой в диалоге.
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Покинуть' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключиться' }).click()
   await expect(page).toHaveURL(/\/clients$/)
 
-  // После выхода второго тренера клиент отключает оставшегося тренера. На узком светлом экране
-  // сначала проверяем понятное подтверждение, затем на 430 px в тёмной теме —
-  // сам результат. Самостоятельная история остаётся доступна.
+  // The second coach also disconnects. There is no remaining hidden coach;
+  // the athlete still owns the complete history from both earlier phases.
   await page.goto('/profile')
   await logoutFromProfile(page)
   await page.getByLabel('Email').fill(clientEmail)
@@ -788,24 +810,8 @@ test('trainer invitation links a client account', async ({ page }, testInfo) => 
   await expect(page).toHaveURL(/\/me$/)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/me/profile')
-  const remainingTrainerActions = page.getByRole('button', { name: 'Действия с тренером Тренер', exact: true })
-  await expect(remainingTrainerActions).toBeVisible()
-  await remainingTrainerActions.click()
-  await page.getByRole('menuitem', { name: 'Отключить' }).click()
-  const disconnectDialog = page.getByRole('alertdialog')
-  await expect(disconnectDialog).toContainText('Ваш аккаунт, история тренировок, замеры и цели сохранятся.')
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await disconnectDialog.getByRole('button', { name: 'Отмена' }).click()
-
-  await page.setViewportSize({ width: 430, height: 932 })
-  await page.goto('/me/settings')
-  await page.getByRole('switch', { name: 'Тёмная тема' }).check()
-  await page.goto('/me/profile')
-  await remainingTrainerActions.click()
-  await page.getByRole('menuitem', { name: 'Отключить' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
-  await expect(page.getByRole('status')).toContainText('Ваш аккаунт, тренировки, замеры и цели сохранены.')
   await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Действия с тренером / })).toHaveCount(0)
   await expect(page.getByText('Основной тренер')).toHaveCount(0)
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
