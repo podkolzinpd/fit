@@ -125,8 +125,8 @@ light retry-click (кнопка исчезла, retry passed, fail-on-flaky шт
 auth/nutrition набор локально40/40 passed за54s с fail-on-flaky; весь1440-case
 WebKit passed за9.7s. Новые copy-cases в CI прошли. Запущен штатный rerun failed,
 затем остановлен как устаревший: main обновился после #1709 на006ebbc7.
-Ветка перенесена без конфликтов, inventory8/8 passed. Финальный push/CI
-ожидает предыдущий активный #1710, чтобы не выпускать устаревшую базу.
+Ветка перенесена без конфликтов, inventory8/8 passed. На этапе базы006ebbc7
+финальный push/CI ожидал предыдущий активный #1710.
 
 На source5da4563d (base006ebbc7/#1709) повторный полный local npm run check
 также завершился exit0:2758 frontend/1441API+163standardDBskip, policy321,
@@ -134,3 +134,21 @@ calendar12, hosting169, build/startup/fonts2/2. Runtime/test-timeout/coverage
 thresholds прежние. Владелец отдельно спросил дождаться full-local — этот
 гейт выполнен на обеих проверенных базах. Предложено только изменение очереди
 перед задержанным #1710; без прямого ответа приоритет не меняется.
+
+## Финальный pre-merge snapshot — base114b3e9f
+
+#1710 слит штатно, изменение очереди не понадобилось. Ветка перенесена на
+main114b3e9f без конфликтов. Новые ClientWorkoutDateControl/clientLime-ветви
+сохранены; правка копирования/ошибки не меняет дату и время. Релевантные
+обновления UI_DESIGN_SYSTEM/FIT_LIME_DESIGN_CODE прочитаны.
+На runtime source19bb8388 повторены browser4/4 (15.8s), PostgreSQL17 4/4,
+inventory8/8 и один responsive error-state390/430/1440 (assertions passed,
+три снимка осмотрены). Дополнительных постоянных случаев не добавлялось.
+Два предыдущих full-local exit0 остаются доказательствами своих баз; новый
+полный npm run check на114b выполняется на момент этого документационного
+коммита. Merge запрещён до его exit0 И успешного свежего CI текущего head.
+CI допускается параллельно общему локальному прогону; никакие проверки
+не заменяют друг друга. Результаты последующего CI/full-local и выпуска
+фиксируются в PR/YAFIT, без бесконечных docs-only перезапусков CI.
+Production/API-журнал/fresh native sync-build-install-launch ещё не выполнены.
+Причина конкретного пользовательского5xx не установлена.
