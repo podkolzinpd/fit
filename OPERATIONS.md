@@ -215,7 +215,11 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   Podman relay на127.0.0.1:18084, текущая app-session проверяется через loopback
   API до открытия SpeechKit stream. `/stt` проксируется через существующий API
   HTTPS. Никаких DB/media credentials в relay; ограничения payload/auth buffer,
-  срока соединения и ресурсов, без текста/токенов в логах. До promotion —
+  срока соединения и ресурсов. Верхнеуровневые статусы сессий пишутся только в
+  stdout unit `fit-speechkit.service` (читать: `journalctl -u fit-speechkit.service`),
+  не в БД и не в Cloud Logging. Это не потоковый лог: максимум события подключения,
+  открытия upstream, его результата и закрытия; журнал ограничен 120 записями в минуту.
+  В событиях нет текста, аудио, токенов, IP-адресов или заголовков. До promotion —
   synthetic upstream и unauthenticated guard. После success установить
   CLOUDRU_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt и пересобрать web/native.
 - `Configure Cloud.ru fresh background delivery`: только существующая VAPID
