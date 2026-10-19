@@ -165,8 +165,8 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   // active membership. Явно подключаем тренера: именно membership является
   // источником истины для обещания доставить новый отзыв.
   await page.goto('/me/profile')
-  await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeVisible()
   if (!await page.getByText('Тест Тренер', { exact: true }).count()) {
+    await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeVisible()
     await page.getByRole('button', { name: 'Пригласить тренера' }).click()
     const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
     const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]

@@ -297,6 +297,10 @@ test('invitation links reject the wrong role and revoked code without consuming 
   await expect(page.getByText(/Клиент приглашения/)).toBeVisible()
 
   await page.goto('/me/profile')
+  await page.getByRole('button', { name: 'Действия с тренером Тренер приглашения' }).click()
+  await page.getByRole('menuitem', { name: 'Отключить' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отключить' }).click()
+  await expect(page.getByRole('heading', { name: 'Найдите своего тренера' })).toBeVisible()
   await page.getByRole('button', { name: 'Пригласить тренера' }).click()
   const trainerCode = (await page.getByText(/Код для тренера:/).textContent())?.match(/[A-F0-9]{12}/)?.[0]
   expect(trainerCode).toBeTruthy()

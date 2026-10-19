@@ -6025,7 +6025,7 @@ for (const withTrainer of [false, true]) for (const theme of ['light', 'dark']) 
     await page.goto('/me/profile')
     const connections = page.getByRole('region', { name: 'Связь с тренером' })
     if (withTrainer) {
-      await expect(connections).toContainText('Основной тренер')
+      await expect(connections).toContainText('Ваш тренер')
       await connections.getByRole('button', { name: 'Действия с тренером Тестовый тренер' }).click()
       await page.getByRole('menuitem', { name: 'Отключить' }).click()
       await expect(page.getByRole('alertdialog')).toBeVisible()
