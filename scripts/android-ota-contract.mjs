@@ -12,7 +12,9 @@ export function androidOtaPolicy(root = projectRoot, env = process.env) {
   // covers native plugins under unknown scopes; a dependency upgrade needs an APK.
   const nativeDependencies = Object.entries(lock.packages).filter(([name]) => name.startsWith('node_modules/'))
     .map(([name, entry]) => [name, entry.version, entry.integrity]).sort()
-  const hash = createHash('sha256').update(JSON.stringify(nativeDependencies))
+  // Root declarations matter too: promoting an already locked package to a
+  // direct plugin dependency can change Capacitor registration without a version change.
+  const hash = createHash('sha256').update(JSON.stringify([lock.packages[''] ?? {}, nativeDependencies]))
   // Generated sync outputs and machine-specific files cannot describe an ABI.
   const excluded = new Set(['build', '.gradle', '.kotlin', '.cxx', '.externalNativeBuild', '.idea', 'capacitor-cordova-android-plugins'])
   const generated = new Set(['local.properties', 'capacitor.settings.gradle', 'capacitor.build.gradle'])
