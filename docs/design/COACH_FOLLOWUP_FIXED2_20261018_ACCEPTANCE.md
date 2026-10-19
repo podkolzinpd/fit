@@ -275,10 +275,35 @@ source tree. Это локальное подтверждение, не заяв
 2. Live-композиция/анимация, PR1701 — production и native readback пройдены.
 3. Свайп/перетягивание, PR1702 — production и native readback пройдены.
 4. Непрерывная шапка, PR1703 — production и native readback пройдены.
-5. Недельное расписание, PR1705 — merged mainb5d54357, выпуск проверяется.
+5. Недельное расписание, PR1705 — production и native readback пройдены, mainb5d54357.
 6. День/направленный переход, PR1706 — реализован на main5, fresh CI и выпуск впереди;
    удаление фильтра Day из1697 сохранено.
 
 Это snapshot до публикации последнего PR, не заявление о шести готовых выкатках.
 Проверенные факты завершения каждого выпуска, checklist и итоговый статус —
 [YAFIT-626](https://tracker.yandex.ru/YAFIT-626).
+
+### PR6: разнесение проверок без ослабления приёмки
+
+Fresh CI39199981392 остановил два WebKit full-editor случая на общем лимите30s:
+trace показывает последовательное выполнение предыдущих действий и timeout на
+поздних goto, а не неверное значение. Проверки Day forward/back, вертикали,
+смены года, history Back, reduced motion и отсутствия Day-фильтра перенесены
+из четырёх viewport editor-кейсов в существующий navigation/history case.
+Его исходный legacy fixture и assertions сохранены; fixed2 использует отдельную
+страницу того же контекста без повторного init script на старой странице.
+Во всех четырёх editor-размерах остаются дата, weekday и отсутствие overflow.
+Имена, проекты и количество cases неизменны: inventory2034/2034 идентичен.
+Timeouts, retries, protected digest и CI gates не менялись. Динамические
+проверки больше не умножаются на размеры; responsive приёмка остаётся.
+Локальный повтор:12/12 WebKit/Chromium passed. Editor12.2–15.1s в WebKit,
+navigation7.3s; Chromium editor11.6–14.9s, navigation8.6s. Полный check и
+fresh remote CI остаются обязательными перед merge; это не замена CI.
+
+Этап5 первоначально остановился до promotion из-за диска self-hosted runner.
+Штатная bounded retention освободила около6GiB старых воспроизводимых build
+каталогов; текущий/rollback, БД, media, volumes и backups не изменялись.
+Prune отказал для используемого image — принудительного удаления не было.
+Read-only inspection и прежний public smoke прошли, официальные API/frontend
+rerun затем успешно выпустили b5d54357:207/207 assets+health, frozen/compiled
+closed2 и native sync/build/install/launch прошли. Это не объявление выпуска6.
