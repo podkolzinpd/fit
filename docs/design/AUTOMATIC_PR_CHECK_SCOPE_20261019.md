@@ -72,6 +72,13 @@ scripts. CI test-файл использует прежний regex-style и п�
 job declarations/dependencies валидны. Protected Lime sources/policy/runner и
 Android workflow byte-identical main; inventory digest не менялся.
 
+После main2d12d7f5 (#1720) объединены конфликты только scope policy/tests;
+оба новых safe-пути сохранены, policy/tests byte-identical нашему проверенному
+f527d02c после удаления merge-дубля одного fixture path. Входящий disk workflow
+и его tests сохранены без изменения. Свежий combined target90/90 passed,
+YAML/dependencies и diff-check passed. SQL/runtime/dependencies main не менялись,
+повтор всей frontend/API сборки не требуется; полный CI нового head обязателен.
+
 Изолированный Git fixture сначала ошибался из-за отсутствующей папки после
 checkout и попадания output/summary в fixture commit; изоляция исправлена,
 повтор69/69 passed, продуктовые assertions не менялись. Эти промежуточные ошибки
