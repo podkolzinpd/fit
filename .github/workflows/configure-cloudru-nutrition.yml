@@ -81,6 +81,7 @@ jobs:
         env:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           FIT_NUTRITION_ACCOUNT_COHORT: ${{ secrets.FIT_NUTRITION_ACCOUNT_COHORT }}
+          FIT_NUTRITION_BARCODE_LOGIN_HASH: ${{ secrets.FIT_NUTRITION_BARCODE_LOGIN_HASH }}
         run: |
           set -euo pipefail
           owner="/opt/fit/secrets/nutrition-audit-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
