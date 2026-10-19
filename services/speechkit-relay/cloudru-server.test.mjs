@@ -94,3 +94,34 @@ test('an oversized unauthenticated frame closes only its socket and leaves the r
   const response = await fetch(url.replace('ws:', 'http:').replace('/stt', '/health'))
   assert.equal(response.status, 200)
 })
+
+test('emits bounded request lifecycle diagnostics without audio, transcript or session data', async t => {
+  const stream = new SyntheticStream()
+  const events = []
+  let time = 1_000
+  let markStreaming
+  let markClosed
+  const streaming = new Promise(resolve => { markStreaming = resolve })
+  const closedLogged = new Promise(resolve => { markClosed = resolve })
+  const url = await relay(t, { authenticate: async () => true, createStream: () => stream,
+    log: event => { events.push(event); if (event.status === 'streaming') markStreaming(); if (event.status === 'closed') markClosed() }, now: () => time })
+  const socket = new WebSocket(url)
+  t.after(() => socket.terminate())
+  await once(socket, 'open')
+  socket.send(JSON.stringify({ type: 'config', sessionToken: token }))
+  await streaming
+  socket.send(Buffer.alloc(64))
+  stream.emit('data', { chunks: [{ final: false, alternatives: [{ text: 'секретная расшифровка' }] }] })
+  socket.send(JSON.stringify({ type: 'stop' }))
+  time = 1_025
+  socket.close()
+  await once(socket, 'close')
+  await closedLogged
+
+  assert.deepEqual(events.map(event => event.status), ['connected', 'streaming', 'upstream_done', 'closed'])
+  const closed = events.at(-1)
+  assert.deepEqual(closed, { event: 'cloudru_speech_session', sessionId: 1, status: 'closed', stage: 'stopping',
+    outcome: 'client_stop', closeCode: 1005, durationMs: 25, audioBytes: 64, partialResults: 1, finalResults: 0 })
+  assert.equal(JSON.stringify(events).includes('секретная расшифровка'), false)
+  assert.equal(JSON.stringify(events).includes(token), false)
+})

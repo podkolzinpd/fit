@@ -11,6 +11,8 @@ Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20
 UMask=0077
+LogRateLimitIntervalSec=1min
+LogRateLimitBurst=120
 
 [Install]
 WantedBy=multi-user.target
