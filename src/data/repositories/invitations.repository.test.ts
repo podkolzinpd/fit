@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const queries = vi.hoisted(() => ({
   claimLink: vi.fn(),
   createShare: vi.fn(),
-  disconnectTrainer: vi.fn(),
+  removeTrainer: vi.fn(),
   previewLink: vi.fn(),
   reconnect: vi.fn(),
 }))
@@ -11,39 +11,22 @@ vi.mock('../queries/invitations.queries', () => ({ invitationQueries: queries })
 
 import { invitationsRepository } from './invitations.repository'
 
-describe('invitationsRepository.disconnectTrainer', () => {
-  beforeEach(() => queries.disconnectTrainer.mockReset())
+describe('invitationsRepository.removeTrainer', () => {
+  beforeEach(() => queries.removeTrainer.mockReset())
 
-  it('returns the atomic disconnect result', async () => {
-    queries.disconnectTrainer.mockResolvedValue({
-      data: { clientId: 'client-1', trainerId: 'trainer-1', status: 'disconnected' },
-      error: null,
-    })
-
-    await expect(invitationsRepository.disconnectTrainer('client-1')).resolves.toEqual({
-      clientId: 'client-1', trainerId: 'trainer-1', status: 'disconnected',
-    })
-    expect(queries.disconnectTrainer).toHaveBeenCalledWith('client-1')
-  })
-
-  it('treats an already disconnected relationship as a successful result', async () => {
-    queries.disconnectTrainer.mockResolvedValue({
-      data: { clientId: 'client-1', status: 'already_disconnected' },
-      error: null,
-    })
-
-    await expect(invitationsRepository.disconnectTrainer('client-1')).resolves.toEqual({
-      clientId: 'client-1', trainerId: null, status: 'already_disconnected',
-    })
+  it('uses the explicit selected trainer command rather than a membership-only disconnect', async () => {
+    queries.removeTrainer.mockResolvedValue({ data: null, error: null })
+    await expect(invitationsRepository.removeTrainer('client-1', 'trainer-1')).resolves.toBeUndefined()
+    expect(queries.removeTrainer).toHaveBeenCalledWith('client-1', 'trainer-1')
   })
 
   it('maps a legacy migration conflict without exposing database details', async () => {
-    queries.disconnectTrainer.mockResolvedValue({
+    queries.removeTrainer.mockResolvedValue({
       data: null,
       error: { code: 'PT409', message: 'client_requires_safe_migration' },
     })
 
-    await expect(invitationsRepository.disconnectTrainer('client-1')).rejects.toMatchObject({
+    await expect(invitationsRepository.removeTrainer('client-1', 'trainer-1')).rejects.toMatchObject({
       code: 'client_requires_safe_migration',
       message: 'Сейчас отключить тренера безопасно не получилось. Ваши данные не изменены. Попробуйте позже или напишите в поддержку.',
     })

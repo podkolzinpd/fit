@@ -2126,6 +2126,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         return reply.code(422).send({ error: 'invalid_message' })
       }
       if (error instanceof PilotConnectionCommandError) {
+        if (error.failure === 'invitation_connection_ended') {
+          return reply.code(409).send({ error: error.failure })
+        }
+        if (error.failure === 'invitation_role_mismatch') {
+          return reply.code(403).send({ error: error.failure })
+        }
         if (error.failure === 'forbidden') {
           return reply.code(403).send({ error: 'action_not_allowed' })
         }

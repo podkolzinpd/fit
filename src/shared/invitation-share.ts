@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import type { InvitationLinkSource } from './domain'
 
 export function invitationShareUrl(
@@ -5,7 +6,7 @@ export function invitationShareUrl(
   source: InvitationLinkSource,
   origin = window.location.origin,
 ): string {
-  const url = new URL('/invite', origin)
+  const url = new URL('/invite', Capacitor.isNativePlatform() ? 'https://fit-training.ru' : origin)
   url.search = new URLSearchParams({ token, source }).toString()
   return url.toString()
 }

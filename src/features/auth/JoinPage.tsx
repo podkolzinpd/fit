@@ -25,7 +25,7 @@ export function JoinPage() {
   const isClient = actor?.role === 'client'
   const backPath = isClient ? '/me/profile' : '/clients'
   const requiresDisconnect = claim.error instanceof RepositoryError
-    && claim.error.code === 'trainer_disconnect_required'
+    && (claim.error.code === 'trainer_disconnect_required' || claim.error.code === 'trainer_switch_required')
 
   function connect(code: string) {
     const normalizedCode = code.trim().toUpperCase()
