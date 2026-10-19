@@ -5,6 +5,7 @@ import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { androidOtaPolicy } from './android-ota-contract.mjs'
+import { verifyAndroidApkCertificate } from './verify-android-apk-signature.mjs'
 import { signAndroidOtaManifest } from './package-android-ota.mjs'
 
 test('OTA is default-off; ABI is stable across generated sync outputs but changes for a native source', () => {
@@ -40,4 +41,13 @@ test('publisher signs the exact JSON bytes using standard RSA-SHA256, not a chec
   const payload = Buffer.from(envelope.payload, 'base64')
   assert.equal(verify('sha256', payload, publicKey, Buffer.from(envelope.signature, 'base64')), true)
   assert.equal(verify('sha256', Buffer.from('{"sequence":8}'), publicKey, Buffer.from(envelope.signature, 'base64')), false)
+})
+
+test('APK certificate verification accepts Build Tools signer labels and rejects another certificate', () => {
+  const expected = 'a'.repeat(64)
+  for (const label of ['Signer #1', 'V3.0 Signer']) {
+    assert.doesNotThrow(() => verifyAndroidApkCertificate(`${label}: certificate SHA-256 digest: ${expected}\n`, expected))
+  }
+  assert.throws(() => verifyAndroidApkCertificate(`V3.0 Signer: certificate SHA-256 digest: ${'b'.repeat(64)}\n`, expected))
+  assert.throws(() => verifyAndroidApkCertificate(`V3.0 Signer: public key SHA-256 digest: ${expected}\n`, expected))
 })

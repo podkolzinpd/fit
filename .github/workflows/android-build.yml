@@ -186,9 +186,8 @@ jobs:
           "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out ota-candidate/fit-1.1.0-ota-release.apk "$RUNNER_TEMP/fit-aligned.apk"
           echo "Verifying APK signature"
           "$signer" verify --verbose --print-certs ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/signature.txt
-          grep -i 'Signer #1 certificate SHA-256 digest:' ota-candidate/signature.txt
           echo "Checking original certificate"
-          grep -qi 'Signer #1 certificate SHA-256 digest: a933c356832d86e306408963056e3662094c3cd2cd7d779118dad86a79bb6978' ota-candidate/signature.txt
+          node scripts/verify-android-apk-signature.mjs ota-candidate/signature.txt a933c356832d86e306408963056e3662094c3cd2cd7d779118dad86a79bb6978
           echo "Checking 16KB alignment"
           "$tools_dir/zipalign" -c -P 16 4 ota-candidate/fit-1.1.0-ota-release.apk
           "$tools_dir/aapt" dump badging ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/package-info.txt
