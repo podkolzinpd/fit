@@ -20,6 +20,21 @@ function renderFields(onCommit = vi.fn()) {
 }
 
 describe('RunMetricsFields', () => {
+  it('plan input commits decimal distance and rowing rate while focused without rounding units', async () => {
+    const user = userEvent.setup()
+    const commit = vi.fn()
+    render(<RunMetricsFields reference planInput rowing idPrefix="plan-row" distanceKm={1.5} durationSec={60}
+      inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция" distanceUnitLabel="Единица дистанции" onCommit={commit} />)
+    const distance = screen.getByLabelText('Дистанция')
+    expect(distance).toHaveAttribute('autocomplete', 'off')
+    expect(screen.getByLabelText('Гребков в минуту')).toHaveAttribute('autocomplete', 'off')
+    await user.clear(distance)
+    await user.type(distance, '2,75')
+    expect(distance).toHaveFocus()
+    expect(commit).toHaveBeenLastCalledWith({ distanceKm: 2.75 })
+    await user.type(screen.getByLabelText('Гребков в минуту'), '24')
+    expect(commit).toHaveBeenLastCalledWith({ reps: 24 })
+  })
   it.each(['22.16', '22,16'])('preserves decimal kilometres entered as %s', async (value) => {
     const user = userEvent.setup()
     const commit = renderFields()
@@ -51,6 +66,7 @@ describe('RunMetricsFields', () => {
     expect(screen.getByRole('textbox', { name: 'Время: секунды' })).toHaveValue('40')
     expect(screen.getByLabelText('Дистанция')).toHaveValue('5.2')
     expect(screen.getByLabelText('Дистанция')).toHaveAttribute('placeholder', '0')
+    expect(screen.getByLabelText('Дистанция')).not.toHaveAttribute('autocomplete')
     expect(screen.getByLabelText('Единица дистанции')).toHaveValue('km')
     expect(screen.getByRole('option', { name: 'км' })).toHaveProperty('selected', true)
     expect(screen.getByText('Темп 5:42/км')).toBeInTheDocument()

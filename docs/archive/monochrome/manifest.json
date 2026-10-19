@@ -1,0 +1,244 @@
+{
+  "status": "historical-reference-only",
+  "createdOn": "2026-10-18",
+  "records": [
+    {
+      "source": "docs/UI_IDENTITY.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "27acca0679d5c317a0ffa76f0017380d8dde7da370cb55e33004a8ed207f2558",
+      "archive": "docs/archive/monochrome/UI_IDENTITY.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/UI_DESIGN_SYSTEM.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "74498aa3d91877b531f4e560f6b9cddc78298d787cd6636dfb17b2bbf4caced7",
+      "archive": "docs/archive/monochrome/UI_DESIGN_SYSTEM.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/UI_TASK_PROMPT.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "1f5999147a621639680dcb78711dc48ad55ff16c9a953ee408e396d26519ada1",
+      "archive": "docs/archive/monochrome/UI_TASK_PROMPT.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_CLIENT_PILOT_VISUAL_AUDIT.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "9404dc7915487053f77b595989cd8c17c9a2ee06b1dd7fe29c73b92e6876d00a",
+      "archive": "docs/design/MONOCHROME_CLIENT_PILOT_VISUAL_AUDIT.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_0_BASELINE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "369c7f92419ecc23dfc2cbc107f1054824017c6054ec6ea323a8fa18231cd981",
+      "archive": "docs/design/MONOCHROME_GATE_0_BASELINE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_1_ACTIONS_FORMS.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "7f7d9cec37300d0fc82312f1d62c237f5dc25214cf05c471ae61d58822c5d51f",
+      "archive": "docs/design/MONOCHROME_GATE_1_ACTIONS_FORMS.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_1_DARK_PALETTE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "13b15ecb93dc4b3401efe8241e443981dcb8ad0eec9d32b9586a46fc6585839a",
+      "archive": "docs/design/MONOCHROME_GATE_1_DARK_PALETTE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_1_LIGHT_PALETTE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "f13b3282066075b39a6747e9ac7acaa392f132a59dd453e105d426a346ed81cc",
+      "archive": "docs/design/MONOCHROME_GATE_1_LIGHT_PALETTE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_1_SHELL_NAV_ICONS.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "4118458cc90a03e20451ea2307b6b3f15c5cbcf344e934a7d12095518b9a7161",
+      "archive": "docs/design/MONOCHROME_GATE_1_SHELL_NAV_ICONS.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_1_SURFACES_STATES.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "5c71e7f787a1fd3abf85b9d21947407879741189a2dbd638904d65f7b1c9b010",
+      "archive": "docs/design/MONOCHROME_GATE_1_SURFACES_STATES.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_1_TYPOGRAPHY.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "bcaf5b6c6c50adb22c3ecbdf4bc8ead4c4710407e6e48b5d3e14450d3af96e2e",
+      "archive": "docs/design/MONOCHROME_GATE_1_TYPOGRAPHY.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_3_CLIENT_HOME.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "1dd26ac4e4a62c9b5ce9f27ab22541446d26a5d4398bfa4fe726c2607c45050f",
+      "archive": "docs/design/MONOCHROME_GATE_3_CLIENT_HOME.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_4_LIVE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "3cfea9da287614a49d36728bf5e9c2cc073765474d1a1f738d2d48d652c97ac0",
+      "archive": "docs/design/MONOCHROME_GATE_4_LIVE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_5_PROGRESS.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "cbceeb596a4bfa390bd7f8ad3fd24cbf7c25ad42498afb586a60a8f08b677586",
+      "archive": "docs/design/MONOCHROME_GATE_5_PROGRESS.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_6_CLIENT_CARD_EDIT.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "207e0cdffd8c49e65c8cf4545f0bf14937d92d5e0ed0f49e440d24cdd5c7e90c",
+      "archive": "docs/design/MONOCHROME_GATE_6_CLIENT_CARD_EDIT.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_6_CLIENT_PROFILE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "be0b4caa12b859dc4508ed2c1a3bce7e8a8faf51dfa911aeec613801655f1ac3",
+      "archive": "docs/design/MONOCHROME_GATE_6_CLIENT_PROFILE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_6_MY_WORKOUTS.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "c753e3062cc99fe8589bd51ade051ab7683435d633e7a7ebc41618c6553dbbd9",
+      "archive": "docs/design/MONOCHROME_GATE_6_MY_WORKOUTS.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_EXERCISE_CATALOG.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "b5738a1af29a7e96693b6d162b9afce7bfef608b58b239ec14100c2946a06cbc",
+      "archive": "docs/design/MONOCHROME_GATE_7_EXERCISE_CATALOG.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENTS.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "318f47a63949c8aac8e0822b66e0769562853fea071624c5d4be72a9359c4e59",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENTS.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENT_DETAIL.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "12489ed0b2ada125f03b50bfa4c29aaada4d291470b2d3b042af3b83f4f6561c",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENT_DETAIL.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENT_FORM.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "74a33d3986fd56442d53dfe22d39bed95e98af92e34ee21c005546c2f312529b",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENT_FORM.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENT_GOAL.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "7f5cf1d4a226b1cc387379ec2166a129c0f6d6bc80b361357a4c37daec26858d",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_CLIENT_GOAL.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_PROFILE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "c07940bc4fbbc2e66c628931bbe7bb553bcd675d33283733090541796019e451",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_PROFILE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_PROGRESS.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "e6f437ca43cc0f5d49a73e4e06f4a63335368a93514eac642b8c137bdddc1e8e",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_PROGRESS.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_SCHEDULE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "653a34ee0316fbb7d2efe8ea5b48c18ecf42ef034a573991b0f9dafc3259eb93",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_SCHEDULE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_TRAINER_TODAY.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "492a4b0094002aed2699ed4bee2e371c1be7b44a156421b1a407145464752786",
+      "archive": "docs/design/MONOCHROME_GATE_7_TRAINER_TODAY.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_WORKOUT_CREATE_EDIT.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "fa6a7ef0a1272b0a0995cc4f994f6441f006060f7e9835cad581d01a8cae117e",
+      "archive": "docs/design/MONOCHROME_GATE_7_WORKOUT_CREATE_EDIT.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_7_WORKOUT_DETAIL_HISTORY.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "9ad70d0ef143ad58fc8a75c3acdf476e4ae820e4fa4af5c6e7edb53cfbef31a5",
+      "archive": "docs/design/MONOCHROME_GATE_7_WORKOUT_DETAIL_HISTORY.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_8_ASSISTANT.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "14be54c21fe707757343bfa155cd43dd82d88903c5ab89ce063cb65b59c96f2b",
+      "archive": "docs/design/MONOCHROME_GATE_8_ASSISTANT.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_8_AUTH_FLOW.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "fe435952a04841ec6691b92628a6f8ad3ddfe57f2cb6582e7411e535efb2c9af",
+      "archive": "docs/design/MONOCHROME_GATE_8_AUTH_FLOW.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_9_ACCESSIBILITY.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "265a69aa9c2dd30e6b1eba2c66e2e3fe5c370bb78be494b46eac9da298229314",
+      "archive": "docs/design/MONOCHROME_GATE_9_ACCESSIBILITY.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_GATE_9_RELEASE.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "3dde505166903ad5c5f6c0c6f2a162a488fe1efaf8b81f404476366345516764",
+      "archive": "docs/design/MONOCHROME_GATE_9_RELEASE.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_PREVIEW_ROLLOUT.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "0b6e4ee232119c6f4ea1f5b11b57c841fd32b370c259616c2b281c48514c6828",
+      "archive": "docs/design/MONOCHROME_PREVIEW_ROLLOUT.md",
+      "contentPreservedAfterHeader": true
+    },
+    {
+      "source": "docs/design/MONOCHROME_REDESIGN_PLAN.md",
+      "sourceCommit": "b38b76e1d849385f5764ecc9d18b09fb04f8f8c7",
+      "sourceSha256": "a6d450e0719624bd40c846d7349948a1dd4894dec524edc918af06e8266f65ff",
+      "archive": "docs/design/MONOCHROME_REDESIGN_PLAN.md",
+      "contentPreservedAfterHeader": true
+    }
+  ]
+}

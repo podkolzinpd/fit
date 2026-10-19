@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { useState } from 'react'
 import type { WorkoutExerciseDraft } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { adjustWorkoutLoad, clearWorkoutLoad, roundToStep, WorkoutExerciseEditor } from './WorkoutExerciseEditor'
+import { CoachPlanTimeField } from './CoachPlanTimeField'
 
 const exercises: WorkoutExerciseDraft[] = [{
   source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
@@ -70,6 +71,28 @@ function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
 }
 
 describe('workout exercise editor rules', () => {
+  it('reference clock edits HH:mm and applies or cancels the existing time wheels', async () => {
+    function Clock() {
+      const [value, setValue] = useState('23:45')
+      return <form><CoachPlanTimeField referencePolish name="startTime" label="Начало" value={value} onChange={setValue} /></form>
+    }
+    const user = userEvent.setup()
+    render(<Clock />)
+    const input = screen.getByRole('textbox', { name: 'Начало' })
+    await user.clear(input); await user.type(input, '0730')
+    expect(input).toHaveValue('07:30')
+    await user.click(screen.getByRole('button', { name: 'Выбрать время: Начало' }))
+    screen.getByRole('listbox', { name: 'часы' }).focus()
+    await user.keyboard('[End]')
+    screen.getByRole('listbox', { name: 'минуты' }).focus()
+    await user.keyboard('[Home]')
+    await user.click(screen.getByRole('button', { name: 'Применить время' }))
+    expect(input).toHaveValue('23:00')
+    await user.click(screen.getByRole('button', { name: 'Выбрать время: Начало' }))
+    await user.keyboard('[Home][Escape]')
+    expect(input).toHaveValue('23:00')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
   it.each(['vital-barbell-hold-ex010', 'vital-gym-pro-r003-0006', 'vital-gym-pro-r289-1625'])('shows weight and duration for %s without repetitions', (ref) => {
     render(<LoadedEditorHarness exerciseRef={ref} inputKind="duration" />)
     expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(3.4)
@@ -419,5 +442,62 @@ describe('workout exercise editor rules', () => {
     await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
     await user.click(screen.getByRole('menuitem', { name: 'Создать суперсет со следующим' }))
     expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
+  })
+  it('uses the same adjacent superset action in the reference plan and keeps rounds and split', async () => {
+    function ReferencePlan() {
+      const [draft, setDraft] = useState<WorkoutExerciseDraft[]>([
+        exercises[0]!, { ...exercises[0]!, ref: 'bench', name: 'Жим', position: 1 },
+      ])
+      return <WorkoutExerciseEditor reference safePlanInput refinedPlan exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+    }
+    const user = userEvent.setup()
+    render(<ReferencePlan />)
+    expect(screen.getAllByLabelText('Вес, подход 1')[0]).toHaveAttribute('placeholder', '—')
+    expect(screen.getAllByLabelText('Повторы, подход 1')[0]).toHaveAttribute('placeholder', '—')
+    expect(screen.getAllByLabelText('Вес, подход 1')[0]).toHaveValue('52.5')
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Объединить со следующим в суперсет' }))
+    expect(screen.getByLabelText('Тип блока')).toHaveValue('set')
+    expect(screen.getByLabelText('Кругов')).toHaveValue(2)
+    expect(screen.getByText('Настройки блока')).toBeInTheDocument()
+    const lastRound = screen.getByRole('group', { name: 'Удалить круг 2: суперсет' })
+    lastRound.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить круг 2: суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByLabelText('Кругов')).toHaveValue(2)
+    lastRound.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить круг 2: суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Удалить круги' }))
+    await waitFor(() => expect(screen.getByLabelText('Кругов')).toHaveValue(1))
+    expect(screen.getByRole('group', { name: 'Удалить круг 1: суперсет' })).not.toHaveAttribute('tabindex')
+    expect(screen.getAllByLabelText('Вес, подход 1')[0]).toHaveValue('52.5')
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Разделить суперсет' }))
+    await user.click(screen.getByRole('button', { name: 'Разделить' }))
+    expect(screen.queryByLabelText('Тип блока')).not.toBeInTheDocument()
+  })
+  it('reference set deletion is explicit, cancellable and protects the last set without a cross', async () => {
+    function ReferencePlan() {
+      const [draft, setDraft] = useState(exercises)
+      return <WorkoutExerciseEditor reference exercises={draft} onChange={setDraft} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />
+    }
+    const user = userEvent.setup()
+    render(<ReferencePlan />)
+    expect(document.querySelector('.planned-set-remove')).toBeNull()
+    const second = screen.getByRole('group', { name: 'Удалить подход 2: Присед' })
+    second.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить подход 2: Присед' }))
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(screen.getByLabelText('Повторы, подход 2')).toHaveValue(8)
+    second.focus()
+    await user.keyboard('[Delete]')
+    await user.click(screen.getByRole('button', { name: 'Удалить подход 2: Присед' }))
+    await user.click(screen.getByRole('button', { name: 'Удалить подход' }))
+    expect(screen.queryByLabelText('Повторы, подход 2')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
+    expect(screen.getByRole('group', { name: 'Удалить подход 1: Присед' })).not.toHaveAttribute('tabindex')
   })
 })

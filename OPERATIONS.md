@@ -227,7 +227,11 @@ API проксирует в Cloud.ru с сохранением CORS Origin и с
   Podman relay на127.0.0.1:18084, текущая app-session проверяется через loopback
   API до открытия SpeechKit stream. `/stt` проксируется через существующий API
   HTTPS. Никаких DB/media credentials в relay; ограничения payload/auth buffer,
-  срока соединения и ресурсов, без текста/токенов в логах. До promotion —
+  срока соединения и ресурсов. Верхнеуровневые статусы сессий пишутся только в
+  stdout unit `fit-speechkit.service` (читать: `journalctl -u fit-speechkit.service`),
+  не в БД и не в Cloud Logging. Это не потоковый лог: максимум события подключения,
+  открытия upstream, его результата и закрытия; журнал ограничен 120 записями в минуту.
+  В событиях нет текста, аудио, токенов, IP-адресов или заголовков. До promotion —
   synthetic upstream и unauthenticated guard. После success установить
   CLOUDRU_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt и пересобрать web/native.
 - `Configure Cloud.ru fresh background delivery`: только существующая VAPID
@@ -676,6 +680,29 @@ workflow после read-only audit;
 production frontend или Supabase. Перенос на stage оплачивает только фактические
 холодные вызовы уже существующего Serverless Container; новый постоянно
 работающий или provisioned ресурс не создаётся.
+
+## DataLens после переезда на Cloud.ru
+
+Кластер `fit-stage-postgres` (`10.70.10.67:5432`, база `fit`) не имеет публичного
+адреса. Внешний DataLens (Yandex Cloud) читает схему `analytics` через ВМ
+`fit-stage-app`: nginx stream слушает `55432` и без разрыва TLS пробрасывает
+TCP к кластеру (`infra/cloudru/nginx-stream-datalens.conf`). Пускаются только
+адреса DataLens; тот же список нужен в группе безопасности публичного IP ВМ.
+
+1. Пользователь `fit_datalens` создаётся в консоли Cloud.ru (вкладка
+   «Пользователи» кластера); пароль хранится только у владельца и в DataLens.
+2. Миграция `000147` выдаёт ему только чтение схемы `analytics` (и права по
+   умолчанию на будущие представления); без роли ничего не делает.
+3. Проброс ставит ручной `configure-cloudru-datalens-proxy.yml`: сначала
+   `mode=inspect`, затем `mode=apply` с `confirmation=OPEN_DATALENS_DB_PROXY`.
+   Шаг проверяет доступность кластера, `nginx -t` с откатом и ответ PostgreSQL
+   на SSLRequest через проброс.
+4. В DataLens редактируется существующее подключение (не создаётся новое):
+   хост `87.242.117.210`, порт `55432`, база `fit`, пользователь
+   `fit_datalens`, TLS включён.
+
+Закрыть доступ: удалить `/etc/nginx/fit-stream.d/datalens.conf`, `nginx -t`,
+reload, и убрать правило `55432` из группы безопасности.
 
 ## Служебная плашка о восстановлении ИИ
 
@@ -1168,10 +1195,48 @@ frontend создаёт короткоживущие signed URL.
 ### Build-time флаги production frontend
 
 Текущий источник production-значений — шаг build в
-`.github/workflows/deploy-yandex-frontend.yml`: переменную нужно явно
+`.github/workflows/prepare-cloudru-frontend.yml`: переменную нужно явно
 передать в его `env` (из GitHub variable/secret либо фиксированного значения),
-а после изменения выполнить новый Yandex frontend deployment. Одной записи в
-Vercel Environment или GitHub Variables без подключения в workflow недостаточно.
+а после изменения выполнить штатный Cloud.ru frontend deployment с зелёного
+актуального main. Старый Yandex workflow — только сохранённый rollback-контур,
+не цель новых выпусков. Одной записи в GitHub Variables без подключения в build
+недостаточно.
+
+Закрытые исправления ввода плана (17.10) используют независимые переменные:
+
+Для этого выпуска они задаются в GitHub environment `fit-frontend-candidate`,
+где уже хранится действующий fixed2 reference-пилот. Сам reference allowlist
+не изменяется; новая функция получает собственные переменные с той же
+подтверждённой парой. Чтение только repository-level variables не показывает
+environment-level настройки сборки.
+
+```text
+VITE_COACH_PLAN_INPUT_ENABLED=true
+VITE_COACH_PLAN_INPUT_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>
+VITE_COACH_PLAN_LAYOUT_ENABLED=true
+VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>
+```
+
+Default-off: нужно точное `true`, ровно два разных ID и роль trainer с прежним
+coach-workout-reference доступом. Другая учётка, третий Lime-тренер, клиент,
+пустой/дублированный/расширенный список и старые сохранённые настройки не
+включают пилот. Это не авторизация данных; backend ownership/version прежние.
+План сохраняется явно. Локальный edit draft изолирован от копии и принимается
+только для той же версии плана; ошибка сети сохраняет ввод. Откат: флаг false
+и новый deployment, без изменения тренировочных данных. Состав прежнего fixed2
+не расширять. План приёмки — docs/design/COACH_PLAN_AND_LIVE_FIXED2_20261017.md.
+Флаг PLAN_LAYOUT независим от PLAN_INPUT и имеет те же default-off/exact2
+правила. Он меняет только плановый trainer UI: геометрию, подписи и доступность
+существующего RPE в суперсетах. Оба списка задаются самостоятельно в
+fit-frontend-candidate; переключатель плотности планировщику не добавлен.
+
+Два вида тренерского Live включаются независимо в том же environment:
+`VITE_COACH_LIVE_DENSITY_ENABLED=true` и
+`VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS=<profile-id-1>,<profile-id-2>`.
+Точное true/exact2/trainer/server Lime/прежний reference обязательны; пустая или
+расширенная конфигурация закрыта. Состав прежней пары не менять. Локальный
+per-user/device выбор original/compact сам по себе доступа не даёт. Kill switch:
+LIVE_DENSITY_ENABLED=false и deployment, без мутации данных/плана/таймера.
 
 Закрытый пилот Apple Health использует build-time переменные:
 

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isCoachLiveDensityEnabled } from '../../app/coach-workout-redesign'
+import { setCoachLiveDensity, useCoachLiveDensity } from '../../app/coach-live-density'
 import { setExercisePlanRestDisplay, useExercisePlanRestDisplay } from '../../app/exercise-plan-display'
 import { setLiveExerciseAnimation, useLiveExerciseAnimation } from '../../app/live-exercise-animation'
 import { setRpeDisplay, useRpeDisplay } from '../../app/rpe-display'
@@ -41,7 +43,8 @@ export function TrainerProfileSettingsPage() {
   const showRpe = useRpeDisplay(actor?.userId)
   const useTimeWheel = useWorkoutTimeWheel()
   const showExerciseRest = useExercisePlanRestDisplay(actor?.userId)
-  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId)
+  const showLiveExerciseAnimation = useLiveExerciseAnimation(actor?.userId, !isCoachLiveDensityEnabled(actor))
+  const liveDensity = useCoachLiveDensity(actor?.userId)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(false)
   const fitLimeSettings = isFitLimeShellRoute(actor, '/profile/settings', '')
@@ -51,11 +54,23 @@ export function TrainerProfileSettingsPage() {
   return <Page title="Настройки" back="/profile" swipeBack className="profile-page profile-settings-page settings-page">
     {fitLimeSettings && <SettingsSection title="Приложение"><FitLimeInstallSetting /></SettingsSection>}
     <SettingsSection title="Уведомления">
-      <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" detailed={fitLimeSettings} /></div>
+      <div className="profile-settings"><NotificationsSetting userId={actor.userId} role="trainer" /></div>
     </SettingsSection>
 
     <SettingsSection title="Тренировки">
       <div className="profile-settings">
+        {isCoachLiveDensityEnabled(actor) && <div className="schedule-density-setting coach-live-density-setting">
+          <div><strong>Вид Live-тренировки</strong><span>Выбор сохраняется для вашей учётки на этом устройстве.</span></div>
+          <div className="schedule-density-options" role="radiogroup" aria-label="Вид Live-тренировки">
+            {(['original', 'compact'] as const).map(value => <button key={value} type="button" role="radio" aria-checked={liveDensity === value} tabIndex={liveDensity === value ? 0 : -1} onClick={() => setCoachLiveDensity(actor.userId, value)} onKeyDown={event => {
+              if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
+              event.preventDefault()
+              const next = event.key === 'Home' ? 'original' : event.key === 'End' ? 'compact' : value === 'original' ? 'compact' : 'original'
+              setCoachLiveDensity(actor.userId, next)
+              event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button')[next === 'original' ? 0 : 1]?.focus()
+            }}>{value === 'original' ? 'Оригинальный' : 'Компактный'}</button>)}
+          </div>
+        </div>}
         <Switch label="Анимация упражнения" checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
         <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
         <Switch label="Показывать отдых" checked={showExerciseRest} onChange={(checked) => setExercisePlanRestDisplay(actor.userId, checked)} />

@@ -1,3 +1,4 @@
+import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { NutritionSummary } from '../nutrition'
@@ -863,6 +864,11 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const header = todayHeaderProps(clientMode, actor)
   const pageTitle = greetingHeaderPilotEnabled ? greeting : header.title
   const supplementalLoadError = catalog.error ?? (!clientMode ? trainerHome.error : null)
+  const reviewOrderControl = reviewBlocks.length > 1 ? reordering
+    ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div>
+    : <button type="button" className="link" onClick={() => { trackGoal('today_review_reorder_started'); setReordering(true) }}>Изменить порядок</button>
+    : null
+
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && !limePlanning && !(clientLime && requestedClientDraft) && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
     {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
@@ -949,13 +955,10 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!clientMode && !limePlanning && !textComposerOpen && <TrainerActiveWorkouts workouts={trainerHome.data} returnTo="/today" />}
       {!limePlanning && voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
-    </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}`}>
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : planOnly ? 'Сохраните план' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? `Распознано: ${items.length}` : undefined) : planOnly ? 'Проверьте клиента, дату и формат' : 'Выберите вариант и дату'} /></div>
+    </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}${clientLime && screen === 'review' ? ' client-lime-review' : ''}`}>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : planOnly ? 'Сохраните план' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? clientLime ? <div className="client-review-meta"><span>{`Распознано: ${items.length}`}</span>{reviewOrderControl}</div> : `Распознано: ${items.length}` : undefined) : planOnly ? 'Проверьте клиента, дату и формат' : 'Выберите вариант и дату'} /></div>
       {screen === 'review' && <>
-      {reviewBlocks.length > 1 && <div className="today-review-order-toolbar">{reordering
-        ? <div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div>
-        : <button type="button" className="link" onClick={() => { trackGoal('today_review_reorder_started'); setReordering(true) }}>Изменить порядок</button>}
-      </div>}
+      {!clientLime && reviewOrderControl && <div className="today-review-order-toolbar">{reviewOrderControl}</div>}
       {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.length > 1 && <><span className="block-badge">{block.items[0]!.item.structure?.blockPreset === 'interval' ? 'Интервалы' : block.items[0]!.item.structure?.blockPreset === 'circuit' ? 'Круговая' : 'Суперсет'}</span>{block.items[0]!.item.structure?.blockPreset === 'set' && !reordering && <div className="today-review-round-actions">
         <span>Кругов: {Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1)))}</span>
         <button type="button" className="secondary" disabled={Math.max(1, ...block.items.flatMap(({ item }) => item.sets.map((set) => set.position + 1))) >= 20} onClick={() => addReviewRound(block.id)}><AddActionLabel>Круг</AddActionLabel></button>
@@ -1050,7 +1053,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
           <p className="today-save-question">Как сохранить?</p>
           <div className="today-record-mode" role="group" aria-label="Как сохранить тренировку"><button type="button" className={recordMode === 'planned' ? 'active' : ''} aria-pressed={recordMode === 'planned'} onClick={() => { setRecordMode('planned'); setMissingCardioTime(null) }}>Запланировать</button><button type="button" className={recordMode === 'completed' ? 'active' : ''} aria-pressed={recordMode === 'completed'} onClick={() => setRecordMode('completed')}>Записать выполненную</button></div>
         </>}
-        <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label><label className="today-date-field"><span>{recordMode === 'planned' ? 'Время' : 'Время начала'}</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>
+        {clientLime ? <ClientWorkoutDateControl value={workoutDate} today={today} onChange={setWorkoutDate} start={startTime} onTimeChange={(next) => setStartTime(next.start)} startLabel={recordMode === 'planned' ? 'Время' : 'Время начала'} disabled={save.isPending} /> : <div className="split"><label className="today-date-field"><span>Дата</span><input aria-label="Дата тренировки" type="date" value={workoutDate} onChange={(event) => setWorkoutDate(localDate(event.target.value))} required /></label><label className="today-date-field"><span>{recordMode === 'planned' ? 'Время' : 'Время начала'}</span><input aria-label="Время тренировки" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></label></div>}
         {!clientMode && <div className="today-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
         {recordMode === 'completed' && <WorkoutActualDurationField value={actualDurationMinutes} onChange={setActualDurationMinutes} disabled={save.isPending} />}
         {recordMode === 'completed' && missingCardioTime
@@ -1070,7 +1073,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       </section></section>}
     </section>}
     {supplementalLoadError && <InlineRequestError error={supplementalLoadError} />}
-    {pickerOpen && <ExercisePicker catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
+    {pickerOpen && <ExercisePicker clientLime={isClientLimeEnabled(actor)} catalog={catalog} clientRecent={clientRecentExercises} initialMode={replaceIndex === null && items.length === 0 ? 'choose' : 'all'} techniqueActionLabel={replaceIndex === null ? 'Добавить упражнение' : 'Заменить упражнение'} onPick={(exercise, runningFormat) => pickExercises([exercise], runningFormat)} onPickMany={pickExercises} selectionDraft={replaceIndex === null ? pickerSelectionDraft : undefined} onSelectionDraftChange={replaceIndex === null ? setPickerSelectionDraft : undefined} multiple={replaceIndex === null} onClose={() => { setPickerOpen(false); setReplaceIndex(null); setPickerFromCompose(false) }} />}
     {confirmDialog}
   </Page>
 }

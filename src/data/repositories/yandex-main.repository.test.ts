@@ -412,7 +412,7 @@ describe('Yandex main repository', () => {
       operation: 'GET /v1/legal/acceptance',
       stage: 'api',
       status: 503,
-      errorCode: 'service_unavailable',
+      errorCode: 'database_unavailable',
       releaseId: 'release-42',
     })
   })
@@ -651,6 +651,29 @@ describe('Yandex main repository', () => {
     expect(url).toBe(`${apiBaseUrl}/v1/clients/me/quick`)
     expect(init.method).toBe('POST')
     expect(JSON.parse(String(init.body))).toEqual({ fullName: 'Антон' })
+  })
+
+  it.each(['invitation', 'archive'] as const)('drops a stale client snapshot after a failed %s command', async (command) => {
+    let version = 1
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const path = new URL(String(input)).pathname
+      if (path === '/v1/clients') return Promise.resolve(jsonResponse({ clients: [{
+        id: clientId, canArchive: true, hasAccount: command === 'invitation' && version > 1,
+        fullName: 'Synthetic client', canonicalFullName: 'Synthetic client', gender: null,
+        ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+        currentWeightKg: null, archivedAt: null, version, membershipVersion: 1,
+      }] }))
+      return Promise.resolve(jsonResponse({ error: command === 'invitation' ? 'action_not_allowed' : 'version_conflict' }, command === 'invitation' ? 403 : 409))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const previous = await repository.clients.get(clientId)
+    expect(previous.version).toBe(1)
+    version = 2
+    await expect(command === 'invitation'
+      ? repository.invitations.createShare(clientId, 'client')
+      : repository.clients.setArchived(previous, true)).rejects.toMatchObject({ code: command === 'invitation' ? 'PT403' : 'PT409' })
+    expect((await repository.clients.get(clientId)).version).toBe(2)
   })
 
   it('drops a stale client snapshot after a conflict and on realtime refresh', async () => {
@@ -1236,6 +1259,11 @@ describe('Yandex main repository', () => {
     vi.stubGlobal('Notification', { permission: 'granted' })
     expect(await repository.pushNotifications.status(actor.userId)).toEqual({ state: 'working', workoutReminderEnabled: true, workoutScheduledEnabled: false, chatMessageEnabled: true })
     await repository.pushNotifications.enable(actor.userId)
+    expect(fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname.startsWith('/v1/push-notifications/preferences/'))).toHaveLength(0)
+    await repository.pushNotifications.sendTestPush('https://push.example/pilot-device')
+    expect(fetchMock).toHaveBeenCalledWith(`${apiBaseUrl}/v1/push-notifications/test`, expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ endpoint: 'https://push.example/pilot-device' }),
+    }))
     await repository.pushNotifications.disable(actor.userId)
     const pushRequests = fetchMock.mock.calls.filter(([input]) =>
       new URL(String(input)).pathname.startsWith('/v1/push-notifications/'))

@@ -1081,10 +1081,12 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .push-status-text.warning { color: var(--warning-fg) }
 .push-status-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
 .push-status-actions .secondary, .push-status-actions .link { min-height: var(--control-height-standard) }
+.push-status-row .request-error-inline .request-diagnostic-copy { min-height: var(--control-height-standard) }
 .push-unavailable { margin:0; padding:14px; color:var(--muted); font-size:var(--type-caption-size); line-height:var(--leading-body) }
 .notification-channel-note { min-height:58px; display:grid; align-content:center; gap:2px; margin:0; padding:10px 14px; border-top:1px solid var(--border) }
 .notification-channel-note strong { color:var(--fg); font-size:var(--text-ui); font-weight:var(--weight-medium) }
 .notification-channel-note span { color:var(--muted); font-size:var(--type-caption-size) }
+.notification-reminder-note { min-height:0; padding-top:0; border-top:0 }
 .notification-settings-error { display:block; padding:0 14px 14px }
 
 .settings-page { align-content:start }
@@ -6761,7 +6763,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .request-error-inline .request-diagnostic-code strong { color:var(--fg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.02em; }
 .request-error-inline .request-diagnostic-copy { min-height:36px; display:inline-flex; align-items:center; gap:7px; margin:0; padding:7px 10px; border:1px solid var(--border); border-radius:10px; background:var(--surface-raised); color:var(--fg); font-size:12px; font-weight:500; box-shadow:none; }
 .request-error-inline .request-diagnostic-copy svg { width:16px; height:16px; }
-.workout-template-editor-page .request-diagnostic-copy,.workout-templates-page .request-diagnostic-copy { min-height:44px; }
+.workout-template-editor-page .request-diagnostic-copy,.workout-templates-page .request-diagnostic-copy,.workout-form-page .request-diagnostic-copy { min-height:44px; }
 .request-error-inline .request-diagnostic-status { min-height:17px; color:var(--muted); font-size:12px; }
 .today-start-page > .request-error-inline { margin-top:14px; }
 

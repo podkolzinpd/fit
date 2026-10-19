@@ -7,14 +7,15 @@ function storageKey(userId: string | undefined) {
   return userId ? `${STORAGE_PREFIX}${userId}` : undefined
 }
 
-/** Автопоказ техники в Live включён по умолчанию и хранится отдельно для пользователя. */
-export function getLiveExerciseAnimation(userId: string | undefined): boolean {
+/** Existing default stays on; a scoped caller may choose off until an explicit per-user choice. */
+export function getLiveExerciseAnimation(userId: string | undefined, defaultEnabled = true): boolean {
   const key = storageKey(userId)
-  if (typeof window === 'undefined' || !key) return true
+  if (typeof window === 'undefined' || !key) return defaultEnabled
   try {
-    return window.localStorage.getItem(key) !== 'false'
+    const stored = window.localStorage.getItem(key)
+    return stored === null ? defaultEnabled : stored !== 'false'
   } catch {
-    return true
+    return defaultEnabled
   }
 }
 
@@ -27,7 +28,7 @@ export function setLiveExerciseAnimation(userId: string, visible: boolean) {
   window.dispatchEvent(new Event(CHANGE_EVENT))
 }
 
-export function useLiveExerciseAnimation(userId: string | undefined) {
+export function useLiveExerciseAnimation(userId: string | undefined, defaultEnabled = true) {
   const key = storageKey(userId)
   const subscribe = useCallback((onStoreChange: () => void) => {
     if (typeof window === 'undefined') return () => undefined
@@ -41,6 +42,6 @@ export function useLiveExerciseAnimation(userId: string | undefined) {
       window.removeEventListener('storage', onStorage)
     }
   }, [key])
-  const getSnapshot = useCallback(() => getLiveExerciseAnimation(userId), [userId])
-  return useSyncExternalStore(subscribe, getSnapshot, () => true)
+  const getSnapshot = useCallback(() => getLiveExerciseAnimation(userId, defaultEnabled), [userId, defaultEnabled])
+  return useSyncExternalStore(subscribe, getSnapshot, () => defaultEnabled)
 }

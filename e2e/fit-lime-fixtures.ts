@@ -117,7 +117,7 @@ export function coachGestureWorkout(grouped = false, count = grouped ? 4 : 3): M
 }
 
 export async function revealCoachSetDelete(page: Page, row: Locator) {
-  const number = row.locator('.live-set-number')
+  const number = row.locator('.live-set-number, .planned-set-number')
   await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
   await expect.poll(() => number.evaluate(element => {
     const box = element.getBoundingClientRect()
@@ -127,6 +127,17 @@ export async function revealCoachSetDelete(page: Page, row: Locator) {
   const x = box.x + box.width / 2, y = box.y + box.height / 2
   await page.mouse.move(x, y); await page.mouse.down()
   await page.mouse.move(Math.max(1, x - 36), y, { steps: 6 }); await page.mouse.up()
+}
+
+export async function holdClientLiveCard(page: Page, blockId: string) {
+  const card = page.locator(`[data-workout-block="${blockId}"]`)
+  const anchor = card.locator('.circuit-head, .live-exercise-head, .workout-exercise-compact').first()
+  await anchor.evaluate(element => element.scrollIntoView({ block: 'center' }))
+  const box = (await card.boundingBox())!, header = (await anchor.boundingBox())!
+  await page.mouse.move(box.x + 8, header.y + 8)
+  await page.mouse.down()
+  await expect(card).toHaveClass(/dragging/)
+  return card
 }
 
 export async function expectContainedButtonText(button: Locator) {
@@ -211,9 +222,9 @@ export const workout = {
   exercises: [] as WorkoutExercise[],
 }
 
-export type MockWorkout = Omit<typeof workout, 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort' | 'clientComment' | 'feedbackSubmittedAt'> & { clientComment:string | null; feedbackSubmittedAt:string | null; sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
+export type MockWorkout = Omit<typeof workout, 'notes' | 'startTime' | 'endTime' | 'startedAt' | 'completedAt' | 'createdBy' | 'trainingFormat' | 'sessionRpe' | 'wellbeing' | 'discomfort' | 'clientComment' | 'feedbackSubmittedAt'> & { notes: string | null; clientComment:string | null; feedbackSubmittedAt:string | null; sessionRpe?: number | null; wellbeing?: 'good' | 'normal' | 'bad' | null; discomfort?: boolean | null; createdBy: string | null; startTime: string | null; endTime: string | null; startedAt: string | null; completedAt: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; plannedDate?: string; plannedStartTime?: string | null; plannedEndTime?: string | null; prepSeconds?: number; actualDurationSec?: number | null; activeCaloriesKcal?: number | null; calorieEstimateBasis?: string | null; calorieEstimateNotice?: string | null }
 
-export async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number; showFeedbackNotice?: boolean } = {}) {
+export async function mockPilot(page: Page, options: { role?: 'trainer' | 'client'; profileId?: string; clientTrainerId?: string; pilot?: boolean; fitLime?: boolean; clientLime?: boolean; scheduleDensity?: 'comfortable' | 'compact'; hasClients?: boolean; clientRecords?: Array<{ id: string; fullName: string; archivedAt: string | null; version: number }>; workouts?: MockWorkout[]; withGoal?: boolean; withMeasurements?: boolean; clientGender?: 'male' | 'female'; withCustomExercise?: boolean; failProgress?: boolean; failProfile?: boolean; failFirstProfileSave?: boolean; failFirstCustomExerciseSave?: boolean; failArchive?: boolean; failClients?: boolean; failTrainingData?: boolean; failConnections?: boolean; failWorkspace?: boolean; failThreads?: boolean; questionWorkout?: boolean; failFirstSetConfirm?: boolean; failFirstSave?: boolean; failFirstChatSend?: boolean; failAppendAfterCommitAt?: number; showFeedbackNotice?: boolean; unseenCoachmarks?: string[] } = {}) {
   const profileId = options.profileId ?? trainerId
   const apiOrigin = process.env.VITE_YANDEX_API_BASE_URL ?? 'http://127.0.0.1:4100'
   let snoozedUntil: string | null = null
@@ -265,14 +276,14 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
   await page.route(`${apiOrigin}/health`, async (route) => {
     await route.fulfill({ status: 200, headers: { 'x-fit-request-id': 'pilot-health-check', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-fit-request-id' }, contentType: 'application/json', body: '{"ok":true}' })
   })
-  await page.addInitScript(({ token, profileId, showFeedbackNotice }) => {
+  await page.addInitScript(({ token, profileId, showFeedbackNotice, unseenCoachmarks }) => {
     localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({
       token,
       expiresAt: '2099-01-01T00:00:00.000Z',
     }))
     const coachmarkKey = `fit.coachmarks-seen.${profileId}`
     const seen = JSON.parse(localStorage.getItem(coachmarkKey) ?? '[]') as string[]
-    localStorage.setItem(coachmarkKey, JSON.stringify([...seen,
+    localStorage.setItem(coachmarkKey, JSON.stringify([...seen, ...[
       'assistant-all-trainers-2026-09',
       'client-assistant-2026-09',
       'missed-workout-actions-2026-08',
@@ -280,6 +291,9 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'live-phase-timer-2026-10',
       'coach-workout-gestures-2026-10',
       'coach-live-number-gestures-2026-10',
+      'coach-live-set-swipe-2026-10-16',
+      'coach-schedule-filters-2026-10-16',
+      'coach-schedule-guide-fixed2-2026-10-17',
       'coach-live-finish-top-2026-10',
       'lime-quick-plan-2026-10',
       'lime-direct-client-start-2026-10',
@@ -287,9 +301,10 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'lime-schedule-history-2026-10',
       'lime-schedule-ownership-2026-10',
       'client-live-multiple-exercises-2026-10',
+      'client-live-card-drag-2026-10',
       ...(showFeedbackNotice ? [] : ['workout-feedback-compact-2026-10']),
-    ]))
-  }, { token: sessionToken, profileId, showFeedbackNotice: options.showFeedbackNotice ?? false })
+    ].filter(id => !unseenCoachmarks.includes(id))]))
+  }, { token: sessionToken, profileId, showFeedbackNotice: options.showFeedbackNotice ?? false, unseenCoachmarks: options.unseenCoachmarks ?? [] })
   await page.route(`${apiOrigin}/v1/**`, async (route) => {
     const url = new URL(route.request().url())
     let body: unknown

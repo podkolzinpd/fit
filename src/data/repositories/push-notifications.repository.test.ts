@@ -134,7 +134,7 @@ describe('pushNotificationsRepository.enable', () => {
     expect(subscribeToPush).not.toHaveBeenCalled()
   })
 
-  it('subscribes the browser, persists it, and turns the preference on', async () => {
+  it('subscribes the browser without overwriting preference choices', async () => {
     vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'test-vapid-public-key')
     const subscription = { endpoint: 'https://push.example/ep1', p256dh: 'p256dh', authKey: 'auth' }
     subscribeToPush.mockResolvedValue(subscription)
@@ -144,7 +144,7 @@ describe('pushNotificationsRepository.enable', () => {
     await pushNotificationsRepository.enable(USER_ID)
 
     expect(upsertSubscription).toHaveBeenCalledWith(USER_ID, subscription)
-    expect(setPreference).toHaveBeenCalledWith(USER_ID, 'workout_reminder', true)
+    expect(setPreference).not.toHaveBeenCalled()
   })
 
   it('propagates a repository error when persisting the subscription fails', async () => {

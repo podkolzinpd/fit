@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useDataBackend } from '../../app/data-backend-context'
 import { useAuth } from '../../app/auth-context'
+import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { Coachmark } from '../../shared/ui'
 import { BackIcon, CloseIcon } from '../../shared/icons'
 import { todayInTimeZone, type LocalDate } from '../../shared/local-date'
@@ -16,6 +17,7 @@ export function FitLimeWorkoutEntry({ date, returnTo, onClose }: {
 }) {
   const { clients: clientsRepository, workouts: workoutsRepository } = useDataBackend()
   const { actor } = useAuth()
+  const reference = isCoachWorkoutRedesignEnabled(actor)
   const [planning, setPlanning] = useState(false)
   const [starting, setStarting] = useState(false)
   const [choosingClient, setChoosingClient] = useState(false)
@@ -25,7 +27,7 @@ export function FitLimeWorkoutEntry({ date, returnTo, onClose }: {
   const workouts = useQuery({ queryKey: ['workout-home', today], queryFn: () => workoutsRepository.home(today) })
   useEffect(() => { if (!planning) { dialog.current?.showModal(); dialog.current?.focus({ preventScroll: true }) } }, [planning])
   if (planning) return <FitLimePlanComposer date={date} returnTo={returnTo} onClose={onClose} onBack={() => setPlanning(false)} />
-  return <dialog ref={dialog} tabIndex={-1} className="fit-lime-plan-dialog fit-lime-workout-entry" aria-label="Новая тренировка"
+  return <dialog ref={dialog} tabIndex={-1} role={reference ? 'dialog' : undefined} className="fit-lime-plan-dialog fit-lime-workout-entry" aria-label="Новая тренировка"
     onClose={(event) => { if (event.target === event.currentTarget) onClose() }}
     onCancel={(event) => { if (starting) event.preventDefault() }}>
     <button type="button" className="fit-lime-plan-close" aria-label="Закрыть выбор действия" disabled={starting} onClick={() => dialog.current?.close()}><CloseIcon /></button>

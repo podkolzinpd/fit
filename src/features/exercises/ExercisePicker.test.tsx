@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -67,6 +67,47 @@ function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (ex
 }
 
 describe('ExercisePicker', () => {
+  it('client Lime filters retain search, consecutive facets and selection until applied', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker clientLime multiple catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Выбрать: Присед (Штанга)' }))
+    await openFilters(user)
+    expect(screen.getByRole('heading', { name: 'Фильтры' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Выберите упражнения' })).not.toBeInTheDocument()
+    const search = screen.getByRole('textbox', { name: 'Поиск упражнения' })
+    expect(screen.getByLabelText('Название упражнения')).toBe(search)
+    await user.type(search, 'Присед')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Оборудование' }), 'Штанга')
+    expect(screen.getByRole('region', { name: 'Фильтры упражнений' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Показать упражнения' }))
+    expect(screen.getByRole('textbox', { name: 'Поиск упражнения' })).toHaveValue('Присед')
+    expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')
+    await openFilters(user)
+    expect(screen.getByRole('button', { name: 'Ноги' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('combobox', { name: 'Оборудование' })).toHaveValue('Штанга')
+    await user.click(screen.getByRole('button', { name: 'Очистить поиск' }))
+    expect(search).toHaveValue('')
+    expect(screen.getByRole('region', { name: 'Фильтры упражнений' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Оборудование' })).toHaveValue('Штанга')
+    await user.click(screen.getByRole('button', { name: 'Назад к упражнениям' }))
+    expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
+  })
+
+  it('client Lime keeps an empty search in filters and returns with Escape', async () => {
+    const user = userEvent.setup()
+    render(<ExercisePicker clientLime catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
+    await openFilters(user)
+    await user.type(screen.getByRole('textbox', { name: 'Поиск упражнения' }), 'несуществующее упражнение')
+    await user.click(screen.getByRole('button', { name: 'Показать упражнения' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Ничего не найдено')
+    await openFilters(user)
+    await user.click(screen.getByRole('combobox', { name: 'Оборудование' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: 'Фильтры упражнений' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Поиск упражнения' })).toHaveValue('несуществующее упражнение')
+  })
+
   it('reference filters stay open until confirmed and keep equipment and search', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker reference catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
@@ -797,6 +838,38 @@ describe('ExercisePicker', () => {
     expect(onClose).not.toHaveBeenCalled()
     finish!()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Добавить 0' })).toBeDisabled())
+  })
+
+  for (const fail of [false, true]) it(`keeps acknowledged items visible while Live is adding, then ${fail ? 'shows only remaining retries' : 'clears after success'}`, async () => {
+    let finish: ((error?: Error) => void) | undefined
+    function LiveSelection() {
+      const [draft, setDraft] = useState<ExerciseSnapshot[]>([])
+      return <ExercisePicker catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} multiple showEmptySelection keepSelectionWhileAdding
+        selectionDraft={draft} onSelectionDraftChange={setDraft} onClose={vi.fn()}
+        onPickMany={(chosen) => {
+          setDraft(chosen.slice(1))
+          return new Promise<void>((resolve, reject) => { finish = (error) => error ? reject(error) : resolve() })
+        }} />
+    }
+    render(<LiveSelection />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /Выбрать: Присед/ }))
+    await user.click(screen.getByRole('button', { name: /Выбрать: Жим лёжа/ }))
+    await user.click(screen.getByRole('button', { name: 'Добавить 2' }))
+    expect(screen.getByRole('button', { name: 'Добавляем…' })).toBeDisabled()
+    expect(screen.getByText('Выбрано: 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Убрать: Присед/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Убрать: Жим лёжа/ })).toHaveAttribute('aria-pressed', 'true')
+    await act(async () => { finish!(fail ? new Error('network') : undefined); await Promise.resolve() })
+    if (fail) {
+      expect(screen.getByRole('alert')).toHaveTextContent('повторите добавление остальных')
+      expect(screen.getByText('Выбрано: 1')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Выбрать: Присед/ })).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByRole('button', { name: /Убрать: Жим лёжа/ })).toHaveAttribute('aria-pressed', 'true')
+    } else {
+      expect(screen.getByText('Выбрано: 0')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Добавить 0' })).toBeDisabled()
+    }
   })
 
   it('selects several exercises and adds them in one action', async () => {

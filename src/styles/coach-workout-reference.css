@@ -5,14 +5,15 @@
   font-weight: 100 900;
   font-display: swap;
 }
-.coach-workout-reference.live-identity .live-workout-page { padding-inline: 16px }
+.coach-workout-reference.live-identity .live-workout-page { padding-inline: 16px; --coach-live-halo-color: rgb(182 239 77 / 20%); --coach-live-halo: radial-gradient(ellipse 240px 220px at 50% 0, var(--coach-live-halo-color), transparent); background: #000 var(--coach-live-halo) no-repeat fixed }
+.coach-workout-reference.live-identity .live-workout-page:has(.coach-live-status.resting) { --coach-live-halo-color: rgb(248 176 33 / 24%) }
 .coach-workout-reference.live-identity { --bg: #000; --lime-bg: #000 }
-.coach-workout-reference.live-identity .live-pinned { --coach-clock-space: 176px; position: sticky; top: calc(44px - var(--coach-clock-space)); z-index: 8 }
+.coach-workout-reference.live-identity .live-pinned { --coach-clock-space: 176px; position: sticky; top: calc(44px - var(--coach-clock-space)); z-index: 8; background: #000 var(--coach-live-halo) no-repeat fixed }
 /* Keep the reference clock out of the keyboard's working area. No new animation. */
 .coach-workout-reference.live-identity.keyboard-open .live-pinned { --coach-clock-space: 92px }
 .coach-workout-reference.live-identity.keyboard-open .coach-live-clock { min-height: 80px; margin-block: 4px 8px }
 .coach-workout-reference.live-identity.keyboard-open .coach-live-digits { font-size: 48px; line-height: 56px }
-.coach-workout-reference.live-identity .live-workout-page > .page-header { position: sticky; top: 0; z-index: 9; min-height: 44px; margin-bottom: 20px; background: #000 }
+.coach-workout-reference.live-identity .live-workout-page > .page-header { position: sticky; top: 0; z-index: 9; min-height: 44px; margin-bottom: 20px; background: #000 var(--coach-live-halo) no-repeat fixed; isolation: isolate }
 .coach-workout-reference.live-identity .live-workout-page > .page-header > .coachmark-anchor { margin-left: auto }
 .coach-workout-reference.live-identity .page-back { border: 0; background: transparent; border-radius: 99px }
 .coach-workout-reference.live-identity .coach-live-finish { margin-left: auto; width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; border-radius: 99px; color: #fff; background: #1a1a1c }
@@ -33,9 +34,7 @@
 .coach-workout-reference.live-identity .coach-live-colon::before { content: ''; position: absolute; width: .075em; height: .075em; top: 34%; left: 50%; transform: translateX(-50%); background: var(--lime-accent); box-shadow: 0 .28em 0 var(--lime-accent) }
 .coach-workout-reference.live-identity .coach-live-clock-rest .coach-live-colon::before { background: #f8b021; box-shadow: 0 .28em 0 #f8b021 }
 .coach-workout-reference.live-identity .coach-live-clock { position: relative; isolation: isolate }
-.coach-workout-reference.live-identity .coach-live-clock::before { content: ''; position: absolute; z-index: -1; inset: -100px -16px -24px; pointer-events: none; background: radial-gradient(ellipse at 50% 15%, rgb(182 239 77 / 20%), transparent 65%) }
-.coach-workout-reference.live-identity .coach-live-clock-rest::before { background: radial-gradient(ellipse at 50% 15%, rgb(248 176 33 / 24%), transparent 65%) }
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-session-header { display: block; margin: 24px 0; padding: 12px 0; border: 0; text-align: center }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-session-header { display: block; margin: 16px 0; padding: 4px 0; border: 0; text-align: center }
 .coach-workout-reference.live-identity .live-session-header .workout-header-copy { align-items: center; gap: 8px; min-width: 0 }
 .coach-workout-reference.live-identity .live-session-header .workout-header-eyebrow { color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0; text-transform: none }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-session-header h2 { margin: 0; padding: 0; font-size: 24px; line-height: 28px; font-weight: 500; letter-spacing: -.48px; overflow-wrap: anywhere }
@@ -67,6 +66,8 @@
 .coach-workout-reference.live-identity .live-exercise-head button.workout-drag-handle { display: grid; place-items: center; grid-column: 1; grid-row: 1 }
 .coach-workout-reference.live-identity .live-exercise-head .workout-exercise-header-summary { grid-column: 1 / -1; margin: 8px 0 0; text-align: center; font-size: 13px; line-height: 18px; font-weight: 400; color: var(--lime-text-secondary); overflow-wrap: anywhere }
 .coach-workout-reference.live-identity .live-upcoming-row { justify-content: center }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-exercise-upcoming .live-exercise-start { min-height: 44px; padding: 8px 12px; border: 0; background: transparent; color: var(--lime-text-secondary); font-size: 14px; font-weight: 400 }
+.coach-workout-reference.live-identity .coach-live-footer-brand { display: block; width: 120px; height: auto; margin: 32px auto 24px; opacity: .18 }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-exercise-collapsed { display: block }
 .coach-workout-reference.live-identity .live-exercise-collapsed > .live-exercise-start { display: block; margin: 0 auto }
 .coach-workout-reference.live-identity .live-technique-collapsed { min-height: 44px; margin: 0 auto 8px; background: transparent; color: var(--lime-text-secondary); font-size: 13px; line-height: 18px }
@@ -89,7 +90,7 @@
 /* Units live inside the original 48px fields; RPE stays on a secondary row. */
 .coach-workout-reference.live-identity .live-set-table-head { display: none }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid,
-.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.rpe-visible .live-set-grid { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 48px; gap: 4px; border: 0; overflow: visible }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set.rpe-visible .live-set-grid { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 48px; gap: 4px; border: 0; overflow: visible }
 .phone-frame.fit-lime-shell.coach-workout-reference.live-identity .live-set-grid > :not(:first-child) { border-left: 0 }
 .coach-workout-reference.live-identity .coach-live-metric { position: relative; display: block; min-width: 0; height: 48px }
 .coach-workout-reference.live-identity .coach-live-field-unit { position: absolute; right: 6px; bottom: 3px; font-size: 10px; line-height: 12px; font-weight: 400; color: var(--lime-text-secondary); pointer-events: none }
@@ -316,9 +317,253 @@
 .coach-reference-form .compact-editor-exercise-fields { margin: 0 -16px; padding: 16px; border-color: #3b3b40 }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { height: 48px; min-height: 48px; border: 0; border-radius: 16px; background: #3b3b40; font-size: 16px; font-weight: 400 }
 .coach-reference-form .planned-set { gap: 2px; margin-bottom: 2px }
+.coach-reference-form .planned-set { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) }
+.coach-reference-form .planned-set.rpe-visible { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) }
+.coach-reference-form .planned-set-table-head { display: none }
+.coach-reference-form .planned-set-table { border: 0 }
+.coach-reference-form .planned-set { border: 0; padding: 0; gap: 4px; margin-block: 4px; background: transparent }
+.coach-reference-form .planned-set > * { border-left: 0 }
+.coach-reference-form :is(.coach-plan-metric, .coach-live-metric) { position: relative; display: block; min-width: 0; height: 48px }
+.coach-reference-form .coach-plan-rpe { grid-column: 2 / 4; order: 9 }
+.coach-reference-form :is(.coach-plan-field-unit, .coach-live-field-unit) { position: absolute; right: 6px; bottom: 3px; pointer-events: none; color: var(--lime-text-secondary); font-size: 10px; line-height: 12px; font-weight: 400 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe) { width: 100%; padding: 0 5px; text-align: center; box-shadow: none; outline: 0 }
+.coach-reference-form input.planned-set-input[type='number'] { appearance: textfield }
+.coach-reference-form input.planned-set-input::-webkit-inner-spin-button,
+.coach-reference-form input.planned-set-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe):focus-visible { outline: 1px solid var(--lime-accent); outline-offset: -1px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form :is(.planned-set-input, .planned-set-rpe):invalid { outline: 1px solid var(--danger); outline-offset: -1px }
+.coach-reference-form .compact-editor-exercise-fields { border: 0 }
+.coach-reference-form .coach-plan-time-label { display: flex; flex: 1; align-items: center; gap: 16px; min-width: 0; min-height: 48px; padding: 0; border: 0; background: transparent; color: var(--lime-text-secondary); font-size: 14px; font-weight: 400 }
+.coach-reference-form .coach-plan-time-label svg { width: 24px; height: 24px; flex: 0 0 24px }
+.coach-reference-form .coach-plan-time input { min-width: 0; font-variant-numeric: tabular-nums }
+.coach-reference-form .coach-plan-time input:invalid { outline: 1px solid var(--danger); outline-offset: -1px }
+.coach-reference-form .planned-set-running .run-distance-control { height: 48px; border-radius: 16px; border: 0; background: var(--lime-surface-raised) }
+.coach-reference-form .planned-set-running .run-distance-unit { height: 48px; min-height: 48px; border: 0; background: transparent }
+/* Measured plan refinement is independent of the existing reference cohort.
+   Fields stay 48px; the two-view preference belongs to Live, not this editor. */
+.coach-plan-refined .planned-set { gap: 2px; margin: 0 0 2px; align-items: start }
+.coach-plan-refined .planned-set.rpe-visible { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) 48px }
+.coach-plan-refined .coach-plan-rpe { grid-column: auto; order: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-refined .planned-set-rpe { appearance: none; -webkit-appearance: none; border-radius: 16px; font-size: 16px; line-height: 20px; cursor: pointer }
+.coach-plan-refined :is(.coach-plan-field-unit, .coach-live-field-unit) { right: 6px; bottom: 3px; font-size: 10px; line-height: 12px }
+.coach-plan-refined .workout-duration-parts { height: 48px; gap: 2px }
+.coach-plan-refined .workout-duration-part { position: relative; display: block; height: 48px }
+.coach-plan-refined .workout-duration-part > span { position: absolute; right: 5px; bottom: 3px; font-size: 10px; line-height: 12px; pointer-events: none }
+.coach-plan-refined :is(.coach-plan-metric, .coach-live-metric):has(.workout-duration-parts) > :is(.coach-plan-field-unit, .coach-live-field-unit) { display: none }
+.coach-plan-refined .run-distance-control { grid-template-columns: minmax(0, 1fr) 44px; gap: 0; overflow: hidden }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-refined .run-distance-unit { min-width: 44px; padding: 0 3px; font-size: 11px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-plan-refined .planned-round-exercise { gap: 2px; margin-bottom: 8px }
+.coach-plan-refined .planned-round-exercise:has(.coach-plan-rpe) { grid-template-columns: repeat(2, minmax(0, 1fr)) 48px }
+.coach-plan-refined .planned-round-exercise-name { margin-block: 8px 4px; overflow-wrap: anywhere }
+.coach-plan-refined .loaded-distance-time { grid-column: 2 / -1; margin-top: 2px }
+.coach-plan-refined .planned-round-exercise .loaded-distance-time { grid-column: 1 / -1 }
+.coach-plan-refined .rowing-stroke-rate-field { margin-top: 4px }
+.coach-plan-refined .rowing-stroke-rate-field > span { font-size: 10px; line-height: 14px; color: var(--lime-text-secondary) }
+.coach-plan-refined .coach-plan-details .error { margin: 4px 0; font-size: 14px; line-height: 20px }
+.coach-workout-reference .workout-set-number { min-width: 44px; min-height: 48px; display: grid; place-items: center; touch-action: pan-y; user-select: none; -webkit-user-select: none }
+.coach-workout-reference .workout-set-swipe { border-radius: 16px; overflow: clip }
+.coach-workout-reference .workout-set-swipe button.workout-swipe-action { border-radius: 16px; min-height: 48px }
+.coach-workout-reference .workout-set-swipe:focus-visible { outline: 1px solid var(--lime-accent); outline-offset: 1px }
+.coach-workout-reference .overflow-item:has(.overflow-item-description) { display: grid; gap: 4px; max-width: min(320px, calc(100vw - 32px)); white-space: normal; opacity: 1; color: var(--lime-text-secondary) }
+.coach-workout-reference .overflow-item-description { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-workout-reference :is(.exercise-block-head, .circuit-head:not(.pinned)) { gap: 8px; flex-wrap: wrap; align-items: center }
+.coach-workout-reference .exercise-block-head > select { min-height: 48px; border: 0; border-radius: 16px; padding: 8px 12px; background: var(--lime-surface-raised); color: var(--lime-text); font-size: 16px; font-weight: 400 }
+.coach-workout-reference .block-rounds { font-size: 13px; line-height: 18px; font-weight: 400 }
+.coach-workout-reference .block-rounds input { height: 48px; min-height: 48px; border: 0; border-radius: 16px; font-size: 16px; font-weight: 400; background: var(--lime-surface-raised); color: var(--lime-text) }
+.coach-workout-reference :is(.planned-round-label, .planned-round-exercise-name, .circuit-round-label, .circuit-counter) { font-weight: 400; font-size: 13px; line-height: 18px }
+.coach-workout-reference .planned-round-exercise { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px }
+.coach-workout-reference .planned-round-exercise-name { grid-column: 1 / -1; margin-block: 8px 4px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .set-add-row { justify-content: center; margin-top: 12px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .set-add-row > button { min-height: 48px; border: 0; background: transparent; font-size: 14px; font-weight: 400 }
 .coach-reference-form .set-add-row .add-action-label svg { color: var(--lime-accent) }
 .coach-reference-form .exercise-comment-options { margin-top: 8px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-form .exercise-comment-options > summary { font-size: 14px; font-weight: 400; color: var(--lime-text-secondary) }
-.coach-reference-form .workout-editor-footer { justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }
+.coach-reference-form .workout-editor-footer { display: flex; justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }
+.coach-workout-reference .coach-schedule-filter-options { margin: 4px 0 8px; padding: 0; border: 0; background: transparent }
+.coach-workout-reference .coach-schedule-filter-options > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 8px 18px; list-style: none; color: var(--lime-text-secondary); font-size: 14px; font-weight: 500; cursor: pointer }
+.coach-workout-reference .coach-schedule-filter-options > summary::-webkit-details-marker { display: none }
+.coach-workout-reference .coach-schedule-filter-options > summary svg { width: 20px; height: 20px; margin-left: auto }
+.coach-workout-reference .coach-schedule-filter-options[open] > summary svg { transform: rotate(90deg) }
+.coach-workout-reference .coach-schedule-filter-options .fit-lime-schedule-filters { margin-top: 8px }
+
+/* Fixed2 Live: one DOM/coordinator/timer, density-only overrides. Source SVG:
+   card radius32, inset/gaps2, index40, rest60/radius20. Original input/check54;
+   compact48 per owner18.10. Dynamic content is never fixed-height. */
+.coach-workout-reference.live-identity .live-workout-page.coach-live-density { padding: 0 2px; background: #000 }
+.coach-workout-reference.live-identity .live-workout-page.coach-live-density { --coach-live-halo-color: rgb(182 239 77 / calc(.2 * var(--coach-live-halo-fade, 1))) }
+.coach-workout-reference.live-identity .live-workout-page.coach-live-density:has(.coach-live-status.resting) { --coach-live-halo-color: rgb(248 176 33 / calc(.24 * var(--coach-live-halo-fade, 1))) }
+.coach-workout-reference.live-identity .coach-live-density > .page-header { margin: 0; padding-inline: 14px; min-height: 44px; background: #000 var(--coach-live-halo) no-repeat scroll center 0 }
+/* Paint locally (not WebKit fixed tiles), but align the world origin through
+   scroll-only CSS variables. Both surfaces fade together as the clock leaves. */
+.coach-workout-reference.live-identity .coach-live-density .live-pinned { --coach-clock-space: 194px; padding-top: 0; background: #000 var(--coach-live-halo) no-repeat scroll center var(--coach-live-halo-y, -44px) }
+/* The reference has no second elapsed caption. Keep it available to the screen
+   reader without overflowing the reduced clock or peeking through sticky joins. */
+.coach-workout-reference.live-identity .coach-live-density .coach-live-elapsed { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%) }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-clock { height: 194px; min-height: 194px; margin: 0; opacity: var(--coach-live-halo-fade, 1) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-session-header { min-height: 146px; margin: 0; padding: 20px 16px; display: flex; align-items: center; justify-content: center }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-workout-note { min-height: 52px; margin: 0; padding: 8px 18px 16px; font-size: 14px; line-height: 20px; color: var(--lime-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere }
+.coach-workout-reference.live-identity .coach-live-density .workout-gesture-list { gap: 2px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .workout-exercise-contract { padding: 0 16px 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-head { min-height: 133px; margin: 0 -16px 16px; padding: 32px 16px 16px; gap: 8px; align-items: start }
+.coach-workout-reference.live-identity .coach-live-density .live-exercise-head .workout-exercise-header-summary { margin: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set-grid { gap: 2px }
+.coach-workout-reference.live-identity .coach-live-density .live-set { margin-block: 0 2px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density button.live-add-set { min-height: 68px; margin: 0; padding-block: 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density button.live-add-exercise { min-height: 80px; margin-top: 2px; border-radius: 20px }
+.coach-workout-reference.live-identity .coach-live-density .live-exercise-note { margin: 0; padding-bottom: 8px }
+.coach-workout-reference.live-identity .coach-live-density .live-exercise-note > summary { min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 0; list-style: none; font-size: 14px; line-height: 20px; font-weight: 400; color: var(--lime-text-secondary) }
+.coach-workout-reference.live-identity .coach-live-density .live-exercise-note > summary::-webkit-details-marker { display: none }
+.coach-workout-reference.live-identity .coach-live-density .live-note-preview { min-width: 0; max-width: 100%; overflow-wrap: anywhere }
+.coach-workout-reference.live-identity .coach-live-density .live-set-rpe { appearance: none; -webkit-appearance: none }
+
+/* Source editor2221/2224/2227: at375, metrics84.5x54, action54x54,
+   row pitch56, radius16. The owner's no-cross adaptation balances its former
+   56px space across both sides; original field widths remain unchanged. Distance+unit is an explicit
+   wider adaptation: both native controls retain at least44px usable width. */
+.coach-workout-reference.live-identity .coach-live-density-original { --coach-live-field-height: 54px; --coach-live-number-width: 54px; --coach-live-row-inset: 28px }
+.coach-workout-reference.live-identity .coach-live-density-compact { --coach-live-field-height: 48px; --coach-live-number-width: 44px; --coach-live-row-inset: 0px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-grid, .live-set.rpe-visible .live-set-grid) { grid-template-columns: var(--coach-live-number-width) minmax(0, 1fr) minmax(0, 1fr) var(--coach-live-field-height); min-height: var(--coach-live-field-height); padding-inline: var(--coach-live-row-inset) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set-grid:has(.run-distance-control) { padding-inline: 0 }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-finish { position: relative; background: transparent }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-finish::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: #1a1a1c }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-finish svg { position: relative; width: 24px; height: 24px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .overflow-trigger svg[data-icon='more'] { width: 24px; height: 24px; background: var(--lime-text); mask: url('../../docs/design/figma-20261008/assets/coach-more.svg') center / contain no-repeat }
+.coach-workout-reference.live-identity .coach-live-density .overflow-trigger svg[data-icon='more'] > * { opacity: 0 }
+.coach-workout-reference.live-identity .coach-live-density-original .coach-live-field-unit { font-size: 9px; line-height: 10px; bottom: 4px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-input, .live-set-rpe, .live-set-check, .live-set-save, .coach-live-metric, .run-duration-field, .workout-duration-trigger, .run-distance-control, .run-distance-unit, .run-distance-unit-control) { height: var(--coach-live-field-height); min-height: var(--coach-live-field-height) }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density :is(.live-set-check, .live-set-save) { width: var(--coach-live-field-height); min-width: var(--coach-live-field-height) }
+.coach-workout-reference.live-identity .coach-live-density .live-set-confirm { min-height: var(--coach-live-field-height) }
+.coach-workout-reference.live-identity .coach-live-density .live-technique-collapsed { display: flex; align-items: center; gap: 8px }
+/* Preserve the original53.4121x55.3104 export including its20px shadow margin;
+   scaling the entire export to18px would make the actual play contour tiny. */
+.coach-workout-reference.live-identity .coach-live-density .live-technique-collapsed img { flex-shrink: 0; width: 53.4121px; height: 55.3104px; margin: -20px; pointer-events: none }
+/* The compact view keeps visible exercise markers instead of repeating the
+   current exercise/set and completed count immediately above the same card. */
+.coach-workout-reference.live-identity .coach-live-density-compact .live-session-progress-copy { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%) }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-exercise-utilities { display: contents }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-utilities { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 8px; align-items: start }
+/* Empty closed note shares the add-set row, not another54px footer. Filled or
+   opened notes regain the full width; no text is truncated or unmounted. */
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-utilities:has(.live-exercise-note[open], .live-exercise-note[data-has-note]) { grid-template-columns: minmax(0, 1fr) }
+
+/* Compact adapts density, never shrinks input/check or gesture hit targets. */
+.coach-workout-reference.live-identity .coach-live-density-compact .live-pinned { --coach-clock-space: 84px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-clock { height: 84px; min-height: 84px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-digits { font-size: 56px; line-height: 64px; letter-spacing: -1px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-digits-long { font-size: 48px; line-height: 56px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact button.live-rest-trigger { height: 48px; min-height: 48px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header { min-height: 98px; padding: 10px 16px }
+.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header .workout-header-copy { gap: 4px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header h2 { font-size: 20px; line-height: 24px }
+.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header :is(.workout-header-eyebrow, .workout-header-meta, .live-session-progress-copy) { font-size: 12px; line-height: 16px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-markers { gap: 8px; margin-block: 4px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-markers > span { width: 6px; height: 6px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-workout-note { min-height: 44px; padding-block: 6px 10px; font-size: 13px; line-height: 18px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-head { min-height: 90px; padding: 12px 16px 8px; margin-bottom: 10px; gap: 4px 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-head :is(h2, h3) { font-size: 20px; line-height: 24px }
+.coach-workout-reference.live-identity .coach-live-density-compact .coach-live-exercise-number { width: 32px; height: 32px; font-size: 14px }
+.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-head .workout-exercise-header-summary { font-size: 12px; line-height: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact button.live-add-set { min-height: 48px; padding-block: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact button.live-add-exercise { min-height: 56px }
+.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-note { padding-bottom: 4px }
+.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-note > summary { font-size: 13px; line-height: 18px }
+.coach-workout-reference.live-identity.keyboard-open .coach-live-density .live-pinned { --coach-clock-space: 64px }
+.coach-workout-reference.live-identity.keyboard-open .coach-live-density .coach-live-clock { height: 64px; min-height: 64px; margin: 0 }
+.coach-workout-reference.live-identity.keyboard-open .coach-live-density .coach-live-digits { font-size: 48px; line-height: 56px }
+
+/* Source editor metadata; closed PLAN_LAYOUT fixed2 only. Client DTO has no
+   photo: initials are the approved fallback, never the designer's portrait. */
+.coach-plan-polish .coach-plan-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 50%; background: #3b3b40; color: #fff; font-size: 12px; line-height: 16px }
+.coach-workout-reference .coach-plan-polish .coach-plan-date .schedule-v2-calendar { color: #f8b021 }
+.coach-workout-reference .coach-plan-polish .coach-plan-date img { background: currentColor; mask: url('../../docs/design/figma-20261008/assets/coach-date-lime.svg') center / contain no-repeat; object-position: -9999px }
+.coach-plan-polish .coach-plan-time { display: grid; grid-template-columns: 44px 72px minmax(0, 1fr); gap: 4px; padding: 0; align-items: center }
+.coach-plan-polish .coach-plan-time-label { width: 44px; min-height: 48px; justify-content: center; color: var(--lime-text-secondary) }
+.coach-plan-polish .coach-plan-time-label img { opacity: .6 }
+.coach-workout-reference .coach-plan-polish .coach-plan-time > input { width: 72px; padding-inline: 0 }
+.coach-plan-polish .coach-plan-time-caption { color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; overflow-wrap: anywhere }
+.coach-plan-polish .coach-plan-note .voice-note-field { position: relative; margin: 0; gap: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .coach-plan-note textarea { min-height: 48px; padding: 14px 48px 14px 0; border: 0; border-radius: 0; background: transparent; font-size: 16px; line-height: 20px; resize: none }
+.coach-plan-polish .coach-plan-note .voice-input-icon { position: static; margin: 0; min-height: 0 }
+.coach-plan-polish .coach-plan-note .voice-input-icon > .assistant-icon-button { position: absolute; right: 0; top: 0; width: 44px; height: 48px }
+
+/* Card polish stays inside the independent PLAN_LAYOUT fixed2 opt-in. The
+   source 32/16/2 geometry is retained, while notes and extra metrics can grow. */
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .planned-exercise { padding-top: 0; padding-bottom: 0 }
+.coach-plan-polish .compact-editor-exercise-head { margin: 0 -16px; padding: 26px 16px 16px; align-items: start }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .compact-editor-exercise-toggle { padding-block: 0 }
+.coach-plan-polish .compact-editor-exercise-head .workout-drag-handle { margin-top: 6px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-block-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-block-head > select,
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .block-rounds input { height: 48px; min-height: 48px; padding: 8px 12px; border: 0; border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font: inherit; font-size: 16px; appearance: none; -webkit-appearance: none }
+.coach-plan-polish .exercise-block-head > select { flex: 1; min-width: 120px; cursor: pointer }
+.coach-plan-polish .block-rounds { display: flex; align-items: center; gap: 8px; color: var(--lime-text-secondary); font-size: 13px }
+.coach-plan-polish .block-rounds input { width: 56px; text-align: center }
+.coach-plan-polish .block-rounds input::-webkit-inner-spin-button,
+.coach-plan-polish .block-rounds input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0 }
+.coach-plan-polish .block-rounds input[type='number'] { appearance: textfield }
+.coach-plan-polish .workout-set-swipe:has(> .workout-swipe-content > .planned-round) { border-radius: 16px }
+.coach-plan-polish .compact-editor-exercise-fields { border-top: 1px solid #3b3b40 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .overflow-trigger svg[data-icon='more'] { width: 24px; height: 24px; background: var(--lime-text); mask: url('../../docs/design/figma-20261008/assets/coach-more.svg') center / contain no-repeat }
+.coach-plan-polish .overflow-trigger svg[data-icon='more'] > * { opacity: 0 }
+.coach-plan-polish .exercise-comment-options { margin: 0; padding: 0; border: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .exercise-comment-options > summary { min-height: 44px; padding-block: 8px; line-height: 20px }
+.coach-plan-polish .set-add-row .fit-lime-add-label { justify-content: center; gap: 8px }
+.coach-plan-polish .set-add-row svg[data-original-icon='plus'] { background-color: var(--lime-accent); mask: url('../../docs/design/figma-20261002/assets/plus.svg') center / contain no-repeat }
+.coach-plan-polish .set-add-row svg[data-original-icon='plus'] > image { opacity: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-plan-polish .coach-plan-entry-controls > .quick-workout-expand { background: var(--lime-accent); color: var(--lime-text-on-accent) }
+.coach-plan-polish .quick-workout-expand svg[data-original-icon='microphone'] { background-color: currentColor; mask: url('../../docs/design/figma-20261002/assets/microphone.svg') center / contain no-repeat }
+.coach-plan-polish .quick-workout-expand svg[data-original-icon='microphone'] > image { opacity: 0 }
+
+/* Both released Live densities: source check-small has the measured 2.5px
+   stroke. Reuse its bytes; retain the existing coordinator and 48px targets. */
+.coach-workout-reference.live-identity .coach-live-density :is(.live-set-check, .live-set-save) svg[data-original-icon='check'] { mask-image: url('../../docs/design/figma-20261002/assets/check-small.svg') }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done { color: #fff }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-session-header { min-height: 0; padding: 16px 16px 12px }
+.coach-workout-reference.live-identity .coach-live-density .live-session-header .workout-header-copy { gap: 4px }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-exercise-markers { margin-block: 4px }
+.coach-workout-reference.live-identity .coach-live-density .live-session-progress-copy { gap: 2px 8px }
+.coach-workout-reference.live-identity .coach-live-density .live-session-progress-copy > strong { font-weight: 400 }
+/* Markers remain the visible progress; the exact set progressbar stays
+   available to assistive technology without a second competing track. */
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-session-progress-track { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%) }
+.coach-workout-reference.live-identity .coach-live-density .coach-live-workout-note { min-height: 44px; padding: 8px 16px 12px; overflow-wrap: anywhere }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed .live-exercise-head { min-height: 0; padding: 16px 16px 8px; margin-bottom: 0; border-bottom: 0 }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed { padding-bottom: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density .live-exercise-collapsed > .live-exercise-start { min-height: 44px; margin: 0 auto; padding: 8px 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-session-header { padding-block: 8px }
+.phone-frame.fit-lime-shell.coach-workout-reference.live-identity .coach-live-density-compact .live-exercise-collapsed .live-exercise-head { padding-block: 12px 4px }
+
+/* Schedule controls reuse their existing handlers, filters and modes. Only the
+   original reference pair gets the denser presentation; Day stays untouched. */
+.coach-workout-reference .coach-schedule-polish .schedule-v2-topbar { margin-bottom: 16px }
+.coach-schedule-polish .coach-schedule-toolbar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 4px 8px; align-items: start; margin: 0 16px 8px }
+.coach-schedule-polish :is(.coach-schedule-view-slot, .coach-schedule-filter-slot) { min-width: 0 }
+.coach-schedule-polish .coach-schedule-view-slot { grid-column: 1; grid-row: 1; z-index: 1 }
+.coach-schedule-polish .coach-schedule-filter-slot { grid-column: 1 / -1; grid-row: 1 }
+.coach-schedule-polish .coach-schedule-filter-options > summary { margin-left: calc(58.333333% + 3.333333px) }
+.coach-schedule-polish .coach-schedule-filter-options > .fit-lime-schedule-filters { min-width: 0 }
+.coach-schedule-polish .coach-schedule-view-slot .schedule-v2-range-toggle { justify-content: flex-start; margin: 0 }
+.coach-schedule-polish .coach-schedule-view-slot .schedule-v2-range-toggle > button { min-width: 0; flex: 1; padding-inline: 8px }
+.coach-workout-reference .coach-schedule-polish .coach-schedule-filter-options { margin: 0 }
+.coach-workout-reference .coach-schedule-polish .coach-schedule-filter-options > summary { padding: 8px; font-weight: 400; flex-wrap: wrap }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-range-toggle[aria-label='Период расписания'] { margin: 0 16px 4px; gap: 4px; justify-content: flex-start }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-range-toggle[aria-label='Период расписания'] button { min-height: 44px; padding-block: 6px }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-period { margin-bottom: 4px }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-period-summary { margin-block: 8px 12px }
+.coach-day-swipe { touch-action: pan-y }
+.coach-day-heading { display: grid; min-width: 0; overflow: hidden; -webkit-user-select: none; user-select: none; --day-enter: 18px; --day-exit: -18px }
+.coach-day-heading[data-direction='previous'] { --day-enter: -18px; --day-exit: 18px }
+.coach-day-heading > div { grid-area: 1 / 1; min-width: 0 }
+.coach-day-heading-outgoing { pointer-events: none }
+.coach-day-heading[data-animating] .coach-day-heading-current { animation: coach-day-in 220ms ease-out both }
+.coach-day-heading[data-animating] .coach-day-heading-outgoing { animation: coach-day-out 220ms ease-out both }
+@keyframes coach-day-in { from { opacity: 0; transform: translateX(var(--day-enter)) } to { opacity: 1; transform: translateX(0) } }
+@keyframes coach-day-out { from { opacity: 1; transform: translateX(0) } to { opacity: 0; transform: translateX(var(--day-exit)) } }
+@media (prefers-reduced-motion: reduce) {
+  .coach-day-heading[data-animating] > div { animation: none }
+  .coach-day-heading-outgoing { display: none }
+}
+/* No separate source screen exists for chooser/draft recovery. Reuse the
+   measured quick-plan surface, retaining native dialog and existing controls. */
+.phone-frame.fit-lime-shell.coach-workout-reference .fit-lime-workout-entry { width: min(calc(100% - 16px), 359px); border-radius: 32px; background: #252529; padding: 24px 20px 16px }
+.coach-workout-reference .fit-lime-workout-entry .fit-lime-plan-close { top: 12px; right: 8px }

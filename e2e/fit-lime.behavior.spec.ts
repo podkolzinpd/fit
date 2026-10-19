@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test'
-import { mockFinancePaymentLifecycle, mockTemplateUncertainSave, copyTemplateDiagnostic, sessionToken } from './fit-lime-fixtures'
+import { expect, test, type Page } from '@playwright/test'
+import { mockFinancePaymentLifecycle, mockTemplateUncertainSave, copyTemplateDiagnostic, sessionToken, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGestureWorkout, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, mockClientStreamingVoice, publicTrainerId, mockPublicTrainer } from './fit-lime-fixtures'
 
 // Behavior-only acceptance. Visual/mixed state matrices live in the visual spec.
@@ -274,6 +274,7 @@ test('Figma workout Coach reference grouped drag retry has one unchanged receipt
 })
 
 test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: ['@lime-critical'] }, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   const source = coachGestureWorkout(true), first = source.exercises[0]!
   first.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
   first.sets[0]!.fact = { weightKg: 25, reps: 9 }
@@ -289,11 +290,14 @@ test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: [
   await expect(page.locator('[data-workout-swipe]')).toHaveCount(0)
   const field = page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`).getByLabel('Фактический вес', { exact: true })
   await field.fill('27.5'); await field.blur()
-  const handle = page.getByRole('button', { name: 'Переместить: Приседания, Жим' })
-  await expect(handle).toBeEnabled()
-  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Escape')
+  const card = await holdClientLiveCard(page, first.blockId)
+  await page.keyboard.press('Escape'); await page.mouse.up()
+  await expect(card).not.toHaveClass(/dragging/)
   expect(commands).toHaveLength(0)
-  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Enter')
+  await holdClientLiveCard(page, first.blockId)
+  await page.mouse.move(24, 820, { steps: 12 })
+  await expect(page.locator('.workout-drag-preview')).toContainText('Позиция 3 из 3')
+  await page.mouse.up()
   await expect(page.getByRole('button', { name: 'Повторить сохранение порядка' })).toBeVisible()
   await expect(page.locator('[data-workout-block]').first()).toHaveAttribute('data-workout-block', first.blockId)
   await expect(field).toHaveValue('27.5')
@@ -308,6 +312,15 @@ test('Client Lime grouped drag preserves facts drafts and exact retry', { tag: [
   await expect(page.locator('[data-workout-block]').last()).toHaveAttribute('data-workout-block', first.blockId)
   await expect(field).toHaveValue('27.5')
   await expect(page.locator(`form[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+  const active = await page.locator('.live-session-progress-copy').textContent()
+  await group.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
+  await page.getByRole('menuitem', { name: 'Изменить порядок', exact: true }).click()
+  await group.getByRole('button', { name: 'Вверх', exact: true }).click()
+  await expect.poll(() => commands.length).toBe(3)
+  await expect(page.locator('[data-workout-block]').nth(1)).toHaveAttribute('data-workout-block', first.blockId)
+  await expect(page.locator('.live-session-progress-copy')).toHaveText(active!)
+  await page.getByRole('button', { name: 'Готово', exact: true }).click()
+  await expect(group.getByRole('button', { name: 'Вверх', exact: true })).toHaveCount(0)
 })
 
 test('Figma workout Coach reference actions completion retains cardio warning', async ({ page }) => {
@@ -343,6 +356,11 @@ for (const [role, profileId, expected] of [
     await expect(page.locator('.live-rest-trigger')).toBeVisible()
     await expect(page.locator('.coach-live-digits')).toHaveCount(expected ? 1 : 0)
     await expect(page.locator('.coach-workout-reference')).toHaveCount(expected ? 1 : 0)
+    if (role === 'trainer') {
+      await page.goto('/schedule?week=2026-09-21')
+      await expect(page.locator('.coach-schedule-filter-options')).toHaveCount(expected ? 1 : 0)
+      if (expected) await checkCoachScheduleFilters(page)
+    }
   })
 }
 
@@ -544,6 +562,71 @@ test('Achievement collection restores earned badges after signing in again', asy
   await expect(first.locator('.athlete-achievement-badge')).toHaveClass(/is-earned/)
 })
 
+async function checkCoachScheduleFilters(page: Page) {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+  const rows = scheduleVisibilityRows().map(row => ({ ...row, trainerId: profileId, createdBy: row.createdBy === trainerId ? profileId : row.createdBy }))
+  const backend = await mockPilot(page, { profileId, fitLime: true, workouts: rows, failClients: true })
+  await page.goto('/schedule?week=2026-09-21')
+  const filters = page.locator('.coach-schedule-filter-options')
+  const summary = filters.locator('summary')
+  await expect(summary).toContainText('ошибка')
+  await expect(filters).not.toHaveAttribute('open')
+  await expect(filters.getByLabel('Фильтр по клиенту')).not.toBeVisible()
+  await summary.click()
+  backend.setClientsFailure(false)
+  await filters.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(summary).not.toContainText('ошибка')
+  // A pair of changes in one browser task must not lose the first filter
+  // while the router is committing the second. Native selection checks below
+  // remain separate and unchanged.
+  await expect(filters.getByLabel('Фильтр по клиенту').locator(`option[value="${clientId}"]`)).toHaveCount(1)
+  await filters.evaluate((node, id) => {
+    const client = node.querySelector<HTMLSelectElement>('select[aria-label="Фильтр по клиенту"]')!
+    const status = node.querySelector<HTMLSelectElement>('select[aria-label="Фильтр по статусу"]')!
+    client.value = id; client.dispatchEvent(new Event('change', { bubbles: true }))
+    status.value = 'planned'; status.dispatchEvent(new Event('change', { bubbles: true }))
+  }, clientId)
+  await expect.poll(() => new URL(page.url()).searchParams.get('client')).toBe(clientId)
+  await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('planned')
+  await expect(summary).toHaveText('Фильтры · 2')
+  await filters.getByLabel('Фильтр по клиенту').selectOption('')
+  await expect.poll(() => new URL(page.url()).searchParams.get('client')).toBeNull()
+  await filters.getByLabel('Фильтр по статусу').selectOption('all')
+  await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBeNull()
+  await filters.getByLabel('Фильтр по клиенту').selectOption(clientId)
+  await filters.getByLabel('Фильтр по статусу').selectOption('planned')
+  await filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' }).check()
+  await expect(summary).toHaveText('Фильтры · 3')
+  await summary.click()
+  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Список', exact: true }).click()
+  await expect(page).toHaveURL(/mode=list/)
+  await expect(summary).toHaveText('Фильтры · 3')
+  await page.getByRole('group', { name: 'Вид расписания' }).getByRole('button', { name: 'Календарь', exact: true }).click()
+  await page.reload()
+  await expect(summary).toHaveText('Фильтры · 3')
+  await expect(filters).not.toHaveAttribute('open')
+  await page.locator('.schedule-v2-weekdays button').nth(3).click()
+  await expect(page).toHaveURL(/date=2026-09-24/)
+  await expect(filters).toHaveCount(0)
+  await expect(page.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toHaveCount(0)
+  await expect(page).not.toHaveURL(/client=|status=|mode=/)
+  await expect(page.getByRole('region', { name: 'Самостоятельные тренировки' })).toHaveCount(0)
+  // Stale deep links must not silently filter the Day either.
+  await page.goto('/today?date=2026-09-24&client=not-a-client&status=cancelled')
+  await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+  await page.goBack()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/schedule\?/)
+  await expect(summary).toHaveText('Фильтры · 3')
+  await expect(filters).not.toHaveAttribute('open')
+  await summary.click()
+  await expect(filters.getByLabel('Фильтр по клиенту')).toHaveValue(clientId)
+  await expect(filters.getByLabel('Фильтр по статусу')).toHaveValue('planned')
+  await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeChecked()
+}
+
 test('Lime schedule ownership empty retry preference and account isolation', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-24T09:00:00+03:00'))
   const backend = await mockPilot(page, { fitLime: true, workouts: scheduleVisibilityRows().slice(1, 4), failTrainingData: true })
@@ -565,8 +648,10 @@ test('Lime schedule ownership empty retry preference and account isolation', asy
   await page.reload()
   await expect(toggle).toBeChecked()
   await page.goto('/today?date=2026-09-24')
+  await expect(toggle).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Самостоятельные тренировки' })).toHaveCount(0)
+  await page.goto('/schedule?week=2026-09-21')
   await expect(toggle).toBeChecked()
-  await expect(page.getByRole('region', { name: 'Самостоятельные тренировки' }).locator('a')).toHaveCount(2)
 })
 
 test('Lime schedule ownership storage failure is visible and retry keeps selection', async ({ page }) => {
@@ -955,6 +1040,127 @@ test('Fit Lime questions remain visible when dialogs fail, and dialogs recover i
 })
 
 // One mobile interaction per engine: history access must match list and detail.
+test('Trainer restores archived client before sharing an invitation', { tag: ['@lime-clients'] }, async ({ page }) => {
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  let archived = true
+  let canArchive = true
+  let version = 1
+  let restores = 0
+  let invitations = 0
+  let releaseRestore: (() => void) | undefined
+  let revokeArchivePermission = false
+  const name = 'Архивный спортсмен'
+  await page.route((url) => url.pathname === '/v1/clients', (route) => {
+    const archivedRequest = new URL(route.request().url()).searchParams.get('archived') === 'true'
+    return route.fulfill({ json: { clients: archivedRequest === archived ? [{
+      id: clientId, canArchive, hasAccount: false, fullName: name, canonicalFullName: name,
+      gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null,
+      goal: 'Сохранённая цель', note: 'Сохранённая заметка', currentWeightKg: null,
+      archivedAt: archived ? '2026-10-19T08:00:00Z' : null, version, membershipVersion: 1,
+    }] : [] } })
+  })
+  // Archived memberships really are absent in the API; do not fake isRoot here.
+  await page.route('**/v1/connections', (route) => route.fulfill({ json: {
+    memberships: archived ? [] : [{ clientId, trainerId, firstName: 'Тренер', lastName: null, joinedAt: '2026-09-01T00:00:00Z', isRoot: canArchive }], invitations: [],
+  } }))
+  await page.route(`**/v1/clients/${clientId}/archive`, async (route) => {
+    restores += 1
+    expect(route.request().postDataJSON()).toEqual({ archived: false, expectedVersion: version })
+    if (revokeArchivePermission) {
+      canArchive = false
+      return route.fulfill({ status: 403, json: { error: 'action_not_allowed' } })
+    }
+    if (restores === 1) return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    await new Promise<void>((resolve) => { releaseRestore = resolve })
+    archived = false
+    version += 1
+    return route.fulfill({ json: { client: { version } } })
+  })
+  await page.route('**/v1/invitation-links', (route) => {
+    invitations += 1
+    expect(archived).toBe(false)
+    expect(route.request().postDataJSON()).toEqual({ clientId, targetRole: 'client' })
+    return route.fulfill({ status: 201, json: { invitation: {
+      id: '10000000-0000-4000-8000-000000000099', clientId, targetRole: 'client',
+      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2099-01-01T00:00:00Z',
+    } } })
+  })
+  await page.goto('/clients/archive')
+  await page.getByRole('link', { name: new RegExp(name) }).click()
+  const restore = page.getByRole('button', { name: 'Вернуть из архива', exact: true })
+  await expect(restore).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toHaveCount(0)
+  await restore.click()
+  const error = page.getByRole('alert').filter({ hasText: 'Не удалось вернуть клиента из архива' })
+  await expect(error).toBeVisible()
+  await expect(restore).toBeVisible()
+  expect(archived).toBe(true)
+  expect(invitations).toBe(0)
+  await error.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect.poll(() => Boolean(releaseRestore)).toBe(true)
+  await expect(page.getByRole('button', { name: 'Обновляем…', exact: true })).toBeDisabled()
+  releaseRestore!()
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toBeVisible()
+  await expect(error).toHaveCount(0)
+  await expect(page.getByText('Сохранённая цель', { exact: true })).toBeVisible()
+  await expect(page.getByText('Сохранённая заметка', { exact: true })).toBeVisible()
+  await page.goto('/clients')
+  await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible()
+  await page.goto('/clients/archive')
+  await expect(page.getByRole('link', { name: new RegExp(name) })).toHaveCount(0)
+  await page.goto(`/clients/${clientId}`)
+  await page.getByRole('button', { name: 'Пригласить клиента', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+  expect(restores).toBe(2)
+  expect(invitations).toBe(1)
+  // A visible card without the explicit capability must never offer restoration.
+  archived = true
+  canArchive = false
+  await page.reload()
+  await expect(page.getByRole('heading', { name })).toBeVisible()
+  await expect(restore).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toHaveCount(0)
+  // Losing permission while the card is open must also remove the retry action.
+  canArchive = true
+  revokeArchivePermission = true
+  await page.reload()
+  await restore.click()
+  await expect(error).toBeVisible()
+  await expect(restore).toHaveCount(0)
+  await expect(error.getByRole('button', { name: 'Повторить', exact: true })).toHaveCount(0)
+  expect(restores).toBe(3)
+})
+
+test('Invitation denial refreshes an already-connected client', { tag: ['@lime-clients'] }, async ({ page }) => {
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  let linked = false
+  let invitations = 0
+  await page.route((url) => url.pathname === '/v1/clients', (route) => route.fulfill({ json: { clients: [{
+    id: clientId, canArchive: true, hasAccount: linked, fullName: 'Подключённый спортсмен', canonicalFullName: 'Подключённый спортсмен',
+    gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+    currentWeightKg: null, archivedAt: null, version: linked ? 2 : 1, membershipVersion: 1,
+  }] } }))
+  await page.route('**/v1/invitation-links', (route) => {
+    invitations += 1
+    return route.fulfill({ status: 403, json: { error: 'action_not_allowed' } })
+  })
+  await page.goto(`/clients/${clientId}`)
+  const invite = page.getByRole('button', { name: 'Пригласить клиента', exact: true })
+  await expect(invite).toBeVisible()
+  await invite.click()
+  await expect(page.getByText('Недостаточно прав для этого действия.', { exact: true })).toBeVisible()
+  await expect(invite).toBeVisible()
+  expect(invitations).toBe(1)
+  linked = true
+  await invite.click()
+  await expect(invite).toHaveCount(0)
+  await expect(page.getByText('Недостаточно прав для этого действия.', { exact: true })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Подключённый спортсмен' })).toBeVisible()
+  await expect(invite).toHaveCount(0)
+  expect(invitations).toBe(2)
+})
+
 test('Trainer client detail opens disconnected history without creating a dialog', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await mockPilot(page, { fitLime: true })

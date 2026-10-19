@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+18.10 — Нейтральное обращение в ИИ-анализе: mandatory direct-address guard,
+безопасная локальная коррекция и recheck без дополнительных платных вызовов.
+Пол не передаётся; цифры/тренерский текст/данные прежние. Старый анализ обновляется
+явно существующей кнопкой; план и проверка: `docs/design/PROGRESS_NEUTRAL_ADDRESS_20261018.md`.
+
 YAFIT-611 / история чатов: список и карточка используют существующий диалог
 независимо от текущей привязки; недельный календарь сохраняет вход/возврат.
 Migration145 сохраняет исходных участников, ID, сообщения, фото и read cursors
@@ -80,6 +85,16 @@ YAFIT-593 / PR3: аддитивная Yandex migration120 сохраняет pla
 YAFIT-593 / PR2: единое завершение календарного планирования voice/text/manual, клиент/дата/формат в сводке, возврат с savedPlanId без потери calendar URL; retry/reload сохраняет requestId и blockId. Запись выполненной и немедленный старт вне этой ветки сохранены.
 
 YAFIT-593 / PR1: изоляция календарного plan/voice draft по requestId, синхронизация упражнений с исходной формой с проверкой ID, сохранение идентичности между review/save/reload. Legacy draft и непилотный поток не меняются. Полный план пяти PR: docs/design/FIT_LIME_VIDEO_FIXES_20261004.md.
+
+17.10 trainer fixed2 planning: independent PLAN_INPUT/PLAN_LAYOUT preserve explicit
+save, comma decimals/Next/version-bound drafts and 48px metric geometry. RPE in
+superset rounds follows existing display setting and survives splitting into
+singles. Legacy/client/third trainer unchanged. Acceptance and release gates:
+docs/design/COACH_PLAN_AND_LIVE_FIXED2_20261017.md. No plan density setting.
+Тот же закрытый fixed2 получает независимый LIVE_DENSITY: original/compact в
+настройках, один Live DOM/coordinator/rest,48px inputs/checks в обоих видах,
+notes/RPE/supersets/swipe/drag и отрицательный отдых сохранены. Default original,
+per-account/device; client/third trainer denied, stale preference не даёт доступа.
 
 Client Lime pilot (2026-10-04): existing client routes and workout lifecycle retain
 behavior under an independent single-account flag. Light/dark/system preferences
@@ -636,6 +651,36 @@ format/stage/template/comment/technique/duration/distance/RPE сохранены
 и request ID. Browser18/18 Chromium/WebKit375/390/430/1440; прежний ClientLime
 light/dark390/430 и непилотный trainer1440 WebKit5/5. CI, последовательный merge,
 финальное включение и production/native acceptance остаются отдельными гейтами.
+
+YAFIT-619 / fixed2 reference polish: план и неизменяемые acceptance cases в
+`docs/design/COACH_REFERENCE_POLISH_FIXED2_20261017.md`. Реквизиты плана используют
+инициалы (фото в Client DTO отсутствует), янтарную дату, часы и обычную заметку.
+48px ввод, сохранение, черновики и границы пилота сохранены; остальные три PR
+не считаются выполненными до собственной приёмки и выпуска.
+
+PR2 того же плана: scoped PLAN_LAYOUT карточки получают divider, компактную
+пустую заметку44px, тире вместо повторных крупных units, исходный plus через
+alpha mask и лаймовую диктовку. Структурные операции и сохранение прежние;
+поля48px, radii32/16 и gaps2 сохранены. Приёмка и выпуск ведутся в YAFIT-619.
+
+PR3 того же плана: оба существующих Live density-scoped вида используют
+original check-small stroke2.5 и white done state; quiet units opt-in, меньшую
+сводку и collapsed completed header без фиксированной минимальной высоты.
+Set progressbar остаётся доступным для assistive technology, видимыми остаются
+маркеры и тексты. Coordinator/save/rest/gestures/переключатель не меняются.
+
+PR4 того же плана: закрытые view/filters собраны вместе только в fixed2 Schedule,
+открытые filters fullwidth; Day toolbar/другие тренеры остаются прежними. Native chooser/
+draft surface сверена с quick-plan, первого Coachmark не скрывает top-layer
+(scoped explicit dialog role, общий Coachmark не меняется). Переходы, поля,
+draft/requestId/save503 retry сохранены. Numeric autocomplete hint выключен для
+reference distance/stroke rate; системная iOS панель физически не проверена.
+
+YAFIT-620: fixed2 Schedule использует один существующий Coachmark, привязанный
+к видимому переключателю календаря/списка, вместо трёх перекрывающихся подсказок.
+Per-user dismiss/reload, первый вход и непилотный контроль проверяются в прежних
+browser cases; новых inventory cases нет. Общий Coachmark/Day/flags и механика
+Live/плана не меняются. План: design/COACH_SCHEDULE_FIRST_GUIDE_FIXED2_20261017.md.
 
 ## Cloud.ru production stabilization — In progress
 

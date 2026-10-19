@@ -2108,6 +2108,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         return reply.code(422).send({ error: 'invalid_assistant_state' })
       }
       if (error instanceof PushNotificationCommandError) {
+        if (error.failure === 'rate_limited') return reply.code(429).send({ error: 'push_test_rate_limited' })
+        if (error.failure === 'not_subscribed') return reply.code(409).send({ error: 'push_subscription_missing' })
         return reply
           .code(error.failure === 'forbidden' ? 403 : 422)
           .send({ error: error.failure === 'forbidden'
@@ -2768,6 +2770,22 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       reply,
       () => pushNotifications.hasSubscription(sessionToken, subscription.endpoint),
       (subscribed) => reply.header('cache-control', 'no-store').send({ subscribed }),
+    )
+  })
+
+  app.post('/v1/push-notifications/test', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') {
+      return reply.code(403).send({ error: 'read_write_session_required' })
+    }
+    const subscription = readPushSubscriptionEndpointRequest(request.body)
+    if (subscription === undefined) return reply.code(400).send({ error: 'invalid_request' })
+    const push = options.pilotPushNotifications
+    if (push === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(
+      reply, () => push.requestTest(session, subscription.endpoint),
+      () => reply.header('cache-control', 'no-store').code(202).send(),
     )
   })
 

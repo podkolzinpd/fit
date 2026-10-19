@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { buildProgressData, requestYandexSummary, requestYandexSummaryDeduplicated, summarizeClientTraining } from './index.js'
 import { buildSummaryModelInput } from './summary-model-input.js'
+import { assessSummaryQuality, repairSummaryQuality } from './summary-quality.js'
 
 const validSummary = {
   trainer: {
@@ -80,7 +81,85 @@ describe('summary training picture', () => {
   })
 })
 
+describe('neutral client summary address', () => {
+  it.each([
+    'Ты хорошо поддерживал ритм тренировок, что положительно сказывается на результатах.',
+    'Ты уже уверенно увеличила рабочий вес с 50 до 60 кг.',
+    'Ты за 4 недели выполнил 6 тренировок.',
+    'Ты был готов к следующей тренировке.',
+    'Ты хорошо выполнил подходы и увеличил рабочий вес.',
+    'Ты выполнил/выполнила план.',
+    'Ты смогла сохранить ритм.',
+  ])('makes gendered direct address mandatory: %s', (consistency) => {
+    const generated = { ...validSummary, client: { ...validSummary.client, consistency } }
+    expect(assessSummaryQuality(generated, {}).blockingIssues).toContain(
+      'В client есть зависящее от рода обращение к человеку; используй нейтральную конструкцию.',
+    )
+  })
+
+  it('neutralizes the reported sentence and preserves exercise facts without changing the input', () => {
+    const generated = {
+      ...validSummary,
+      client: {
+        ...validSummary.client,
+        consistency: 'Ты хорошо поддерживал ритм тренировок, что положительно сказывается на результатах.',
+        achievements: ['Жим лёжа: ты уже увеличила рабочий вес с 50 до 60 кг.'],
+      },
+    }
+    const original = structuredClone(generated)
+    const facts = { before: 50, after: 60 }
+    const repaired = repairSummaryQuality(generated, facts)
+    expect(repaired.client.consistency).toBe('Тебе хорошо удавалось поддерживать ритм тренировок, что положительно сказывается на результатах.')
+    expect(repaired.client.achievements).toEqual(['Жим лёжа: тебе уже удалось увеличить рабочий вес с 50 до 60 кг.'])
+    expect(assessSummaryQuality(repaired, facts).blockingIssues).toEqual([])
+    expect(generated).toEqual(original)
+    expect(repaired.trainer).toEqual(generated.trainer)
+  })
+
+  it('does not reject ordinary grammatical gender or a different clause subject', () => {
+    const generated = { ...validSummary, client: {
+      ...validSummary.client,
+      consistency: 'Твой рабочий вес вырос. Тренировка выполнена. Ты видишь, что вес вырос.',
+    } }
+    expect(assessSummaryQuality(generated, {}).blockingIssues).toEqual([])
+    expect(repairSummaryQuality(generated, {}).client.consistency).toBe(generated.client.consistency)
+  })
+
+  it('leaves ambiguous compound and slash forms blocking instead of producing a half-repair', () => {
+    for (const consistency of ['Ты выполнил подходы и повысил вес.', 'Ты сделал/сделала 12 повторений.', 'Ты сделал(а) 12 повторений.']) {
+      const generated = { ...validSummary, client: { ...validSummary.client, consistency } }
+      const repaired = repairSummaryQuality(generated, {})
+      expect(repaired.client.consistency).toBe(consistency)
+      expect(assessSummaryQuality(repaired, {}).blockingIssues).toContain(
+        'В client есть зависящее от рода обращение к человеку; используй нейтральную конструкцию.',
+      )
+    }
+  })
+})
+
 describe('summarizeClientTraining cloud handler', () => {
+  it('repairs direct address in the actual model path using only the original paid call', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    const generated = { ...validSummary, client: {
+      ...validSummary.client, consistency: 'Ты хорошо поддерживала ритм тренировок.',
+    } }
+    const fetchImpl = vi.fn().mockResolvedValue(completionResponse(200, generated))
+    const result = await requestYandexSummary({}, '2026-08-01', '2026-08-25', { fetchImpl })
+    expect(result.summary.client.consistency).toBe('Тебе хорошо удавалось поддерживать ритм тренировок.')
+    expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
+  it('rejects unsupported gendered address without a second paid call', async () => {
+    vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
+    vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const generated = { ...validSummary, client: { ...validSummary.client, encouragement: 'Ты был готов к следующей тренировке.' } }
+    const fetchImpl = vi.fn().mockResolvedValue(completionResponse(200, generated))
+    await expect(requestYandexSummary({}, '2026-08-01', '2026-08-25', { fetchImpl }))
+      .rejects.toMatchObject({ message: 'yandex_cloud_quality_check_failed', qualityIssueCodes: ['gendered_client_address'] })
+    expect(fetchImpl).toHaveBeenCalledOnce()
+  })
   it('blocks accidental live AI calls from automated tests', async () => {
     vi.stubEnv('NODE_ENV', 'test')
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'must-not-be-used')

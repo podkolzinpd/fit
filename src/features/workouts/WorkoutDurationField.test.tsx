@@ -13,6 +13,29 @@ function choose(user: ReturnType<typeof userEvent.setup>, column: 'минуты'
 describe('WorkoutDurationField', () => {
   afterEach(() => setWorkoutTimeWheel(false))
 
+  it('plan input respects keyboard preference despite compact layout and commits before blur', async () => {
+    const user = userEvent.setup()
+    const commit = vi.fn()
+    render(<WorkoutDurationField compact planInput label="Плановое время" durationSec={90} onCommit={commit} />)
+    const seconds = screen.getByRole('textbox', { name: 'Плановое время: секунды' })
+    await user.clear(seconds)
+    await user.type(seconds, '45')
+    expect(seconds).toHaveFocus()
+    expect(commit).toHaveBeenLastCalledWith(105)
+    await user.clear(seconds)
+    await user.type(seconds, '65')
+    expect(seconds).toBeInvalid()
+    await user.tab()
+    expect(seconds).toHaveValue('65')
+    expect(seconds).toBeInvalid()
+  })
+
+  it('plan input still exposes the wheel when explicitly chosen', () => {
+    setWorkoutTimeWheel(true)
+    render(<WorkoutDurationField compact planInput label="Плановое время" durationSec={90} />)
+    expect(screen.getByRole('button', { name: 'Плановое время: 1:30' })).toBeInTheDocument()
+  })
+
   it('uses the keyboard by default, stores exact seconds in a Live form and allows clearing both fields', async () => {
     const user = userEvent.setup()
     const onInput = vi.fn()

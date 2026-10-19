@@ -1,17 +1,374 @@
 import { writeFile } from 'node:fs/promises'
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
+import { readSavePlannedWorkoutRequest } from '../services/api/src/planned-workout-request'
 import type { WorkoutExercise, WorkoutTemplateDraft } from '../src/shared/domain'
-import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic } from './fit-lime-fixtures'
+import type { YandexPilotTrainingData } from '../src/data/repositories/yandex-pilot.repository'
+import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, messageId, newWorkoutId, customExerciseId, coachGestureWorkout, revealCoachSetDelete, expectContainedButtonText, addEditorExercise, checkEditorAction, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, expectSwipeActionReadable, mockClientStreamingVoice, mockPublicTrainer } from './fit-lime-fixtures'
 
 // Visual and mixed interaction/state acceptance; all original assertions are retained.
 test.skip(!process.env.FIT_SCHEDULE_V2_VISUAL, 'Dedicated server-backed pilot harness')
 
+const scheduleGuideId = 'coach-schedule-guide-fixed2-2026-10-17'
+const dayGuideId = 'lime-day-workspace-2026-10'
+const scheduleCoachmarks = [scheduleGuideId, 'lime-schedule-history-2026-10', 'lime-schedule-ownership-2026-10', 'coach-schedule-filters-2026-10-16']
+
+// Two engines are intentional: native implicit submit and pointer selection differ in Safari.
+function coachPlanInputFixture(profileId = 'c0ac0000-6010-4000-8000-000000000001') {
+  const plan = coachGestureWorkout(false, 3)
+  plan.status = 'planned'; plan.startedAt = null; plan.trainerId = profileId; plan.createdBy = profileId
+  plan.title = 'Плановые значения'
+  plan.exercises[1] = { ...plan.exercises[1]!, ref: 'plank', name: 'Планка', inputKind: 'duration', sets: plan.exercises[1]!.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 90 })) }
+  plan.exercises[2] = { ...plan.exercises[2]!, ref: 'running', name: 'Бег', inputKind: 'distance', sets: plan.exercises[2]!.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 600, distanceKm: 1.5 })) }
+  return plan
+}
+async function openCoachPlanInput(page: Page, profileId?: string, unseenCoachmarks?: string[]) {
+  const plan = coachPlanInputFixture(profileId)
+  await mockPilot(page, { profileId: plan.trainerId, fitLime: true, workouts: [plan], unseenCoachmarks })
+  await page.addInitScript(() => localStorage.setItem('fit.workoutTimeWheel', 'false'))
+  page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss())
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await expect(page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })).toBeVisible()
+  return plan
+}
+
+test('Figma workout Coach plan input keeps decimals, Next, active metrics and retry', async ({ page }, info) => {
+  await openCoachPlanInput(page)
+  const writes: Array<{ version: number; exercises: Array<{ sets: Array<{ weightKg?: number; durationSec?: number; distanceKm?: number }> }> }> = []
+  await page.route(`**/v1/workouts/${workoutId}`, async route => {
+    if (route.request().method() !== 'PUT') return route.fallback()
+    writes.push(route.request().postDataJSON() as typeof writes[number])
+    if (writes.length === 1) return route.fulfill({ status: 503, json: { error: 'Временная ошибка сохранения' } })
+    return route.fallback()
+  })
+  const first = page.locator('.planned-exercise').first()
+  const weight = first.getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill(''); await weight.pressSequentially('22,5')
+  await expect(weight).toHaveValue('22,5')
+  expect(await weight.evaluate((node: HTMLInputElement) => node.checkValidity())).toBe(true)
+  await weight.fill('50'); await first.getByLabel('Повторы, подход 1', { exact: true }).click()
+  await weight.click(); await weight.pressSequentially('25')
+  await expect(weight).toHaveValue('25')
+  await first.getByLabel('Повторы, подход 1', { exact: true }).press('Enter')
+  await expect(first.getByLabel('Вес, подход 2', { exact: true })).toBeFocused()
+  expect(writes).toHaveLength(0)
+  await weight.fill('-1'); await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  expect(await weight.evaluate((node: HTMLInputElement) => node.checkValidity())).toBe(false)
+  expect(writes).toHaveLength(0)
+  await weight.fill('22,5')
+  const plank = page.locator('.planned-exercise').nth(1)
+  await expect(plank.locator('.workout-duration-trigger')).toHaveCount(0)
+  await plank.getByLabel('Время, подход 1: секунды', { exact: true }).fill('42')
+  const distance = page.locator('.planned-exercise').nth(2).getByLabel('Расстояние, подход 1', { exact: true })
+  await distance.fill('2,75'); await distance.press('Enter')
+  expect(writes).toHaveLength(0)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/edit$`))
+  await distance.fill('3.25') // Save directly from the still-focused last metric.
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
+  await expect(weight).toHaveValue('22,5')
+  await page.screenshot({ path: info.outputPath('coach-plan-input-retry.png') })
+  expect(writes[0]!.exercises[0]!.sets[0]!.weightKg).toBe(22.5)
+  expect(writes[0]!.exercises[1]!.sets[0]!.durationSec).toBe(102)
+  expect(writes[0]!.exercises[2]!.sets[0]!.distanceKm).toBe(3.25)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).focus()
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).press('Enter')
+  await expect(page.locator('.coach-reference-form')).not.toBeVisible()
+  expect(writes).toHaveLength(2); expect(writes[1]).toEqual(writes[0])
+  expect(await page.evaluate(key => localStorage.getItem(key), `fit.workout-form-draft.c0ac0000-6010-4000-8000-000000000001.edit-${workoutId}`)).toBeNull()
+})
+
+test('Figma workout Coach plan input restores only same-version edits and guards Back', async ({ page }) => {
+  const plan = await openCoachPlanInput(page)
+  const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill('77.5'); await weight.press('Enter')
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  const confirm = page.getByRole('alertdialog')
+  await expect(confirm).toContainText('Выйти без сохранения плана?')
+  await confirm.getByRole('button', { name: 'Отмена', exact: true }).click()
+  await page.reload(); await expect(weight).toHaveValue('77.5')
+  plan.version += 1 // Simulate a newer server version; never mix it with an old edit.
+  await page.reload(); await expect(weight).toHaveValue('20')
+  const retained = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}') as { sourceVersion?: number }, `fit.workout-form-draft.c0ac0000-6010-4000-8000-000000000001.edit-${workoutId}`)
+  expect(retained.sourceVersion).toBe(plan.version - 1)
+})
+
+test('Figma workout Coach plan input second identity creates and reloads a numeric draft', async ({ page }) => {
+  const id = 'c0ac0000-6010-4000-8000-000000000002'
+  await mockPilot(page, { profileId: id, fitLime: true, workouts: [], failFirstSave: true })
+  await page.goto(`/workouts/new?client=${clientId}&date=2026-10-17`)
+  await page.getByRole('textbox', { name: 'Название тренировки' }).fill('Новый план без случайного сохранения')
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await picker.getByLabel('Поиск упражнения').fill('присед со штангой')
+  await picker.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+  await picker.getByRole('button', { name: 'Добавить выбранные упражнения' }).click()
+  const card = page.locator('.planned-exercise').first()
+  const weight = card.getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill(''); await weight.pressSequentially('27,5')
+  await weight.press('Enter')
+  await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toBeFocused()
+  await card.getByLabel('Повторы, подход 1', { exact: true }).fill('12')
+  await page.reload(); await expect(weight).toHaveValue('27.5')
+  await card.getByRole('button', { name: 'Подход', exact: true }).click()
+  await expect(card.getByLabel('Вес, подход 2', { exact: true })).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(weight).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.locator('.coach-reference-form')).not.toBeVisible()
+  await page.goto(`/workouts/${newWorkoutId}/edit`)
+  await expect(weight).toHaveValue('27.5')
+})
+
+test('Figma workout Coach plan input never leaks into a third Lime trainer', async ({ page }) => {
+  await openCoachPlanInput(page, 'c0ac0000-6010-4000-8000-000000000003', scheduleCoachmarks)
+  await expect(page.locator('.coach-reference-form')).toHaveCount(0)
+  const weight = page.locator('.planned-exercise').first().getByLabel('Вес, подход 1', { exact: true })
+  await expect(weight).toHaveAttribute('type', 'number')
+  await expect(weight).not.toHaveAttribute('data-live-direct')
+  await page.goto(`/workouts/new?entry=quick&date=2026-09-24&client=${clientId}`)
+  await expect(page.locator('.today-plan-summary')).toBeVisible()
+  await page.goto('/schedule?week=2026-09-21')
+  await expect(page.locator('.coach-schedule-toolbar')).toHaveCount(0)
+  await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Вид и фильтры расписания' })).toHaveCount(0)
+  await expect(page.locator('.coachmark-bubble').filter({ hasText: 'История — в списке' })).toHaveCount(1)
+  await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Только ваши занятия' })).toHaveCount(1)
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.locator('.schedule-day-view')).toBeVisible()
+  await expect(page.locator('.coach-day-swipe, .coach-day-heading')).toHaveCount(0)
+})
+
+test('Figma workout Coach refined plan keeps RPE in a 48px metric row and duration labels quiet', async ({ page }, info) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(id => localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'), pilot)
+  await openCoachPlanInput(page)
+  await expect(page.locator('.coach-plan-refined')).toBeVisible()
+  const row = page.locator('.planned-set').first()
+  const boxes = await row.locator('input, select').evaluateAll(nodes => nodes.map(node => {
+    const rect = node.getBoundingClientRect()
+    return { y: rect.y, height: rect.height, width: rect.width }
+  }))
+  expect(boxes).toHaveLength(3)
+  expect(boxes.every(box => box.height === 48 && box.width >= 44)).toBe(true)
+  expect(new Set(boxes.map(box => box.y)).size).toBe(1)
+  const rpe = row.getByLabel('Целевой RPE, подход 1', { exact: true })
+  expect(await rpe.evaluate(node => getComputedStyle(node).appearance)).toBe('none')
+  await rpe.selectOption('8')
+  const minutes = page.locator('.planned-exercise').nth(1).getByLabel('Время, подход 1: минуты', { exact: true })
+  await minutes.click()
+  await page.setViewportSize({ width: 390, height: 400 }) // Keyboard-sized viewport: input must remain reachable.
+  await expect(minutes).toBeInViewport()
+  expect(await minutes.evaluate(node => node.getBoundingClientRect().height)).toBe(48)
+  const duplicate = page.locator('.planned-exercise').nth(1).locator('.coach-plan-metric:has(.workout-duration-parts) > .coach-plan-field-unit').first()
+  await expect(duplicate).toBeHidden()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+  await page.screenshot({ path: info.outputPath('coach-refined-plan-keyboard.png') })
+})
+
+test('Figma workout Coach refined plan retains RPE inside supersets and after split', async ({ page }) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+  const plan = coachGestureWorkout(true, 3)
+  plan.status = 'planned'; plan.startedAt = null; plan.trainerId = pilot; plan.createdBy = pilot
+  await page.addInitScript(id => localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'), pilot)
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [plan] })
+  const writes: Array<{ exercises: Array<{ blockType: string; sets: Array<{ rpe?: number }> }> }> = []
+  page.on('request', request => { if (request.method() === 'PUT' && new URL(request.url()).pathname === `/v1/workouts/${workoutId}`) writes.push(request.postDataJSON() as typeof writes[number]) })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  const group = page.locator('.exercise-block').first()
+  await expect(group.getByLabel(/Целевой RPE, подход/)).toHaveCount(4)
+  const blockControls = await group.locator('.exercise-block-head select, .block-rounds input').evaluateAll(nodes => nodes.map(node => ({ height: node.getBoundingClientRect().height, appearance: getComputedStyle(node).appearance })))
+  expect(blockControls).toHaveLength(2)
+  expect(blockControls.every(control => control.height === 48)).toBe(true)
+  expect(blockControls[0]!.appearance).toBe('none')
+  await group.getByLabel('Целевой RPE, подход 1', { exact: true }).first().selectOption('8')
+  const groupRow = group.locator('.planned-round-exercise').first()
+  const rects = await groupRow.locator('input, select').evaluateAll(nodes => nodes.filter(node => (node as HTMLInputElement).type !== 'hidden').map(node => { const r = node.getBoundingClientRect(); return { y: r.y, height: r.height } }))
+  expect(rects.every(r => r.height === 48)).toBe(true)
+  expect(new Set(rects.map(r => r.y)).size).toBe(1)
+  const lastRound = group.getByRole('group', { name: 'Удалить круг 2: суперсет', exact: true })
+  await lastRound.focus()
+  await page.keyboard.press('Delete')
+  await lastRound.getByRole('button', { name: 'Удалить круг 2: суперсет', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(group.locator('.planned-round')).toHaveCount(2)
+  await group.locator('.exercise-block-head .overflow-trigger').click()
+  await page.getByRole('menuitem', { name: 'Разделить суперсет', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить', exact: true }).click()
+  await expect(page.locator('.exercise-block')).toHaveCount(0)
+  await expect(page.locator('.planned-exercise').first().getByLabel('Целевой RPE, подход 1', { exact: true })).toHaveValue('8')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.locator('.coach-reference-form')).not.toBeVisible()
+  expect(writes).toHaveLength(1)
+  expect(writes[0]!.exercises[0]!.sets[0]!.rpe).toBe(8)
+  expect(writes[0]!.exercises.every(exercise => exercise.blockType === 'single')).toBe(true)
+})
+
+test('Figma workout Coach Live density setting persists for the second pilot only', async ({ page }) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000002'
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
+  await page.goto('/profile/settings')
+  const group = page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })
+  const animation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
+  await expect(animation).not.toBeChecked()
+  await animation.click()
+  await expect(animation).toBeChecked()
+  await expect(group.getByRole('radio', { name: 'Оригинальный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await group.getByRole('radio', { name: 'Компактный', exact: true }).click()
+  await page.reload()
+  await expect(group.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(animation).toBeChecked()
+  await group.getByRole('radio', { name: 'Компактный', exact: true }).focus()
+  await page.keyboard.press('ArrowLeft')
+  await expect(group.getByRole('radio', { name: 'Оригинальный', exact: true })).toBeFocused()
+  await page.keyboard.press('ArrowRight')
+  await expect(group.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  expect(await page.evaluate(() => localStorage.getItem('fit.coachLiveDensity.c0ac0000-6010-4000-8000-000000000001'))).toBeNull()
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-live-density-compact')).toBeVisible()
+  const guide = page.locator('.coachmark-bubble')
+  await expect(guide).toHaveCount(1)
+  await expect(guide).toContainText('Управление тренировкой')
+  await expect(guide).toBeInViewport({ ratio: 1 })
+  expect(await page.locator('.live-timer-toolbar .coachmark-anchor').evaluate(node => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0 })).toBe(true)
+  await guide.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await expect(guide).toHaveCount(0)
+  await page.reload()
+  await expect(page.locator('.coach-live-density-compact')).toBeVisible()
+  await expect(guide).toHaveCount(0)
+  expect(await page.evaluate(id => {
+    const seen: unknown = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]')
+    return Array.isArray(seen) && seen.some((entry: unknown) => entry === 'live-timer-2026-09')
+  }, pilot)).toBe(true)
+  expect(await page.evaluate(() => localStorage.getItem('fit.coachmarks-seen.c0ac0000-6010-4000-8000-000000000001'))).toBeNull()
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  expect(deadline).not.toBeNull()
+  await page.goto('/profile/settings')
+  await group.getByRole('radio', { name: 'Оригинальный', exact: true }).click()
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-live-density-original')).toBeVisible()
+  await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+})
+
+test('Figma workout Coach Live density switches without remounting fields or resetting rest', async ({ page }) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.clock.install({ time: new Date('2026-10-08T08:59:00Z') })
+  await page.addInitScript(() => {
+    const viewport = new EventTarget()
+    Object.defineProperties(viewport, { height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? innerHeight) }, offsetTop: { get: () => 0 } })
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  })
+  const source = restTimerWorkout(); source.startedAt = '2026-10-08T08:00:00Z'; source.notes = 'Не торопиться в негативной фазе'
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  let confirmations = 0
+  page.on('request', request => { if (request.url().endsWith('/confirm')) confirmations++ })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-live-density-original')).toBeVisible()
+  await page.clock.pauseAt(new Date('2026-10-08T09:00:00Z'))
+  await expect(page.getByLabel('Заметка к тренировке', { exact: true })).toHaveText(source.notes)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
+  const field = page.locator('[data-live-set-id]').last().getByLabel('Фактический вес', { exact: true })
+  await field.fill('29.5'); const element = await field.elementHandle()
+  const forms = await page.locator('[data-live-set-id]').count()
+  await page.evaluate(id => {
+    const key = `fit.coachLiveDensity.${id}`
+    localStorage.setItem(key, 'compact')
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'compact' }))
+    document.documentElement.dataset.testVisibleHeight = '400'
+    window.visualViewport?.dispatchEvent(new Event('resize'))
+  }, pilot)
+  await page.clock.runFor(250) // Flush viewport/visibility RAF while keeping Date deterministic.
+  await expect(page.locator('.coach-live-density-compact')).toBeVisible()
+  const utilities = page.locator('.coach-live-exercise-utilities').first()
+  expect(await utilities.evaluate(node => {
+    const add = node.querySelector('.live-add-set')!.getBoundingClientRect(), note = node.querySelector('summary')!.getBoundingClientRect()
+    return add.top === note.top && note.left >= add.right
+  })).toBe(true)
+  await expect(field).toBeFocused(); await expect(field).toHaveValue('29.5')
+  expect(await element!.evaluate(node => node.isConnected && node === document.activeElement)).toBe(true)
+  expect(await page.locator('[data-live-set-id]').count()).toBe(forms)
+  await expect.poll(() => field.evaluate(node => { const r = node.getBoundingClientRect(); const rest = document.querySelector('.live-rest-trigger')!.getBoundingClientRect(); return r.top >= rest.bottom && r.bottom <= 400 && r.height === 48 })).toBe(true)
+  await page.clock.fastForward(4_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых −0:02')
+  await expect(page.locator('.coach-live-digits')).toHaveText('1:00:04')
+  expect(confirmations).toBe(1)
+  await page.evaluate(id => { const key = `fit.coachLiveDensity.${id}`; localStorage.setItem(key, 'original'); window.dispatchEvent(new StorageEvent('storage', { key, newValue: 'original' })) }, pilot)
+  await page.clock.runFor(100)
+  await expect(page.locator('.coach-live-density-original')).toBeVisible()
+  expect(await element!.evaluate(node => node.isConnected && node === document.activeElement)).toBe(true)
+  await expect(field).toHaveValue('29.5')
+  expect(confirmations).toBe(1)
+})
+
+for (const role of ['trainer', 'client'] as const) test(`Figma workout Coach Live density stays closed for outside ${role}`, async ({ page }) => {
+  const id = role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000003' : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.addInitScript(id => localStorage.setItem(`fit.coachLiveDensity.${id}`, 'compact'), id)
+  await mockPilot(page, { role, profileId: id, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
+  await page.goto('/profile/settings')
+  await expect(page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })).toHaveCount(0)
+  if (role === 'trainer') await expect(page.getByRole('switch', { name: 'Анимация упражнения', exact: true })).toBeChecked()
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+  await expect(page.locator('.coach-live-density')).toHaveCount(0)
+})
+
+// Density/width are visual axes only: no repeated long mutation chains.
+for (const density of ['original', 'compact'] as const) for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach Live density composition ${density} ${width}`, async ({ page }, info) => {
+  const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.addInitScript(({ id, value }) => localStorage.setItem(`fit.coachLiveDensity.${id}`, value), { id: pilot, value: density })
+  const source = coachGestureWorkout(false, 3); source.title = 'На всё тело'; source.notes = 'Контролировать дыхание'; source.exercises[0]!.trainerComment = 'Пятки не отрывать'
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator(`.coach-live-density-${density}`)).toBeVisible()
+  await expect(page.locator('.live-technique, .live-technique-collapsed')).toHaveCount(0)
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.locator('.coach-live-clock')).toHaveCSS('height', density === 'original' ? '194px' : '84px')
+  await expect(page.locator('.live-rest-trigger')).toHaveCSS('height', density === 'original' ? '60px' : '48px')
+  const first = page.locator('.live-exercise.current')
+  await expect(first).toHaveCSS('border-radius', '32px')
+  await expect(page.locator('.workout-gesture-list')).toHaveCSS('gap', '2px')
+  const sizes = await first.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
+  expect(sizes.length).toBeGreaterThan(0); expect(sizes.every(height => height === (density === 'original' ? 54 : 48))).toBe(true)
+  await expect(first.locator('.live-set-check').first()).toHaveCSS('width', density === 'original' ? '54px' : '48px')
+  if (density === 'original' && width === 375) await expect(first.locator('.live-set-input').first()).toHaveCSS('width', '84.5px')
+  await expect(first.locator('.live-set-grid').first()).toHaveCSS('padding-left', density === 'original' ? '28px' : '0px')
+  await expect(first.locator('.live-set-grid').first()).toHaveCSS('padding-right', density === 'original' ? '28px' : '0px')
+  await expect(page.locator('.coach-live-finish svg')).toHaveAttribute('data-original-icon', 'check-small')
+  await expect(page.locator('.coach-live-finish')).toHaveCSS('width', '44px')
+  expect(await page.locator('.coach-live-finish').evaluate(node => getComputedStyle(node, '::before').width)).toBe('40px')
+  const restIcon = page.locator('.live-rest-trigger > img')
+  await expect(restIcon).toHaveAttribute('width', '16')
+  expect(await restIcon.evaluate(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth === 16)).toBe(true)
+  if (density === 'compact') await expect(page.locator('.live-session-progress-copy')).toHaveCSS('clip-path', 'inset(50%)')
+  await expect(first.getByLabel('Фактический вес', { exact: true }).first()).toHaveAttribute('placeholder', '—')
+  await expect(first.getByLabel('Фактические повторы', { exact: true }).first()).toHaveAttribute('placeholder', '—')
+  await expect(first.locator('.live-set-check svg').first()).toHaveCSS('mask-image', /check-small\.svg|Check%20small/)
+  await expect(page.locator('.live-session-header')).toHaveCSS('min-height', '0px')
+  await expect(page.getByRole('progressbar', { name: 'Выполненные подходы' })).toHaveCSS('clip-path', 'inset(50%)')
+  await expect(first.locator('.live-exercise-note > summary')).toContainText('Заметка тренера')
+  await expect(first.locator('.live-exercise-note > summary')).toContainText('Пятки не отрывать')
+  const finish = page.getByRole('button', { name: 'Завершить тренировку', exact: true }).first()
+  await expect(finish).toBeInViewport()
+  await expect.poll(() => finish.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+  await page.screenshot({ path: info.outputPath(`coach-live-${density}-${width}.png`) })
+})
+
 for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference full editor ${width}`, async ({ page }, info) => {
+  const pilot = width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001'
   await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
-  await mockPilot(page, { profileId: width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [], failFirstSave: true })
-  await page.goto('/workouts/new?date=2026-09-24')
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [], failFirstSave: true, unseenCoachmarks: [...scheduleCoachmarks, dayGuideId] })
+  // One existing width covers the real quick entry; the others retain the
+  // normal creation route. No extra visual/behavior matrix is introduced.
+  await page.goto(`/workouts/new?date=2026-09-24${width === 390 ? '&entry=quick' : ''}`)
   await expect(page.locator('.coach-reference-form')).toBeVisible()
   const title = page.getByRole('textbox', { name: 'Название тренировки' })
   await title.fill('На всё тело: силовая тренировка')
@@ -21,11 +378,28 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await clients.getByRole('button', { name: /Алексей Смирнов/ }).click()
   await expect(page.getByRole('button', { name: 'Сохранить план' })).toBeDisabled()
   await clients.getByRole('button', { name: 'Применить клиента' }).click()
+  await expect(page.locator('.coach-plan-avatar')).toHaveText('АС')
+  await expect(page.locator('.coach-plan-date .schedule-v2-calendar')).toHaveCSS('color', 'rgb(248, 176, 33)')
+  await expect(page.locator('.coach-plan-time-label img').first()).toHaveAttribute('src', /clock/i)
+  const planNote = page.getByRole('textbox', { name: 'Заметка для спортсмена', exact: true })
+  await expect(planNote).toBeVisible()
+  await expect(page.locator('.coach-plan-note summary')).toHaveCount(0)
+  await planNote.fill('Не торопиться в негативной фазе')
   await page.getByLabel('Начало', { exact: true }).fill('12:00')
   await page.getByLabel('Окончание', { exact: true }).fill('11:00')
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page.getByRole('alert')).toContainText('12 часов')
   await page.getByLabel('Окончание', { exact: true }).fill('13:00')
+  await expect(page.getByLabel('Начало', { exact: true })).toHaveAttribute('type', 'text')
+  await expect(page.getByLabel('Начало', { exact: true })).toHaveValue('12:00')
+  if (width === 390) {
+    await page.getByRole('button', { name: 'Выбрать время: Начало', exact: true }).click()
+    const clock = page.getByRole('dialog', { name: 'Время: Начало', exact: true })
+    await expect(clock.getByRole('listbox', { name: 'часы', exact: true })).toBeVisible()
+    await expect(clock.getByRole('listbox', { name: 'минуты', exact: true })).toBeVisible()
+    await clock.getByRole('button', { name: 'Применить время', exact: true }).click()
+    await expect(page.getByLabel('Начало', { exact: true })).toHaveValue('12:00')
+  }
   await page.getByText('Настройки плана', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Добавить шаблон' })).toBeVisible()
   await page.getByLabel('Подготовка перед стартом').selectOption('10')
@@ -39,10 +413,35 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await picker.getByRole('button', { name: 'Выбрать: Планка', exact: true }).click()
   await picker.getByRole('button', { name: 'Добавить выбранные упражнения' }).click()
   const squat = page.locator('.planned-exercise').filter({ hasText: 'Присед со штангой' })
+  await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('placeholder', '—')
+  await expect(squat.getByLabel('Повторы, подход 1')).toHaveAttribute('placeholder', '—')
+  await expect(squat.locator('.compact-editor-exercise-fields')).toHaveCSS('border-top', '1px solid rgb(59, 59, 64)')
+  await expect(squat.locator('.overflow-trigger svg[data-icon="more"]')).toHaveCSS('width', '24px')
+  await expect(squat.locator('.exercise-comment-options > summary')).toHaveCSS('min-height', '44px')
+  await expect(squat.locator('.set-add-row svg')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(page.locator('.coach-plan-entry-controls .quick-workout-expand')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  await expect(page.locator('.coach-plan-entry-controls > button').first()).toHaveCSS('background-color', 'rgb(59, 59, 64)')
   await squat.getByLabel('Вес, подход 1').fill('27.5')
   await squat.getByLabel('Повторы, подход 1').fill('10')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveCSS('height', '48px')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveCSS('font-size', '16px')
+  await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('autocomplete', 'off')
+  await expect(squat.getByLabel('Вес, подход 1')).toHaveAttribute('inputmode', 'decimal')
+  await expect(page.locator('.today-plan-summary')).toHaveCount(0)
+  const lower = page.locator('.coach-plan-entry-controls'), bulk = page.locator('.workout-editor-footer .overflow-trigger')
+  await expect(lower).toHaveCSS('gap', '2px')
+  expect(await lower.locator(':scope > button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 80))).toBe(true)
+  await bulk.scrollIntoViewIfNeeded()
+  expect(await bulk.evaluate(button => {
+    const rect = button.getBoundingClientRect(), footer = button.closest('.workout-editor-footer')!.getBoundingClientRect()
+    const controls = document.querySelector('.coach-plan-entry-controls')!.getBoundingClientRect()
+    return Math.abs(footer.right - rect.right - 16) < 1 && controls.top >= rect.bottom + 8 && rect.height >= 44
+  })).toBe(true)
+  await bulk.click()
+  await expect(page.getByRole('menuitem', { name: 'Сбросить значения', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(squat.locator('.planned-set-table-head')).not.toBeVisible()
+  await expect(squat.locator('.coach-plan-field-unit')).toHaveText(['кг', 'повт.'])
   await expect(squat).toHaveCSS('border-radius', '32px')
   await expect(squat.locator('.compact-editor-exercise-title strong')).toHaveCSS('font-size', '24px')
   await expect(page.locator('.workout-gesture-list .live-set-confirm')).toHaveCount(0)
@@ -54,6 +453,7 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await page.reload()
   await expect(title).toHaveValue('На всё тело: силовая тренировка')
   await expect(page.locator('.planned-exercise').last()).toContainText('Присед со штангой')
+  await expect(planNote).toHaveValue('Не торопиться в негативной фазе')
   await expect(squat.getByLabel('Вес, подход 1')).toHaveValue('27.5')
   const sent: Array<{ requestId: string; prepSeconds: number; title: string; trainingFormat: string; startTime: string; endTime: string; exercises: Array<{ name: string; sets: Array<{ weightKg?: number }> }> }> = []
   page.on('request', request => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number]) })
@@ -64,10 +464,88 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await page.getByRole('button', { name: 'Сохранить план' }).click()
   await expect(page.locator('.coach-reference-form')).not.toBeVisible()
   expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0])
-  expect(sent[0]).toMatchObject({ title: 'На всё тело: силовая тренировка', prepSeconds: 10, trainingFormat: 'with_trainer', startTime: '12:00', endTime: '13:00' })
+  expect(sent[0]).toMatchObject({ title: 'На всё тело: силовая тренировка', notes: 'Не торопиться в негативной фазе', prepSeconds: 10, trainingFormat: 'with_trainer', startTime: '12:00', endTime: '13:00' })
   expect(sent[0]!.exercises.map(exercise => exercise.name)).toEqual(['Планка', 'Присед со штангой'])
   expect(sent[0]!.exercises[1]!.sets[0]!.weightKg).toBe(27.5)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.goto('/schedule?week=2026-09-21')
+  const filters = page.locator('.coach-schedule-filter-options')
+  const guide = page.locator('.coachmark-bubble')
+  await expect(guide).toHaveCount(1)
+  await expect(guide).toContainText('Вид и фильтры расписания')
+  await expect(guide).toBeInViewport({ ratio: 1 })
+  const view = page.getByRole('group', { name: 'Вид расписания', exact: true })
+  expect(await view.evaluate(node => {
+    const anchor = node.closest('.coachmark-anchor')!
+    const a = anchor.getBoundingClientRect(), r = node.getBoundingClientRect()
+    const bubble = document.querySelector('.coachmark-bubble')!.getBoundingClientRect()
+    return a.width > 0 && a.height > 0 && a.top <= r.top && a.bottom >= r.bottom && bubble.top >= r.bottom
+  })).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-schedule-first-guide.png') })
+  const understood = guide.getByRole('button', { name: 'Понятно', exact: true })
+  expect(await understood.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+  await understood.click()
+  await expect(guide).toHaveCount(0)
+  expect(await page.evaluate(({ id, key }) => {
+    const seen: unknown = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]')
+    return Array.isArray(seen) && seen.some((entry: unknown) => entry === key)
+  }, { id: pilot, key: scheduleGuideId })).toBe(true)
+  await page.reload()
+  await expect(view).toBeVisible()
+  await expect(guide).toHaveCount(0)
+  await expect(page.locator('.coach-schedule-toolbar')).toHaveCSS('display', 'grid')
+  expect(await page.locator('.coach-schedule-toolbar').evaluate(node => {
+    const mode = node.querySelector('[aria-label="Вид расписания"]')!.getBoundingClientRect()
+    const filter = node.querySelector('summary')!.getBoundingClientRect()
+    return Math.abs(mode.top - filter.top) < 1 && mode.right <= filter.left
+  })).toBe(true)
+  await expect(filters).toBeVisible()
+  await expect(filters).not.toHaveAttribute('open')
+  await page.screenshot({ path: info.outputPath('coach-schedule-filters-closed.png') })
+  const filterClosed = await filters.locator('summary').boundingBox()
+  const viewClosed = await view.boundingBox()
+  await expect(page.locator('.schedule-v2-day-card').first()).toHaveAccessibleName(/На этот день тренировок нет/)
+  await expect(page.locator('.schedule-v2-day-card em').filter({ hasText: 'Свободный день' })).toHaveCount(0)
+  await filters.locator('summary').click()
+  await expect(filters.getByLabel('Фильтр по клиенту')).toBeVisible()
+  const filterOpen = await filters.locator('summary').boundingBox()
+  expect(filterOpen!.x).toBeCloseTo(filterClosed!.x, 0)
+  expect(filterOpen!.y).toBeCloseTo(filterClosed!.y, 0)
+  expect(filterOpen!.width).toBeCloseTo(filterClosed!.width, 0)
+  expect((await view.boundingBox())!.y).toBeCloseTo(viewClosed!.y, 0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-schedule-filters-open.png') })
+  await filters.locator('summary').click()
+  await view.getByRole('button', { name: 'Список', exact: true }).click()
+  await view.getByRole('button', { name: 'Календарь', exact: true }).click()
+  await expect(guide).toHaveCount(0)
+  await page.goto('/today?date=2026-09-24')
+  await expect(guide).toHaveCount(1)
+  await expect(guide).toContainText('Все дела — в календаре')
+  await expect(guide).toBeInViewport({ ratio: 1 })
+  await expect(filters).toHaveCount(0)
+  expect(await page.locator('.schedule-v2-summary').evaluate(node => {
+    const anchor = node.closest('.coachmark-anchor')!.getBoundingClientRect()
+    const control = node.getBoundingClientRect()
+    return anchor.width > 0 && anchor.height > 0 && anchor.top <= control.top && anchor.bottom >= control.bottom
+  })).toBe(true)
+  await page.screenshot({ path: info.outputPath('coach-day-first-guide.png') })
+  await guide.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await expect(guide).toHaveCount(0)
+  expect(await page.evaluate(({ id, key }) => {
+    const seen: unknown = JSON.parse(localStorage.getItem(`fit.coachmarks-seen.${id}`) ?? '[]')
+    return Array.isArray(seen) && seen.some((entry: unknown) => entry === key)
+  }, { id: pilot, key: dayGuideId })).toBe(true)
+  await page.reload()
+  await expect(filters).toHaveCount(0)
+  await expect(guide).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '24 сентября', exact: true })).toBeVisible()
+  await expect(page.locator('.coach-day-heading')).toContainText('четверг')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.goto('/schedule?week=2026-09-21')
+  await filters.locator('summary').click()
+  await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeVisible()
+
 })
 
 test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
@@ -86,9 +564,23 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await picker.getByRole('button', { name: 'Добавить выбранные упражнения' }).click()
   await page.locator('.planned-exercise').first().getByLabel('Вес, подход 1').fill('27.5')
   await page.locator('.planned-exercise').first().getByLabel('Повторы, подход 1').fill('10')
+  const planExercise = page.locator('.planned-exercise').first()
+  await planExercise.getByRole('button', { name: 'Подход', exact: true }).click()
+  const planRow = planExercise.locator('.workout-set-swipe').nth(1)
+  await expect(planExercise.locator('.planned-set-remove')).toHaveCount(0)
+  expect((await planRow.locator('.planned-set-number').boundingBox())!.width).toBeGreaterThanOrEqual(44)
+  await revealCoachSetDelete(page, planRow)
+  await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(2)
+  await revealCoachSetDelete(page, planRow)
+  await planRow.getByRole('button', { name: /^Удалить подход 2:/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить подход', exact: true }).click()
+  await expect(planExercise.locator('.planned-set')).toHaveCount(1)
+  await expect(planExercise.getByLabel('Вес, подход 1')).toHaveValue('27.5')
   const handle = page.getByRole('button', { name: 'Переместить: Присед со штангой' })
   await handle.focus(); await handle.press('Space'); await handle.press('End'); await handle.press('Enter')
-  const swipes = page.locator('[data-workout-swipe]')
+  const swipes = page.locator('[data-workout-swipe]:not(.workout-set-swipe)')
   async function swipe(item: Locator, right: boolean) {
     // The rounded corner is not a reliable hit target. Use the inert card
     // padding at header mid-height; the title itself is a toggle button.
@@ -134,6 +626,65 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Проверка жестов плана')
   await expect(page.locator('.live-set-confirm')).toHaveCount(0)
   expect(writes).toEqual([])
+})
+
+// Copying a completed source creates a plan, not an editor of its old fact.
+// One behavioral case, two engines: picker focus and submit differ in Safari.
+test('Coach copied plan replaces exercises, preserves values and retries a failed save', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const source = coachGestureWorkout(false, 1)
+  source.status = 'done'; source.completedAt = '2026-09-24T12:00:00Z'
+  source.exercises[0]!.sets = [{ ...source.exercises[0]!.sets[0]!,
+    weightKg: 20, reps: 8, fact: { weightKg: 27.5, reps: 10 }, confirmedAt: source.completedAt }]
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/v1/workouts', async route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    writes.push(route.request().postDataJSON() as Record<string, unknown>)
+    expect(readSavePlannedWorkoutRequest(writes.at(-1), null)).toBeDefined()
+    if (writes.length === 1) return route.fulfill({ status: 503,
+      headers: { 'x-fit-request-id': '00000000-0000-4000-8000-000000000123', 'x-fit-error-code': '53300', 'x-fit-error-category': 'unknown',
+        'access-control-expose-headers': 'x-fit-request-id, x-fit-error-code, x-fit-error-category' },
+      json: { error: 'service_unavailable' } })
+    return route.fallback()
+  })
+  await page.goto(`/workouts/new?copy=${workoutId}&client=${clientId}`)
+  const card = page.locator('.planned-exercise').first()
+  await card.getByRole('button', { name: /^Приседания / }).click()
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await page.screenshot({ path: info.outputPath('copied-plan-before-replacement.png') })
+  const menu = card.getByRole('button', { name: 'Ещё действия', exact: true })
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Заменить', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await picker.getByLabel('Поиск упражнения').fill('жим штанги лёжа')
+  await picker.locator('button[data-exercise-ref="bench-press"]').click()
+  await expect(picker).not.toBeVisible()
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('10')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
+  const diagnosticButton = page.getByRole('alert').getByRole('button', { name: 'Скопировать диагностику' })
+  await diagnosticButton.scrollIntoViewIfNeeded()
+  expect((await diagnosticButton.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  expect(await copyTemplateDiagnostic(page)).toContain('53300')
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await page.screenshot({ path: info.outputPath('copied-plan-save-error.png') })
+  await page.reload()
+  await card.locator('.compact-editor-exercise-toggle').click()
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.locator('.workout-form-page')).not.toBeVisible()
+  expect(writes).toHaveLength(2)
+  expect(writes[1]).toEqual(writes[0])
+  expect(writes[0]).not.toHaveProperty('expectedVersion')
+  expect(writes[0]).toMatchObject({ exercises: [{ sourceExerciseId: null,
+    sets: [{ sourceSetId: null, weightKg: 27.5, reps: 10 }] }] })
+  const command = readSavePlannedWorkoutRequest(writes[0], null)!
+  expect(command.draft.exercises[0]!.ref).toBe('bench-press')
+  expect(command.draft.exercises[0]).not.toHaveProperty('sourceExerciseId')
+  expect(command.draft.exercises[0]!.sets[0]).not.toHaveProperty('sourceSetId')
+  await info.attach('copied-plan-command', { body: JSON.stringify(writes[0]), contentType: 'application/json' })
 })
 
 test('Figma workout Coach reference swipe keeps vertical scrolling and field focus', async ({ page, browserName }) => {
@@ -279,10 +830,32 @@ for (const width of [375, 390, 430, 1440]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
     await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [], failFirstSave: true })
     await page.goto('/today?date=2026-09-24')
+    if (width === 390) await page.evaluate(() => {
+      const key = 'fit.coachmarks-seen.c0ac0000-6010-4000-8000-000000000001'
+      const seen = JSON.parse(localStorage.getItem(key) ?? '[]') as string[]
+      localStorage.setItem(key, JSON.stringify(seen.filter(id => !['lime-quick-plan-2026-10', 'lime-direct-client-start-2026-10'].includes(id))))
+    })
     await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Новая тренировка', exact: true })).toHaveCSS('border-radius', '32px')
+    await expect(page.getByRole('dialog', { name: 'Новая тренировка', exact: true })).toHaveAttribute('role', 'dialog')
+    if (width === 390) {
+      await page.screenshot({ path: info.outputPath('coach-reference-first-entry.png') })
+      const entryCoachmark = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).locator('.coachmark-bubble')
+      await expect(entryCoachmark).toContainText('Начало без лишнего шага')
+      const entryClose = page.getByRole('dialog', { name: 'Новая тренировка', exact: true }).getByRole('button', { name: 'Закрыть выбор действия', exact: true })
+      expect(await entryClose.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+      await entryCoachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
+    }
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
     const composer = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await expect(composer).toHaveClass(/coach-reference-composer/)
+    if (width === 390) {
+      const coachmark = composer.locator('.coachmark-bubble')
+      await expect(coachmark).toContainText('План можно сохранить сразу')
+      const close = composer.getByRole('button', { name: 'Закрыть создание', exact: true })
+      expect(await close.evaluate(node => { const r = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) })).toBe(true)
+      await coachmark.getByRole('button', { name: 'Понятно', exact: true }).click()
+    }
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveCSS('font-size', '24px')
     await expect(composer.getByRole('button', { name: 'Сохранить план', exact: true })).toHaveCount(0)
     await composer.getByRole('textbox', { name: 'Название тренировки' }).fill('Силовая с длинным названием')
@@ -314,6 +887,15 @@ for (const width of [375, 390, 430, 1440]) {
     await dates.getByRole('button', { name: 'Применить дату' }).click()
     await composer.getByText('Настройки и способы ввода', { exact: true }).click()
     await composer.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
+    await composer.getByRole('button', { name: 'Закрыть создание', exact: true }).click()
+    await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+    const recovery = page.getByRole('dialog', { name: 'Черновик плана' })
+    await expect(recovery).toHaveCSS('border-radius', '32px')
+    await expect(recovery).toContainText('Силовая с длинным названием')
+    await page.screenshot({ path: info.outputPath('coach-reference-draft-recovery.png') })
+    await recovery.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+    await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
     const sent: Array<{ requestId: string; trainingFormat: string; startTime: string; endTime: string; exercises: unknown[] }> = []
     page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number]) })
     await composer.getByRole('button', { name: 'Сохранить план' }).click()
@@ -329,7 +911,7 @@ for (const width of [375, 390, 430, 1440]) {
 }
 
 for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
-  test(`Figma workout Coach reference adjacent superset ${profileId}`, async ({ page }, info) => {
+  test(`Figma workout Coach reference adjacent superset ${profileId}`, async ({ page, browserName }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
     const source = coachGestureWorkout(), first = source.exercises[0]!, second = source.exercises[1]!
@@ -357,6 +939,28 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       current.version++
       await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
     })
+    const roundCommands: string[] = []
+    if (profileId.endsWith('1')) {
+      await page.route('**/blocks/*/rounds', async route => {
+        const current = backend.getWorkouts()[0]!
+        expect(route.request().method()).toBe('POST')
+        expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+        const members = current.exercises.filter(exercise => exercise.blockId === first.blockId)
+        members.forEach((exercise, index) => { exercise.sets.push({ ...exercise.sets.at(-1)!, id: `c0ac0000-6010-4000-8000-0000000008${index}2`, position: 2, fact: {}, confirmedAt: null }); exercise.blockRounds = 3 })
+        current.version++; roundCommands.push('append')
+        await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+      })
+      await page.route('**/blocks/*/rounds/2', async route => {
+        const current = backend.getWorkouts()[0]!
+        expect(route.request().method()).toBe('DELETE')
+        expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+        const members = current.exercises.filter(exercise => exercise.blockId === first.blockId)
+        expect(members.every(exercise => exercise.sets.at(-1)?.position === 2 && !exercise.sets.at(-1)?.confirmedAt && Object.keys(exercise.sets.at(-1)!.fact).length === 0)).toBe(true)
+        members.forEach(exercise => { exercise.sets = exercise.sets.filter(set => set.position !== 2); exercise.blockRounds = 2 })
+        current.version++; roundCommands.push('remove')
+        await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+      })
+    }
     await page.goto(`/workouts/${workoutId}/live`)
     await page.locator(`[data-workout-block="${first.blockId}"]`).getByRole('button', { name: 'Ещё действия', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Объединить со следующим в суперсет', exact: true }).click()
@@ -364,6 +968,24 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await expect(page.locator('.circuit-round')).toHaveCount(2)
     await expect(page.getByRole('button', { name: 'Круг', exact: true })).toBeVisible()
     const group = page.locator('.exercise-block.live')
+    if (profileId.endsWith('1')) {
+      await group.getByRole('button', { name: 'Круг', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(3)
+      const lastRound = group.locator('.circuit-round').last()
+      await lastRound.getByRole('button', { name: /Круг 3/ }).click()
+      const row = lastRound.locator('[data-live-set-id]').first()
+      const swipeRound = async () => { const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true })); await gesture.move(60); await gesture.end() }
+      await swipeRound()
+      await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(3)
+      expect(backend.getWorkouts()[0]!.exercises.filter(exercise => exercise.blockId === first.blockId).map(exercise => exercise.sets.at(-1)!.fact)).toEqual([{}, {}])
+      await swipeRound()
+      await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Убрать', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(2)
+      expect(roundCommands).toEqual(['append', 'remove'])
+    }
     await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
     await expect(page.locator(`[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
     await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
@@ -372,7 +994,10 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await expect(group.locator('.circuit-round-toggle').first()).toContainText('2 из 2 выполнено')
     await expect(page.locator('.live-rest-trigger')).toContainText('1:30')
     await group.locator('.circuit-head').getByRole('button', { name: 'Ещё действия', exact: true }).click()
-    await expect(page.getByRole('menuitem', { name: /следующее.*суперсет/ })).toHaveCount(0)
+    const unavailableMerge = page.getByRole('menuitem', { name: 'Добавить следующее в суперсет', exact: true })
+    await expect(unavailableMerge).toBeDisabled()
+    await expect(unavailableMerge).toContainText('Есть выполненные подходы')
+    await page.screenshot({ path: info.outputPath('coach-live-superset-unavailable.png') })
     await page.getByRole('menuitem', { name: 'Разделить суперсет', exact: true }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить', exact: true }).click()
     await expect(page.locator('.exercise-block.live')).toHaveCount(0)
@@ -433,6 +1058,7 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   const source = coachGestureWorkout(false, 8), first = source.exercises[0]!
   first.ref = 'vital-gym-pro-r007-0017'
   first.name = 'Жим гантелей над головой'
+  if (role === 'trainer') await page.addInitScript(() => localStorage.setItem('fit.liveExerciseAnimation.c0ac0000-6010-4000-8000-000000000001', 'true'))
   await mockPilot(page, { role, profileId: role === 'client' ? clientId : 'c0ac0000-6010-4000-8000-000000000001', clientLime: role === 'client', fitLime: true, workouts: [source] })
   const moves: unknown[] = []
   page.on('request', request => { if (request.method() === 'POST' && request.url().endsWith('/move')) moves.push(request.postDataJSON() as unknown) })
@@ -446,24 +1072,41 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
   const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input:not(:disabled)`).first()
   await field.fill('27.5'); await field.blur()
-  const handle = page.getByRole('button', { name: `Переместить: ${first.name}`, exact: true })
-  await expect(handle).toBeEnabled()
+  const handle = role === 'trainer' ? page.getByRole('button', { name: `Переместить: ${first.name}`, exact: true }) : page.locator(`[data-workout-block="${first.blockId}"] .live-exercise-head`)
+  if (role === 'trainer') await expect(handle).toBeEnabled()
   await handle.evaluate(element => element.scrollIntoView({ block: 'center' }))
   await expect.poll(() => handle.evaluate(element => {
     const rect = element.getBoundingClientRect()
     return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
   })).toBe(true)
   const box = (await handle.boundingBox())!
-  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  const cardBox = (await page.locator(`[data-workout-block="${first.blockId}"]`).boundingBox())!
+  let point = role === 'trainer' ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : { x: cardBox.x + 8, y: box.y + 8 }
   const cdp = await page.context().newCDPSession(page)
   try {
+    if (role === 'client') {
+      const before = await page.locator('.content').evaluate(element => element.scrollTop)
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x, y: point.y - 80 }] })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await expect.poll(() => page.locator('.content').evaluate(element => element.scrollTop)).toBeGreaterThan(before)
+      await expect(page.locator('.workout-drag-preview')).toHaveCount(0)
+      expect(moves).toHaveLength(0)
+      await handle.evaluate(element => element.scrollIntoView({ block: 'center' }))
+      // Wait for the native pan/scroll relocation to settle before starting a
+      // new held gesture. evaluate(scrollIntoView) alone does not await it.
+      await handle.scrollIntoViewIfNeeded()
+      const movedHeader = (await handle.boundingBox())!, movedCard = (await page.locator(`[data-workout-block="${first.blockId}"]`).boundingBox())!
+      point = { x: movedCard.x + 8, y: movedHeader.y + 8 }
+    }
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
-    await expect(handle).toHaveAttribute('aria-pressed', 'true')
+    if (role === 'trainer') await expect(handle).toHaveAttribute('aria-pressed', 'true')
+    else await expect(page.locator(`[data-workout-block="${first.blockId}"]`)).toHaveClass(/dragging/)
     await expect(page.locator('.workout-drag-preview')).toContainText(first.name)
     for (let step = 1; step <= 12; step += 1) await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchMove', touchPoints: [{ x: point.x, y: point.y + (820 - point.y) * step / 12 }],
     })
-    await expect.poll(() => page.locator('.workout-gesture-list > [role="status"]').textContent()).not.toBe('Перенос: позиция 1 из 8')
+    await expect(page.locator('.workout-gesture-list > [role="status"]')).toHaveText(/Перенос: позиция [2-8] из 8/)
     expect(moves).toHaveLength(0)
     await page.screenshot({ path: info.outputPath('coach-live-touch-drag.png') })
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
@@ -474,6 +1117,58 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
     await expect(page.locator('.live-rest-trigger')).toHaveText(/Отдых\s+1:[0-5]\d/)
     await expect(page.locator('.live-session-progress-copy')).toContainText(`Сейчас: ${first.name}`)
   } finally { await cdp.detach() }
+})
+
+// Layout-only axes: theme controls contrast; width controls Russian title wrap.
+// Drag/confirmation/network chains remain in the existing behavior cases.
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`Client Lime compact Live composition ${theme} ${width}`, { tag: ['@lime-critical'] }, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 932 })
+  const source = coachGestureWorkout(false, 3), first = source.exercises[0]!
+  source.startedAt = '2026-10-08T09:00:00Z'
+  first.ref = 'vital-gym-pro-r007-0017'
+  first.name = 'Жим гантелей на наклонной скамье'
+  first.trainerComment = 'Комментарий тренера к упражнению. '.repeat(6)
+  source.exercises[2]!.name = 'Пуловер с гантелью с согнутыми руками'
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:31Z'))
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [source] })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.locator('.workout-drag-handle')).toHaveCount(0)
+  await expect(page.locator('.live-set-plan-caption')).toHaveCount(0)
+  const current = page.locator('.live-exercise.current')
+  const geometry = await current.evaluate(card => {
+    const note = card.querySelector('.live-exercise-note summary')!.getBoundingClientRect()
+    const add = card.querySelector('.live-add-set')!.getBoundingClientRect()
+    const media = card.querySelector('.exercise-thumbnail')!.getBoundingClientRect()
+    return { noteTop: note.top, addTop: add.top, noteHeight: note.height, addHeight: add.height, mediaWidth: media.width, mediaHeight: media.height }
+  })
+  expect(geometry.noteTop).toBe(geometry.addTop)
+  expect(geometry.noteHeight).toBe(44); expect(geometry.addHeight).toBe(44)
+  expect(geometry.mediaWidth).toBe(72); expect(geometry.mediaHeight).toBe(72)
+  for (const card of await page.locator('.live-exercise-upcoming').all()) {
+    expect(await card.evaluate(card => {
+      const menu = card.querySelector('.overflow-trigger')!, header = card.querySelector('.live-exercise-head')!, start = card.querySelector('.live-exercise-start')!
+      const m = menu.getBoundingClientRect(), s = start.getBoundingClientRect()
+      return header.contains(menu) && s.top - m.bottom >= 12 && getComputedStyle(menu).borderWidth === '0px' && getComputedStyle(menu).backgroundColor === 'rgba(0, 0, 0, 0)'
+    })).toBe(true)
+  }
+  await current.locator('.live-trainer-note summary').click()
+  await expect(current.locator('.live-trainer-note p')).toHaveText(first.trainerComment)
+  await current.locator('.live-exercise-note summary').click()
+  const note = current.getByLabel(`Заметка: ${first.name}`, { exact: true })
+  await expect(note).toBeVisible()
+  expect(await note.evaluate(field => Math.abs(field.getBoundingClientRect().width - field.closest('.live-exercise-utilities')!.getBoundingClientRect().width))).toBeLessThanOrEqual(1)
+  await current.locator('.live-trainer-note summary').click()
+  await current.locator('.live-exercise-note summary').click()
+  await current.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Показать план', exact: true }).click()
+  await expect(current.locator('.live-set-plan-caption')).toHaveCount(first.sets.length)
+  await current.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Скрыть план', exact: true }).click()
+  await expect(current.locator('.live-set-plan-caption')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('client-live-compact.png') })
 })
 
 test('Client Lime Live gradual keyboard keeps the edited row visible', { tag: ['@lime-critical'] }, async ({ page }, info) => {
@@ -542,10 +1237,13 @@ test('Figma workout Coach reference rest and fields stay usable in the reduced k
   await page.evaluate(() => { document.documentElement.dataset.testVisibleHeight = '400'; window.visualViewport?.dispatchEvent(new Event('resize')) })
   await expect(page.locator('.phone-frame')).toHaveClass(/keyboard-open/)
   await expect(field).toBeFocused()
+  await expect(page.locator('.coach-live-elapsed')).toHaveCSS('clip-path', 'inset(50%)')
+  await expect(page.locator('.live-pinned')).toHaveCSS('padding-top', '0px')
+  await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
   await page.screenshot({ path: info.outputPath('coach-live-keyboard-before.png') })
   await expect.poll(() => field.evaluate(element => {
     const rect = element.getBoundingClientRect(), rest = document.querySelector('.live-rest-trigger')!.getBoundingClientRect(), content = document.querySelector('.content')!.getBoundingClientRect()
-    return rect.top >= rest.bottom && rect.bottom <= content.bottom && content.bottom <= 400 && rect.height === 48
+    return rect.top >= rest.bottom && rect.bottom <= content.bottom && content.bottom <= 400 && rect.height === 54
   })).toBe(true)
   await page.screenshot({ path: info.outputPath('coach-live-keyboard.png') })
   await field.fill('27.5')
@@ -563,12 +1261,14 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   await page.goto(`/workouts/${workoutId}/live`)
   const field = page.locator(`[data-workout-block="${first.blockId}"] .live-set-input`).first()
   await field.fill('27.5'); await field.blur()
-  const handle = page.getByRole('button', { name: 'Переместить: Приседания' })
-  await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded()
+  const handle = role === 'trainer' ? page.getByRole('button', { name: 'Переместить: Приседания' }) : await holdClientLiveCard(page, first.blockId)
+  if (role === 'trainer') { await expect(handle).toBeEnabled(); await handle.scrollIntoViewIfNeeded() }
   const box = (await handle.boundingBox())!
   const before = await page.locator('.content').evaluate((element) => element.scrollTop)
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
-  await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  if (role === 'trainer') {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down()
+    await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  } else await expect(handle).toHaveClass(/dragging/)
   await page.mouse.move(box.x + box.width / 2, 820, { steps: 12 })
   await expect.poll(() => page.locator('.content').evaluate((element) => element.scrollTop)).toBeGreaterThan(before + 100)
   // Wait for an actual insertion target, not merely the first scroll frame:
@@ -577,7 +1277,8 @@ for (const role of ['trainer', 'client'] as const) test(role === 'trainer' ? 'Fi
   expect(moves).toHaveLength(0)
   await page.locator('.workout-gesture-list').dispatchEvent('pointerup', { pointerId: 999, isPrimary: false, pointerType: 'touch' })
   await page.locator('.workout-gesture-list').dispatchEvent('pointercancel', { pointerId: 999, isPrimary: false, pointerType: 'touch' })
-  await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  if (role === 'trainer') await expect(handle).toHaveAttribute('aria-pressed', 'true')
+  else await expect(handle).toHaveClass(/dragging/)
   expect(moves).toHaveLength(0)
   await page.mouse.up()
   await expect.poll(() => moves.length).toBe(1)
@@ -604,12 +1305,39 @@ for (const width of [375, 390, 430, 1440]) {
     await page.locator('.content').evaluate(element => { element.scrollTop = 700 })
     await expect.poll(() => page.locator('.live-rest-trigger').evaluate(button => {
       const rect = button.getBoundingClientRect(), header = document.querySelector('.page-header')!.getBoundingClientRect()
-      return rect.top >= header.bottom && rect.bottom <= header.bottom + 66
+      return Math.abs(rect.top - header.bottom) < 1 && rect.bottom <= header.bottom + 60
     })).toBe(true)
+    await expect(page.locator('.coach-live-elapsed')).toHaveCSS('clip-path', 'inset(50%)')
+    await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
+    if (width === 390) {
+      const livePage = page.locator('.live-workout-page')
+      const field = page.locator('.live-set-input').first()
+      const identity = await field.evaluate(node => { node.setAttribute('data-halo-identity', 'retained'); return node.getAttribute('data-halo-identity') })
+      let previous = 1
+      for (const scroll of [40, 100, 194]) {
+        await page.locator('.content').evaluate((node, value) => { node.scrollTop = value }, scroll)
+        await expect.poll(async () => livePage.evaluate(node => Number(getComputedStyle(node).getPropertyValue('--coach-live-halo-fade')))).toBeLessThan(previous)
+        await expect.poll(async () => page.locator('.live-pinned').evaluate(node => {
+          const head = document.querySelector('.live-workout-page > .page-header')!
+          return Math.abs(node.getBoundingClientRect().top + parseFloat(getComputedStyle(node).backgroundPositionY) - head.getBoundingClientRect().top)
+        })).toBeLessThan(.5)
+        previous = await livePage.evaluate(node => Number(getComputedStyle(node).getPropertyValue('--coach-live-halo-fade')))
+      }
+      expect(previous).toBe(0)
+      expect(await field.getAttribute('data-halo-identity')).toBe(identity)
+      await page.locator('.content').evaluate(node => { node.scrollTop = 0 })
+      await expect.poll(async () => livePage.evaluate(node => Number(getComputedStyle(node).getPropertyValue('--coach-live-halo-fade')))).toBe(1)
+      await page.locator('.content').evaluate(node => { node.scrollTop = 700 })
+    }
+    expect(await page.locator('.page-header').evaluate(header => {
+      const h = header.getBoundingClientRect(), p = document.querySelector('.live-pinned')!.getBoundingClientRect()
+      return h.left === p.left && h.width === p.width
+    })).toBe(true)
+    await expect(page.locator('.page-header')).toHaveCSS('background-attachment', 'scroll')
     await page.screenshot({ path: info.outputPath('coach-live-scrolled-rest.png'), fullPage: true })
     await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
     const fields = page.locator('.live-set-input, .live-set-check')
-    expect(await fields.evaluateAll(elements => elements.every(element => element.getBoundingClientRect().height === 48))).toBe(true)
+    expect(await fields.evaluateAll(elements => elements.every(element => element.getBoundingClientRect().height === 54))).toBe(true)
     await expect(page.locator('.live-set-input:not(:disabled)').first()).toHaveCSS('border-radius', '16px')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
@@ -629,7 +1357,7 @@ for (const width of [375, 390, 430, 1440]) {
       height: field.getBoundingClientRect().height, font: getComputedStyle(field).fontSize,
     })))
     expect(sizes.length).toBeGreaterThan(0)
-    expect(sizes.every((field) => field.height === 48)).toBe(true)
+    expect(sizes.every((field) => field.height === 54)).toBe(true)
     expect(await page.locator('.coach-live-digits').evaluate((field) => getComputedStyle(field).fontFamily)).toContain('Doto')
     await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
     await expect(page.locator('.coach-live-digits')).toHaveText('00:02')
@@ -666,11 +1394,11 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(check.locator('svg')).toHaveCSS('width', '24px')
     await expect(check.locator('svg')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
     expect(await check.locator('svg').evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none')
-    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '10px')
+    await expect(row.locator('.coach-live-field-unit').first()).toHaveCSS('font-size', '9px')
     await expect(weight).toHaveCSS('font-size', '16px')
     await expect(weight).toHaveCSS('padding-top', '0px')
     await expect(weight).toHaveCSS('padding-bottom', '0px')
-    expect(await row.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 48))).toBe(true)
+    expect(await row.locator('.live-set-input, .live-set-check').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height === 54))).toBe(true)
     await check.click()
     await expect(row).toHaveClass(/invalid/)
     await expect(weight).toHaveCSS('outline-width', '1px')
@@ -712,7 +1440,8 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     const row = page.locator(`[data-live-set-id="${set.id}"]`)
     const saveRequest = page.waitForRequest(request => request.url().endsWith(`/workout-sets/${set.id}/draft`))
     const weight = row.getByLabel('Фактический вес', { exact: true })
-    await weight.focus()
+    // Only real input autosaves: merely focusing the displayed plan is not a fact.
+    await weight.fill('21')
     await weight.evaluate(element => element.blur())
     await saveRequest
     try {
@@ -720,7 +1449,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     } finally { releaseSave() }
     await expect(page.locator('.live-sync-state[role="alert"]')).toContainText('Не удалось отправить')
     await expect(row).not.toHaveClass(/invalid/)
-    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('20')
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('21')
     expect(await page.evaluate(() => navigator.onLine)).toBe(true)
     await expect.poll(() => confirmations).toBe(1)
     await expect.poll(() => page.evaluate(({ profileId, workoutId, setId }) => {
@@ -733,6 +1462,95 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     await expect(row).toHaveClass(/confirmed/)
     await expect(page.locator('.live-sync-state')).toHaveCount(0)
     await expect(row.locator('.live-set-save-feedback')).toHaveCount(0)
+    await expect(row.locator('.live-set-check.done')).toHaveCSS('color', 'rgb(255, 255, 255)')
+    // The same retry contract also covers a note blur followed by the first
+    // add-set tap. One account suffices for this chain; storage unit tests
+    // separately prove account/workout isolation. No new matrix/case is added.
+    if (profileId.endsWith('1')) {
+      const snapshot = page.waitForResponse(response => response.request().method() === 'GET'
+        && new URL(response.url()).pathname.endsWith('/v1/training-data') && new URL(response.url()).searchParams.get('workoutId') === workoutId)
+      await page.reload()
+      const data = await (await snapshot).json() as YandexPilotTrainingData
+      let server = data.workouts.find(item => item.id === workoutId)!
+      const exerciseId = server.exercises[0]!.id, name = server.exercises[0]!.name
+      let noteWrites = 0, additions = 0, releaseNote = () => {}
+      const noteGate = new Promise<void>(resolve => { releaseNote = resolve })
+      await page.route('**/v1/training-data?*', async route => {
+        if (new URL(route.request().url()).searchParams.get('workoutId') !== workoutId) return route.fallback()
+        await route.fulfill({ json: { ...data, workouts: [server] } })
+      })
+      await page.route(`**/v1/workout-exercises/${exerciseId}/comment`, async route => {
+        const command = route.request().postDataJSON() as { comment: string; expectedVersion: number }
+        noteWrites++
+        if (noteWrites === 1) {
+          await noteGate
+          await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+          return
+        }
+        server = { ...server, version: Math.max(server.version, command.expectedVersion) + 1,
+          exercises: server.exercises.map(exercise => exercise.id === exerciseId ? { ...exercise, trainerComment: command.comment || null } : exercise) }
+        if (noteWrites === 3) {
+          // Lost acknowledgement: readback confirms the accepted text. No
+          // duplicate resend or stale retry/error should remain afterwards.
+          await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
+          return
+        }
+        await route.fulfill({ json: { exercise: { version: server.version } } })
+      })
+      await page.route(`**/v1/workout-exercises/${exerciseId}/sets`, async route => {
+        additions++
+        const command = route.request().postDataJSON() as { expectedVersion: number }
+        server = { ...server, version: Math.max(server.version, command.expectedVersion) + 1,
+          exercises: server.exercises.map(exercise => exercise.id === exerciseId ? { ...exercise, sets: [...exercise.sets,
+            { ...exercise.sets.at(-1)!, id: '10000000-0000-4000-8000-000000009999', position: exercise.sets.length,
+              fact: { weightKg: null, reps: null, durationMin: null, durationSec: null, distanceKm: null, rpe: null }, confirmedAt: null, version: 1 }] } : exercise) }
+        await route.fulfill({ json: { set: { version: server.version } } })
+      })
+      const card = page.locator('.live-exercise.current'), note = card.getByLabel(`Заметка: ${name}`, { exact: true })
+      await card.locator('.live-exercise-note summary').click()
+      const text = 'Контролировать дыхание — черновик до подтверждения сервера'
+      await note.fill(text)
+      try {
+        const request = page.waitForRequest(request => request.url().endsWith(`/workout-exercises/${exerciseId}/comment`))
+        await card.getByRole('button', { name: 'Подход', exact: true }).click()
+        await request
+        expect(additions).toBe(0) // Structural command waits in the existing coordinator.
+      } finally { releaseNote() }
+      await expect.poll(() => additions).toBe(1)
+      await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toBeVisible()
+      await page.reload()
+      await card.locator('.live-exercise-note summary').click()
+      await expect(note).toHaveValue(text)
+      await note.focus(); await note.blur()
+      expect(noteWrites).toBe(1) // Opening a restored draft is not a new edit.
+      await page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true }).click()
+      await expect.poll(() => noteWrites).toBe(2)
+      await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toHaveCount(0)
+      await expect.poll(() => page.evaluate(({ profileId, workoutId, exerciseId }) => {
+        const pending = JSON.parse(localStorage.getItem(`fit.live-note-drafts.${profileId}.${workoutId}`) ?? '{}') as Record<string, unknown>
+        return Object.hasOwn(pending, exerciseId)
+      }, { profileId, workoutId, exerciseId })).toBe(false)
+      await page.reload()
+      await card.locator('.live-exercise-note summary').click()
+      await expect(note).toHaveValue(text)
+      expect(additions).toBe(1)
+      await note.fill(`${text} `)
+      await expect(note).toHaveValue(`${text} `) // Readback cleanup must not trim the active editor.
+      await note.pressSequentially('Дышать ровно')
+      await expect(note).toHaveValue(`${text} Дышать ровно`)
+      await note.blur()
+      await expect.poll(() => noteWrites).toBe(3)
+      await expect(note).toBeEnabled()
+      await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toHaveCount(0)
+      await expect(page.locator('.live-workout-page > p.error')).toHaveCount(0)
+      await note.fill('')
+      await note.blur()
+      await expect.poll(() => noteWrites).toBe(4)
+      await expect(note).toBeEnabled()
+      await page.reload()
+      await card.locator('.live-exercise-note summary').click()
+      await expect(note).toHaveValue('')
+    }
   })
   test(`Figma workout Coach reference expiry keeps rest when deleting future exercise ${profileId}`, async ({ page }, info) => {
     await page.setViewportSize({ width: 390, height: 844 })
@@ -792,7 +1610,14 @@ for (const width of [375, 390, 430, 1440]) {
     const clock = page.locator('.coach-live-clock')
     await expect(clock.locator('.coach-live-digits')).toHaveText('01:00')
     await expect(clock.locator('.coach-live-colon')).toHaveCount(1)
-    expect(await clock.evaluate((node) => getComputedStyle(node, '::before').backgroundImage)).toContain('radial-gradient')
+    const livePage = page.locator('.live-workout-page')
+    const halo = await page.locator('.live-pinned').evaluate(node => getComputedStyle(node).backgroundImage)
+    expect(halo).toContain('radial-gradient')
+    await expect(livePage).toHaveCSS('background-image', 'none')
+    await expect(page.locator('.live-workout-page > .page-header')).toHaveCSS('background-image', halo)
+    await expect(page.locator('.live-workout-page > .page-header')).toHaveCSS('background-attachment', 'scroll')
+    await expect(page.locator('.live-pinned')).toHaveCSS('background-image', halo)
+    await expect(page.locator('.live-pinned')).toHaveCSS('background-attachment', 'scroll')
     expect(await clock.locator('.coach-live-colon').evaluate((node) => getComputedStyle(node, '::before').width)).not.toBe('0px')
     await expect(header.getByRole('heading')).toHaveCSS('text-align', 'center')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -815,6 +1640,7 @@ for (const width of [375, 390, 430, 1440]) {
     first.name = 'Жим гантелей над головой с длинным названием упражнения'
     first.ref = 'vital-gym-pro-r007-0017'
     first.sets[1]!.weightKg = 25
+    await page.addInitScript(() => localStorage.setItem('fit.liveExerciseAnimation.c0ac0000-6010-4000-8000-000000000002', 'true'))
     await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
     await page.goto(`/workouts/${workoutId}/live`)
     const card = page.locator(`[data-workout-block="${first.blockId}"] .workout-exercise-contract`), head = card.locator('.live-exercise-head')
@@ -825,11 +1651,15 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(head.locator('.workout-exercise-header-summary')).toHaveText(`План: ${first.sets.length} подхода · разные параметры`)
     await expect(head.locator('.overflow-trigger')).toHaveCSS('min-height', '44px')
     await expect(page.locator('.live-exercise-upcoming')).toHaveCount(2)
+    await expect(page.locator('.live-exercise-upcoming').getByRole('button', { name: /^Показать подходы:/ })).toHaveCount(2)
+    await expect(page.locator('.live-exercise-upcoming').getByRole('button', { name: /^Начать упражнение/ })).toHaveCount(0)
+    await expect(page.locator('.coach-live-footer-brand')).toHaveAttribute('src', '/fit-logo.svg')
     const blocks = page.locator('.workout-gesture-list > .workout-drag-block')
     await expect(blocks).toHaveCount(3)
     await expect(card).toHaveCSS('margin', '0px')
-    expect(await blocks.evaluateAll(items => items.slice(1).every((item, i) =>
-      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - 4) < .5))).toBe(true)
+    const expectedGap = await page.locator('.coach-live-density').count() ? 2 : 4
+    expect(await blocks.evaluateAll((items, gap) => items.slice(1).every((item, i) =>
+      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - gap) < .5), expectedGap)).toBe(true)
     await expect(page.locator('.live-technique')).toHaveCount(0)
     await card.getByRole('button', { name: /Показать анимацию:/ }).click()
     await expect(card.locator('.live-technique')).toBeVisible()
@@ -847,10 +1677,25 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.live-exercise-collapsed')).toBeVisible()
     await expect(page.locator('.live-exercise-collapsed .coach-live-exercise-number')).toHaveText('1')
     await expect(card).toHaveCSS('margin', '0px')
-    expect(await blocks.evaluateAll(items => items.slice(1).every((item, i) =>
-      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - 4) < .5))).toBe(true)
+    expect(await blocks.evaluateAll((items, gap) => items.slice(1).every((item, i) =>
+      Math.abs(item.getBoundingClientRect().top - items[i]!.getBoundingClientRect().bottom - gap) < .5), expectedGap)).toBe(true)
     await page.getByRole('button', { name: `Исправить: ${first.name}`, exact: true }).click()
     await expect(page.locator('.live-exercise.done .live-set')).toHaveCount(first.sets.length)
+    if (width === 390) {
+      let writes = 0
+      page.on('request', request => { if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method()) && /\/v1\/(?:workout|workout-sets)/.test(new URL(request.url()).pathname)) writes++ })
+      const next = page.locator('.live-exercise-upcoming').first()
+      const nextName = await next.locator('h2').innerText()
+      await next.getByRole('button', { name: /^Показать подходы:/ }).click()
+      await expect(page.locator('.live-exercise.current').getByRole('heading', { name: nextName, exact: true })).toBeVisible()
+      await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 6')
+      expect(writes).toBe(0)
+      const brand = page.locator('.coach-live-footer-brand')
+      await brand.scrollIntoViewIfNeeded()
+      await expect(brand).toBeVisible()
+      expect(await brand.evaluate(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0)).toBe(true)
+      await page.screenshot({ path: info.outputPath('coach-live-footer-brand.png') })
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
@@ -866,6 +1711,7 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
     const number = row.locator('.live-set-number')
     await number.evaluate(element => element.scrollIntoView({ block: 'center' }))
     const box = (await number.boundingBox())!, point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    expect(box.width).toBeGreaterThanOrEqual(44)
     const cdp = await page.context().newCDPSession(page)
     try {
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
@@ -879,6 +1725,12 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       await expect(page.getByRole('alertdialog')).toBeVisible()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
       const input = row.getByLabel('Фактический вес', { exact: true })
+      const fieldGesture = await beginClientGesture(page, row, browserName, input)
+      await fieldGesture.move(60); await fieldGesture.end()
+      await expect(row.getByRole('button', { name: /Удалить подход 2:/ })).toBeVisible()
+      await expect(input).not.toBeFocused()
+      await row.getByRole('button', { name: /Удалить подход 2:/ }).tap()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
       await input.tap(); await expect(input).toBeFocused(); await input.fill('31')
       await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
       await input.blur()
@@ -892,12 +1744,27 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       await expect.poll(() => page.locator('.content').evaluate(element => element.scrollTop)).toBeLessThan(startScroll)
       await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
       await expect(input).toHaveValue('31')
+      await expect(row.locator('.workout-set-swipe')).toHaveAttribute('tabindex', '0')
+      const fieldPan = await beginClientGesture(page, row, browserName, input)
+      const fieldScroll = await page.locator('.content').evaluate(element => element.scrollTop)
+      await fieldPan.move(0, fieldScroll > 40 ? 80 : -80); await fieldPan.end()
+      await expect.poll(() => page.locator('.content').evaluate((element, before) => Math.abs(element.scrollTop - before), fieldScroll)).toBeGreaterThan(4)
+      await expect(input).not.toBeFocused()
+      await expect(row.locator('.workout-swipe-action')).toHaveCount(0)
+      const outer = page.locator('.workout-drag-block > .workout-swipe').first()
+      const heading = outer.locator('.live-exercise-head h2, .live-exercise-head h3').first()
+      const exerciseGesture = await beginClientGesture(page, outer, browserName, heading)
+      await exerciseGesture.move(100); await exerciseGesture.end()
+      await expect(outer.getByRole('button', { name: 'Удалить', exact: true })).toBeVisible()
+      await outer.getByRole('button', { name: 'Удалить', exact: true }).tap()
+      await expect(page.getByRole('alertdialog')).toBeVisible()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).tap()
     } finally { await cdp.detach() }
   })
 }
 
 for (const width of [375, 390, 430, 1440]) {
-  test(`Figma workout Coach reference field completion ${width}`, async ({ page }, info) => {
+  test(`Figma workout Coach reference field completion ${width}`, async ({ page, browserName }, info) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
     const source = restTimerWorkout(), exercise = source.exercises[0]!
     await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
@@ -914,13 +1781,23 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(page.locator('.coach-live-remove-set')).toHaveCount(0)
     await expect(page.locator('.live-set-table-head')).not.toBeVisible()
     expect(await first.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(await second.locator('.live-set-check').evaluate(el => getComputedStyle(el).backgroundColor))
-    expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll(elements => {
+    const expectedFieldGap = await page.locator('.coach-live-density').count() ? 2 : 4
+    expect(await first.locator('.coach-live-metric, .live-set-confirm').evaluateAll((elements, gap) => {
       const boxes = elements.map(el => el.getBoundingClientRect())
-      return boxes.every(box => box.height === 48) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + 4)
-    })).toBe(true)
+      return boxes.every(box => box.height === 54) && boxes.slice(1).every((box, i) => box.left >= boxes[i]!.right + gap)
+    }, expectedFieldGap)).toBe(true)
     await page.getByRole('button', { name: 'Ещё действия', exact: true }).first().click()
     await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
-    await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '48px')
+    await expect(first.getByRole('combobox', { name: 'Фактический RPE', exact: true })).toHaveCSS('height', '54px')
+    if (width === 390) {
+      const gesture = await beginClientGesture(page, second, browserName, second.getByLabel('Фактический вес', { exact: true }))
+      await gesture.move(60); await gesture.end()
+      await expect(second.getByRole('button', { name: /Удалить подход 2:/ })).toBeVisible()
+      await expect(second.getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
+      await second.getByRole('button', { name: /Удалить подход 2:/ }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+      expect(attempts).toBe(0)
+    }
     await first.getByLabel('Фактический вес', { exact: true }).fill('27.5')
     await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
     await expect(first).toHaveClass(/confirmed/)
@@ -994,14 +1871,21 @@ for (const width of [375, 390, 430, 1440]) {
       await expect(page.locator('.coach-live-field-unit').first()).toBeVisible()
       const row = page.locator('.live-set').first()
       const fields = row.locator('.live-set-input, .live-set-check')
-      expect(await fields.evaluateAll(elements => elements.every(el => el.getBoundingClientRect().height === 48))).toBe(true)
+      expect(await fields.evaluateAll(elements => elements.every(el => el.getBoundingClientRect().height === 54))).toBe(true)
       expect(await row.evaluate(el => { const box = el.getBoundingClientRect(); return [...el.querySelectorAll('.live-set-grid > *:not(input[type="hidden"])')].every(child => { const rect = child.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right }) })).toBe(true)
       await expect(row.locator('.coach-live-field-unit').filter({ hasText: 'мин:с' })).toBeVisible()
       expect(await row.locator('.coach-live-field-unit').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(), parent = el.parentElement!.getBoundingClientRect(); return rect.top >= parent.top && rect.bottom <= parent.bottom && rect.left >= parent.left && rect.right <= parent.right }))).toBe(true)
       if (kind === 'distance' || ref === 'vital-stair-climber') {
         await expect(row.getByRole('combobox', { name: 'Единица фактической дистанции', exact: true })).toBeVisible()
         await expect(row.getByRole('textbox', { name: 'Фактическая дистанция', exact: true })).toBeVisible()
-        expect(await row.locator('.run-distance-control :is(input,select)').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(); return rect.height === 48 && rect.width >= 44 }))).toBe(true)
+        expect(await row.locator('.run-distance-control :is(input,select)').evaluateAll(elements => elements.every(el => { const rect = el.getBoundingClientRect(); return rect.height === 54 && rect.width >= 44 }))).toBe(true)
+      }
+      if (ref === 'plank' && width === 390) {
+        await row.locator('.workout-duration-trigger').click()
+        const dialog = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+        await expect(dialog).toBeVisible()
+        await dialog.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+        await expect(dialog).toHaveCount(0)
       }
       await row.evaluate(el => el.scrollIntoView({ block: 'center' }))
       await page.screenshot({ path: info.outputPath(`coach-live-${ref}-completion.png`), fullPage: true })
@@ -1038,7 +1922,8 @@ for (const width of [375, 390, 430, 1440]) {
     await expect(originalPlus.locator('image')).toHaveCSS('opacity', '0')
     const addExercise = page.getByRole('button', { name: 'Упражнение', exact: true })
     await addExercise.scrollIntoViewIfNeeded()
-    await expect(addExercise).toHaveCSS('min-height', '80px')
+    // Original remains80px; the approved compact-only density has a56px action.
+    await expect(addExercise).toHaveCSS('min-height', await page.locator('.coach-live-density-compact').count() ? '56px' : '80px')
     await expect(addExercise).toHaveCSS('background-color', 'rgb(59, 59, 64)')
     const finish = page.getByRole('button', { name: 'Завершить тренировку', exact: true })
     await expect(finish).toHaveCount(1)
@@ -1090,9 +1975,11 @@ for (const width of [375, 390, 430, 1440]) {
     }
     await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
     await expect(page.locator('.workout-exercise-header-summary')).toContainText('Результат: 2 подхода · 27.5 кг')
+    await expect(page.locator('.live-exercise-collapsed .live-exercise-head')).toHaveCSS('min-height', '0px')
+    expect(await page.locator('.live-exercise-collapsed').evaluate(card => card.getBoundingClientRect().height)).toBeLessThan(180)
     expect(await page.locator('.live-exercise-collapsed').evaluate(card => {
       const header = card.querySelector('.live-exercise-head')!.getBoundingClientRect(), action = card.querySelector('.live-exercise-start')!.getBoundingClientRect()
-      return header.width >= card.getBoundingClientRect().width - 32 && action.top >= header.bottom
+      return header.width >= card.getBoundingClientRect().width - 32 && action.top >= header.bottom && action.bottom <= card.getBoundingClientRect().bottom - 8
     })).toBe(true)
     await expect.poll(() => page.locator('.live-session-progress-track').evaluate(track => track.firstElementChild!.getBoundingClientRect().width / track.getBoundingClientRect().width)).toBe(1)
     await page.screenshot({ path: info.outputPath('coach-live-actions-complete.png'), fullPage: true })
@@ -1351,18 +2238,37 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await page.getByRole('button', { name: 'Далее', exact: true }).click()
     for (const mode of ['Запланировать', 'Записать выполненную']) {
       await page.getByRole('button', { name: mode, exact: true }).click()
-      const date = page.getByLabel('Дата тренировки', { exact: true })
-      const time = page.getByLabel('Время тренировки', { exact: true })
-      for (const field of [date, time]) {
-        await expect(field).toHaveCSS('border-radius', '16px')
-        expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(48)
-        await expect(field).toHaveCSS('font-family', /YS Geo/)
-        await expect(field).toHaveCSS('font-size', '16px')
+      const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+      for (const row of await control.locator('.client-lime-date-row').all()) {
+        expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+        await expect(row).toHaveCSS('font-family', /YS Geo/)
+        await expect(row).toHaveCSS('font-size', '16px')
       }
-      const d = (await date.boundingBox())!, t = (await time.boundingBox())!
-      expect(t.x - (d.x + d.width)).toBeGreaterThanOrEqual(12)
-      await time.fill('12:30'); await expect(time).toHaveValue('12:30')
-      await time.fill(''); await expect(time).toHaveValue('')
+      const before = await control.innerText()
+      await control.click()
+      const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+      const timeLabel = mode === 'Запланировать' ? 'Время' : 'Время начала'
+      const time = dates.getByLabel(timeLabel, { exact: true })
+      await expect(time).toHaveCSS('border-radius', '16px')
+      await expect(time).toHaveCSS('font-size', '16px')
+      expect((await time.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+      await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
+      await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
+      await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('height', '36px')
+      await time.fill('12:30')
+      await expect(time).toHaveValue('12:30')
+      await page.screenshot({ path: info.outputPath(`date-window-${mode}.png`) })
+      await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
+      await expect(control).toHaveText(before, { useInnerText: true })
+      await control.click()
+      await expect(time).toHaveValue('')
+      await time.fill('12:30')
+      await dates.getByRole('button', { name: 'Применить дату' }).click()
+      await expect(control).toContainText('12:30')
+      await control.click()
+      await time.fill('')
+      await dates.getByRole('button', { name: 'Применить дату' }).click()
+      await expect(control).toContainText('Без времени')
       await page.screenshot({ path: info.outputPath(`save-${mode}.png`) })
     }
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
@@ -1781,20 +2687,19 @@ for (const width of [390, 430, 1440]) {
       await expect(page.getByText('По этим фильтрам тренировок нет.')).toBeVisible()
       await page.getByRole('combobox', { name: 'Фильтр по статусу' }).selectOption('all')
       await page.locator('.fit-lime-history h2 button').click()
-      await expect(toggle).toBeChecked()
+      await expect(toggle).toHaveCount(0)
       await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
       const independent = page.getByRole('region', { name: 'Самостоятельные тренировки' })
-      await expect(independent.locator('a')).toHaveCount(2)
-      await expect(independent).toContainText('10:00–11:00')
-      await expect(independent).toContainText('Без времени')
+      await expect(independent).toHaveCount(0)
       await page.screenshot({ path: info.outputPath('schedule-day.png'), fullPage: true })
       await page.reload()
-      await expect(toggle).toBeChecked()
-      await expect(independent.locator('a')).toHaveCount(2)
-      await assertCoachLimeTheme()
-      await toggle.uncheck()
+      await expect(toggle).toHaveCount(0)
       await expect(independent).toHaveCount(0)
-      await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+      await assertCoachLimeTheme()
+      await page.goto('/schedule?week=2026-09-21')
+      await expect(toggle).toBeChecked()
+      await toggle.uncheck()
+      await expect(page.locator('.schedule-v2-day-events > span')).toHaveCount(2)
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
       await page.goto(`/clients/${clientId}/workouts`)
       await expect(page.locator(`a[href="/workouts/10000000-0000-4000-8000-000000000008"]`)).toBeVisible()
@@ -2037,8 +2942,9 @@ for (const width of [320, 390, 430, 1440]) {
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
   test(`Lime notification settings separate permission, device connection and retry for ${profileId}`, { tag: ["@lime-profile"] }, async ({ page }, testInfo) => {
+    const clientRole = profileId !== trainerId
     await page.setViewportSize({ width: 390, height: 844 })
-    await mockPilot(page, { profileId, fitLime: true })
+    await mockPilot(page, { role: clientRole ? 'client' : 'trainer', profileId, fitLime: true, clientLime: clientRole })
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
       Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
@@ -2050,38 +2956,101 @@ for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
     })
     let fail = false
     let endpointChecks = 0
+    let testRequests = 0
     await page.route('http://127.0.0.1:4100/v1/push-notifications/**', async (route) => {
       if (fail) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' })
       const path = new URL(route.request().url()).pathname
+      if (path.endsWith('/test')) {
+        expect(route.request().postDataJSON()).toEqual({ endpoint: 'https://push.example/device' })
+        testRequests += 1
+        return route.fulfill({ status: 202 })
+      }
       if (path.endsWith('/subscription/status')) {
         endpointChecks += 1
         expect(route.request().postDataJSON()).toEqual({ endpoint: 'https://push.example/device' })
       }
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: true } } }) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(path.endsWith('/subscription/status') ? { subscribed: true } : { status: { subscribed: true, preferences: { workout_reminder: false, workout_scheduled: true, chat_message: false } } }) })
     })
-    await page.goto('/profile/settings')
-    await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
+    await page.goto(clientRole ? '/me/settings' : '/profile/settings')
+    if (!clientRole) await expect(page.getByText('Fit открыт как приложение', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Как установить Fit' })).toHaveCount(0)
-    await expect(page.getByText('Разрешено', { exact: true })).toBeVisible()
-    await expect(page.getByText('Уведомления включены', { exact: true })).toBeVisible()
+    await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Включить', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('switch', { name: 'Напоминать о незавершённой тренировке' })).not.toBeChecked()
+    if (clientRole) await expect(page.getByRole('switch', { name: 'Напоминания о тренировках' })).not.toBeChecked()
+    else await expect(page.getByRole('switch', { name: 'Напоминания о тренировках' })).toHaveCount(0)
+    await expect(page.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
+    await expect(page.getByRole('switch', { name: 'Новые тренировки' })).toHaveCount(clientRole ? 1 : 0)
+    await page.getByRole('button', { name: 'Отправить тестовое уведомление' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'отправлено в очередь' })).toBeVisible()
+    expect(testRequests).toBe(1)
     expect(endpointChecks).toBeGreaterThan(0)
     await page.screenshot({ path: testInfo.outputPath('lime-notification-settings.png'), fullPage: true })
     fail = true
-    await page.getByRole('button', { name: 'Повторить проверку' }).click()
-    await expect(page.getByRole('alert').filter({ hasText: 'подписку устройства' })).toBeVisible({ timeout: 15000 })
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(page.getByRole('alert').filter({ hasText: 'Проверьте интернет' })).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Новые сообщения' })).not.toBeChecked()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeDisabled()
+    const retry = page.getByRole('button', { name: 'Повторить', exact: true })
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     fail = false
-    await page.getByRole('button', { name: 'Повторить проверку' }).click()
-    await expect(page.getByText('Уведомления включены', { exact: true })).toBeVisible()
+    await retry.click()
+    await expect(page.getByText('Уведомления настроены', { exact: true })).toBeVisible()
     await expect(page.getByRole('switch', { name: 'Новые сообщения' })).toBeEnabled()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    // Geometry only: client 390/430 in both themes; trainer Lime is dark-only.
+    for (const width of clientRole ? [390, 430] : [390, 1440]) {
+      await page.setViewportSize({ width, height: 1000 })
+      for (const theme of clientRole ? ['light', 'dark'] : ['dark']) {
+        if (clientRole) await page.getByRole('combobox', { name: 'Тема оформления' }).selectOption(theme)
+        await expect(page.locator('html')).toHaveClass(theme === 'light' ? /theme-light/ : /^(?!.*theme-light)/)
+        const action = page.getByRole('button', { name: 'Отправить тестовое уведомление' })
+        expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        await page.screenshot({ path: testInfo.outputPath(`notifications-${clientRole ? 'client' : 'trainer'}-${width}-${theme}.png`), fullPage: true })
+      }
+    }
   })
 }
 
+test('Lime notification settings show safe diagnostics when browser push initialization fails', { tag: ['@lime-profile'] }, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockPilot(page, { profileId: trainerId, fitLime: true })
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true })
+    Object.defineProperty(window, 'PushManager', { value: class {}, configurable: true })
+    const notification = {
+      permission: 'default',
+      requestPermission: () => { notification.permission = 'granted'; return Promise.resolve('granted') },
+    }
+    Object.defineProperty(window, 'Notification', { value: notification, configurable: true })
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: {
+      register: () => Promise.resolve({ pushManager: {
+        getSubscription: () => Promise.resolve(null),
+        subscribe: () => Promise.reject(new DOMException('Push service initialization failed', 'AbortError')),
+      } }),
+      ready: Promise.resolve(),
+      addEventListener() {}, removeEventListener() {},
+    } })
+  })
+  await page.route('http://127.0.0.1:4100/v1/push-notifications/**', route => route.fulfill({
+    status: 200,
+    json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } },
+  }))
+
+  await page.goto('/profile/settings')
+  await page.getByRole('button', { name: 'Включить', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось подключить уведомления' })).toBeVisible()
+  await expect(page.getByText(/Код для поддержки: FIT-/)).toBeVisible()
+  const copy = page.getByRole('button', { name: 'Скопировать диагностику' })
+  await expect(copy).toBeVisible()
+  const bounds = await copy.boundingBox()
+  expect(bounds?.height).toBeGreaterThanOrEqual(44)
+  await expect(page.getByText('Push service initialization failed')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('lime-push-diagnostic.png'), fullPage: true })
+})
+
 for (const width of [390, 430, 1440]) {
-  test(`Lime history preserves completed, untimed and filtered calendar context at ${width}`, async ({ page }, testInfo) => {
+  test(`Lime history preserves completed and untimed rows while Day ignores its filters at ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 })
     const otherClient = '10000000-0000-4000-8000-000000000099'
     const profileId = width === 430 ? '10000000-0000-4000-8000-000000000010' : trainerId
@@ -2105,7 +3074,9 @@ for (const width of [390, 430, 1440]) {
     await expect(list.getByRole('link')).toHaveCount(1)
     await list.getByRole('button', { name: '24 сентября 2026 г.' }).click()
     await expect(page).toHaveURL(/date=2026-09-24/)
-    await expect(page.locator('.schedule-v2-event')).toHaveCount(1)
+    await expect(page.locator('.schedule-v2-event')).toHaveCount(2)
+    await expect(page).not.toHaveURL(/client=|status=|mode=/)
+    await expect(page.getByRole('combobox', { name: 'Фильтр по статусу' })).toHaveCount(0)
     await page.goBack()
     await expect(list.getByRole('link')).toHaveCount(1)
     await page.reload()
@@ -2588,6 +3559,7 @@ for (const width of [390, 430, 1440]) {
     await mockPilot(page, { fitLime: true })
     await page.goto('/today?date=2026-09-24')
     await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Новая тренировка', exact: true })).not.toHaveAttribute('role')
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
     await page.getByRole('textbox', { name: 'Название тренировки' }).fill('План с очень длинным названием для проверки переноса')
     await page.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
@@ -3648,6 +4620,47 @@ test('keeps the selected day and both weeks through navigation and reload', asyn
   await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
   await page.getByRole('button', { name: 'Назад', exact: true }).click()
   await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+
+  // Keep the legacy history fixture above; use an isolated fixed2 page for the
+  // Day gesture flow instead of multiplying it inside four editor-width cases.
+  const dayPage = await page.context().newPage()
+  try {
+    await dayPage.setViewportSize({ width: 390, height: 844 })
+    await mockPilot(dayPage, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true })
+    // Fixed2 Day uses the same openDay/URL model; free-surface drag never replaces
+    // a calendar button or a workout tap. The heading moves date+weekday together.
+    await dayPage.goto('/today?date=2026-09-24')
+    const dayDrag = async (next: boolean, dy = 0) => {
+      await dayPage.locator('.coach-day-heading').scrollIntoViewIfNeeded()
+      const rect = await dayPage.locator('.coach-day-heading').boundingBox()
+      const y = rect!.y + rect!.height / 2, left = Math.max(32, rect!.x + 12), right = Math.min(rect!.x + rect!.width - 12, left + 140)
+      const from = next ? right : left, to = next ? left : right
+      await dayPage.mouse.move(from, y); await dayPage.mouse.down()
+      await dayPage.mouse.move(to, y + dy, { steps: 10 }); await dayPage.mouse.up()
+    }
+    await dayDrag(true)
+    await expect(dayPage).toHaveURL(/date=2026-09-25/)
+    await expect(dayPage.getByRole('heading', { name: '25 сентября', exact: true })).toBeVisible()
+    await expect(dayPage.locator('.schedule-v2-event')).toHaveCount(0)
+    await dayDrag(false)
+    await expect(dayPage).toHaveURL(/date=2026-09-24/)
+    await expect(dayPage.locator('.schedule-v2-event')).toHaveCount(1)
+    await dayDrag(true, 180)
+    await expect(dayPage).toHaveURL(/date=2026-09-24/)
+    await dayPage.goto('/today?date=2026-12-31')
+    await dayDrag(true)
+    await expect(dayPage).toHaveURL(/date=2027-01-01/)
+    await dayPage.goBack()
+    await expect(dayPage).toHaveURL(/date=2026-12-31/)
+    await expect(dayPage.getByRole('heading', { name: '31 декабря', exact: true })).toBeVisible()
+    await dayPage.emulateMedia({ reducedMotion: 'reduce' })
+    await dayDrag(false)
+    await expect(dayPage).toHaveURL(/date=2026-12-30/)
+    await expect(dayPage.locator('.coach-day-heading-outgoing')).toHaveCount(0)
+    await expect(dayPage.locator('.coach-schedule-filter-options')).toHaveCount(0)
+  } finally {
+    await dayPage.close()
+  }
 })
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {
@@ -3943,10 +4956,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
   test(`Client Lime workout list and calendar actions ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-09-24T12:00:00+03:00'))
     await mockPilot(page, { role: 'client', profileId: clientId, workouts: [
       { ...workout, createdBy: clientId, trainingFormat: 'self' },
       { ...workout, id: newWorkoutId, createdBy: clientId, trainingFormat: 'self', status: 'done',
         completedAt: '2026-09-23T12:00:00Z', workoutDate: '2026-09-23' },
+      { ...workout, id: '10000000-0000-4000-8000-000000000097', createdBy: clientId, trainingFormat: 'self', status: 'done', completedAt: '2026-09-24T09:00:00Z', workoutDate: '2026-09-24' },
+      { ...workout, id: '10000000-0000-4000-8000-000000000098', createdBy: clientId, trainingFormat: 'self', status: 'done', completedAt: '2026-09-23T10:00:00Z', workoutDate: '2026-09-23' },
     ] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     await page.goto('/me')
@@ -3957,7 +4973,6 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(currentToggle).toHaveCSS('border-radius', '28px')
     await currentToggle.getByRole('button', { name: 'Календарь' }).click()
     await expect(workoutsPage.getByRole('grid', { name: /Актуальные тренировки за/ })).toBeVisible()
-    await workoutsPage.getByRole('button', { name: 'Предыдущий месяц' }).click()
     await expect(workoutsPage.getByRole('button', { name: /24 сентября/ })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath(`client-planned-calendar-${theme}-${width}.png`) })
     await page.getByRole('tab', { name: 'История' }).click()
@@ -3968,8 +4983,43 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await expect(workoutsPage.locator('#workouts-history-panel .client-history-calendar')).toBeVisible()
     await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveAttribute('aria-pressed', 'true')
     await expect(toggle.getByRole('button', { name: 'Календарь' })).toHaveCSS('border-radius', '24px')
+    const calendar = workoutsPage.locator('#workouts-history-panel .client-history-calendar')
+    await calendar.getByRole('button', { name: '23 сентября 2026 г., 2 тренировки' }).click()
+    const marker = calendar.locator('.selected .lime-calendar-day-marker')
+    await expect(marker).toHaveCSS('width', '36px')
+    await expect(marker).toHaveCSS('height', '36px')
+    await expect(marker).toHaveCSS('box-shadow', 'none')
+    const geometry = await calendar.locator('.selected > button').evaluate((button) => {
+      const hit = button.getBoundingClientRect(), visual = button.querySelector('.lime-calendar-day-marker')!.getBoundingClientRect()
+      return { width: hit.width, height: hit.height, deltaX: visual.x + visual.width / 2 - hit.x - hit.width / 2, deltaY: visual.y + visual.height / 2 - hit.y - hit.height / 2 }
+    })
+    expect(geometry.width).toBeGreaterThanOrEqual(44)
+    expect(geometry.height).toBeGreaterThanOrEqual(44)
+    expect(Math.abs(geometry.deltaX)).toBeLessThan(1)
+    expect(Math.abs(geometry.deltaY)).toBeLessThan(1)
+    await expect(calendar.locator('.today .lime-calendar-day-marker')).toHaveCSS('width', '36px')
+    await expect(calendar.locator('.today > button')).toHaveCSS('box-shadow', 'none')
+    await expect(calendar.locator('.selected .client-history-calendar-day-mark')).toHaveText('2')
+    await page.screenshot({ path: testInfo.outputPath(`client-calendar-today-and-selected-${theme}-${width}.png`) })
+    await calendar.getByRole('button', { name: '24 сентября 2026 г., 1 тренировка' }).click()
+    await expect(calendar.locator('.today.selected .lime-calendar-day-marker')).toHaveCSS('border-top-color', 'rgba(0, 0, 0, 0)')
+    await expect(calendar.locator('.today.selected > button')).toHaveCSS('box-shadow', 'none')
+    await calendar.getByRole('button', { name: 'Предыдущий месяц' }).click()
+    await expect(calendar).toContainText('В этом месяце тренировок нет.')
+    await calendar.getByRole('button', { name: 'Следующий месяц' }).click()
+    await expect(calendar.getByRole('button', { name: 'Следующий месяц' })).toBeDisabled()
+    await calendar.getByRole('button', { name: '24 сентября 2026 г., 1 тренировка' }).click()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-workout-calendar-${theme}-${width}.png`) })
+    if (theme === 'light' && width === 390) {
+      const returnUrl = page.url()
+      await calendar.getByRole('link', { name: 'Открыть тренировку за 24 сентября 2026 г.' }).click()
+      await expect(page.locator('.workout-detail-page')).toBeVisible()
+      await page.getByRole('button', { name: 'Назад', exact: true }).click()
+      await expect(page).toHaveURL(returnUrl)
+      await expect(calendar.locator('.today.selected .lime-calendar-day-marker')).toHaveText('24')
+    }
+
   })
 }
 
@@ -4047,11 +5097,13 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     })
     expect(controls.aligned).toBe(true)
     expect(controls.close).toBe(true)
-    const technique = circuit.locator('.circuit-round.current .live-technique .exercise-image-technique')
-    if (await technique.count()) {
-      await expect(technique).toHaveCSS('max-height', '100px')
-      await expect(circuit.locator('.circuit-round.current section').first().locator('.exercise-thumbnail')).toHaveCount(0)
-    }
+    const firstExercise = circuit.locator('.circuit-round.current section').first()
+    const technique = firstExercise.locator('.live-exercise-head .live-header-animation')
+    await expect(technique).toHaveCount(1)
+    await expect(technique).toHaveCSS('width', '44px')
+    await expect(technique).toHaveCSS('height', '44px')
+    await expect(technique.locator('.exercise-image-technique')).toHaveCount(1)
+    await expect(firstExercise.locator(':scope > .live-technique')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`client-live-circuit-${theme}-${width}.png`) })
   })
@@ -4262,7 +5314,7 @@ test('Client Lime logout resets document scope and return preserves only its own
 
 for (const theme of ['light', 'dark']) {
   test(`Client Lime editor and exercise history ${theme}`, async ({ page }, testInfo) => {
-    await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...workout, createdBy: clientId, trainingFormat: 'self' }] })
+    const backend = await mockPilot(page, { role: 'client', profileId: clientId, workouts: [{ ...coachGestureWorkout(false, 1), status: 'planned', startedAt: null, createdBy: clientId, trainingFormat: 'self' }] })
     await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 844 })
@@ -4276,6 +5328,67 @@ for (const theme of ['light', 'dark']) {
         await expect(page.locator(surface)).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
         await page.screenshot({ path: testInfo.outputPath(`${route.replaceAll('/', '-')}-${width}.png`) })
+        if (route.endsWith('/edit')) {
+          const control = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+          const before = await control.innerText()
+          await control.click()
+          const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+          await expect(dates.locator('.lime-calendar-day-marker').first()).toHaveCSS('width', '36px')
+          await dates.getByLabel('Начало', { exact: true }).fill('12:30')
+          await page.screenshot({ path: testInfo.outputPath(`client-editor-date-${theme}-${width}.png`) })
+          if (theme === 'light' && width === 390) {
+            // The stored app height can lag a reduced viewport during keyboard recovery.
+            await page.setViewportSize({ width, height: 450 })
+            await dates.getByLabel('Начало', { exact: true }).focus()
+            await expect.poll(async () => (await dates.boundingBox())!.y).toBeGreaterThanOrEqual(0)
+            await dates.getByRole('button', { name: 'Применить дату' }).scrollIntoViewIfNeeded()
+            await expect(dates.getByRole('button', { name: 'Применить дату' })).toBeInViewport()
+            await page.setViewportSize({ width, height: 844 })
+          }
+          await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
+          await expect(control).toHaveText(before, { useInnerText: true })
+          if (theme === 'light' && width === 390) {
+            const updates: Array<{ workoutDate: string; startTime?: string | null; endTime?: string | null }> = []
+            // Unlike the generic visual fixture's 10:00/11:00 fallback, this
+            // contract check must read back cleared optional times as null.
+            await page.route(`**/v1/workouts/${workoutId}`, async (requestRoute) => {
+              if (requestRoute.request().method() !== 'PUT') return requestRoute.fallback()
+              const command = requestRoute.request().postDataJSON() as typeof updates[number]
+              updates.push(command)
+              const current = backend.getWorkouts().find((item) => item.id === workoutId)!
+              Object.assign(current, { workoutDate: command.workoutDate, startTime: command.startTime ?? null, endTime: command.endTime ?? null, version: current.version + 1 })
+              await requestRoute.fulfill({ json: { workout: { id: workoutId } } })
+            })
+            const addEnd = page.getByRole('button', { name: 'Добавить время окончания', exact: true })
+            if (await addEnd.isVisible()) await addEnd.click()
+            await control.click()
+            await dates.getByLabel('Начало', { exact: true }).fill('')
+            await dates.getByLabel('Окончание', { exact: true }).fill('14:00')
+            await dates.getByRole('button', { name: 'Применить дату' }).click()
+            const attempts = updates.length
+            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+            await expect(page.getByRole('alert')).toContainText('Укажите время начала тренировки')
+            expect(updates).toHaveLength(attempts)
+            await control.click()
+            await dates.getByLabel('Начало', { exact: true }).fill('23:30')
+            await dates.getByLabel('Окончание', { exact: true }).fill('00:15')
+            await dates.getByRole('button', { name: 'Применить дату' }).click()
+            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+            await page.goto(route)
+            await expect(control).toContainText('23:30')
+            await expect(control).toContainText('00:15')
+            await page.getByRole('button', { name: 'Убрать окончание', exact: true }).click()
+            await control.click()
+            await expect(dates.getByLabel('Окончание', { exact: true })).toHaveCount(0)
+            await dates.getByRole('button', { name: 'Применить дату' }).click()
+            await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+            await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+            await page.goto(route)
+            await expect(page.getByRole('button', { name: 'Добавить время окончания', exact: true })).toBeVisible()
+          }
+        }
+
       }
     }
   })
@@ -4293,7 +5406,10 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
       const voice = composer.locator('.voice-input-button')
       await expect(page.locator('.page-back')).toHaveCSS('border-radius', '50%')
       await expect(page.locator('.workout-form-section').first()).toHaveCSS('border-radius', '32px')
-      await expect(page.locator('.workout-form .field input').first()).toHaveCSS('border-radius', '16px')
+      const dates = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+      await page.getByRole('button', { name: 'Выбрать дату и время', exact: true }).click()
+      await expect(dates.getByLabel('Начало', { exact: true })).toHaveCSS('border-radius', '16px')
+      await dates.getByRole('button', { name: 'Закрыть календарь' }).click()
       await expect(voice).toBeVisible()
       await expect(voice).toHaveCSS('border-radius', '999px')
       await expect(voice).toHaveCSS('min-height', '44px')
@@ -4420,6 +5536,15 @@ for (const width of [390, 430]) test(`Client Lime reviewed instances persist thr
   }, clientId)
   await page.goto('/me?draft=reviewed&view=review')
   await expect(page.locator('.today-exercise')).toHaveCount(2)
+  const reorder = page.locator('.client-review-meta').getByRole('button', { name: 'Изменить порядок', exact: true })
+  await expect(reorder).toBeVisible()
+  const menu = page.getByRole('button', { name: 'Настройки упражнения «Жим лёжа»' }).first()
+  await expect(menu).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(menu).toHaveCSS('min-height', '44px')
+  await reorder.click()
+  await expect(page.getByRole('button', { name: 'Переместить блок «Жим лёжа» вниз' }).first()).toBeEnabled()
+  await page.locator('.client-review-meta').getByRole('button', { name: 'Готово', exact: true }).click()
+
   await page.getByRole('button', { name: 'Настройки упражнения «Жим лёжа»' }).first().click()
   await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
   await expect(page.locator('.today-exercise')).toHaveCount(1)
@@ -4707,7 +5832,9 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
     await expect(page.getByRole('region', { name: 'Фильтры упражнений' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('exercise-filters.png') })
-    await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
+    await expect(picker.getByRole('heading', { name: 'Фильтры', exact: true })).toBeVisible()
+    await expect(picker.getByRole('textbox', { name: 'Поиск упражнения', exact: true })).toBeVisible()
+    await picker.getByRole('button', { name: 'Назад к упражнениям', exact: true }).click()
     await picker.getByLabel('Поиск упражнения').fill('присед со штангой')
     await picker.getByRole('button', { name: 'Проиграть технику: Присед со штангой', exact: true }).click()
     await picker.getByRole('button', { name: 'Открыть технику: Присед со штангой', exact: true }).click()
@@ -4717,6 +5844,30 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
     await picker.getByRole('button', { name: 'Создать упражнение' }).click()
     await expect(picker.getByRole('heading', { name: 'Своё упражнение' })).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('exercise-create.png') })
+    // C2 interactions run once per engine inside the existing appearance matrix.
+    if (theme === 'light' && width === 390) {
+      await picker.getByRole('button', { name: 'Назад к упражнениям' }).click()
+      await picker.getByLabel('Поиск упражнения').fill('присед')
+      await picker.getByRole('button', { name: 'Выбрать: Присед со штангой', exact: true }).click()
+      await picker.getByRole('button', { name: /^Фильтры/ }).click()
+      await expect(picker.getByRole('heading', { name: 'Фильтры', exact: true })).toBeVisible()
+      const search = picker.getByRole('textbox', { name: 'Поиск упражнения', exact: true })
+      await expect(search).toHaveValue('присед')
+      await search.fill('присед со штангой')
+      await picker.getByRole('button', { name: 'Ноги', exact: true }).click()
+      await picker.getByLabel('Оборудование', { exact: true }).selectOption({ label: 'Штанга' })
+      await expect(picker.getByRole('region', { name: 'Фильтры упражнений' })).toBeVisible()
+      await picker.getByRole('button', { name: 'Показать упражнения' }).click()
+      await expect(picker.getByRole('button', { name: 'Убрать: Присед со штангой', exact: true })).toHaveAttribute('aria-pressed', 'true')
+      await picker.getByRole('button', { name: /^Фильтры/ }).click()
+      await expect(picker.getByLabel('Оборудование', { exact: true })).toHaveValue('Штанга')
+      await picker.getByRole('button', { name: 'Очистить поиск' }).click()
+      await expect(search).toHaveValue('')
+      await expect(picker.getByRole('button', { name: 'Ноги', exact: true })).toHaveAttribute('aria-pressed', 'true')
+      await picker.getByRole('button', { name: 'Назад к упражнениям' }).click()
+      await expect(picker.getByText('Выбрано: 1', { exact: true })).toBeVisible()
+      await expect(picker.getByRole('button', { name: 'Добавить 1', exact: true })).toBeEnabled()
+    }
     await page.goto('/me/trainers')
     await page.getByRole('button', { name: 'Фильтры', exact: true }).click()
     const filters = page.getByRole('dialog', { name: 'Фильтры тренеров' })
@@ -5572,8 +6723,9 @@ for (const [role, lime, width] of [['client', true, 390], ['client', true, 430],
       expect(pilot.getAppendCommands()).toHaveLength(0)
       await expect(picker.getByRole('button', { name: 'Добавить 1', exact: true })).toBeVisible()
       await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
+      await expect(picker.getByRole('heading', { name: 'Фильтры', exact: true })).toBeVisible()
+      await picker.getByRole('button', { name: 'Показать упражнения', exact: true }).click()
       await expect(picker).toContainText('Выбрано: 1')
-      await picker.getByRole('button', { name: 'Фильтры', exact: true }).click()
       await picker.getByRole('button', { name: 'Убрать: Жим гантелей сидя', exact: true }).click()
       await expect(picker.getByRole('button', { name: 'Добавить 0', exact: true })).toBeDisabled()
       await picker.getByRole('button', { name: 'Выбрать: Жим гантелей сидя', exact: true }).click()

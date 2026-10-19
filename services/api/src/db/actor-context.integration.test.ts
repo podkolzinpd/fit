@@ -30,6 +30,7 @@ import {
   deletePushSubscription,
   hasPushSubscription,
   readPushNotificationStatus,
+  requestTestPushNotification,
   setNotificationPreference,
   upsertPushSubscription,
 } from '../push-notifications-command.js'
@@ -4232,6 +4233,32 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
     })
 
+    it('restores an archived card without membership rows while preserving its data and permissions', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const snapshot = () => ownerPool!.query(`select
+        to_jsonb(client) - 'version' - 'updated_at' - 'archived_at' as card,
+        (select jsonb_agg(to_jsonb(w) order by w.id) from public.workouts w where w.client_id=client.id) as workouts,
+        (select jsonb_agg(to_jsonb(e) order by e.id) from public.workout_exercises e join public.workouts w on w.id=e.workout_id where w.client_id=client.id) as exercises,
+        (select jsonb_agg(to_jsonb(s) order by s.id) from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id join public.workouts w on w.id=e.workout_id where w.client_id=client.id) as sets,
+        (select jsonb_agg(to_jsonb(m) order by m.trainer_id) from public.client_trainers m where m.client_id=client.id) as memberships,
+        (select jsonb_agg(to_jsonb(r) order by r.trainer_id) from public.client_trainer_relationships r where r.client_id=client.id) as relationships
+        from public.clients client where client.id=$1`, [CLIENT_ID])
+      const before = (await snapshot()).rows
+      const initial = (await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleClients)).clients.find((client) => client.id === CLIENT_ID)!
+      const archivedVersion = await withActorTransaction(runtimePool, ACTOR_ID, (client) => setClientArchived(client, CLIENT_ID, true, initial.version))
+      const archived = (await withActorTransaction(runtimePool, ACTOR_ID, (client) => readAccessibleClients(client, true))).clients.find((client) => client.id === CLIENT_ID)!
+      expect(archived).toMatchObject({ canArchive: true, version: archivedVersion })
+      expect(archived.archivedAt).not.toBeNull()
+      expect((await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleConnections)).memberships).toEqual([])
+      for (const actorId of [MEMBER_TRAINER_ID, OUTSIDE_TRAINER_ID]) {
+        await expect(withActorTransaction(runtimePool, actorId, (client) => setClientArchived(client, CLIENT_ID, false, archivedVersion))).rejects.toMatchObject({ failure: 'forbidden' })
+      }
+      const version = await withActorTransaction(runtimePool, ACTOR_ID, (client) => setClientArchived(client, CLIENT_ID, false, archivedVersion))
+      const restored = (await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleClients)).clients.find((client) => client.id === CLIENT_ID)!
+      expect(restored).toMatchObject({ archivedAt: null, canArchive: true, version })
+      expect((await snapshot()).rows).toEqual(before)
+    })
+
     it('hides memberships and invitations for archived clients', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
@@ -5226,6 +5253,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await expect(withActorTransaction(db, ACTOR_ID, (client) => savePlannedWorkout(client, { ...draft, requestId: randomUUID() }, null))).rejects.toThrow()
       } finally {
         if (savedId) await ownerPool.query('delete from public.workouts where id=$1', [savedId])
+        await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])
+      }
+    })
+
+    // Two distinct payloads: copying unchanged and replacing a strength exercise.
+    it.each([false, true])('persists copied plan and replay without changing its source (replacement=%s)', async (replacement) => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      const db = runtimePool
+      const pilotHash = 'd'.repeat(64)
+      const savedIds: string[] = []
+      await ownerPool.query(`insert into app_private.fit_lime_pilot_allowlist
+        (login_sha256, profile_id, enabled) values ($1, $2, true)`, [pilotHash, ACTOR_ID])
+      const source: PlannedWorkoutDraft = {
+        id: null, requestId: randomUUID(), clientId: CLIENT_ID, title: 'План',
+        workoutDate: '2026-10-19', startTime: '10:00', endTime: '11:00',
+        notes: null, trainingFormat: 'with_trainer', exercises: [
+          { ref: 'walking', name: 'Ходьба на дорожке', muscleGroup: 'cardio' as const, inputKind: 'distance' as const,
+            sets: [{ position: 0, weightKg: null, reps: null, durationMin: null, durationSec: 690, distanceKm: 1, rpe: null }] },
+          { ref: 'wrist-curl', name: 'Сгибание кистей с гантелями', muscleGroup: 'arms' as const, inputKind: 'strength' as const,
+            sets: Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 12.5, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null })) },
+          { ref: 'cable-crunch', name: 'Скручивания в блоке', muscleGroup: 'core' as const, inputKind: 'strength' as const,
+            sets: Array.from({ length: 2 }, (_, position) => ({ position, weightKg: 26, reps: 20, durationMin: null, durationSec: null, distanceKm: null, rpe: null })) },
+        ].map((exercise, position) => ({ ...exercise, position, source: 'system', customExerciseId: null,
+          blockId: randomUUID(), blockType: 'single', blockPreset: 'set', blockRounds: 1,
+          restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90, trainerComment: null })),
+      }
+      try {
+        const original = await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, source, null))
+        savedIds.push(original.id)
+        const before = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        const sourceBefore = before.workouts.find(item => item.id === original.id)!
+        const copy: PlannedWorkoutDraft = { ...source, requestId: randomUUID(),
+          exercises: source.exercises.map((exercise, position) => ({ ...exercise, blockId: randomUUID(),
+            ...(replacement && position === 1 ? { ref: 'bench-press', name: 'Жим штанги лёжа' } : {}) })) }
+        const created = await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, copy, null))
+        savedIds.push(created.id)
+        expect(await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, copy, null))).toEqual(created)
+        const after = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        expect(after.workouts).toHaveLength(before.workouts.length + 1)
+        expect(after.workouts.find(item => item.id === original.id)).toEqual(sourceBefore)
+        const savedCopy = after.workouts.find(item => item.id === created.id)!
+        expect(savedCopy).toMatchObject({ status: 'planned', trainingFormat: 'with_trainer', exercises: [
+          { ref: 'walking', sets: [{ plan: { durationSec: 690, distanceKm: 1 } }] },
+          { ref: replacement ? 'bench-press' : 'wrist-curl', sets: Array.from({ length: 3 }, () => ({ plan: { weightKg: 12.5, reps: 10 } })) },
+          { ref: 'cable-crunch', sets: Array.from({ length: 2 }, () => ({ plan: { weightKg: 26, reps: 20 } })) },
+        ] })
+        expect(savedCopy.exercises.map(item => item.id)).not.toEqual(sourceBefore.exercises.map(item => item.id))
+        const receipts = await ownerPool.query<{ count: number }>('select count(*)::int as count from app_private.lime_plan_create_requests where actor_id=$1 and request_id=$2', [ACTOR_ID, copy.requestId])
+        expect(receipts.rows).toEqual([{ count: 1 }])
+        await expect(withActorTransaction(db, OUTSIDE_TRAINER_ID, client => savePlannedWorkout(client, copy, null))).rejects.toMatchObject({ failure: 'forbidden' })
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=any($1::uuid[])', [savedIds])
         await ownerPool.query('delete from app_private.fit_lime_pilot_allowlist where login_sha256=$1', [pilotHash])
       }
     })
@@ -7933,6 +8012,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )).rows).toEqual([{ enabled: true }])
         await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           setNotificationPreference(client, 'workout_reminder', false))
+        await withActorTransaction(runtimePool, ACTOR_ID, client =>
+          upsertPushSubscription(client, {
+            endpoint: 'https://push.example/actor',
+            p256dh: 'actor-public-key', authKey: 'actor-auth-secret',
+          }))
 
         const actorStatus = await withActorTransaction(
           runtimePool,
@@ -8059,6 +8143,41 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'delete from public.push_subscriptions where user_id = any($1::uuid[])',
           [[ACTOR_ID, OTHER_ACTOR_ID]],
         )
+      }
+    })
+
+    it('enqueues an explicit test for one owned device, preserves opt-outs and bounds repeat requests', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
+      try {
+        await ownerPool.query('delete from app_private.push_notifications_outbox where user_id = $1', [ACTOR_ID])
+        for (const endpoint of ['https://push.example/test-phone', 'https://push.example/test-tablet']) {
+          await withActorTransaction(runtimePool, ACTOR_ID, client => upsertPushSubscription(client, { endpoint, p256dh: 'p', authKey: 'a' }))
+        }
+        await withActorTransaction(runtimePool, ACTOR_ID, client => setNotificationPreference(client, 'workout_reminder', false))
+        await expect(withActorTransaction(runtimePool, OTHER_ACTOR_ID, client =>
+          requestTestPushNotification(client, 'https://push.example/test-phone'))).rejects.toMatchObject({ failure: 'not_subscribed' })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, client =>
+          requestTestPushNotification(client, 'http://invalid'))).rejects.toMatchObject({ failure: 'invalid' })
+        await withActorTransaction(runtimePool, ACTOR_ID, client => requestTestPushNotification(client, 'https://push.example/test-phone'))
+        await expect(withActorTransaction(runtimePool, ACTOR_ID, client =>
+          requestTestPushNotification(client, 'https://push.example/test-tablet'))).rejects.toMatchObject({ failure: 'rate_limited' })
+        const rows = await ownerPool.query(
+          `select notification.kind, notification.data, subscription.endpoint
+           from app_private.push_notifications_outbox notification
+           join public.push_subscriptions subscription on subscription.id = notification.subscription_id
+           where notification.user_id = $1`, [ACTOR_ID],
+        )
+        expect(rows.rows).toHaveLength(1)
+        expect(rows.rows[0]).toMatchObject({ kind: 'test', endpoint: 'https://push.example/test-phone', data: { test: true, url: '/profile/settings' } })
+        const status = await withActorTransaction(runtimePool, ACTOR_ID, readPushNotificationStatus)
+        expect(status.preferences.workout_reminder).toBe(false)
+        await ownerPool.query("update app_private.push_notifications_outbox set created_at = now() - interval '2 minutes' where user_id = $1", [ACTOR_ID])
+        await withActorTransaction(runtimePool, ACTOR_ID, client => requestTestPushNotification(client, 'https://push.example/test-tablet'))
+        expect((await ownerPool.query('select id from app_private.push_notifications_outbox where user_id = $1', [ACTOR_ID])).rowCount).toBe(2)
+      } finally {
+        await ownerPool.query('delete from app_private.push_notifications_outbox where user_id = $1', [ACTOR_ID])
+        await ownerPool.query('delete from public.push_subscriptions where user_id = $1', [ACTOR_ID])
+        await ownerPool.query('delete from public.notification_preferences where user_id = $1', [ACTOR_ID])
       }
     })
 

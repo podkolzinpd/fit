@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 632-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 658-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,13 @@ test('real Playwright partitions preserve the 632-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 632) // Previous629 + grouped retry, pointer and trusted-touch client drag.
+    assert.equal(full.length, 658) // Previous656 + archive restoration and late invitation-state refresh.
+    assert.equal(full.filter(key => key.endsWith('Trainer restores archived client before sharing an invitation')).length, 1)
+    assert.equal(full.filter(key => key.endsWith('Invitation denial refreshes an already-connected client')).length, 1)
+    assert.equal(full.filter(key => key.endsWith('Coach copied plan replaces exercises, preserves values and retries a failed save')).length, 1)
+    assert.equal(full.filter(key => key.endsWith('Lime notification settings show safe diagnostics when browser push initialization fails')).length, 1)
+    assert.equal(full.filter(item => item.includes('Figma workout Coach plan input ')).length, 4)
+    assert.equal(full.filter(key => key.includes('Client Lime compact Live composition ')).length, 4)
     assert.equal(full.filter(key => key.endsWith('Client Lime Live gradual keyboard keeps the edited row visible')).length, 1)
     for (const title of ['Client Lime grouped drag preserves facts drafts and exact retry', 'Client Lime pointer drag autoscrolls and preserves draft', 'Client Lime touch drag autoscrolls and preserves draft']) assert.equal(full.filter(key => key.endsWith(title)).length, 1)
     for (const role of ['client', 'trainer']) assert.equal(full.filter(key => key.endsWith(`Lime Live direct input keeps confirmed facts editable ${role}`)).length, 1)
@@ -126,7 +132,7 @@ test('real Playwright partitions preserve the 632-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 100) // Three client drag checks are also critical.
+    assert.equal(scoped.length, 104) // Existing100 + compact Live layout assertions.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }

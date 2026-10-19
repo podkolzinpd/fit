@@ -6,11 +6,13 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/local/libexec/fit-cloudru-speechkit
-ExecStop=/usr/bin/podman stop --time 10 fit-speechkit-cloudru
+ExecStop=/usr/bin/podman rm --force --time 5 --ignore fit-speechkit-cloudru
 Restart=on-failure
 RestartSec=5
-TimeoutStopSec=20
+TimeoutStopSec=10
 UMask=0077
+LogRateLimitIntervalSec=1min
+LogRateLimitBurst=120
 
 [Install]
 WantedBy=multi-user.target

@@ -1,15 +1,18 @@
-export type RequestDiagnosticStage = 'api' | 'network' | 'response'
+export type RequestDiagnosticStage = 'api' | 'network' | 'response' | 'permission' | 'service-worker' | 'subscription-read' | 'subscription-create'
 
 export interface RequestDiagnostics {
   requestId: string
   occurredAt: string
-  backend: 'yandex'
+  backend: 'yandex' | 'browser'
   operation: string
   stage: RequestDiagnosticStage
   status?: number
   errorCode?: string
   errorCategory?: string
   releaseId?: string
+  platform?: 'ios' | 'android' | 'other'
+  appInstalled?: boolean
+  notificationPermission?: 'granted' | 'denied' | 'default'
 }
 
 type DiagnosticError = Error & { requestDiagnostics?: RequestDiagnostics }
@@ -37,9 +40,9 @@ export function getRequestDiagnostics(error: unknown): RequestDiagnostics | null
   if (!candidate || typeof candidate !== 'object') return null
   if (typeof candidate.requestId !== 'string'
     || typeof candidate.occurredAt !== 'string'
-    || candidate.backend !== 'yandex'
+    || !['yandex', 'browser'].includes(candidate.backend)
     || typeof candidate.operation !== 'string'
-    || !['api', 'network', 'response'].includes(candidate.stage)) return null
+    || !['api', 'network', 'response', 'permission', 'service-worker', 'subscription-read', 'subscription-create'].includes(candidate.stage)) return null
   return {
     requestId: candidate.requestId,
     occurredAt: candidate.occurredAt,
@@ -50,6 +53,9 @@ export function getRequestDiagnostics(error: unknown): RequestDiagnostics | null
     ...(optionalText(candidate.errorCode) ? { errorCode: candidate.errorCode } : {}),
     ...(optionalText(candidate.errorCategory) ? { errorCategory: candidate.errorCategory } : {}),
     ...(optionalText(candidate.releaseId) ? { releaseId: candidate.releaseId } : {}),
+    ...(candidate.platform !== undefined && ['ios', 'android', 'other'].includes(candidate.platform) ? { platform: candidate.platform } : {}),
+    ...(typeof candidate.appInstalled === 'boolean' ? { appInstalled: candidate.appInstalled } : {}),
+    ...(candidate.notificationPermission !== undefined && ['granted', 'denied', 'default'].includes(candidate.notificationPermission) ? { notificationPermission: candidate.notificationPermission } : {}),
   }
 }
 
@@ -73,5 +79,8 @@ export function formatRequestDiagnostics(diagnostics: RequestDiagnostics): strin
   if (diagnostics.errorCode !== undefined) lines.push(`Ошибка: ${diagnostics.errorCode}`)
   if (diagnostics.errorCategory !== undefined) lines.push(`Категория: ${diagnostics.errorCategory}`)
   if (diagnostics.releaseId !== undefined) lines.push(`Release: ${diagnostics.releaseId}`)
+  if (diagnostics.platform !== undefined) lines.push(`Платформа: ${diagnostics.platform}`)
+  if (diagnostics.appInstalled !== undefined) lines.push(`С домашнего экрана: ${diagnostics.appInstalled ? 'да' : 'нет'}`)
+  if (diagnostics.notificationPermission !== undefined) lines.push(`Разрешение: ${diagnostics.notificationPermission}`)
   return lines.join('\n')
 }

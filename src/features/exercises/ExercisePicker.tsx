@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { FitLimeSheetHeader } from '../../shared/FitLimeSheetHeader'
 import { useAppViewport } from '../../app/app-viewport'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import type { PreparedImage } from '../../shared/image-prep'
@@ -112,10 +113,12 @@ interface ExercisePickerProps {
   onSelectionDraftChange?: (exercises: ExerciseSnapshot[]) => void
   multiple?: boolean
   showEmptySelection?: boolean
+  keepSelectionWhileAdding?: boolean
   initialSearch?: string
   initialMode?: ExercisePickerMode
   techniqueActionLabel?: string
   reference?: boolean
+  clientLime?: boolean
   onClose: () => void
 }
 
@@ -147,7 +150,7 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, clientLime = false, onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
   )
@@ -170,6 +173,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [localSelected, setLocalSelected] = useState<Map<string, ExerciseSnapshot>>(() => new Map())
   const [addingSelected, setAddingSelected] = useState(false)
+  const [pendingSelection, setPendingSelection] = useState<ReadonlyMap<string, ExerciseSnapshot>>(() => new Map())
   const [selectionError, setSelectionError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -294,16 +298,19 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       : new Map(selectionDraft.map((exercise) => [exerciseKey(exercise), exercise])),
     [localSelected, selectionDraft],
   )
+  // Live removes acknowledged items from its retry draft before readback ends.
+  // Keep that write bookkeeping separate from the visible pending selection.
+  const visibleSelection = keepSelectionWhileAdding && addingSelected ? pendingSelection : selected
 
   useEffect(() => {
-    if (!reference) return
+    if (!reference && !clientLime) return
     const previous = document.activeElement
     dialogRef.current?.focus()
     return () => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus() }
-  }, [reference])
+  }, [reference, clientLime])
 
   function handleDialogKey(event: KeyboardEvent<HTMLElement>) {
-    if (!reference || event.defaultPrevented) return
+    if ((!reference && !clientLime) || event.defaultPrevented) return
     if (event.key === 'Escape') {
       event.preventDefault()
       if (addingSelected) return
@@ -334,7 +341,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   }
   function applyFilter(change: () => void) {
     change()
-    if (!reference) closeFilters()
+    if (!reference && !clientLime) closeFilters()
   }
 
   function openCreate() {
@@ -366,6 +373,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   async function addSelected() {
     const exercises = [...selected.values()]
     if (!exercises.length || !onPickMany || addingSelected) return
+    if (keepSelectionWhileAdding) setPendingSelection(new Map(selected))
     setAddingSelected(true)
     setSelectionError(null)
     try {
@@ -378,6 +386,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         : reference && error instanceof Error ? error.message : 'Не удалось добавить упражнения. Выбор сохранён — попробуйте ещё раз.')
     } finally {
       setAddingSelected(false)
+      if (keepSelectionWhileAdding) setPendingSelection(new Map())
     }
   }
   function pickRunningFormat(format: RunningFormat) {
@@ -393,7 +402,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     setEquipment(null)
     setPurpose(null)
     setCustomOnly(false)
-    if (filtersOpen) closeFilters()
+    if (filtersOpen && !clientLime) closeFilters()
   }
   function clearSearch() {
     setSearch('')
@@ -437,7 +446,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   // активной карточке открывает подробную технику; кнопка «+» меняет выбор.
   function item(exercise: ExerciseSnapshot, keyPrefix: string) {
     const key = exerciseKey(exercise)
-    const checked = selected.has(key)
+    const checked = visibleSelection.has(key)
     const hasTechniqueMedia = hasExerciseMedia(exercise)
     const hasTechniqueVideo = hasExerciseAnimation(exercise)
     const playing = hasTechniqueVideo && playingExerciseKey === key
@@ -517,8 +526,13 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
 
   const referenceList = reference && !previewExercise && !creating
   return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onClick={() => { if (!addingSelected) onClose() }}>
-    <section ref={dialogRef} tabIndex={reference ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${reference ? ' coach-reference-sheet coach-reference-catalog' : ''}${selected.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
-      {referenceList ? <header className="picker-header coach-reference-sheet-header">
+    <section ref={dialogRef} tabIndex={reference || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${reference ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
+      {clientLime ? <FitLimeSheetHeader
+        title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? 'Фильтры' : 'Выберите упражнения'}
+        backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}
+        onBack={previewExercise ? closeTechnique : creating ? closeCreate : filtersOpen ? () => closeFilters(true) : onClose}
+        disabled={addingSelected}
+      /> : referenceList ? <header className="picker-header coach-reference-sheet-header">
         <button type="button" className="picker-close" disabled={addingSelected} aria-label={filtersOpen ? 'Назад к упражнениям' : 'Закрыть'} onClick={filtersOpen ? () => closeFilters(true) : onClose}>{filtersOpen ? <BackIcon /> : <CloseIcon />}</button>
         <h1>{filtersOpen ? 'Фильтры' : 'Добавить упражнение'}</h1>
         {(filtersOpen || multiple) && <button type="button" className="coach-sheet-confirm" aria-label={filtersOpen ? 'Применить фильтры' : 'Добавить выбранные упражнения'} disabled={!filtersOpen && (addingSelected || selected.size === 0)} onClick={filtersOpen ? () => closeFilters(true) : () => void addSelected()}><CheckSmallIcon /></button>}
@@ -529,7 +543,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       </header>}
       {previewExercise ? <div className="picker-technique-view">
         <ExerciseTechniqueContent exercise={previewExercise} beforeFacts={<CatalogVariantField exercise={previewExercise} catalog={catalog.exercises} onChange={setPreviewExercise} />} />
-        <button type="button" className="primary picker-technique-action" onClick={() => techniqueAction(previewExercise)}>{multiple && selected.has(exerciseKey(previewExercise)) ? 'Убрать из выбранных' : multiple ? 'Добавить к выбранным' : techniqueActionLabel}</button>
+        <button type="button" className="primary picker-technique-action" onClick={() => techniqueAction(previewExercise)}>{multiple && visibleSelection.has(exerciseKey(previewExercise)) ? 'Убрать из выбранных' : multiple ? 'Добавить к выбранным' : techniqueActionLabel}</button>
       </div> : creating ? <div className="stack">
         <label className="field">Название<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например: Болгарский присед" /></label>
         <div className="picker-categories" aria-label="Группа мышц">{MUSCLE_GROUPS.map((item) => <button type="button" key={item} className={group === item ? 'picker-category active' : 'picker-category'} onClick={() => selectCustomGroup(item)}>{MUSCLE_GROUP_LABELS[item]}</button>)}</div>
@@ -544,17 +558,17 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         {catalog.error && <p className="error">{catalog.error.message}</p>}
         <button type="button" className="primary" disabled={catalog.saving || photoBusy || !name.trim() || !group} onClick={() => void createExercise()}>{catalog.saving ? 'Сохранение…' : 'Сохранить упражнение'}</button>
       </div> : <>
-        {(!reference || !filtersOpen) && <><div className="picker-search-control"><input ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => setFiltersOpen(false)} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div>
-        <div className="picker-toolbar">
+        {(!reference || !filtersOpen) && <><div className="picker-search-control">{clientLime && filtersOpen && <label htmlFor="client-picker-search">Название упражнения</label>}<input id={clientLime ? 'client-picker-search' : undefined} ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => { if (!clientLime) setFiltersOpen(false) }} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div>
+        {(!clientLime || !filtersOpen) && <div className="picker-toolbar">
           {reference && <span className="coach-catalog-count">{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>}
-          <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>{reference ? 'Фильтровать' : 'Фильтры'}{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}{reference && <img src={coachWorkoutReferenceAssets.filter} width="16" height="16" alt="" />}</button>
+          <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" disabled={clientLime && addingSelected} aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>{reference ? 'Фильтровать' : 'Фильтры'}{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}{(reference || clientLime) && <img className={clientLime ? 'client-lime-filter-icon' : undefined} src={coachWorkoutReferenceAssets.filter} width="16" height="16" alt="" />}</button>
           {(!reference || selected.size > 0) && <button type="button" className="secondary picker-create-action" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}>Создать упражнение</button>}
-        </div>
-        {activeFilterChips.length > 0 && <div className="picker-active-filters" role="group" aria-label="Выбранные фильтры">
+        </div>}
+        {(!clientLime || !filtersOpen) && activeFilterChips.length > 0 && <div className="picker-active-filters" role="group" aria-label="Выбранные фильтры">
           {activeFilterChips.map((chip) => <button type="button" key={chip.key} aria-label={`Убрать фильтр: ${chip.label}`} onClick={() => { chip.remove(); requestAnimationFrame(() => filterButtonRef.current?.focus()) }}><span>{chip.label}</span><CloseIcon /></button>)}
         </div>}</>}
         {filtersOpen ? <div id="picker-filter-panel" className="picker-filter-panel" role="region" aria-label="Фильтры упражнений" onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); closeFilters(true) } }}>
-          <div className="picker-filter-panel-heading">{!reference && <h2>Фильтры</h2>}{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>
+          <div className="picker-filter-panel-heading">{!reference && !clientLime && <h2>Фильтры</h2>}{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>
           {reference && <div className="picker-filter-strip"><button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button></div>}
           <p className="picker-filter-label">Группа мышц</p>
           <div className="picker-filter-strip" role="group" aria-label="Группа мышц">
@@ -606,7 +620,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         </>}
         {selectionError && <p className="error" role="alert">{selectionError}</p>}
         {reference && !filtersOpen && selected.size === 0 && <div className="coach-catalog-create-bar"><button type="button" className="secondary picker-create-action coach-catalog-create-floating" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}><img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /></button></div>}
-        {multiple && (selected.size > 0 || showEmptySelection) && (!reference || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {selected.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${selected.size}`}</button></div>}
+        {multiple && (visibleSelection.size > 0 || showEmptySelection) && ((!reference && !clientLime) || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {visibleSelection.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${visibleSelection.size}`}</button></div>}
       </>}
     </section>
   </div>

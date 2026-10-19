@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { localDate } from '../../shared/local-date'
-import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
+import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, readWorkoutEditDraft, readWorkoutFormDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 
 describe('workout form draft storage', () => {
   const key = workoutFormDraftKey('trainer', 'workout-1')
@@ -23,6 +23,18 @@ describe('workout form draft storage', () => {
     writeWorkoutFormDraft(key, draft)
     expect(readWorkoutFormDraft(key)).toEqual(draft)
     expect(readWorkoutFormDraft(workoutFormDraftKey('trainer', 'other'))).toBeNull()
+  })
+
+  it('restores an edit only for its exact version, never from an unfinished copy or another account', () => {
+    const editKey = workoutFormDraftKey('trainer', 'edit-workout-1')
+    writeWorkoutFormDraft(key, draft)
+    expect(readWorkoutEditDraft(editKey, 4)).toBeNull()
+    writeWorkoutFormDraft(editKey, { ...draft, sourceVersion: 4 })
+    expect(readWorkoutEditDraft(editKey, 4)?.sourceVersion).toBe(4)
+    expect(readWorkoutEditDraft(editKey, 5)).toBeNull()
+    expect(readWorkoutEditDraft(editKey, undefined)).toBeNull()
+    expect(readWorkoutEditDraft(workoutFormDraftKey('other', 'edit-workout-1'), 4)).toBeNull()
+    expect(readWorkoutEditDraft(key, 4)).toBeNull()
   })
 
   it('removes a saved draft', () => {

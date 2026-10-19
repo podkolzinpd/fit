@@ -3,6 +3,7 @@ import { LIVE_WORKOUT_REQUEST_TIMEOUT_MS } from './auth-fetch'
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
 import {
   getResponseDiagnostics,
+  fetchWithRequestDiagnostics,
   resetYandexPlatformRequestStateForTests,
 } from './request-diagnostics'
 import { createYandexMainQueries, YANDEX_MAIN_READ_TIMEOUT_MS } from './yandex-main.queries'
@@ -29,6 +30,24 @@ describe('Yandex main query timeout', () => {
     resetYandexPlatformRequestStateForTests()
     vi.useRealTimers()
     vi.restoreAllMocks()
+  })
+
+  it.each(['url', 'request'] as const)('keeps the web API proxy prefix in the %s mutation preflight', async (kind) => {
+    vi.useFakeTimers()
+    const endpoint = 'https://web-api.example/api/v1/workout-sets/set-1/confirm?fixture=1#ignored'
+    const input = kind === 'request' ? new Request(endpoint, { method: 'POST' }) : endpoint
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((value) => {
+      const url = value instanceof Request ? value.url : String(value)
+      if (url === 'https://web-api.example/api/health') return Promise.resolve(new Response('{}', { headers: { 'x-fit-request-id': 'proxy-health' } }))
+      if (url === 'https://web-api.example/health') return Promise.resolve(new Response('<html>frontend</html>', { headers: { 'content-type': 'text/html' } }))
+      return Promise.resolve(new Response('{}', { status: 201 }))
+    })
+    const outcome = fetchWithRequestDiagnostics(globalThis.fetch, input, { method: 'POST', body: '{"same":"command"}' }).catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(await outcome).toBeInstanceOf(Response)
+    expect(fetchMock.mock.calls.map(([value]) => value instanceof Request ? value.url : String(value))).toEqual(['https://web-api.example/api/health', endpoint])
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.body).toBe('{"same":"command"}')
   })
 
   it('aborts a stalled Live write', async () => {

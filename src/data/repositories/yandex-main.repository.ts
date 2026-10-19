@@ -440,6 +440,8 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'push_test_rate_limited') return new RepositoryError(code, 'Тест уже запрошен. Подождите минуту перед повторной отправкой.')
+  if (code === 'push_subscription_missing') return new RepositoryError(code, 'Подключение устройства потеряно. Повторите проверку уведомлений.')
   if (status === 401) return new RepositoryError('session_expired', 'Сессия Yandex ID истекла. Войдите заново.')
   if (status === 403) return new RepositoryError('PT403', 'Недостаточно прав для этого действия.')
   if (status === 404) return new RepositoryError('PT404', 'Запись не найдена или больше недоступна.')
@@ -1320,11 +1322,14 @@ export function createYandexMainRepository(
         }
       },
       async setArchived(item, archived) {
-        const payload = await writeJson(queries, `/v1/clients/${item.id}/archive`, 'PUT', {
-          archived, expectedVersion: item.version,
-        }, z.object({ client: z.object({ version: z.number().int().positive() }) }))
-        invalidate()
-        return { ...item, archivedAt: archived ? new Date().toISOString() : null, version: payload.client.version }
+        try {
+          const payload = await writeJson(queries, `/v1/clients/${item.id}/archive`, 'PUT', {
+            archived, expectedVersion: item.version,
+          }, z.object({ client: z.object({ version: z.number().int().positive() }) }))
+          return { ...item, archivedAt: archived ? new Date().toISOString() : null, version: payload.client.version }
+        } finally {
+          invalidate()
+        }
       },
     },
     exercises: {
@@ -1630,8 +1635,12 @@ export function createYandexMainRepository(
         invalidate(); return payload.invitation.code
       },
       async createShare(clientId, targetRole) {
-        const payload = await writeJson(queries, '/v1/invitation-links', 'POST', { clientId, targetRole }, z.object({ invitation: invitationShareSchema }))
-        invalidate(); return payload.invitation
+        try {
+          const payload = await writeJson(queries, '/v1/invitation-links', 'POST', { clientId, targetRole }, z.object({ invitation: invitationShareSchema }))
+          return payload.invitation
+        } finally {
+          invalidate()
+        }
       },
       previewLink() {
         throw new Error('Публичный предпросмотр приглашения выполняется без сессии.')
@@ -1745,9 +1754,8 @@ export function createYandexMainRepository(
     },
     pushNotifications: {
       async status() {
-        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
         const payload = await readJson(queries, '/v1/push-notifications/status', z.object({ status: z.object({ subscribed: z.boolean(), preferences: z.object({ workout_reminder: z.boolean(), workout_scheduled: z.boolean(), chat_message: z.boolean() }) }) }))
-        const state = await reconcilePushSubscription(vapidPublicKey, {
+        const state = await reconcilePushSubscription({
           hasServerSubscription: async (endpoint) => {
             const result = await writeJson(
               queries,
@@ -1774,7 +1782,6 @@ export function createYandexMainRepository(
         if (!vapidPublicKey) throw new Error('Push-уведомления сейчас недоступны')
         const subscription = await subscribeToPush(vapidPublicKey)
         await writeEmpty(queries, '/v1/push-notifications/subscription', 'PUT', subscription)
-        await writeEmpty(queries, '/v1/push-notifications/preferences/workout_reminder', 'PUT', { enabled: true })
       },
       async disable() {
         await writeEmpty(queries, '/v1/push-notifications/preferences/workout_reminder', 'PUT', { enabled: false })
@@ -1790,11 +1797,8 @@ export function createYandexMainRepository(
       async setCategoryEnabled(_userId, kind, enabled) {
         await writeEmpty(queries, `/v1/push-notifications/preferences/${kind}`, 'PUT', { enabled })
       },
-      sendTestPush() {
-        // Yandex-пилот не разворачивал отдельный тестовый эндпоинт (см.
-        // YAFIT-475) — намеренно недоступно, а не забытая заглушка.
-        // NotificationOnboarding не вызывает это для source: 'yandex'.
-        return Promise.reject(new Error('Тестовое уведомление недоступно для этого аккаунта'))
+      async sendTestPush(endpoint) {
+        await writeEmpty(queries, '/v1/push-notifications/test', 'POST', { endpoint })
       },
     },
     realtime: {

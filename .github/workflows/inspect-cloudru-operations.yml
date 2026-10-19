@@ -5,6 +5,10 @@ on:
     - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
+      api_errors:
+        description: Read only sanitized API command error-code counts for the last 24 hours
+        type: boolean
+        default: false
       renewal_check:
         description: Also run a bounded Let's Encrypt staging renewal check
         type: boolean
@@ -34,6 +38,15 @@ jobs:
           sudo systemctl show fit-background.service --property=Result --property=ExecMainCode --property=ExecMainStatus
           sudo journalctl --unit=fit-background.service --since="15 minutes ago" --lines=100 --output=json --no-pager |
             python3 scripts/cloudru-background-diagnostics.py
+      - name: Read only bounded API command error-code counts
+        if: github.event_name == 'workflow_dispatch' && inputs.api_errors
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-api-stage --since="24 hours ago" --lines=5000 --output=json --no-pager 2>/dev/null |
+            python3 scripts/cloudru-api-command-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Inspect runtime, workers, certificates and backup freshness without reading user data
         env:
           SPEECH_EXPECTED_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL }}

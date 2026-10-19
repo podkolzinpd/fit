@@ -86,6 +86,17 @@ describe('system actions', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Удалить' }))
     expect(action).toHaveBeenCalledOnce()
   })
+  it('explains an unavailable action without changing its accessible name', () => {
+    const action = vi.fn()
+    render(<OverflowMenu items={[{ label: 'Объединить со следующим в суперсет', description: 'Есть выполненные подходы.', disabled: true, onClick: action }]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    const item = screen.getByRole('menuitem', { name: 'Объединить со следующим в суперсет' })
+    expect(item).toBeDisabled()
+    expect(item).toHaveAttribute('aria-description', 'Есть выполненные подходы.')
+    expect(screen.getByText('Есть выполненные подходы.')).toBeVisible()
+    fireEvent.click(item)
+    expect(action).not.toHaveBeenCalled()
+  })
 })
 
 describe('Coachmark', () => {

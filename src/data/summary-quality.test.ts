@@ -192,11 +192,14 @@ describe('summaryQualityIssues', () => {
 
     expect([...quality.blockingIssues, ...quality.advisories]).toEqual(expect.arrayContaining([
       expect.stringContaining('императив'),
-      expect.stringContaining('зависящая от рода'),
+      expect.stringContaining('зависящее от рода обращение'),
       expect.stringContaining('восклицательный'),
       expect.stringContaining('усталость'),
       expect.stringContaining('Регулярность нельзя'),
     ]))
+    expect(quality.blockingIssues).toContain(
+      'В client есть зависящее от рода обращение к человеку; используй нейтральную конструкцию.',
+    )
   })
 
   it('requires goal-aware copy and readable rounding', () => {
@@ -316,12 +319,12 @@ describe('summaryQualityIssues', () => {
 
     expect(quality.blockingIssues).toEqual(expect.arrayContaining([
       expect.stringContaining('короткий обычный перерыв'),
+      expect.stringContaining('зависящее от рода обращение'),
     ]))
     expect(quality.blockingIssues).not.toEqual(expect.arrayContaining([
       expect.stringContaining('нет наблюдений за выполнением'),
     ]))
     expect(quality.advisories).toEqual(expect.arrayContaining([
-      expect.stringContaining('зависящая от рода'),
       expect.stringContaining('императив'),
     ]))
   })

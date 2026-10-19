@@ -1,0 +1,308 @@
+# Доработки Live и планирования по видео 18 октября
+
+Согласованный план из пяти PR. Только исходная пара тренеров, уже включённая
+в независимые WORKOUT_REDESIGN / LIVE_DENSITY / PLAN_INPUT / PLAN_LAYOUT guards.
+Контакты и реальные UUID не публикуются. Клиентский интерфейс, остальные
+тренеры и allowlist не меняются. Исходные SVG остаются неизменными.
+
+## PR 1 — Шапка, таймер и прокрутка
+
+- Убрать наложение и обрезанную строку общего времени между закреплёнными блоками.
+- Устранить прямоугольные пятна свечения и чёрные полосы от нескольких fixed-фонов.
+- Сохранить положение ввода при открытии/закрытии клавиатуры; поле остаётся видно.
+- Логика отдыха прежняя: на нуле большой таймер возвращается к зелёному общему
+  времени, а кнопка отдыха продолжает отрицательный отсчёт.
+
+## PR 2 — Оригинальный и компактный виды
+
+- Оригинальный Live: поля 54 px и галочка 54×54. Компактный: 48 px.
+- Согласовать всю строку: оболочки, сетку, подтверждение, сохранение, выполненные
+  состояния, RPE, время и дистанцию. Планирование остаётся 48 px.
+- Оригинальные ширины, отступы и радиусы брать из SVG; компактные — из
+  согласованного эскиза. Карточка растёт под дополнительные подходы и заметки.
+- Уплотнить компактные карточки, сохранив заметки; убрать лишнее дублирование
+  сводки. Существующий вход в анимацию оформить оригинальной SVG-иконкой вместо
+  системного треугольника; не добавлять новую кнопку техники.
+- Обновить рабочую спецификацию и проверки геометрии. Не подменять Doto
+  выдуманным шрифтом без полного набора оригинальных глифов.
+
+## PR 3 — Заметки и потерянные нажатия
+
+- Хранить локальный черновик заметки отдельно по пользователю и тренировке
+  до подтверждения сервером; восстанавливать после перезагрузки.
+- Сохранить уже существующий ручной повтор при ошибке.
+- Устранить потерю первого нажатия «Подход», когда blur заметки начинает
+  сохранение. Не создавать двойной подход, новые постоянные баннеры или
+  сложный механизм поверх существующего координатора.
+
+## PR 4 — Планирование и ввод на iPhone
+
+- Убрать нижний дубль клиента, даты, времени и формата тренировки
+  (`today-plan-summary`) только в новой форме исходной пары тренеров.
+- Привести нижние элементы управления к согласованным отступам, сохранив
+  массовое редактирование.
+- Проверить причину системного «Автозаполнить контакт» при autocomplete=off;
+  применять лишь целевое исправление. Не отключать autofill во всём приложении.
+- Сохранить дробные значения, очистку, «Далее» и сохранение. Проверка в WebKit
+  или симуляторе не доказывает исчезновение панели на физическом iPhone.
+
+## PR 5 — Первые подсказки
+
+- Расписание уже исправлено PR 1686; повторно не переделывать.
+- В Day и Live оставить максимум по одной подсказке у видимого элемента,
+  с сохранением закрытия отдельно для пользователя, без нового тура.
+
+## Общие критерии приёмки и выпуск
+
+Перед каждым PR: актуальный main, текущий код, слитые/открытые PR и живой
+локальный сценарий; сверка «работает → используем → меняем → не проверено».
+Переиспользовать существующие поля, WorkoutGestures, координатор мутаций,
+LiveRestTimer, Coachmark, исходные иконки и токены Fit Lime.
+Главное действие подхода — существующая галочка; завершение — существующее
+подтверждение. Новых Start/Pause/фаз нет.
+
+Сохранить суперсеты (объединить со следующим/разъединить), перетягивание,
+свайп-удаление без крестиков, автосохранение, RPE, время и дистанцию.
+Проверить ошибки/повтор/возврат, обе плотности и выход за пределы пилота.
+Целевые тесты и `npm run check`; WebKit 375/390/430/440 и desktop 1440 по
+затронутым сценариям. Не ослаблять гейты и не обновлять inventory ради обхода.
+
+Каждый PR: документация фактического поведения и CURRENT_STATE в той же ветке,
+зелёный обязательный CI, штатный merge, официальный Cloud.ru release,
+проверка опубликованных файлов и закрытого пилота, актуальная native sync,
+сборка/установка/запуск по правилам репозитория. Физический iPhone и настоящий
+OAuth не считать проверенными по синтетическим данным или симулятору.
+
+## Статус
+
+- PR 1: #1688/main94552310 выпущен; mainCI39077893863/Cloud.ru39078700484 success, public207/207+health/compiled4closed2/native207/207 passed.
+- PR 2: #1690/main9ee5af25 полностью выпущен: PRCI39107082759/mainCI39108106161/Cloud.ru39108856277 success, public207/207+health/compiled4closed2/native207/207 sync/build/install/launch passed.
+- PR 3: #1691/main22d237e1 полностью выпущен: PRCI39109269478 attempt2/mainCI39110267065/Cloud.ru39111035966 success; public207/207+health/frozen original pair/web-native4closed2/native207/207 launch passed.
+- PR 4: #1692/mainf87135dc merged после PRCI39111157234/Android39111157240 success; native207/207 и4closed2 passed, mainCI39112080639 идёт. Contact panel не объявляется исправленной.
+- PR 5: финальный PR на mainf87135dc, non-docs checkedc960d699 (fresh52/fullcheck2738). CI5 параллелен main/release4, но merge5 только после подтверждённого web4 readback. Итоговые факты — YAFIT-621; ожидание не завершает задачу.
+
+## Сверка и приёмка PR 1
+
+База 3bdf1acd; trainer, Lime, WORKOUT_REDESIGN + LIVE_DENSITY fixed2.
+Маршрут `/workouts/:id/live`, синтетические данные, без production-мутаций.
+
+| Пункт | Уже работает и переиспользуется | Изменение и доказательство | Статус |
+| --- | --- | --- | --- |
+| Шапка/строка времени | Page + LiveRestTimer + sticky | Исходный зазор6px и caption-overflow воспроизведены; padding0 + visually hidden caption; WebKit/Chromium geometry assertions | Локально пройден |
+| Свечение | Имеющийся Lime/amber halo | Удалены fixed-фоны только density-пилота; scroll background assertions, визуально отсмотрены оба вида375/440 | Локально пройден; физический iPhone не проверен |
+| Клавиатура | AppViewport + useLiveInputVisibility | Редуцированный viewport400/540: фокус и видимость сохранены, caption не перекрывает поле | Локально пройден |
+| Отдых | Действующий deadline и LiveRestTimer | 2s→negative, общий clock зелёный, reload/density/gestures не сбрасывают отдых | Локально пройден |
+| Граница пилота | Независимые действующие guards | Outside trainer/client и обе плотности; allowlist неизменён | Локально пройден |
+
+Существующие browser cases расширены, новые случаи не добавлялись. WebKit
+9/9 целевых + WebKit/Chromium66/66 регрессионных; отдельная диагностическая
+пара375/440 — 2/2 (не подмена assertion тестов). Полный локальный check и
+exact-head CI, штатный merge и release/native обязательны перед выпуском.
+Нельзя считать системную панель iOS, реальный OAuth или физический iPhone
+проверенными по этим синтетическим сценариям.
+
+Полный check исходного diff прошёл exit0: frontend2729/API1426+160 стандартных
+DB skips, infra320/hosting169/calendar12/fonts2/build/startup. Визуальный просмотр
+после него выявил разную ширину фона header/pinned: margin14 заменён внутренним
+padding14, legacy верхний page-padding убран, фон теперь непрерывен по ширине.
+Добавлена проверка совпадения левых краёв и ширины; финальная геометрия и полный
+check повторяются на этом исправленном diff перед merge.
+
+Финальный full check `a65097af` — exit0, те же2729/1426+160DBskip;
+fonts/build/startup passed. Дополнительная геометрия16/16 и оба вида2/2 пройдены.
+
+## Сверка и приёмка PR 2
+
+Локальная подготовка от `a65097af`, предыдущий PR ещё на CI. `/workouts/:id/live`,
+trainer Lime, исходные WORKOUT_REDESIGN + LIVE_DENSITY exact2. Baseline390px
+воспроизведён и просмотрен в обоих видах, затем сравнивается после нового main.
+Работают и переиспользуются LiveSetFields/Input, WorkoutSetRow, прежние save/confirm,
+WorkoutGestures/суперсеты, AppViewport и LiveExerciseTechnique. Primary — галочка
+подхода, не новый запуск. Не проверены настоящий OAuth и физический iPhone.
+
+| Пункт | Видимый результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| Размеры54/48 | Вся строка, RPE/время/дистанция/правка и галочка; план48 неизменён | Existing density composition + metric/field/keyboard cases | Локально в проверке |
+| Оригинальная геометрия |375px: вес/повторы84,5×54, check54, gap2/radius16; другие ширины адаптивны | Source workout-editor-catalog2221/2224/2227, width assertion375 | Локально в проверке |
+| Компактный вид | Меньше повторов над карточкой; пустая закрытая заметка рядом с «Подход», заполненная/открытая на всю ширину | Composition notes + accessible summary/markers, density-switch footer bounds | Локально в проверке |
+| Вход в анимацию | Оригинальный Play без emoji, прежние действия | Existing component rerender + browser card completion | Локально в проверке |
+| Спецификация | Private approvedOverrides original54/compact48/plan48, originals unchanged | validate:9 attachments,7 originals,6612elements, hashes all match | Пройден |
+
+Дистанция с м/км — явно обозначенная адаптация, её поля не сжимаются до84,5px.
+В оригинальном виде сохраняется свободное место удалённого крестика, сам крестик
+и скрытая кнопка не возвращаются. Высота всей карточки не фиксируется. Doto и
+измерения исходного SVG не меняются. Новых browser/unit cases нет: расширены
+существующие assertions, protected inventory/digest не обновляется.
+
+Исходный PR2 unit5/6 остановился на неверном ожидании имени файла: Vite
+инлайнит оригинальный SVG как data URI. Проверка сравнивает точный импорт,
+а не путь; итог6/6. Runtime ради этого не менялся. До финального footer
+browser122/122; финальный footer/density18/18 и private375/4402/2. Первый full
+check остановился на сравнении line-number inventory, поскольку файл теста
+редактировался во время collection. Количество654 и гейт не менялись;
+итоговый check запущен на стабилизированном исходнике без параллельных правок
+runtime или tests. Исходные SVG и коммерческие файлы в публичный PR не добавляются.
+
+Финальный PR2 full check exit0: frontend2729/API1426+160standardDBskip,
+infra320/hosting169/calendar12/fonts2/build/startup passed; inventory654 union
+проверен без изменения гейта. Отдельно supersets6/6 в обоих движках; footer18/18,
+private375/4402/2. PR1#1688 полностью выпущен на main94552310: mainCI39077893863,
+Cloud.ru39078700484, public207/207+health, compiled4closed2, native207/207 и
+sync/build/install/launch пройдены. PR2 опубликован как1690; после штатного
+merge более раннего1689 перенесён на main210ee7b6. Его patch не изменился
+(range-diff=). Свежие WebKit/Chromium40/40 и fullcheck exit0:
+frontend2734/API1426+160standardDBskip/infra320/hosting169/calendar12/fonts2/
+build/startup. Inventory656 пришёл из двух upstream push cases1689; наш гейт
+и digest не ослаблялись. Exact-head CI, merge, release и native PR2 ещё впереди.
+
+## Сверка и приёмка PR 3
+
+Подготовка от локально проверенного PR2 `1335eb0b`; `/workouts/:id/live`,390px,
+trainer Lime, исходный WORKOUT_REDESIGN fixed2. До изменения повторно получено:
+первый тап не отправляет append, после503/reload текст пуст и retry отсутствует.
+Сценарий и снимок сохранены приватно. Работают и переиспользуются существующие
+comment mutation/retry, runLiveWorkoutMutation/coordinator и textarea/disclosure.
+Не меняются API/БД/права, сообщения, таймер, SVG, поля подходов и клиентский путь.
+
+| Пункт | Результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| Черновик | scoped account/workout, включая очистку заметки, сохраняется до readback | storage4 + restored textarea after503/reload | Локально пройден |
+| Ручной повтор | Тот же вход восстанавливается после reload, accepted text очищает draft | existing quiet-retry case extended on one account | Локально пройден |
+| Первый тап | Один append ждёт note command в прежнем координаторе, затем выполняется | delayed503 + exact one append + reload/retry | Локально пройден |
+| Без усложнения | Нет нового баннера, автоматической рассылки/фоновой синхронизации или новой команды | code + visual390, non-pilot defaults preserved | Локально пройден |
+
+Targeted storage/coordinator10/10; existing browser case4/4 в двух движках.
+Новых browser cases нет; повтор длинной note-chain добавлен только первому из
+двух существующих аккаунтов, изоляция учётки/тренировки проверена unit.
+Первый расширенный тест ожидал несуществующий GET/workouts/:id и остановился;
+заменён точным текущим read-контрактом GET/training-data?workoutId. Runtime
+ради ошибочного ожидания не менялся; timeout/retries/inventory654/digest прежние.
+Типизация пройдена. При storage denied форма держит текст только в текущей
+вкладке; физический iPhone/реальный OAuth не проверены. Full check, CI и выпуск
+обязательны до публикации результата PR3.
+
+После публикации PR2 его docs-only amend дал9ba7099d, src/e2e остались байт-в-байт
+как в1335eb0b. PR3 перенесён на этот источник без конфликтов runtime. Итоговая
+regression54/54; дополнительные edge4/4: focus/blur восстановленного текста без
+повторной отправки, сохранение пробела при вводе, потерянный ACK с подтверждённым
+readback (stale error снимается), намеренная очистка заметки и reload.
+Параметры таймаутов и654-case inventory не менялись. Перед full check runtime и
+tests стабилизированы; правки документации не подменяют завершение этого гейта.
+
+Финальный PR3 full check exit0: frontend2733/2733 (четыре новых focused storage
+unit), API1426+160standardDBskip, infra320/hosting169/calendar12/fonts2/build/startup.
+Inventory654 union и все прежние гейты прошли; digest/таймауты не менялись.
+PR3 пока локальный: публикация после merge/release PR2, без обхода более ранних PR.
+
+После1689 PR3 перенесён на PR2 aa40ecd1 (main210ee7b6): workout runtime/unit
+байт-в-байт прежние; конфликты были только в статусах документов и разрешены
+с сохранением актуального выпуска и полной приёмки PR3. Fresh browser4/4,
+fullcheck exit0 frontend2738/API1426+160standardDBskip/infra320/hosting169/
+calendar12/fonts2/build/startup. Inventory656 — два upstream push cases, не
+новая наша матрица; гейты/digest не ослаблялись. Публикация всё ещё по очереди.
+
+PR2#1690/main9ee5af25 полностью выпущен после PRCI39107082759/mainCI39108106161
+и Cloud.ru39108856277 success: public207/207 size/hash+health, web/native4closed2,
+native sync/build/install/launch и207/207 built/installed passed. PR3 перенесён
+на этот squash-main; до изменения docs `git diff ce4c6b29 HEAD` пуст по всему
+дереву. Проверенные2738/frontend/API1426+160standardDBskip и browser4 относятся
+к тем же runtime/tests; новый exact-head CI всё равно обязателен. Физическое
+устройство и настоящий OAuth не проверены; новых правок поведения при переносе нет.
+
+## Сверка и приёмка PR 4
+
+Подготовка от локального PR3 `d31970e8`. Новый quick-plan открыт при390px с
+реальным выбором упражнения, trainer Lime: pilot и третий trainer. До правки
+нижняя сводка есть у обоих; в пилоте кнопки уже80px/gap2, поля48px с type=text,
+inputMode=decimal и autocomplete=off. «Изменить все» слева: одиночный оставшийся
+элемент попадает в первую колонку прежнего grid, justify-content:flex-end
+не перемещает его. Это воспроизведено кодом и приватным снимком, не гипотеза.
+
+| Пункт | Результат | Проверка | Статус |
+| --- | --- | --- | --- |
+| Дубль реквизитов | Нет только в reference fixed2 quick-plan; верхние реквизиты остались | summary0 pilot/1 outside; existing full-editor390 quick entry | Локально пройден |
+| Нижние действия/bulk | Footer flex с прежними16px inset/8px margin; bulk справа и меню доступно;80/2 без изменения | full-editor375/390/430/1440 bounds/menu assertions | Локально пройден |
+| iPhone contact autofill | App не создаёт такую панель; текущие numeric-поля уже off + numeric/decimal | DOM/source; пользовательское видео подтверждает наличие OS-панели | Физический результат НЕ ПРОВЕРЕН, исправление панели не заявлено |
+| Дроби/очистка/Next/save | Прежний SAFE_PLAN_INPUT,48px, тот же submit/retry | Existing plan-input и полный editor/save/reload | Browser20/20 пройден |
+
+Не отключается autofill глобально и не назначается ложное textContentType /
+one-time-code ради подавления панели. Не добавляются native bridge/новая
+клавиатура без воспроизводимого физического сценария. Независимые подтверждённые
+косметические правки продолжаются по правилу preflight; limitation сохраняется
+в handoff. Target WebKit5/5 и private2/2; обновлён один существующий маршрут
+390px, новые browser cases/digest/таймауты не добавлялись. Остальные ширины
+сохраняют обычное создание плана. Полная проверка и CI обязательны до выпуска.
+
+Итоговая browser regression PR4 —20/20 в WebKit/Chromium: create/edit/decimal,
+Next, метрики/RPE, retry/save/reload и outside-cohort. Full check запущен после
+просмотра финального390px снимка: дубликата нет, bulk справа,80/2/48 сохранены.
+Полный прогон дошёл до успешного build/startup: frontend2733, API1426 +160
+standardDBskip. Вывод завершения сохранён; публикация и CI ещё впереди.
+
+После1689 PR4 перенесён на актуальный PR3 ce4c6b29. Workout/CSS код идентичен
+проверенному83e61268; docs-конфликты разрешены с сохранением прежней приёмки
+и новых фактов. Fresh WebKit/Chromium20/20 и fullcheck exit0 frontend2738/
+API1426+160standardDBskip/infra320/hosting169/calendar12/fonts2/build/startup.
+Свежий390px снимок просмотрен: нижнего дубля нет, bulk справа,80/2/48 сохранены.
+Inventory656 и стандартные гейты прежние; CI/merge/release/native далее по порядку.
+
+PR3#1691 merged/main22d237e1, PRCI39109269478 attempt2/mainCI39110267065 и
+Android39109269466 success. У первого PR-CI один inherited nutrition-layout
+case прошёл retry и был правильно marked flaky; failed-only attempt2 чистый,
+без source/test/gate edits. Native3 sync/build/install/launch207/207 и4closed2
+проверены на точном main; physical/OAuth не заявляются. На момент открытия PR4
+Cloud.ru39111035966 в работе. Для сокращения ожидания CI4 идёт параллельно
+верификации web3; merge4 запрещён до success/public readback предыдущего релиза.
+До status-docs non-docs PR4 совпали с checked324c4194; прежние browser20/fullcheck
+2738 относятся к тем же runtime/tests. Новый exact-head CI4 обязателен.
+
+## Сверка и приёмка PR 5
+
+База локального PR4 `83e61268`, существующие Coachmark/storage/portal остаются.
+До изменений свежий390px WebKit показал одновременно три подсказки в Day и
+три в Live. В Day все три anchor имели нулевую высоту; в Live третий был
+невидимой строкой жестов. Before DOM/log и after-снимки сохранены приватно. Ошибки частного
+диагностического harness (portal не является потомком anchor, загрузочные main)
+исправлены в harness, не в продукте. Исходный сценарий затем прошёл2/2.
+
+| Пункт | Уже есть | Изменение | Статус |
+| --- | --- | --- | --- |
+| Day | Действующий Coachmark/seen-id рабочей области | Один прежний id у видимого details «Фильтры»; два старых дублирующих hint не выводятся только fixed2 | Target10/10 пройден |
+| Live | Один существующий Coachmark вокруг таймера | Короткое общее описание; убраны два coach-only дубля, кнопка завершения и жесты сохранены | Target10/10, regression44/44 пройдены |
+| Закрытие | Per-user localStorage, Escape/Понятно, портал и позиционирование | Не менялись; reload и изоляция учётки проверяются существующими cases | Target10/10 пройден |
+| Расписание | Выпущенный PR1686 | Не переделывается; прежний первый guide и view/filter приёмка сохранены | Без новой реализации |
+
+Новых id/тура/библиотеки/принудительного повторного показа нет. Клиентские
+подсказки и третий тренер прежние. Целевые проверки расширяют существующие
+cases, не добавляют матрицу и не меняют654-case inventory или таймауты.
+
+WebKit/Chromium target10/10 и regression44/44:375/390/430/1440, обе плотности,
+сохранение rest/deadline, поля/повтор, outside trainer/client. На первом target
+ошибочно ожидался status-select в Day без активного фильтра: его там раньше не
+было, runtime не расширялся; ожидание исправлено на реальную checkbox, текст
+подсказки уточнён. Первый full check остановил ESLint из-за any в новых test
+assertions; заменены на unknown/Array.isArray, гейты не ослаблялись.
+Исходный SVG validator:9attachments/7unique/6612elements/784rectangles,
+measurementErrors0, original hashes и linked source components совпали.
+Финальный стабильный full check exit0: frontend2733/2733, API1426+160standardDBskip,
+infra320/hosting169/calendar12/fonts2/build/startup. Inventory654 и все прежние
+гейты прошли без обхода. Изначальная приёмка была до1689; после его штатного выпуска
+PR3–5 перенесены на новую основу. CI/merge/release/native ещё впереди; локальная
+готовность не выдаётся за опубликованные изменения.
+
+На основе PR4 324c4194 (через PR3 ce4c6b29/PR2 aa40ecd1/main210ee7b6)
+workout runtime идентичен первоначальному751b956a. Fresh target+regression52/52
+WebKit/Chromium: единичный guide, per-user dismissal/reload, обе плотности,
+поля/отдых/заметки/сохранение плана и outside. Fresh fullcheck exit0:
+frontend2738/API1426+160standardDBskip/infra320/hosting169/calendar12/fonts2/
+build/startup. Inventory656 только от1689, гейт не менялся. Все пять этапов
+подготовлены; штатные CI/merge/production/native ещё выполняются по порядку.
+
+Финальный перенос на PR4/mainf87135dc сохранил non-docs checkedc960d699 без
+изменений. PR4#1692/PRCI39111157234 и Android39111157240 success, native4
+sync/build/install/launch207/207/4closed2 passed. При открытии PR5 mainCI4
+39112080639 ещё выполняется; CI5 идёт параллельно, merge5 ждёт CI/main/release4
+и точного public readback. Три первых этапа полностью выпущены, включая web3
+39111035966/public207/207+health/frozen-pair; реальный OAuth/physical не заявляются.
+Геометрия/заметки/жесты/сохранение плана не менялись при переносах. Сохраняются
+согласованные размеры Live54/48 и plan48, исходные SVG, четыре closed guards.

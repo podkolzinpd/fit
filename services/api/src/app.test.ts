@@ -2682,6 +2682,7 @@ function buildAssistantTurnRunner(error?: Error): {
 
 function buildPushNotifications(error?: Error): {
   pilotPushNotifications: PilotPushNotifications
+  requestTest: ReturnType<typeof vi.fn>
   readStatus: ReturnType<typeof vi.fn>
   hasSubscription: ReturnType<typeof vi.fn>
   upsertSubscription: ReturnType<typeof vi.fn>
@@ -2703,8 +2704,10 @@ function buildPushNotifications(error?: Error): {
   const upsertSubscription = vi.fn(() => result(undefined))
   const deleteSubscription = vi.fn(() => result(undefined))
   const setPreference = vi.fn(() => result(undefined))
+  const requestTest = vi.fn(() => result(undefined))
   return {
     pilotPushNotifications: {
+      requestTest,
       readStatus,
       hasSubscription,
       upsertSubscription,
@@ -2712,6 +2715,7 @@ function buildPushNotifications(error?: Error): {
       setPreference,
     },
     readStatus,
+    requestTest,
     hasSubscription,
     upsertSubscription,
     deleteSubscription,
@@ -4619,6 +4623,40 @@ describe('pilot app feedback command', () => {
 
 describe('pilot push notification state', () => {
   const sessionToken = 's'.repeat(43)
+
+  it('queues a test only through a validated write session and current endpoint', async () => {
+    const push = buildPushNotifications()
+    const app = buildApp({ pilotPushNotifications: push.pilotPushNotifications, logger: false })
+    apps.push(app)
+    const payload = { endpoint: ' https://push.example/this-device ', userId: 'ignored-recipient' }
+    for (const headers of [{}, { 'x-fit-pilot-session': sessionToken }]) {
+      const denied = await app.inject({ method: 'POST', url: '/v1/push-notifications/test', headers, payload })
+      expect(denied.statusCode).toBe('x-fit-pilot-session' in headers ? 403 : 401)
+    }
+    const invalid = await app.inject({ method: 'POST', url: '/v1/push-notifications/test', headers: { 'x-fit-session': sessionToken }, payload: { endpoint: 'http://invalid' } })
+    expect(invalid.statusCode).toBe(400)
+    expect(push.requestTest).not.toHaveBeenCalled()
+    const response = await app.inject({ method: 'POST', url: '/v1/push-notifications/test', headers: { 'x-fit-session': sessionToken }, payload })
+    expect(response.statusCode).toBe(202)
+    expect(response.headers['cache-control']).toBe('no-store')
+    expect(response.body).toBe('')
+    expect(push.requestTest).toHaveBeenCalledExactlyOnceWith(
+      { accessMode: 'read_write', token: sessionToken }, 'https://push.example/this-device',
+    )
+  })
+
+  it.each([
+    ['not_subscribed', 409, 'push_subscription_missing'],
+    ['rate_limited', 429, 'push_test_rate_limited'],
+  ] as const)('reports a safe test result for %s', async (failure, status, code) => {
+    const push = buildPushNotifications(new PushNotificationCommandError(failure))
+    const app = buildApp({ pilotPushNotifications: push.pilotPushNotifications, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/push-notifications/test', headers: { 'x-fit-session': sessionToken }, payload: { endpoint: 'https://push.example/this-device' } })
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: code })
+    expect(response.body).not.toContain('push.example')
+  })
 
   it('returns actor-scoped status without exposing subscription secrets', async () => {
     const push = buildPushNotifications()
