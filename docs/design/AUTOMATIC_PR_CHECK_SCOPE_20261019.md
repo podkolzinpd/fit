@@ -88,6 +88,16 @@ click/reload (строки520/539), а не на data/layout matcher. Локал
 assertions, budgets и retries не менялись; красный CI не считается приёмкой.
 Дальнейшая проверка нового head после включения main384ed74b — в PR1722.
 
+20.10 — более ранний #1721 merged/mainf9c6e608, включён без конфликтов. Его
+frontend/API/SQL и visual text сохранены byte-identical main; собственный diff
+по-прежнему только9 CI/docs файлов. Inventory digest не обновлялся, fail-closed
+full сохраняется. Ожидавший CI39323402043 остановлен как устаревший до тяжёлых
+browser jobs, не как успешный прогон. Новая полная локальная проверка exit0:
+frontend2772/API1447+183 штатныхlocalDBskip/SpeechKit7/infra328/hosting170/
+media2/calendar12/lint/typecheck/build; целевые69/69, YAML/dependencies и
+diff-check passed. Базы не сбрасывались, production не менялся. Следующий
+полный CI проверяет объединённый head; старый красный CI не обходится.
+
 Изолированный Git fixture сначала ошибался из-за отсутствующей папки после
 checkout и попадания output/summary в fixture commit; изоляция исправлена,
 повтор69/69 passed, продуктовые assertions не менялись. Эти промежуточные ошибки

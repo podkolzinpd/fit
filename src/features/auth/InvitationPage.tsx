@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../app/auth-context'
-import { useDataBackend } from '../../app/data-backend-context'
+import { useOptionalDataBackend } from '../../app/data-backend-context'
 import { RepositoryError } from '../../data/repositories/error'
 import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
 import { FitLogo } from '../../shared/FitLogo'
@@ -24,11 +24,7 @@ function invitationTitle(inviterName: string, targetRole: 'client' | 'trainer'):
     : `${inviterName} приглашает вас стать спортсменом`
 }
 
-function terminalCopy(status: 'claimed' | 'revoked' | 'expired'): { title: string; description: string } {
-  if (status === 'claimed') return {
-    title: 'Приглашение уже принято',
-    description: 'Эта ссылка уже была использована.',
-  }
+function terminalCopy(status: 'revoked' | 'expired'): { title: string; description: string } {
   if (status === 'revoked') return {
     title: 'Приглашение отменено',
     description: 'Попросите отправителя создать новую ссылку.',
@@ -43,7 +39,7 @@ export function InvitationPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { actor, loading: authLoading, signOut } = useAuth()
-  const backend = useDataBackend()
+  const backend = useOptionalDataBackend()
   const [{ pending, persisted, hadUrlParameters }] = useState<{
     pending: PendingInvitationLink | null
     persisted: boolean
@@ -75,7 +71,7 @@ export function InvitationPage() {
     retry: false,
   })
   useEffect(() => {
-    if (preview.data !== null && preview.data !== undefined && preview.data.status !== 'active') {
+    if (preview.data?.status === 'revoked' || preview.data?.status === 'expired') {
       clearPendingInvitationLink()
     }
     if (preview.data?.status === 'active' && !openedTracked.current) {
@@ -86,6 +82,7 @@ export function InvitationPage() {
   const claim = useMutation({
     mutationFn: async () => {
       if (pending === null) throw new Error('Ссылка приглашения не найдена.')
+      if (backend === null) throw new Error('Сессия недоступна. Войдите в аккаунт снова.')
       if (backend.source === 'yandex' || pending.source === backend.source) {
         return backend.invitations.claimLink(pending.token)
       }
@@ -103,7 +100,7 @@ export function InvitationPage() {
   const roleMismatch = actor !== null && invitation !== null && invitation !== undefined
     && actor.role !== invitation.targetRole
   const requiresDisconnect = claim.error instanceof RepositoryError
-    && claim.error.code === 'trainer_disconnect_required'
+    && (claim.error.code === 'trainer_disconnect_required' || claim.error.code === 'trainer_switch_required')
   const homePath = actor?.role === 'client' ? '/me' : '/clients'
 
   async function changeAccount(): Promise<void> {
@@ -148,16 +145,16 @@ export function InvitationPage() {
   if (preview.isError || invitation === null || invitation === undefined) {
     return <AuthIdentityScreen className="invitation-page">
       <header className="auth-entry-head"><FitLogo /></header>
-      <StatePanel tone="error" title="Ссылка не работает" description="Проверьте ссылку или попросите новое приглашение." action={<button type="button" className="secondary" onClick={() => void preview.refetch()}>Повторить</button>} />
+      <StatePanel tone="error" title={preview.isError ? 'Не удалось проверить приглашение' : 'Ссылка не работает'} description={preview.isError ? 'Проверьте соединение и повторите. Приглашение сохранено.' : 'Проверьте ссылку или попросите новое приглашение.'} action={<button type="button" className="secondary" onClick={() => void preview.refetch()}>Повторить</button>} />
       <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться в Fit' : 'Перейти ко входу'}</Link>
     </AuthIdentityScreen>
   }
 
-  if (invitation.status !== 'active') {
+  if (invitation.status === 'revoked' || invitation.status === 'expired') {
     const copy = terminalCopy(invitation.status)
     return <AuthIdentityScreen className="invitation-page">
       <header className="auth-entry-head"><FitLogo /></header>
-      <StatePanel tone={invitation.status === 'claimed' ? 'info' : 'error'} title={copy.title} description={copy.description} />
+      <StatePanel tone="error" title={copy.title} description={copy.description} />
       <Link className="auth-back-link" to={actor ? homePath : '/auth'}>{actor ? 'Вернуться в Fit' : 'Перейти ко входу'}</Link>
     </AuthIdentityScreen>
   }
@@ -174,6 +171,7 @@ export function InvitationPage() {
       <h1>{invitationTitle(invitation.inviterName, invitation.targetRole)}</h1>
       <p className="muted">После подключения вы увидите общие тренировки и сможете общаться в Fit.</p>
     </header>
+    {invitation.status === 'claimed' && <StatePanel tone="info" title="Приглашение уже принято" description="Войдите в тот же аккаунт и проверьте подключение. Повторная проверка не меняет тренера." />}
     <section className="compact stack invitation-summary" aria-label="Приглашение">
       <div><span>Ваша роль</span><strong>{invitation.targetRole === 'trainer' ? 'Тренер' : 'Спортсмен'}</strong></div>
       <div><span>Действует до</span><strong>{expiresAt}</strong></div>
@@ -197,7 +195,8 @@ export function InvitationPage() {
     /> : <div className="stack invitation-actions">
       {requiresDisconnect ? <StatePanel tone="error" title="Сначала отключите текущего тренера" description="Аккаунт, тренировки и замеры сохранятся." action={<Link className="button secondary" to="/me/profile">Открыть профиль</Link>} />
         : claim.error && <p className="error" role="alert">{claim.error.message}</p>}
-      <button type="button" className="primary" disabled={claim.isPending || requiresDisconnect} onClick={() => claim.mutate()}>{claim.isPending ? 'Подключаем…' : invitation.targetRole === 'trainer' ? 'Стать тренером' : 'Подключиться к тренеру'}</button>
+      <button type="button" className="primary" aria-busy={claim.isPending} disabled={claim.isPending || requiresDisconnect || backend === null} onClick={() => claim.mutate()}>{claim.isPending ? 'Проверяем…' : invitation.status === 'claimed' ? 'Проверить подключение' : invitation.targetRole === 'trainer' ? 'Стать тренером' : 'Подключиться к тренеру'}</button>
+      {backend === null && <StatePanel tone="error" title="Войдите в аккаунт снова" description="Приглашение сохранено." action={<button type="button" className="secondary" onClick={() => void changeAccount()}>Перейти ко входу</button>} />}
     </div>}
   </AuthIdentityScreen>
 }

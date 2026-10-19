@@ -1,4 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render as testingRender, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from './AuthPages'
@@ -74,6 +76,14 @@ const establish = vi.fn()
 const retry = vi.fn()
 const reset = vi.fn()
 const signOut = vi.fn()
+const previewInvitation = vi.hoisted(() => vi.fn())
+vi.mock('../../data/repositories/public-invitation-links.repository', () => ({
+  publicInvitationLinksRepository: { preview: previewInvitation },
+}))
+
+function render(ui: ReactNode) {
+  return testingRender(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>)
+}
 
 async function appCallbackSearch(): Promise<string> {
   const authorizationUrl = new URL(await createYandexAuthorizationUrl(
@@ -104,6 +114,7 @@ async function registrationCallbackSearch(): Promise<string> {
 
 describe('Yandex app session auth flow', () => {
   beforeEach(() => {
+    previewInvitation.mockReset().mockResolvedValue({ targetRole: 'client', inviterName: 'Тренер', status: 'active', expiresAt: '2099-09-19T12:10:00.000Z' })
     establish.mockReset()
     retry.mockReset().mockResolvedValue(undefined)
     reset.mockReset()
@@ -579,11 +590,13 @@ describe('Yandex app session auth flow', () => {
     )
   })
 
-  it('keeps invitation registration client-only and allows error retry without losing name', async () => {
+  it.each(['client', 'trainer'] as const)('uses the verified %s invitation role and retries without losing the name', async (targetRole) => {
     vi.stubEnv('VITE_YANDEX_NATIVE_REGISTRATION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_MAIN_ROUTING_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_ONLY_AUTH_ENABLED', 'true')
-    saveInvitationAuthReturn('/join?code=AB12CD34EF56')
+    captureInvitationLink(`?token=AB12CD34EF56.${'a'.repeat(64)}&source=yandex`)
+    saveInvitationAuthReturn('/invite')
+    previewInvitation.mockResolvedValue({ targetRole, inviterName: 'Отправитель', status: 'active', expiresAt: '2099-09-19T12:10:00.000Z' })
     repository.exchangeCodeForAppSession.mockRejectedValueOnce(new YandexAccountSetupRequiredError({
       token: 'h'.repeat(43), expiresAt: '2099-09-19T12:10:00.000Z',
     }))
@@ -594,8 +607,8 @@ describe('Yandex app session auth flow', () => {
       <Route path="/auth/yandex/session" element={<p>new session</p>} />
     </Routes></MemoryRouter>)
     await screen.findByRole('main', { name: 'Регистрация' })
-    expect(screen.getByRole('radio', { name: 'Я спортсмен' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'Я тренер' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: targetRole === 'client' ? 'Я спортсмен' : 'Я тренер' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: targetRole === 'client' ? 'Я тренер' : 'Я спортсмен' })).toBeDisabled()
     expect(document.documentElement).toHaveClass('fit-client-lime-document')
     expect(screen.queryByText(/Создадим|Yandex Cloud/)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Тестовый спортсмен' } })
@@ -604,8 +617,8 @@ describe('Yandex app session auth flow', () => {
     expect(screen.getByLabelText('Имя')).toHaveValue('Тестовый спортсмен')
     fireEvent.click(screen.getByRole('button', { name: 'Создать аккаунт' }))
     expect(await screen.findByText('new session')).toBeVisible()
-    expect(repository.completeYandexRegistration).toHaveBeenLastCalledWith('https://stage.example.test', expect.objectContaining({ accountRole: 'client', firstName: 'Тестовый спортсмен' }))
-    expect(readInvitationAuthReturn()).toBe('/join?code=AB12CD34EF56')
+    expect(repository.completeYandexRegistration).toHaveBeenLastCalledWith('https://stage.example.test', expect.objectContaining({ accountRole: targetRole, firstName: 'Тестовый спортсмен' }))
+    expect(readInvitationAuthReturn()).toBe('/invite')
   })
 
   it('keeps both roles visible and disables editing while creating', async () => {
