@@ -4,6 +4,7 @@ import type { ProfileResponse } from './profile.js'
 
 const hashPattern = /^[0-9a-f]{64}$/
 export interface NutritionPilot { clients: readonly string[]; trainers: readonly string[]; native?: true }
+export interface NutritionBarcodePilot { loginHash: string }
 
 // Nutrition-specific normalization: do not change the shared login hash used
 // by other experiments. Yandex treats dots/hyphens as equivalent in native
@@ -34,6 +35,10 @@ export function readNativeNutritionPilot(enabled: string | undefined, raw: strin
   return { clients: clients as string[], trainers: trainers as string[], native: true }
 }
 
+export function readNutritionBarcodePilot(enabled: string | undefined, loginHash: string | undefined): NutritionBarcodePilot | null {
+  return enabled === 'true' && typeof loginHash === 'string' && hashPattern.test(loginHash) ? { loginHash } : null
+}
+
 export async function nutritionProfileAllowed(client: DatabaseClient, pilot: NutritionPilot | null,
   profileId: string, role: 'client' | 'trainer'): Promise<boolean> {
   if (pilot === null) return false
@@ -44,11 +49,20 @@ export async function nutritionProfileAllowed(client: DatabaseClient, pilot: Nut
   return typeof rows[0]?.login_hash === 'string' && cohort.includes(rows[0].login_hash)
 }
 
+export async function nutritionBarcodeProfileAllowed(client: DatabaseClient, nutritionPilot: NutritionPilot | null,
+  barcodePilot: NutritionBarcodePilot | null, profileId: string, role: 'client' | 'trainer'): Promise<boolean> {
+  if (barcodePilot === null || !await nutritionProfileAllowed(client, nutritionPilot, profileId, role)) return false
+  const rows = await client.query<{ login_hash: string | null }>(
+    'select app_private.nutrition_login_for_profile($1, $2) login_hash', [profileId, role])
+  return rows[0]?.login_hash === barcodePilot.loginHash
+}
+
 export async function withNutritionProfileDecision(client: DatabaseClient, profile: ProfileResponse | undefined,
-  pilot: NutritionPilot | null): Promise<ProfileResponse | undefined> {
+  pilot: NutritionPilot | null, barcodePilot: NutritionBarcodePilot | null = null): Promise<ProfileResponse | undefined> {
   if (profile === undefined || pilot === null) return profile
   const enabled = await nutritionProfileAllowed(client, pilot, profile.profile.id, profile.profile.accountRole)
-  return { ...profile, profile: { ...profile.profile, experiments: { ...profile.profile.experiments, nutrition: enabled } } }
+  const barcode = await nutritionBarcodeProfileAllowed(client, pilot, barcodePilot, profile.profile.id, profile.profile.accountRole)
+  return { ...profile, profile: { ...profile.profile, experiments: { ...profile.profile.experiments, nutrition: enabled, nutritionBarcode: barcode } } }
 }
 
 export interface NutritionAutoActivator { bind(subjectHash: string, loginHash: string): Promise<{ bound: boolean }> }

@@ -65,7 +65,7 @@ import { DatabaseAssistantFeatureLinksAutoActivator } from './assistant-feature-
 import { DatabasePilotTrainerFinance } from './trainer-finance.js'
 import { DatabaseNutritionDiary } from './nutrition-diary.js'
 import { VkusvillNutritionCatalog } from './nutrition-catalog.js'
-import { DatabaseNutritionAutoActivator, readNativeNutritionPilot } from './nutrition-pilot.js'
+import { DatabaseNutritionAutoActivator, readNativeNutritionPilot, readNutritionBarcodePilot } from './nutrition-pilot.js'
 
 function parsePort(value: string | undefined): number {
   if (value === undefined) return 8080
@@ -84,9 +84,10 @@ const databasePool =
 // Production food rollout is native-only; even an empty configuration never
 // falls back to stale legacy UUID variables or another experiment's cohort.
 const nutritionPilot = readNativeNutritionPilot(process.env.NUTRITION_ENABLED, process.env.NUTRITION_LOGIN_COHORT)
+const nutritionBarcodePilot = readNutritionBarcodePilot(process.env.NUTRITION_BARCODE_ENABLED, process.env.NUTRITION_BARCODE_LOGIN_HASH)
 const nutritionAutoActivator = databasePool === undefined ? undefined : new DatabaseNutritionAutoActivator(databasePool, nutritionPilot)
 const nutritionDiary = databasePool === undefined ? undefined : new DatabaseNutritionDiary(
-  databasePool, new VkusvillNutritionCatalog(), nutritionPilot,
+  databasePool, new VkusvillNutritionCatalog(), nutritionPilot, nutritionBarcodePilot,
 )
 const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
@@ -109,11 +110,11 @@ const pilotSessionIssuer =
 const yandexAppSessionIssuer =
   databasePool === undefined
     ? undefined
-    : new DatabaseYandexAppSessionIssuer(databasePool, undefined, nutritionPilot)
+    : new DatabaseYandexAppSessionIssuer(databasePool, undefined, nutritionPilot, nutritionBarcodePilot)
 const yandexAppSessionReader =
   databasePool === undefined
     ? undefined
-    : new DatabaseYandexAppSessionReader(databasePool, nutritionPilot)
+    : new DatabaseYandexAppSessionReader(databasePool, nutritionPilot, nutritionBarcodePilot)
 const yandexAppSessionRevoker =
   databasePool === undefined
     ? undefined

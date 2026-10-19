@@ -19,6 +19,7 @@ const profilePayloadSchema = z.object({
     clientLime: z.boolean().optional(),
     assistantFeatureLinks: z.boolean().optional(),
     nutrition: z.boolean().optional(),
+    nutritionBarcode: z.boolean().optional(),
   }).optional(),
   preferences: z.object({
     scheduleDensity: z.enum(['comfortable', 'compact']),

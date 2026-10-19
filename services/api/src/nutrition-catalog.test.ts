@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { parseCatalogFood, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError } from './nutrition-catalog.js'
+import { isEanBarcode, parseCatalogFood, parseOpenFoodFactsBarcode, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -72,4 +72,14 @@ describe('read-only public food source', () => {
       await expect(new VkusvillNutritionCatalog(call).search('курица', 1)).rejects.toThrow(NutritionCatalogUnavailableError)
     },
   )
+})
+
+describe('barcode normalization', () => {
+  it('accepts only valid EAN checksums and maps a bounded Open Food Facts response', () => {
+    expect(isEanBarcode('5449000000996')).toBe(true)
+    expect(isEanBarcode('5449000000997')).toBe(false)
+    expect(parseOpenFoodFactsBarcode({ product: { product_name_ru: 'Вода', nutriments: {
+      'energy-kcal_100g': 0, proteins_100g: 0, fat_100g: 0, carbohydrates_100g: 0,
+    } } }, '5449000000996')).toMatchObject({ name: 'Вода', calories: 0 })
+  })
 })

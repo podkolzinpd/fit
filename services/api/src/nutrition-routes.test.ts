@@ -17,7 +17,7 @@ function fixture(enabled = true) {
   const diary = {
     day: vi.fn<NutritionDiary['day']>().mockResolvedValue({ access: 'granted', entries: [], lastRecordedDay: null, totals: { calories: 0, protein: 0, fat: 0, carbs: 0 } }),
     recent: vi.fn<NutritionDiary['recent']>().mockResolvedValue({ entries: [] }),
-    save: vi.fn<NutritionDiary['save']>(), search: vi.fn<NutritionDiary['search']>(),
+    save: vi.fn<NutritionDiary['save']>(), search: vi.fn<NutritionDiary['search']>(), barcode: vi.fn<NutritionDiary['barcode']>(),
     setDeleted: vi.fn<NutritionDiary['setDeleted']>(), consents: vi.fn<NutritionDiary['consents']>(),
     setConsent: vi.fn<NutritionDiary['setConsent']>(),
   }
@@ -84,6 +84,13 @@ describe('nutrition HTTP boundary', () => {
     const response = await app.inject({ method, url, headers, ...(payload === undefined ? {} : { payload }) })
     expect(response.statusCode).toBe(422)
     for (const method of Object.values(diary)) expect(method).not.toHaveBeenCalled()
+  })
+  it('keeps barcode values out of logs and delegates only a valid EAN', async () => {
+    const { app, diary } = fixture()
+    diary.barcode.mockResolvedValue({ food: null })
+    const response = await app.inject({ url: '/v1/nutrition/foods/barcode/5449000000996', headers })
+    expect(response.statusCode).toBe(200)
+    expect(diary.barcode).toHaveBeenCalledWith({ accessMode: 'read_write', token: headers['x-fit-session'] }, '5449000000996')
   })
   it('preserves the trainer locked state without inventing totals', async () => {
     const { app, diary } = fixture()

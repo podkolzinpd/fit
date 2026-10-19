@@ -3,7 +3,7 @@ import type { QueryResultRow } from 'pg'
 import { createPilotSessionToken, hashPilotSessionToken } from './auth/pilot-session-token.js'
 import type { DatabasePool } from './db/types.js'
 import { readOwnProfile, type ProfileResponse } from './profile.js'
-import { withNutritionProfileDecision, type NutritionPilot } from './nutrition-pilot.js'
+import { withNutritionProfileDecision, type NutritionBarcodePilot, type NutritionPilot } from './nutrition-pilot.js'
 import {
   YandexAppSessionInvalidError,
   withIssuedYandexAppSessionTransaction,
@@ -41,6 +41,7 @@ export class DatabaseYandexAppSessionIssuer implements YandexAppSessionIssuer {
     private readonly pool: DatabasePool,
     private readonly now: () => Date = () => new Date(),
     private readonly nutritionPilot: NutritionPilot | null = null,
+    private readonly nutritionBarcodePilot: NutritionBarcodePilot | null = null,
   ) {}
 
   issue(subjectHash: string): Promise<YandexAppSessionResponse | undefined> {
@@ -53,7 +54,7 @@ export class DatabaseYandexAppSessionIssuer implements YandexAppSessionIssuer {
       sessionToken.sha256,
       expiresAt,
       async (client) => {
-        const profile = await withNutritionProfileDecision(client, await readOwnProfile(client, 'read_write'), this.nutritionPilot)
+        const profile = await withNutritionProfileDecision(client, await readOwnProfile(client, 'read_write'), this.nutritionPilot, this.nutritionBarcodePilot)
         return profile === undefined
           ? undefined
           : {
@@ -70,14 +71,15 @@ export class DatabaseYandexAppSessionIssuer implements YandexAppSessionIssuer {
 }
 
 export class DatabaseYandexAppSessionReader implements YandexAppSessionReader {
-  constructor(private readonly pool: DatabasePool, private readonly nutritionPilot: NutritionPilot | null = null) {}
+  constructor(private readonly pool: DatabasePool, private readonly nutritionPilot: NutritionPilot | null = null,
+    private readonly nutritionBarcodePilot: NutritionBarcodePilot | null = null) {}
 
   read(sessionToken: string): Promise<ProfileResponse> {
     const tokenHash = hashPilotSessionToken(sessionToken)
     if (tokenHash === undefined) throw new YandexAppSessionInvalidError()
 
     return withYandexAppSessionTransaction(this.pool, tokenHash, async (client) => {
-      const profile = await withNutritionProfileDecision(client, await readOwnProfile(client, 'read_write'), this.nutritionPilot)
+      const profile = await withNutritionProfileDecision(client, await readOwnProfile(client, 'read_write'), this.nutritionPilot, this.nutritionBarcodePilot)
       if (profile === undefined) throw new YandexAppSessionInvalidError()
       return profile
     })
