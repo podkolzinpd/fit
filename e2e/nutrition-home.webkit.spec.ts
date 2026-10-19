@@ -67,8 +67,10 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
   await page.reload()
   await expect(card.getByRole('alert')).toContainText('Не удалось загрузить питание.')
   await expect(card.getByText('Сегодня записей нет')).toHaveCount(0)
+  const retry = card.getByRole('button', { name: 'Повторить' })
+  await expect(retry).toBeVisible()
   state.mode = 'data'
-  await card.getByRole('button', { name: 'Повторить' }).click()
+  await retry.click()
   await expect(card.getByText('228,3 ккал')).toBeVisible()
 })
 
