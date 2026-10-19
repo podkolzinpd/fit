@@ -18,6 +18,7 @@ vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: fi
 vi.mock('../../app/feature-flags', () => ({ isNutritionPilotEnabled: () => fixture.enabled }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ nutrition: fixture, clients: { get: fixture.get } }) }))
 vi.mock('../chat', () => ({ ChatStartButton: () => <button>Написать</button> }))
+vi.mock('../voice-input', () => ({ VoiceInputButton: ({ onTranscript, idleLabel }: { onTranscript: (text: string) => void; idleLabel: string }) => <button type="button" onClick={() => onTranscript('рис отварной 100 г')}>{idleLabel}</button> }))
 
 const entry: NutritionEntry = { id: 'f00d0000-6010-4000-8000-000000000013', day: '2026-10-10', meal: 'lunch',
   name: 'Курица с рисом', basis: '100g', grams: 150, calories: 152.2, protein: 9.8, fat: 4.2, carbs: 18.8,
@@ -94,10 +95,12 @@ it('renders the mandatory source link next to an attributed catalog result', asy
   expect(await screen.findByRole('link', { name: 'Данные: perek.us' })).toHaveAttribute('href', 'https://perek.us/food/burger-king/vopper')
 })
 
-it('shows barcode camera entry only for the server-authorized barcode cohort', () => {
+it('shows barcode camera and SpeechKit food entry only for the server-authorized cohort', async () => {
   fixture.barcodeEnabled = true
-  setup()
+  const { user } = setup()
   expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeVisible()
+  await user.click(screen.getByRole('button', { name: 'Надиктовать еду' }))
+  await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('рис отварной', 1))
 })
 
 it('manual portion needs only name and calories; unknown macros remain null', async () => {

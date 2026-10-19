@@ -15,6 +15,7 @@ import { parseFoodText } from './free-text'
 import { BarcodeScanner } from './BarcodeScanner'
 import './nutrition.css'
 import { ChatStartButton } from '../chat'
+import { VoiceInputButton } from '../voice-input'
 
 const queryKey = (userId: string) => ['nutrition', userId] as const
 function selectedDate(text: string | null, today: LocalDate): LocalDate {
@@ -188,6 +189,16 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
       <fieldset className="stack nutrition-fields" disabled={mutation.isPending}>
       {!selection && !manual ? <>
         <Field label="Поиск еды"><input type="search" maxLength={120} autoFocus placeholder="Например, куриная грудка 300 г, рис отварной 100 г" {...form.register('search')} /></Field>
+        {actor?.experiments?.nutritionBarcode === true && <VoiceInputButton
+          source="nutrition"
+          idleLabel="Надиктовать еду"
+          showCancel
+          onTranscript={(text) => {
+            const previous = form.getValues('search')
+            form.setValue('search', text)
+            return () => form.setValue('search', previous)
+          }}
+        />}
         {actor?.experiments?.nutritionBarcode === true && <section className="nutrition-barcode" aria-label="Штрихкод продукта"><Field label="Штрихкод"><input inputMode="numeric" value={barcode} maxLength={13} placeholder="8 или 13 цифр" onChange={(event) => setBarcode(event.target.value)} /></Field>
           <div className="nutrition-barcode-actions"><button type="button" className="secondary" disabled={barcodePending} aria-busy={barcodePending} onClick={() => void lookupBarcode()}>{barcodePending ? 'Ищем…' : 'Найти по штрихкоду'}</button>
             <button type="button" className="secondary" disabled={barcodePending} onClick={() => setScannerOpen(true)}>Сканировать камерой</button></div>
