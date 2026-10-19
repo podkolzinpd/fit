@@ -180,12 +180,20 @@ jobs:
           test -n "$signer"
           tools_dir=$(dirname "$signer")
           mkdir -p ota-candidate
+          echo "Aligning unsigned release"
           "$tools_dir/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/fit-aligned.apk"
+          echo "Signing with existing release key"
           "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out ota-candidate/fit-1.1.0-ota-release.apk "$RUNNER_TEMP/fit-aligned.apk"
+          echo "Verifying APK signature"
           "$signer" verify --verbose --print-certs ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/signature.txt
+          grep -i 'Signer #1 certificate SHA-256 digest:' ota-candidate/signature.txt
+          echo "Checking original certificate"
           grep -qi 'Signer #1 certificate SHA-256 digest: a933c356832d86e306408963056e3662094c3cd2cd7d779118dad86a79bb6978' ota-candidate/signature.txt
+          echo "Checking 16KB alignment"
           "$tools_dir/zipalign" -c -P 16 4 ota-candidate/fit-1.1.0-ota-release.apk
           "$tools_dir/aapt" dump badging ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/package-info.txt
+          head -n 1 ota-candidate/package-info.txt
+          echo "Checking release identity"
           if grep -q '^application-debuggable' ota-candidate/package-info.txt; then exit 1; fi
           grep -q "package: name='com.coachspace.fit' versionCode='4' versionName='1.1.0'" ota-candidate/package-info.txt
           sha256sum ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/SHA256SUMS
