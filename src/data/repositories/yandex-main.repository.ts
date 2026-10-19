@@ -1060,6 +1060,7 @@ export function createYandexMainRepository(
     nutrition: {
       day: (day, clientId) => readJson(queries, `${clientId ? `/v1/clients/${encodeURIComponent(clientId)}` : '/v1/me'}/nutrition?day=${encodeURIComponent(day)}`, nutritionDaySchema, nutritionErrorForStatus),
       search: (query, page) => readJson(queries, `/v1/nutrition/foods?q=${encodeURIComponent(query)}&page=${page}`, z.object({ foods: z.array(nutritionFoodSchema), hasMore: z.boolean() }), nutritionErrorForStatus),
+      async barcode(code) { return (await readJson(queries, `/v1/nutrition/foods/barcode/${encodeURIComponent(code)}`, z.object({ food: nutritionFoodSchema.nullable() }), nutritionErrorForStatus)).food },
       async recent() { return (await readJson(queries, '/v1/me/nutrition/recent', z.object({ entries: z.array(nutritionEntrySchema) }), nutritionErrorForStatus)).entries },
       async save(draft) { return (await writeJson(queries, '/v1/me/nutrition/entries', 'PUT', draft, z.object({ entry: nutritionEntrySchema }), nutritionErrorForStatus)).entry },
       async setDeleted(entryId, expectedVersion, deleted) { return (await writeJson(queries, `/v1/me/nutrition/entries/${encodeURIComponent(entryId)}/visibility`, 'PUT', { expectedVersion, deleted }, z.object({ entry: nutritionEntrySchema }), nutritionErrorForStatus)).entry },

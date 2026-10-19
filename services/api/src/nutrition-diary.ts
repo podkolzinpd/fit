@@ -2,8 +2,8 @@ import type { QueryResultRow } from 'pg'
 import type { DatabaseClient, DatabasePool } from './db/types.js'
 import { withYandexActorSession, type YandexActorSession } from './yandex-actor-session.js'
 import { PilotDomainCommandError } from './domain-commands.js'
-import { publicNutritionFood, type NutritionCatalog, type NutritionValues } from './nutrition-catalog.js'
-import { nutritionProfileAllowed, type NutritionPilot } from './nutrition-pilot.js'
+import { NutritionCatalogUnavailableError, publicNutritionFood, type NutritionCatalog, type NutritionValues } from './nutrition-catalog.js'
+import { nutritionBarcodeProfileAllowed, nutritionProfileAllowed, type NutritionBarcodePilot, type NutritionPilot } from './nutrition-pilot.js'
 export type { NutritionPilot } from './nutrition-pilot.js'
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -104,7 +104,8 @@ const columns = "id, day::text, meal, name, basis, grams::text, calories::text, 
 
 export class DatabaseNutritionDiary {
   private readonly searchTimes = new Map<string, number>()
-  constructor(private readonly pool: DatabasePool, private readonly catalog: NutritionCatalog, private readonly pilot: NutritionPilot | null) {}
+  constructor(private readonly pool: DatabasePool, private readonly catalog: NutritionCatalog, private readonly pilot: NutritionPilot | null,
+    private readonly barcodePilot: NutritionBarcodePilot | null = null) {}
 
   private async actor(client: DatabaseClient, role?: 'client' | 'trainer'): Promise<ActorRow> {
     if (this.pilot === null) throw new PilotDomainCommandError('forbidden')
@@ -133,6 +134,21 @@ export class DatabaseNutritionDiary {
         [food.id, food.sourceId, food.name, food.calories, food.protein, food.fat, food.carbs])
       }
       return { foods: result.foods.map(publicNutritionFood), hasMore: result.hasMore }
+    }, 'client')
+  }
+  async barcode(session: YandexActorSession, barcode: string) {
+    await this.withActor(session, async (client, profile) => {
+      if (!await nutritionBarcodeProfileAllowed(client, this.pilot, this.barcodePilot, profile.id, profile.account_role)) throw new PilotDomainCommandError('forbidden')
+      return profile.id
+    }, 'client')
+    const result = await this.catalog.barcode?.(barcode)
+    if (result === undefined) throw new NutritionCatalogUnavailableError()
+    if (result === null) return { food: null }
+    return this.withActor(session, async (client) => {
+      await client.query(`insert into app_private.nutrition_food_catalog (id, source_id, name, calories, protein, fat, carbs)
+        values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing`,
+      [result.id, result.sourceId, result.name, result.calories, result.protein, result.fat, result.carbs])
+      return { food: publicNutritionFood(result) }
     }, 'client')
   }
   day(session: YandexActorSession, day: string, clientId?: string) {

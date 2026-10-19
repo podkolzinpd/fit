@@ -5,7 +5,7 @@ import { PilotDomainCommandError } from './domain-commands.js'
 import { YandexAppSessionDeniedError, YandexAppSessionInvalidError } from './db/yandex-app-transaction.js'
 import { readYandexActorSession, type YandexActorSession } from './yandex-actor-session.js'
 
-export type NutritionDiary = Pick<DatabaseNutritionDiary, 'day' | 'recent' | 'save' | 'search' | 'setDeleted' | 'consents' | 'setConsent'>
+export type NutritionDiary = Pick<DatabaseNutritionDiary, 'barcode' | 'day' | 'recent' | 'save' | 'search' | 'setDeleted' | 'consents' | 'setConsent'>
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 function object(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -61,6 +61,11 @@ export function registerNutritionRoutes(app: FastifyInstance, diary: NutritionDi
     if (typeof q !== 'string' || q.trim().length < 2 || q.length > 120
       || !Number.isSafeInteger(number) || number < 1 || number > 100) throw new PilotDomainCommandError('invalid')
     return service.search(session, q, number)
+  }))
+  app.get('/v1/nutrition/foods/barcode/:barcode', privateRequestLog('GET', '/v1/nutrition/foods/barcode/:barcode'), (request, reply) => run(request, reply, async (service, session) => {
+    const { barcode } = object(request.params)
+    if (typeof barcode !== 'string' || !/^\d{8}$|^\d{13}$/.test(barcode)) throw new PilotDomainCommandError('invalid')
+    return service.barcode(session, barcode)
   }))
   app.put('/v1/me/nutrition/entries', privateRequestLog('PUT', '/v1/me/nutrition/entries'), (request, reply) => run(request, reply, async (service, session) => {
     const draft = readNutritionDraft(request.body)

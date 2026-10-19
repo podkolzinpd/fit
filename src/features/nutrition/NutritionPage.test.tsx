@@ -11,7 +11,7 @@ import { NutritionPage, NutritionSummary } from './NutritionPage'
 import { readNutritionForm } from './draft'
 
 const fixture = vi.hoisted(() => ({ enabled: true, role: 'client', userId: 'f00d0000-6010-4000-8000-000000000001',
-  day: vi.fn<NutritionRepository['day']>(), search: vi.fn<NutritionRepository['search']>(), recent: vi.fn<NutritionRepository['recent']>(),
+  day: vi.fn<NutritionRepository['day']>(), search: vi.fn<NutritionRepository['search']>(), barcode: vi.fn<NutritionRepository['barcode']>(), recent: vi.fn<NutritionRepository['recent']>(),
   save: vi.fn<NutritionRepository['save']>(), setDeleted: vi.fn<NutritionRepository['setDeleted']>(),
   consents: vi.fn<NutritionRepository['consents']>(), setConsent: vi.fn<NutritionRepository['setConsent']>(), get: vi.fn() }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: fixture.userId, role: fixture.role, timezone: 'Europe/Moscow' } }) }))

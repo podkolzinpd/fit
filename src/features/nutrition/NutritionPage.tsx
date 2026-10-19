@@ -99,6 +99,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const values = useWatch({ control: form.control }), selection = values.selection, manual = values.manual
   const [storageError, setStorageError] = useState(false), [search, setSearch] = useState('')
   const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
+  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false)
   const cache = useQueryClient(), active = useRef(true), [confirm, dialog] = useConfirm()
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   useEffect(() => { const timer = setTimeout(() => setSearch(values.search?.trim() ?? ''), 600); return () => clearTimeout(timer) }, [values.search])
@@ -122,6 +123,16 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const searchParsedFood = (name: string, grams: number | null) => {
     form.setValue('search', name)
     setSuggestedGrams(grams === null ? null : String(grams))
+  }
+  const lookupBarcode = async () => {
+    const code = barcode.replace(/\s|-/g, '')
+    if (!/^\d{8}$|^\d{13}$/.test(code)) { setBarcodeError('Введите штрихкод из 8 или 13 цифр'); return }
+    setBarcodePending(true); setBarcodeError(null)
+    try {
+      const food = await nutrition.barcode(code)
+      if (food === null) { setBarcodeError('По этому штрихкоду продукт не найден. Можно добавить свою еду.'); return }
+      choose(food)
+    } catch { setBarcodeError('Не удалось проверить штрихкод. Повторите позже или добавьте свою еду.') } finally { setBarcodePending(false) }
   }
   const numeric = (field: 'calories' | 'protein' | 'fat' | 'carbs' | 'grams', required: boolean, max: number) => {
     const raw = form.getValues(field), value = nutritionDecimal(raw)
@@ -166,6 +177,10 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
       <fieldset className="stack nutrition-fields" disabled={mutation.isPending}>
       {!selection && !manual ? <>
         <Field label="Поиск еды"><input type="search" maxLength={120} autoFocus placeholder="Например, куриная грудка 300 г, рис отварной 100 г" {...form.register('search')} /></Field>
+        {actor?.experiments?.nutritionBarcode === true && <section className="nutrition-barcode" aria-label="Штрихкод продукта"><Field label="Штрихкод"><input inputMode="numeric" value={barcode} maxLength={13} placeholder="8 или 13 цифр" onChange={(event) => setBarcode(event.target.value)} /></Field>
+          <button type="button" className="secondary" disabled={barcodePending} aria-busy={barcodePending} onClick={() => void lookupBarcode()}>{barcodePending ? 'Ищем…' : 'Найти по штрихкоду'}</button>
+          {barcodeError && <p className="muted" role="status">{barcodeError}</p>}
+        </section>}
         {parsedFood.length > 1 && <section className="nutrition-parsed-food" aria-label="Разобранная еда"><p className="muted">Выберите продукт по очереди — вес уже подставится. КБЖУ не угадываем.</p>
           <div className="nutrition-food-list">{parsedFood.map((item, index) => <button type="button" className="secondary nutrition-food" key={`${item.name}.${index}`} onClick={() => searchParsedFood(item.name, item.grams)}>
             <span>{item.name}<small>{item.grams === null ? 'Вес не указан' : `${nutritionNumber(item.grams)} г`}</small></span><ChevronRightIcon />

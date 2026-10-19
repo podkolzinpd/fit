@@ -20,6 +20,7 @@ export interface CatalogFood extends NutritionFood {
 export interface NutritionCatalog {
   search(query: string, page: number): Promise<{ foods: CatalogFood[]; hasMore: boolean }>
   details(sourceId: number): Promise<CatalogFood | null>
+  barcode?(barcode: string): Promise<CatalogFood | null>
 }
 
 export class NutritionCatalogUnavailableError extends Error {
@@ -84,6 +85,28 @@ export function publicNutritionFood(food: CatalogFood): NutritionFood {
   return { id, name, basis, calories, protein, fat, carbs }
 }
 
+export function isEanBarcode(value: string): boolean {
+  if (!/^\d{8}$|^\d{13}$/.test(value)) return false
+  const digits = [...value].map(Number)
+  const expected = (10 - digits.slice(0, -1).reduce((sum, digit, index) => sum + digit * ((digits.length - 2 - index) % 2 === 0 ? 3 : 1), 0) % 10) % 10
+  return expected === digits.at(-1)
+}
+
+export function parseOpenFoodFactsBarcode(value: unknown, barcode: string): CatalogFood | null {
+  if (!isEanBarcode(barcode)) return null
+  const root = object(value), product = object(root?.product), nutriments = object(product?.nutriments)
+  const rawName = typeof product?.product_name_ru === 'string' ? product.product_name_ru : product?.product_name
+  const name = typeof rawName === 'string' ? plainText(rawName) : ''
+  const read = (key: string, max: number) => typeof nutriments?.[key] === 'number' && Number.isFinite(nutriments[key]) && nutriments[key] >= 0 && nutriments[key] <= max ? nutriments[key] : null
+  const calories = read('energy-kcal_100g', 1000)
+  if (name.length < 2 || name.length > 160 || calories === null) return null
+  const protein = read('proteins_100g', 100), fat = read('fat_100g', 100), carbs = read('carbohydrates_100g', 100)
+  if ((protein ?? 0) + (fat ?? 0) + (carbs ?? 0) > 101) return null
+  const hex = createHash('sha256').update(JSON.stringify(['fit-food:openfoodfacts', barcode, name, calories, protein, fat, carbs])).digest('hex')
+  const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+  return { id, sourceId: Number.parseInt(hex.slice(0, 13), 16), name, basis: '100g', calories, protein, fat, carbs }
+}
+
 export class VkusvillNutritionCatalog implements NutritionCatalog {
   constructor(private readonly fetchImplementation: typeof fetch = globalThis.fetch) {}
 
@@ -146,5 +169,20 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
     if (!Number.isSafeInteger(sourceId) || sourceId < 1) throw new NutritionCatalogUnavailableError()
     const data = await this.call('vkusvill_product_details', { id: sourceId })
     return parseCatalogFood(data)
+  }
+
+  async barcode(barcode: string) {
+    if (!isEanBarcode(barcode)) throw new NutritionCatalogUnavailableError()
+    try {
+      const response = await this.fetchImplementation(`https://world.openfoodfacts.org/api/v3/product/${barcode}.json`, {
+        headers: { accept: 'application/json', 'user-agent': 'FitNutrition/1.0 (barcode lookup)' }, redirect: 'error', signal: AbortSignal.timeout(5_000),
+      })
+      if (response.status === 404) return null
+      if (!response.ok) throw new NutritionCatalogUnavailableError()
+      return parseOpenFoodFactsBarcode(await response.json(), barcode)
+    } catch (error) {
+      if (error instanceof NutritionCatalogUnavailableError) throw error
+      throw new NutritionCatalogUnavailableError()
+    }
   }
 }
