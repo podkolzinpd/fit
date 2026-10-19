@@ -21,7 +21,7 @@ export function cloudruSpeechStream(environment = process.env) {
 export async function authenticateCloudruSpeech(token, request = fetch) {
   if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) return false
   try {
-    const response = await request('http://127.0.0.1:18080/v1/profile', {
+    const response = await request('http://127.0.0.1:18080/v1/legal/acceptance', {
       headers: { 'x-fit-session': token }, signal: AbortSignal.timeout(3_000), redirect: 'error',
     })
     await response.body?.cancel()
