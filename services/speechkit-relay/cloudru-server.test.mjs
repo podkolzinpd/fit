@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { EventEmitter, once } from 'node:events'
 import test from 'node:test'
 import WebSocket from 'ws'
-import { authenticateCloudruSpeech, buildCloudruSpeechRelay } from './cloudru-server.mjs'
+import { authenticateCloudruSpeech, buildCloudruSpeechRelay, closeCloudruSpeechRelay } from './cloudru-server.mjs'
 
 const token = 'a'.repeat(43)
 class SyntheticStream extends EventEmitter {
@@ -93,6 +93,18 @@ test('an oversized unauthenticated frame closes only its socket and leaves the r
   assert.equal(authenticated, false)
   const response = await fetch(url.replace('ws:', 'http:').replace('/stt', '/health'))
   assert.equal(response.status, 200)
+})
+
+test('gracefully stops open WebSocket sessions without waiting for the systemd timeout', async () => {
+  const { server, wss } = buildCloudruSpeechRelay()
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  const socket = new WebSocket(`ws://127.0.0.1:${server.address().port}/stt`)
+  await once(socket, 'open')
+  const closed = once(socket, 'close')
+  await closeCloudruSpeechRelay({ server, wss, timeoutMs: 100 })
+  const [code] = await closed
+  assert.equal(code, 1006)
+  assert.equal(server.listening, false)
 })
 
 test('emits bounded request lifecycle diagnostics without audio, transcript or session data', async t => {

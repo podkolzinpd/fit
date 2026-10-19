@@ -140,10 +140,35 @@ export function buildCloudruSpeechRelay({ authenticate = authenticateCloudruSpee
   return { server, wss }
 }
 
+export function closeCloudruSpeechRelay({ server, wss, timeoutMs = 8_000 } = {}) {
+  return new Promise(resolve => {
+    let finished = false
+    const finish = () => {
+      if (finished) return
+      finished = true
+      clearTimeout(deadline)
+      resolve()
+    }
+    const deadline = setTimeout(finish, timeoutMs)
+    deadline.unref?.()
+    for (const client of wss.clients) client.terminate()
+    try { server.close(finish) } catch { finish() }
+  })
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   if (!process.env.YANDEX_CLOUD_API_KEY || !process.env.YANDEX_CLOUD_FOLDER_ID) throw new Error('speech_credentials_missing')
   const port = Number(process.env.PORT ?? 18084)
   if (![18084, 18085].includes(port)) throw new Error('speech_port_rejected')
-  const { server } = buildCloudruSpeechRelay()
+  const relay = buildCloudruSpeechRelay()
+  let stopping = false
+  const shutdown = () => {
+    if (stopping) return
+    stopping = true
+    void closeCloudruSpeechRelay(relay).finally(() => process.exit(0))
+  }
+  process.once('SIGTERM', shutdown)
+  process.once('SIGINT', shutdown)
+  const { server } = relay
   server.listen(port, '127.0.0.1', () => console.log('{"event":"cloudru_speech_listening"}'))
 }
