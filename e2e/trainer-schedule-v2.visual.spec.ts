@@ -658,7 +658,7 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   await page.getByRole('menuitem', { name: 'Заменить', exact: true }).click()
   const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
   await picker.getByLabel('Поиск упражнения').fill('жим штанги лёжа')
-  await picker.getByRole('button', { name: /^Добавить: / }).first().click()
+  await picker.locator('button[data-exercise-ref="bench-press"]').click()
   await expect(picker).not.toBeVisible()
   await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
   await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('10')
@@ -681,6 +681,7 @@ test('Coach copied plan replaces exercises, preserves values and retries a faile
   expect(writes[0]).toMatchObject({ exercises: [{ sourceExerciseId: null,
     sets: [{ sourceSetId: null, weightKg: 27.5, reps: 10 }] }] })
   const command = readSavePlannedWorkoutRequest(writes[0], null)!
+  expect(command.draft.exercises[0]!.ref).toBe('bench-press')
   expect(command.draft.exercises[0]).not.toHaveProperty('sourceExerciseId')
   expect(command.draft.exercises[0]!.sets[0]).not.toHaveProperty('sourceSetId')
   await info.attach('copied-plan-command', { body: JSON.stringify(writes[0]), contentType: 'application/json' })

@@ -286,3 +286,37 @@ test('background journal report keeps only fixed flags and allowlisted database 
   assert.deepEqual(report.launcherFailures, [{ stage: 'container', exitCode: 125 }])
   assert.doesNotMatch(result.stdout, /private-/)
 })
+
+test('manual API journal inspection exposes counts only, never user payloads or arbitrary codes', () => {
+  const entry = (value, container = 'fit-api-stage') => JSON.stringify({
+    CONTAINER_NAME: container, MESSAGE: JSON.stringify(value), PRIVATE_TOKEN: 'private-token',
+  })
+  const messages = [
+    entry({ msg: 'Pilot command failed', databaseErrorCode: '23502', body: 'private-workout' }),
+    entry({ msg: 'Pilot command failed', databaseErrorCode: '23502', email: 'private-email' }),
+    entry({ msg: 'Pilot command failed', databaseErrorCode: 'PT422' }),
+    entry({ msg: 'Pilot command failed', databaseErrorCode: 'private-code' }),
+    entry({ msg: 'Pilot command failed', databaseErrorCode: 'TOKEN' }),
+    entry({ msg: 'Pilot command failed', databaseErrorCode: '42702' }, 'another-container'),
+    entry({ msg: 'private-message', databaseErrorCode: '42702' }),
+    JSON.stringify({ CONTAINER_NAME: 'fit-api-stage', MESSAGE: 'private-raw-text' }),
+    'invalid-json', '[]', 'null',
+  ]
+  const result = spawnSync('python3', ['scripts/cloudru-api-command-diagnostics.py'], {
+    input: messages.join('\n'), encoding: 'utf8',
+  })
+  assert.equal(result.status, 0)
+  assert.deepEqual(JSON.parse(result.stdout), {
+    event: 'cloudru_api_command_error_counts', journalEntries: 7, parsedApiEntries: 6,
+    failedCommands: 5, databaseCodes: { '23502': 2, PT422: 1, unknown: 2 },
+  })
+  assert.doesNotMatch(result.stdout, /private-|42702|another-container|TOKEN/)
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const step = workflow.slice(workflow.indexOf('      - name: Read only bounded API'), workflow.indexOf('      - name: Inspect runtime'))
+  assert.match(step, /github\.event_name == 'workflow_dispatch' && inputs\.api_errors/)
+  assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(step, /test "\$\(hostname\)" = fit-stage-app/)
+  assert.match(step, /timeout 15 journalctl CONTAINER_NAME=fit-api-stage --since="24 hours ago" --lines=5000/)
+  assert.match(step, /python3 scripts\/cloudru-api-command-diagnostics\.py \| tee/)
+  assert.doesNotMatch(step, /secrets\.|--env-file|podman run|systemctl (?:restart|stop)|psql/)
+})

@@ -5265,6 +5265,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         savedIds.push(created.id)
         expect(await withActorTransaction(db, ACTOR_ID, client => savePlannedWorkout(client, copy, null))).toEqual(created)
         const after = await withActorTransaction(db, ACTOR_ID, readAccessibleTrainingData)
+        expect(after.workouts).toHaveLength(before.workouts.length + 1)
         expect(after.workouts.find(item => item.id === original.id)).toEqual(sourceBefore)
         const savedCopy = after.workouts.find(item => item.id === created.id)!
         expect(savedCopy).toMatchObject({ status: 'planned', trainingFormat: 'with_trainer', exercises: [
