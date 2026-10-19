@@ -64,6 +64,18 @@ it('repeats the displayed snapshot and validates quantity without an automatic s
   expect(readNutritionForm(fixture.userId, 'new')).toBeNull()
 })
 
+it('splits a typed food list and carries its explicit grams into the chosen catalog food', async () => {
+  fixture.search.mockResolvedValue({ foods: [{ id: 'f00d0000-6010-4000-8000-000000000014', name: 'Куриная грудка', basis: '100g',
+    calories: 113, protein: 23.6, fat: 1.9, carbs: 0 }], hasMore: false })
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox'), 'куриная грудка 300гр., рис отварной 100гр')
+  await user.click(screen.getByRole('button', { name: /куриная грудка.*300 г/i }))
+  await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('куриная грудка', 1))
+  await user.click(await screen.findByRole('button', { name: /Куриная грудка.*113 ккал/i }))
+  expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('300')
+  expect(fixture.save).not.toHaveBeenCalled()
+})
+
 it('manual portion needs only name and calories; unknown macros remain null', async () => {
   const { user } = setup()
   await user.click(screen.getByRole('button', { name: 'Добавить свою еду' }))

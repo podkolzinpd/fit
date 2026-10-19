@@ -11,6 +11,7 @@ import { NUTRITION_MEALS, nutritionNumber, scaledNutrition, type NutritionConnec
 import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { AsyncView, Coachmark, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, Skeleton, Switch, useConfirm } from '../../shared/ui'
 import { nutritionDecimal, readNutritionForm, removeNutritionForm, storeNutritionForm, type NutritionForm } from './draft'
+import { parseFoodText } from './free-text'
 import './nutrition.css'
 import { ChatStartButton } from '../chat'
 
@@ -97,6 +98,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const form = useForm<NutritionForm>({ defaultValues: readNutritionForm(userId, key) ?? defaults })
   const values = useWatch({ control: form.control }), selection = values.selection, manual = values.manual
   const [storageError, setStorageError] = useState(false), [search, setSearch] = useState('')
+  const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
   const cache = useQueryClient(), active = useRef(true), [confirm, dialog] = useConfirm()
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   useEffect(() => { const timer = setTimeout(() => setSearch(values.search?.trim() ?? ''), 600); return () => clearTimeout(timer) }, [values.search])
@@ -112,8 +114,14 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   } })
   const choose = (food: NutritionFood | NutritionEntry) => {
     form.setValue('selection', food)
-    form.setValue('grams', 'grams' in food ? food.grams?.toString() ?? '' : '')
+    form.setValue('grams', 'grams' in food ? food.grams?.toString() ?? '' : suggestedGrams ?? '')
+    setSuggestedGrams(null)
     form.clearErrors()
+  }
+  const parsedFood = !manual && !selection ? parseFoodText(values.search ?? '') : []
+  const searchParsedFood = (name: string, grams: number | null) => {
+    form.setValue('search', name)
+    setSuggestedGrams(grams === null ? null : String(grams))
   }
   const numeric = (field: 'calories' | 'protein' | 'fat' | 'carbs' | 'grams', required: boolean, max: number) => {
     const raw = form.getValues(field), value = nutritionDecimal(raw)
@@ -157,7 +165,12 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     <form className="stack" onSubmit={form.handleSubmit(submit)}>
       <fieldset className="stack nutrition-fields" disabled={mutation.isPending}>
       {!selection && !manual ? <>
-        <Field label="Поиск еды"><input type="search" maxLength={120} autoFocus placeholder="Например, курица с рисом" {...form.register('search')} /></Field>
+        <Field label="Поиск еды"><input type="search" maxLength={120} autoFocus placeholder="Например, куриная грудка 300 г, рис отварной 100 г" {...form.register('search')} /></Field>
+        {parsedFood.length > 1 && <section className="nutrition-parsed-food" aria-label="Разобранная еда"><p className="muted">Выберите продукт по очереди — вес уже подставится. КБЖУ не угадываем.</p>
+          <div className="nutrition-food-list">{parsedFood.map((item, index) => <button type="button" className="secondary nutrition-food" key={`${item.name}.${index}`} onClick={() => searchParsedFood(item.name, item.grams)}>
+            <span>{item.name}<small>{item.grams === null ? 'Вес не указан' : `${nutritionNumber(item.grams)} г`}</small></span><ChevronRightIcon />
+          </button>)}</div>
+        </section>}
         {search.length >= 2 ? <AsyncView loading={foods.isLoading} error={foods.error} onRetry={() => void foods.refetch()}>
           {foods.data?.pages.every((page) => page.foods.length === 0) && <p className="muted">Подходящей еды не нашлось. Можно добавить свою.</p>}
           <div className="nutrition-food-list">{foods.data?.pages.flatMap((page) => page.foods).map((food) => <button type="button" className="secondary nutrition-food" key={food.id} onClick={() => choose(food)}><span>{food.name}<small>{nutritionNumber(food.calories)} ккал на 100 г</small></span><ChevronRightIcon /></button>)}</div>
