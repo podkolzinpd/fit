@@ -134,6 +134,9 @@ test('Figma workout Coach plan input never leaks into a third Lime trainer', asy
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Вид и фильтры расписания' })).toHaveCount(0)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'История — в списке' })).toHaveCount(1)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Только ваши занятия' })).toHaveCount(1)
+  await page.goto('/today?date=2026-09-24')
+  await expect(page.locator('.schedule-day-view')).toBeVisible()
+  await expect(page.locator('.coach-day-swipe, .coach-day-heading')).toHaveCount(0)
 })
 
 test('Figma workout Coach refined plan keeps RPE in a 48px metric row and duration labels quiet', async ({ page }, info) => {
@@ -535,9 +538,13 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   await page.reload()
   await expect(filters).toHaveCount(0)
   await expect(guide).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '24 сентября', exact: true })).toBeVisible()
+  await expect(page.locator('.coach-day-heading')).toContainText('четверг')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.goto('/schedule?week=2026-09-21')
   await filters.locator('summary').click()
   await expect(filters.getByRole('checkbox', { name: 'Показывать самостоятельные тренировки' })).toBeVisible()
+
 })
 
 test('Figma workout Coach reference editor swipe replacement and deletion preserve the plan', async ({ page }) => {
@@ -4534,6 +4541,47 @@ test('keeps the selected day and both weeks through navigation and reload', asyn
   await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
   await page.getByRole('button', { name: 'Назад', exact: true }).click()
   await expect(page).toHaveURL(/\/today\?date=2026-09-24&week=2026-09-21&range=2w$/)
+
+  // Keep the legacy history fixture above; use an isolated fixed2 page for the
+  // Day gesture flow instead of multiplying it inside four editor-width cases.
+  const dayPage = await page.context().newPage()
+  try {
+    await dayPage.setViewportSize({ width: 390, height: 844 })
+    await mockPilot(dayPage, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true })
+    // Fixed2 Day uses the same openDay/URL model; free-surface drag never replaces
+    // a calendar button or a workout tap. The heading moves date+weekday together.
+    await dayPage.goto('/today?date=2026-09-24')
+    const dayDrag = async (next: boolean, dy = 0) => {
+      await dayPage.locator('.coach-day-heading').scrollIntoViewIfNeeded()
+      const rect = await dayPage.locator('.coach-day-heading').boundingBox()
+      const y = rect!.y + rect!.height / 2, left = Math.max(32, rect!.x + 12), right = Math.min(rect!.x + rect!.width - 12, left + 140)
+      const from = next ? right : left, to = next ? left : right
+      await dayPage.mouse.move(from, y); await dayPage.mouse.down()
+      await dayPage.mouse.move(to, y + dy, { steps: 10 }); await dayPage.mouse.up()
+    }
+    await dayDrag(true)
+    await expect(dayPage).toHaveURL(/date=2026-09-25/)
+    await expect(dayPage.getByRole('heading', { name: '25 сентября', exact: true })).toBeVisible()
+    await expect(dayPage.locator('.schedule-v2-event')).toHaveCount(0)
+    await dayDrag(false)
+    await expect(dayPage).toHaveURL(/date=2026-09-24/)
+    await expect(dayPage.locator('.schedule-v2-event')).toHaveCount(1)
+    await dayDrag(true, 180)
+    await expect(dayPage).toHaveURL(/date=2026-09-24/)
+    await dayPage.goto('/today?date=2026-12-31')
+    await dayDrag(true)
+    await expect(dayPage).toHaveURL(/date=2027-01-01/)
+    await dayPage.goBack()
+    await expect(dayPage).toHaveURL(/date=2026-12-31/)
+    await expect(dayPage.getByRole('heading', { name: '31 декабря', exact: true })).toBeVisible()
+    await dayPage.emulateMedia({ reducedMotion: 'reduce' })
+    await dayDrag(false)
+    await expect(dayPage).toHaveURL(/date=2026-12-30/)
+    await expect(dayPage.locator('.coach-day-heading-outgoing')).toHaveCount(0)
+    await expect(dayPage.locator('.coach-schedule-filter-options')).toHaveCount(0)
+  } finally {
+    await dayPage.close()
+  }
 })
 
 for (const profileId of [trainerId, '10000000-0000-4000-8000-000000000010']) {

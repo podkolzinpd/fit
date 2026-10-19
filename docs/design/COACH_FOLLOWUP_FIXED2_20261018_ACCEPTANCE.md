@@ -204,7 +204,53 @@ blur assumptions; они исправлены в родительских PR1701
 8/8 и4/4 passed. После обновления parent от mainb38b76e1 нужен exact-head CI.
 Merge/Cloud.ru/readback/native впереди; новых browser cases/осей нет.
 
-## Следующие PR
+## PR 6 — День/направленный переход
+
+Финальная интеграционная база — actual mainb5d54357 после штатного merge PR1705
+на head5f7587ef/freshCI39172282277; более ранний docs-only1704 опубликован93f,
+public207/health/compiled4closed2/frozen original pair passed. PR1–4 полностью
+выпущены и отмечены в YAFIT-626. PR5 проходит mainCI39199666522 и автовыпуск;
+его publication readback обязателен до merge6. При переносе сохранены оба
+дополнения Wiki: быстрые фильтры PR5 и свайп Day, все соседние CURRENT_STATE notes.
+
+Общий runtime всех шести этапов перед этим переносом проверен полностью:
+frontend2756/API1441+161штатныхDBskip/policy/build/startup и browser20/20,
+включая филтровый регресс; trusted touch2/2 проверен отдельно. Новый source tree
+повторно заморожен для current-main check/browser и exact-head CI. Оригинальная
+геометрия54/48/48 и удаление Day-фильтра1697 сохранены, клиентские сценарии не
+мигрируют. После6 обязательны public/compiled/frozen readback и свежая нативная
+сборка merged current main. Физический iPhone/OAuth не проверены.
+
+База before0886b149. Before WebKit/Chromium390: реальный Day и горизонтальный
+жест по дате не меняли URL. Day-filter1697 уже отсутствует; он не восстанавливается.
+Source day-schedule.svg сохраняет статическую композицию/шрифт/контролы, движения
+в SVG нет. Переиспользуем Page, выбранную LocalDate и openDay без нового календаря.
+Primary прежний — «Новая тренировка». Нового действия/фазы тренировки нет.
+
+Новый узкий hook распознаёт завершённый горизонтальный жест на свободной
+поверхности, один gesture — один addDays/openDay. Vertical/cancel/short/edge28,
+buttons/links/inputs/dialogs остаются прежними. Два реальных слоя date+weekday
+движутся противоположно и crossfade220ms; направление соответствует жесту.
+Предыдущий слой aria-hidden; reduced motion без перемещения. Список привязан к
+той же дате, смена недели использует существующий loading/query, не старые строки.
+
+Найдено и исправлено на реальных движках: WebKit Back восстанавливает range в
+non-editable дате, что блокировало следующий свайп; обычное выделение текста вне
+даты остаётся нативным. Trusted Chromium touch обнаружил bubbling child capture
+loss при передаче implicit capture корню: это больше не считается отменой. Root
+loss/cancel проверяются по pointerId, чужой старый pointer не отменяет новый жест.
+Приватные pointer JSON сохраняют воспроизведение; fake mouse не выдан за touch.
+Физический iPhone и OAuth не проверены. Frozen3c39f2ef:4/4 unit,18/18 existing
+browser WebKit/Chromium375/390/430/1440 (включая third refusal и history/Day filters),
+private2/2 с настоящим Chromium CDP touch: оба направления, cancel, native vertical
+pan. Все ступени check на обновлённой базе passed: frontend2752/API1441+161skip,
+policy/calendar/hosting/build/startup. Отдельных browser cases/осей не добавлено.
+Первый real partitions отказ был гонкой самой диагностики: e2e-файл менялся между
+последовательными list-командами. Финальный source заморожен до запуска, union и
+protected digest/gates прошли без изменений. Полные logs/контуры/шрифты остаются
+приватными. Exact-head CI/merge/Cloud.ru/public readback/native — следующие гейты.
+
+## Интеграционный журнал и предпубликационный статус
 
 ### Интеграционная перепроверка PR3 — 19.10
 
@@ -225,8 +271,39 @@ touch Chromium Linux оба случая (включая Delete/Cancel, поля
 Финальный полный check и двухбраузерная проверка запускаются на замороженном
 source tree. Это локальное подтверждение, не заявление о выпуске PR3.
 
-2. Live-композиция и существующая настройка анимации — локально реализован, выпуск впереди.
-3. Свайп/перетягивание — локально реализован и проверен, выпуск впереди.
-4. Непрерывная шапка Live/отдыха — локально реализован, выпуск впереди.
-5. Недельное расписание — локально реализован, выпуск впереди.
-6. День/направленный переход — не реализован; соседний PR1697 убирает фильтр.
+1. Планирование, PR1700 — production и native readback пройдены.
+2. Live-композиция/анимация, PR1701 — production и native readback пройдены.
+3. Свайп/перетягивание, PR1702 — production и native readback пройдены.
+4. Непрерывная шапка, PR1703 — production и native readback пройдены.
+5. Недельное расписание, PR1705 — production и native readback пройдены, mainb5d54357.
+6. День/направленный переход, PR1706 — реализован на main5, fresh CI и выпуск впереди;
+   удаление фильтра Day из1697 сохранено.
+
+Это snapshot до публикации последнего PR, не заявление о шести готовых выкатках.
+Проверенные факты завершения каждого выпуска, checklist и итоговый статус —
+[YAFIT-626](https://tracker.yandex.ru/YAFIT-626).
+
+### PR6: разнесение проверок без ослабления приёмки
+
+Fresh CI39199981392 остановил два WebKit full-editor случая на общем лимите30s:
+trace показывает последовательное выполнение предыдущих действий и timeout на
+поздних goto, а не неверное значение. Проверки Day forward/back, вертикали,
+смены года, history Back, reduced motion и отсутствия Day-фильтра перенесены
+из четырёх viewport editor-кейсов в существующий navigation/history case.
+Его исходный legacy fixture и assertions сохранены; fixed2 использует отдельную
+страницу того же контекста без повторного init script на старой странице.
+Во всех четырёх editor-размерах остаются дата, weekday и отсутствие overflow.
+Имена, проекты и количество cases неизменны: inventory2034/2034 идентичен.
+Timeouts, retries, protected digest и CI gates не менялись. Динамические
+проверки больше не умножаются на размеры; responsive приёмка остаётся.
+Локальный повтор:12/12 WebKit/Chromium passed. Editor12.2–15.1s в WebKit,
+navigation7.3s; Chromium editor11.6–14.9s, navigation8.6s. Полный check и
+fresh remote CI остаются обязательными перед merge; это не замена CI.
+
+Этап5 первоначально остановился до promotion из-за диска self-hosted runner.
+Штатная bounded retention освободила около6GiB старых воспроизводимых build
+каталогов; текущий/rollback, БД, media, volumes и backups не изменялись.
+Prune отказал для используемого image — принудительного удаления не было.
+Read-only inspection и прежний public smoke прошли, официальные API/frontend
+rerun затем успешно выпустили b5d54357:207/207 assets+health, frozen/compiled
+closed2 и native sync/build/install/launch прошли. Это не объявление выпуска6.
