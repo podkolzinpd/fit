@@ -538,12 +538,16 @@
 .coach-workout-reference .coach-schedule-polish .schedule-v2-topbar { margin-bottom: 16px }
 .coach-schedule-polish .coach-schedule-toolbar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 4px 8px; align-items: start; margin: 0 16px 8px }
 .coach-schedule-polish :is(.coach-schedule-view-slot, .coach-schedule-filter-slot) { min-width: 0 }
+.coach-schedule-polish .coach-schedule-view-slot { grid-column: 1; grid-row: 1; z-index: 1 }
+.coach-schedule-polish .coach-schedule-filter-slot { grid-column: 1 / -1; grid-row: 1 }
+.coach-schedule-polish .coach-schedule-filter-options > summary { margin-left: calc(58.333333% + 3.333333px) }
+.coach-schedule-polish .coach-schedule-filter-options > .fit-lime-schedule-filters { min-width: 0 }
 .coach-schedule-polish .coach-schedule-view-slot .schedule-v2-range-toggle { justify-content: flex-start; margin: 0 }
 .coach-schedule-polish .coach-schedule-view-slot .schedule-v2-range-toggle > button { min-width: 0; flex: 1; padding-inline: 8px }
 .coach-workout-reference .coach-schedule-polish .coach-schedule-filter-options { margin: 0 }
 .coach-workout-reference .coach-schedule-polish .coach-schedule-filter-options > summary { padding: 8px; font-weight: 400; flex-wrap: wrap }
-.coach-schedule-polish .coach-schedule-filter-slot:has(details[open]) { grid-column: 1 / -1 }
-.coach-workout-reference .coach-schedule-polish > .schedule-v2-range-toggle { margin-bottom: 4px }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-range-toggle[aria-label='Период расписания'] { margin: 0 16px 4px; gap: 4px; justify-content: flex-start }
+.coach-workout-reference .coach-schedule-polish .schedule-v2-range-toggle[aria-label='Период расписания'] button { min-height: 44px; padding-block: 6px }
 .coach-workout-reference .coach-schedule-polish .schedule-v2-period { margin-bottom: 4px }
 .coach-workout-reference .coach-schedule-polish .schedule-v2-period-summary { margin-block: 8px 12px }
 /* No separate source screen exists for chooser/draft recovery. Reuse the

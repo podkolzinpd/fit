@@ -726,7 +726,9 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
     const next = new URLSearchParams(location.search)
     if (value && value !== 'all' && value !== 'calendar') next.set(key, value)
     else next.delete(key)
-    navigate(`${location.pathname}?${next}`)
+    // Commit this fixed2 filter URL before the next control reads location;
+    // otherwise consecutive selections can overwrite one another's params.
+    navigate(`${location.pathname}?${next}`, compactScheduleFilters ? { flushSync: true } : undefined)
   }
   const dateInputRef = useRef<HTMLInputElement>(null)
   const actionTriggerRef = useRef<HTMLButtonElement>(null)
@@ -967,7 +969,7 @@ function TrainerScheduleV2({ forceDayView = false }: { forceDayView?: boolean })
               <span className="schedule-v2-day-events">{workouts.slice(0, 5).map((workout) => {
                 const status = scheduleEventStatus(workout, today)
                 return <span key={workout.id} className={`schedule-event-${status.tone}`}><time>{workout.startTime?.slice(0, 5) ?? '—'}</time><b>{workout.clientName}</b>{fitLimeSchedule && isIndependentScheduleWorkout(workout) && <small className="schedule-independent-label">Самостоятельно</small>}<span className="sr-only">{status.label}</span></span>
-              })}{workouts.length === 0 && <em>Свободный день</em>}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
+              })}{workouts.length === 0 && (compactScheduleFilters ? <span className="sr-only">На этот день тренировок нет</span> : <em>Свободный день</em>)}{workouts.length > 5 && <em>Ещё {workouts.length - 5}</em>}</span>
             </button>
           })}
         </section>
