@@ -1,8 +1,10 @@
 # Android OTA feed (not activated)
 
 `location.conf` is an offline fragment for the existing HTTPS frontend server.
-Do not copy it to production or publish bundles until the new APK has passed
-native acceptance and RuStore has confirmed the OTA distribution policy.
+Do not copy it to production or publish bundles until the owner approves the
+closed rollout and the new APK has passed native acceptance. Before store
+distribution, review current RuStore requirements for this release; this task
+does not claim store approval for OTA.
 No new cloud resources, account or Capawesome Cloud service are needed.
 
 Artifact layout produced by `npm run android:ota:package -- DIST OUTPUT SHA`:
@@ -40,10 +42,12 @@ Manual rollback uses the same packaging command with `--reset`, creating a
 next check/cold start; offline clients retain their working installed bundle.
 Do not copy an old manifest: clients reject lower sequence numbers. Missing or
 expired metadata cannot brick the app and does not delete its existing bundle.
+Renew metadata before its30-day expiry with a higher signed sequence if the
+release should remain available to new installations.
 
 The native plugin automatically falls back to the APK's builtin web layer when
 `ready()` is not called within20s in the foreground and blocks the failed bundle.
 It does not promise the last downloaded release as the fallback. Do not call
-`reload()` during a workout/voice entry/form: only a later native process launch
+`reload()` during a workout/voice entry/form: only a later native Activity/WebView bootstrap
 activates a staged update. Feed publication is a separate explicit step; it is
 not coupled to deploying the public website or its release cleanup.

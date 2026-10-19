@@ -700,5 +700,6 @@ Legacy writers и независимое расхождение БД требу�
 `docs/design/ANDROID_OTA_20261019.md`. Android1.1.0/code4: подписанные manifest/ZIP,
 строгая совместимость/expiry/sequence, staged activation без reload и native
 builtin rollback. По умолчанию выключено; локальная реализация подготовлена,
-native/CI/physical-device acceptance и RuStore policy ещё гейты. Не Implemented
+native/CI и signed candidate passed; physical-device/pilot и store distribution
+ещё впереди. Не Implemented
 как опубликованный пользовательский сценарий; 1.0.2 остаётся bundled-only.
