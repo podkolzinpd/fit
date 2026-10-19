@@ -8,6 +8,7 @@ const providers = vi.hoisted(() => ({
   backend: vi.fn(),
   errorBoundary: vi.fn(),
   query: vi.fn(),
+  nativeUpdate: vi.fn(),
   yandexSession: vi.fn(),
 }))
 
@@ -18,6 +19,7 @@ function passThrough(spy: () => void) {
   }
 }
 
+vi.mock('../native/NativeUpdateLifecycle', () => ({ NativeUpdateLifecycle: () => { providers.nativeUpdate(); return null } }))
 vi.mock('./App', () => ({ App: () => { providers.app(); return <p>Основное приложение</p> } }))
 vi.mock('./auth-context', () => ({ AuthProvider: passThrough(providers.auth) }))
 vi.mock('./data-backend-context', () => ({ DataBackendProvider: passThrough(providers.backend) }))
@@ -59,7 +61,8 @@ describe('maintenance mode', () => {
     expect(providers.app).not.toHaveBeenCalled()
     expect(providers.auth).not.toHaveBeenCalled()
     expect(providers.backend).not.toHaveBeenCalled()
-    expect(providers.errorBoundary).not.toHaveBeenCalled()
+    expect(providers.errorBoundary).toHaveBeenCalledOnce()
+    expect(providers.nativeUpdate).toHaveBeenCalledOnce()
     expect(providers.query).not.toHaveBeenCalled()
     expect(providers.yandexSession).not.toHaveBeenCalled()
   })

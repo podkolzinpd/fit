@@ -9,7 +9,10 @@ import { MaintenancePage } from './maintenance-page'
 import { YandexAppSessionProvider } from './yandex-app-session-context'
 
 export function AppRoot() {
-  if (isMaintenanceModeEnabled()) return <MaintenancePage />
+  if (isMaintenanceModeEnabled()) return <AppErrorBoundary>
+    <MaintenancePage />
+    <NativeUpdateLifecycle />
+  </AppErrorBoundary>
 
   return <AppErrorBoundary>
     <QueryProvider>
