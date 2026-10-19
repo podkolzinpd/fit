@@ -135,13 +135,13 @@ export function YandexPilotConnections({
           const memberships = connections?.memberships.filter((item) => item.clientId === clientId) ?? []
           const invitations = connections?.invitations.filter((item) => item.clientId === clientId) ?? []
           const ownMembership = memberships.find((item) => item.trainerId === session.profile.id)
-          const canCreate = session.profile.accountRole === 'client' || client?.hasAccount === false
+          const canCreate = session.profile.accountRole === 'client' ? memberships.length === 0 : client?.hasAccount === false
           return <article className="card yandex-pilot-connection" key={clientId}>
             <div>
               <strong>{client?.fullName ?? 'Клиент'}</strong>
-              <p>{memberships.length === 0 ? 'Подключённых тренеров нет' : memberships.map((membership) => {
+              <p>{memberships.length > 1 ? 'Не удалось определить текущего тренера. Обновите данные или обратитесь в поддержку.' : memberships.length === 0 ? 'Тренер не подключён' : memberships.map((membership) => {
                 const trainerName = [membership.firstName, membership.lastName].filter(Boolean).join(' ') || 'Тренер'
-                return `${trainerName} · ${membership.isRoot ? 'основной' : 'подключённый'}`
+                return `${trainerName} · ваш тренер`
               }).join('; ')}</p>
             </div>
             {canCreate && <button
@@ -177,8 +177,7 @@ export function YandexPilotConnections({
                 }}
               >{busyAction === `revoke:${invitation.id}` ? 'Отзываем…' : 'Отозвать'}</button>
             </div>)}
-            {session.profile.accountRole === 'client' && memberships
-              .filter((membership) => !membership.isRoot)
+            {session.profile.accountRole === 'client' && memberships.length === 1 && memberships
               .map((membership) => <button
                 className="link danger"
                 disabled={busyAction !== null}
@@ -199,7 +198,7 @@ export function YandexPilotConnections({
                     ), 'Тренер отключён.')
                 }}
               >{busyAction === `remove:${membership.trainerId}` ? 'Отключаем…' : 'Отключить тренера'}</button>)}
-            {session.profile.accountRole === 'trainer' && ownMembership && !ownMembership.isRoot && <button
+            {session.profile.accountRole === 'trainer' && memberships.length === 1 && ownMembership && client?.hasAccount === true && <button
               className="link danger"
               disabled={busyAction !== null}
               type="button"

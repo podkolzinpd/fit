@@ -185,7 +185,7 @@ describe('Yandex ID pilot callback page', () => {
     expect(screen.getByText('31 лет · 168 см · Подготовка к старту')).toBeVisible()
     expect(screen.queryByRole('link', { name: 'Анна Смирнова' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Связи и приглашения' })).toBeVisible()
-    expect(screen.getByText('Ирина · основной')).toBeVisible()
+    expect(screen.getByText('Ирина · ваш тренер')).toBeVisible()
     expect(screen.getByText(/Активное приглашение для клиента до/)).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Тренировки в stage' })).toBeVisible()
     expect(screen.getByText('Тяга саней')).toBeVisible()
@@ -456,14 +456,14 @@ describe('Yandex ID pilot membership controls', () => {
     pilot.removeTrainer.mockReset()
   })
 
-  it('confirms removal for a client and never offers removal of the root trainer', async () => {
+  it.each([0, 1])('confirms the single trainer disconnect regardless of the historical partition marker (%s)', async (selected) => {
     const user = userEvent.setup()
     const onRefresh = vi.fn().mockResolvedValue(undefined)
     pilot.removeTrainer.mockResolvedValue(undefined)
     render(<MemoryRouter><YandexPilotConnections
       apiBaseUrl={apiBaseUrl}
       clients={clients}
-      connections={connections}
+      connections={{ ...connections, memberships: [connections.memberships[selected]!] }}
       error={null}
       loading={false}
       onRefresh={onRefresh}
@@ -489,19 +489,19 @@ describe('Yandex ID pilot membership controls', () => {
       apiBaseUrl,
       's'.repeat(43),
       clientId,
-      memberTrainerId,
+      connections.memberships[selected]!.trainerId,
     )
     expect(onRefresh).toHaveBeenCalledOnce()
   })
 
-  it('lets only a connected non-root trainer leave the client space', async () => {
+  it('lets the current trainer leave a linked athlete without an alternate membership path', async () => {
     const user = userEvent.setup()
     const onRefresh = vi.fn().mockResolvedValue(undefined)
     pilot.leaveClient.mockResolvedValue(undefined)
     render(<MemoryRouter><YandexPilotConnections
       apiBaseUrl={apiBaseUrl}
       clients={clients}
-      connections={connections}
+      connections={{ ...connections, memberships: [connections.memberships[1]!] }}
       error={null}
       loading={false}
       onRefresh={onRefresh}

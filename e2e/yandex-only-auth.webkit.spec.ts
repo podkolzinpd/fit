@@ -17,6 +17,105 @@ if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
 
 const legacyRequestCounts = new WeakMap<object, number>()
 
+test('single-trainer public invitation survives preview failure and preserves a claimed receipt without a session', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const token = `ABCDEF123456.${'a'.repeat(64)}`
+  let previewCount = 0
+  await page.route('https://stage.example.test/v1/invitation-links/preview', route => {
+    previewCount += 1
+    return route.fulfill(previewCount === 1 ? { status: 503, json: { error: 'service_unavailable' } } : { json: {
+      invitation: { targetRole: 'trainer', inviterName: 'Тестовый спортсмен', status: 'claimed', expiresAt: '2099-01-01T00:00:00.000Z' },
+    } })
+  })
+  await page.goto(`/invite?token=${token}&source=yandex`)
+  await expect(page.getByText('Не удалось проверить приглашение', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.getByText('Приглашение уже принято', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Войти и подключиться' })).toBeEnabled()
+  expect(await page.evaluate(() => sessionStorage.getItem('fit.pendingInvitationLink.v1'))).toContain(token)
+  for (const width of [390, 430, 1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`public-invite-receipt-${width}.png`), fullPage: true })
+  }
+})
+
+for (const role of ['client', 'trainer'] as const) {
+  test(`single-trainer invitation registration preserves the verified ${role} role after OAuth`, async ({ page }, testInfo) => {
+    test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+    const token = `ABCDEF123456.${'a'.repeat(64)}`
+    await page.route('https://stage.example.test/v1/auth/yandex/session', route => route.fulfill({ status: 409, json: {
+      error: 'yandex_identity_unlinked', handoff: { token: 'h'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' },
+    } }))
+    await page.route('https://stage.example.test/v1/invitation-links/preview', route => route.fulfill({ json: {
+      invitation: { targetRole: role, inviterName: 'Отправитель приглашения', status: 'active', expiresAt: '2099-01-01T00:00:00.000Z' },
+    } }))
+    let submittedRole: unknown
+    await page.route('https://stage.example.test/v1/auth/yandex/complete-registration', route => {
+      const body: unknown = route.request().postDataJSON()
+      submittedRole = z.object({ accountRole: z.enum(['client', 'trainer']) }).parse(body).accountRole
+      return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    })
+    await page.route('https://stage.example.test/health', route => route.fulfill({ json: { status: 'ok' }, headers: {
+      'x-fit-request-id': 'synthetic-invite-health', 'access-control-expose-headers': 'x-fit-request-id',
+    } }))
+    await page.addInitScript(value => {
+      sessionStorage.setItem('fit.pendingInvitationLink.v1', JSON.stringify({ token: value, source: 'yandex', savedAt: Date.now() }))
+      sessionStorage.setItem('fit.yandexIdPilot.oauthState', 'test-state')
+      sessionStorage.setItem('fit.yandexIdPilot.oauthVerifier', 'v'.repeat(64))
+      sessionStorage.setItem('fit.yandexIdPilot.oauthIntent', 'app')
+    }, token)
+    await page.goto('/auth/yandex/callback?code=test-code&state=test-state')
+    const form = page.getByRole('main', { name: 'Регистрация' })
+    await expect(form.getByRole('radio', { name: role === 'client' ? 'Я спортсмен' : 'Я тренер' })).toBeChecked()
+    await expect(form.getByRole('radio', { name: role === 'client' ? 'Я тренер' : 'Я спортсмен' })).toBeDisabled()
+    await form.getByRole('textbox', { name: 'Имя' }).fill('Тестовый пользователь')
+    await form.getByRole('button', { name: 'Создать аккаунт' }).click()
+    await expect(form.getByRole('alert')).toBeVisible()
+    expect(submittedRole).toBe(role)
+    await expect(form.getByRole('textbox', { name: 'Имя' })).toHaveValue('Тестовый пользователь')
+    for (const width of [390, 430, 1440]) {
+      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`invite-registration-${role}-${width}.png`), fullPage: true })
+    }
+  })
+}
+
+test('single-trainer claimed link recovers a lost response through an explicit safe retry', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const token = `ABCDEF123456.${'a'.repeat(64)}`
+  const trainerId = '11e49d0a-78ac-4b5c-a2d1-b4c087f1d169'
+  let claims = 0
+  await page.route('https://stage.example.test/v1/legal/acceptance', route => route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } }))
+  await page.route('https://stage.example.test/v1/auth/yandex/session', route => route.fulfill({ json: {
+    accessMode: 'read_write', profile: { id: trainerId, firstName: 'Тестовый тренер', lastName: null,
+      timezone: 'Europe/Moscow', accountRole: 'trainer', experiments: { trainerScheduleV2: false, fitLime: true, clientLime: false } },
+  } }))
+  await page.route('https://stage.example.test/v1/invitation-links/preview', route => route.fulfill({ json: {
+    invitation: { targetRole: 'trainer', inviterName: 'Тестовый спортсмен', status: 'claimed', expiresAt: '2099-01-01T00:00:00.000Z' },
+  } }))
+  await page.route('https://stage.example.test/health', route => route.fulfill({ json: { status: 'ok' }, headers: {
+    'x-fit-request-id': 'synthetic-invite-health', 'access-control-expose-headers': 'x-fit-request-id',
+  } }))
+  await page.route('https://stage.example.test/v1/invitation-links/claim', route => {
+    claims += 1
+    return claims === 1 ? route.abort('connectionreset') : route.fulfill({ json: { clientId } })
+  })
+  await page.addInitScript(() => localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' })))
+  await page.goto(`/invite?token=${token}&source=yandex`)
+  await expect(page.getByRole('button', { name: 'Проверить подключение' })).toBeEnabled()
+  expect(claims).toBe(0)
+  await page.getByRole('button', { name: 'Проверить подключение' }).click()
+  await expect(page.getByRole('alert')).toBeVisible()
+  expect(claims).toBe(1)
+  await page.getByRole('button', { name: 'Проверить подключение' }).click()
+  await expect(page.getByRole('heading', { name: 'Спортсмен подключён' })).toBeVisible()
+  expect(claims).toBe(2)
+  expect(await page.evaluate(() => sessionStorage.getItem('fit.pendingInvitationLink.v1'))).toBeNull()
+  await page.screenshot({ path: testInfo.outputPath('claimed-link-recovered.png'), fullPage: true })
+})
+
 for (const lime of [false, true]) {
   test(`Yandex trainer display name refreshes in profile and chat (${lime ? 'lime' : 'mono'})`, async ({ page }, testInfo) => {
     test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true'
@@ -46,6 +145,7 @@ for (const lime of [false, true]) {
         currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: null,
       }] } })
       if (path === '/v1/me/finance') return route.fulfill({ json: { finance: { trainers: [] } } })
+      if (path === '/v1/me/sport-profile') return route.fulfill({ json: { sport: { sports: [], bio: null } } })
       if (path === '/v1/chat/conversations') return route.fulfill({ json: { conversationId } })
       if (path === '/v1/connections') {
         connectionsReads += 1
@@ -66,9 +166,10 @@ for (const lime of [false, true]) {
       if (path === '/v1/push/status') return route.fulfill({ json: { subscribed: false } })
       return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
     })
-    await page.addInitScript(() => {
+    await page.addInitScript(id => {
       localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
-    })
+      localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-assistant-2026-09']))
+    }, actorId)
     await page.goto('/me/profile')
     await expect(page.locator('.client-trainer-connection-card')).toBeVisible()
     await expect(page.locator('html')).toHaveClass(lime ? /fit-client-lime-document/ : /^(?!.*fit-client-lime-document)/)
@@ -681,8 +782,9 @@ for (const theme of ['dark', 'light']) {
       await expect(form.getByRole('textbox', { name: 'Имя' })).toBeVisible()
       await page.addInitScript(() => sessionStorage.setItem('fit.auth.invitationReturn.v1', JSON.stringify({ path: '/join?code=AB12CD34EF56', savedAt: Date.now() })))
       await page.goto('/auth/yandex/callback?code=test-code&state=test-state')
-      await expect(form.getByRole('radio', { name: 'Я спортсмен' })).toBeChecked()
-      await expect(form.getByRole('radio', { name: 'Я тренер' })).toBeDisabled()
+      // A legacy code has no public role preview: do not guess its target role.
+      await expect(form.getByRole('radio', { name: 'Я спортсмен' })).toBeEnabled()
+      await expect(form.getByRole('radio', { name: 'Я тренер' })).toBeEnabled()
       await page.screenshot({ path: testInfo.outputPath(`registration-invitation-${theme}-${width}.png`), fullPage: true })
     })
   }

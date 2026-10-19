@@ -17,7 +17,7 @@ vi.mock('../../app/auth-context', () => ({
   useAuth: () => ({ actor: state.actor, loading: false, error: null, signOut }),
 }))
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: state.backendSource, invitations: { claimLink } }),
+  useOptionalDataBackend: () => ({ source: state.backendSource, invitations: { claimLink } }),
 }))
 vi.mock('../../data/repositories/invitations.repository', () => ({
   invitationsRepository: { claimLink },

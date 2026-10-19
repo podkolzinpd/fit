@@ -167,6 +167,8 @@ async function seedTrainerFixture(
     `,
     [ids.clientId, trainerId],
   )
+  await client.query(`insert into public.client_trainer_relationships(client_id, trainer_id, connected_by)
+    values ($1,$2,$2) on conflict (client_id) where status='active' do nothing`, [ids.clientId, trainerId])
   await client.query(
     `
       insert into public.custom_exercises (
