@@ -80,7 +80,7 @@ aggregate-only Python allowlist. Новая проверка гарантиру�
 Runtime/API commands/данные/секреты/рассылки и hourly-поведение не меняются.
 После выпуска нужно прочитать отчёт и продолжить поиск причины, если код есть.
 
-CI9dd01f7e, run39212065365: success32/32. Дополнительные diagnostic-policy20/20
+CI9dd01f7e, run39212065365: success. Дополнительные diagnostic-policy20/20
 прошли; после их коммита и обновления main нужен свежий CI. Полный локальный
 check: lint/typecheck passed; Node26 coverage прерван после несвязанных
 таймаутов при нагрузке, уменьшение параллельности не устранило все превышения;
@@ -91,3 +91,20 @@ SHA256 архива23b25245dcfb9af7262f8ff142e9e2e0af025368117329e7a7458a51e5922
 сверен с nodejs.org. Следующий полный npm run check использует этот runtime и
 штатный VITEST_MAX_WORKERS=1. Таймауты, пороги и состав проверок не ослаблены.
 Ни одна прерванная попытка не выдаётся за успешный общий localcheck.
+
+После переноса на main638c0c62 CI39216052064/a645b50c завершился success:
+31 job passed, один штатно skipped; Android39216052063 success. После
+перезагрузки компьютера ветка перенесена на main6a7d5bae (#1708). Полный
+локальный npm run check на Node22.23.3/VITEST_MAX_WORKERS=1 завершился exit0:
+2758 frontend tests, coverage82.2/76.43/82.33/86.44%, 1441 API tests и163
+штатных DB-skips (без TEST_DATABASE_URL в общем API-прогоне), policy321,
+calendar12, hosting169, финальная build/startup и шрифты2/2 passed.
+Отдельный PostgreSQL17-прогон с TEST_DATABASE_URL подтвердил4/4, включая
+обе копии/replay/source unchanged/RLS. WebKit/Chromium копия и existing retry:
+4/4 passed за11.8s. Одно error-state responsive исследование390/430/1440
+прошло assertions отсутствия overflow/обрезания кнопки и hit target≥44px;
+три снимка осмотрены, текст и код читаемы. Это диагностические снимки,
+не golden comparison. Дополнительной постоянной матрицы в CI нет.
+Временный контейнер подготовки завершился при перезагрузке до прогона и удалён;
+не считается проверкой. Production/native/API-журнал и свежий CI после
+переноса остаются гейтами. Исходный пользовательский5xx всё ещё не воспроизведён.
