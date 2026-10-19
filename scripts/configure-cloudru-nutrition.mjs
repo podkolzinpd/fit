@@ -12,17 +12,19 @@ export function prepareCloudruNutrition(raw) {
   if (![4, 5].includes(parsed.clients.length) || parsed.trainers.length !== 2) throw new Error('nutrition_cohort_rejected')
   const barcodeLoginHash = Array.isArray(input) ? '' : input.barcodeLoginHash
   if (typeof barcodeLoginHash !== 'string' || !/^[0-9a-f]{64}$/.test(barcodeLoginHash)) throw new Error('nutrition_barcode_cohort_rejected')
-  return { cohort, barcodeLoginHash }
+  const perekApiKey = Array.isArray(input) ? '' : input.perekApiKey
+  if (typeof perekApiKey !== 'string' || !/^pk_[A-Za-z0-9_-]{20,200}$/.test(perekApiKey)) throw new Error('nutrition_perek_key_rejected')
+  return { cohort, barcodeLoginHash, perekApiKey }
 }
 
 export function mergeCloudruNutritionEnv(existing, raw, mode) {
   checkCloudruApiEnv(existing)
   if (!['enable', 'disable'].includes(mode)) throw new Error('nutrition_mode_rejected')
-  const prepared = mode === 'enable' ? prepareCloudruNutrition(raw) : { cohort: '', barcodeLoginHash: '' }
+  const prepared = mode === 'enable' ? prepareCloudruNutrition(raw) : { cohort: '', barcodeLoginHash: '', perekApiKey: '' }
   // Preserve all unrelated runtime values byte-for-byte, including AI/CORS/auth.
-  const retained = existing.split('\n').filter(line => !/^NUTRITION_(ENABLED|LOGIN_COHORT|BARCODE_ENABLED|BARCODE_LOGIN_HASH)=/.test(line)).join('\n')
+  const retained = existing.split('\n').filter(line => !/^NUTRITION_(ENABLED|LOGIN_COHORT|BARCODE_ENABLED|BARCODE_LOGIN_HASH|PEREK_API_KEY)=/.test(line)).join('\n')
   const next = retained + (retained.endsWith('\n') ? '' : '\n')
-    + `NUTRITION_ENABLED=${mode === 'enable'}\nNUTRITION_LOGIN_COHORT=${prepared.cohort}\nNUTRITION_BARCODE_ENABLED=${mode === 'enable'}\nNUTRITION_BARCODE_LOGIN_HASH=${prepared.barcodeLoginHash}\n`
+    + `NUTRITION_ENABLED=${mode === 'enable'}\nNUTRITION_LOGIN_COHORT=${prepared.cohort}\nNUTRITION_BARCODE_ENABLED=${mode === 'enable'}\nNUTRITION_BARCODE_LOGIN_HASH=${prepared.barcodeLoginHash}\nNUTRITION_PEREK_API_KEY=${prepared.perekApiKey}\n`
   checkCloudruApiEnv(next)
   return next
 }
@@ -35,8 +37,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       // stdout is piped exclusively into a private root-owned file, never logs.
       const raw = process.env.FIT_NUTRITION_ACCOUNT_COHORT
       const barcodeLoginHash = process.env.FIT_NUTRITION_BARCODE_LOGIN_HASH
-      const prepared = prepareCloudruNutrition(JSON.stringify({ cohort: JSON.parse(raw ?? ''), barcodeLoginHash }))
-      process.stdout.write(mode === 'prepare' ? JSON.stringify({ cohort: JSON.parse(raw ?? ''), barcodeLoginHash }) : `NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=${prepared.cohort}\nNUTRITION_BARCODE_ENABLED=true\n`)
+      const perekApiKey = process.env.FIT_NUTRITION_PEREK_API_KEY
+      const prepared = prepareCloudruNutrition(JSON.stringify({ cohort: JSON.parse(raw ?? ''), barcodeLoginHash, perekApiKey }))
+      process.stdout.write(mode === 'prepare' ? JSON.stringify({ cohort: JSON.parse(raw ?? ''), barcodeLoginHash, perekApiKey }) : `NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=${prepared.cohort}\nNUTRITION_BARCODE_ENABLED=true\n`)
     } else {
       const id = process.argv[3]
       if (process.getuid() !== 0 || !/^[0-9]+-[0-9]+$/.test(id ?? '')) throw new Error('rejected')

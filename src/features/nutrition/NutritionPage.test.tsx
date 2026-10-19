@@ -85,6 +85,15 @@ it('normalizes a single free-text product before searching and keeps its grams',
   expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('300')
 })
 
+it('renders the mandatory source link next to an attributed catalog result', async () => {
+  fixture.search.mockResolvedValue({ foods: [{ id: 'f00d0000-6010-4000-8000-000000000014', name: 'Воппер', basis: '100g',
+    calories: 262.77, protein: 9.85, fat: 16.06, carbs: 19.34,
+    attribution: { label: 'Данные: perek.us', url: 'https://perek.us/food/burger-king/vopper' } }], hasMore: false })
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox'), 'воппер')
+  expect(await screen.findByRole('link', { name: 'Данные: perek.us' })).toHaveAttribute('href', 'https://perek.us/food/burger-king/vopper')
+})
+
 it('shows barcode camera entry only for the server-authorized barcode cohort', () => {
   fixture.barcodeEnabled = true
   setup()

@@ -30,6 +30,8 @@
 .nutrition-native-select { position:relative; display:block; }
 .nutrition-native-select > svg { position:absolute; right:12px; top:50%; width:16px; height:16px; transform:translateY(-50%) rotate(90deg); pointer-events:none; color:var(--muted); }
 .nutrition-food-list, .nutrition-meal { display:grid; gap:var(--space-2); }
+.nutrition-food-result { display:grid; gap:var(--space-1); }
+.nutrition-attribution { color:var(--muted); font-size:var(--font-size-sm); padding-inline:var(--space-2); width:max-content; }
 .nutrition-food { display:flex; justify-content:space-between; gap:var(--space-2); text-align:left; width:100%; }
 .nutrition-food span { min-width:0; overflow-wrap:anywhere; }
 .nutrition-food small, .nutrition-entry small { display:block; color:var(--muted); margin-top:var(--space-1); }
