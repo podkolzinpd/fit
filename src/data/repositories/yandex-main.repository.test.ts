@@ -653,6 +653,29 @@ describe('Yandex main repository', () => {
     expect(JSON.parse(String(init.body))).toEqual({ fullName: 'Антон' })
   })
 
+  it.each(['invitation', 'archive'] as const)('drops a stale client snapshot after a failed %s command', async (command) => {
+    let version = 1
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((input) => {
+      const path = new URL(String(input)).pathname
+      if (path === '/v1/clients') return Promise.resolve(jsonResponse({ clients: [{
+        id: clientId, canArchive: true, hasAccount: command === 'invitation' && version > 1,
+        fullName: 'Synthetic client', canonicalFullName: 'Synthetic client', gender: null,
+        ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+        currentWeightKg: null, archivedAt: null, version, membershipVersion: 1,
+      }] }))
+      return Promise.resolve(jsonResponse({ error: command === 'invitation' ? 'action_not_allowed' : 'version_conflict' }, command === 'invitation' ? 403 : 409))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const previous = await repository.clients.get(clientId)
+    expect(previous.version).toBe(1)
+    version = 2
+    await expect(command === 'invitation'
+      ? repository.invitations.createShare(clientId, 'client')
+      : repository.clients.setArchived(previous, true)).rejects.toMatchObject({ code: command === 'invitation' ? 'PT403' : 'PT409' })
+    expect((await repository.clients.get(clientId)).version).toBe(2)
+  })
+
   it('drops a stale client snapshot after a conflict and on realtime refresh', async () => {
     vi.useFakeTimers()
     let version = 1
