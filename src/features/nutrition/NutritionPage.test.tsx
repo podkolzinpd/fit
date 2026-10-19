@@ -10,11 +10,11 @@ import { scaledNutrition, type NutritionDay, type NutritionEntry } from '../../s
 import { NutritionPage, NutritionSummary } from './NutritionPage'
 import { readNutritionForm } from './draft'
 
-const fixture = vi.hoisted(() => ({ enabled: true, role: 'client', userId: 'f00d0000-6010-4000-8000-000000000001',
+const fixture = vi.hoisted(() => ({ enabled: true, barcodeEnabled: false, role: 'client', userId: 'f00d0000-6010-4000-8000-000000000001',
   day: vi.fn<NutritionRepository['day']>(), search: vi.fn<NutritionRepository['search']>(), barcode: vi.fn<NutritionRepository['barcode']>(), recent: vi.fn<NutritionRepository['recent']>(),
   save: vi.fn<NutritionRepository['save']>(), setDeleted: vi.fn<NutritionRepository['setDeleted']>(),
   consents: vi.fn<NutritionRepository['consents']>(), setConsent: vi.fn<NutritionRepository['setConsent']>(), get: vi.fn() }))
-vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: fixture.userId, role: fixture.role, timezone: 'Europe/Moscow' } }) }))
+vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: fixture.userId, role: fixture.role, timezone: 'Europe/Moscow', experiments: { nutritionBarcode: fixture.barcodeEnabled } } }) }))
 vi.mock('../../app/feature-flags', () => ({ isNutritionPilotEnabled: () => fixture.enabled }))
 vi.mock('../../app/data-backend-context', () => ({ useDataBackend: () => ({ nutrition: fixture, clients: { get: fixture.get } }) }))
 vi.mock('../chat', () => ({ ChatStartButton: () => <button>Написать</button> }))
@@ -26,7 +26,7 @@ const empty: NutritionDay = { access: 'granted', entries: [], totals: { calories
 beforeEach(() => {
   vi.clearAllMocks()
   sessionStorage.clear(); localStorage.clear()
-  fixture.enabled = true; fixture.role = 'client'
+  fixture.enabled = true; fixture.barcodeEnabled = false; fixture.role = 'client'
   fixture.day.mockResolvedValue(empty)
   fixture.search.mockResolvedValue({ foods: [], hasMore: false })
   fixture.recent.mockResolvedValue([entry])
@@ -74,6 +74,21 @@ it('splits a typed food list and carries its explicit grams into the chosen cata
   await user.click(await screen.findByRole('button', { name: /Куриная грудка.*113 ккал/i }))
   expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('300')
   expect(fixture.save).not.toHaveBeenCalled()
+})
+
+it('normalizes a single free-text product before searching and keeps its grams', async () => {
+  fixture.search.mockResolvedValue({ foods: [{ id: 'f00d0000-6010-4000-8000-000000000014', name: 'Куриная грудка', basis: '100g', calories: 113, protein: 23.6, fat: 1.9, carbs: 0 }], hasMore: false })
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox'), 'куриная грудка 300гр')
+  await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('куриная грудка', 1))
+  await user.click(await screen.findByRole('button', { name: /Куриная грудка.*113 ккал/i }))
+  expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('300')
+})
+
+it('shows barcode camera entry only for the server-authorized barcode cohort', async () => {
+  fixture.barcodeEnabled = true
+  setup()
+  expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeVisible()
 })
 
 it('manual portion needs only name and calories; unknown macros remain null', async () => {
