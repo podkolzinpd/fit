@@ -10,10 +10,22 @@ frontend. Безопасные локальные URL и publishable key хра�
 Development-сборка программно отклоняет любой Supabase URL, кроме `localhost` и
 `127.0.0.1`. `VITE_SUPABASE_*` нужны только локальным legacy-сценариям, не production
 web/Android/iOS build. Текущая production-конфигурация находится в
-`.github/workflows/deploy-yandex-frontend.yml`, а не в Vercel Production.
+`.github/workflows/prepare-cloudru-frontend.yml`, а не в Vercel Production.
+Yandex frontend workflow сохранён для прежнего контура; его наличие не означает
+активный production deploy.
 Production URL/ключи нельзя копировать в `.env.local`, `.env.development` или
 другие локальные env-файлы. `npm run db:reset` сбрасывает только локальный
 Supabase baseline, не Yandex PostgreSQL.
+
+## Карта системы и подготовка возврата в Yandex Cloud
+
+Актуальная проверенная точка16.10.2026, карта сервисов/доступов, матрица
+работоспособности и очередь исправлений находятся в
+[отчёте аудита](docs/design/CLOUD_RETURN_AUDIT_20261016.md).
+[Инструкция возврата](docs/design/CLOUD_RETURN_RUNBOOK_20261016.md) — проект
+будущей операции с одиночным активным writer, без потери подтверждённых записей
+и с целевым окном остановки записи≤120мин. Полная приёмка возврата ещё не пройдена.
+Локальная synthetic rehearsal не разрешает production migration/DNS switch.
 
 ## Cloud.ru stage: bootstrap и подготовка API
 
