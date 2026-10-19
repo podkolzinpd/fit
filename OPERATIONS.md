@@ -1,5 +1,33 @@
 # Эксплуатация Fit V2
 
+## Автоматический выбор проверок PR
+
+`scripts/e2e-scope.mjs` определяет frontend/browser scope по полному diff PR.
+Ручная просьба в промпте, метка PR или bypass-флаг не нужны и не разрешают skip.
+Для проверенных documentation/API-only/operations-only путей пропускаются
+frontend typecheck/build/coverage, frontend Terraform и браузерные матрицы.
+Общие lint, policy/hosting-контракты, API и PostgreSQL остаются обязательными.
+Android debug уже фильтруется по native/frontend/build paths в своём workflow;
+служебный PR не требует ручной пересборки WebView/iOS/Android.
+
+Auth/routing/контрактные изменения, зависимости, неизвестные пути и CI policy
+требуют полный набор. Классификатор не считает все backend/infra/scripts пути
+безопасными: например, Nginx/CORS/build и новый API runtime требуют проверки.
+На main/manual CI frontend и browser acceptance всегда полные; временный
+Fit Lime feature scope, его срок и аудит inventory не меняются.
+
+Каждый запуск публикует решение и классификацию каждого файла в job log и
+GitHub Actions Summary. Для локального dry run:
+
+```sh
+EVENT_NAME=pull_request node scripts/e2e-scope.mjs <base-sha> <head-sha> --json
+```
+
+Для незакоммиченных изменений учитывайте дополнительно working-tree diff.
+Недоступный/пустой diff требует full. Required `app`/`e2e` проверяют успешность
+scope и ожидаемые success/skipped состояния; failed/cancelled/пустой результат
+не становится зелёным skip. Repository quality не отключается классификатором.
+
 ## Локальная разработка
 
 Обычный запуск выполняется командой `npm run dev`: через Podman она готовит

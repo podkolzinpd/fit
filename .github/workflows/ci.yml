@@ -35,7 +35,7 @@ jobs:
         env:
           MIGRATION_BASE: ${{ github.event.pull_request.base.sha }}
 
-  app-quality:
+  repository-quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,11 +45,23 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: npm run typecheck
       - run: npm run db:types:check
       - run: npm run infra:policy:test
       - run: npm run frontend:hosting:test
       - run: node --test scripts/prepare-fit-lime-fonts.test.mjs
+
+  app-quality:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.frontend_required == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
       - run: npm run build
 
       - name: Verify offline frontend package against the real build
@@ -58,6 +70,8 @@ jobs:
           RELEASE_ID: ${{ github.sha }}
 
   frontend-infrastructure:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.frontend_required == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -72,6 +86,8 @@ jobs:
       - run: terraform -chdir=infra/yandex-frontend test
 
   app-tests:
+    needs: e2e-scope
+    if: needs.e2e-scope.outputs.frontend_required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,21 +98,36 @@ jobs:
       - run: npm ci
       - run: npm run test:coverage
 
-  # Keep the required `app` check stable while quality/build and coverage run
-  # concurrently. A failure or cancellation in either lane still blocks merge.
+  # Only a successful scope decision may authorize skipped frontend lanes.
+  # Repository lint/policy remains mandatory, independently of frontend scope.
   app:
-    needs: [app-quality, app-tests, frontend-infrastructure]
+    needs: [e2e-scope, repository-quality, app-quality, app-tests, frontend-infrastructure]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Verify app checks
         env:
+          SCOPE_RESULT: ${{ needs.e2e-scope.result }}
+          FRONTEND_REQUIRED: ${{ needs.e2e-scope.outputs.frontend_required }}
+          REPOSITORY_RESULT: ${{ needs.repository-quality.result }}
           QUALITY_RESULT: ${{ needs.app-quality.result }}
           TESTS_RESULT: ${{ needs.app-tests.result }}
           INFRA_RESULT: ${{ needs.frontend-infrastructure.result }}
         run: |
           set -euo pipefail
-          if [[ "$QUALITY_RESULT" != "success" || "$TESTS_RESULT" != "success" || "$INFRA_RESULT" != "success" ]]; then
+          if [[ "$SCOPE_RESULT" != "success" || "$REPOSITORY_RESULT" != "success" ]]; then
+            echo "Scope detection and repository quality must pass"
+            exit 1
+          fi
+          if [[ "$FRONTEND_REQUIRED" == "false" ]]; then
+            if [[ "$QUALITY_RESULT" != "skipped" || "$TESTS_RESULT" != "skipped" || "$INFRA_RESULT" != "skipped" ]]; then
+              echo "Unexpected frontend results for a non-frontend scope"
+              exit 1
+            fi
+            echo "Frontend checks intentionally skipped by verified PR scope"
+            exit 0
+          fi
+          if [[ "$FRONTEND_REQUIRED" != "true" || "$QUALITY_RESULT" != "success" || "$TESTS_RESULT" != "success" || "$INFRA_RESULT" != "success" ]]; then
             echo "App checks failed: quality=$QUALITY_RESULT tests=$TESTS_RESULT infrastructure=$INFRA_RESULT"
             exit 1
           fi
@@ -189,6 +220,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       required: ${{ steps.scope.outputs.required }}
+      frontend_required: ${{ steps.scope.outputs.frontend_required }}
       database_required: ${{ steps.database-scope.outputs.required }}
       lime_mode: ${{ steps.lime-scope.outputs.mode }}
       lime_tags: ${{ steps.lime-scope.outputs.tags }}
@@ -197,10 +229,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Detect browser-relevant changes
+      - name: Detect frontend and browser changes with per-file reasons
         id: scope
         run: node scripts/e2e-scope.mjs "$BASE_SHA" "$HEAD_SHA"
         env:
+          EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Detect legacy database changes
@@ -576,11 +609,15 @@ jobs:
             echo "E2E scope detection failed"
             exit 1
           fi
-          if [[ "$E2E_REQUIRED" != "true" ]]; then
+          if [[ "$E2E_REQUIRED" == "false" ]]; then
+            if [[ "$YANDEX_AUTH_RESULT" != "skipped" || "$VISUAL_RESULT" != "skipped" || "$CHROMIUM_RESULT" != "skipped" || "$WEBKIT_RESULT" != "skipped" || "$FIT_LIME_RESULT" != "skipped" ]]; then
+              echo "Unexpected browser results for a non-browser scope"
+              exit 1
+            fi
             echo "E2E skipped: changes do not affect the browser runtime"
             exit 0
           fi
-          if [[ "$YANDEX_AUTH_RESULT" != "success" || "$VISUAL_RESULT" != "success" || "$CHROMIUM_RESULT" != "success" || "$WEBKIT_RESULT" != "success" || "$FIT_LIME_RESULT" != "success" ]]; then
+          if [[ "$E2E_REQUIRED" != "true" || "$YANDEX_AUTH_RESULT" != "success" || "$VISUAL_RESULT" != "success" || "$CHROMIUM_RESULT" != "success" || "$WEBKIT_RESULT" != "success" || "$FIT_LIME_RESULT" != "success" ]]; then
             echo "E2E failed: yandex-auth=$YANDEX_AUTH_RESULT visual=$VISUAL_RESULT chromium=$CHROMIUM_RESULT webkit=$WEBKIT_RESULT fit-lime=$FIT_LIME_RESULT"
             exit 1
           fi
