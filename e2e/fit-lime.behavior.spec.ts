@@ -1040,6 +1040,127 @@ test('Fit Lime questions remain visible when dialogs fail, and dialogs recover i
 })
 
 // One mobile interaction per engine: history access must match list and detail.
+test('Trainer restores archived client before sharing an invitation', { tag: ['@lime-clients'] }, async ({ page }) => {
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  let archived = true
+  let canArchive = true
+  let version = 1
+  let restores = 0
+  let invitations = 0
+  let releaseRestore: (() => void) | undefined
+  let revokeArchivePermission = false
+  const name = 'Архивный спортсмен'
+  await page.route((url) => url.pathname === '/v1/clients', (route) => {
+    const archivedRequest = new URL(route.request().url()).searchParams.get('archived') === 'true'
+    return route.fulfill({ json: { clients: archivedRequest === archived ? [{
+      id: clientId, canArchive, hasAccount: false, fullName: name, canonicalFullName: name,
+      gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null,
+      goal: 'Сохранённая цель', note: 'Сохранённая заметка', currentWeightKg: null,
+      archivedAt: archived ? '2026-10-19T08:00:00Z' : null, version, membershipVersion: 1,
+    }] : [] } })
+  })
+  // Archived memberships really are absent in the API; do not fake isRoot here.
+  await page.route('**/v1/connections', (route) => route.fulfill({ json: {
+    memberships: archived ? [] : [{ clientId, trainerId, firstName: 'Тренер', lastName: null, joinedAt: '2026-09-01T00:00:00Z', isRoot: canArchive }], invitations: [],
+  } }))
+  await page.route(`**/v1/clients/${clientId}/archive`, async (route) => {
+    restores += 1
+    expect(route.request().postDataJSON()).toEqual({ archived: false, expectedVersion: version })
+    if (revokeArchivePermission) {
+      canArchive = false
+      return route.fulfill({ status: 403, json: { error: 'action_not_allowed' } })
+    }
+    if (restores === 1) return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    await new Promise<void>((resolve) => { releaseRestore = resolve })
+    archived = false
+    version += 1
+    return route.fulfill({ json: { client: { version } } })
+  })
+  await page.route('**/v1/invitation-links', (route) => {
+    invitations += 1
+    expect(archived).toBe(false)
+    expect(route.request().postDataJSON()).toEqual({ clientId, targetRole: 'client' })
+    return route.fulfill({ status: 201, json: { invitation: {
+      id: '10000000-0000-4000-8000-000000000099', clientId, targetRole: 'client',
+      code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`, expiresAt: '2099-01-01T00:00:00Z',
+    } } })
+  })
+  await page.goto('/clients/archive')
+  await page.getByRole('link', { name: new RegExp(name) }).click()
+  const restore = page.getByRole('button', { name: 'Вернуть из архива', exact: true })
+  await expect(restore).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toHaveCount(0)
+  await restore.click()
+  const error = page.getByRole('alert').filter({ hasText: 'Не удалось вернуть клиента из архива' })
+  await expect(error).toBeVisible()
+  await expect(restore).toBeVisible()
+  expect(archived).toBe(true)
+  expect(invitations).toBe(0)
+  await error.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect.poll(() => Boolean(releaseRestore)).toBe(true)
+  await expect(page.getByRole('button', { name: 'Обновляем…', exact: true })).toBeDisabled()
+  releaseRestore!()
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toBeVisible()
+  await expect(error).toHaveCount(0)
+  await expect(page.getByText('Сохранённая цель', { exact: true })).toBeVisible()
+  await expect(page.getByText('Сохранённая заметка', { exact: true })).toBeVisible()
+  await page.goto('/clients')
+  await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible()
+  await page.goto('/clients/archive')
+  await expect(page.getByRole('link', { name: new RegExp(name) })).toHaveCount(0)
+  await page.goto(`/clients/${clientId}`)
+  await page.getByRole('button', { name: 'Пригласить клиента', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
+  expect(restores).toBe(2)
+  expect(invitations).toBe(1)
+  // A visible card without the explicit capability must never offer restoration.
+  archived = true
+  canArchive = false
+  await page.reload()
+  await expect(page.getByRole('heading', { name })).toBeVisible()
+  await expect(restore).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Пригласить клиента', exact: true })).toHaveCount(0)
+  // Losing permission while the card is open must also remove the retry action.
+  canArchive = true
+  revokeArchivePermission = true
+  await page.reload()
+  await restore.click()
+  await expect(error).toBeVisible()
+  await expect(restore).toHaveCount(0)
+  await expect(error.getByRole('button', { name: 'Повторить', exact: true })).toHaveCount(0)
+  expect(restores).toBe(3)
+})
+
+test('Invitation denial refreshes an already-connected client', { tag: ['@lime-clients'] }, async ({ page }) => {
+  await mockPilot(page, { fitLime: true, workouts: [] })
+  let linked = false
+  let invitations = 0
+  await page.route((url) => url.pathname === '/v1/clients', (route) => route.fulfill({ json: { clients: [{
+    id: clientId, canArchive: true, hasAccount: linked, fullName: 'Подключённый спортсмен', canonicalFullName: 'Подключённый спортсмен',
+    gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+    currentWeightKg: null, archivedAt: null, version: linked ? 2 : 1, membershipVersion: 1,
+  }] } }))
+  await page.route('**/v1/invitation-links', (route) => {
+    invitations += 1
+    return route.fulfill({ status: 403, json: { error: 'action_not_allowed' } })
+  })
+  await page.goto(`/clients/${clientId}`)
+  const invite = page.getByRole('button', { name: 'Пригласить клиента', exact: true })
+  await expect(invite).toBeVisible()
+  await invite.click()
+  await expect(page.getByText('Недостаточно прав для этого действия.', { exact: true })).toBeVisible()
+  await expect(invite).toBeVisible()
+  expect(invitations).toBe(1)
+  linked = true
+  await invite.click()
+  await expect(invite).toHaveCount(0)
+  await expect(page.getByText('Недостаточно прав для этого действия.', { exact: true })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Подключённый спортсмен' })).toBeVisible()
+  await expect(invite).toHaveCount(0)
+  expect(invitations).toBe(2)
+})
+
 test('Trainer client detail opens disconnected history without creating a dialog', { tag: ['@lime-clients', '@lime-chat'] }, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await mockPilot(page, { fitLime: true })

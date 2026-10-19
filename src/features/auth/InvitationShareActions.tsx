@@ -36,7 +36,10 @@ export function InvitationShareButton({
       trackGoal('invitation_created')
       await queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] })
     },
-    onError: () => trackGoal('invitation_create_error'),
+    onError: async () => {
+      trackGoal('invitation_create_error')
+      if (targetRole === 'client') await queryClient.invalidateQueries({ queryKey: ['client', clientId] })
+    },
   })
 
   async function revoke(share: InvitationShare): Promise<void> {

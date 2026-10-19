@@ -4233,6 +4233,32 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       })
     })
 
+    it('restores an archived card without membership rows while preserving its data and permissions', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) throw new Error('Database pools are not ready')
+      const snapshot = () => ownerPool!.query(`select
+        to_jsonb(client) - 'version' - 'updated_at' - 'archived_at' as card,
+        (select jsonb_agg(to_jsonb(w) order by w.id) from public.workouts w where w.client_id=client.id) as workouts,
+        (select jsonb_agg(to_jsonb(e) order by e.id) from public.workout_exercises e join public.workouts w on w.id=e.workout_id where w.client_id=client.id) as exercises,
+        (select jsonb_agg(to_jsonb(s) order by s.id) from public.workout_sets s join public.workout_exercises e on e.id=s.workout_exercise_id join public.workouts w on w.id=e.workout_id where w.client_id=client.id) as sets,
+        (select jsonb_agg(to_jsonb(m) order by m.trainer_id) from public.client_trainers m where m.client_id=client.id) as memberships,
+        (select jsonb_agg(to_jsonb(r) order by r.trainer_id) from public.client_trainer_relationships r where r.client_id=client.id) as relationships
+        from public.clients client where client.id=$1`, [CLIENT_ID])
+      const before = (await snapshot()).rows
+      const initial = (await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleClients)).clients.find((client) => client.id === CLIENT_ID)!
+      const archivedVersion = await withActorTransaction(runtimePool, ACTOR_ID, (client) => setClientArchived(client, CLIENT_ID, true, initial.version))
+      const archived = (await withActorTransaction(runtimePool, ACTOR_ID, (client) => readAccessibleClients(client, true))).clients.find((client) => client.id === CLIENT_ID)!
+      expect(archived).toMatchObject({ canArchive: true, version: archivedVersion })
+      expect(archived.archivedAt).not.toBeNull()
+      expect((await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleConnections)).memberships).toEqual([])
+      for (const actorId of [MEMBER_TRAINER_ID, OUTSIDE_TRAINER_ID]) {
+        await expect(withActorTransaction(runtimePool, actorId, (client) => setClientArchived(client, CLIENT_ID, false, archivedVersion))).rejects.toMatchObject({ failure: 'forbidden' })
+      }
+      const version = await withActorTransaction(runtimePool, ACTOR_ID, (client) => setClientArchived(client, CLIENT_ID, false, archivedVersion))
+      const restored = (await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleClients)).clients.find((client) => client.id === CLIENT_ID)!
+      expect(restored).toMatchObject({ archivedAt: null, canArchive: true, version })
+      expect((await snapshot()).rows).toEqual(before)
+    })
+
     it('hides memberships and invitations for archived clients', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')
