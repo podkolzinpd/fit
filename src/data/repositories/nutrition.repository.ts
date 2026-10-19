@@ -5,6 +5,7 @@ import { RepositoryError } from './error'
 export interface NutritionRepository {
   day(day: LocalDate, clientId?: string): Promise<NutritionDay>
   search(query: string, page: number): Promise<{ foods: NutritionFood[]; hasMore: boolean }>
+  barcode(code: string): Promise<NutritionFood | null>
   recent(): Promise<NutritionEntry[]>
   save(draft: NutritionDraft): Promise<NutritionEntry>
   setDeleted(entryId: string, expectedVersion: number, deleted: boolean): Promise<NutritionEntry>
@@ -14,6 +15,6 @@ export interface NutritionRepository {
 // Unsupported test/legacy composition must not create a second production path.
 const unavailable = () => Promise.reject(new RepositoryError('nutrition_unavailable', 'Дневник питания сейчас недоступен.'))
 export const unsupportedNutritionRepository: NutritionRepository = {
-  day: unavailable, search: unavailable, recent: unavailable, save: unavailable,
+  day: unavailable, search: unavailable, barcode: unavailable, recent: unavailable, save: unavailable,
   setDeleted: unavailable, consents: unavailable, setConsent: unavailable,
 }

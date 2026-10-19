@@ -64,6 +64,7 @@ jobs:
         if: inputs.mode == 'enable'
         env:
           FIT_NUTRITION_ACCOUNT_COHORT: ${{ secrets.FIT_NUTRITION_ACCOUNT_COHORT }}
+          FIT_NUTRITION_BARCODE_LOGIN_HASH: ${{ secrets.FIT_NUTRITION_BARCODE_LOGIN_HASH }}
         run: |
           set -euo pipefail
           sudo test ! -L /opt/fit/secrets

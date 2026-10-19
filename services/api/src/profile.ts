@@ -37,6 +37,7 @@ export interface ProfileResponse {
       fitLime: boolean
       assistantFeatureLinks?: boolean
       nutrition?: boolean
+      nutritionBarcode?: boolean
     }
     preferences?: {
       scheduleDensity: 'comfortable' | 'compact'

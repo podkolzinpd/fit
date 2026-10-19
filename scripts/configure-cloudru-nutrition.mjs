@@ -5,20 +5,24 @@ import { checkCloudruApiEnv } from './check-cloudru-api-env.mjs'
 import { prepareNativeNutritionCohort } from './prepare-nutrition-native-cohort.mjs'
 
 export function prepareCloudruNutrition(raw) {
-  const cohort = prepareNativeNutritionCohort(raw)
+  const input = JSON.parse(raw)
+  const cohortInput = Array.isArray(input) ? input : input.cohort
+  const cohort = prepareNativeNutritionCohort(JSON.stringify(cohortInput))
   const parsed = JSON.parse(cohort)
   if (![4, 5].includes(parsed.clients.length) || parsed.trainers.length !== 2) throw new Error('nutrition_cohort_rejected')
-  return cohort
+  const barcodeLoginHash = Array.isArray(input) ? '' : input.barcodeLoginHash
+  if (typeof barcodeLoginHash !== 'string' || !/^[0-9a-f]{64}$/.test(barcodeLoginHash)) throw new Error('nutrition_barcode_cohort_rejected')
+  return { cohort, barcodeLoginHash }
 }
 
 export function mergeCloudruNutritionEnv(existing, raw, mode) {
   checkCloudruApiEnv(existing)
   if (!['enable', 'disable'].includes(mode)) throw new Error('nutrition_mode_rejected')
-  const cohort = mode === 'enable' ? prepareCloudruNutrition(raw) : ''
+  const prepared = mode === 'enable' ? prepareCloudruNutrition(raw) : { cohort: '', barcodeLoginHash: '' }
   // Preserve all unrelated runtime values byte-for-byte, including AI/CORS/auth.
-  const retained = existing.split('\n').filter(line => !/^NUTRITION_(ENABLED|LOGIN_COHORT)=/.test(line)).join('\n')
+  const retained = existing.split('\n').filter(line => !/^NUTRITION_(ENABLED|LOGIN_COHORT|BARCODE_ENABLED|BARCODE_LOGIN_HASH)=/.test(line)).join('\n')
   const next = retained + (retained.endsWith('\n') ? '' : '\n')
-    + `NUTRITION_ENABLED=${mode === 'enable'}\nNUTRITION_LOGIN_COHORT=${cohort}\n`
+    + `NUTRITION_ENABLED=${mode === 'enable'}\nNUTRITION_LOGIN_COHORT=${prepared.cohort}\nNUTRITION_BARCODE_ENABLED=${mode === 'enable'}\nNUTRITION_BARCODE_LOGIN_HASH=${prepared.barcodeLoginHash}\n`
   checkCloudruApiEnv(next)
   return next
 }
@@ -30,8 +34,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       if (process.env.GITHUB_REF !== 'refs/heads/main' || process.env.GITHUB_REPOSITORY !== 'podkolzinpd/fit') throw new Error('rejected')
       // stdout is piped exclusively into a private root-owned file, never logs.
       const raw = process.env.FIT_NUTRITION_ACCOUNT_COHORT
-      const cohort = prepareCloudruNutrition(raw)
-      process.stdout.write(mode === 'prepare' ? raw : `NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=${cohort}\n`)
+      const barcodeLoginHash = process.env.FIT_NUTRITION_BARCODE_LOGIN_HASH
+      const prepared = prepareCloudruNutrition(JSON.stringify({ cohort: JSON.parse(raw ?? ''), barcodeLoginHash }))
+      process.stdout.write(mode === 'prepare' ? JSON.stringify({ cohort: JSON.parse(raw ?? ''), barcodeLoginHash }) : `NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=${prepared.cohort}\nNUTRITION_BARCODE_ENABLED=true\n`)
     } else {
       const id = process.argv[3]
       if (process.getuid() !== 0 || !/^[0-9]+-[0-9]+$/.test(id ?? '')) throw new Error('rejected')

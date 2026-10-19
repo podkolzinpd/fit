@@ -7,8 +7,8 @@ import { mergeCloudruNutritionEnv, prepareCloudruNutrition } from './configure-c
 const base = 'DATABASE_HOST=10.70.10.67\nDATABASE_PORT=5432\nDATABASE_NAME=fit\nDATABASE_USER=fit_api\nDATABASE_SSL_MODE=require\nFIT_MEDIA_STORAGE_PROVIDER=cloudru\nFIT_AI_FUNCTIONS_ENABLED=false\nFIT_AI_SUMMARY_GENERATION_DISABLED=true\nCORS_ALLOWED_ORIGINS=https://fit-training.ru\nCLOUDRU_MEDIA_KEY_SECRET=synthetic\n'
 
 test('nutrition disable preserves every unrelated value, removes only own cohort, and is idempotent', () => {
-  const next = mergeCloudruNutritionEnv(base + 'NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=old-private-value\n', '', 'disable')
-  assert.equal(next, base + 'NUTRITION_ENABLED=false\nNUTRITION_LOGIN_COHORT=\n')
+  const next = mergeCloudruNutritionEnv(base + 'NUTRITION_ENABLED=true\nNUTRITION_LOGIN_COHORT=old-private-value\nNUTRITION_BARCODE_ENABLED=true\nNUTRITION_BARCODE_LOGIN_HASH=old-private-value\n', '', 'disable')
+  assert.equal(next, base + 'NUTRITION_ENABLED=false\nNUTRITION_LOGIN_COHORT=\nNUTRITION_BARCODE_ENABLED=false\nNUTRITION_BARCODE_LOGIN_HASH=\n')
   assert.equal(mergeCloudruNutritionEnv(next, '', 'disable'), next)
 })
 

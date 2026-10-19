@@ -11,7 +11,7 @@ import { NutritionPage, NutritionSummary } from './NutritionPage'
 import { readNutritionForm } from './draft'
 
 const fixture = vi.hoisted(() => ({ enabled: true, role: 'client', userId: 'f00d0000-6010-4000-8000-000000000001',
-  day: vi.fn<NutritionRepository['day']>(), search: vi.fn<NutritionRepository['search']>(), recent: vi.fn<NutritionRepository['recent']>(),
+  day: vi.fn<NutritionRepository['day']>(), search: vi.fn<NutritionRepository['search']>(), barcode: vi.fn<NutritionRepository['barcode']>(), recent: vi.fn<NutritionRepository['recent']>(),
   save: vi.fn<NutritionRepository['save']>(), setDeleted: vi.fn<NutritionRepository['setDeleted']>(),
   consents: vi.fn<NutritionRepository['consents']>(), setConsent: vi.fn<NutritionRepository['setConsent']>(), get: vi.fn() }))
 vi.mock('../../app/auth-context', () => ({ useAuth: () => ({ actor: { userId: fixture.userId, role: fixture.role, timezone: 'Europe/Moscow' } }) }))
@@ -62,6 +62,18 @@ it('repeats the displayed snapshot and validates quantity without an automatic s
     day: localDate('2026-10-10'), food: { kind: 'manual', name: entry.name, basis: '100g', calories: 152.2, protein: 9.8, fat: 4.2, carbs: 18.8 } })))
   await screen.findByText('Запись сохранена')
   expect(readNutritionForm(fixture.userId, 'new')).toBeNull()
+})
+
+it('splits a typed food list and carries its explicit grams into the chosen catalog food', async () => {
+  fixture.search.mockResolvedValue({ foods: [{ id: 'f00d0000-6010-4000-8000-000000000014', name: 'Куриная грудка', basis: '100g',
+    calories: 113, protein: 23.6, fat: 1.9, carbs: 0 }], hasMore: false })
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox'), 'куриная грудка 300гр., рис отварной 100гр')
+  await user.click(screen.getByRole('button', { name: /куриная грудка.*300 г/i }))
+  await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('куриная грудка', 1))
+  await user.click(await screen.findByRole('button', { name: /Куриная грудка.*113 ккал/i }))
+  expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('300')
+  expect(fixture.save).not.toHaveBeenCalled()
 })
 
 it('manual portion needs only name and calories; unknown macros remain null', async () => {
