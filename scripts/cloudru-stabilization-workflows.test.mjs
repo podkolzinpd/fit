@@ -256,6 +256,11 @@ test('speech ingress upgrades only the authenticated loopback relay and its runt
   assert.match(workflow, /cloudru-smoke.mjs guard/)
   assert.deepEqual([...workflow.matchAll(/secrets\.([A-Z0-9_]+)/g)].map(match => match[1]), ['CLOUDRU_SPEECHKIT_API_KEY'])
   assert.doesNotMatch(workflow, /MIGRATION_DATABASE_|DATABASE_PASSWORD/)
+  const inspect = read('.github/workflows/inspect-cloudru-operations.yml')
+  const diagnostics = inspect.slice(inspect.indexOf('      - name: Read only aggregate SpeechKit'), inspect.indexOf('      - name: Inspect runtime'))
+  assert.match(diagnostics, /inputs\.speech_diagnostics/)
+  assert.match(diagnostics, /journalctl CONTAINER_NAME=fit-speechkit-cloudru/)
+  assert.doesNotMatch(diagnostics, /--unit=fit-speechkit\.service/)
   const validationStart = workflow.indexOf('          test -n "$SPEECHKIT_API_KEY"')
   const validation = workflow.slice(validationStart, workflow.indexOf('          id=', validationStart)).replace(/^          /gm, '')
   // Independent validation failures, not a browser/theme matrix: nothing after

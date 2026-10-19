@@ -58,7 +58,7 @@ jobs:
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
-          sudo timeout 15 journalctl --unit=fit-speechkit.service --since="15 minutes ago" --lines=500 --output=json --no-pager |
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-speechkit-cloudru --since="15 minutes ago" --lines=500 --output=json --no-pager |
             python3 scripts/cloudru-speech-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Inspect runtime, workers, certificates and backup freshness without reading user data
         env:
