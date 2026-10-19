@@ -30,7 +30,7 @@ test('validates the current app-session against only the local Cloud.ru API with
   assert.equal(calls, 0)
   assert.equal(await authenticateCloudruSpeech(token, async (url, options) => {
     calls++
-    assert.equal(url, 'http://127.0.0.1:18080/v1/profile')
+    assert.equal(url, 'http://127.0.0.1:18080/v1/legal/acceptance')
     assert.equal(options.headers['x-fit-session'], token)
     assert.equal(options.redirect, 'error')
     return new Response('{}', { status: 200 })

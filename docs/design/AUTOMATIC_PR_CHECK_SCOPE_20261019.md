@@ -79,6 +79,15 @@ f527d02c после удаления merge-дубля одного fixture path.
 YAML/dependencies и diff-check passed. SQL/runtime/dependencies main не менялись,
 повтор всей frontend/API сборки не требуется; полный CI нового head обязателен.
 
+CI39314938991/head88a1476a: 31 jobs success/skipped, WebKit visual1/4 и
+итоговый e2e failed. Неизменённый `Figma workout Coach reference full editor1440`
+(`trainer-schedule-v2.visual.spec.ts:365`) трижды исчерпал общий30s на поздних
+click/reload (строки520/539), а не на data/layout matcher. Локальная точная
+диагностика repeat-each3/workers1/retries0 прошла3/3:7,7/6,8/6,8s, всего24s.
+Точная причина замедления CI не установлена; нагрузка — гипотеза. Spec,
+assertions, budgets и retries не менялись; красный CI не считается приёмкой.
+Дальнейшая проверка нового head после включения main384ed74b — в PR1722.
+
 Изолированный Git fixture сначала ошибался из-за отсутствующей папки после
 checkout и попадания output/summary в fixture commit; изоляция исправлена,
 повтор69/69 passed, продуктовые assertions не менялись. Эти промежуточные ошибки
