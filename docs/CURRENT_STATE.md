@@ -119,4 +119,3 @@ Cloud.ru stabilization15.10: server checkpoint ed7969d3; API/frontend/fresh back
 5. DB offsite restore drill выполнен38777631050; остаются authenticated AI summary и push delivery на согласованном устройстве, media metadata403 и observation window. Supabase не удалять: write gate paused, обратной миграции Cloud.ru writes нет.
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover. Android: добавлены Capacitor-проект и локальная debug-сборка для будущего RuStore; origin `https://localhost`, возврат Yandex ID — deep link `com.coachspace.fit://auth/yandex/callback` с PKCE. Redirect URI зарегистрирован 2 октября; реальный вход на устройстве, release-подпись и публикация ещё не подтверждены.
-
