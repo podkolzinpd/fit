@@ -22,9 +22,18 @@ for index in "${!files[@]}"; do
 done
 was_active=false
 if systemctl is-active --quiet fit-speechkit.service; then was_active=true; fi
+diagnose_failed_relay() {
+  echo 'Cloud.ru speech promotion diagnostics (no request data):' >&2
+  systemctl show fit-speechkit.service \
+    --property=LoadState --property=ActiveState --property=SubState --property=Result \
+    --property=ExecMainCode --property=ExecMainStatus --property=NRestarts >&2 || true
+  podman ps --all --filter name=fit-speechkit-cloudru --format '{{.Names}} {{.Status}}' >&2 || true
+  ss --listening --tcp --numeric 'sport = :18084' >&2 || true
+}
 rollback() {
   trap - ERR INT TERM
   failed=false
+  diagnose_failed_relay
   systemctl stop fit-speechkit.service 2>/dev/null || true
   for index in "${!files[@]}"; do
     path=${files[$index]}
