@@ -42,15 +42,18 @@
 | --- | --- |
 | Оригинальные иконки | `src/shared/fit-lime-icons.ts`, `icons.tsx` и контекст, включая portals |
 | Дополнительные SVG-экспорты | `coach-workout-reference-assets.ts`; рисунок отдельно от тренерских флагов/стилей |
-| Дата/время | `src/shared/FitLimeDatePicker.tsx`, `local-date.ts` |
+| Дата/время | `src/shared/FitLimeDatePicker.tsx` (явный `clientLime`), `ClientWorkoutDateControl.tsx`, `local-date.ts` |
+| Шапка клиентского окна | `src/shared/FitLimeSheetHeader.tsx`; один заголовок, back и необязательное подтверждение |
+| Маркер дня клиента | `lime-calendar-day-marker` в клиентских calendar/date CSS:36×36 внутри44×44 |
 | Поиск, фильтры, техника, мультивыбор | `src/features/exercises/ExercisePicker.tsx` |
 | Текстовый/голосовой ввод | `src/features/workouts/WorkoutComposer.tsx` |
 | Черновик, проверка и сохранение | `TodayPage.tsx`, `today-draft.ts` |
 | Список, календарь, форма и детали тренировки | `WorkoutsPages.tsx` и связанные feature-компоненты |
 
-Новый клиентский вариант окна даты, C1/C2 и остальные согласованные эскизы
-перечислены в [плане](design/CLIENT_LIME_SVG_ADOPTION_20261018.md).
-Они не объявлены здесь работающими.
+Клиентские варианты подключены к каталогу/фильтрам, истории, review, сохранению
+и редактору. Состав, acceptance-ID и фактический статус проверки/публикации —
+в [плане](design/CLIENT_LIME_SVG_ADOPTION_20261018.md). Статичный эскиз
+не заменяет проверку конкретной сборки.
 
 ## Сохраняемые общие правила
 

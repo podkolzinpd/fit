@@ -1,3 +1,4 @@
+import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { AddActionLabel } from '../../shared/AddActionLabel'
 import { coachLiveSetSummary } from './coach-live-summary'
@@ -1258,6 +1259,7 @@ export function WorkoutFormPage() {
   const templateSource = useQuery({ queryKey: ['workout-template', templateId], queryFn: () => workoutTemplates.get(templateId ?? ''), enabled: Boolean(templateId) })
   const templateDraft = useMemo(() => templateSource.data ? cloneWorkoutTemplate(templateSource.data) : undefined, [templateSource.data])
   const clientMode = actor?.role === 'client'
+  const clientLime = isClientLimeEnabled(actor)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false), enabled: !clientMode })
   const mine = useQuery({ queryKey: ['my-client'], queryFn: () => clientsRepository.getMine(), enabled: clientMode })
   useClientRealtime(source.data?.clientId ?? (clientMode ? mine.data?.id : params.get('client') ?? undefined))
@@ -1576,7 +1578,7 @@ export function WorkoutFormPage() {
         ? 'Укажите длительность до 12 часов; переход через полночь допустим'
         : ''
     endTimeInput?.setCustomValidity(timeError)
-    if (timeError) { if (coachReference) setFormTimeError(timeError); else endTimeInput?.reportValidity(); return }
+    if (timeError) { if (coachReference || clientLime) setFormTimeError(timeError); else endTimeInput?.reportValidity(); return }
     setFormTimeError(null)
     let actualDurationSec: number | null = null
     if (completedMode) {
@@ -1655,11 +1657,12 @@ export function WorkoutFormPage() {
             : <ClientPicker userId={actor?.userId} clients={availableClients ?? []} selectedId={clientId} onChange={(id) => { setClientSelectionError(null); trainingFormatTouched.current = false; setTrainingFormat(undefined); setSelectedClientId(id) }} selectionError={clientSelectionError} loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
         {!workoutId && !(limePlan && params.get('entry') === 'quick') && <div className="workout-record-mode" role="group" aria-label="Тип тренировки"><button type="button" className={!recordCompleted ? 'active' : ''} aria-pressed={!recordCompleted} onClick={() => setRecordCompleted(false)}>План</button><button type="button" className={recordCompleted ? 'active' : ''} aria-pressed={recordCompleted} onClick={() => setRecordCompleted(true)}>Завершённая</button></div>}
         <div className="workout-form-section-head"><p className="eyebrow">КОГДА</p></div>
-        <div className="split workout-time-row"><Field label="Дата"><input name="date" type="date" value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Начало"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>
+        {clientLime ? <ClientWorkoutDateControl value={entryDate} today={today} onChange={(next) => { setEntryDate(next); setFormTimeError(null) }} start={startTime} end={showEndTime ? endTime : undefined} onTimeChange={(next) => { setStartTime(next.start); setEndTime(next.end); setFormTimeError(null) }} disabled={mutation.isPending} /> : <div className="split workout-time-row"><Field label="Дата"><input name="date" type="date" value={entryDate} onChange={(event) => setEntryDate(localDate(event.target.value))} required /></Field><Field label="Начало"><input name="startTime" type="time" value={startTime} onChange={(event) => { setStartTime(event.target.value); (event.currentTarget.form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} /></Field></div>}
         {!clientMode && <div className="workout-record-mode" role="group" aria-label="Формат тренировки"><button type="button" className={(trainingFormat ?? 'self') === 'self' ? 'active' : ''} aria-pressed={(trainingFormat ?? 'self') === 'self'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('self') }}>Самостоятельно</button><button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => { trainingFormatTouched.current = true; setTrainingFormat('with_trainer') }}>С тренером</button></div>}
         {showEndTime
-          ? <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
+          ? clientLime ? <button type="button" className="link workout-remove-end-time" onClick={() => { setEndTime(''); setShowEndTime(false); setFormTimeError(null) }}>Убрать окончание</button> : <div className="workout-end-time"><Field label="Окончание"><input name="endTime" type="time" value={endTime} onChange={(event) => { setEndTime(event.target.value); event.currentTarget.setCustomValidity('') }} /></Field><button type="button" className="link" onClick={() => { setEndTime(''); setShowEndTime(false) }}>Убрать окончание</button></div>
           : <button type="button" className="link workout-add-end-time" onClick={() => setShowEndTime(true)}><AddActionLabel>Добавить время окончания</AddActionLabel></button>}
+        {clientLime && formTimeError && <p className="error" role="alert">{formTimeError}</p>}
         </>}
         <CoachPlanOptions reference={coachReference}>
         {coachReference && <button ref={templateTriggerRef} type="button" disabled={mutation.isPending} className="secondary workout-form-template-trigger" onClick={() => setTemplatePickerOpen(true)}><CopyIcon />Добавить шаблон</button>}
