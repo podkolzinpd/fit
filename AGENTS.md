@@ -82,7 +82,8 @@ Monochrome документы не назначают палитру, шрифт
    API/domain types → query/repository → UI. Не добавляйте парную Supabase migration.
 4. Добавьте happy path, validation, loading, empty, error и retry states.
 5. Если изменилось пользовательское поведение, роли, доступы, навигация или известные ограничения, обновите `docs/PRODUCT_WIKI.md`. Описывайте только уже реализованный функционал; планы и идеи оставляйте в `docs/design` и `FEATURE_PARITY.md`.
-6. Запустите `npm run check`; для DB-изменений также `npm run local:verify` и
+6. Выберите проверки по автоматическому scope ниже; для frontend/shared или
+   неизвестного diff запустите `npm run check`. Для DB-изменений также `npm run local:verify` и
    целевые Yandex API/actor-RLS тесты. `db:reset`/`db:test` проверяют только
    замороженную локальную Supabase-цепочку и не доказывают новую Yandex-схему.
 7. Обновите `docs/CURRENT_STATE.md` в той же ветке, когда фактура уже известна;
@@ -216,6 +217,38 @@ Monochrome документы не назначают палитру, шрифт
   spec выключает сокращение до нового аудита; не обновляйте SHA256 автоматически.
 
 ## Тесты без избыточного дублирования
+
+### Автоматический scope проверок PR
+
+- Пользователь не обязан просить сокращённый прогон в промпте. Перед дорогими
+  проверками агент сам получает фактический diff и запускает
+  `EVENT_NAME=pull_request node scripts/e2e-scope.mjs <base-sha> <head-sha> --json`.
+  Для незакоммиченных изменений учитывайте также весь working-tree diff;
+  результат только для старого HEAD не разрешает пропустить новые изменения.
+- Источник политики — `scripts/e2e-scope.mjs`, общий для CI и агента. Только
+  явно проверенные documentation/API-only/operations-only пути разрешают
+  пропустить frontend build/unit, visual/browser/WebView и пересборку native.
+  Сами изменённые серверные и служебные контракты всё равно проверяются;
+  repository lint/policy, API и PostgreSQL gates не отключаются.
+- Documentation-only здесь означает Markdown, не всю папку `docs/`:
+  `docs/design` содержит SVG и другие inputs frontend. Изменение таких assets
+  или неизвестных data-файлов требует frontend/browser проверки.
+- Auth, routing, API-контракты, frontend/native, общие зависимости, CI-конфиги,
+  неизвестные пути, diff со frontend/shared и недоступная история требуют полного
+  набора. Не добавляйте blanket skip для `scripts/`, workflows или всей infra:
+  Nginx, CSP, CORS и конфигурация сборки могут менять frontend/WebView.
+- При scope `frontendRequired=false` полный frontend `npm run check` и
+  browser/native-прогоны не обязательны. Выполните применимые серверные и
+  служебные проверки, общий lint/policy; в handoff укажите scope и основание
+  пропуска. В остальных случаях действуют все прежние требования проверки.
+- На main/manual CI сохраняется полный набор; required `app`/`e2e` остаются
+  обязательными и проверяют успех классификатора и ожидаемые результаты jobs.
+  Ошибка/неизвестный результат — не разрешение пропуска. Scope не выбирается
+  меткой PR, текстом промпта или ручным флагом отключения.
+- Изменение классификатора/CI само требует полного CI и regression-тестов
+  разрешённых пропусков, смешанного/неизвестного scope и отказов gates.
+
+### Выбор уровня и сохранение уникального покрытия
 
 Перед добавлением или расширением тестов агент обязан:
 
@@ -376,7 +409,9 @@ Yandex migrations, а не на исторические `supabase/migrations` �
 - API/domain types актуальны; generated Supabase types не меняются без
   отдельной явно согласованной legacy-правки.
 - Unit/component/integration/E2E покрытие соответствует риску.
-- `npm run check` зелёный; Yandex DB/RLS тесты зелёные для изменений БД.
+- `npm run check` зелёный либо подтверждённый non-frontend scope прошёл
+  применимые серверные/служебные lint/policy проверки; Yandex DB/RLS тесты
+  зелёные для изменений БД.
 
 # Fit UI / UX Engineering Rules
 
