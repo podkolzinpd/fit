@@ -28,6 +28,8 @@ export type PilotConnectionCommandFailure =
   | 'not_found'
   | 'trainer_disconnect_required'
   | 'trainer_switch_required'
+  | 'invitation_connection_ended'
+  | 'invitation_role_mismatch'
 
 export class PilotConnectionCommandError extends Error {
   constructor(readonly failure: PilotConnectionCommandFailure) {
@@ -54,9 +56,11 @@ function commandError(error: unknown): PilotConnectionCommandError | undefined {
   }
   const message = error.message
   if (typeof message !== 'string') return undefined
+  if (message === 'invitation_connection_ended' || message === 'invitation_role_mismatch') {
+    return new PilotConnectionCommandError(message)
+  }
   if (
     message === 'invitation_not_allowed'
-    || message === 'invitation_role_mismatch'
     || message === 'membership_not_allowed'
   ) {
     return new PilotConnectionCommandError('forbidden')
@@ -77,8 +81,8 @@ function commandError(error: unknown): PilotConnectionCommandError | undefined {
   if (message.startsWith('client_merge_') && message.endsWith('_conflict')) {
     return new PilotConnectionCommandError('client_merge_conflict')
   }
-  if (message === 'client_already_linked') {
-    return new PilotConnectionCommandError('conflict')
+  if (message === 'client_already_linked' || message === 'canonical_client_invalid') {
+    return new PilotConnectionCommandError('client_merge_conflict')
   }
   if (
     message === 'invalid_invitation_role'

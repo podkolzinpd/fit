@@ -166,6 +166,20 @@ test('prepare workflow retains green-main and default-off automatic gate without
   }
 })
 
+test('frontend cannot overtake its server migrations or promote against a different API revision', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/prepare-cloudru-frontend.yml', import.meta.url), 'utf8')
+  const guard = 'test "$api_release" = "${{ needs.source.outputs.commit }}"'
+  assert.ok(workflow.includes(guard))
+  assert.ok(workflow.indexOf(guard) < workflow.indexOf('Verify immutable candidate'))
+  const expected = 'a'.repeat(40)
+  for (const actual of [expected, 'b'.repeat(40)]) {
+    const result = spawnSync('bash', ['-eu', '-c', guard.replace('${{ needs.source.outputs.commit }}', expected)], {
+      encoding: 'utf8', env: { PATH: process.env.PATH, api_release: actual },
+    })
+    assert.equal(result.status, actual === expected ? 0 : 1)
+  }
+})
+
 test('candidate preserves legacy VITE settings and adds only the reviewed Cloud.ru fixed2 plan pilot', async () => {
   const [production, candidate] = await Promise.all([
     readFile(new URL('../.github/workflows/deploy-yandex-frontend.yml', import.meta.url), 'utf8'),

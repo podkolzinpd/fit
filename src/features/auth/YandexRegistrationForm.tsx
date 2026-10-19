@@ -7,10 +7,10 @@ import { Field } from '../../shared/ui'
 import type { AccountRole } from '../../shared/domain'
 import { LEGAL_PATHS } from '../../shared/legal'
 
-export function YandexRegistrationForm({ role, onRoleChange, invitationRequiresClient, firstName, onNameChange, busy, error, onSubmit, onBack }: {
+export function YandexRegistrationForm({ role, onRoleChange, invitationRole, firstName, onNameChange, busy, error, onSubmit, onBack }: {
   role: AccountRole
   onRoleChange: (role: AccountRole) => void
-  invitationRequiresClient: boolean
+  invitationRole?: AccountRole
   firstName: string
   onNameChange: (name: string) => void
   busy: boolean
@@ -31,7 +31,7 @@ export function YandexRegistrationForm({ role, onRoleChange, invitationRequiresC
           <legend>Как вы будете пользоваться ФИТ?</legend>
           <div className="lime-registration-role-options">
             {(['client', 'trainer'] as const).map((value) => <label key={value} className="lime-registration-role">
-              <input type="radio" name="accountRole" value={value} checked={role === value} disabled={invitationRequiresClient && value === 'trainer'} onChange={() => onRoleChange(value)} />
+              <input type="radio" name="accountRole" value={value} checked={role === value} disabled={invitationRole !== undefined && value !== invitationRole} onChange={() => onRoleChange(value)} />
               <span>{value === 'client' ? 'Я спортсмен' : 'Я тренер'}</span>
             </label>)}
           </div>

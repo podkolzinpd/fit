@@ -440,6 +440,8 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'invitation_role_mismatch') return new RepositoryError(code, 'Приглашение предназначено другой роли. Войдите под подходящим аккаунтом.')
+  if (code === 'invitation_connection_ended') return new RepositoryError(code, 'Это подключение уже завершено. Для повторного подключения нужно новое приглашение.')
   if (code === 'push_test_rate_limited') return new RepositoryError(code, 'Тест уже запрошен. Подождите минуту перед повторной отправкой.')
   if (code === 'push_subscription_missing') return new RepositoryError(code, 'Подключение устройства потеряно. Повторите проверку уведомлений.')
   if (status === 401) return new RepositoryError('session_expired', 'Сессия Yandex ID истекла. Войдите заново.')
@@ -1669,7 +1671,6 @@ export function createYandexMainRepository(
           }))
       },
       async revoke(invitationId) { await writeEmpty(queries, `/v1/invitations/${invitationId}`, 'DELETE'); invalidate() },
-      async disconnectTrainer(clientId) { await writeEmpty(queries, `/v1/clients/${clientId}/memberships/me`, 'DELETE'); invalidate(); return { clientId, trainerId: null, status: 'disconnected' } },
       async removeTrainer(clientId, trainerId) { await writeEmpty(queries, `/v1/clients/${clientId}/trainers/${trainerId}`, 'DELETE'); invalidate() },
       async leave(clientId) { await writeEmpty(queries, `/v1/clients/${clientId}/memberships/me`, 'DELETE'); invalidate() },
     },

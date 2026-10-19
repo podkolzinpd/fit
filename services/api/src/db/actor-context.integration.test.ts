@@ -530,6 +530,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await ownerPool.query(`
         do $$
         begin
+          perform pg_advisory_xact_lock(193635, 1);
           if not exists (select 1 from pg_roles where rolname = 'fit_api') then
             create role fit_api login password '${RUNTIME_PASSWORD}';
           else
@@ -784,6 +785,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         `,
         [CLIENT_ID, ACTOR_ID, MEMBER_TRAINER_ID],
       )
+      // Membership metadata is not a coaching grant. This fixture has exactly
+      // one explicitly active trainer; the other membership is deliberately stale.
+      await ownerPool.query(`insert into public.client_trainer_relationships(client_id, trainer_id, connected_by)
+        values ($1,$2,$3) on conflict (client_id) where status='active' do nothing`,
+      [CLIENT_ID, ACTOR_ID, OTHER_ACTOR_ID])
       await ownerPool.query(
         'delete from public.workouts where id = any($1::uuid[])',
         [[ROOT_WORKOUT_ID, MEMBER_WORKOUT_ID, CLIENT_WORKOUT_ID]],
@@ -1435,6 +1441,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await db.query(`insert into public.clients(id,trainer_id,auth_user_id,full_name)
           values($1,$2,$3,'Synthetic trainer name test')`, [clientId, trainerId, clientUserId])
         await db.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [clientId, secondTrainerId])
+        await db.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [clientId, trainerId, clientUserId])
         await db.query(`insert into public.trainer_professional_profiles(trainer_id,draft_data,published_data,published_at)
           values($1,'{"displayName":"Private draft name"}','{"displayName":"Татьяна"}',now()),
           ($2,'{"displayName":"Private unpublished name"}',null,null)`, [trainerId, secondTrainerId])
@@ -1449,7 +1456,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             secondChat: threads.find(row => row.trainerId === secondTrainerId)?.partnerName }
         }
         await actor(clientUserId)
-        expect(await names()).toEqual({ card: 'Татьяна', chat: 'Татьяна', secondCard: 'Анна', secondChat: 'Анна' })
+        expect(await names()).toEqual({ card: 'Татьяна', chat: 'Татьяна', secondCard: undefined, secondChat: undefined })
         expect((await db.query('select trainer_id from public.trainer_professional_profiles where trainer_id=$1', [secondTrainerId])).rows).toEqual([])
         await actor(trainerId)
         await db.query(`update public.trainer_professional_profiles set draft_data='{"displayName":"Changed private name"}' where trainer_id=auth.uid()`)
@@ -2252,7 +2259,6 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         accessMode: 'read_only',
         memberships: [
           { clientId: CLIENT_ID, trainerId: ACTOR_ID, isRoot: true },
-          { clientId: CLIENT_ID, trainerId: MEMBER_TRAINER_ID, isRoot: false },
         ],
         invitations: [{ id: ROOT_INVITATION_ID, clientId: CLIENT_ID }],
       })
@@ -2841,7 +2847,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     it('shares a client only with its owner and connected trainers', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
 
-      for (const actorId of [ACTOR_ID, OTHER_ACTOR_ID, MEMBER_TRAINER_ID]) {
+      for (const actorId of [ACTOR_ID, OTHER_ACTOR_ID]) {
         const visibleClients = await withActorTransaction(
           runtimePool,
           actorId,
@@ -2874,7 +2880,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
             'select trainer_id from public.client_trainers order by trainer_id',
           ),
       )
-      expect(visibleMemberships).toHaveLength(2)
+      expect(visibleMemberships).toEqual([]) // Private aliases/notes are not athlete data.
     })
 
     it('retries finance writes once, preserves receipt dates and recalculates both roles after corrections', async () => {
@@ -2958,7 +2964,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         "select public.add_trainer_finance_payment($1, $2, date '2026-10-08', null) as result", [id, amount])
       await cleanup()
       try {
-        await create(MEMBER_TRAINER_ID, 100000, 0, '2001-01-01')
+        await expect(create(MEMBER_TRAINER_ID, 100000, 0, '2001-01-01')).rejects.toThrow('trainer_finance_client_not_found')
+        // A former trainer's financial history is not a current coaching grant.
+        await owner.query(`insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on,ends_on,payment_due_on)
+          values($1,$2,'Historical other service',10,100000,'2026-09-01','2030-12-31','2001-01-01')`, [MEMBER_TRAINER_ID, CLIENT_ID])
         const closed = await create(ACTOR_ID, 100000, 0, '2002-01-01')
         await owner.query('update public.trainer_finance_packages set closed_at = now() where id = $1', [closed])
         await create(ACTOR_ID, 100000, 100000, '2003-01-01')
@@ -3174,16 +3183,21 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     it('charges the author service across client-owned partitions and stops after disconnect', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database pools are not ready')
       const clientId = randomUUID()
+      const clientOwner = randomUUID()
+      await ownerPool.query("insert into public.profiles(id,account_role) values($1,'client')", [clientOwner])
       await ownerPool.query(`insert into public.clients (id, trainer_id, auth_user_id, full_name)
-        values ($1, $2, null, 'Finance author fixture')`, [clientId, OTHER_ACTOR_ID])
+        values ($1, $2, $2, 'Finance author fixture')`, [clientId, clientOwner])
       await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id)
         values ($1, $2), ($1, $3)`, [clientId, ACTOR_ID, MEMBER_TRAINER_ID])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, clientOwner])
       try {
-        for (const actor of [ACTOR_ID, MEMBER_TRAINER_ID]) {
+        for (const actor of [ACTOR_ID]) {
           await withActorTransaction(runtimePool, actor, (client) => client.query(
             `select public.create_trainer_finance_service($1, 'session_pack', 'Author package',
               5, 0, 100000, 0, date '2026-10-01', date '2026-10-31', null, null)`, [clientId]))
         }
+        await ownerPool.query(`insert into public.trainer_finance_packages(trainer_id,client_id,title,sessions_total,price_cents,starts_on,ends_on)
+          values($1,$2,'Historical other package',5,100000,'2026-10-01','2026-10-31')`, [MEMBER_TRAINER_ID, clientId])
         const draft: PlannedWorkoutDraft = { id: null, requestId: randomUUID(), clientId,
           workoutDate: '2026-10-02', startTime: null, endTime: null, notes: null, exercises: [] }
         const saved = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveCompletedWorkout(client, draft, null))
@@ -3205,7 +3219,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1 and voided_at is null', [self.id])).rowCount).toBe(0)
         const planned = await withActorTransaction(runtimePool, ACTOR_ID, (client) => savePlannedWorkout(client,
           {...draft, requestId: randomUUID(), trainingFormat: 'with_trainer'}, null))
-        await ownerPool.query('delete from public.client_trainers where client_id=$1 and trainer_id=$2',[clientId, ACTOR_ID])
+        await withActorTransaction(runtimePool, ACTOR_ID, client => leaveClientSpace(client, clientId))
         await ownerPool.query("update public.workouts set status='done', completed_at=now() where id=$1",[planned.id])
         expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1', [planned.id])).rowCount).toBe(0)
         expect((await ownerPool.query('select id from public.trainer_finance_sessions where workout_id=$1', [saved.id])).rowCount).toBe(1)
@@ -3216,7 +3230,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await ownerPool.query('delete from public.trainer_finance_packages where client_id=$1',[clientId])
         await ownerPool.query('delete from public.workouts where client_id=$1',[clientId])
         await ownerPool.query('delete from public.client_trainers where client_id=$1',[clientId])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1',[clientId])
         await ownerPool.query('delete from public.clients where id=$1',[clientId])
+        await ownerPool.query('delete from public.profiles where id=$1',[clientOwner])
       }
     })
 
@@ -3588,6 +3604,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         }
 
         await db.query('update public.clients set auth_user_id=$2 where id=$1', [canonical, athlete])
+        await db.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [canonical, trainer, athlete])
         await db.query('update public.clients set merged_into_client_id=$2 where id=$1', [oldCard, canonical])
         for (const actor of [trainer, athlete]) {
           const mergedThreads = await threads(actor)
@@ -3648,13 +3665,6 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         throw new Error('Database pools are not ready')
       }
 
-      await ownerPool.query(
-        `insert into public.client_trainer_relationships (
-           client_id, trainer_id, connected_by
-         ) values ($1, $2, $3)`,
-        [CLIENT_ID, ACTOR_ID, OTHER_ACTOR_ID],
-      )
-
       try {
         const connections = await withActorTransaction(
           runtimePool,
@@ -3680,10 +3690,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           conversation_id: null,
         }])
       } finally {
-        await ownerPool.query(
-          'delete from public.client_trainer_relationships where client_id = $1',
-          [CLIENT_ID],
-        )
+        expect((await ownerPool.query('select trainer_id from public.client_trainer_relationships where client_id=$1 and status=\'active\'', [CLIENT_ID])).rows)
+          .toEqual([{ trainer_id: ACTOR_ID }])
       }
     })
 
@@ -3943,7 +3951,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     it('keeps client stats scoped to workout author and client RLS', async () => {
       if (runtimePool === undefined) throw new Error('Runtime pool is not ready')
       const db = runtimePool
-      for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID]) {
+      await expect(withActorTransaction(db, MEMBER_TRAINER_ID, client => readClientWorkoutStats(client, CLIENT_ID, '2026-10-06'))).rejects.toMatchObject({ failure: 'not_found' })
+      for (const actorId of [ACTOR_ID, OTHER_ACTOR_ID]) {
         const summaries = await withActorTransaction(db, actorId, (client) => client.query<{ workout_date: string; status: string } & QueryResultRow>(`
           select workout_date::text, status from public.workouts where client_id = $1 and deleted_at is null`, [CLIENT_ID]))
         const expectedDone = summaries.filter((item) => item.status === 'done')
@@ -4079,10 +4088,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(memberData.customExercises).toMatchObject([
         { id: MEMBER_CUSTOM_EXERCISE_ID, name: 'Темповый бег' },
       ])
-      expect(memberData.workouts.map((workout) => workout.id)).toEqual([
-        MEMBER_WORKOUT_ID,
-        CLIENT_WORKOUT_ID,
-      ])
+      expect(memberData.workouts).toEqual([])
 
       const clientData = await withActorTransaction(
         runtimePool,
@@ -4160,7 +4166,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           version: 2,
         })
 
-        for (const actorId of [ACTOR_ID, MEMBER_TRAINER_ID, OTHER_ACTOR_ID]) {
+        for (const actorId of [ACTOR_ID, OTHER_ACTOR_ID]) {
           const data = await withActorTransaction(
             runtimePool,
             actorId,
@@ -4208,7 +4214,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         OTHER_ACTOR_ID,
         readAccessibleConnections,
       )
-      expect(clientConnections.memberships).toHaveLength(2)
+      expect(clientConnections.memberships).toHaveLength(1)
       expect(clientConnections.invitations).toEqual([])
 
       const memberConnections = await withActorTransaction(
@@ -4216,10 +4222,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         MEMBER_TRAINER_ID,
         readAccessibleConnections,
       )
-      expect(memberConnections.memberships).toHaveLength(2)
-      expect(memberConnections.invitations).toMatchObject([
-        { id: MEMBER_INVITATION_ID, targetRole: 'trainer' },
-      ])
+      expect(memberConnections.memberships).toEqual([])
+      expect(memberConnections.invitations).toEqual([])
 
       const outsideConnections = await withActorTransaction(
         runtimePool,
@@ -4306,17 +4310,17 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, OUTSIDE_TRAINER_ID])
           await db.query('set local role fit_api')
           await db.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
-          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toHaveLength(source === 'relationship' ? 0 : 1)
+          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toHaveLength(source === 'membership' ? 0 : 1)
           await db.query("select set_config('request.jwt.claim.sub',$1,true)", [athlete])
           await removeClientTrainer(db, clientId, ACTOR_ID)
           await expect(removeClientTrainer(db, clientId, ACTOR_ID)).resolves.toBeUndefined()
-          expect((await readAccessibleConnections(db)).memberships.map(row => row.trainerId)).toEqual([OUTSIDE_TRAINER_ID])
+          expect((await readAccessibleConnections(db)).memberships).toEqual([])
           expect(await db.query('select id, notes from public.workouts where id=$1', [workoutId])).toEqual([{ id: workoutId, notes: 'Keep client history' }])
           await db.query("select set_config('request.jwt.claim.sub',$1,true)", [ACTOR_ID])
-          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toEqual([])
+          expect(await db.query('select id from public.workouts where id=$1', [workoutId])).toEqual(source === 'membership' ? [] : [{ id: workoutId }])
           expect(await db.query('select id from public.clients where id=$1', [clientId])).toEqual([])
           await db.query("select set_config('request.jwt.claim.sub',$1,true)", [OUTSIDE_TRAINER_ID])
-          expect(await db.query('select id from public.clients where id=$1', [clientId])).toHaveLength(1)
+          expect(await db.query('select id from public.clients where id=$1', [clientId])).toHaveLength(0)
           await db.query('reset role')
           const relationships = await db.query('select status, disconnected_by from public.client_trainer_relationships where client_id=$1', [clientId])
           expect(relationships).toEqual(source === 'membership' ? [] : [{ status: 'disconnected', disconnected_by: athlete }])
@@ -4328,7 +4332,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       },
     )
 
-    it('denies trainer or foreign client disconnect and keeps legacy partition protected', async () => {
+    it('denies trainer or foreign client use of the athlete disconnect command and preserves the partition', async () => {
       if (ownerPool === undefined) throw new Error('Database pool is not ready')
       const connection = await ownerPool.connect()
       const athlete = randomUUID(), foreignAthlete = randomUUID(), clientId = randomUUID()
@@ -4341,7 +4345,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await db.query('insert into public.client_trainer_relationships(client_id, trainer_id, connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, athlete])
         await db.query('insert into public.client_trainers(client_id, trainer_id) values($1,$2)', [clientId, ACTOR_ID])
         await db.query('set local role fit_api')
-        for (const [actor, failure] of [[ACTOR_ID, 'forbidden'], [foreignAthlete, 'forbidden'], [athlete, 'invalid']] as const) {
+        for (const [actor, failure] of [[ACTOR_ID, 'forbidden'], [foreignAthlete, 'forbidden']] as const) {
           await db.query("select set_config('request.jwt.claim.sub',$1,true)", [actor])
           await db.query('savepoint denied_disconnect')
           await expect(removeClientTrainer(db, clientId, ACTOR_ID)).rejects.toMatchObject({ failure })
@@ -4430,7 +4434,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await expect(
         withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
           claimClientInvitation(client, secondInvitation.code)),
-      ).rejects.toMatchObject({ failure: 'forbidden' })
+      ).rejects.toMatchObject({ failure: 'invitation_role_mismatch' })
 
       await expect(
         withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
@@ -4441,6 +4445,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           claimClientInvitation(client, secondInvitation.code)),
       ).resolves.toBe(LIFECYCLE_CLIENT_ID)
 
+      await withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID,
+        client => removeClientTrainer(client, LIFECYCLE_CLIENT_ID, ACTOR_ID))
       const trainerInvitation = await withActorTransaction(
         runtimePool,
         LIFECYCLE_CLIENT_ACTOR_ID,
@@ -4476,11 +4482,11 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       await expect(
         withActorTransaction(runtimePool, LIFECYCLE_CLIENT_ACTOR_ID, (client) =>
           removeClientTrainer(client, LIFECYCLE_CLIENT_ID, ACTOR_ID)),
-      ).rejects.toMatchObject({ failure: 'invalid' })
+      ).resolves.toBeUndefined()
       await expect(
         withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           leaveClientSpace(client, LIFECYCLE_CLIENT_ID)),
-      ).rejects.toMatchObject({ failure: 'invalid' })
+      ).resolves.toBeUndefined()
       await expect(
         withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           leaveClientSpace(client, LIFECYCLE_CLIENT_ID)),
@@ -5556,6 +5562,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const clientId = randomUUID()
       await ownerPool.query("insert into public.profiles(id,first_name,account_role) values($1,'Duration athlete','client')", [athleteId])
       await ownerPool.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Duration fixture')", [clientId, ACTOR_ID, athleteId])
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [clientId, ACTOR_ID, athleteId])
       const draft: PlannedWorkoutDraft = {
         id: null, clientId, workoutDate: '2026-10-02', startTime: '23:30', endTime: '00:30', notes: 'Unchanged plan',
         exercises: [{
@@ -5593,8 +5600,10 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         // A trainer may correct visible athlete-authored history, not another trainer's assignment.
         await ownerPool.query('update public.workouts set created_by=$2 where id=$1', [created.id, athleteId])
         await ownerPool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [clientId, OUTSIDE_TRAINER_ID])
+        await withActorTransaction(runtimePool, athleteId, client => removeClientTrainer(client, clientId, ACTOR_ID))
+        await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [clientId, OUTSIDE_TRAINER_ID, athleteId])
         const historyVersion = await correction(OUTSIDE_TRAINER_ID, 3600, cleared)
-        await ownerPool.query('delete from public.client_trainers where client_id=$1 and trainer_id=$2', [clientId, OUTSIDE_TRAINER_ID])
+        await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, client => leaveClientSpace(client, clientId))
         await expect(correction(OUTSIDE_TRAINER_ID, 3500, historyVersion)).rejects.toMatchObject({ failure: 'forbidden' })
         await ownerPool.query("update public.workouts set status='planned',started_at=null,completed_at=null where id=$1", [created.id])
         await expect(correction(athleteId, 3500, historyVersion)).rejects.toMatchObject({ failure: 'invalid' })
@@ -5602,6 +5611,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await expect(correction(athleteId, 3500, historyVersion)).rejects.toMatchObject({ failure: 'forbidden' })
       } finally {
         await ownerPool.query('delete from public.workouts where id=$1', [created.id])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [clientId])
         await ownerPool.query('delete from public.client_trainers where client_id=$1', [clientId])
         await ownerPool.query('delete from public.clients where id=$1', [clientId])
         await ownerPool.query('delete from public.profiles where id=$1', [athleteId])
@@ -5855,6 +5865,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         `,
         [standaloneClientId, ACTOR_ID],
       )
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [standaloneClientId, ACTOR_ID, standaloneActorId])
 
       const draft: PlannedWorkoutDraft = {
         id: null,
@@ -5967,6 +5978,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'delete from public.client_trainers where client_id = $1',
           [standaloneClientId],
         )
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [standaloneClientId])
         await ownerPool.query(
           'delete from public.clients where id = $1',
           [standaloneClientId],
@@ -6015,6 +6027,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         `,
         [standaloneClientId, ACTOR_ID],
       )
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [standaloneClientId, ACTOR_ID, standaloneActorId])
 
       const draft: PlannedWorkoutDraft = {
         id: null,
@@ -6186,6 +6199,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           'delete from public.client_trainers where client_id = $1',
           [standaloneClientId],
         )
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id=$1', [standaloneClientId])
         await ownerPool.query(
           'delete from public.clients where id = $1',
           [standaloneClientId],
@@ -6608,6 +6622,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
          values ($1, $2, $3, 'Quick start fixture')`,
         [QUICK_START_CLIENT_ID, ACTOR_ID, QUICK_START_ACTOR_ID],
       )
+      await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [QUICK_START_CLIENT_ID, ACTOR_ID, QUICK_START_ACTOR_ID])
       try {
         const first = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.trainer))
@@ -6628,7 +6643,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )
         await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second)))
-          .rejects.toMatchObject({ failure: 'active' })
+          .rejects.toMatchObject({ failure: 'forbidden' })
         const otherTrainerView = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           client.query<{ id: string }>('select id from public.workouts where id = $1', [first.id]))
         expect(otherTrainerView).toEqual([])
@@ -6646,13 +6661,12 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect((await ownerPool.query<{training_format:string}>('select training_format from public.workouts where id=$1',[clientStarted.id])).rows[0]?.training_format).toBe('self')
         const connectedTrainerView = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
           client.query<{ id: string }>('select id from public.workouts where id = $1', [clientStarted.id]))
-        expect(connectedTrainerView).toEqual([{ id: clientStarted.id }])
+        expect(connectedTrainerView).toEqual([])
         const trainerResumed = await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.trainerSecond))
         expect(trainerResumed).toEqual({ id: clientStarted.id, resumed: true })
-        const connectedTrainerResumed = await withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
-          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second))
-        expect(connectedTrainerResumed).toEqual({ id: clientStarted.id, resumed: true })
+        await expect(withActorTransaction(runtimePool, OUTSIDE_TRAINER_ID, (client) =>
+          quickStartLiveWorkout(client, QUICK_START_CLIENT_ID, QUICK_START_OPERATION_IDS.second))).rejects.toMatchObject({ failure: 'forbidden' })
         await expect(withActorTransaction(runtimePool, ACTOR_ID, (client) =>
           finishLiveWorkout(client, clientStarted.id, 1, QUICK_START_OPERATION_IDS.finish)))
           .rejects.toMatchObject({ failure: 'invalid' })
@@ -6661,6 +6675,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           .resolves.toBe(2)
       } finally {
         await ownerPool.query('delete from public.workouts where client_id = $1', [QUICK_START_CLIENT_ID])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id = $1', [QUICK_START_CLIENT_ID])
         await ownerPool.query('delete from public.clients where id = $1', [QUICK_START_CLIENT_ID])
         await ownerPool.query('delete from public.profiles where id = $1', [QUICK_START_ACTOR_ID])
       }
@@ -8493,11 +8508,15 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           runtimePool,
           MEMBER_TRAINER_ID,
           (client) => updateClientCard(client, created.id, draft, 1),
-        )).resolves.toBe(2)
+        )).rejects.toMatchObject({ failure: 'forbidden' })
+        await expect(withActorTransaction(runtimePool, ACTOR_ID,
+          client => updateClientCard(client, created.id, draft, 1))).resolves.toBe(2)
 
+        await expect(withActorTransaction(runtimePool, MEMBER_TRAINER_ID, client =>
+          updateClientPreferences(client, created.id, 'No access', 'No access', 1))).rejects.toMatchObject({ failure: 'forbidden' })
         const membershipVersion = await withActorTransaction(
           runtimePool,
-          MEMBER_TRAINER_ID,
+          ACTOR_ID,
           (client) => updateClientPreferences(
             client,
             created.id,
@@ -8554,7 +8573,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           `select alias, note, version
            from public.client_trainers
            where client_id = $1 and trainer_id = $2`,
-          [created.id, MEMBER_TRAINER_ID],
+          [created.id, ACTOR_ID],
         )
         expect(preferences.rows).toEqual([{
           alias: 'Личный псевдоним',
@@ -8875,13 +8894,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )
         return rows[0]
       })
-      await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, (client) =>
+      await withActorTransaction(runtimePool, ACTOR_ID, (client) =>
         client.query(
           `select stage_id from public.save_goal_stage($1::jsonb, null)`,
           [JSON.stringify({ id: null, goalId: goal?.goal_id, title: 'Первые пять', startsOn: '2026-08-20', endsOn: '2026-10-01', position: 0 })],
         ))
 
-      const shared = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
+      await expect(withActorTransaction(runtimePool, MEMBER_TRAINER_ID,
+        client => client.query('select public.get_client_progress_bundle($1)', [CLIENT_ID])))
+        .rejects.toMatchObject({ message: 'progress_forbidden' })
+      const shared = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
         const rows = await client.query<JsonResultRow>(
           'select public.get_client_progress_bundle($1) result', [CLIENT_ID])
         return rows[0]?.result as {
@@ -8916,17 +8938,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         MEMBER_TRAINER_ID,
         (client) => readAccessibleClients(client),
       )
-      expect(memberOverview.clients.find((client) => client.id === CLIENT_ID)).toMatchObject({
-        canArchive: false,
-        currentWeightKg: 70,
-        activity: {
-          doneCount: 1,
-          completionPercent: 50,
-          lastWorkoutDate: '2026-08-19',
-          // На 14-й день без тренировки сигнал уже должен быть активен.
-          needsAttention: true,
-        },
-      })
+      expect(memberOverview.clients.find((client) => client.id === CLIENT_ID)).toBeUndefined()
 
       const outsiderOverview = await withActorTransaction(
         runtimePool,
@@ -8959,7 +8971,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           weightKg: 70, customMetrics: [],
         })]))).rejects.toMatchObject({ message: 'progress_invalid' })
 
-      const exercisePage = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
+      const exercisePage = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
         const rows = await client.query<JsonResultRow>(
           `select public.list_exercise_progress($1, 'push-up', 20, null, null) result`, [CLIENT_ID])
         return rows[0]?.result as { items: unknown[]; totalCount: number }
@@ -8967,7 +8979,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       expect(exercisePage.items).toHaveLength(1)
       expect(exercisePage.totalCount).toBe(1)
 
-      const chronicle = await withActorTransaction(runtimePool, MEMBER_TRAINER_ID, async (client) => {
+      const chronicle = await withActorTransaction(runtimePool, ACTOR_ID, async (client) => {
         const rows = await client.query<JsonResultRow>(
           'select public.list_workout_chronicle($1, 20, null, null) result', [CLIENT_ID])
         return rows[0]?.result as { items: unknown[]; totalCount: number }
@@ -9013,8 +9025,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           [CLIENT_ID],
         ),
       )
-      expect(memberInternal).toHaveLength(1)
-      expect(memberInternal[0]?.trainer_summary).toEqual(trainerSummary)
+      expect(memberInternal).toEqual([])
 
       const sourceSummary = await ownerPool.query<QueryResultRow & {
         id: string
@@ -9769,11 +9780,13 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         [recordClientId, ACTOR_ID, recordClientActorId])
         await ownerPool.query(`insert into public.client_trainers (client_id, trainer_id)
           values ($1, $2), ($1, $3)`, [recordClientId, ACTOR_ID, MEMBER_TRAINER_ID])
+        await ownerPool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [recordClientId, ACTOR_ID, recordClientActorId])
       })
       afterEach(async () => {
         if (ownerPool === undefined) throw new Error('Database pool is not ready')
         await ownerPool.query('delete from public.workouts where client_id = $1', [recordClientId])
         await ownerPool.query('delete from public.client_trainers where client_id = $1', [recordClientId])
+        await ownerPool.query('delete from public.client_trainer_relationships where client_id = $1', [recordClientId])
         await ownerPool.query('delete from public.clients where id = $1', [recordClientId])
         await ownerPool.query('delete from public.profiles where id = $1', [recordClientActorId])
       })
@@ -9828,7 +9841,8 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await expect(read(MEMBER_TRAINER_ID, id)).rejects.toMatchObject({ message: 'workout_forbidden' })
         await expect(read(OUTSIDE_TRAINER_ID, id)).rejects.toMatchObject({ message: 'workout_forbidden' })
         const clientAuthored = await seed(2, 'reps', 'record-access', [{ reps: 15 }], recordClientActorId)
-        expect(await read(MEMBER_TRAINER_ID, clientAuthored)).toHaveLength(1)
+        await expect(read(MEMBER_TRAINER_ID, clientAuthored)).rejects.toMatchObject({ message: 'workout_forbidden' })
+        expect(await read(ACTOR_ID, clientAuthored)).toHaveLength(1)
         await expect(read(ACTOR_ID, randomUUID())).rejects.toMatchObject({ message: 'workout_forbidden' })
         const deleted = await seed(3, 'reps', 'record-access', [{ reps: 20 }], ACTOR_ID, true)
         await expect(read(ACTOR_ID, deleted)).rejects.toMatchObject({ message: 'workout_forbidden' })
@@ -10148,7 +10162,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect(connection.granted).toBe(false)
         await diary.setConsent(session(0), clientId, trainerId, connection.connectionStartedAt, true)
         expect((await diary.day(session(3), draft.day, clientId)).entries).toHaveLength(1)
-        expect((await diary.day(session(4), draft.day, clientId)).access).toBe('locked')
+        await expect(diary.day(session(4), draft.day, clientId)).rejects.toThrow('forbidden')
         await expect(diary.setConsent(session(3), clientId, trainerId, connection.connectionStartedAt, true)).rejects.toThrow('forbidden')
         await withYandexAppSessionTransaction(runtimePool, hashPilotSessionToken(tokens[3]!)!, async (client) => {
           expect(await client.query('select id from public.nutrition_entries where id=$1', [draft.id])).toHaveLength(1)

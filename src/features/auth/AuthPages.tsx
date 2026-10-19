@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState, type FormEvent, type PropsWithChildren } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { getLocalAuthRepository } from '#fit/local-auth'
 import {
@@ -44,11 +44,12 @@ import {
   savePendingYandexNativeRegistration,
 } from './yandex-pilot-oauth'
 import { yandexAuthorizationRedirectUri } from './yandex-redirect-uri'
+import { publicInvitationLinksRepository } from '../../data/repositories/public-invitation-links.repository'
 import { YandexPilotConnections } from './YandexPilotConnections'
 import { YandexPilotTrainingData } from './YandexPilotTrainingData'
 import { useYandexPilotPolling } from './use-yandex-pilot-polling'
 import { YandexRegistrationForm } from './YandexRegistrationForm'
-import { hasPendingInvitationLink } from './invitation-link-continuation'
+import { hasPendingInvitationLink, readPendingInvitationLink } from './invitation-link-continuation'
 import {
   consumeInvitationAuthReturn,
   readInvitationAuthReturn,
@@ -410,9 +411,15 @@ function YandexAppSessionCallbackPage() {
   const [setupBusy, setSetupBusy] = useState(false)
   const [setupError, setSetupError] = useState<string | null>(null)
   const [firstName, setFirstName] = useState('')
-  const [invitationRequiresClient] = useState(() => hasPendingInvitationLink()
-    || readInvitationAuthReturn()?.startsWith('/join') === true)
-  const [role, setRole] = useState<AccountRole>(() => invitationRequiresClient ? 'client' : 'trainer')
+  const [pendingInvitation] = useState(() => readPendingInvitationLink())
+  const invitationPreview = useQuery({
+    queryKey: ['invitation-link-preview', pendingInvitation?.source, pendingInvitation?.token.slice(0, 12)],
+    queryFn: () => publicInvitationLinksRepository.preview(pendingInvitation!.source, pendingInvitation!.token),
+    enabled: pendingInvitation !== null && handoff !== null,
+    retry: false,
+  })
+  const invitationRole = invitationPreview.data?.targetRole
+  const [role, setRole] = useState<AccountRole>('trainer')
   const sessionRequest = useRef<Promise<YandexAppSession> | null>(null)
 
   useEffect(() => {
@@ -487,10 +494,11 @@ function YandexAppSessionCallbackPage() {
 
   function registerNew(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    if (config === null || handoff === null) return
+    if (config === null || handoff === null
+      || (pendingInvitation !== null && invitationRole === undefined)) return
     void completeSetup(() => yandexPilotRepository.completeYandexRegistration(config.apiBaseUrl, {
       handoffToken: handoff.token,
-      accountRole: role,
+      accountRole: invitationRole ?? role,
       firstName,
       timezone: systemTimeZone(),
       termsVersion: TERMS_VERSION,
@@ -499,8 +507,18 @@ function YandexAppSessionCallbackPage() {
   }
 
   if (config === null) return <Navigate to="/auth" replace />
+  if (handoff !== null && pendingInvitation !== null
+    && (invitationPreview.isPending || invitationPreview.isError || !invitationPreview.data
+      || !['active', 'claimed'].includes(invitationPreview.data.status))) {
+    return <AuthIdentityScreen><FitLogo /><StatePanel
+      tone={invitationPreview.isPending ? 'info' : 'error'}
+      title={invitationPreview.isPending ? 'Проверяем роль приглашения' : 'Не удалось продолжить по приглашению'}
+      description={invitationPreview.isPending ? 'Это займёт несколько секунд.' : 'Повторите проверку или попросите новую ссылку. Аккаунт пока не создан.'}
+      action={invitationPreview.isPending ? undefined : <button className="secondary" onClick={() => void invitationPreview.refetch()}>Повторить</button>}
+    /></AuthIdentityScreen>
+  }
   if (handoff !== null) return <YandexRegistrationForm
-    role={role} onRoleChange={setRole} invitationRequiresClient={invitationRequiresClient}
+    role={invitationRole ?? role} onRoleChange={setRole} invitationRole={invitationRole}
     firstName={firstName} onNameChange={setFirstName} busy={setupBusy} error={setupError}
     onSubmit={registerNew} onBack={() => navigate('/auth', { replace: true })}
   />
