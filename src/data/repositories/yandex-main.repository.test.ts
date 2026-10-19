@@ -412,7 +412,7 @@ describe('Yandex main repository', () => {
       operation: 'GET /v1/legal/acceptance',
       stage: 'api',
       status: 503,
-      errorCode: 'service_unavailable',
+      errorCode: 'database_unavailable',
       releaseId: 'release-42',
     })
   })

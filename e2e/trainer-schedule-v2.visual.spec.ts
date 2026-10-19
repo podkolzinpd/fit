@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { buildFitLimeCalendarPlan } from '../services/api/src/db/fit-lime-calendar-plan'
+import { readSavePlannedWorkoutRequest } from '../services/api/src/planned-workout-request'
 import type { WorkoutExercise, WorkoutTemplateDraft } from '../src/shared/domain'
 import type { YandexPilotTrainingData } from '../src/data/repositories/yandex-pilot.repository'
 import { mockFinancePaymentLifecycle, seedPaidFinanceFixture, mockTemplateUncertainSave, copyTemplateDiagnostic, holdClientLiveCard } from './fit-lime-fixtures'
@@ -65,7 +66,7 @@ test('Figma workout Coach plan input keeps decimals, Next, active metrics and re
   await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/edit$`))
   await distance.fill('3.25') // Save directly from the still-focused last metric.
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('временно недоступен')
+  await expect(page.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
   await expect(weight).toHaveValue('22,5')
   await page.screenshot({ path: info.outputPath('coach-plan-input-retry.png') })
   expect(writes[0]!.exercises[0]!.sets[0]!.weightKg).toBe(22.5)
@@ -625,6 +626,65 @@ test('Figma workout Coach reference editor swipe replacement and deletion preser
   await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Проверка жестов плана')
   await expect(page.locator('.live-set-confirm')).toHaveCount(0)
   expect(writes).toEqual([])
+})
+
+// Copying a completed source creates a plan, not an editor of its old fact.
+// One behavioral case, two engines: picker focus and submit differ in Safari.
+test('Coach copied plan replaces exercises, preserves values and retries a failed save', async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const source = coachGestureWorkout(false, 1)
+  source.status = 'done'; source.completedAt = '2026-09-24T12:00:00Z'
+  source.exercises[0]!.sets = [{ ...source.exercises[0]!.sets[0]!,
+    weightKg: 20, reps: 8, fact: { weightKg: 27.5, reps: 10 }, confirmedAt: source.completedAt }]
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000002', fitLime: true, workouts: [source] })
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/v1/workouts', async route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    writes.push(route.request().postDataJSON() as Record<string, unknown>)
+    expect(readSavePlannedWorkoutRequest(writes.at(-1), null)).toBeDefined()
+    if (writes.length === 1) return route.fulfill({ status: 503,
+      headers: { 'x-fit-request-id': '00000000-0000-4000-8000-000000000123', 'x-fit-error-code': '53300', 'x-fit-error-category': 'unknown',
+        'access-control-expose-headers': 'x-fit-request-id, x-fit-error-code, x-fit-error-category' },
+      json: { error: 'service_unavailable' } })
+    return route.fallback()
+  })
+  await page.goto(`/workouts/new?copy=${workoutId}&client=${clientId}`)
+  const card = page.locator('.planned-exercise').first()
+  await card.getByRole('button', { name: /^Приседания / }).click()
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await page.screenshot({ path: info.outputPath('copied-plan-before-replacement.png') })
+  const menu = card.getByRole('button', { name: 'Ещё действия', exact: true })
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Заменить', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await picker.getByLabel('Поиск упражнения').fill('жим штанги лёжа')
+  await picker.locator('button[data-exercise-ref="bench-press"]').click()
+  await expect(picker).not.toBeVisible()
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await expect(card.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('10')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Не удалось сохранить тренировку')
+  const diagnosticButton = page.getByRole('alert').getByRole('button', { name: 'Скопировать диагностику' })
+  await diagnosticButton.scrollIntoViewIfNeeded()
+  expect((await diagnosticButton.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  expect(await copyTemplateDiagnostic(page)).toContain('53300')
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await page.screenshot({ path: info.outputPath('copied-plan-save-error.png') })
+  await page.reload()
+  await card.locator('.compact-editor-exercise-toggle').click()
+  await expect(card.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('27.5')
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.locator('.workout-form-page')).not.toBeVisible()
+  expect(writes).toHaveLength(2)
+  expect(writes[1]).toEqual(writes[0])
+  expect(writes[0]).not.toHaveProperty('expectedVersion')
+  expect(writes[0]).toMatchObject({ exercises: [{ sourceExerciseId: null,
+    sets: [{ sourceSetId: null, weightKg: 27.5, reps: 10 }] }] })
+  const command = readSavePlannedWorkoutRequest(writes[0], null)!
+  expect(command.draft.exercises[0]!.ref).toBe('bench-press')
+  expect(command.draft.exercises[0]).not.toHaveProperty('sourceExerciseId')
+  expect(command.draft.exercises[0]!.sets[0]).not.toHaveProperty('sourceSetId')
+  await info.attach('copied-plan-command', { body: JSON.stringify(writes[0]), contentType: 'application/json' })
 })
 
 test('Figma workout Coach reference swipe keeps vertical scrolling and field focus', async ({ page, browserName }) => {
