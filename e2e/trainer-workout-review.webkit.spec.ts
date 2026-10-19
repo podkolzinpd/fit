@@ -161,13 +161,14 @@ test('iPhone: trainer review and client post-workout feedback stay visible to th
   await page.getByRole('button', { name: 'Выйти' }).click()
   await login(page, 'client@fit.local')
 
-  // Seed сохраняет legacy root ownership для старых сценариев, но не создаёт
-  // active membership. Явно подключаем тренера: именно membership является
-  // источником истины для обещания доставить новый отзыв.
+  // Legacy fixtures may already expose the connected coach.
+  // Wait for either settled state before deciding whether setup must connect it.
   await page.goto('/me/profile')
-  await expect(page.getByRole('button', { name: 'Пригласить тренера' })).toBeVisible()
-  if (!await page.getByText('Тест Тренер', { exact: true }).count()) {
-    await page.getByRole('button', { name: 'Пригласить тренера' }).click()
+  const connectedTrainer = page.getByRole('button', { name: 'Действия с тренером Тест Тренер', exact: true })
+  const inviteTrainer = page.getByRole('button', { name: 'Пригласить тренера', exact: true })
+  await expect(connectedTrainer.or(inviteTrainer)).toBeVisible()
+  if (await inviteTrainer.isVisible()) {
+    await inviteTrainer.click()
     const trainerCodeText = await page.getByText(/Код для тренера:/).textContent()
     const trainerCode = trainerCodeText?.match(/[A-F0-9]{12}/)?.[0]
     expect(trainerCode).toBeTruthy()

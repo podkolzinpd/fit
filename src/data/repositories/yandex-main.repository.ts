@@ -440,6 +440,8 @@ const workoutTemplateResponseSchema = z.object({ template: workoutTemplateSchema
 type ResponseErrorFactory = (status: number, code?: string) => Error
 
 function errorForStatus(status: number, code?: string): RepositoryError {
+  if (code === 'invitation_role_mismatch') return new RepositoryError(code, 'Приглашение предназначено другой роли. Войдите под подходящим аккаунтом.')
+  if (code === 'invitation_connection_ended') return new RepositoryError(code, 'Это подключение уже завершено. Для повторного подключения нужно новое приглашение.')
   if (code === 'push_test_rate_limited') return new RepositoryError(code, 'Тест уже запрошен. Подождите минуту перед повторной отправкой.')
   if (code === 'push_subscription_missing') return new RepositoryError(code, 'Подключение устройства потеряно. Повторите проверку уведомлений.')
   if (status === 401) return new RepositoryError('session_expired', 'Сессия Yandex ID истекла. Войдите заново.')
@@ -1060,6 +1062,7 @@ export function createYandexMainRepository(
     nutrition: {
       day: (day, clientId) => readJson(queries, `${clientId ? `/v1/clients/${encodeURIComponent(clientId)}` : '/v1/me'}/nutrition?day=${encodeURIComponent(day)}`, nutritionDaySchema, nutritionErrorForStatus),
       search: (query, page) => readJson(queries, `/v1/nutrition/foods?q=${encodeURIComponent(query)}&page=${page}`, z.object({ foods: z.array(nutritionFoodSchema), hasMore: z.boolean() }), nutritionErrorForStatus),
+      async barcode(code) { return (await readJson(queries, `/v1/nutrition/foods/barcode/${encodeURIComponent(code)}`, z.object({ food: nutritionFoodSchema.nullable() }), nutritionErrorForStatus)).food },
       async recent() { return (await readJson(queries, '/v1/me/nutrition/recent', z.object({ entries: z.array(nutritionEntrySchema) }), nutritionErrorForStatus)).entries },
       async save(draft) { return (await writeJson(queries, '/v1/me/nutrition/entries', 'PUT', draft, z.object({ entry: nutritionEntrySchema }), nutritionErrorForStatus)).entry },
       async setDeleted(entryId, expectedVersion, deleted) { return (await writeJson(queries, `/v1/me/nutrition/entries/${encodeURIComponent(entryId)}/visibility`, 'PUT', { expectedVersion, deleted }, z.object({ entry: nutritionEntrySchema }), nutritionErrorForStatus)).entry },
@@ -1668,7 +1671,6 @@ export function createYandexMainRepository(
           }))
       },
       async revoke(invitationId) { await writeEmpty(queries, `/v1/invitations/${invitationId}`, 'DELETE'); invalidate() },
-      async disconnectTrainer(clientId) { await writeEmpty(queries, `/v1/clients/${clientId}/memberships/me`, 'DELETE'); invalidate(); return { clientId, trainerId: null, status: 'disconnected' } },
       async removeTrainer(clientId, trainerId) { await writeEmpty(queries, `/v1/clients/${clientId}/trainers/${trainerId}`, 'DELETE'); invalidate() },
       async leave(clientId) { await writeEmpty(queries, `/v1/clients/${clientId}/memberships/me`, 'DELETE'); invalidate() },
     },

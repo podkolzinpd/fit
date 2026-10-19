@@ -1,7 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Capacitor } from '@capacitor/core'
 import { invitationShareText, invitationShareUrl } from './invitation-share'
 
 describe('invitation share', () => {
+  afterEach(() => vi.restoreAllMocks())
+  it.each(['capacitor://localhost', 'https://localhost'])('uses the public website for a native origin %s', (origin) => {
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
+    expect(new URL(invitationShareUrl(`ABCDEF123456.${'a'.repeat(64)}`, 'yandex', origin)).origin).toBe('https://fit-training.ru')
+  })
   it('keeps the protected token in a transport-safe query', () => {
     const token = `ABCDEF123456.${'a'.repeat(64)}`
     const url = new URL(invitationShareUrl(token, 'yandex', 'https://fit.example'))

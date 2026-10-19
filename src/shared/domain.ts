@@ -101,6 +101,7 @@ interface SessionActorBase {
     fitLime?: boolean
     assistantFeatureLinks?: boolean
     nutrition?: boolean
+    nutritionBarcode?: boolean
   }
   preferences?: {
     scheduleDensity: ScheduleDensity

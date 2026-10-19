@@ -145,6 +145,7 @@ jobs:
           # A same-origin build must not be promoted while /api/ still serves SPA HTML.
           api_release=$(curl --fail --silent --show-error --max-time 10 \
             http://127.0.0.1:18080/health | jq -er '.releaseId | select(test("^[a-f0-9]{40}$"))')
+          test "$api_release" = "${{ needs.source.outputs.commit }}"
           curl --fail --silent --show-error --max-time 10 \
             --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/health |
             jq -e --arg release "$api_release" '.status == "ok" and .releaseId == $release' >/dev/null

@@ -2,7 +2,7 @@
 
 Поток: identity-runtime, только native bootstrap/release tooling.
 Базовый main: 008c20b707f671ca22fddcfe412e5acb3d4ab887.
-Ветка: codex/android-ota. По последней прямой команде владельца PR пока не создаётся.
+Ветка: codex/android-ota. Владелец разрешил создать PR; публикация OTA остаётся отдельным действием.
 Tracker отложен в CURRENT_STATE; внешний тикет не создаётся.
 
 ## Согласованный пользовательский результат (исходный порядок)
@@ -57,3 +57,7 @@ Tracker отложен в CURRENT_STATE; внешний тикет не созд
 - Владелец выбрал «Проверю позже»: физическая установка/вход и end-to-end OTA на телефоне не проверены. Серверный feed, Nginx include, RuStore, production/allowlists не изменены; PR не создавался.
 
 - Final GitHub source24c1087f68a5d37e6abf6a9204f73436c3810fa7, native/sign/upload workflow39288099934 **success**. Artifact12205365975 `fit-android-ota-signed-1.1.0`, retention14days; old certificate check, non-debuggable/code4 and16KB alignment passed. Full application runtime CIbc5465d5/39285521854 **success**; subsequent commits changed only Node release tooling/tests/workflow and these passed in final Android job (Node3/3 + real signing).
+
+## Подготовка PR — 19 октября 2026
+
+Владелец разрешил PR. Ветка обновлена от main f9c6e608; конфликт только в CURRENT_STATE разрешён сохранением актуального main snapshot и OTA-статуса. Изменения native/runtime OTA не правились; старые APK остаются сборками указанных выше исходников. Проверка телефона отложена владельцем, серверный канал выключен. Актуальная интеграция проверяется PR CI; предыдущие успешные runs не выдаются за CI нового merge commit.

@@ -1,0 +1,83 @@
+{
+  "sourceCommit": "d06f01e6cbee68b5d79e1fc5ec76668f8b025da0",
+  "dateMoscow": "2026-10-16",
+  "fullCheck": {
+    "command": "VITEST_MAX_WORKERS=4 npm run check",
+    "status": "passed",
+    "frontend": 2703,
+    "api": 1425,
+    "apiSkippedWithoutDatabase": 160,
+    "infra": 318,
+    "hosting": 169,
+    "calendar": 12,
+    "media": 2,
+    "iosPermissions": 5
+  },
+  "database": {
+    "status": "passed",
+    "command": "TEST_DATABASE_URL=<isolated-loopback-only> TEST_POSTGRES_CONTAINER=<disposable> TEST_POSTGRES_ENGINE=podman vitest run src/db/actor-context.integration.test.ts src/cloudru-release-migrations.integration.test.ts --maxWorkers=1 --no-file-parallelism",
+    "tests": 151,
+    "durationSeconds": 13.05,
+    "fullMigrationChain": true,
+    "realPgDumpRestore": true,
+    "commonLocalDatabasesTouched": false
+  },
+  "browser": {
+    "status": "passed",
+    "tests": 14,
+    "perEngine": 7,
+    "engines": [
+      "chromium",
+      "webkit"
+    ],
+    "durationSeconds": 25.3,
+    "productionBuild": true,
+    "api": "synthetic mocks only",
+    "fontChecksums": "2/2",
+    "selection": "Yandex-only entry has|restored Yandex session completes|Yandex restore exits loading|native nutrition accepts|native nutrition refuses|nutrition manual input|nutrition direct route"
+  },
+  "rehearsal": {
+    "status": "passed",
+    "tests": 23,
+    "freezeSeconds": 3.9097036660000004,
+    "productionReturnAccepted": false,
+    "scriptSha256": "ed8f8a737dd199c8222af617c8fa44c3b188338357f99583d2127614a8a6846d"
+  },
+  "priorAttempts": [
+    {
+      "stage": "local rehearsal preflight",
+      "result": "failed on temporary PostgreSQL init Unix socket; fixed readiness to final loopback TCP listener; no product changes"
+    },
+    {
+      "stage": "browser temporary config",
+      "result": "failed before tests because cwd was /private/tmp; corrected local-only config"
+    },
+    {
+      "stage": "development browser",
+      "result": "14 passed; Onest symlink serving warnings; replaced acceptance with production-build run, no assertions changed"
+    }
+  ],
+  "notRun": [
+    "npm run dev / shared local:verify; common legacy databases were not started or reset",
+    "full legacy browser and visual matrix",
+    "real production login and authenticated mutations",
+    "real production S3 upload/delete or push send",
+    "cloud-to-cloud representative-volume rehearsal and historical data reconciliation",
+    "iOS/Android device builds",
+    "billing/IAM console readback"
+  ],
+  "externalEvidence": {
+    "mainCi": 38923126575,
+    "apiRelease": 38923791432,
+    "frontend": 38923791610,
+    "backup": 38867496640,
+    "operations": 38915615795
+  },
+  "repoVariablesReadOnly": {
+    "CLOUDRU_STAGE_AUTODEPLOY_ENABLED": "true",
+    "CLOUDRU_API_AUTODEPLOY_ENABLED": "true",
+    "CLOUDRU_FRONTEND_AUTODEPLOY_ENABLED": "true",
+    "YC_FRONTEND_AUTODEPLOY_ENABLED": "false",
+    "YC_STAGE_TERRAFORM_AUTODEPLOY_ENABLED": "false"
+  }
+}

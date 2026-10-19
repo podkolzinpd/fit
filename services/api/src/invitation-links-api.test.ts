@@ -51,6 +51,20 @@ function links(overrides: Partial<PilotInvitationLinks> = {}) {
 }
 
 describe('invitation link API', () => {
+  it.each([
+    ['invitation_connection_ended', 409],
+    ['invitation_role_mismatch', 403],
+    ['trainer_disconnect_required', 409],
+    ['client_merge_conflict', 409],
+  ] as const)('preserves the actionable %s claim result without database details', async (failure, status) => {
+    const invitationLinks = links({ claim: vi.fn(() => Promise.reject(new PilotConnectionCommandError(failure))) })
+    const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/invitation-links/claim',
+      headers: { 'x-fit-session': sessionToken }, payload: { token } })
+    expect(response.statusCode).toBe(status)
+    expect(response.json()).toEqual({ error: failure })
+  })
   it('previews a bearer link without an account session', async () => {
     const invitationLinks = links()
     const app = buildApp({ pilotInvitationLinks: invitationLinks, logger: false })

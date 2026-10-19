@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Inspect disk usage or apply the bounded retention policy
+        description: Inspect disk usage, extend the verified root filesystem, or apply bounded retention
         required: true
         type: choice
         default: inspect
-        options: [inspect, apply]
+        options: [inspect, inspect-root, extend-root, apply]
       confirmation:
-        description: APPLY_CLOUDRU_RUNNER_RETENTION for apply
+        description: EXPAND_CLOUDRU_ROOT_FILESYSTEM for extend-root; APPLY_CLOUDRU_RUNNER_RETENTION for apply
         required: false
         type: string
   schedule:
@@ -47,6 +47,14 @@ jobs:
               test "$GITHUB_EVENT_NAME" = workflow_dispatch
               test -z "$RETENTION_CONFIRMATION"
               ;;
+            inspect-root)
+              test "$GITHUB_EVENT_NAME" = workflow_dispatch
+              test -z "$RETENTION_CONFIRMATION"
+              ;;
+            extend-root)
+              test "$GITHUB_EVENT_NAME" = workflow_dispatch
+              test "$RETENTION_CONFIRMATION" = EXPAND_CLOUDRU_ROOT_FILESYSTEM
+              ;;
             apply)
               if test "$GITHUB_EVENT_NAME" = workflow_dispatch; then
                 test "$RETENTION_CONFIRMATION" = APPLY_CLOUDRU_RUNNER_RETENTION
@@ -57,6 +65,43 @@ jobs:
               ;;
             *) exit 1 ;;
           esac
+
+          inspect_root() {
+            root_source=$(findmnt --noheadings --output SOURCE / | tr -d '[:space:]')
+            root_fstype=$(findmnt --noheadings --output FSTYPE / | tr -d '[:space:]')
+            disk_bytes=$(lsblk --bytes --noheadings --nodeps --output SIZE /dev/vda | tr -d '[:space:]')
+            partition_bytes=$(lsblk --bytes --noheadings --output SIZE /dev/vda2 | tr -d '[:space:]')
+            [[ "$disk_bytes" =~ ^[0-9]+$ ]]
+            [[ "$partition_bytes" =~ ^[0-9]+$ ]]
+            printf 'root_source=%s root_fstype=%s disk_bytes=%s partition_bytes=%s\n' \
+              "$root_source" "$root_fstype" "$disk_bytes" "$partition_bytes"
+            lsblk --output NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS /dev/vda
+            df -Pk /
+          }
+
+          if test "$REQUESTED_ACTION" = inspect-root; then
+            inspect_root
+            echo 'Root filesystem inspection complete; nothing was changed.'
+            exit 0
+          fi
+
+          if test "$REQUESTED_ACTION" = extend-root; then
+            inspect_root
+            test "$root_source" = /dev/vda2
+            test "$root_fstype" = ext4
+            test "$disk_bytes" -ge 60000000000
+            test "$partition_bytes" -lt "$disk_bytes"
+            command -v growpart
+            command -v resize2fs
+            sudo growpart /dev/vda 2
+            sudo resize2fs /dev/vda2
+            expanded_kib=$(df -Pk / | awk 'NR == 2 { print $2 }')
+            [[ "$expanded_kib" =~ ^[0-9]+$ ]]
+            test "$expanded_kib" -ge 58593750
+            echo 'Root filesystem expansion complete.'
+            df -Pk /
+            exit 0
+          fi
 
           root=/opt/fit
           releases=$root/releases

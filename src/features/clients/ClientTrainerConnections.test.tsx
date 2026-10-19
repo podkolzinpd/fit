@@ -79,28 +79,19 @@ describe('ClientTrainerConnections safe disconnect', () => {
     expect(screen.getByText('Александр Ситников')).toBeVisible()
   })
 
-  it('refreshes the server list after removing the selected trainer and preserves another trainer', async () => {
-    const user = userEvent.setup()
-    repository.removeTrainer.mockResolvedValue(undefined)
+  it('does not choose a trainer or render multi-trainer controls for an inconsistent old response', async () => {
     const otherTrainer = { ...connectedTrainer, trainerId: 'trainer-2', firstName: 'Другой', lastName: 'Тренер' }
-    repository.listTrainers.mockResolvedValueOnce([connectedTrainer, otherTrainer]).mockResolvedValue([otherTrainer])
+    repository.listTrainers.mockResolvedValue([connectedTrainer, otherTrainer])
     renderConnections()
-
-    const trainerName = await screen.findByText('Александр Ситников')
-    await user.click(within(trainerName.closest('article')!).getByRole('button', { name: 'Действия с тренером Александр Ситников' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Отключить' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Отключить' }))
-
-    expect(await screen.findByRole('status')).toHaveTextContent('Тренер отключён')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось однозначно определить текущего тренера')
     expect(screen.queryByText('Александр Ситников')).not.toBeInTheDocument()
-    expect(screen.getByText('Другой Тренер')).toBeVisible()
-    expect(screen.queryByRole('heading', { name: 'Найдите своего тренера' })).not.toBeInTheDocument()
-    expect(repository.removeTrainer).toHaveBeenCalledWith('client-1', 'trainer-1')
-    expect(repository.listTrainers).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText('Другой Тренер')).not.toBeInTheDocument()
+    expect(repository.removeTrainer).not.toHaveBeenCalled()
   })
 
   it('opens sharing actions for a protected trainer invitation link and keeps the code as fallback', async () => {
     const user = userEvent.setup()
+    repository.listTrainers.mockResolvedValue([])
     repository.createShare.mockResolvedValue({
       id: 'invite-1', clientId: 'client-1', targetRole: 'trainer',
       code: 'ABC123DEF456', token: `ABC123DEF456.${'a'.repeat(64)}`,
@@ -108,7 +99,7 @@ describe('ClientTrainerConnections safe disconnect', () => {
     })
     renderConnections()
 
-    await user.click(screen.getByRole('button', { name: 'Пригласить тренера' }))
+    await user.click(await screen.findByRole('button', { name: 'Пригласить тренера' }))
 
     expect(await screen.findByRole('dialog', { name: 'Ссылка готова' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Отправить ссылку' })).toBeVisible()

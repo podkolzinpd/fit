@@ -1,0 +1,111 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-10-16T16:14:43.706Z",
+  "imageId": "a470461db3d4079fb4cb545328a6ef7c7d1ffc33e6981f5d3e2cfda1634d297e",
+  "scope": "synthetic PostgreSQL and local-file primitive rehearsal; not production cutover acceptance",
+  "elapsedSeconds": 8.219929,
+  "freezeSeconds": 3.9097036660000004,
+  "checks": [
+    {
+      "name": "standby_rejects_write",
+      "passed": true
+    },
+    {
+      "name": "source_accepts_write_before_freeze",
+      "passed": true
+    },
+    {
+      "name": "precopy_is_detectably_stale",
+      "passed": true
+    },
+    {
+      "name": "old_source_request_rejected_after_fence",
+      "passed": true
+    },
+    {
+      "name": "cancel_before_destination_write_reopens_source",
+      "passed": true
+    },
+    {
+      "name": "cancel_keeps_destination_fenced",
+      "passed": true
+    },
+    {
+      "name": "interrupted_archive_rejected",
+      "passed": true
+    },
+    {
+      "name": "failed_restore_does_not_change_target",
+      "passed": true
+    },
+    {
+      "name": "final_rows_updates_deletions_history_match",
+      "passed": true
+    },
+    {
+      "name": "repeat_final_restore_is_deterministic_while_fenced",
+      "passed": true
+    },
+    {
+      "name": "synthetic_media_updated.bin_checksum",
+      "passed": true
+    },
+    {
+      "name": "synthetic_media_new.bin_checksum",
+      "passed": true
+    },
+    {
+      "name": "synthetic_media_deletion_applied",
+      "passed": true
+    },
+    {
+      "name": "foreign_key_preserved",
+      "passed": true
+    },
+    {
+      "name": "row_security_preserved",
+      "passed": true
+    },
+    {
+      "name": "history_of_old_destination_preserved",
+      "passed": true
+    },
+    {
+      "name": "historical_outbox_not_replayed",
+      "passed": true
+    },
+    {
+      "name": "no_background_delivery_during_rehearsal",
+      "passed": true
+    },
+    {
+      "name": "restored_destination_stays_fenced",
+      "passed": true
+    },
+    {
+      "name": "destination_accepts_first_write",
+      "passed": true
+    },
+    {
+      "name": "source_stays_fenced_after_destination_opens",
+      "passed": true
+    },
+    {
+      "name": "dns_only_return_would_lose_new_write",
+      "passed": true
+    },
+    {
+      "name": "fixture_freeze_below_two_hours",
+      "passed": true
+    }
+  ],
+  "notVerified": [
+    "production throughput and two-hour SLA",
+    "existing pooled connections and all real writers",
+    "cloud IAM and managed PostgreSQL extensions",
+    "real S3 signed URLs and version/delete semantics",
+    "DNS and native clients",
+    "real API boot after restore",
+    "historical divergent production reconciliation"
+  ]
+}

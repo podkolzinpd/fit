@@ -323,7 +323,7 @@ export async function readAccessibleTrainingData(
         workout.id,
         workout.trainer_id,
         workout.client_id,
-        client.full_name as client_name,
+        public.readable_workout_client_name(workout.id) as client_name,
         workout.created_by,
         workout.origin,
         workout.favorite_title,
@@ -366,7 +366,6 @@ export async function readAccessibleTrainingData(
         public.read_workout_has_personal_record(workout.id) has_pr,
         count(*) over() total_count
       from public.workouts workout
-      join public.clients client on client.id = workout.client_id
       left join public.goal_stages stage on stage.id = workout.stage_id
       where ${workoutFilter}
       order by workout.workout_date desc, workout.start_time desc nulls last,

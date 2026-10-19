@@ -9,6 +9,10 @@ on:
         description: Read only sanitized API command error-code counts for the last 24 hours
         type: boolean
         default: false
+      speech_diagnostics:
+        description: Read only aggregate SpeechKit relay lifecycle statuses for the last 15 minutes
+        type: boolean
+        default: false
       renewal_check:
         description: Also run a bounded Let's Encrypt staging renewal check
         type: boolean
@@ -47,6 +51,15 @@ jobs:
           test "$(hostname)" = fit-stage-app
           sudo timeout 15 journalctl CONTAINER_NAME=fit-api-stage --since="24 hours ago" --lines=5000 --output=json --no-pager 2>/dev/null |
             python3 scripts/cloudru-api-command-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Read only aggregate SpeechKit relay lifecycle statuses
+        if: github.event_name == 'workflow_dispatch' && inputs.speech_diagnostics
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-speechkit-cloudru --since="15 minutes ago" --lines=500 --output=json --no-pager |
+            python3 scripts/cloudru-speech-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Inspect runtime, workers, certificates and backup freshness without reading user data
         env:
           SPEECH_EXPECTED_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL }}

@@ -1240,7 +1240,6 @@ describe('Yandex main repository', () => {
     expect(await repository.invitations.list(clientId)).toHaveLength(1)
     expect(await repository.invitations.listTrainers(clientId)).toHaveLength(1)
     await repository.invitations.revoke(invitationId)
-    await repository.invitations.disconnectTrainer(clientId)
     await repository.invitations.removeTrainer(clientId, actor.userId)
     await repository.invitations.leave(clientId)
 

@@ -29,7 +29,7 @@ for (const name of configurations) {
 }
 
 test('all new operational shell steps parse without performing any infrastructure operations', () => {
-  for (const name of [...configurations, 'backup-cloudru-production', 'inspect-cloudru-operations', 'route-legacy-yandex-to-cloudru', 'repair-cloudru-media-acl']) {
+  for (const name of [...configurations, 'backup-cloudru-production', 'inspect-cloudru-operations', 'maintain-cloudru-runner-disk', 'route-legacy-yandex-to-cloudru', 'repair-cloudru-media-acl']) {
     const workflow = read(`.github/workflows/${name}.yml`)
     for (const match of workflow.matchAll(/\n        run: \|\n([\s\S]*?)(?=\n      - |$)/g)) {
       const result = spawnSync('bash', ['-n'], { input: match[1].replace(/^          /gm, ''), encoding: 'utf8' })
@@ -39,6 +39,20 @@ test('all new operational shell steps parse without performing any infrastructur
   for (const path of ['scripts/promote-cloudru-speech.sh', 'infra/cloudru/fit-cloudru-background', 'infra/cloudru/fit-cloudru-speechkit']) {
     assert.equal(spawnSync('bash', ['-n'], { input: read(path), encoding: 'utf8' }).status, 0, path)
   }
+})
+
+test('root expansion is manual, VM-bound and constrained to the known ext4 root partition', () => {
+  const workflow = read('.github/workflows/maintain-cloudru-runner-disk.yml')
+  assert.match(workflow, /options: \[inspect, inspect-root, extend-root, apply\]/)
+  assert.match(workflow, /RETENTION_CONFIRMATION" = EXPAND_CLOUDRU_ROOT_FILESYSTEM/)
+  assert.match(workflow, /test "\$root_source" = \/dev\/vda2/)
+  assert.match(workflow, /test "\$root_fstype" = ext4/)
+  assert.match(workflow, /test "\$disk_bytes" -ge 60000000000/)
+  assert.match(workflow, /test "\$partition_bytes" -lt "\$disk_bytes"/)
+  assert.match(workflow, /sudo growpart \/dev\/vda 2/)
+  assert.match(workflow, /sudo resize2fs \/dev\/vda2/)
+  assert.match(workflow, /test "\$expanded_kib" -ge 58593750/)
+  assert.match(workflow, /Root filesystem inspection complete; nothing was changed/)
 })
 
 const mediaApp = 'b87cd7c3-c737-4cd7-87b3-6591dd9b3ec9'
@@ -242,6 +256,11 @@ test('speech ingress upgrades only the authenticated loopback relay and its runt
   assert.match(workflow, /cloudru-smoke.mjs guard/)
   assert.deepEqual([...workflow.matchAll(/secrets\.([A-Z0-9_]+)/g)].map(match => match[1]), ['CLOUDRU_SPEECHKIT_API_KEY'])
   assert.doesNotMatch(workflow, /MIGRATION_DATABASE_|DATABASE_PASSWORD/)
+  const inspect = read('.github/workflows/inspect-cloudru-operations.yml')
+  const diagnostics = inspect.slice(inspect.indexOf('      - name: Read only aggregate SpeechKit'), inspect.indexOf('      - name: Inspect runtime'))
+  assert.match(diagnostics, /inputs\.speech_diagnostics/)
+  assert.match(diagnostics, /journalctl CONTAINER_NAME=fit-speechkit-cloudru/)
+  assert.doesNotMatch(diagnostics, /--unit=fit-speechkit\.service/)
   const validationStart = workflow.indexOf('          test -n "$SPEECHKIT_API_KEY"')
   const validation = workflow.slice(validationStart, workflow.indexOf('          id=', validationStart)).replace(/^          /gm, '')
   // Independent validation failures, not a browser/theme matrix: nothing after

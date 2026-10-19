@@ -22,22 +22,23 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
       await queryClient.cancelQueries({ queryKey: ['client-trainers', clientId] })
       queryClient.setQueryData<TrainerMembership[]>(['client-trainers', clientId], (current) =>
         current?.filter((trainer) => trainer.trainerId !== trainerId))
-      await queryClient.invalidateQueries({ queryKey: ['client-trainers', clientId] })
+      await queryClient.invalidateQueries()
       setDisconnectMessage('Тренер отключён. Ваш аккаунт, тренировки, замеры и цели сохранены.')
     },
   })
   const [confirm, confirmDialog] = useConfirm()
   const hasTrainers = (trainers.data?.length ?? 0) > 0
-  return <section className="client-home-connections" aria-label="Связь с тренером"><div className="client-home-section-head"><div><p className="eyebrow">{hasTrainers ? 'СВЯЗЬ С ТРЕНЕРОМ' : 'ТРЕНЕР'}</p><h2>{trainers.data ? (hasTrainers ? 'Мои тренеры' : 'Найдите своего тренера') : 'Тренеры'}</h2></div></div>
-    {trainers.isLoading && <p className="muted">Загрузка тренеров…</p>}
+  return <section className="client-home-connections" aria-label="Связь с тренером"><div className="client-home-section-head"><div><p className="eyebrow">{hasTrainers ? 'СВЯЗЬ С ТРЕНЕРОМ' : 'ТРЕНЕР'}</p><h2>{trainers.data ? (hasTrainers ? 'Мой тренер' : 'Найдите своего тренера') : 'Мой тренер'}</h2></div></div>
+    {trainers.isLoading && <p className="muted">Загрузка тренера…</p>}
     {trainers.error && <div><p className="error">{trainers.error.message}</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
     {trainers.data?.length === 0 && <p className="client-trainer-empty-description">Посмотрите анкеты и напишите подходящему тренеру.</p>}
-    {trainers.data?.map((trainer) => {
+    {(trainers.data?.length ?? 0) > 1 && <div><p className="error" role="alert">Не удалось однозначно определить текущего тренера. Обновите страницу или обратитесь в поддержку. Ваши данные сохранены.</p><button className="secondary" onClick={() => void trainers.refetch()}>Повторить</button></div>}
+    {trainers.data?.length === 1 && trainers.data.map((trainer) => {
       const name = trainer.displayName?.trim() || [trainer.firstName, trainer.lastName].filter(Boolean).join(' ') || 'Тренер'
       const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
       return <article className="card client-trainer-connection-card" key={trainer.trainerId}>
         <span className="client-trainer-avatar" aria-hidden="true">{initials}</span>
-        <div className="client-trainer-person"><strong>{name}</strong><p>{trainer.isRoot ? 'Основной тренер' : 'Подключённый тренер'}</p></div>
+        <div className="client-trainer-person"><strong>{name}</strong><p>Ваш тренер</p></div>
         <div className="client-trainer-actions"><ChatStartButton clientId={clientId} trainerId={trainer.trainerId} /><OverflowMenu label={`Действия с тренером ${name}`} items={[{
           label: disconnectTrainer.isPending ? 'Отключаем…' : 'Отключить',
           danger: true,
@@ -50,7 +51,8 @@ export function ClientTrainerConnections({ clientId, finance }: { clientId: stri
     })}
     {finance}
     <Link className={`button client-trainer-search ${trainers.data?.length === 0 ? 'primary' : 'secondary'}`} to="/me/trainers"><SearchIcon />Найти тренера</Link>
-    <div className="client-trainer-invite-actions"><p>{hasTrainers ? 'Пригласить другого тренера' : 'Уже договорились с тренером?'}</p><InvitationShareButton clientId={clientId} targetRole="trainer" label="Пригласить тренера" className="secondary client-trainer-invite-button" /><small>Отправьте ему ссылку или QR-код.</small></div>
+    {trainers.data?.length === 0 && <div className="client-trainer-invite-actions"><p>Уже договорились с тренером?</p><InvitationShareButton clientId={clientId} targetRole="trainer" label="Пригласить тренера" className="secondary client-trainer-invite-button" /><small>Отправьте ему ссылку или QR-код.</small></div>}
+    {hasTrainers && <p className="muted">У вас может быть один активный тренер. Для смены сначала отключите текущего — история сохранится.</p>}
     {invitations.isLoading && <p className="muted">Загрузка приглашений…</p>}
     {invitations.data && invitations.data.length > 0 && <div className="client-home-invitations"><h3>Активные приглашения</h3>{invitations.data.map((item) => <article className="card" key={item.id}><div><strong>Приглашение для тренера</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU')}</p></div><button className="link danger" disabled={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка и QR-код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>Отозвать</button></article>)}</div>}
     {invitations.error && <div><p className="error">{invitations.error.message}</p><button className="secondary" onClick={() => void invitations.refetch()}>Повторить</button></div>}

@@ -62,8 +62,8 @@ ID при повторе, Yandex migration134 принимает только т
 существующую request-диагностику. Приёмка: `docs/design/TEMPLATE_SLOW_CONNECTION_20261008.md`.
 
 Выбранный тренер: Yandex migration135 переносит прежний targeted disconnect
-контракт — закрывает active relationship и membership атомарно, сохраняя
-других тренеров, историю и legacy guard. Приёмка:
+контракт — закрывает единственный active relationship атомарно, сохраняя
+историю, авторство и приватные метаданные без текущего доступа. Историческая приёмка:
 `docs/design/SELECTED_TRAINER_DISCONNECT_20261007.md`, GitHub#1492 пункт6.
 
 Workout aggregate: Yandex migration125 удаляет только дубли индексов позиций;
@@ -226,6 +226,14 @@ Auth/DataBackend/Assistant используют native composition, development/
 - Обязательные проверки: owner/member/root/cross-tenant SQL matrix, подтверждение необратимых действий в UI и E2E invite → join → leave/remove.
 
 ### Yandex Cloud invitation lifecycle checkpoint
+
+Актуальный контракт (YAFIT-635): строго один активный тренер, один источник
+прав для кода/ссылки/QR/чата и обоих направлений приглашения. Отключение с обеих
+сторон закрывает период без переноса технического partition-owner и удаления
+истории. Старое членство не выдаёт доступ; неоднозначный upgrade останавливается
+без выбора тренера и без частичных изменений. План и матрица:
+`docs/design/SINGLE_ACTIVE_TRAINER_20261019.md`. Старый pilot checkpoint ниже
+описывает исходный этап миграции, а не действующую многотренерскую модель.
 
 - Ограниченный Yandex ID pilot воспроизводит membership-контракт:
   root trainer, connected trainer и client видят memberships доступного клиента,

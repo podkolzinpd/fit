@@ -6,6 +6,11 @@ Production Fit использует внешний Yandex ID; app-session/API/Po
 работают в Cloud.ru, frontend `fit-training.ru` публикуется через Cloud.ru Nginx.
 Названия Yandex API/migrations ниже обозначают сохранённые кодовые контракты.
 Старый Yandex-контур сохранён, обратной синхронизации записей Cloud.ru нет.
+[Аудит16.10](design/CLOUD_RETURN_AUDIT_20261016.md) фиксирует текущие доказательства;
+[проект возврата](design/CLOUD_RETURN_RUNBOOK_20261016.md) требует reconciliation
+историй, запрета всех writers и отдельной полной репетиции≤120мин. Эти документы
+не разрешают production switch. Старые cutover-команды ниже не являются reverse
+migration Cloud.ru → Yandex Cloud.
 Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
 Supabase остаётся временным legacy-источником для legacy linking, неперенесённых
 media, локальных тестов и rollback — не вторым production backend новых функций.
@@ -23,7 +28,8 @@ routing или переносимые продуктовые данные. Те�
 ## Текущее production-состояние и цель вывода legacy
 
 - новые и существующие пользователи входят только через Yandex ID;
-- актуальная web-сборка направляет продуктовые запросы в `api.fit-training.ru`
+- актуальная web-сборка направляет продуктовые запросы через `fit-training.ru/api`
+  (новые native bundles — через `api.fit-training.ru`)
   и Cloud.ru PostgreSQL/S3; старые cached/native writers ещё требуют проверки
   и контролируемого закрытия: наличие старого API не означает dual-write;
 - frontend выпускается на `fit-training.ru` только проверенным
