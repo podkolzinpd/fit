@@ -5,7 +5,9 @@ import { pathToFileURL } from 'node:url'
 const SAFE_WITHOUT_E2E = [
   /^docs\//,
   /^infra\/yandex\//,
+  /^infra\/cloudru\/(?:fit-speechkit\.service|fit-cloudru-speechkit)$/,
   /^services\/api\//,
+  /^services\/speechkit-relay\//,
   /^\.github\/workflows\/deploy-cloudru-stage\.yml$/,
   /^\.github\/workflows\/migrate-yandex-(?:database|media)-to-cloudru\.yml$/,
   /^\.github\/workflows\/transfer-yandex-sql-to-cloudru\.yml$/,
@@ -14,6 +16,7 @@ const SAFE_WITHOUT_E2E = [
   /^\.github\/workflows\/(?:deploy-database|deploy-summary-function|deploy-yandex-[^/]+|manage-yandex-stage-database-access|manage-yandex-stage-identity-unlink|manage-trainer-schedule-v2-pilot|migrate-yandex-media|sync-yandex-stage-preview)\.yml$/,
   /^(?:AGENTS|README|FEATURE_PARITY|OPERATIONS)\.md$/,
   /^scripts\/(?:check-yandex-migration-container-plan|check-yandex-terraform-plan|cloudru-media-migration-workflow|deploy-yandex-serverless-revision|deploy-yandex-stage-workflow|e2e-scope|verify-yandex-stage-access|yandex-stage-smoke)(?:\.test)?\.mjs$/,
+  /^scripts\/promote-cloudru-speech\.sh$/,
   /^scripts\/ci-workflow\.test\.mjs$/,
   /^scripts\/domain-change-push-workflow\.test\.mjs$/,
   /^vercel\.json$/,
