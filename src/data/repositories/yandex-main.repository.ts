@@ -1322,11 +1322,14 @@ export function createYandexMainRepository(
         }
       },
       async setArchived(item, archived) {
-        const payload = await writeJson(queries, `/v1/clients/${item.id}/archive`, 'PUT', {
-          archived, expectedVersion: item.version,
-        }, z.object({ client: z.object({ version: z.number().int().positive() }) }))
-        invalidate()
-        return { ...item, archivedAt: archived ? new Date().toISOString() : null, version: payload.client.version }
+        try {
+          const payload = await writeJson(queries, `/v1/clients/${item.id}/archive`, 'PUT', {
+            archived, expectedVersion: item.version,
+          }, z.object({ client: z.object({ version: z.number().int().positive() }) }))
+          return { ...item, archivedAt: archived ? new Date().toISOString() : null, version: payload.client.version }
+        } finally {
+          invalidate()
+        }
       },
     },
     exercises: {
@@ -1632,8 +1635,12 @@ export function createYandexMainRepository(
         invalidate(); return payload.invitation.code
       },
       async createShare(clientId, targetRole) {
-        const payload = await writeJson(queries, '/v1/invitation-links', 'POST', { clientId, targetRole }, z.object({ invitation: invitationShareSchema }))
-        invalidate(); return payload.invitation
+        try {
+          const payload = await writeJson(queries, '/v1/invitation-links', 'POST', { clientId, targetRole }, z.object({ invitation: invitationShareSchema }))
+          return payload.invitation
+        } finally {
+          invalidate()
+        }
       },
       previewLink() {
         throw new Error('Публичный предпросмотр приглашения выполняется без сессии.')

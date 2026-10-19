@@ -428,7 +428,18 @@ export function ClientDetailPage() {
   const workouts = useQuery({ queryKey: ['workouts', clientId, 'upcoming'], queryFn: () => workoutsRepository.list(undefined, undefined, clientId) })
   const progress = useQuery({ queryKey: ['progress', clientId], queryFn: () => progressRepository.list(clientId) })
   const upcoming = workouts.data ? splitClientWorkouts(workouts.data, today).upcoming : []
-  const archive = useMutation({ mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt), onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ['clients'] }); await query.refetch() } })
+  const archive = useMutation({
+    mutationFn: (client: Client) => clientsRepository.setArchived(client, !client.archivedAt),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['clients'] }),
+        queryClient.invalidateQueries({ queryKey: ['client-trainers', clientId] }),
+        queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }),
+        query.refetch(),
+      ])
+    },
+    onError: async () => { await query.refetch() },
+  })
   const invitations = useQuery({ queryKey: ['client-invitations', clientId], queryFn: () => invitationsRepository.list(clientId) })
   const revoke = useMutation({ mutationFn: (invitationId: string) => invitationsRepository.revoke(invitationId), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['client-invitations', clientId] }) })
   const trainers = useQuery({ queryKey: ['client-trainers', clientId], queryFn: () => invitationsRepository.listTrainers(clientId) })
@@ -484,13 +495,16 @@ export function ClientDetailPage() {
       <ClientNoteBlock client={query.data} />
       <div className="page-actions">
         {fitLimePilot && <ClientDetailSourceState label="приглашения и права доступа" loading={invitations.isLoading || trainers.isLoading} error={invitations.error ?? trainers.error} onRetry={() => { void invitations.refetch(); void trainers.refetch() }} />}
-        {query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить клиента" className="secondary wide" />}
+        {!query.data.archivedAt && query.data.hasAccount === false && <InvitationShareButton clientId={clientId} targetRole="client" label="Пригласить клиента" className="secondary wide" />}
         {invitations.data?.map((item) => <article className="card" key={item.id}><div><strong>Активное приглашение клиента</strong><p>Действует до {new Date(item.expiresAt).toLocaleDateString('ru-RU', { timeZone: normalizeTimeZone(actor?.timezone) })}</p></div><button className="link danger" disabled={revoke.isPending} aria-busy={revoke.isPending} onClick={async () => { if (await confirm({ message: 'Отозвать это приглашение? Ссылка, QR-код и код больше не будут работать.', confirmLabel: 'Отозвать', danger: true })) revoke.mutate(item.id) }}>{revoke.isPending ? 'Отзываем…' : 'Отозвать'}</button></article>)}
         {revoke.error && <p className="error">{revoke.error.message}</p>}
         {currentMembership && !currentMembership.isRoot && <button className="danger secondary wide" disabled={leave.isPending} aria-busy={leave.isPending} onClick={async () => { if (await confirm({ message: 'Покинуть пространство клиента? Доступ к тренировкам и прогрессу будет закрыт.', confirmLabel: 'Покинуть', danger: true })) leave.mutate() }}>{leave.isPending ? 'Покидаем пространство…' : 'Покинуть пространство клиента'}</button>}
         {leave.error && <p className="error">{leave.error.message}</p>}
-        {currentMembership?.isRoot && <button className="danger secondary wide" disabled={archive.isPending} aria-busy={archive.isPending} onClick={() => void changeArchive(query.data!)}>{archive.isPending ? 'Обновляем…' : query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
-        {fitLimePilot && archive.error && <p className="client-detail-source-state is-error" role="alert">Не удалось обновить архив. Повторите действие.</p>}
+        {actor?.role === 'trainer' && query.data.canArchive === true && <button className={query.data.archivedAt ? 'secondary wide' : 'danger secondary wide'} disabled={archive.isPending} aria-busy={archive.isPending} onClick={() => void changeArchive(query.data!)}>{archive.isPending ? 'Обновляем…' : query.data.archivedAt ? 'Вернуть из архива' : 'Архивировать клиента'}</button>}
+        {archive.error && Boolean(archive.variables?.archivedAt) === Boolean(query.data.archivedAt) && <div className="client-detail-source-state is-error" role="alert">
+          <span>{query.data.archivedAt ? 'Не удалось вернуть клиента из архива. Повторите попытку.' : 'Не удалось обновить архив. Повторите действие.'}</span>
+          {actor?.role === 'trainer' && query.data.canArchive === true && <button type="button" className="secondary" disabled={archive.isPending} onClick={() => void changeArchive(query.data!)}>Повторить</button>}
+        </div>}
         {fitLimePilot && archive.isSuccess && <p className="client-detail-source-state" role="status">Изменение архива сохранено</p>}
       </div>
       {confirmDialog}

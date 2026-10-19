@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const backend = vi.hoisted(() => ({
+  createShare: vi.fn(),
   createShareForNewClient: vi.fn(),
   revoke: vi.fn(),
 }))
@@ -14,13 +15,28 @@ vi.mock('../../app/data-backend-context', () => ({
   useDataBackend: () => ({
     source: 'supabase',
     invitations: {
+      createShare: backend.createShare,
       createShareForNewClient: backend.createShareForNewClient,
       revoke: backend.revoke,
     },
   }),
 }))
 
-import { InviteAthleteButton } from './InvitationShareActions'
+import { InvitationShareButton, InviteAthleteButton } from './InvitationShareActions'
+
+describe('InvitationShareButton state refresh', () => {
+  it.each(['client', 'trainer'] as const)('refreshes only the affected athlete card after a %s invitation failure', async (targetRole) => {
+    backend.createShare.mockReset().mockRejectedValue(new Error('Недостаточно прав для этого действия.'))
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const refresh = vi.spyOn(queryClient, 'invalidateQueries')
+    render(<QueryClientProvider client={queryClient}><InvitationShareButton clientId="client-1" targetRole={targetRole} label="Пригласить" /></QueryClientProvider>)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Пригласить' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Недостаточно прав')
+    expect(backend.createShare).toHaveBeenCalledExactlyOnceWith('client-1', targetRole)
+    if (targetRole === 'client') expect(refresh).toHaveBeenCalledWith({ queryKey: ['client', 'client-1'] })
+    else expect(refresh).not.toHaveBeenCalled()
+  })
+})
 
 function renderButton() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
