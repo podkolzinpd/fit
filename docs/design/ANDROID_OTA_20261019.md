@@ -16,7 +16,7 @@ Tracker отложен в CURRENT_STATE; внешний тикет не созд
 
 ## Реализация и acceptance
 
-- MIT @capawesome/capacitor-live-update 8.7.1 (notice включён в public/licenses), без аккаунта/телеметрии/Capawesome Cloud. Только downloadBundle/setNextBundle/ready/reset.
+- MIT @capawesome/capacitor-live-update 8.7.1 (notice включён в public/licenses), без аккаунта/телеметрии/Capawesome Cloud. Runtime io.ionic:liveupdateprovider:1.0.0 (MIT) включён явно: плагин ссылается на его exception types при class loading; notice сохранён. Только downloadBundle/setNextBundle/ready/reset.
 - Фоновая проверка при старте Android. Текущая тренировка/диктовка/форма не перезагружается; скачанный bundle применяется при следующем native process launch.
 - Два RSA-SHA256 подтверждения: подписанный JSON-манифест и native-проверка ZIP. Отдельный OTA private key в ignored .env.android-ota, не ключ подписи APK. Только публичный ключ входит в исходники и APK.
 - Подписанный manifest связывает app/platform/channel, hash native-контракта, точный versionCode, срок действия/sequence и content-addressed URL на fit-training.ru. Отказ при иной подписи, ABI/version, URL, expired/replayed manifest, повреждённом архиве.
@@ -32,8 +32,8 @@ Tracker отложен в CURRENT_STATE; внешний тикет не созд
 
 - TypeScript/typecheck и целевой ESLint passed. Frontend2796/2796, infra321/321, calendar12/12, hosting171/171 прошли в полном check; API отсутствовал в свежей worktree, после reuse идентичного lock — lint/typecheck1441/1441+164 standard DBskip/build passed. Production web build и WebKit startup/auth offline/retry2/2 (390/430) passed.
 - Криптография, version/ABI/expiry/replay, прерванная загрузка, blocked bundles, no reload:30/30 unit/component; Node packaging/ABI2/2 passed.
-- Android native build / реальный install-update-bad-start-rollback: впереди; GitHub39281016165 queued. Локальный SDK отсутствует; официальный installer запросил Android SDK License и без согласия пропустил packages. Никакое согласие не принято.
-- Первый check остановился на регистрации .d.mts в tsconfig; исправлено без ослабления lint. Следующий прошёл frontend/infra/hosting, остановился на отсутствовавших API dependencies; этап API повторён успешно. Финальный сквозной npm run check прошёл; maintenance recovery дополнительно проверен без запуска auth/data providers. Native CI собрал Java, загрузка и RSA-проверки прошли, rollback Activity test остановился на NoClassDefFoundError; расширен диагностический stack trace, гейт не снят.
+- После явного согласия владельца Android SDK License принят, SDK установлен во временный каталог. Native OTA3/3 + existing1/1 Robolectric passed: реальные downloader/signature/extraction/SharedPreferences/Bridge/20s rollback и blocked ID. Только отсутствующий Chromium ServiceWorker provider и WebView package metadata — browser fixtures; это не physical-device acceptance. APK signing/GitHub artifact явно разрешены, RuStore/feed не публикуются.
+- Первый check остановился на регистрации .d.mts в tsconfig; исправлено без ослабления lint. Следующий прошёл frontend/infra/hosting, остановился на отсутствовавших API dependencies; этап API повторён успешно. Финальный сквозной npm run check прошёл; maintenance recovery дополнительно проверен без запуска auth/data providers. NoClassDefFoundError устранён включением runtime Ionic contracts, не test-only заглушкой. Kotlin/Gradle generated cache исключён из ABI; существующий тест проверяет стабильность до/после .kotlin generation. Сквозной check повторно exit0; после final native/cache fix целевые Node2/2 и native4/4 passed. Signed candidate CI ещё гейт.
 - RuStore: опубликованный раздел requirement-apps изучен19.10; явное правило про OTA/интерпретируемый JS не найдено. Разрешение магазина не доказано. Публикация feed и новый store APK — до уточнения не выполняются.
 
 ## Матрица исходного плана

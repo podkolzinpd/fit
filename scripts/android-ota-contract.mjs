@@ -14,7 +14,7 @@ export function androidOtaPolicy(root = projectRoot, env = process.env) {
     .map(([name, entry]) => [name, entry.version, entry.integrity]).sort()
   const hash = createHash('sha256').update(JSON.stringify(nativeDependencies))
   // Generated sync outputs and machine-specific files cannot describe an ABI.
-  const excluded = new Set(['build', '.gradle', '.idea', 'capacitor-cordova-android-plugins'])
+  const excluded = new Set(['build', '.gradle', '.kotlin', '.cxx', '.externalNativeBuild', '.idea', 'capacitor-cordova-android-plugins'])
   const generated = new Set(['local.properties', 'capacitor.settings.gradle', 'capacitor.build.gradle'])
   function visit(directory) {
     for (const item of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {

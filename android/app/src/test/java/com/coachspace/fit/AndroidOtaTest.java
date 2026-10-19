@@ -4,7 +4,11 @@ import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.os.Looper;
+import android.webkit.ServiceWorkerController;
+import android.webkit.ServiceWorkerClient;
+import android.webkit.ServiceWorkerWebSettings;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
@@ -27,20 +31,41 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.json.JSONObject;
 import org.junit.Test;
+import org.junit.Before;
+import org.robolectric.shadows.ShadowWebView;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.Implementation;
+import org.robolectric.annotation.Implements;
 import org.robolectric.annotation.LooperMode;
 
 /** Real plugin, crypto, extraction, SharedPreferences and Bridge rollback under
  * Android's JVM test runtime. This does not replace acceptance on a real phone. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 35)
+@Config(sdk = 35, shadows = AndroidOtaTest.ServiceWorkers.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class AndroidOtaTest {
+    // Robolectric has no Chromium service-worker provider. Only this unrelated
+    // browser facility is stubbed; OTA/Bridge/storage/crypto/timer stay real.
+    @Implements(ServiceWorkerController.class)
+    public static class ServiceWorkers {
+        @Implementation protected static ServiceWorkerController getInstance() {
+            return new ServiceWorkerController() {
+                @Override public ServiceWorkerWebSettings getServiceWorkerWebSettings() { return null; }
+                @Override public void setServiceWorkerClient(ServiceWorkerClient client) {}
+            };
+        }
+    }
+    @Before public void configureBrowserFixture() {
+        PackageInfo webview = new PackageInfo();
+        webview.packageName = "com.google.android.webview";
+        webview.versionName = "130.0.0.0";
+        ShadowWebView.setCurrentWebViewPackage(webview);
+    }
     private byte[] fixture() throws Exception {
         try (InputStream stream = getClass().getResourceAsStream("/ota/bundle.zip")) {
             assertNotNull("Run generate-android-ota-native-fixtures.mjs", stream);

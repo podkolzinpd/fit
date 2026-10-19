@@ -42,6 +42,9 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // LiveUpdate 8.7.1 exposes these types while loading its plugin class.
+    // Match its compileOnly dependency at runtime, including on Android.
+    implementation "io.ionic:liveupdateprovider:1.0.0"
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.robolectric:robolectric:4.16.1"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
