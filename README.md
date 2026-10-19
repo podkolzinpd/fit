@@ -109,7 +109,8 @@ npm run check
 - [docs/CURRENT_STATE.md](./docs/CURRENT_STATE.md) — короткая автоматически обновляемая точка продолжения между сессиями.
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — границы слоёв и работа с БД.
 - [FEATURE_PARITY.md](./FEATURE_PARITY.md) — контракт переноса V1.
-- [docs/YANDEX_CUTOVER_PLAYBOOK.md](./docs/YANDEX_CUTOVER_PLAYBOOK.md) — временный контракт параллельной разработки и переключения на Yandex Cloud/Yandex ID.
+- [Аудит Cloud.ru и возврат в Yandex Cloud](docs/design/CLOUD_RETURN_AUDIT_20261016.md) — проверенная карта, ограничения и очередь исправлений.
+- [docs/YANDEX_CUTOVER_PLAYBOOK.md](./docs/YANDEX_CUTOVER_PLAYBOOK.md) — временный контракт Cloud.ru production, Yandex ID и сохранённого legacy-контура.
 - [docs/UI_IDENTITY.md](./docs/UI_IDENTITY.md) — действующий визуальный контракт, общие продуктовые инварианты и доступность.
 - [docs/design/FIT_LIME_DESIGN_CODE.md](./docs/design/FIT_LIME_DESIGN_CODE.md) — утверждённый Lime-дизайн-код: существующие компоненты, SVG-параметры и согласованные адаптации.
 - [docs/UI_TASK_PROMPT.md](./docs/UI_TASK_PROMPT.md) — обязательный дизайн-контракт и готовый промпт для любых изменений интерфейса.

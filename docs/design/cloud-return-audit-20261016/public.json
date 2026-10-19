@@ -1,0 +1,100 @@
+{
+  "checkedAt": "2026-10-16T16:03:20.043Z",
+  "sourceCommit": "d06f01e6cbee68b5d79e1fc5ec76668f8b025da0",
+  "health": {
+    "checkedAt": "2026-10-16T16:03:19.642Z",
+    "status": "passed",
+    "dns": [
+      {
+        "host": "fit-training.ru",
+        "addresses": [
+          "87.242.117.210"
+        ],
+        "passed": true
+      },
+      {
+        "host": "www.fit-training.ru",
+        "addresses": [
+          "87.242.117.210"
+        ],
+        "passed": true
+      },
+      {
+        "host": "api.fit-training.ru",
+        "addresses": [
+          "87.242.117.210"
+        ],
+        "passed": true
+      }
+    ],
+    "checks": [
+      {
+        "host": "fit-training.ru",
+        "path": "/auth",
+        "status": 200,
+        "certificateValidDays": 87,
+        "passed": true
+      },
+      {
+        "host": "www.fit-training.ru",
+        "path": "/auth",
+        "status": 200,
+        "certificateValidDays": 87,
+        "passed": true
+      },
+      {
+        "host": "api.fit-training.ru",
+        "path": "/health",
+        "status": 200,
+        "certificateValidDays": 87,
+        "release": "d06f01e6cbee68b5d79e1fc5ec76668f8b025da0",
+        "passed": true
+      },
+      {
+        "host": "api.fit-training.ru",
+        "path": "/ready",
+        "status": 200,
+        "certificateValidDays": 87,
+        "passed": true
+      },
+      {
+        "host": "api.fit-training.ru",
+        "path": "/v1/clients",
+        "status": 401,
+        "certificateValidDays": 87,
+        "passed": true
+      },
+      {
+        "host": "fit-training.ru",
+        "path": "/api/health",
+        "status": 200,
+        "certificateValidDays": 87,
+        "release": "d06f01e6cbee68b5d79e1fc5ec76668f8b025da0",
+        "passed": true
+      },
+      {
+        "host": "fit-training.ru",
+        "path": "/api/ready",
+        "status": 200,
+        "certificateValidDays": 87,
+        "passed": true
+      },
+      {
+        "host": "fit-training.ru",
+        "path": "/api/v1/clients",
+        "status": 401,
+        "certificateValidDays": 87,
+        "passed": true
+      }
+    ]
+  },
+  "staticFiles": {
+    "total": 20,
+    "passed": 20,
+    "bytes": 5343294,
+    "js": 12,
+    "css": 1,
+    "fonts": 6,
+    "failures": []
+  }
+}

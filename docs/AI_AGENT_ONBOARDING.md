@@ -2,7 +2,8 @@
 
 Эта инструкция позволяет выдать ИИ-агенту доступ к приватному репозиторию,
 подготовить локальное окружение и проверить, что оно готово к работе. Production
-frontend — `fit-training.ru` на Yandex API Gateway/Object Storage; Vercel
+frontend — `fit-training.ru` на Cloud.ru Nginx; app-session/API/PostgreSQL и media
+также размещены в Cloud.ru. Yandex ID — внешний провайдер входа; Vercel
 остаётся только для редиректа со старого адреса; Vercel Preview отключён.
 Новые изменения БД получают только numbered Yandex PostgreSQL migrations в
 `services/api/db/migrations`; новые Supabase migrations не нужны. Агенту не
