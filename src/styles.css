@@ -7328,6 +7328,11 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .live-timer-confirm { position:absolute; top:50%; right:0; min-height:44px; padding:0 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); box-shadow:none; font-size:13px; font-weight:600; transform:translateY(-50%) }
 .live-set-check.done.timer { color:var(--warning-fg) }
 .live-set-check.done.timer svg { width:18px; height:18px }
+/* Пауза всей тренировки (YAFIT-627): часы — кнопка, на паузе жёлтые с надписью «Пауза». */
+.live-timer-toggle { font:inherit; cursor:pointer; box-shadow:none; -webkit-tap-highlight-color:transparent }
+.live-timer.paused { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.live-identity .live-timer.paused { border:1px solid var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.live-timer.paused .live-dot-mark { background:var(--warning); box-shadow:none; animation:none }
 /* Опция «Таймер сам ведёт подходы» в конструкторе: одна строка с переключателем и подписью. */
 .workout-execution-mode { display:grid; gap:2px; margin-top:var(--space-2) }
 .workout-execution-mode .switch-row { min-height:48px; padding:6px 0 }

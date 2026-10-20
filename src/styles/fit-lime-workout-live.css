@@ -107,3 +107,6 @@
   color: var(--lime-text-on-accent);
 }
 .fit-lime-shell .live-timer-confirm { border-color: var(--lime-accent); background: transparent; color: var(--lime-accent-ink); }
+/* Пауза тренировки в Lime: тот же стиль, что у статуса «Выполняется» в шапке Live. */
+.fit-lime-shell.live-identity .live-timer.paused { border-color: var(--warning-border); background: var(--warning-surface); color: var(--warning-fg); }
+.fit-lime-shell.live-identity .live-timer.paused .live-dot-mark { background: var(--warning); }

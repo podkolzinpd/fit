@@ -289,6 +289,68 @@ test('client reference Live mode switch in the timer settings stops the timer fl
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
 })
 
+for (const density of ['original', 'compact']) test(`client reference pause clock freezes and resumes the existing timer ${density}`, async ({ page }, info) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.clientLime.theme.${id}`, density === 'original' ? 'dark' : 'light')
+  }, { id: pilotId, density })
+  await page.setViewportSize({ width: density === 'original' ? 390 : 430, height: 844 })
+  const source = Object.assign(restTimerWorkout(0, true, 'timer'), { startedAt: '2026-10-08T08:59:00Z', pausedSeconds: 20 })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const pauses: boolean[] = []
+  page.on('request', request => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  const clock = page.locator('button.coach-live-clock.live-timer-toggle')
+  await expect(clock).toHaveCount(1)
+  await expect(clock).toHaveAttribute('aria-pressed', 'false')
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500)
+  const cardTop = await page.locator('.live-exercise').first().evaluate(el => el.getBoundingClientRect().top)
+  await clock.click()
+  // The test clock is frozen; deliver the existing query notification timer.
+  await page.clock.runFor(1)
+  await expect(clock).toHaveAttribute('aria-pressed', 'true')
+  await expect(clock).toHaveText('Пауза')
+  const elapsed = (await clock.getAttribute('aria-label'))!.split(', прошло ')[1]!
+  const frozen = await page.locator('.live-rest-trigger').innerText()
+  await page.screenshot({ path: info.outputPath('paused-clock.png'), animations: 'disabled' })
+  expect(await page.locator('.live-exercise').first().locator('.live-set-check,.live-add-set,.live-exercise-note summary').evaluateAll(nodes => nodes.every(node => { const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth }))).toBe(true)
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-rest-trigger')).toHaveText(frozen)
+  await expect(clock).toHaveAttribute('aria-label', `Продолжить тренировку, прошло ${elapsed}`)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  expect(Math.abs((await page.locator('.live-exercise').first().evaluate(el => el.getBoundingClientRect().top)) - cardTop)).toBeLessThanOrEqual(1)
+  await clock.click()
+  await page.clock.runFor(1)
+  await expect(clock).toHaveAttribute('aria-label', `Поставить тренировку на паузу, прошло ${elapsed}`)
+  await expect.poll(() => pauses).toEqual([true, false])
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+})
+
+for (const density of ['original', 'compact']) test(`client reference pause restores existing server state and set action resumes ${density}`, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:02:00Z') })
+  await page.addInitScript(({ id, density }) => localStorage.setItem(`fit.clientLiveDensity.${id}`, density), { id: pilotId, density })
+  const source = Object.assign(restTimerWorkout(0, true), { startedAt: '2026-10-08T09:00:00Z', pausedAt: '2026-10-08T09:01:00Z', pausedSeconds: 20 })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const pauses: boolean[] = []
+  page.on('request', request => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const clock = page.locator('button.coach-live-clock.live-timer-toggle')
+  await expect(clock).toHaveAttribute('aria-label', 'Продолжить тренировку, прошло 00:40')
+  await expect(clock).toHaveText('Пауза')
+  await page.clock.fastForward(10_000)
+  await page.reload()
+  await expect(clock).toHaveAttribute('aria-label', 'Продолжить тренировку, прошло 00:40')
+  expect(pauses).toEqual([])
+  await page.getByRole('button', { name: 'Старт подхода' }).first().click()
+  await expect(clock).toHaveAttribute('aria-pressed', 'false')
+  await expect(clock).not.toHaveText('Пауза')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect.poll(() => pauses).toEqual([false])
+})
+
 test('client reference Live manual mode times a set from Start and records the time past zero', async ({ page }) => {
   // Часы стоят и двигаются только fastForward: записанное время точное и в медленном CI.
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
