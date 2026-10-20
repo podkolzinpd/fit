@@ -315,6 +315,60 @@ test('client reference Live manual mode times a set from Start and records the t
 })
 
 
+for (const mode of ['planned', 'done'] as const) for (const wheel of [false, true]) test(`client editor reference metric kinds preserve ${mode} wheel-${wheel}`, async ({ page }, info) => {
+  await page.setViewportSize({ width: mode === 'planned' ? 390 : 430, height: 844 })
+  await page.addInitScript(({ id, wheel, mode }) => { localStorage.setItem('fit.workoutTimeWheel', String(wheel)); localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'); localStorage.setItem(`fit.clientLime.theme.${id}`, mode === 'planned' ? 'dark' : 'light') }, { id: pilotId, wheel, mode })
+  const source = coachGestureWorkout()
+  source.createdBy = pilotId; source.trainingFormat = 'self'; source.status = mode
+  source.startedAt = mode === 'done' ? '2026-10-20T09:00:00Z' : null
+  source.completedAt = mode === 'done' ? '2026-10-20T10:00:00Z' : null
+  source.exercises = source.exercises.map((exercise, index) => ({ ...exercise,
+    name: ['Планка', 'Бег с длинным названием тренировки', 'Упражнение на повторы'][index]!,
+    ref: ['plank', 'running', 'push-ups'][index]!, inputKind: (['duration', 'distance', 'reps'] as const)[index]!,
+    sets: [{ ...exercise.sets[0]!, weightKg: undefined, durationSec: index === 1 ? 600 : index === 2 && mode === 'planned' ? undefined : 90, distanceKm: index === 1 ? 1.5 : undefined, reps: index === 2 ? 12 : undefined, rpe: 7,
+      confirmedAt: mode === 'done' ? '2026-10-20T09:10:00Z' : null,
+      fact: mode === 'done' ? { durationSec: index === 1 ? 500 : 45, distanceKm: index === 1 ? 2 : undefined, reps: index === 2 ? 10 : undefined, rpe: 6 } : {} }] }))
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const writes: Array<{ exercises: Array<{ sets: Array<{ durationSec?: number; distanceKm?: number; reps?: number }> }> }> = []
+  await page.route(`**/v1/workouts/${workoutId}`, route => { if (route.request().method() === 'PUT') writes.push(route.request().postDataJSON() as typeof writes[number]); return route.fallback() })
+  // Completed edits use the existing separate endpoint; the common fixture covers plan PUT.
+  await page.route(`**/v1/workouts/${workoutId}/completed`, route => { if (route.request().method() !== 'PUT') return route.fallback(); writes.push(route.request().postDataJSON() as typeof writes[number]); return route.fulfill({ json: { workout: { id: workoutId } } }) })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  const plank = page.locator('.planned-exercise').nth(0)
+  const run = page.locator('.planned-exercise').nth(1)
+  const reps = page.locator('.planned-exercise').nth(2)
+  if (wheel) {
+    const clock = plank.getByRole('button', { name: mode === 'done' ? 'Время, подход 1: 0:45' : 'Время, подход 1: 1:30', exact: true })
+    await expect(clock).toBeVisible()
+    await clock.click()
+    const picker = page.getByRole('dialog', { name: 'Время, подход 1', exact: true })
+    await expect(picker).toBeVisible()
+    await page.screenshot({ path: info.outputPath('duration-picker.png') })
+    await picker.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+  } else {
+    await expect(plank.locator('.workout-duration-trigger')).toHaveCount(0)
+    await expect(plank.getByLabel('Время, подход 1: секунды', { exact: true })).toHaveValue(mode === 'done' ? '45' : '30')
+  }
+  const distance = run.getByLabel('Расстояние, подход 1', { exact: true })
+  await expect(distance).toHaveValue(mode === 'done' ? '2' : '1.5')
+  await distance.fill('2.75'); await distance.press('Tab')
+  await run.getByLabel('Единица расстояния, подход 1', { exact: true }).selectOption('m')
+  await expect(distance).toHaveValue('2750')
+  await run.getByLabel('Единица расстояния, подход 1', { exact: true }).selectOption('km')
+  await expect(distance).toHaveValue('2.75')
+  await expect(reps.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue(mode === 'done' ? '10' : '12')
+  if (mode === 'planned' && wheel) await expect(reps.getByRole('button', { name: 'Время, подход 1: не указано', exact: true })).toHaveText('—')
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('mixed-metrics.png') })
+  await reps.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath('mixed-metrics-last.png') })
+  await page.getByRole('button', { name: mode === 'done' ? 'Сохранить изменения' : 'Сохранить план', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]!.exercises[0]!.sets[0]!.durationSec).toBe(mode === 'done' ? 45 : 90)
+  expect(writes[0]!.exercises[1]!.sets[0]!.distanceKm).toBe(2.75)
+  expect(writes[0]!.exercises[2]!.sets[0]!.reps).toBe(mode === 'done' ? 10 : 12)
+})
+
 async function expectClientEditorFits(page: Page) {
   const overflow = await page.locator('.content').evaluate(el => el.scrollWidth - el.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)

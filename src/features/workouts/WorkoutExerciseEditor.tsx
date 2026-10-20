@@ -342,13 +342,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'reps') return <>
-      {metric(<WorkoutDurationField compact={referenceAppearance} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(<WorkoutDurationField compact={reference} emptyLabel={referenceAppearance ? '—' : undefined} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
       {metric(repsField, 'повт.')}
       {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'duration' && !distanceCapable) return <>
       {allowsDurationWeight(exercise) && metric(weightField, 'кг')}
-      {metric(<WorkoutDurationField compact={referenceAppearance} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(<WorkoutDurationField compact={reference} emptyLabel={referenceAppearance ? '—' : undefined} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
       {!allowsDurationWeight(exercise) && <span aria-hidden="true" />}
       {rpeField && metric(rpeField, 'RPE')}
     </>
@@ -356,7 +356,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <RunMetricsFields
         reference={referenceAppearance}
         planInput={safePlanInput}
-        compactDuration={referenceAppearance}
+        compactDuration={reference}
         loadField={isLoadedDistance(exercise) ? metric(weightField, 'кг') : undefined}
         key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}
