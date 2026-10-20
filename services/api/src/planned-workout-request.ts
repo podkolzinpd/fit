@@ -65,6 +65,7 @@ export interface PlannedWorkoutDraft {
   favoriteTitle?: string | null
   trainingFormat?: 'self' | 'with_trainer'
   prepSeconds?: number | null
+  executionMode?: 'timer' | 'manual' | null
 }
 
 export interface SavePlannedWorkoutRequest {
@@ -321,6 +322,8 @@ export function readSavePlannedWorkoutRequest(
     : enumValue(input.trainingFormat, ['self', 'with_trainer'] as const)
   const prepSeconds = input.prepSeconds === null || input.prepSeconds === undefined
     ? null : integer(input.prepSeconds, 0, 600)
+  const executionMode = input.executionMode === null || input.executionMode === undefined
+    ? null : enumValue(input.executionMode, ['timer', 'manual'] as const)
   const exercises = input.exercises.map(readExercise)
   const expectedVersion = workoutId === null
     ? null
@@ -338,6 +341,7 @@ export function readSavePlannedWorkoutRequest(
     || favoriteTitle === undefined
     || trainingFormat === undefined
     || prepSeconds === undefined
+    || executionMode === undefined
     || exercises.some((exercise) => exercise === undefined)
     || new Set(exercises.map((exercise) => exercise?.position)).size
       !== exercises.length
@@ -363,6 +367,8 @@ export function readSavePlannedWorkoutRequest(
       ...(trainingFormat === null ? {} : { trainingFormat }),
       // Omitted by older clients: the save function then keeps the stored value.
       ...(input.prepSeconds === undefined ? {} : { prepSeconds }),
+      // Режим выполнения: отсутствующий ключ (старые клиенты) сохраняет прежнее значение.
+      ...(input.executionMode === undefined ? {} : { executionMode }),
       exercises: exercises as PlannedWorkoutExerciseDraft[],
     },
     expectedVersion: expectedVersion ?? null,

@@ -35,9 +35,10 @@ import { copiedExerciseName } from '../../shared/exercise-catalog-curation'
 import { AxisTick, computeYDomain, formatTooltipLabel, formatTooltipValue, renderChartDot } from '../progress/ProgressChart'
 import { readLiveRestOverrides, restDeadline, restoreRestDeadline, storeRestDeadline } from './rest-timer-storage'
 import { blockLabel, chartUnitFor, compactCompletedSetSummary, compactExerciseDetailSummary, compactPlannedSetSummary, completedWorkoutDraft, copyWorkout, createRunningFormatDrafts, durationLabel, durationSeconds, exerciseSummary, factLine, favoriteTemplateToWorkoutDraft, formatFactVsPlan, groupIntoBlocks, blockRoundsView, currentRoundIndex, muscleGroupLabels, performedMuscleGroupLabels, previousResultLine, replaceExercise, restSecondsAfterSet, splitClientWorkouts, tonnageLabel, workoutFocusTitle, workoutStatusPresentation, workoutDurationLabel, workoutToFavoriteTemplate, workoutTonnage } from '../../data/repositories/workout-rules'
-import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTemplate, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing } from '../../shared/domain'
+import type { ExerciseProgressCursor, ExerciseSnapshot, LiveSetDraft, TrainerReaction, Workout, WorkoutDraft, WorkoutExercise as WorkoutExerciseModel, WorkoutFeedbackDraft, WorkoutQuestionAnswerDraft, WorkoutSet, WorkoutTemplate, WorkoutTrainerResponseDraft, WorkoutTrainingFormat, WorkoutWellbeing, WorkoutExecutionMode } from '../../shared/domain'
 import { formatRest, LiveRestTimer } from './LiveRestTimer'
-import { claimLiveAutostart, elapsedWorkSeconds, formatPrepOption, livePhasePrimaryAction, restoreLivePhase, storeLivePhase, timedSetSeconds, WORKOUT_PREP_OPTIONS, type LivePhaseTimer } from './live-phase'
+import { WorkoutExecutionModeField } from './WorkoutExecutionModeField'
+import { claimLiveAutostart, DEFAULT_EXECUTION_MODE, effectiveExecutionMode, elapsedWorkSeconds, EXECUTION_MODE_LABELS, PERSON_WORK_FINISH_GUARD_MS, personWorkSeconds, formatPrepOption, livePhasePrimaryAction, restoreLiveExecutionMode, restoreLivePhase, storeLiveExecutionMode, storeLivePhase, timedSetSeconds, timerAssumesPlannedValues, WORKOUT_PREP_OPTIONS, type LivePhaseTimer } from './live-phase'
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import {
   addDays, currentTimeInTimeZone, dayOfMonth, daysBetween, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
@@ -96,7 +97,7 @@ import { WorkoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { computeAthleteAchievements, newlyEarnedAchievements, type AthleteAchievement } from '../../shared/athlete-achievements'
 import { markAchievementCompletion, takeAchievementCompletion } from '../achievements/completion-marker'
-import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, CheckSmallIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, SettingsIcon, TrashIcon } from '../../shared/icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, CheckSmallIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, PlayIcon, SettingsIcon, TimerIcon, TrashIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -1286,6 +1287,8 @@ export function WorkoutFormPage() {
   const [title, setTitle] = useState('')
   // 0 — без подготовки; иначе обратный отсчёт перед первым подходом Live.
   const [prepSeconds, setPrepSeconds] = useState(0)
+  // undefined — режим ещё не выбран явно и следует формату тренировки.
+  const [executionMode, setExecutionMode] = useState<WorkoutExecutionMode | undefined>(undefined)
   const [clientSelectionError, setClientSelectionError] = useState<string | null>(null)
   const [stageId, setStageId] = useState('')
   const [formDraftReady, setFormDraftReady] = useState(false)
@@ -1367,6 +1370,7 @@ export function WorkoutFormPage() {
       setNotes(saved.notes)
       setTitle(saved.title ?? '')
       setPrepSeconds(saved.prepSeconds ?? 0)
+      setExecutionMode(saved.executionMode)
       setStageId(saved.stageId)
       setRecordCompleted(saved.recordCompleted)
       setTrainingFormat(clientMode ? 'self' : saved.trainingFormat)
@@ -1389,6 +1393,9 @@ export function WorkoutFormPage() {
       setTitle(source.data?.title ?? '')
       // Подготовка — настройка хода тренировки, копия забирает её вместе с отдыхом.
       setPrepSeconds(source.data?.prepSeconds ?? 0)
+      // Старая тренировка без режима ведётся вручную — правка это сохраняет;
+      // копия без режима получает значение по формату.
+      setExecutionMode(source.data?.executionMode ?? (workoutId ? 'manual' : undefined))
       setStageId(initial.stageId ?? '')
       setTrainingFormat(clientMode ? 'self' : workoutId ? source.data?.trainingFormat ?? 'self' : undefined)
       trainingFormatTouched.current = Boolean(workoutId)
@@ -1405,7 +1412,7 @@ export function WorkoutFormPage() {
 
   useEffect(() => {
     if (!formDraftReady || safePlanInput && planSaved.current || workoutId && !safePlanInput) return
-    const draft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat, prepSeconds }
+    const draft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId, recordCompleted, exercises, trainingFormat, prepSeconds, executionMode }
     if (workoutId) {
       const fingerprint = JSON.stringify(draft)
       editBaseline.current ??= fingerprint
@@ -1419,7 +1426,7 @@ export function WorkoutFormPage() {
       }
       writeWorkoutFormDraft(planDraftKey, { ...draft, sourceVersion: editSourceVersion.current })
     } else writeWorkoutFormDraft(draftKey, { ...draft, requestId: createRequestId.current })
-  }, [actualDurationMinutes, clientId, draftKey, planDraftKey, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, workoutId])
+  }, [actualDurationMinutes, clientId, draftKey, planDraftKey, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, executionMode, workoutId])
 
   useEffect(() => {
     if (!safePlanInput || !hasEditChanges) return
@@ -1596,7 +1603,7 @@ export function WorkoutFormPage() {
     const stageId = String(form.get('stageId') || '') || null
     mutation.mutate({ id: workoutId, requestId: workoutId ? undefined : createRequestId.current, clientId: submitClientId, workoutDate: date, startTime: submittedStartTime || undefined,
       endTime: submittedEndTime || undefined,
-      ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null }),
+      ...(completedMode ? { actualDurationSec } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }),
       ...(limePlan ? { title: title.trim() || null } : {}),
       notes: notes || undefined, stageId: stageId || null, exercises, version: safePlanInput && workoutId ? editSourceVersion.current : source.data?.version,
       favoriteTitle: initial?.favoriteTitle, trainingFormat: clientMode ? 'self' : trainingFormat ?? 'self' })
@@ -1680,6 +1687,7 @@ export function WorkoutFormPage() {
           </select></span>
           <small>Обратный отсчёт в Live, чтобы положить телефон и занять положение.</small>
         </Field>}
+        {!completedMode && <WorkoutExecutionModeField value={executionMode ?? DEFAULT_EXECUTION_MODE} onChange={setExecutionMode} />}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
           <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
@@ -2033,6 +2041,7 @@ export function WorkoutDetailPage() {
             <summary className={done ? 'completed-set-summary' : 'planned-set-summary'}>
               <span className="workout-detail-exercise-heading"><strong>{exercise.name}</strong><span className="exercise-details-chevron" aria-hidden="true" /></span>
               <span className="workout-detail-exercise-result">{detailSummary}</span>
+              {done && exercise.sets.some((set) => set.timerConfirmed) && <span className="workout-timer-confirmed-note">Засчитано таймером, не проверено: {exercise.sets.filter((set) => set.timerConfirmed).length}</span>}
             </summary>
             <WorkoutSetTable variant="history" inputKind={exercise.inputKind} showRpe={false} columnLabels={[done ? 'Результат' : 'План']} className="workout-history-sets">
               {exercise.sets.map((set, index) => <WorkoutHistorySet key={set.id} set={set} index={index} done={done} clientLime={isClientLimeEnabled(actor)} showRpe={showRpe} exerciseRef={exercise.ref} />)}
@@ -2567,7 +2576,7 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false, quietUnits = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean; quietUnits?: boolean }) {
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false, quietUnits = false, workTimer }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode }) {
   // Lime keeps confirmed facts directly editable; completion is independent of
   // field availability. The old UI retains its explicit editing mode.
   const locked = Boolean(set.confirmedAt) && !editing && !directInput
@@ -2593,6 +2602,8 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
   </select>, 'RPE') : null
   const measurements = { source, ref: exerciseRef ?? '', inputKind }
+  // «Старт» и отсчёт подхода «Веду сам» живут в ячейке времени: поле остаётся для ручного ввода.
+  const withWorkTimer = (field: ReactNode) => workTimer ? <span className="live-set-time-cell">{field}{workTimer}</span> : field
   const weightField = metric(<LiveSetInput name="weightKg" label="Фактический вес" placeholder={quietUnits ? '—' : 'кг'} defaultValue={value(set.fact.weightKg, set.weightKg)} planHint={isPlanHint(set.fact.weightKg, set.weightKg)} step="any" disabled={locked} inputKey={`w-${k}-${directInput ? 'stable' : carriedWeightKey}`} decimal selectZero directInput={directInput} />, 'кг')
   if (inputKind === 'strength') return <>
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="durationSec" value={value(factDuration, planDuration) ?? ''} />}
@@ -2601,7 +2612,7 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
+    {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />), 'мин:с')}
     {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder={quietUnits ? '—' : 'повт.'} defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
@@ -2609,7 +2620,7 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {allowsDurationWeight(measurements) && <input type="hidden" name="distanceKm" value={value(set.fact.distanceKm, set.distanceKm) ?? ''} />}
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="reps" value={value(set.fact.reps, set.reps) ?? ''} />}
     {allowsDurationWeight(measurements) && weightField}
-    {metric(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />, 'мин:с')}
+    {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />), 'мин:с')}
     {!allowsDurationWeight(measurements) && <span className="live-set-empty" aria-hidden="true" />}
     {rpeField}
   </>
@@ -2642,6 +2653,27 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
 }
 
 // Live elapsed workout time counting up from the start timestamp, "42:07".
+// Кнопка в ячейке времени для режима «Веду сам»: до старта — ▶, во время
+// подхода — сам отсчёт (после нуля «+0:12»), нажатие засчитывает подход.
+function LiveSetWorkTimer({ phase, disabled, onStart, onFinish }: {
+  phase: { startedAt: number; endsAt: number } | null
+  disabled: boolean
+  onStart: () => void
+  onFinish: () => void
+}) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    if (!phase) return
+    const interval = window.setInterval(() => setNow(Date.now()), 250)
+    setNow(Date.now())
+    return () => window.clearInterval(interval)
+  }, [phase])
+  if (!phase) return <button type="button" className="live-set-work-start" aria-label="Старт подхода" disabled={disabled} onClick={onStart}><PlayIcon /></button>
+  const over = now >= phase.endsAt
+  const clock = over ? `+${formatRest(Math.floor((now - phase.endsAt) / 1000))}` : formatRest(Math.max(0, Math.ceil((phase.endsAt - now) / 1000)))
+  return <button type="button" className={`live-set-work-timer${over ? ' over' : ''}`} aria-label={`Засчитать подход: ${clock}`} onClick={onFinish}>{clock}</button>
+}
+
 function liveDistanceIsValid(form: HTMLFormElement, report = false): boolean {
   const invalid = [...form.querySelectorAll<HTMLInputElement>('input[data-live-direct]')].find((field) => !field.checkValidity())
   if (invalid) { if (report) invalid.reportValidity(); return false }
@@ -3026,6 +3058,13 @@ export function LiveWorkoutPage() {
   // кнопка таймера показывает текущую фазу (docs/design/live-phase-timer.md).
   const [livePhase, setLivePhaseState] = useState<LivePhaseTimer | null>(null)
   const livePhaseRef = useRef<LivePhaseTimer | null>(null)
+  // Кто ведёт тренировку (YAFIT-627): режим тренировки или выбор в этой сессии.
+  // «Ведёт таймер» — подходы со временем идут и засчитываются сами, отдых не
+  // уходит в минус; «Веду сам» — прежний ручной поток (#1509). Тренерский Live
+  // по референсу не меняется.
+  const [liveModeOverride, setLiveModeOverride] = useState<WorkoutExecutionMode | null>(null)
+  const liveExecutionMode = effectiveExecutionMode(query.data?.executionMode, liveModeOverride)
+  const timerLeads = Boolean(query.data) && !coachReference && liveExecutionMode === 'timer'
   const [phaseNotice, setPhaseNotice] = useState<
     | { kind: 'work-confirmed'; setId: string; exerciseId: string; seconds: number; shownAt: number }
     | { kind: 'rest-stopped'; restoreRestUntil: number; shownAt: number }
@@ -3064,6 +3103,7 @@ export function LiveWorkoutPage() {
     const phase = restoreLivePhase(workoutId)
     livePhaseRef.current = phase
     setLivePhaseState(phase)
+    setLiveModeOverride(restoreLiveExecutionMode(workoutId))
   }, [workoutId])
   // При правке ПОДТВЕРЖДЁННОГО подхода (карандаш → «Сохранить») значение пишется
   // в БД, но без refetch локальный set остаётся старым и поле возвращает прежнее
@@ -3195,7 +3235,7 @@ export function LiveWorkoutPage() {
       // The next timed set may start only after the confirmed result is in
       // the cache; starting rest does not pretend the server saved the fact.
       autoStartNextWork.current = seconds !== undefined && (seconds <= 0
-        || Boolean(!coachReference && query.data?.prepSeconds && restEndsAt !== null && restEndsAt <= Date.now()))
+        || Boolean(timerLeads && restEndsAt !== null && restEndsAt <= Date.now()))
       void query.refetch()
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
@@ -3312,8 +3352,8 @@ export function LiveWorkoutPage() {
   }
   // Запускает таймер подхода на время; false — у подхода нет плановой длительности.
   function startWorkTimer(set: WorkoutSet | undefined, exercise: WorkoutExerciseModel | undefined): boolean {
-    if (!query.data?.prepSeconds) return false
-    const seconds = set && exercise ? timedSetSeconds(exercise, set) : null
+    if (!timerLeads) return false
+    const seconds = set && exercise ? timedSetSeconds(set) : null
     if (!set || seconds === null || pendingSetConfirmations.current.has(set.id)) return false
     const now = Date.now()
     if (restEndsAt !== null) startRestUntil(null)
@@ -3330,15 +3370,19 @@ export function LiveWorkoutPage() {
     setLivePhase(null)
     if (!located || located.set.confirmedAt) return
     const { exercise, set } = located
-    const seconds = elapsedWorkSeconds(phase, at)
+    const seconds = phase.manual ? personWorkSeconds(phase, at) : elapsedWorkSeconds(phase, at)
     const form = liveSetForms.current.get(set.id)
     const base: LiveSetDraft = form ? draftFrom(form, set) : {
       weightKg: set.fact.weightKg ?? set.weightKg, reps: set.fact.reps ?? set.reps,
       distanceKm: set.fact.distanceKm ?? set.distanceKm, rpe: set.fact.rpe,
     }
+    // На нуле подход засчитывает таймер без участия человека. Если повторы, вес
+    // или дистанция взяты из плана, пометка держится до «Подтвердить» или правки.
+    const byTimer = !phase.manual && at >= phase.endsAt && timerAssumesPlannedValues(base)
     const draft: LiveSetDraft = {
       ...base, durationSec: seconds, durationMin: undefined,
       metricSources: { distance: base.metricSources?.distance ?? 'unknown', rpe: base.metricSources?.rpe ?? 'unknown', duration: 'entered' },
+      ...(byTimer ? { timerConfirmed: true as const } : {}),
     }
     liveSetAutosave.clear(set.id)
     prepareGong()
@@ -3656,6 +3700,41 @@ export function LiveWorkoutPage() {
   })
   const hasIncompleteLiveSets = query.data?.exercises.some((exercise) => !exercise.sets.every((set) => set.confirmedAt)) ?? false
   const cardioSetMissingTime = query.data ? firstCardioSetMissingEnteredDuration(query.data) : null
+  // Подходы, засчитанные таймером без участия человека, помечены на карточке
+  // упражнения «Подтвердить»; подтверждение снимает пометку обычным сохранением.
+  const timerConfirmedSets = query.data?.exercises.flatMap((exercise) => exercise.sets
+    .filter((set) => set.confirmedAt && set.timerConfirmed)
+    .map((set) => ({ exercise, set }))) ?? []
+  const [acceptingTimerSets, setAcceptingTimerSets] = useState<string | null>(null)
+  async function acceptTimerSets(scope: string, sets: WorkoutSet[]) {
+    setAcceptingTimerSets(scope)
+    try {
+      for (const set of sets) {
+        const { timerConfirmed: _timer, ...fact } = set.fact
+        void _timer
+        await save.mutateAsync({ set, draft: { ...fact, ...(set.metricSources ? { metricSources: set.metricSources } : {}) } })
+      }
+      return true
+    } catch {
+      return false
+    } finally {
+      setAcceptingTimerSets(null)
+    }
+  }
+  async function acceptExerciseTimerSets(exercise: WorkoutExerciseModel) {
+    if (await acceptTimerSets(exercise.id, exercise.sets.filter((set) => set.confirmedAt && set.timerConfirmed))) trackGoal('live_timer_exercise_accepted')
+  }
+  async function acceptTimerSetsAndFinish() {
+    if (!await acceptTimerSets('finish', timerConfirmedSets.map(({ set }) => set))) return
+    trackGoal('live_timer_sets_accepted')
+    setConfirmFinish(false)
+    finish.mutate()
+  }
+  function reviewTimerSets() {
+    setConfirmFinish(false)
+    const first = timerConfirmedSets[0]?.exercise.id
+    if (first) window.requestAnimationFrame(() => document.querySelector(`[data-timer-pending="${first}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
+  }
   function focusCardioDuration() {
     if (!cardioSetMissingTime) return
     setConfirmFinish(false)
@@ -3800,6 +3879,14 @@ export function LiveWorkoutPage() {
     const confirmationFailed = clientLime && confirm.isError && confirm.variables?.set.id === set.id
     const saveStatus = confirmationPending ? 'saving' : confirmationFailed ? 'error' : savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
     const setNumber = label?.match(/\d+/)?.[0]
+    // Отсчёт идущего подхода виден в его строке в обоих режимах; «Старт» — только
+    // в «Веду сам», в «Ведёт таймер» подходы запускаются сами.
+    const workPhase = livePhase?.kind === 'work' ? livePhase : null
+    const ownPhase = workPhase?.setId === set.id ? workPhase : null
+    const personWorkTimer = !coachReference && !set.confirmedAt && timedSetSeconds(set) !== null && (!timerLeads || ownPhase)
+      ? <LiveSetWorkTimer phase={ownPhase} disabled={Boolean(workPhase) || confirm.isPending}
+          onStart={() => startPersonWorkTimer(set)} onFinish={() => ownPhase?.manual ? finishPersonWorkTimer(true) : confirmRunningTimerSet()} />
+      : undefined
     const restSeconds = query.data ? restSecondsAfterSet(query.data, exercise, set) : 0
     const confirmLabel = set.confirmedAt
       ? 'Подтверждено'
@@ -3844,14 +3931,14 @@ export function LiveWorkoutPage() {
     }}>
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} directInput={directLiveInput} quietUnits={densityEnabled} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={coachReference} directInput={directLiveInput} quietUnits={densityEnabled} workTimer={personWorkTimer} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
                 onPointerDown={() => { skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id) }}
                 onClick={(event) => { const form = event.currentTarget.form; skipBlurForSet.current = null; if (!form || !liveDistanceIsValid(form, true)) return; persistLiveDraft(set, draftFrom(form, set), true); setEditingSets((prev) => { const next = new Set(prev); next.delete(set.id); return next }) }}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
-            : set.confirmedAt && directLiveInput ? <span className="live-set-check done" role="img" aria-label="Подход выполнен">{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</span>
-            : set.confirmedAt ? <button type="button" className="secondary live-set-check done" aria-label="Редактировать подход" title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
+            : set.confirmedAt && directLiveInput ? <span className={`live-set-check done${set.timerConfirmed ? ' timer' : ''}`} role="img" aria-label={set.timerConfirmed ? 'Засчитано таймером' : 'Подход выполнен'}>{set.timerConfirmed ? <TimerIcon /> : coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</span>
+            : set.confirmedAt ? <button type="button" className={`secondary live-set-check done${set.timerConfirmed ? ' timer' : ''}`} aria-label={set.timerConfirmed ? 'Засчитано таймером, изменить подход' : 'Редактировать подход'} title={coachReference ? 'Подход выполнен — изменить результат' : undefined} onClick={() => setEditingSets((prev) => new Set(prev).add(set.id))}>{set.timerConfirmed ? <TimerIcon /> : coachReference ? <CheckIcon /> : <span aria-hidden="true">✓</span>}</button>
             : <button type="button" className="live-set-check" aria-label={confirmLabel} aria-busy={confirmationPending} disabled={confirm.isPending}
                 onPointerDown={(event) => {
                   prepareGong(); skipBlurForSet.current = set.id; liveSetAutosave.clear(set.id)
@@ -3860,6 +3947,12 @@ export function LiveWorkoutPage() {
                 }}
                 onClick={(event) => {
                   prepareGong()
+                  const running = livePhaseRef.current
+                  if (running?.kind === 'work' && running.manual && running.setId === set.id) {
+                    skipBlurForSet.current = null
+                    finishPersonWorkTimer(false)
+                    return
+                  }
                   liveSetAutosave.clear(set.id)
                   const form = event.currentTarget.form
                   if (!form || !liveDistanceIsValid(form, true)) { skipBlurForSet.current = null; return }
@@ -3890,20 +3983,26 @@ export function LiveWorkoutPage() {
   const currentLiveSet = selectedLiveBlock && selectedLiveBlock.exercises.length > 1
     ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
     : activeLiveExercise?.sets.find((set) => !set.confirmedAt)
-  const currentSetTimed = Boolean(activeLiveExercise && currentLiveSet && timedSetSeconds(activeLiveExercise, currentLiveSet) !== null)
-  // Preparation opts the entire workout into the phase timer. Without it,
-  // keep the legacy rest-only flow, including negative overtime.
+  const currentSetTimed = Boolean(currentLiveSet && timedSetSeconds(currentLiveSet) !== null)
+  // Режим «Ведёт таймер» запускает тренировку сам: подготовка, если задана,
+  // иначе сразу первый подход со временем. «Веду сам» — прежний поток отдыха.
   useEffect(() => {
     const workout = query.data
     if (!workout || workout.status !== 'in_progress') return
-    if (!workout.prepSeconds) {
-      if (livePhaseRef.current) setLivePhase(null)
+    if (!timerLeads) {
+      const phase = livePhaseRef.current
+      if (phase && !(phase.kind === 'work' && phase.manual)) setLivePhase(null)
       return
     }
     if (workout.exercises.some((exercise) => exercise.sets.some((set) => set.confirmedAt))) return
-    if (livePhaseRef.current || restEndsAt !== null || !claimLiveAutostart(workoutId)) return
-    startPrep(workout.prepSeconds)
-  }, [query.data?.id, query.data?.status, query.data?.prepSeconds])
+    if (livePhaseRef.current || restEndsAt !== null) return
+    // Попытку тратим, только когда есть что запустить: сразу после старта
+    // тренировки текущий подход ещё может быть не выбран — тогда ждём его.
+    if (!workout.prepSeconds && (!currentLiveSet || timedSetSeconds(currentLiveSet) === null)) return
+    if (!claimLiveAutostart(workoutId)) return
+    if (workout.prepSeconds) startPrep(workout.prepSeconds)
+    else startWorkTimer(currentLiveSet, activeLiveExercise)
+  }, [query.data?.id, query.data?.status, query.data?.prepSeconds, timerLeads, currentLiveSet?.id])
   useEffect(() => {
     const phase = livePhaseRef.current
     if (phase?.kind === 'work' && query.data) {
@@ -3913,7 +4012,7 @@ export function LiveWorkoutPage() {
     if (!autoStartNextWork.current || !query.data) return
     autoStartNextWork.current = false
     if (!livePhaseRef.current && (restEndsAt === null || restEndsAt <= Date.now())) {
-      if (!startWorkTimer(currentLiveSet, activeLiveExercise) && query.data.prepSeconds) startRestUntil(null)
+      if (!startWorkTimer(currentLiveSet, activeLiveExercise) && timerLeads) startRestUntil(null)
     }
   }, [query.data])
   // «Подход засчитан · Исправить» висит весь отдых после подхода (не меньше
@@ -3926,7 +4025,52 @@ export function LiveWorkoutPage() {
     const timer = window.setTimeout(() => setPhaseNotice(null), Math.max(0, until - Date.now()))
     return () => window.clearTimeout(timer)
   }, [phaseNotice, restEndsAt])
+  // Смена режима прямо в Live действует до конца сессии. «Веду сам»
+  // останавливает идущую подготовку или подход без засчёта; «Ведёт таймер»
+  // сразу запускает текущий подход со временем, если отдых не идёт.
+  function changeLiveExecutionMode(mode: WorkoutExecutionMode) {
+    if (mode === liveExecutionMode) return
+    setLiveModeOverride(mode)
+    storeLiveExecutionMode(workoutId, mode)
+    trackGoal(mode === 'timer' ? 'live_mode_timer' : 'live_mode_manual')
+    if (livePhaseRef.current) setLivePhase(null)
+  }
+  const previousTimerLeads = useRef(timerLeads)
+  useEffect(() => {
+    const switchedOn = timerLeads && !previousTimerLeads.current
+    previousTimerLeads.current = timerLeads
+    if (!switchedOn || query.data?.status !== 'in_progress' || livePhaseRef.current) return
+    if (restEndsAt === null || restEndsAt <= Date.now()) startWorkTimer(currentLiveSet, activeLiveExercise)
+  }, [timerLeads])
+  // «Веду сам»: подход со временем человек запускает сам, таймер отсчитывает
+  // и сигналит на нуле, засчитывает подход повторное нажатие или «Готово».
+  function startPersonWorkTimer(set: WorkoutSet) {
+    const seconds = timedSetSeconds(set)
+    if (timerLeads || coachReference || seconds === null || livePhaseRef.current || pendingSetConfirmations.current.has(set.id)) return
+    prepareGong()
+    if (restEndsAt !== null) startRestUntil(null)
+    const now = Date.now()
+    setLivePhase({ kind: 'work', setId: set.id, startedAt: now, endsAt: now + seconds * 1000, manual: true })
+    setExpandedSetId(set.id)
+    trackGoal('live_person_work_started')
+  }
+  /** true — нажатие относилось к подходу «Веду сам» (засчитан или проглочен как случайный). */
+  function finishPersonWorkTimer(guardAccidentalTap: boolean): boolean {
+    const phase = livePhaseRef.current
+    if (phase?.kind !== 'work' || !phase.manual) return false
+    const now = Date.now()
+    if (guardAccidentalTap && now - phase.startedAt < PERSON_WORK_FINISH_GUARD_MS) return true
+    confirmWorkFromTimer(phase, now)
+    return true
+  }
+  /** «Ведёт таймер»: нажатие на отсчёт в строке засчитывает подход раньше нуля, как нажатие на таймер. */
+  function confirmRunningTimerSet() {
+    const phase = livePhaseRef.current
+    if (phase?.kind === 'work' && !phase.manual) confirmWorkFromTimer(phase, Date.now())
+  }
   function handlePhaseExpire(phase: LivePhaseTimer) {
+    // «Веду сам»: на нуле только сигнал, подход засчитывает человек.
+    if (phase.kind === 'work' && phase.manual) return
     if (phase.kind === 'prep') {
       setLivePhase(null)
       startWorkTimer(currentLiveSet, activeLiveExercise)
@@ -3934,18 +4078,26 @@ export function LiveWorkoutPage() {
     }
     confirmWorkFromTimer(phase, phase.endsAt)
   }
-  // Only the opted-in phase flow advances at zero. The legacy timer keeps
-  // its deadline and counts negative seconds until the user changes it.
+  // Только «Ведёт таймер» переходит дальше на нуле. «Веду сам» сохраняет
+  // дедлайн и считает минус, пока человек не продолжит (#1509).
+  // Конец отдыха разбирается после рендера, а не в замыкании таймера: короткий
+  // отдых может истечь на рендере, где ответ подтверждения уже пришёл, но
+  // текущий подход и confirm.isPending ещё старые, — тогда следующий подход не
+  // стартовал бы и отдых ушёл бы в минус.
+  const [restExpiryPending, setRestExpiryPending] = useState(false)
   function handleRestExpire() {
-    if (coachReference || !query.data?.prepSeconds) return
-    // An immediate rest can finish before the confirmation reaches the server.
-    // Do not start/confirm the same pending set again; resume after acknowledgement.
-    if (confirm.isPending) return
-    if (livePhaseRef.current) return
-    if (!startWorkTimer(currentLiveSet, activeLiveExercise)) startRestUntil(null)
+    if (timerLeads) setRestExpiryPending(true)
   }
+  useEffect(() => {
+    // Пока подтверждение в пути, тот же подход не запускаем повторно — ждём ответа.
+    if (!restExpiryPending || confirm.isPending) return
+    setRestExpiryPending(false)
+    if (!timerLeads || livePhaseRef.current || (restEndsAt !== null && restEndsAt > Date.now())) return
+    if (!startWorkTimer(currentLiveSet, activeLiveExercise)) startRestUntil(null)
+  }, [restExpiryPending, confirm.isPending, currentLiveSet?.id])
   function handleTimerPrimary(): boolean {
-    if (!query.data?.prepSeconds) return false
+    if (finishPersonWorkTimer(true)) return true
+    if (!timerLeads) return false
     const phase = livePhaseRef.current
     const action = livePhasePrimaryAction({ phase, restEndsAt, now: Date.now(), currentSetTimed })
     if (action === 'skip-prep') {
@@ -4034,10 +4186,14 @@ export function LiveWorkoutPage() {
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <><div ref={haloRef} className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} />}
-            <Coachmark id={query.data.prepSeconds ? 'live-phase-timer-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : query.data.prepSeconds ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : query.data.prepSeconds ? 'Нажатие — следующий шаг: пропустить подготовку, засчитать подход на время или закончить отдых. Удерживайте кнопку, чтобы открыть настройки таймера.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время или остановить его.'}>
+            <Coachmark id={timerLeads ? 'live-timer-mode-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
-                phase={livePhase} onPrimary={query.data.prepSeconds ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} onReferenceRestActiveChange={coachReference ? setReferenceRestActive : undefined} />
+                phase={livePhase} onPrimary={timerLeads || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
+                referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} onReferenceRestActiveChange={coachReference ? setReferenceRestActive : undefined}
+                settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
+                  {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}
+                    className={liveExecutionMode === mode ? 'active' : ''} onClick={() => changeLiveExecutionMode(mode)}>{EXECUTION_MODE_LABELS[mode]}</button>)}
+                </div> : undefined} />
             </Coachmark>
           </div>
           {phaseNotice && <div className="live-phase-notice" role="status">
@@ -4091,10 +4247,19 @@ export function LiveWorkoutPage() {
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
-              const completedCard = <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
+              // Засчитанное таймером ждёт подтверждения прямо на карточке: «Подтвердить»
+              // вместо «Завершена», без отдельного списка в конце тренировки.
+              const timerPending = !coachReference && exercise.sets.some((set) => set.confirmedAt && set.timerConfirmed)
+              const compactCard = <WorkoutExerciseCompact key={exercise.id} state="completed" className="live-exercise-collapsed" title={exercise.name}
                 leading={liveHeaderThumbnail(exercise)}
                 meta={`${doneCount} ${doneCount === 1 ? 'подход' : doneCount < 5 ? 'подхода' : 'подходов'}${best ? ` · ${best}` : ''}`}
+                action={timerPending ? <span className="sr-only">Засчитано таймером</span> : undefined}
                 onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))} />
+              const completedCard = timerPending ? <div key={exercise.id} className="live-timer-pending" data-timer-pending={exercise.id}>
+                {compactCard}
+                <button type="button" className="live-timer-confirm" aria-label={`Подтвердить подходы: ${exercise.name}`} aria-busy={acceptingTimerSets === exercise.id}
+                  disabled={acceptingTimerSets !== null || save.isPending} onClick={() => void acceptExerciseTimerSets(exercise)}>Подтвердить</button>
+              </div> : compactCard
               return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
                 <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise, canReorder, removableSet, groupingItems)} />
                 <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : clientLime ? <div className="live-completed-gesture-head">{completedCard}<span className="exercise-head-actions">{exerciseMenu(exercise, canReorder)}{reorder}</span></div> : completedCard)
@@ -4229,7 +4394,15 @@ export function LiveWorkoutPage() {
           <button type="button" className="secondary" disabled={save.isPending || confirm.isPending} onClick={() => void retryPendingLiveDrafts()}>{save.isPending ? 'Отправляем…' : 'Повторить'}</button>
         </div>}
         {query.data.exercises.length > 0 && (confirmFinish
-          ? <div className="finish-confirm">
+          ? timerConfirmedSets.length > 0 && !cardioSetMissingTime
+            ? <div className="finish-confirm timer-review">
+                <p>{`Таймер засчитал подходов: ${timerConfirmedSets.length}${hasIncompleteLiveSets ? ', часть подходов не выполнена' : ''}. Всё верно?`}</p>
+                <div className="actions workout-action-row">
+                  <WorkoutCta type="button" variant="tertiary" onClick={reviewTimerSets}>Проверить</WorkoutCta>
+                  <WorkoutCta variant="primary" pending={acceptingTimerSets === 'finish' || finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => void acceptTimerSetsAndFinish()}>Всё верно, завершить</WorkoutCta>
+                </div>
+              </div>
+            : <div className="finish-confirm">
               <p>{cardioSetMissingTime
                 ? `У «${cardioSetMissingTime.exerciseName}» указана дистанция, но нет фактического времени. Добавьте время для оценки активных калорий FIT или завершите без неё.`
                 : hasIncompleteLiveSets ? clientLime ? `Не подтверждено подходов: ${query.data.exercises.flatMap((exercise) => exercise.sets).filter((set) => !set.confirmedAt).length}. Завершить тренировку?` : 'Есть незавершённые подходы. Завершить частично?' : 'Все подходы выполнены. Завершить тренировку?'}</p>
@@ -4240,7 +4413,7 @@ export function LiveWorkoutPage() {
                 <WorkoutCta variant={cardioSetMissingTime ? 'secondary' : 'primary'} pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { setConfirmFinish(false); finish.mutate() }}>{cardioSetMissingTime ? 'Завершить без оценки' : 'Завершить'}</WorkoutCta>
               </div>
             </div>
-          : !coachReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
+          : !coachReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>}
     </>}</AsyncView>
     {canManageLiveStructure && pickerOpen && <ExercisePicker clientLime={isClientLimeEnabled(actor)} reference={coachReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}

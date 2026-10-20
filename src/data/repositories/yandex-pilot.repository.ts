@@ -137,6 +137,7 @@ const workoutSetSchema = z.object({
     distance: z.enum(['unknown', 'planned', 'entered']),
     rpe: z.enum(['unknown', 'planned', 'entered']),
   }).optional(),
+  timerConfirmed: z.literal(true).optional(),
   confirmedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
 })
@@ -172,6 +173,7 @@ const workoutSchema = z.object({
   origin: z.enum(['manual', 'ai']).optional(),
   favoriteTitle: z.string().nullable().optional(),
   prepSeconds: z.number().int().min(1).max(600).nullable().optional(),
+  executionMode: z.enum(['timer', 'manual']).optional(),
   title: z.string().max(120).nullable().optional(),
   trainingFormat: z.enum(['self', 'with_trainer']).optional(),
   startedBy: z.uuid().nullable(),

@@ -398,7 +398,8 @@ test('Live rest starts before the first confirmation response and is not restart
   } finally { release() }
 })
 
-test('Live rest preparation disabled keeps timed sets manual', async ({ page }) => {
+// «Веду сам» (и старые тренировки без режима) — поведение #1509: ручное подтверждение и минус после отдыха.
+test('Live manual mode keeps timed sets manual', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
   await page.goto(`/workouts/${workoutId}/live`)
@@ -412,9 +413,41 @@ test('Live rest preparation disabled keeps timed sets manual', async ({ page }) 
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
 })
 
-test('Live rest preparation enabled preserves the automatic phase sequence', { tag: ["@lime-critical"] }, async ({ page }) => {
+// «Веду сам»: подход на время запускает человек, на нуле сигнал и счёт в плюс,
+// повторное нажатие засчитывает фактическое время без пометки таймера.
+test('Live manual mode times a set from Start and records the time past zero', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
-  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
+  const drafts: Array<{ durationSec?: number; timerConfirmed?: true }> = []
+  page.on('request', (request) => {
+    if (/\/v1\/workout-sets\/[^/]+\/draft$/.test(new URL(request.url()).pathname)) drafts.push((request.postDataJSON() as { draft: { durationSec?: number; timerConfirmed?: true } }).draft)
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+  await page.getByRole('button', { name: 'Старт подхода' }).first().click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход +0:02')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  await page.getByRole('button', { name: /^Засчитать подход:/ }).click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  expect(drafts.at(-1)).toMatchObject({ durationSec: 5 })
+  expect(drafts.at(-1)?.timerConfirmed).toBeUndefined()
+})
+
+test('Live manual set timer ignores an accidental second tap right after Start', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: 'Старт подхода' }).first().click()
+  await page.getByRole('button', { name: /^Засчитать подход:/ }).click()
+  await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toBeVisible()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+})
+
+test('Live timer mode with preparation runs the automatic phase sequence', { tag: ["@lime-critical"] }, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true, 'timer')] })
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка 0:10')
   await page.clock.fastForward(10_000)
@@ -427,6 +460,97 @@ test('Live rest preparation enabled preserves the automatic phase sequence', { t
   await page.clock.fastForward(3_000)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
   await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+})
+
+// Повторы со временем: таймер ведёт подход, но повторы берёт из плана, не измеряя.
+function timedRepsWorkout() {
+  const source = restTimerWorkout(0, true, 'timer')
+  const exercise = source.exercises[0]!
+  source.exercises[0] = { ...exercise, ref: 'squat', name: 'Приседания', inputKind: 'reps', sets: exercise.sets.map((set) => ({ ...set, reps: 10 })) }
+  return source
+}
+
+async function runTwoTimedSets(page: Page, waitForServer: boolean) {
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  if (waitForServer) await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 0:02')
+  await page.clock.fastForward(2_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+}
+
+function recordSetDrafts(page: Page) {
+  const drafts: Array<{ timerConfirmed?: true }> = []
+  page.on('request', (request) => {
+    if (/\/v1\/workout-sets\/[^/]+\/draft$/.test(new URL(request.url()).pathname)) drafts.push((request.postDataJSON() as { draft: { timerConfirmed?: true } }).draft)
+  })
+  return drafts
+}
+
+// YAFIT-627: режим «Ведёт таймер» не зависит от подготовки. Подход только на время
+// таймер измерил сам — засчитывается без пометки и без проверки в конце.
+test('Live timer mode without preparation runs timed sets itself without asking to confirm them', { tag: ["@lime-critical"] }, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true, 'timer')] })
+  const drafts = recordSetDrafts(page)
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.getByRole('group', { name: 'Кто ведёт тренировку' })).toHaveCount(0)
+  await runTwoTimedSets(page, true)
+  expect(drafts.filter((draft) => draft.timerConfirmed)).toHaveLength(0)
+  await expect(page.getByRole('button', { name: /^Подтвердить подходы/ })).toHaveCount(0)
+  const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await finish
+})
+
+// Повторы из плана ждут «Подтвердить» на карточке, а при завершении — одно «Всё верно».
+test('Live timer mode asks to confirm planned reps before finishing', { tag: ["@lime-critical"] }, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [timedRepsWorkout()] })
+  const drafts = recordSetDrafts(page)
+  await page.goto(`/workouts/${workoutId}/live`)
+  await runTwoTimedSets(page, true)
+  expect(drafts.filter((draft) => draft.timerConfirmed)).toHaveLength(2)
+  await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await expect(page.locator('.timer-review')).toContainText('Таймер засчитал подходов: 2. Всё верно?')
+  const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
+  await page.getByRole('button', { name: 'Всё верно, завершить', exact: true }).click()
+  await finish
+  expect(drafts.slice(-2).every((draft) => !draft.timerConfirmed)).toBe(true)
+})
+
+// «Подтвердить» на карточке снимает пометку сразу, и завершение уже не спрашивает про таймер.
+// Шаги отдыха без ожидания ответа сервера: короткий отдых истекает, пока подтверждение в пути.
+test('Live exercise confirmation clears the timer marks before finishing', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [timedRepsWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await runTwoTimedSets(page, false)
+  await page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toHaveCount(0)
+  const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await finish
+  await expect(page.locator('.timer-review')).toHaveCount(0)
+})
+
+// Режим меняется редко, поэтому живёт в настройках таймера (удержание), а не на экране Live.
+test('Live mode switch in the timer settings stops the timer flow for this session', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true, 'timer')] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.locator('.live-rest-trigger').click({ button: 'right' })
+  const mode = page.getByRole('dialog').getByRole('group', { name: 'Кто ведёт тренировку' })
+  await expect(mode.getByRole('button', { name: 'Ведёт таймер' })).toHaveAttribute('aria-pressed', 'true')
+  await mode.getByRole('button', { name: 'Веду сам', exact: true }).click()
+  await page.getByRole('button', { name: 'Закрыть таймер' }).click()
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
 })
 
 test('Live rest failure and retry preserve the countdown and a manual adjustment', { tag: ["@lime-critical"] }, async ({ page }) => {
@@ -450,7 +574,7 @@ test('Live rest failure and retry preserve the countdown and a manual adjustment
 
 test('Live rest phase expiry waits for a pending confirmation without timing the same set twice', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
-  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true)] })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(10, true, 'timer')] })
   let release = () => {}, confirmations = 0
   const responseGate = new Promise<void>((resolve) => { release = resolve })
   await page.route('**/v1/workout-sets/*/confirm', async (route) => {

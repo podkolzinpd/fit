@@ -6596,6 +6596,58 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       )
     })
 
+    it('stores the execution mode and the timer confirmation marker until a person saves the set', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const today = (await ownerPool.query<{ today: string }>(
+        'select app_private.client_today($1)::text as today', [CLIENT_ID],
+      )).rows[0]!.today
+      const plan: PlannedWorkoutDraft = {
+        id: null, clientId: CLIENT_ID, workoutDate: today, startTime: null, endTime: null,
+        notes: 'Проверка режима таймера', executionMode: 'timer',
+        exercises: [{
+          position: 0, source: 'system', ref: 'plank', customExerciseId: null, name: 'Планка',
+          muscleGroup: 'core', inputKind: 'duration', blockId: randomUUID(), blockType: 'single',
+          blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 30, trainerComment: null,
+          sets: [{ position: 0, weightKg: null, reps: null, durationMin: null, durationSec: 45, distanceKm: null, rpe: null }],
+        }],
+      }
+      const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) => savePlannedWorkout(client, plan, null))
+      try {
+        const setId = (await ownerPool.query<{ id: string }>(
+          `select workout_set.id from public.workout_sets workout_set
+           join public.workout_exercises exercise on exercise.id = workout_set.workout_exercise_id
+           where exercise.workout_id = $1`, [created.id],
+        )).rows[0]!.id
+        const started = await withActorTransaction(runtimePool, ACTOR_ID, (client) => startLiveWorkout(client, created.id, created.version, randomUUID()))
+        const personDraft = {
+          weightKg: null, reps: null, durationMin: null, durationSec: 45, distanceKm: null, rpe: null,
+          metricSources: { duration: 'planned' as const, distance: 'unknown' as const, rpe: 'unknown' as const },
+        }
+        const timerDraft = { ...personDraft, timerConfirmed: true as const }
+        const saved = await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveLiveSetDraft(client, setId, timerDraft, 1, randomUUID()))
+        const confirmed = await withActorTransaction(runtimePool, ACTOR_ID, (client) => confirmLiveSet(client, setId, saved.version, randomUUID()))
+        const marked = await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleTrainingData)
+        expect(marked.workouts.find((workout) => workout.id === created.id)).toMatchObject({
+          executionMode: 'timer',
+          exercises: [{ sets: [{ fact: { durationSec: 45 }, timerConfirmed: true }] }],
+        })
+        // «Всё верно» или ручная правка — обычное сохранение без признака снимает пометку.
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => saveLiveSetDraft(
+          client, setId, { ...personDraft, durationSec: 38, metricSources: { ...personDraft.metricSources, duration: 'entered' } }, confirmed.version, randomUUID(),
+        ))
+        const cleared = await ownerPool.query<{ timer_confirmed: boolean; fact_duration_sec: number }>(
+          'select timer_confirmed, fact_duration_sec from public.workout_sets where id = $1', [setId],
+        )
+        expect(cleared.rows).toEqual([{ timer_confirmed: false, fact_duration_sec: 38 }])
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => finishLiveWorkout(client, created.id, started.version, randomUUID()))
+      } finally {
+        await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+      }
+    })
+
     it('keeps post-workout feedback, questions and attention tenant-safe and idempotent', async () => {
       if (ownerPool === undefined || runtimePool === undefined) {
         throw new Error('Database pools are not ready')

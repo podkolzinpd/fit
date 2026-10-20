@@ -15,6 +15,8 @@ function draftKey(draft: LiveSetDraft): string {
     draft.metricSources?.duration ?? null,
     draft.metricSources?.distance ?? null,
     draft.metricSources?.rpe ?? null,
+    // Снятие пометки «засчитано таймером» — тоже запись, даже при тех же числах.
+    draft.timerConfirmed === true,
   ])
 }
 

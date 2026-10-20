@@ -63,6 +63,21 @@ describe('live set coordinator', () => {
     expect(confirmLiveSet).toHaveBeenCalledWith('set-1', 3)
   })
 
+  // YAFIT-627: «Подтвердить» после засчёта таймером шлёт те же числа без пометки.
+  it('saves the person confirmation of a timer-confirmed set with the same numbers', async () => {
+    const saveLiveSet = vi.fn()
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(4)
+    const coordinator = createLiveSetCoordinator(saveLiveSet, vi.fn().mockResolvedValue(3))
+    const timed: LiveSetDraft = { durationSec: 30, metricSources: { duration: 'entered', distance: 'unknown', rpe: 'unknown' } }
+
+    await coordinator.confirm(set, { ...timed, timerConfirmed: true })
+    await coordinator.save(set, timed)
+
+    expect(saveLiveSet).toHaveBeenCalledTimes(2)
+    expect(saveLiveSet).toHaveBeenNthCalledWith(2, 'set-1', timed, 3)
+  })
+
   it('continues the queue after a failed save and retries with the same version', async () => {
     const saveLiveSet = vi.fn()
       .mockRejectedValueOnce(new Error('network'))

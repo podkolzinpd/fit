@@ -119,6 +119,15 @@ describe('planned workout request', () => {
     expect(readSavePlannedWorkoutRequest({ ...validRequest(), prepSeconds: 1.5 }, null)).toBeUndefined()
   })
 
+  it('accepts an explicit execution mode and keeps it absent for older clients', () => {
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), executionMode: 'timer' }, null))
+      .toMatchObject({ draft: { executionMode: 'timer' } })
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), executionMode: 'manual' }, null))
+      .toMatchObject({ draft: { executionMode: 'manual' } })
+    expect(readSavePlannedWorkoutRequest(validRequest(), null)?.draft).not.toHaveProperty('executionMode')
+    expect(readSavePlannedWorkoutRequest({ ...validRequest(), executionMode: 'auto' }, null)).toBeUndefined()
+  })
+
   it('keeps the shared block id, preset and rest settings of a superset', () => {
     const first = {
       ...validRequest().exercises[0]!,
