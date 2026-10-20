@@ -1,8 +1,8 @@
 import { expect, it, vi } from 'vitest'
-import { legacySummaryDiagnosticQuery, summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
+import { summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
 import { getLegacySummaryDiagnostic, getSummaryDiagnostic } from './summary-diagnostic.repository'
 
-vi.mock('../queries/summary-diagnostic.queries', () => ({ summaryDiagnosticQuery: vi.fn(), legacySummaryDiagnosticQuery: vi.fn() }))
+vi.mock('../queries/summary-diagnostic.queries', () => ({ summaryDiagnosticQuery: vi.fn() }))
 const valid = {
   diagnostic: true,
   ready: true,
@@ -40,12 +40,9 @@ it('keeps a valid no-model preflight with trace metadata', async () => {
   })
 })
 
-it('validates the Supabase bridge preflight with the same contract', async () => {
-  vi.mocked(legacySummaryDiagnosticQuery).mockResolvedValue(valid)
-
-  await expect(getLegacySummaryDiagnostic('client', '2026-08-16', '2026-09-15')).resolves.toMatchObject({
-    ready: true,
-    code: 'available',
-    requestId: 'request-id',
-  })
+it('closes retired legacy diagnostics without invoking native diagnostics', async () => {
+  vi.mocked(summaryDiagnosticQuery).mockClear()
+  await expect(getLegacySummaryDiagnostic('client', '2026-08-16', '2026-09-15'))
+    .rejects.toThrow('Диагностика старого AI API отключена')
+  expect(summaryDiagnosticQuery).not.toHaveBeenCalled()
 })

@@ -1,4 +1,4 @@
-import { legacyCloudApiBaseUrl } from './legacy-cloud-functions'
+import { legacyCloudApiBaseUrl } from './legacy-api-base-url'
 import { supabase } from './client'
 
 type ChatMediaBridgeError = Error | { context: Response }
