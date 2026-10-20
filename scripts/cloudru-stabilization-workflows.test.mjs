@@ -339,3 +339,33 @@ test('manual API journal inspection exposes counts only, never user payloads or 
   assert.match(step, /python3 scripts\/cloudru-api-command-diagnostics\.py \| tee/)
   assert.doesNotMatch(step, /secrets\.|--env-file|podman run|systemctl (?:restart|stop)|psql/)
 })
+
+
+test('request diagnostics correlate only the requested UUID and never export error messages or request data', () => {
+  const id = '00000000-0000-4000-8000-000000000001'
+  const row = (entry) => JSON.stringify({CONTAINER_NAME:'fit-api-stage',MESSAGE:JSON.stringify(entry)})
+  const lines = [row({reqId:id,req:{body:'private-body'},msg:'private-msg'}),
+    row({reqId:id,err:{type:'TypeError',code:'FST_ERR_FAILED_ERROR_SERIALIZATION',message:'private-sql',stack:'private-sql\n at x (/app/dist/planned-workout-request.js:120:3)'}}),
+    row({reqId:id,res:{statusCode:500}}),row({reqId:'another',err:{type:'RangeError'}}),
+    row({reqId:id,err:{type:'private-type',code:'private-code',stack:'private-stack'}}), 'null', 'invalid']
+  const result = spawnSync('python3',['scripts/cloudru-api-request-diagnostics.py',id],{input:lines.join('\n'),encoding:'utf8'})
+  assert.equal(result.status,0)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.matchedEntries,4)
+  assert.deepEqual(report.statuses,[500])
+  assert.deepEqual(report.errors,[{type:'TypeError',code:'FST_ERR_FAILED_ERROR_SERIALIZATION',frames:['planned-workout-request.js:120:3']},{type:'unknown',code:'unknown',frames:[]}])
+  assert.doesNotMatch(result.stdout,/private-|another|reqId|body|message|stack/)
+  const invalid = spawnSync('python3',['scripts/cloudru-api-request-diagnostics.py','not-a-uuid'],{input:lines.join('\n'),encoding:'utf8'})
+  assert.notEqual(invalid.status,0)
+  assert.equal(invalid.stdout,'')
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const step = workflow.slice(workflow.indexOf('      - name: Read only bounded diagnostics for one API request'),workflow.indexOf('      - name: Read only aggregate SpeechKit'))
+  assert.match(step,/github\.event_name == 'workflow_dispatch'/)
+  assert.match(step,/test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(step,/test "\$\(hostname\)" = fit-stage-app/)
+  assert.match(step,/timeout 15 journalctl CONTAINER_NAME=fit-api-stage/)
+  assert.match(step,/--lines=5000/)
+  assert.match(step,/epoch - 120/)
+  assert.match(step,/epoch \+ 120/)
+  assert.doesNotMatch(step,/secrets\.|--env-file|podman run|systemctl (?:restart|stop)|psql/)
+})
