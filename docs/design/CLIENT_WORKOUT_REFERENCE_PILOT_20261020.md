@@ -65,3 +65,6 @@ LiveSetInput, live-input-visibility, live-set-cache, текущий coordinator 
 | PR3 | Новый редактор без изменения сценариев | create/edit/copy/voice/retry/rights | Запланирован |
 | PR4 | Новый каталог/фильтры без потери выбора | query/preview/batch/failure/nonpilot | Запланирован |
 | PR5 | Дата/время/окна без изменения значений | apply/cancel/clear/validation/back | Запланирован |
+
+## Финальное обновление PR1 после общей серии
+Source3f8f708e от mainb6e9ea67 (#1742–1745 слиты). Собственный допуск/плотность/анимации повторно проверены без расширения scope: unit59/59, policy+resolver45/45, WebKit/Chromium22/22 light/dark390/430 и обе плотности; licensed fonts2/2. Внешние HTTP/WS блокированы. Финальный CI обновлённого head обязателен перед merge; флаги выключены до read-only инспекции настоящих привязок. Настоящий iPhone недоступен: devicectl0 физических устройств; физический ввод НЕ ПРОВЕРЕН.
