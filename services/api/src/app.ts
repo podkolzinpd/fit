@@ -136,7 +136,7 @@ import {
   readWorkoutTemplateVersion,
   type PilotWorkoutTemplates,
 } from './workout-templates.js'
-import { WorkoutParseError, type LegacyWorkoutParser } from './legacy-workout-parser.js'
+import { WorkoutParseError } from './legacy-workout-parser.js'
 import { HttpError as SummaryModelError } from './training-summary-core.js'
 import { readAssistantProgressRequest } from './assistant-progress-request.js'
 import { readYandexActorSession } from './yandex-actor-session.js'
@@ -178,8 +178,6 @@ import {
   readTrainerFinanceVoidPayment,
   readTrainerFinanceSessionUpdate,
 } from './trainer-finance-request.js'
-
-export type LegacySummaryHandler = (request: Request) => Promise<Response>
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -227,8 +225,6 @@ interface BuildAppOptions {
   pilotTrainingSummaryDiagnostic?: PilotTrainingSummaryDiagnostic
   pilotTrainingSummaryPublisher?: PilotTrainingSummaryPublisher
   pilotTrainingSummaryReader?: PilotTrainingSummaryReader
-  legacyWorkoutParser?: LegacyWorkoutParser
-  legacySummaryHandler?: LegacySummaryHandler
   yandexAuthHandoffService?: YandexAuthHandoffService
   yandexOnlyAuthEnabled?: boolean
   yandexNativeRegistrar?: YandexNativeRegistrar
@@ -361,55 +357,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     }
   })
 
-  app.post('/v1/legacy/parse-workout', async (request, reply) => {
-    const actorToken = request.headers['x-supabase-authorization']
-    if (typeof actorToken !== 'string' || !actorToken.startsWith('Bearer ')) {
-      return reply.code(401).send({ error: 'unauthorized' })
-    }
-    if (options.legacyWorkoutParser === undefined) {
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-    try {
-      const body = request.body as { kind?: unknown } | null
-      if (body?.kind === 'goal_criteria' && options.legacyWorkoutParser.suggest === undefined) return reply.code(503).send({ error: 'service_unavailable' })
-      return reply.send(body?.kind === 'goal_criteria'
-        ? await options.legacyWorkoutParser.suggest!(actorToken.slice('Bearer '.length), request.body)
-        : await options.legacyWorkoutParser.parse(actorToken.slice('Bearer '.length), request.body))
-    } catch (error) {
-      if (error instanceof WorkoutParseError) {
-        if (error.code === 'invalid_request') {
-          return reply.code(400).send({ error: { code: error.code, message: 'Некорректный запрос разбора тренировки' } })
-        }
-        if (error.code === 'empty_catalog') {
-          return reply.code(400).send({ error: { code: error.code, message: 'Каталог упражнений пуст' } })
-        }
-        if (error.code === 'llm_unavailable') {
-          return reply.code(502).send({ error: { code: error.code, message: 'Модель временно недоступна' } })
-        }
-        if (error.code === 'parse_failed') {
-          return reply.code(502).send({ error: { code: error.code, message: 'Не удалось разобрать диктовку' } })
-        }
-        return reply.code(error.status).send({ error: error.code })
-      }
-      throw error
-    }
-  })
-
-  app.post('/v1/legacy/summarize-client-training', async (request, reply) => {
-    const externalRequestId = request.id
-    const authorization = request.headers['x-supabase-authorization']
-    if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
-      request.log.warn({ externalRequestId, stage: 'authorization', errorCode: 'authentication_required' }, 'summary pre-model request rejected')
-      return reply.code(401).send({ error: 'authentication_required' })
-    }
-    if (options.legacySummaryHandler === undefined) {
-      request.log.error({ externalRequestId, stage: 'configuration', errorCode: 'service_unavailable' }, 'summary pre-model request rejected')
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-    request.log.info({ externalRequestId, stage: 'api_received' }, 'summary request received')
-    return forwardLegacySummary(authorization, request.body, reply, externalRequestId)
-  })
-
   const legacyChatMediaToken = (headers: { readonly [header: string]: unknown }): string | undefined => {
     const authorization = headers['x-supabase-authorization']
     return typeof authorization === 'string' && authorization.startsWith('Bearer ')
@@ -467,26 +414,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await options.legacyChatMediaBridge.remove(token, body.conversationId, body.messageId)
       return reply.header('cache-control', 'no-store').code(204).send()
     } catch (error) { return legacyChatMediaFailure(error, reply) }
-  })
-
-  // Первый assistant endpoint намеренно не является универсальным tool runner.
-  // Сводка read-only, поэтому её можно безопасно обкатать раньше write-действий.
-  app.post('/v1/assistant/progress-summary', async (request, reply) => {
-    const authorization = request.headers['x-supabase-authorization']
-    if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
-      return reply.code(401).send({ error: 'authentication_required' })
-    }
-    const command = readAssistantProgressRequest(request.body)
-    if (command === undefined) return reply.code(400).send({ error: 'invalid_progress_request' })
-    if (options.legacySummaryHandler === undefined) {
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-    return forwardLegacySummary(authorization, {
-      client_id: command.clientId,
-      period_start: command.periodStart,
-      period_end: command.periodEnd,
-      force: command.force,
-    }, reply)
   })
 
   app.post('/v1/assistant/yandex/parse-workout', async (request, reply) => {
@@ -717,28 +644,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return reply.header('x-fit-error-code', code).code(502).send({ error: code })
     }
     return reply.code(503).send({ error: 'service_unavailable' })
-  }
-
-  async function forwardLegacySummary(authorization: string, body: unknown, reply: FastifyReply, externalRequestId?: string) {
-    if (options.legacySummaryHandler === undefined) {
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-    const response = await options.legacySummaryHandler(new Request(
-      'http://legacy.internal/summarize-client-training',
-      {
-        method: 'POST',
-        headers: {
-          authorization,
-          'content-type': 'application/json',
-          ...(externalRequestId === undefined ? {} : { 'x-fit-request-id': externalRequestId }),
-        },
-        body: JSON.stringify(body),
-      },
-    ))
-    const errorCode = response.headers.get('x-fit-error-code')
-    if (errorCode !== null) reply.header('x-fit-error-code', errorCode)
-    reply.log.info({ externalRequestId, stage: 'api_completed', status: response.status, errorCode }, 'summary request completed')
-    return reply.code(response.status).type('application/json').send(await response.text())
   }
 
   app.get('/ready', async (_request, reply) => {

@@ -1348,6 +1348,17 @@ app-session/registration не меняются; миграции и identity-з�
 обычный вход, без передачи его кода в API. Supabase credentials пока нужны
 media/legacy functions/migration/rollback и этой задачей не удаляются.
 
+### Retired legacy AI HTTP compatibility
+
+В основном API удалены POST `/v1/legacy/parse-workout`,
+`/v1/legacy/summarize-client-training` и `/v1/assistant/progress-summary`.
+Ожидаемый ответ404 с любыми credentials; aliases или native fallback не добавлены.
+`server.ts` больше не создаёт Supabase parser и legacy summary adapter.
+Native AI routes и model configuration прежние. Исходники Cloud Functions,
+их shared adapters, prompts и deploy workflows сохранены. Supabase credentials
+не удалять: они ещё нужны legacy media/functions/tooling. CORS legacy header
+остаётся нужен media bridge. Старые explicit local legacy API overrides получают404.
+
 Stage API CORS allowlist обязан содержать production web origin, точный
 `capacitor://localhost` для iOS и точный `https://localhost` для Android.
 `http://localhost` без порта и произвольные `capacitor://` origins не

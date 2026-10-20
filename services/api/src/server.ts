@@ -37,7 +37,6 @@ import { DatabasePilotWorkoutTemplates } from './workout-templates.js'
 import { DatabasePilotProgressData } from './progress-data.js'
 import { DatabasePilotWorkoutParser } from './pilot-workout-parser.js'
 import { DatabasePilotTrainingSummaries } from './training-summary.js'
-import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
 import { YandexWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
 import { DatabaseYandexNativeRegistrar } from './yandex-native-registration.js'
@@ -47,7 +46,6 @@ import {
   DatabaseYandexAppSessionReader,
   DatabaseYandexAppSessionRevoker,
 } from './yandex-app-session.js'
-import { summarizeClientTraining } from './legacy-summary/index.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
 import { SupabaseVitalMediaSigner } from './supabase-vital-media.js'
 import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
@@ -260,23 +258,6 @@ const vitalMediaSigner = yandexMediaStorage !== undefined
   : supabaseBridgeConfig === undefined
     ? undefined
     : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
-const legacyWorkoutParser =
-  !aiEnabled || supabaseBridgeConfig === undefined
-    || process.env.YANDEX_CLOUD_API_KEY === undefined
-    || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
-    ? undefined
-    : new SupabaseWorkoutParser(
-        new SupabaseBridge(supabaseBridgeConfig),
-        process.env.YANDEX_CLOUD_API_KEY,
-        process.env.YANDEX_CLOUD_FOLDER_ID,
-        process.env.YANDEX_CLOUD_MODEL_ID,
-      )
-const legacySummaryHandler =
-  !aiEnabled || supabaseBridgeConfig === undefined
-  || yandexAiAuthorization === undefined
-  || process.env.YANDEX_CLOUD_FOLDER_ID === undefined
-    ? undefined
-    : (request: Request) => summarizeClientTraining(request, { authorization: yandexAiAuthorization })
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -340,8 +321,6 @@ const app = buildApp(
     ...(pilotTrainingSummaryReader === undefined
       ? {}
       : { pilotTrainingSummaryPublisher: pilotTrainingSummaryReader }),
-    ...(legacyWorkoutParser === undefined ? {} : { legacyWorkoutParser }),
-    ...(legacySummaryHandler === undefined ? {} : { legacySummaryHandler }),
   },
 )
 
