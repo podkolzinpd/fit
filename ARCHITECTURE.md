@@ -54,6 +54,12 @@ legacy backend. Server-side bridges и frozen local tests пока сохран�
 
 ## Приватные media
 
+Общие контракты и валидаторы находятся в `chat-media.ts` и `vital-media.ts` без
+Supabase SDK. Legacy storage adapters вынесены в `supabase-chat-media.ts` и
+`supabase-vital-media.ts`; их подключает `server.ts`. Импорт общих media, native
+stores и `buildApp` без SDK проверяет `native-media-import-boundary.test.ts`.
+Выбор хранилища и доступ к legacy objects при этом не меняются.
+
 - Supabase и Yandex adapters сохраняют один доменный контракт путей, но не
   обращаются к storage друг друга после cutover.
 - Yandex API хранит новые chat images и подписывает exercise media в одном
