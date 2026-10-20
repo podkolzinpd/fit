@@ -17,6 +17,128 @@ if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
 
 const legacyRequestCounts = new WeakMap<object, number>()
 
+test('Yandex favorite save keeps the title and exposes diagnostics without replaying a failed POST', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const actorId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+  const workoutId = '948d78c7-994c-4c21-b2fe-81efb2091854'
+  const exerciseId = 'e2fc2c6d-0f33-4826-af68-46b0a5c79ff4'
+  let saves = 0
+  let favorite: { id: string; title: string; exercises: Record<string, unknown>[]; createdAt: string } | undefined
+  let releaseSave: (() => void) | undefined
+  await page.route('https://stage.example.test/health', route => route.fulfill({ json: { status: 'ok' }, headers: {
+    'x-fit-request-id': 'synthetic-health', 'access-control-expose-headers': 'x-fit-request-id',
+  } }))
+  await page.route('https://stage.example.test/v1/**', async route => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/v1/auth/yandex/session') return route.fulfill({ json: {
+      accessMode: 'read_write', profile: { id: actorId, firstName: 'Тестовый спортсмен', lastName: null,
+        timezone: 'Europe/Moscow', accountRole: 'client', client: { id: clientId, trainerId: actorId, fullName: 'Тестовый спортсмен' },
+        experiments: { clientLime: true, fitLime: false, trainerScheduleV2: false } },
+    } })
+    if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
+    if (path === '/v1/connections') return route.fulfill({ json: { memberships: [], invitations: [] } })
+    if (path === '/v1/training-data') return route.fulfill({ json: {
+      accessMode: 'read_only', customExercises: [], attention: [], attentionPreferences: [], hasMoreWorkouts: false, totalWorkouts: 1,
+      workouts: [{ id: workoutId, trainerId: actorId, clientId, clientName: 'Тестовый спортсмен', createdBy: actorId,
+        startedBy: null, completedBy: actorId, workoutDate: '2020-01-02', startTime: null, endTime: null, status: 'done',
+        notes: null, clientComment: null, sessionRpe: null, wellbeing: null, discomfort: null, feedbackSubmittedAt: null,
+        trainerReaction: null, trainerReview: null, trainerReviewAuthorId: null, trainerReviewedAt: null,
+        clientQuestion: null, clientQuestionAskedAt: null, clientQuestionResolvedAt: null, startedAt: null,
+        completedAt: '2020-01-02T12:00:00Z', hasPr: false, version: 1,
+        exercises: [{ id: exerciseId, position: 0, source: 'system', ref: 'squat', customExerciseId: null,
+          name: 'Приседание', muscleGroup: 'legs', inputKind: 'strength', blockId: exerciseId, blockType: 'single',
+          blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0,
+          restBetweenSetsSec: 60, trainerComment: null, sets: [{ id: exerciseId, position: 0,
+            plan: { weightKg: 50, reps: 5, durationMin: null, durationSec: null, distanceKm: null, rpe: null },
+            fact: { weightKg: 55, reps: 6, durationMin: null, durationSec: null, distanceKm: null, rpe: null },
+            confirmedAt: '2020-01-02T12:00:00Z', version: 1 }] }],
+      }],
+    } })
+    if (path === '/v1/favorite-workouts' && route.request().method() === 'POST') {
+      saves += 1
+      const body = z.object({ title: z.string(), exercises: z.array(z.record(z.string(), z.unknown())) }).parse(route.request().postDataJSON())
+      expect(body.title).toBe('Тестовый план')
+      expect(body.exercises[0]?.sets).toMatchObject([{ weightKg: 55, reps: 6 }])
+      expect(route.request().headers()['x-fit-request-id']).toMatch(/^[a-f0-9-]{36}$/)
+      await new Promise<void>(resolve => { releaseSave = resolve })
+      if (saves > 1) favorite = { id: exerciseId, title: body.title, exercises: body.exercises, createdAt: '2026-10-20T09:00:00+00:00' }
+      return route.fulfill(saves === 1 ? { status: 503, json: { error: 'database_unavailable' }, headers: {
+        'x-fit-request-id': '12345678-1234-4234-8234-123456789abc', 'x-fit-release-id': 'synthetic-release',
+        'x-fit-error-code': '08006', 'x-fit-error-category': 'database_connection',
+        'access-control-expose-headers': 'x-fit-request-id,x-fit-release-id,x-fit-error-code,x-fit-error-category',
+      } } : { status: 201, json: { id: exerciseId, title: body.title, exercises: body.exercises, createdAt: '2026-10-20T09:00:00+00:00' } })
+    }
+    if (path === '/v1/favorite-workouts') return route.fulfill({ json: { favorites: favorite ? [favorite] : [] } })
+    if (path === '/v1/clients') return route.fulfill({ json: { clients: [{
+      id: clientId, canArchive: false, hasAccount: true, fullName: 'Тестовый спортсмен', canonicalFullName: 'Тестовый спортсмен',
+      gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null,
+      currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: null,
+    }] } })
+    return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+  })
+  await page.addInitScript(() => {
+    localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText: (text: string) => { sessionStorage.setItem('test.copiedDiagnostic', text); return Promise.resolve() },
+    } })
+  })
+  await page.goto(`/workouts/${workoutId}`)
+  await page.getByRole('button', { name: 'Действия с тренировкой' }).click()
+  await page.getByRole('menuitem', { name: 'В избранное', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Сохранить в избранное' })
+  const title = dialog.getByRole('textbox', { name: 'Название' })
+  await title.fill('Тестовый план')
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect.poll(() => saves).toBe(1)
+  await expect(dialog.getByRole('button', { name: 'Сохраняем…', exact: true })).toBeDisabled()
+  await expect(title).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'Закрыть', exact: true })).toBeDisabled()
+  // A second form submission while pending must not start another mutation.
+  await dialog.locator('form').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(saves).toBe(1)
+  releaseSave?.()
+  await expect(dialog.getByRole('alert')).toContainText('Сервер не подтвердил сохранение в избранное')
+  await expect(dialog.getByText('FIT-1234-5678-9ABC')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Скопировать диагностику' }).click()
+  await expect(dialog.getByRole('status')).toHaveText('Скопировано')
+  const diagnostic = await page.evaluate(() => sessionStorage.getItem('test.copiedDiagnostic'))
+  expect(diagnostic).toContain('08006')
+  expect(diagnostic).toContain('synthetic-release')
+  expect(diagnostic).not.toContain('Тестовый план')
+  expect(diagnostic).not.toContain('a'.repeat(43))
+  await expect(title).toHaveValue('Тестовый план')
+  expect(saves).toBe(1)
+  // One behavior flow; this matrix only checks responsive/theme rendering.
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(({ value, id }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, value)
+      window.dispatchEvent(new Event('fit-client-lime-theme-change'))
+    }, { value: theme, id: actorId })
+    await expect(page.locator('html')).toHaveClass(/fit-client-lime-document/)
+    if (theme === 'light') await expect(page.locator('html')).toHaveClass(/theme-light/)
+    else await expect(page.locator('html')).not.toHaveClass(/theme-light/)
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      const copy = await dialog.getByRole('button', { name: 'Скопировать диагностику' }).boundingBox()
+      expect(copy?.height).toBeGreaterThanOrEqual(44)
+      await page.screenshot({ path: testInfo.outputPath(`favorite-error-${theme}-${width}.png`) })
+    }
+  }
+  await dialog.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect.poll(() => saves).toBe(2)
+  releaseSave?.()
+  await expect(dialog).not.toBeVisible()
+  await page.goto('/me/workouts?tab=presets')
+  await page.reload()
+  const card = page.locator('.favorite-workout-card').filter({ hasText: 'Тестовый план' })
+  await expect(card).toBeVisible()
+  await card.getByRole('button', { name: 'Запланировать' }).click()
+  await expect(page).toHaveURL(/\/workouts\/new\?favorite=/)
+  await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
+  expect(saves).toBe(2)
+})
+
 test('single-trainer public invitation survives preview failure and preserves a claimed receipt without a session', async ({ page }, testInfo) => {
   test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
   const token = `ABCDEF123456.${'a'.repeat(64)}`

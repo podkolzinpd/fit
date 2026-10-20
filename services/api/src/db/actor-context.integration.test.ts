@@ -12,6 +12,8 @@ import type { DatabaseClient } from './types.js'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hashPilotSessionToken } from '../auth/pilot-session-token.js'
+import { buildApp } from '../app.js'
+import { DatabasePilotFavoriteWorkouts } from '../favorite-workouts.js'
 import { submitAppFeedback } from '../app-feedback-command.js'
 import {
   claimAppFeedbackDeliveries,
@@ -455,6 +457,63 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let ownerPool: Pool | undefined
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
+
+    it('persists favorite snapshots through HTTP and PostgreSQL with session, limit and ownership checks', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not initialized')
+      const actors = [randomUUID(), randomUUID(), randomUUID()]
+      const tokens = actors.map(() => randomBytes(32).toString('base64url'))
+      const app = buildApp({ pilotFavoriteWorkouts: new DatabasePilotFavoriteWorkouts(runtimePool), logger: false })
+      const request = (method: 'GET' | 'POST' | 'DELETE', actor: number, payload?: object, suffix = '') => app.inject({
+        method, url: `/v1/favorite-workouts${suffix}`, headers: { 'x-fit-session': tokens[actor]! }, ...(payload ? { payload } : {}),
+      })
+      try {
+        for (const [index, actor] of actors.entries()) {
+          await ownerPool.query("insert into public.profiles(id,first_name,account_role) values($1,'Synthetic favorite check',$2)", [actor, index === 2 ? 'trainer' : 'client'])
+          await ownerPool.query("insert into app_private.profile_rollout_assignments(profile_id,target_backend,access_mode,enabled) values($1,'yandex','read_write',true)", [actor])
+          await ownerPool.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 hour')", [hashPilotSessionToken(tokens[index]!), actor])
+        }
+        const base: PlannedWorkoutDraft['exercises'][number] = {
+          position: 0, source: 'system', ref: 'synthetic-strength', customExerciseId: null, name: 'Synthetic strength',
+          muscleGroup: 'arms', inputKind: 'strength', blockId: randomUUID(), blockType: 'single', blockPreset: 'set',
+          blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 60, trainerComment: null,
+          sets: [{ position: 0, weightKg: 35, reps: 10, durationMin: null, durationSec: null, distanceKm: null, rpe: null }],
+        }
+        const exercises: PlannedWorkoutDraft['exercises'] = [base, {
+          ...base, position: 1, ref: 'synthetic-distance', name: 'Synthetic distance', inputKind: 'distance', muscleGroup: 'cardio', blockId: randomUUID(),
+          sets: [{ ...base.sets[0]!, weightKg: null, reps: null, durationSec: 670, distanceKm: 1 }],
+        }, { ...base, position: 2, ref: 'synthetic-partial', name: 'Synthetic partial', blockId: randomUUID(), sets: [] }]
+        expect((await request('GET', 0)).json()).toEqual({ favorites: [] })
+        // The completed snapshot carries actual metrics; a plan carries planned
+        // metrics. Snapshot conversion is separately covered in workout-rules.
+        const snapshots = [exercises, [{ ...base, sets: [{ ...base.sets[0]!, weightKg: 40, reps: 12 }] }]]
+        let firstId = ''
+        for (let index = 0; index < 10; index += 1) {
+          const snapshot = snapshots[index % snapshots.length]!
+          const saved = await request('POST', 0, { title: `Synthetic favorite ${index}`, exercises: snapshot })
+          expect(saved.statusCode).toBe(201)
+          const favorite: { id: string; exercises: unknown } = saved.json()
+          if (index === 0) firstId = favorite.id
+          expect(favorite.exercises).toEqual(snapshot)
+        }
+        const limit = await request('POST', 0, { title: 'Over limit', exercises })
+        expect(limit.statusCode).toBe(422)
+        expect(limit.json()).toEqual({ error: 'favorite_workout_limit_reached' })
+        const listed = await request('GET', 0)
+        expect(listed.statusCode).toBe(200)
+        expect(listed.json<{ favorites: unknown[] }>().favorites).toHaveLength(10)
+        expect((await request('GET', 1)).json()).toEqual({ favorites: [] })
+        expect((await request('DELETE', 1, undefined, `/${firstId}`)).statusCode).toBe(404)
+        expect((await request('POST', 2, { title: 'Forbidden', exercises })).statusCode).toBe(403)
+        expect((await request('POST', 0, { title: 'Invalid', exercises: [] })).statusCode).toBe(400)
+        expect((await app.inject({ method: 'POST', url: '/v1/favorite-workouts', payload: { title: 'No session', exercises } })).statusCode).toBe(401)
+        expect((await request('DELETE', 0, undefined, `/${firstId}`)).statusCode).toBe(204)
+        expect((await request('POST', 0, { title: 'Space available again', exercises })).statusCode).toBe(201)
+        expect((await request('GET', 0)).json<{ favorites: unknown[] }>().favorites).toHaveLength(10)
+      } finally {
+        await app.close()
+        await ownerPool.query('delete from public.profiles where id = any($1::uuid[])', [actors])
+      }
+    })
 
     it('saves maximum effort and discomfort without a note, with exact retry and actor/version validation', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not initialized')

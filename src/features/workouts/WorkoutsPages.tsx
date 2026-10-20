@@ -1772,11 +1772,11 @@ function SaveFavoriteWorkoutSheet({ exercises, pending, error, onSave, onClose }
   // реальным названием, если он ничего не введёт сам.
   const placeholder = workoutFocusTitle(muscleGroupLabels(exercises))
   return <div className="sheet-overlay" onClick={() => !pending && onClose()}>
-    <section className="workout-decision-sheet" role="dialog" aria-modal="true" aria-label="Сохранить в избранное" onClick={(event) => event.stopPropagation()}>
+    <section className="workout-decision-sheet workout-favorite-save-sheet" role="dialog" aria-modal="true" aria-label="Сохранить в избранное" onClick={(event) => event.stopPropagation()}>
       <header className="picker-header"><h2>Сохранить в избранное</h2><button type="button" className="picker-close" aria-label="Закрыть" disabled={pending} onClick={onClose}><CloseIcon /></button></header>
-      <form className="stack compact" onSubmit={(event) => { event.preventDefault(); onSave(title.trim() || placeholder) }}>
-        <Field label="Название"><input value={title} maxLength={120} placeholder={placeholder} autoFocus onChange={(event) => setTitle(event.target.value)} /></Field>
-        {error && <p className="error" role="alert">{error.message}</p>}
+      <form className="stack compact" onSubmit={(event) => { event.preventDefault(); if (!pending) onSave(title.trim() || placeholder) }}>
+        <Field label="Название"><input value={title} maxLength={120} placeholder={placeholder} autoFocus disabled={pending} onChange={(event) => setTitle(event.target.value)} /></Field>
+        {error && <InlineRequestError error={error} />}
         <div className="actions workout-action-row">
           <WorkoutCta type="button" variant="tertiary" disabled={pending} onClick={onClose}>Отмена</WorkoutCta>
           <WorkoutCta type="submit" pending={pending} pendingLabel="Сохраняем…">Сохранить</WorkoutCta>
