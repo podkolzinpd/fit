@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockPilot, workoutId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
@@ -215,4 +215,100 @@ test('client reference top finish retains missing cardio time warning', async ({
   await page.getByRole('button', { name: 'Завершить без оценки', exact: true }).click()
   await expect(page).not.toHaveURL(/\/live$/)
   expect(finishes).toBe(1)
+})
+
+function timedRepsWorkout() {
+  const source = restTimerWorkout(0, true, 'timer')
+  const exercise = source.exercises[0]!
+  source.exercises[0] = { ...exercise, ref: 'squat', name: 'Приседания', inputKind: 'reps', sets: exercise.sets.map((set) => ({ ...set, reps: 10 })) }
+  return source
+}
+
+async function runTwoTimedSets(page: Page, waitForServer: boolean) {
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  if (waitForServer) await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 0:02')
+  await page.clock.fastForward(2_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
+}
+
+function recordSetDrafts(page: Page) {
+  const drafts: Array<{ timerConfirmed?: true }> = []
+  page.on('request', (request) => {
+    if (/\/v1\/workout-sets\/[^/]+\/draft$/.test(new URL(request.url()).pathname)) drafts.push((request.postDataJSON() as { draft: { timerConfirmed?: true } }).draft)
+  })
+  return drafts
+}
+
+
+test('client reference Live manual mode keeps timed sets manual', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(0, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Отдых')
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  await page.clock.fastForward(4_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+})
+
+test('client reference Live timer mode asks to confirm planned reps before finishing', { tag: ["@lime-critical"] }, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [timedRepsWorkout()] })
+  const drafts = recordSetDrafts(page)
+  await page.goto(`/workouts/${workoutId}/live`)
+  await runTwoTimedSets(page, true)
+  expect(drafts.filter((draft) => draft.timerConfirmed)).toHaveLength(2)
+  await expect(page.getByRole('button', { name: 'Подтвердить подходы: Приседания', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await expect(page.locator('.timer-review')).toContainText('Таймер засчитал подходов: 2. Всё верно?')
+  const finish = page.waitForRequest((request) => new URL(request.url()).pathname === `/v1/workouts/${workoutId}/finish`)
+  await page.getByRole('button', { name: 'Всё верно, завершить', exact: true }).click()
+  await finish
+  expect(drafts.slice(-2).every((draft) => !draft.timerConfirmed)).toBe(true)
+})
+
+test('client reference Live mode switch in the timer settings stops the timer flow for this session', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(0, true, 'timer')] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.locator('.live-rest-trigger').click({ button: 'right' })
+  const mode = page.getByRole('dialog').getByRole('group', { name: 'Кто ведёт тренировку' })
+  await expect(mode.getByRole('button', { name: 'Ведёт таймер' })).toHaveAttribute('aria-pressed', 'true')
+  await mode.getByRole('button', { name: 'Веду сам', exact: true }).click()
+  await page.getByRole('button', { name: 'Закрыть таймер' }).click()
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Отдых')
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+})
+
+test('client reference Live manual mode times a set from Start and records the time past zero', async ({ page }) => {
+  // Часы стоят и двигаются только fastForward: записанное время точное и в медленном CI.
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(0, true)] })
+  const drafts: Array<{ durationSec?: number; timerConfirmed?: true }> = []
+  page.on('request', (request) => {
+    if (/\/v1\/workout-sets\/[^/]+\/draft$/.test(new URL(request.url()).pathname)) drafts.push((request.postDataJSON() as { draft: { durationSec?: number; timerConfirmed?: true } }).draft)
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Отдых')
+  await page.clock.pauseAt(new Date('2026-10-08T09:01:00Z'))
+  await page.getByRole('button', { name: 'Старт подхода' }).first().click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход +0:02')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toHaveCSS('border-radius', '16px')
+  await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toHaveCSS('min-height', '54px')
+  await page.getByRole('button', { name: /^Засчитать подход:/ }).click()
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  expect(drafts.at(-1)).toMatchObject({ durationSec: 5 })
+  expect(drafts.at(-1)?.timerConfirmed).toBeUndefined()
 })
