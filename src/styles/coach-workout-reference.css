@@ -66,10 +66,13 @@
 .coach-workout-reference .coach-plan-options .fit-lime-plan-back { display: flex; align-items: center; gap: 8px; margin-block: 8px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-sheet { width: min(calc(100% - 24px), 375px); height: min(752px, calc(var(--app-visible-height, 100dvh) - 24px)); max-height: calc(var(--app-visible-height, 100dvh) - 24px); padding: 0; border-radius: 40px; background: #1a1a1c; color: #fff; overflow-y: auto }
 .phone-frame.fit-lime-shell.coach-workout-reference .client-picker.coach-reference-sheet { width: min(100%, 375px); display: flex; flex-direction: column }
-.coach-workout-reference .coach-reference-sheet .coach-reference-sheet-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 88px; padding: 22px 20px; margin: 0; border-bottom: 1px solid #252529; background: #1a1a1c; position: sticky; top: 0; z-index: 2; flex-shrink: 0 }
+.coach-workout-reference .coach-reference-sheet .coach-reference-sheet-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 88px; padding: 23px 18px 20px; margin: 0; border-bottom: 1px solid #252529; background: #1a1a1c; position: sticky; top: 0; z-index: 2; flex-shrink: 0 }
 .coach-workout-reference .coach-reference-sheet-header > :is(h1, h2) { grid-column: 2; grid-row: 1; margin: 0; font-size: 16px; line-height: 16px; text-align: center; font-weight: 500 }
 .coach-workout-reference .coach-reference-sheet-header > button { width: 44px; height: 44px; min-height: 44px; padding: 10px; background: transparent; border: 0; border-radius: 99px; grid-column: 1; grid-row: 1 }
 .coach-workout-reference .coach-reference-sheet-header > button.coach-sheet-confirm { grid-column: 3; background: #3b3b40 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-sheet-header > button.coach-sheet-confirm { position: relative; background: transparent }
+.coach-workout-reference .coach-reference-sheet-header > button.coach-sheet-confirm::before { content: ''; position: absolute; inset: 2px; border-radius: inherit; background: var(--lime-surface-high) }
+.coach-workout-reference .coach-reference-sheet-header > button.coach-sheet-confirm > svg { position: relative }
 .phone-frame.fit-lime-shell.coach-workout-reference .client-picker.coach-reference-sheet .picker-close { background: transparent }
 .coach-workout-reference .coach-reference-sheet .picker-search { width: calc(100% - 40px); margin: 16px 20px 0; min-height: 44px }
 .coach-workout-reference .coach-reference-sheet .client-picker-list { padding: 20px; flex: 1; overflow-y: auto }
@@ -150,7 +153,15 @@
 .coach-workout-reference .coach-reference-catalog .picker-filter-label { margin: 28px 0 16px; font-size: 16px; line-height: 16px; font-weight: 400; color: #fff }
 .coach-workout-reference .coach-reference-catalog .picker-filter-strip { flex-wrap: wrap; overflow: visible; gap: 6px; padding: 0 }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-filter-strip button { min-height: 60px; padding: 20px 26px; border: 1px solid #3b3b40; border-radius: 20px; background: transparent; color: #fff; font-size: 14px; line-height: 16px; font-weight: 500 }
-.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-filter-strip button.active { border-color: var(--lime-accent); background: var(--lime-accent); color: #000 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-filter-strip button.active { border-color: var(--lime-pink); background: var(--lime-pink); color: var(--lime-text) }
+.coach-workout-reference .coach-reference-catalog .coach-filter-count { display: inline-grid; place-items: center; flex: 0 0 20px; width: 20px; height: 20px; min-width: 20px; padding: 0; border-radius: 50%; background: var(--lime-accent); color: var(--lime-text-on-accent); font-size: 12px; line-height: 16px; font-weight: 500 }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .coach-reference-sheet-header h1 { display: flex; align-items: center; justify-content: center; gap: 8px }
+.coach-workout-reference .coach-reference-catalog .coach-catalog-sheet-title { position: relative; display: inline-block; min-width: 0; max-width: 100% }
+.coach-workout-reference .coach-reference-catalog .coach-catalog-sheet-title .coach-filter-count { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%) }
+.coach-workout-reference .coach-reference-catalog .coach-filter-reset { display: block; margin: -32px -20px 32px; border-bottom: 1px solid var(--lime-surface-raised) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .coach-filter-reset > button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; padding: 16px 20px; border: 0; border-radius: 0; background: transparent; color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; font-weight: 400 }
+.coach-workout-reference .coach-reference-catalog .coach-filter-reset svg { width: 16px; height: 16px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-custom-only button { width: 133px }
 .coach-workout-reference .coach-reference-catalog .picker-filter-done { margin-top: 24px }
 .coach-workout-reference .coach-reference-catalog .picker-selection-bar { position: static; flex-shrink: 0; padding: 12px 20px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid #3b3b40; background: #1a1a1c }
 .coach-workout-reference .coach-reference-catalog > :is(.state, .error, .stack),
