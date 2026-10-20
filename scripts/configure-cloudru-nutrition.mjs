@@ -11,10 +11,17 @@ export function prepareCloudruNutrition(raw) {
   const parsed = JSON.parse(cohort)
   if (![4, 5].includes(parsed.clients.length) || parsed.trainers.length !== 2) throw new Error('nutrition_cohort_rejected')
   const barcodeLoginHash = Array.isArray(input) ? '' : input.barcodeLoginHash
-  if (typeof barcodeLoginHash !== 'string' || !/^[0-9a-f]{64}$/.test(barcodeLoginHash)) throw new Error('nutrition_barcode_cohort_rejected')
+  parseBarcodeLoginHashes(barcodeLoginHash)
   const perekApiKey = Array.isArray(input) ? '' : input.perekApiKey
   if (typeof perekApiKey !== 'string' || !/^pk_[A-Za-z0-9_-]{20,200}$/.test(perekApiKey)) throw new Error('nutrition_perek_key_rejected')
   return { cohort, barcodeLoginHash, perekApiKey }
+}
+
+export function parseBarcodeLoginHashes(value) {
+  const hashes = typeof value === 'string' ? value.split(',') : []
+  if (hashes.length < 1 || hashes.length > 5 || hashes.some(hash => !/^[0-9a-f]{64}$/.test(hash))
+    || new Set(hashes).size !== hashes.length) throw new Error('nutrition_barcode_cohort_rejected')
+  return hashes
 }
 
 export function mergeCloudruNutritionEnv(existing, raw, mode) {
