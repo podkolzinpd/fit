@@ -62,7 +62,7 @@ LiveSetInput, live-input-visibility, live-set-cache, текущий coordinator 
 |---|---|---|---|
 | PR1 | Изолированный доступ, две плотности, анимации независимо | gate/preference unit + settings route + nonpilot | В работе |
 | PR2 | Новый Live обеих плотностей, сохранены механики1–6 | targeted behavior + visual/browser + native evidence | Локальные54/54 после #1741; выпуск впереди |
-| PR3 | Новый редактор без изменения сценариев | create/edit/copy/voice/retry/rights | Запланирован |
+| PR3 | Новый редактор без изменения сценариев | create/edit/copy/voice/retry/rights | Локальные14/14, полный check прошёл; выпуск впереди |
 | PR4 | Новый каталог/фильтры без потери выбора | query/preview/batch/failure/nonpilot | Запланирован |
 | PR5 | Дата/время/окна без изменения значений | apply/cancel/clear/validation/back | Запланирован |
 
@@ -102,3 +102,5 @@ Client reference не подменяет coachReference/limePlan/safePlanInput, 
 Регрессия тренерского редактора19/20. Единственный оставшийся WebKit `refined plan ...duration labels quiet` при уменьшении окна844→400 не проходит и на исходной ветке Live/ac1668fd без PR3: viewport ratio0 у поля минут; Chromium на обеих версиях проходит. Логи pr3-trainer.log и pr3-trainer-baseline.log. Исходный защищённый тест, retry/таймауты и прокрутка не менялись; это зафиксированное ограничение локальной проверки, не доказанная новая регрессия. Реальный iPhone НЕ ПРОВЕРЕН. Полный check ещё выполняется/требует завершения после исправления только типов тестового harness.
 ### PR2: подписанный ручной отсчёт в крупном индикаторе
 Проверка текущего runtime подтвердила: при ручном превышении2сек существующий trigger показывает«Подход +0:02», новый крупный indicator до уточнения показывал«Подход:00:00» (pr2-overtime-before.log, обе платформы). Клиентский reference использует уже рассчитанный phaseOvertime и существующий formatReferenceClock; только отображение, без изменения deadline, phase/expiry/gong/API/сохранения. Новая необязательная view-prop по умолчаниюfalse сохраняет тренерский reference. После уточнения крупный indicator«Подход:+00:02», фактические5сек сохраняются: WebKit/Chromium2/2; все18unit LiveRestTimer прошли, включая неизменность default trainer display и callbacks. Новый полный check будет проверен после обновления базы перед PR2.
+
+Полный checkpoint PR3 на5db66dab: все штатные стадии check exit0, frontend2792/2792, API1453passed+185standardDBskip, lint/type/coverage/policies/build/postbuild. Включает client manual overtime из dbea4182. Лог outputs/client-workout-reference-20261020/pr3-check-controlled.log. PR2 подготовлен Draft#1749; ни один этап пока не опубликован.
