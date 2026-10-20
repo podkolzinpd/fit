@@ -6,6 +6,18 @@
   "contract": "FIT_LIME_DESIGN_CODE.md",
   "clientPlan": "CLIENT_LIME_SVG_ADOPTION_20261018.md",
   "codeBaseline": "39f82d06",
+  "coachCatalogStateMapping": {
+    "scope": "Original fixed2 only; no rollout configuration changes",
+    "source": "workout-editor-catalog",
+    "sourceSha256": "0b8fbbba4fc2cc3319cf96bc67629904f6c72d9ae7d95dc614d2661c79661078",
+    "selectionToken": "--lime-pink",
+    "selectionColor": "#BA60EA",
+    "selectedItem": { "elementIndex": 2163, "visualWidth": 40, "visualHeight": 40, "radius": 20, "hitTarget": 44, "meaning": "Deselect, not delete" },
+    "addSelected": { "elementIndex": 2172, "width": 140, "height": 60, "radius": 20 },
+    "activeFilters": { "elementIndices": [2103, 2108], "implementationStage": "PR4 of YAFIT-640" },
+    "unchangedLimeRoles": ["filter count", "own exercise label", "unselected create FAB"],
+    "sourceWhiteTextContrast": 3.53
+  },
   "localArchive": "Project root (outside checkout): docs/design/fit-lime-svg-reference",
   "sourceCounts": {
     "attachments": 9,
