@@ -152,6 +152,12 @@ Type-only Supabase contracts в program adapters стираются при сб�
 пока остаётся зависимостью API для legacy endpoints и media adapters; отделение
 native AI не означает отключение старых ресурсов или изменение AI-поведения.
 
+Основной `server.ts` не подключает legacy parser/summary adapters. Три старых
+AI HTTP routes (`/v1/legacy/parse-workout`, `/v1/legacy/summarize-client-training`,
+`/v1/assistant/progress-summary`) удалены, forwarding и legacy AI options отсутствуют.
+Shared adapters/modules сохранены для Cloud Functions и их regression tests;
+это не удаление самих функций. Native AI handlers/core/prompts не менялись.
+
 ## AI-суммаризация прогресса
 
 ```text
