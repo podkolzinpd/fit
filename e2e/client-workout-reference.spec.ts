@@ -431,6 +431,53 @@ for (const mode of ['planned', 'done'] as const) for (const wheel of [false, tru
   expect(writes[0]!.exercises[2]!.sets[0]!.reps).toBe(mode === 'done' ? 10 : 12)
 })
 
+for (const [theme, width] of [['dark', 390], ['light', 430]] as const) test(`client editor reference copy edits and saves a new plan ${theme}`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = coachGestureWorkout(false, 1)
+  source.createdBy = pilotId; source.status = 'done'; source.workoutDate = '2026-10-20'; source.completedAt = '2026-10-20T09:10:00Z'
+  source.exercises[0]!.sets[0]!.confirmedAt = source.completedAt
+  source.exercises[0]!.sets[0]!.fact = { weightKg: 25, reps: 9 }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const copies: Array<{ exercises: Array<{ blockId?: string; sets: Array<{ weightKg?: number; reps?: number; fact?: unknown; confirmedAt?: unknown }> }> }> = []
+  const originalWrites: string[] = []
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname
+    if (path === '/v1/workouts' && request.method() === 'POST') copies.push(request.postDataJSON() as typeof copies[number])
+    if (path === `/v1/workouts/${workoutId}` && ['PUT', 'DELETE'].includes(request.method())) originalWrites.push(request.method())
+  })
+  await page.goto('/me/workouts')
+  await page.getByRole('tab', { name: 'История', exact: true }).click()
+  await page.getByRole('link', { name: /^Скопировать тренировку за/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/new\\?copy=${workoutId}`))
+  await expect(page.locator('.client-reference-form')).toBeVisible()
+  await expect(page.getByText(/Скопировано/).first()).toBeVisible()
+  const exercise = page.locator('.planned-exercise').first()
+  await exercise.locator('.compact-editor-exercise-toggle').click()
+  const weight = exercise.getByLabel('Вес, подход 1', { exact: true })
+  await expect(weight).toHaveValue('25')
+  await expect(exercise.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('9')
+  await expect(exercise.getByLabel('Вес, подход 2', { exact: true })).toHaveValue('20')
+  await weight.fill('27.5')
+  await exercise.getByLabel('Повторы, подход 1', { exact: true }).fill('8')
+  await expectClientEditorFits(page)
+  await weight.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath('copy-edit.png') })
+  const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+  await save.scrollIntoViewIfNeeded()
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('copy-save.png') })
+  await save.click()
+  await expect.poll(() => copies.length).toBe(1)
+  expect(copies[0]!.exercises[0]!.sets[0]).toMatchObject({ weightKg: 27.5, reps: 8 })
+  expect(copies[0]!.exercises[0]!.sets[1]).toMatchObject({ weightKg: 20, reps: 10 })
+  expect(copies[0]!.exercises[0]!.sets[0]!.fact).toBeUndefined()
+  expect(copies[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeUndefined()
+  expect(copies[0]!.exercises[0]!.blockId).not.toBe(source.exercises[0]!.blockId)
+  expect(originalWrites).toEqual([])
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}`))
+})
+
 async function expectClientEditorFits(page: Page) {
   const overflow = await page.locator('.content').evaluate(el => el.scrollWidth - el.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)

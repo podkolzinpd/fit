@@ -32,9 +32,18 @@ export async function resolveClientWorkoutProfiles(client, cohort) {
   } catch (error) { await client.query('rollback'); throw error }
 }
 
+export function clientWorkoutInspectionFailure(error, phase) {
+  const known = new Set(['client_workout_cohort_rejected', 'client_workout_readonly_required', 'client_workout_profiles_not_ready', 'client_workout_target_rejected', 'client_workout_database_rejected', 'client_workout_readback_differs'])
+  const stage = ['target', 'connection', 'profiles', 'readback', 'artifact'].includes(phase) ? phase : 'unknown'
+  const reason = known.has(error?.message) ? error.message : ['28P01', '42501', '42P01', '42703', 'ECONNREFUSED', 'ETIMEDOUT', 'EACCES', 'EEXIST', 'ERR_MODULE_NOT_FOUND'].includes(error?.code) ? error.code : 'unclassified'
+  return `client_workout_profile_inspection_failed_closed phase=${stage} reason=${reason}`
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  let phase = 'target'
   try {
     if (process.env.GITHUB_REF !== 'refs/heads/main' || process.env.GITHUB_REPOSITORY !== 'podkolzinpd/fit') throw new Error('client_workout_target_rejected')
+    phase = 'connection'
     const { buildDatabaseConnectionConfig } = await import('/app/dist/db/connection-config.js')
     const config = buildDatabaseConnectionConfig('MIGRATION_DATABASE')
     if (config?.host !== '10.70.10.67' || config.port !== 5432 || config.database !== 'fit'
@@ -43,12 +52,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const client = new Client({ ...config, connectionTimeoutMillis: 5000, query_timeout: 5000 })
     await client.connect()
     try {
+      phase = 'profiles'
       const cohort = JSON.parse(process.env.CLIENT_WORKOUT_LOGIN_COHORT ?? '')
       const first = await resolveClientWorkoutProfiles(client, cohort)
+      phase = 'readback'
       const second = await resolveClientWorkoutProfiles(client, cohort)
       if (JSON.stringify(first) !== JSON.stringify(second)) throw new Error('client_workout_readback_differs')
+      phase = 'artifact'
       writeFileSync('/result/client-workout-pilot-ids.json', JSON.stringify(first) + '\n', { flag: 'wx', mode: 0o600 })
       console.log('Verified five existing test-client profiles and two trainer profiles; read only, no admission changes.')
     } finally { await client.end() }
-  } catch { console.error('client_workout_profile_inspection_failed_closed'); process.exitCode = 1 }
+  } catch (error) { console.error(clientWorkoutInspectionFailure(error, phase)); process.exitCode = 1 }
 }
