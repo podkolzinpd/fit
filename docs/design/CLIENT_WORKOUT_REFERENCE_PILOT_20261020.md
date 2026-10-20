@@ -64,7 +64,7 @@ LiveSetInput, live-input-visibility, live-set-cache, текущий coordinator 
 | PR2 | Новый Live обеих плотностей, сохранены механики1–6 | targeted behavior + visual/browser + native evidence | Локальные54/54 после #1741; выпуск впереди |
 | PR3 | Новый редактор без изменения сценариев | create/edit/copy/voice/retry/rights | Локальные14/14, полный check прошёл; выпуск впереди |
 | PR4 | Новый каталог/фильтры без потери выбора | query/preview/batch/failure/nonpilot | Запланирован |
-| PR5 | Дата/время/окна без изменения значений | apply/cancel/clear/validation/back | Существующее оформление подходит; browser14/14, полный check впереди |
+| PR5 | Дата/время/окна без изменения значений | apply/cancel/clear/validation/back | Существующее оформление подходит; browser14/14 и полный check прошли, выпуск впереди |
 
 ## Preflight PR2
 Свежий remote main0e07a888, рабочая база840cf461 (PR1). #1741 ещё проходит CI и меняет режимы выполнения; его state machine не переносим и не переписываем. #1742–1745 — исправления тренерского времени/даты/каталога/фильтров: используем после merge для PR3–5.
@@ -132,3 +132,4 @@ Source a9c504f1 (PR4), remote main1662bede/#1743; активные #1744–1745 
 WebKit/Chromium14/14: обе темы390/430, selected/today marker36×36/hit44, фактически загруженный YSGeo, поля48/r16, Escape/cancel/focus, Apply, очистка времени, Enter без parent submit, декабрь→январь, прежняя валидация отсутствующего начала и допустимой полуночи, Today план/факт и возврат к review без потери времени. Первое падение harness было из-за чтения trigger до загрузки исходного времени; добавлено ожидание10:00. Второе — некорректный fixture startTime пустой строкой вместо nullable API-контракта; исправлено только fixture наnull. Продуктовый календарь/валидация не менялись. Итоговая цельная матрица14/14 прошла.
 Существующее оформление подходит новому редактору: отдельной UI-правки даты/времени не требуется. PR5 закрепляет этот контракт приёмкой; общий дизайн-код, поля, данные и сценарии прежние. Полный check впереди. Физический iPhone и его системные окна НЕ ПРОВЕРЕНЫ.
 
+Полный checkpoint PR5 на9d51cf43: все исходные стадии check exit0,2793frontend/1453API+185штатныхDBskip, lint/types/coverage/policy/APIbuild/frontendbuild/postbuild; licensed webfonts2/2 verified. Локальный cap2Vitestworkers без смены timeout/coverage. Продуктовые исходники в diff PR5 не меняются. Обязательны fresh-main интеграция, зелёный CI, последовательный merge/Cloud.ru/public readback/native перед закрытием серии.
