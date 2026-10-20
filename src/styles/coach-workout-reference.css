@@ -213,6 +213,18 @@
 .coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button[aria-pressed='true'] { background: transparent }
 .coach-workout-reference .coach-reference-sheet .fit-lime-month-grid button[aria-pressed='true'] > span { background: var(--lime-accent); color: var(--lime-text-on-accent) }
 .coach-workout-reference .coach-reference-sheet .fit-lime-date-times { position: sticky; bottom: 0; padding: 16px 20px; margin: 0; border-top: 1px solid #252529; background: #1a1a1c }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-source-date-sheet[open] { display: flex; flex-direction: column; width: min(100%, 375px); overflow: hidden }
+.coach-workout-reference .coach-source-date-sheet > :not(.coach-date-months) { flex-shrink: 0 }
+.coach-workout-reference .coach-source-date-sheet .coach-date-sun { display: inline-block; width: 24px; height: 24px; flex: 0 0 24px; background: var(--lime-yellow); mask-position: center; mask-size: 24px 24px; mask-repeat: no-repeat }
+.coach-workout-reference .coach-source-date-sheet .fit-lime-month-navigation { position: relative; display: block; margin: 0; padding: 20px 20px 12px; border-bottom: 1px solid var(--lime-surface-raised) }
+.coach-workout-reference .coach-source-date-sheet .fit-lime-month-navigation > button { position: absolute; top: -64px; width: 44px; height: 44px }
+.coach-workout-reference .coach-source-date-sheet .fit-lime-month-navigation > button:first-child { right: 64px }
+.coach-workout-reference .coach-source-date-sheet .fit-lime-month-navigation > button:last-child { right: 20px }
+.coach-workout-reference .coach-source-date-sheet .fit-lime-date-selected { padding-right: 112px; min-height: 64px }
+.coach-workout-reference .coach-date-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-size: 14px; line-height: 20px; color: var(--lime-text-secondary) }
+.coach-workout-reference .coach-date-months { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 20px 20px }
+.coach-workout-reference .coach-date-months section { padding: 0 0 16px }
+.coach-workout-reference .coach-date-months section h3 { margin: 16px 0 12px }
 
 /* PR4: source catalog and filter sheet. Product facets/media stay intact. */
 .phone-frame.fit-lime-shell.coach-workout-reference .exercise-picker.coach-reference-catalog { width: min(100%, 375px); gap: 0; display: flex; flex-direction: column; overflow: hidden; border: 0; padding: 0; background: #1a1a1c; border-radius: 40px }
