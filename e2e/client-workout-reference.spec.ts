@@ -420,6 +420,7 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`cli
   const card = picker.locator('.picker-item').first()
   await expect(card).toHaveCSS('border-radius', '32px')
   await expect(card.locator('.picker-item-name')).toHaveCSS('font-family', /YS Geo/)
+  expect(await page.evaluate(async () => { const faces = await document.fonts.load('16px "YS Geo"', 'Жим'); return faces.length > 0 && faces.every(face => face.status === 'loaded') })).toBe(true)
   await expect(card.locator('.picker-select-mark')).toHaveCSS('width', '44px')
   const preview = card.locator('.picker-item-technique')
   await preview.click()
