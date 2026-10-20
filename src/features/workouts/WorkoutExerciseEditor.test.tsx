@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { useState } from 'react'
@@ -71,26 +71,26 @@ function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
 }
 
 describe('workout exercise editor rules', () => {
-  it('reference clock edits HH:mm and applies or cancels the existing time wheels', async () => {
+  it('reference clock uses one native minute-precision input, clears inline and never submits on Enter', async () => {
+    const submit = vi.fn((event: React.FormEvent) => event.preventDefault())
     function Clock() {
       const [value, setValue] = useState('23:45')
-      return <form><CoachPlanTimeField referencePolish name="startTime" label="Начало" value={value} onChange={setValue} /></form>
+      return <form onSubmit={submit}><CoachPlanTimeField referencePolish name="startTime" label="Начало" value={value} onChange={setValue} /><button type="submit">Сохранить</button></form>
     }
     const user = userEvent.setup()
     render(<Clock />)
-    const input = screen.getByRole('textbox', { name: 'Начало' })
-    await user.clear(input); await user.type(input, '0730')
+    const input = screen.getByLabelText('Начало')
+    expect(input).toHaveAttribute('type', 'time')
+    expect(input).toHaveAttribute('step', '60')
+    fireEvent.change(input, { target: { value: '07:30' } })
     expect(input).toHaveValue('07:30')
-    await user.click(screen.getByRole('button', { name: 'Выбрать время: Начало' }))
-    screen.getByRole('listbox', { name: 'часы' }).focus()
-    await user.keyboard('[End]')
-    screen.getByRole('listbox', { name: 'минуты' }).focus()
-    await user.keyboard('[Home]')
-    await user.click(screen.getByRole('button', { name: 'Применить время' }))
-    expect(input).toHaveValue('23:00')
-    await user.click(screen.getByRole('button', { name: 'Выбрать время: Начало' }))
-    await user.keyboard('[Home][Escape]')
-    expect(input).toHaveValue('23:00')
+    input.focus()
+    await user.keyboard('[Enter]')
+    expect(submit).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Убрать время: Начало' }))
+    expect(input).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Убрать время: Начало' })).not.toBeInTheDocument()
+    expect(screen.getByText('Начало')).toBeVisible()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
   it.each(['vital-barbell-hold-ex010', 'vital-gym-pro-r003-0006', 'vital-gym-pro-r289-1625'])('shows weight and duration for %s without repetitions', (ref) => {
