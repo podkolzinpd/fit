@@ -1384,7 +1384,7 @@ export function WorkoutFormPage() {
     } else if (initial) {
       // copyWorkout generates block IDs. Freeze the reference editor draft
       // once so unrelated form/query renders cannot remount an active card.
-      if (coachReference) setDraftExercises(initial.exercises)
+      if (coachReference || clientReference) setDraftExercises(initial.exercises)
       setEntryDate(initial.workoutDate)
       // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
       // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
@@ -1404,7 +1404,7 @@ export function WorkoutFormPage() {
       trainingFormatTouched.current = Boolean(workoutId)
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, coachReference, draftKey, planDraftKey, safePlanInput, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
+  }, [actor, clientMode, coachReference, clientReference, draftKey, planDraftKey, safePlanInput, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
 
   useEffect(() => {
     if (clientMode) { setTrainingFormat('self'); return }

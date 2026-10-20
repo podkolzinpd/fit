@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { resolveClientWorkoutProfiles } from './resolve-client-workout-pilot.mjs'
+import { clientWorkoutInspectionFailure, resolveClientWorkoutProfiles } from './resolve-client-workout-pilot.mjs'
 
 const cohort = { clients: [1, 2, 3, 4, 5].map(n => String(n).repeat(64)), trainers: [6, 7].map(n => String(n).repeat(64)) }
 const rows = [...cohort.clients, ...cohort.trainers].map((hash, i) => ({ hash, id: `10000000-0000-4000-8000-00000000000${i + 1}`, role: i < 5 ? 'client' : 'trainer', enabled: true }))
@@ -61,4 +61,11 @@ test('profile inspection accepts safe config and rejects controls and another da
   for (const value of ['a\nvalue', 'a\u0000value', 'a\u007fvalue']) assert.equal(accepted({ ...config, MIGRATION_DATABASE_PASSWORD: value }), false)
   for (const [key, value] of [['MIGRATION_DATABASE_HOST', '127.0.0.1'], ['MIGRATION_DATABASE_PORT', '5433'], ['MIGRATION_DATABASE_USER', 'another_owner'], ['MIGRATION_DATABASE_NAME', 'another_database'], ['MIGRATION_DATABASE_URL', 'postgres://synthetic']]) assert.equal(accepted({ ...config, [key]: value }), false)
   assert.match(workflow, /uses: actions\/setup-node@v4\n\s+with:\n\s+node-version: 22/)
+})
+
+// Emit only fixed diagnostic labels, never database messages or identities.
+test('inspection failures expose only an allowlisted phase and reason', () => {
+  assert.equal(clientWorkoutInspectionFailure(new Error('client_workout_profiles_not_ready'), 'profiles'), 'client_workout_profile_inspection_failed_closed phase=profiles reason=client_workout_profiles_not_ready')
+  assert.equal(clientWorkoutInspectionFailure({code:'42501',message:'private database context'}, 'connection'), 'client_workout_profile_inspection_failed_closed phase=connection reason=42501')
+  assert.equal(clientWorkoutInspectionFailure({code:'synthetic-secret',message:'synthetic-secret'}, 'synthetic-secret'), 'client_workout_profile_inspection_failed_closed phase=unknown reason=unclassified')
 })
