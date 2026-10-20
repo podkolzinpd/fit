@@ -1,5 +1,10 @@
 # Feature parity с trainer-app
 
+20.10 — Supabase linking retired по решению владельца: UI/gate/transport/API
+удалены; существующие Yandex identities и обычный PKCE/app-session/native
+registration сохранены. Старый callback очищается без обмена кода и даёт
+повтор входа. Приёмка: `docs/design/REMOVE_SUPABASE_LINKING_20261020.md`.
+
 ## Favorites save failure acceptance — YAFIT-636
 
 Personal client favorites retain the source workout/history and snapshot actual

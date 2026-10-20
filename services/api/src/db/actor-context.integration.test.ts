@@ -133,11 +133,6 @@ import {
   PilotEnrollmentConflictError,
 } from './yandex-pilot-enrollment.js'
 import {
-  DatabaseYandexAccountLinker,
-  YandexAccountLinkError,
-  type ExistingActor,
-} from '../yandex-account-linking.js'
-import {
   DatabaseYandexNativeRegistrar,
 } from '../yandex-native-registration.js'
 import { loadDatabaseProgramContext } from '../assistant-orchestrator/program/source.js'
@@ -258,6 +253,137 @@ const BOOTSTRAP_LINK_ACTOR_ID = 'f3f04352-32ac-4a8c-86d1-46cc8e8a6b13'
 const BOOTSTRAP_LINK_SUBJECT_HASH = '8'.repeat(64)
 const NATIVE_TRAINER_SUBJECT_HASH = '9'.repeat(64)
 const NATIVE_CLIENT_SUBJECT_HASH = '0'.repeat(64)
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+interface ExistingActorProfile {
+  id: string
+  firstName: string | null
+  lastName: string | null
+  timezone: string
+  accountRole: 'trainer' | 'client'
+  createdAt: string
+  updatedAt: string
+}
+
+interface ExistingActorTrainer {
+  profileId: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface ExistingActor {
+  profile: ExistingActorProfile
+  trainer?: ExistingActorTrainer
+}
+
+interface YandexIdentityLink {
+  profileId: string
+}
+
+interface YandexIdentityLinkStatus {
+  linked: boolean
+}
+
+interface YandexAccountLinker {
+  linkActor(actor: ExistingActor, subjectHash: string): Promise<YandexIdentityLink>
+  readStatus(actor: ExistingActor): Promise<YandexIdentityLinkStatus>
+}
+
+type YandexAccountLinkFailure =
+  | 'conflict'
+  | 'forbidden'
+  | 'invalid'
+  | 'not_found'
+
+class YandexAccountLinkError extends Error {
+  constructor(readonly failure: YandexAccountLinkFailure) {
+    super(`Yandex account link failed: ${failure}`)
+    this.name = 'YandexAccountLinkError'
+  }
+}
+
+interface LinkedIdentityRow extends QueryResultRow {
+  profile_id: string
+}
+
+interface LinkedIdentityStatusRow extends QueryResultRow {
+  linked: boolean
+}
+
+function mapYandexAccountLinkError(error: unknown): YandexAccountLinkError | undefined {
+  if (typeof error !== 'object' || error === null || !('message' in error)) {
+    return undefined
+  }
+  const message = error.message
+  if (message === 'authentication_required') {
+    return new YandexAccountLinkError('forbidden')
+  }
+  if (message === 'profile_not_found') {
+    return new YandexAccountLinkError('not_found')
+  }
+  if (
+    message === 'yandex_identity_already_linked'
+    || message === 'yandex_profile_already_linked'
+  ) {
+    return new YandexAccountLinkError('conflict')
+  }
+  if (typeof message === 'string' && message.startsWith('yandex_')) {
+    return new YandexAccountLinkError('invalid')
+  }
+  return undefined
+}
+
+async function linkYandexIdentity(
+  client: DatabaseClient,
+  actor: ExistingActor,
+  subjectHash: string,
+): Promise<YandexIdentityLink> {
+  try {
+    const rows = await client.query<LinkedIdentityRow>(
+      `select public.bootstrap_and_link_yandex_identity(
+         $1, $2, $3, $4, $5, $6, $7, $8, $9
+       ) as profile_id`,
+      [
+        subjectHash,
+        actor.profile.firstName,
+        actor.profile.lastName,
+        actor.profile.timezone,
+        actor.profile.accountRole,
+        actor.profile.createdAt,
+        actor.profile.updatedAt,
+        actor.trainer?.createdAt ?? null,
+        actor.trainer?.updatedAt ?? null,
+      ],
+    )
+    const profileId = rows[0]?.profile_id
+    if (profileId === undefined || !UUID_PATTERN.test(profileId)) {
+      throw new YandexAccountLinkError('not_found')
+    }
+    return { profileId }
+  } catch (error) {
+    throw mapYandexAccountLinkError(error) ?? error
+  }
+}
+
+class FrozenIdentityLinkFixture implements YandexAccountLinker {
+  constructor(private readonly pool: DatabasePool) {}
+
+  linkActor(actor: ExistingActor, subjectHash: string): Promise<YandexIdentityLink> {
+    return withActorTransaction(this.pool, actor.profile.id, (client) =>
+      linkYandexIdentity(client, actor, subjectHash))
+  }
+
+  readStatus(actor: ExistingActor): Promise<YandexIdentityLinkStatus> {
+    return withActorTransaction(this.pool, actor.profile.id, async (client) => {
+      const rows = await client.query<LinkedIdentityStatusRow>(
+        'select public.has_yandex_identity() as linked',
+      )
+      return { linked: rows[0]?.linked === true }
+    })
+  }
+}
+
 const LINK_ACTOR: ExistingActor = {
   profile: {
     id: LINK_ACTOR_ID,
@@ -2585,7 +2711,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         throw new Error('Database pools are not ready')
       }
 
-      const linker = new DatabaseYandexAccountLinker(runtimePool)
+      const linker = new FrozenIdentityLinkFixture(runtimePool)
 
       await expect(linker.readStatus(LINK_ACTOR)).resolves.toEqual({ linked: false })
 
@@ -2715,7 +2841,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         throw new Error('Database pools are not ready')
       }
 
-      const linker = new DatabaseYandexAccountLinker(runtimePool)
+      const linker = new FrozenIdentityLinkFixture(runtimePool)
       await expect(
         linker.linkActor(BOOTSTRAP_LINK_ACTOR, BOOTSTRAP_LINK_SUBJECT_HASH),
       ).resolves.toEqual({ profileId: BOOTSTRAP_LINK_ACTOR_ID })

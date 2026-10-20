@@ -12,7 +12,7 @@ Production Fit использует внешний Yandex ID; app-session/API/Po
 не разрешают production switch. Старые cutover-команды ниже не являются reverse
 migration Cloud.ru → Yandex Cloud.
 Vercel сохранён только для редиректа со старого адреса; PR Preview отключён.
-Supabase остаётся временным legacy-источником для legacy linking, неперенесённых
+Supabase остаётся временным legacy-источником для неперенесённых
 media, локальных тестов и rollback — не вторым production backend новых функций.
 
 Этот playbook обязателен для задач, которые до вывода Supabase затрагивают
@@ -36,8 +36,7 @@ routing или переносимые продуктовые данные. Те�
   `.github/workflows/prepare-cloudru-frontend.yml` после зелёного CI на `main`;
 - production frontend больше не маршрутизирует продуктовые запросы в Supabase,
   web/Android/iOS production build больше не требует `VITE_SUPABASE_*` и
-  не инициализирует Supabase SDK/Auth. Локальный SDK, server-side legacy linking/
-  media и rollback tooling пока сохраняются;
+  не инициализирует Supabase SDK/Auth. Локальный SDK, server-side legacy media и rollback tooling пока сохраняются;
 - Supabase Auth, Data API, Storage, Edge Functions и фоновые producer отключены
   только после подтверждённого окна стабилизации и сохранения rollback backup;
 - пользовательский контракт клиента и тренера не ухудшается при переключении.
@@ -50,7 +49,7 @@ client transport и API. Непривязанный Yandex ID открывает
 не удаляются, но больше не привязываются через проверку Supabase credentials.
 Старый `/v1/auth/yandex/recover` возвращает 404. Исторические SQL migrations
 сохраняются без переписывания; они не являются доступным recovery API.
-Локальный Supabase SDK, server-side legacy linking и media adapters остаются
+Локальный Supabase SDK, server-side legacy media adapters остаются
 для следующих отдельных задач; это ещё не полный decommission.
 
 ## Общая методика продуктовой разработки
@@ -80,7 +79,7 @@ route/feature -> domain repository contract -> Yandex API/PostgreSQL
 7. Tenant catalog/export/import меняются, только если требуется перенос
    **существующих** legacy-данных. Для новой Yandex-only таблицы не создавайте
    фиктивное Supabase mapping.
-8. Legacy linking/media или старый локальный тестовый путь не расширяются
+8. Legacy media или старый локальный тестовый путь не расширяются
    автоматически под новые фичи. Если новое поведение пока не проверено через
    Yandex, вход остаётся default-off до целевого теста и безопасного rollout.
 
@@ -111,7 +110,7 @@ remote apply, изменение production build-time variables и обратн
 Затрагиваемые таблицы/API и общие файлы:
 Общий repository-контракт:
 Yandex implementation:
-Зависимость от существующих legacy linking/media путей (если есть):
+Зависимость от существующих legacy media путей (если есть):
 Feature flag и default-off поведение:
 Локальная Yandex PostgreSQL/API/RLS проверка:
 Что запрещено включать или выкатывать из этой задачи:
@@ -163,7 +162,7 @@ migration либо восстановление согласованного che
 
 До отключения старого проекта необходимо:
 
-1. Закрыть оставшиеся legacy linking/media зависимости и проверить данные без
+1. Закрыть оставшиеся legacy media зависимости и проверить данные без
    `allow-missing`; не удалять credentials, которые ещё используются мостом.
 2. Проверить Yandex ID, роли, mutation, Assistant, upload и push на
    согласованных тестовых учётках; контролировать auth errors, API 5xx,
@@ -187,3 +186,12 @@ Yandex migrations/catalog/flags;
 зависимый следующий PR;
 состояние дерева; production не менялся/точное согласованное изменение.
 ```
+
+## Завершение Supabase linking — 20.10.2026
+
+Удалены UI, transport, server handlers и production provider привязки через
+Supabase-сессию. GET/POST `/v1/auth/yandex/link` возвращают 404. Существующие
+identity-записи и native Yandex login/registration не меняются. Старый pending
+link callback завершает работу безопасной ошибкой с повторным обычным входом.
+Исторические SQL migrations и их RLS/idempotency регрессии сохранены;
+тестовый SQL fixture больше не является production adapter.
