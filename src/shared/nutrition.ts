@@ -5,7 +5,7 @@ export const nutritionValuesSchema = z.object({ calories: z.number().finite().no
   protein: z.number().finite().nonnegative().nullable(), fat: z.number().finite().nonnegative().nullable(),
   carbs: z.number().finite().nonnegative().nullable() })
 export const nutritionFoodSchema = nutritionValuesSchema.extend({ id: z.uuid(), name: z.string().min(1).max(160), basis: z.literal('100g'),
-  attribution: z.object({ label: z.string().min(1).max(80), url: z.url() }).optional() })
+  manufacturer: z.string().min(1).max(80).optional() })
 export const nutritionEntrySchema = nutritionValuesSchema.extend({ id: z.uuid(), day: z.iso.date(),
   meal: z.enum(['breakfast', 'lunch', 'dinner', 'snack']), name: z.string().min(1).max(160),
   basis: z.enum(['100g', 'portion']), grams: z.number().positive().nullable(), totals: nutritionValuesSchema,
