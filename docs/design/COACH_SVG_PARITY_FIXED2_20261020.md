@@ -95,6 +95,14 @@ Live-механику не переделываем: оригинальные п
 
 ## Preflight и evidence (добавления; исходный план выше не изменяется)
 
+PR2 integration: actual main `c3a58c90` после merge PR1742; собственные два
+calendar-коммита перенесены без конфликтов, исходный план не изменён.
+Переиспользуем существующий DatePicker и родительские date/time/draft/save;
+ни новой модели даты, ни новой механики планирования нет. PR1 full local
+2785/2785 frontend +1453 API/185 standard DB skips,12/12 browser, exact-head
+CI39486603586 success. PR1 production/native ещё проверяются; PR2 merge ждёт их.
+Свежие проверки календаря на этом actualmain обязательны до PR2 merge.
+
 Baseline: main `0e07a888`, локальная WebKit-сборка, trainer dark fixed2 fixture,
 реальный маршрут `/workouts/new?client=fixture&date=2026-09-24`.
 Диагностический проход актуального main 1/1, 20.10; production actor не использован.
