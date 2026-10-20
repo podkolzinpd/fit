@@ -207,9 +207,8 @@
     '$1\n          $3$2'
   );
   defs[0].css += '\n.tier.club .plus{margin-top:0;margin-bottom:8px}\n';
-  // Omit the VAT footnote and the 2027 column only on the revenue slide.
+  // Omit the VAT footnote only on the revenue slide (2027 column restored 20.10).
   defs[1].html = defs[1].html.replace('<div class="fn">с НДС · Fit оставляет себе ~3,2% оборота без НДС</div>', '');
-  defs[1].css += '\n#cols > .col:first-child{display:none}\n';
   // Слайд 09 (13.10): без подписи у заголовка и схемы арбитража, короче «по желанию», реклама и итог — по строкам.
   defs[0].html = defs[0].html.replace(/<div class="sub">[\s\S]*?<\/div>/, '');
   defs[0].html = defs[0].html.replace(/<div class="arb">[\s\S]*?(?=<div class="gains">)/, '');
