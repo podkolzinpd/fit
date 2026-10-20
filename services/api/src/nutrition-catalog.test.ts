@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
+import { BasicNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -103,6 +103,19 @@ describe('Perek API source', () => {
   it('rejects products without a safe product link or bounded nutrition', () => {
     expect(parsePerekFood({ ...perek, url: 'https://not-perek.example/food/a' })).toBeNull()
     expect(parsePerekFood({ ...perek, per100: { ...perek.per100, protein: 150 } })).toBeNull()
+  })
+})
+
+describe('reviewed basic foods', () => {
+  it.each(['яичница', 'глазунья', 'жареное яйцо'])('finds the canonical fried-egg record for %s', async (query) => {
+    await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{
+      name: 'Яичница-глазунья', calories: 196, protein: 13.61, fat: 14.84, carbs: 0.83,
+      servings: [{ label: '1 яйцо', grams: 46 }],
+    }] })
+  })
+
+  it('also offers the cooked egg for a broad egg search', async () => {
+    await expect(new BasicNutritionCatalog().search('яйцо', 1)).resolves.toMatchObject({ foods: [{ name: 'Яичница-глазунья' }] })
   })
 })
 

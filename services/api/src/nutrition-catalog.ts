@@ -25,6 +25,40 @@ export interface NutritionCatalog {
   barcode?(barcode: string): Promise<CatalogFood | null>
 }
 
+interface BasicFood extends CatalogFood { readonly aliases: readonly string[] }
+
+// Common cooked foods are not reliably represented by a retailer catalog or a
+// barcode. Keep the small, reviewed base separate from retailer adapters so a
+// user never receives a confectionery item for a dish name. Values below are
+// USDA FoodData Central SR Legacy FDC 173423 (CC0), per 100 g edible portion.
+const BASIC_FOODS: readonly BasicFood[] = [{
+  id: '17342300-0000-4000-8000-000000000000', sourceId: 173423,
+  name: 'Яичница-глазунья', aliases: ['яичница', 'глазунья', 'жареное яйцо'], basis: '100g',
+  calories: 196, protein: 13.61, fat: 14.84, carbs: 0.83,
+  servings: [{ label: '1 яйцо', grams: 46 }],
+}]
+
+function normalizedFoodTerm(value: string): string {
+  return value.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+}
+
+export class BasicNutritionCatalog implements NutritionCatalog {
+  async search(query: string, page: number) {
+    const normalized = normalizedFoodTerm(query)
+    if (normalized.length < 2 || normalized.length > 120 || !Number.isSafeInteger(page) || page < 1 || page > 100) {
+      throw new NutritionCatalogUnavailableError()
+    }
+    if (page !== 1) return { foods: [], hasMore: false }
+    const foods = BASIC_FOODS.filter(food => [food.name, ...food.aliases]
+      .some(term => normalizedFoodTerm(term).includes(normalized) || normalized.includes(normalizedFoodTerm(term))))
+    return { foods, hasMore: false }
+  }
+
+  async details(sourceId: number) {
+    return BASIC_FOODS.find(food => food.sourceId === sourceId) ?? null
+  }
+}
+
 export class NutritionCatalogUnavailableError extends Error {
   constructor() {
     super('Food search is temporarily unavailable')
