@@ -75,7 +75,7 @@ describe('read-only public food source', () => {
 })
 
 describe('Perek API source', () => {
-  const perek = { id: 'burger-king/vopper', name: 'Воппер', url: 'https://perek.us/food/burger-king/vopper', per100: {
+  const perek = { id: 'burger-king/vopper', name: 'Воппер', url: 'https://perek.us/food/burger-king/vopper', brand: { name: 'Бургер Кинг' }, servings: [{ label: 'Порция', grams: 274 }], per100: {
     kcal: 262.77, protein: 9.85, fat: 16.06, carbs: 19.34,
   } }
 
@@ -87,8 +87,8 @@ describe('Perek API source', () => {
     const [url, options] = call.mock.calls[0]!
     expect(url).toBe('https://perek.us/api/v1/foods/search?q=%D0%B2%D0%BE%D0%BF%D0%BF%D0%B5%D1%80&limit=10&offset=10&market=ru&full=true')
     expect(options?.headers).toMatchObject({ 'x-api-key': 'pk_test_key' })
-    expect(result).toMatchObject({ foods: [{ name: 'Воппер', manufacturer: 'Burger King' }], hasMore: false })
-    expect(publicNutritionFood(result.foods[0]!)).toHaveProperty('manufacturer', 'Burger King')
+    expect(result).toMatchObject({ foods: [{ name: 'Воппер', manufacturer: 'Бургер Кинг', servings: [{ label: 'Порция', grams: 274 }] }], hasMore: false })
+    expect(publicNutritionFood(result.foods[0]!)).toMatchObject({ manufacturer: 'Бургер Кинг', servings: [{ label: 'Порция', grams: 274 }] })
   })
 
   it('rejects products without a safe product link or bounded nutrition', () => {

@@ -99,8 +99,11 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     fat: existing?.fat?.toString() ?? '', carbs: existing?.carbs?.toString() ?? '', search: '', selection: existing ?? null }
   const form = useForm<NutritionForm>({ defaultValues: readNutritionForm(userId, key) ?? defaults })
   const values = useWatch({ control: form.control }), selection = values.selection, manual = values.manual
+  const selectedServing = selection && 'servings' in selection ? selection.servings?.[0] : undefined
+  const selectedServingGrams = selectedServing?.grams ?? null
   const [storageError, setStorageError] = useState(false), [search, setSearch] = useState('')
   const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
+  const [portionMode, setPortionMode] = useState(false), [portionCount, setPortionCount] = useState('1')
   const parsedSearch = useRef<string | null>(null)
   const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [scannerOpen, setScannerOpen] = useState(false)
   const cache = useQueryClient(), active = useRef(true), [confirm, dialog] = useConfirm()
@@ -125,7 +128,8 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   } })
   const choose = (food: NutritionFood | NutritionEntry) => {
     form.setValue('selection', food)
-    form.setValue('grams', 'grams' in food ? food.grams?.toString() ?? '' : suggestedGrams ?? '')
+    form.setValue('grams', 'grams' in food ? food.grams?.toString() ?? '' : food.servings?.[0]?.grams.toString() ?? suggestedGrams ?? '')
+    setPortionMode(!('grams' in food) && (food.servings?.length ?? 0) > 0); setPortionCount('1')
     setSuggestedGrams(null)
     parsedSearch.current = null
     form.clearErrors()
@@ -159,7 +163,10 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     if (mutation.isPending) return
     form.clearErrors()
     const basis = input.manual ? input.per100 ? '100g' : 'portion' : input.selection?.basis
-    const grams = basis === '100g' ? numeric('grams', true, 20000) : null
+    const serving = !input.manual && input.selection && !('grams' in input.selection) ? input.selection.servings?.[0] : undefined
+    const portions = nutritionDecimal(portionCount)
+    const grams = basis === '100g' ? portionMode && serving ? portions === null || portions <= 0 || portions > 100 ? undefined : serving.grams * portions : numeric('grams', true, 20000) : null
+    if (portionMode && serving && grams === undefined) form.setError('grams', { message: 'Укажите от 0,1 до 100 порций' })
     let food: NutritionDraft['food'] | undefined
     if (input.manual) {
       const name = input.name.trim(), max = input.per100 ? 100 : 5000
@@ -225,7 +232,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           <Field label={values.per100 ? 'Калории на 100 г' : 'Калории съеденной порции'} error={form.formState.errors.calories?.message}><input aria-label={values.per100 ? 'Калории на 100 г' : 'Калории съеденной порции'} aria-invalid={!!form.formState.errors.calories} inputMode="decimal" {...form.register('calories')} /></Field>
           <details><summary>Указать БЖУ (необязательно)</summary><div className="nutrition-macros-form">{(['protein', 'fat', 'carbs'] as const).map((field, index) => <Field key={field} label={['Белки, г', 'Жиры, г', 'Углеводы, г'][index]!} error={form.formState.errors[field]?.message}><input aria-label={['Белки, г', 'Жиры, г', 'Углеводы, г'][index]!} aria-invalid={!!form.formState.errors[field]} inputMode="decimal" {...form.register(field)} /></Field>)}</div></details>
         </> : <h2>{selection?.name}</h2>}
-        {basis === '100g' && <Field label="Сколько съели, г" error={form.formState.errors.grams?.message}><input aria-label="Сколько съели, г" aria-invalid={!!form.formState.errors.grams} inputMode="decimal" autoFocus={!manual} {...form.register('grams')} /></Field>}
+        {basis === '100g' && <>{selectedServing && selectedServingGrams !== null ? <div className="nutrition-quantity-mode"><button type="button" className={portionMode ? 'secondary' : 'primary'} onClick={() => setPortionMode(false)}>Граммы</button><button type="button" className={portionMode ? 'primary' : 'secondary'} onClick={() => setPortionMode(true)}>Порции</button></div> : null}{portionMode && selectedServing && selectedServingGrams !== null ? <Field label={`${selectedServing.label}, ${nutritionNumber(selectedServingGrams)} г`} error={form.formState.errors.grams?.message}><input aria-label="Сколько порций" inputMode="decimal" value={portionCount} onChange={event => setPortionCount(event.target.value)} /></Field> : <Field label="Сколько съели, г" error={form.formState.errors.grams?.message}><input aria-label="Сколько съели, г" aria-invalid={!!form.formState.errors.grams} inputMode="decimal" autoFocus={!manual} {...form.register('grams')} /></Field>}</>}
         {preview && <Totals values={preview} />}
         <div className="nutrition-date-meal"><Field label="Дата"><input type="date" min="1900-01-01" max="2100-12-31" {...form.register('date', { required: true })} /></Field>
           <Field label="Приём пищи"><span className="nutrition-native-select"><select {...form.register('meal')}>{Object.entries(NUTRITION_MEALS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronRightIcon /></span></Field></div>

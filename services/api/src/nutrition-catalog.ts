@@ -12,6 +12,7 @@ export interface NutritionFood extends NutritionValues {
   name: string
   basis: '100g'
   manufacturer?: string
+  servings?: readonly { label: string; grams: number }[]
 }
 
 export interface CatalogFood extends NutritionFood {
@@ -82,8 +83,8 @@ export function parseCatalogFood(value: unknown): CatalogFood | null {
 }
 
 export function publicNutritionFood(food: CatalogFood): NutritionFood {
-  const { id, name, basis, calories, protein, fat, carbs, manufacturer } = food
-  return { id, name, basis, calories, protein, fat, carbs, ...(manufacturer === undefined ? {} : { manufacturer }) }
+  const { id, name, basis, calories, protein, fat, carbs, manufacturer, servings } = food
+  return { id, name, basis, calories, protein, fat, carbs, ...(manufacturer === undefined ? {} : { manufacturer }), ...(servings === undefined ? {} : { servings }) }
 }
 
 export function isEanBarcode(value: string): boolean {
@@ -131,10 +132,14 @@ export function parsePerekFood(value: unknown): CatalogFood | null {
   const protein = read('protein', 100), fat = read('fat', 100), carbs = read('carbs', 100)
   if (protein === undefined || fat === undefined || carbs === undefined || (protein ?? 0) + (fat ?? 0) + (carbs ?? 0) > 101) return null
   const stable = stableCatalogId('fit-food:perek', sourceId, name, calories, protein, fat, carbs)
+  const servings = Array.isArray(product?.servings) ? product.servings.map(object).flatMap(serving => typeof serving?.label === 'string' && typeof serving.grams === 'number' && Number.isFinite(serving.grams) && serving.grams > 0 && serving.grams <= 20_000 ? [{ label: plainText(serving.label), grams: serving.grams }] : []).filter(serving => serving.label.length > 0 && serving.label.length <= 80).slice(0, 8) : []
+  const brand = object(product?.brand)
+  const explicitManufacturer = typeof brand?.name === 'string' ? plainText(brand.name) : ''
   const manufacturerSlug = new URL(url).pathname.split('/').filter(Boolean).at(1)
-  const manufacturer = manufacturerSlug === undefined ? undefined : manufacturerSlug.split('-').map(part => part[0]?.toUpperCase() + part.slice(1)).join(' ')
+  const manufacturer = explicitManufacturer.length > 0 && explicitManufacturer.length <= 80 ? explicitManufacturer
+    : manufacturerSlug === undefined ? undefined : manufacturerSlug.split('-').map(part => part[0]?.toUpperCase() + part.slice(1)).join(' ')
   return { id: stable.id, sourceId: stable.numericId, name, basis: '100g', calories, protein, fat, carbs,
-    ...(manufacturer === undefined ? {} : { manufacturer }) }
+    ...(manufacturer === undefined ? {} : { manufacturer }), ...(servings.length === 0 ? {} : { servings }) }
 }
 
 export class PerekNutritionCatalog implements NutritionCatalog {
