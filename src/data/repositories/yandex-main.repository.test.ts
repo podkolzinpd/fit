@@ -9,6 +9,7 @@ import type {
 import { localDate } from '../../shared/local-date'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
+import { resetYandexPlatformRequestStateForTests } from '../queries/request-diagnostics'
 import type { YandexTrainingDataPage } from '../queries/yandex-pilot.queries'
 import { createYandexMainRepository } from './yandex-main.repository'
 
@@ -479,6 +480,38 @@ describe('Yandex main repository', () => {
     })
     expect(fetchMock.mock.calls[2]?.[0]).toBe(`${apiBaseUrl}/v1/favorite-workouts/${wireFavorite.id}`)
     expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'DELETE' })
+  })
+
+  it.each([
+    [422, 'favorite_workout_limit_reached', 'Можно сохранить не больше 10 тренировок в избранном. Удалите одну, чтобы добавить новую.'],
+    [400, 'invalid_request', 'Проверьте название и упражнения перед сохранением в избранное.'],
+    [401, 'unauthorized', 'Сессия Yandex ID истекла. Войдите заново.'],
+    [403, 'forbidden', 'Недостаточно прав для этого действия.'],
+    [503, 'database_unavailable', 'Сервер не подтвердил сохранение в избранное. Название осталось в форме. Перед повторной попыткой проверьте список избранного.'],
+  ])('explains favorite save failure %s/%s and preserves safe request diagnostics without POST retry', async (status, code, message) => {
+    resetYandexPlatformRequestStateForTests()
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(input => Promise.resolve(String(input).endsWith('/health')
+      ? jsonResponse({ status: 'ok' }) : jsonResponse({ error: code }, status)))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const error: unknown = await repository.favoriteWorkouts.save('Synthetic favorite', []).catch((failure: unknown) => failure)
+    expect(error).toMatchObject({ message })
+    expect(getRequestDiagnostics(error)).toMatchObject({ status, errorCode: code, operation: 'POST /v1/favorite-workouts' })
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
+  })
+
+  it('keeps a network failure distinct from an API rejection when saving a favorite', async () => {
+    resetYandexPlatformRequestStateForTests()
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(input => {
+      if (String(input).endsWith('/health')) return Promise.resolve(jsonResponse({ status: 'ok' }))
+      return Promise.reject(new TypeError('synthetic connection lost'))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    const error: unknown = await repository.favoriteWorkouts.save('Synthetic favorite', []).catch((failure: unknown) => failure)
+    expect(error).toMatchObject({ code: 'network_unavailable' })
+    expect(getRequestDiagnostics(error)).toMatchObject({ stage: 'network' })
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
   })
 
   it('lists favorites carried over from Supabase, whose exercises omit unset optional keys entirely', async () => {

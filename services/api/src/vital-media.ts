@@ -1,7 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-import type { SupabaseBridgeConfig } from './supabase-bridge.js'
-
 const VITAL_MEDIA_PATH = /^vital-pro\/[a-z0-9][a-z0-9-]*\.(?:jpg|mp4)$/
 const MAX_VITAL_MEDIA_BATCH = 32
 
@@ -28,20 +24,4 @@ export function readVitalMediaBatchRequest(body: unknown): { paths: string[] } |
     || new Set(paths).size !== paths.length
   ) return undefined
   return { paths: paths as string[] }
-}
-
-export class SupabaseVitalMediaSigner implements VitalMediaSigner {
-  private readonly storage
-
-  constructor(config: SupabaseBridgeConfig) {
-    this.storage = createClient(config.url, config.serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    }).storage.from('fit-exercise-media')
-  }
-
-  async sign(path: string): Promise<string> {
-    const { data, error } = await this.storage.createSignedUrl(path, 60 * 60)
-    if (error || !data?.signedUrl) throw new Error('vital_media_signing_failed')
-    return data.signedUrl
-  }
 }

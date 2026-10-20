@@ -11,6 +11,7 @@ export interface NutritionFood extends NutritionValues {
   id: string
   name: string
   basis: '100g'
+  manufacturer?: string
 }
 
 export interface CatalogFood extends NutritionFood {
@@ -81,8 +82,8 @@ export function parseCatalogFood(value: unknown): CatalogFood | null {
 }
 
 export function publicNutritionFood(food: CatalogFood): NutritionFood {
-  const { id, name, basis, calories, protein, fat, carbs } = food
-  return { id, name, basis, calories, protein, fat, carbs }
+  const { id, name, basis, calories, protein, fat, carbs, manufacturer } = food
+  return { id, name, basis, calories, protein, fat, carbs, ...(manufacturer === undefined ? {} : { manufacturer }) }
 }
 
 export function isEanBarcode(value: string): boolean {
@@ -107,10 +108,84 @@ export function parseOpenFoodFactsBarcode(value: unknown, barcode: string): Cata
   return { id, sourceId: Number.parseInt(hex.slice(0, 13), 16), name, basis: '100g', calories, protein, fat, carbs }
 }
 
+function stableCatalogId(namespace: string, sourceId: string, name: string, calories: number, protein: number | null, fat: number | null, carbs: number | null): { id: string; numericId: number } {
+  const hex = createHash('sha256').update(JSON.stringify([namespace, sourceId, name, calories, protein, fat, carbs])).digest('hex')
+  return { id: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`,
+    numericId: Number.parseInt(hex.slice(0, 12), 16) }
+}
+
+export function parsePerekFood(value: unknown): CatalogFood | null {
+  const product = object(value), per100 = object(product?.per100)
+  const sourceId = typeof product?.id === 'string' ? product.id : ''
+  const rawName = typeof product?.name === 'string' ? product.name : ''
+  const url = typeof product?.url === 'string' ? product.url : ''
+  const name = plainText(rawName)
+  const urlValid = /^https:\/\/perek\.us\/food\/[a-z0-9/-]+$/i.test(url)
+  const read = (key: string, max: number): number | null | undefined => {
+    if (per100?.[key] === undefined || per100?.[key] === null) return null
+    const number = per100[key]
+    return typeof number === 'number' && Number.isFinite(number) && number >= 0 && number <= max ? number : undefined
+  }
+  const calories = read('kcal', 1000)
+  if (!/^[a-z0-9][a-z0-9/-]{0,180}$/i.test(sourceId) || name.length < 2 || name.length > 160 || !urlValid || calories === null || calories === undefined) return null
+  const protein = read('protein', 100), fat = read('fat', 100), carbs = read('carbs', 100)
+  if (protein === undefined || fat === undefined || carbs === undefined || (protein ?? 0) + (fat ?? 0) + (carbs ?? 0) > 101) return null
+  const stable = stableCatalogId('fit-food:perek', sourceId, name, calories, protein, fat, carbs)
+  const manufacturerSlug = new URL(url).pathname.split('/').filter(Boolean).at(1)
+  const manufacturer = manufacturerSlug === undefined ? undefined : manufacturerSlug.split('-').map(part => part[0]?.toUpperCase() + part.slice(1)).join(' ')
+  return { id: stable.id, sourceId: stable.numericId, name, basis: '100g', calories, protein, fat, carbs,
+    ...(manufacturer === undefined ? {} : { manufacturer }) }
+}
+
+export class PerekNutritionCatalog implements NutritionCatalog {
+  constructor(private readonly apiKey: string, private readonly fetchImplementation: typeof fetch = globalThis.fetch) {}
+
+  private async request(path: string): Promise<Record<string, unknown> | null> {
+    try {
+      const response = await this.fetchImplementation(`https://perek.us/api/v1/foods${path}`, {
+        headers: { accept: 'application/json', 'user-agent': 'FitNutrition/1.0 (food diary)', 'x-api-key': this.apiKey },
+        redirect: 'error', signal: AbortSignal.timeout(5_000),
+      })
+      if (response.status === 404) return null
+      if (!response.ok) throw new NutritionCatalogUnavailableError()
+      const payload = object(await response.json())
+      if (payload === undefined) throw new NutritionCatalogUnavailableError()
+      return payload
+    } catch (error) {
+      if (error instanceof NutritionCatalogUnavailableError) throw error
+      throw new NutritionCatalogUnavailableError()
+    }
+  }
+
+  async search(query: string, page: number) {
+    if (query.trim().length < 2 || query.length > 120 || !Number.isSafeInteger(page) || page < 1 || page > 100) throw new NutritionCatalogUnavailableError()
+    const params = new URLSearchParams({ q: query.trim(), limit: '10', offset: String((page - 1) * 10), market: 'ru', full: 'true' })
+    const payload = await this.request(`/search?${params.toString()}`)
+    if (payload === null || !Array.isArray(payload.foods) || typeof payload.more !== 'boolean') throw new NutritionCatalogUnavailableError()
+    return { foods: payload.foods.map(parsePerekFood).filter((food): food is CatalogFood => food !== null), hasMore: payload.more }
+  }
+
+  details(sourceId: number) {
+    // Perek IDs are opaque strings. The diary only needs a snapshot returned by
+    // search or barcode, so numeric cache IDs deliberately cannot be reversed.
+    if (!Number.isSafeInteger(sourceId) || sourceId < 1) throw new NutritionCatalogUnavailableError()
+    return Promise.resolve(null)
+  }
+
+  async barcode(barcode: string) {
+    if (!isEanBarcode(barcode)) throw new NutritionCatalogUnavailableError()
+    const payload = await this.request(`/barcode/${barcode}`)
+    if (payload === null) return null
+    const food = parsePerekFood(payload.food ?? payload)
+    if (food === null) throw new NutritionCatalogUnavailableError()
+    return food
+  }
+}
+
 export class VkusvillNutritionCatalog implements NutritionCatalog {
   constructor(private readonly fetchImplementation: typeof fetch = globalThis.fetch) {}
 
-  private async call(name: 'vkusvill_products_search' | 'vkusvill_product_details', args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  private async call(name: 'vkusvill_products_search' | 'vkusvill_product_details' | 'vkusvill_product_barcode', args: Record<string, unknown>): Promise<Record<string, unknown>> {
     try {
       const response = await this.fetchImplementation('https://mcp.vkusvill.ru/mcp', {
         method: 'POST', redirect: 'error', signal: AbortSignal.timeout(5_000),
@@ -174,6 +249,14 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
   async barcode(barcode: string) {
     if (!isEanBarcode(barcode)) throw new NutritionCatalogUnavailableError()
     try {
+      const local = await this.call('vkusvill_product_barcode', { barcode })
+      const food = parseCatalogFood(local)
+      if (food !== null) return food
+    } catch {
+      // Barcode coverage in the retailer source is optional. A missing MCP
+      // tool or an upstream error must not prevent the public fallback.
+    }
+    try {
       const response = await this.fetchImplementation(`https://world.openfoodfacts.org/api/v3/product/${barcode}.json`, {
         headers: { accept: 'application/json', 'user-agent': 'FitNutrition/1.0 (barcode lookup)' }, redirect: 'error', signal: AbortSignal.timeout(5_000),
       })
@@ -184,5 +267,36 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
       if (error instanceof NutritionCatalogUnavailableError) throw error
       throw new NutritionCatalogUnavailableError()
     }
+  }
+}
+
+export class FallbackNutritionCatalog implements NutritionCatalog {
+  constructor(private readonly primary: NutritionCatalog | undefined, private readonly fallback: NutritionCatalog) {}
+
+  async search(query: string, page: number) {
+    if (this.primary !== undefined) {
+      try {
+        const result = await this.primary.search(query, page)
+        if (result.foods.length > 0 || result.hasMore) return result
+      } catch {
+        // The pilot still has the existing source when perek.us is rate-limited
+        // or temporarily unavailable.
+      }
+    }
+    return this.fallback.search(query, page)
+  }
+
+  details(sourceId: number) { return this.fallback.details(sourceId) }
+
+  async barcode(barcode: string) {
+    if (this.primary?.barcode !== undefined) {
+      try {
+        const food = await this.primary.barcode(barcode)
+        if (food !== null) return food
+      } catch {
+        // A provider failure is not a barcode miss; try the existing fallback.
+      }
+    }
+    return this.fallback.barcode?.(barcode) ?? null
   }
 }

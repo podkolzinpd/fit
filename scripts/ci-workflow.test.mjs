@@ -154,15 +154,51 @@ test('runs Chromium behavior scenarios in two isolated shards', () => {
 })
 
 test('keeps the required app check stable while quality and coverage run in parallel', () => {
-  assert.match(workflow, /app-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run build/)
-  assert.match(workflow, /app-quality:[\s\S]*- run: npm run db:types:check[\s\S]*- run: npm run build/)
+  assert.match(workflow, /repository-quality:[\s\S]*- run: npm run lint[\s\S]*- run: npm run infra:policy:test/)
+  assert.match(workflow, /repository-quality:[\s\S]*- run: npm run db:types:check/)
+  assert.match(workflow, /app-quality:[\s\S]*- run: npm run typecheck[\s\S]*- run: npm run build/)
   assert.match(workflow, /app-tests:[\s\S]*- run: npm run test:coverage/)
-  assert.match(workflow, /app:\n    needs: \[app-quality, app-tests, frontend-infrastructure\]/)
+  assert.match(workflow, /app:\n    needs: \[e2e-scope, repository-quality, app-quality, app-tests, frontend-infrastructure\]/)
+  assert.match(workflow, /REPOSITORY_RESULT: \$\{\{ needs\.repository-quality\.result \}\}/)
+  assert.match(workflow, /FRONTEND_REQUIRED: \$\{\{ needs\.e2e-scope\.outputs\.frontend_required \}\}/)
   assert.match(workflow, /INFRA_RESULT: \$\{\{ needs\.frontend-infrastructure\.result \}\}/)
   assert.match(workflow, /"\$INFRA_RESULT" != "success"/)
   assert.match(workflow, /QUALITY_RESULT: \$\{\{ needs\.app-quality\.result \}\}/)
   assert.match(workflow, /TESTS_RESULT: \$\{\{ needs\.app-tests\.result \}\}/)
   assert.match(workflow, /App checks failed: quality=\$QUALITY_RESULT tests=\$TESTS_RESULT/)
+})
+
+test('frontend jobs depend on the automatic scope, not a prompt, label or manual skip', () => {
+  for (const name of ['app-quality', 'app-tests', 'frontend-infrastructure']) {
+    assert.ok(workflow.includes(`  ${name}:\n    needs: e2e-scope\n    if: needs.e2e-scope.outputs.frontend_required == 'true'`), name)
+  }
+  assert.match(workflow, /frontend_required: \$\{\{ steps\.scope\.outputs\.frontend_required \}\}/)
+  const scope = workflow.slice(workflow.indexOf('      - name: Detect frontend'), workflow.indexOf('      - name: Detect legacy database'))
+  assert.match(scope, /EVENT_NAME: \$\{\{ github\.event_name \}\}/)
+  assert.doesNotMatch(scope, /inputs\.|labels|skip/i)
+})
+
+test('real app and E2E gate scripts reject missing scope, failed lanes and unauthorized skips', () => {
+  const appScript = workflow.match(/- name: Verify app checks[\s\S]*?run: \|\n([\s\S]*?)(?=\n {2}api:)/)[1].replace(/^ {10}/gm, '')
+  const e2eScript = workflow.match(/- name: Verify E2E result[\s\S]*?run: \|\n([\s\S]*)$/)[1].replace(/^ {10}/gm, '')
+  const cases = [
+    { script: appScript, flag: 'FRONTEND_REQUIRED', lanes: ['QUALITY_RESULT', 'TESTS_RESULT', 'INFRA_RESULT'] },
+    { script: e2eScript, flag: 'E2E_REQUIRED', lanes: ['YANDEX_AUTH_RESULT', 'VISUAL_RESULT', 'CHROMIUM_RESULT', 'WEBKIT_RESULT', 'FIT_LIME_RESULT'] },
+  ]
+  for (const { script, flag, lanes } of cases) {
+    const run = values => spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env,
+      SCOPE_RESULT: 'success', REPOSITORY_RESULT: 'success', ...values } }).status
+    const results = value => Object.fromEntries(lanes.map(lane => [lane, value]))
+    assert.equal(run({ [flag]: 'true', ...results('success') }), 0)
+    assert.equal(run({ [flag]: 'false', ...results('skipped') }), 0)
+    for (const invalid of ['', 'unknown']) assert.notEqual(run({ [flag]: invalid, ...results('skipped') }), 0)
+    for (const scope of ['failure', 'cancelled', 'skipped']) assert.notEqual(run({ [flag]: 'false', ...results('skipped'), SCOPE_RESULT: scope }), 0)
+    for (const lane of lanes) {
+      for (const result of ['failure', 'cancelled', 'skipped', '']) assert.notEqual(run({ [flag]: 'true', ...results('success'), [lane]: result }), 0)
+      assert.notEqual(run({ [flag]: 'false', ...results('skipped'), [lane]: 'failure' }), 0)
+    }
+  }
+  assert.notEqual(spawnSync('bash', ['-c', appScript], { env: { SCOPE_RESULT: 'success', REPOSITORY_RESULT: 'failure', FRONTEND_REQUIRED: 'false', QUALITY_RESULT: 'skipped', TESTS_RESULT: 'skipped', INFRA_RESULT: 'skipped' } }).status, 0)
 })
 
 test('runs heavy legacy database checks only for relevant changes or a manual CI run', () => {

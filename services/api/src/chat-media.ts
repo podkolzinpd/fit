@@ -1,7 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-import type { SupabaseBridgeConfig } from './supabase-bridge.js'
-
 export const CHAT_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 
 export type ChatImageUpload = {
@@ -33,30 +29,4 @@ export function readChatImageUpload(value: unknown): ChatImageUpload | undefined
   const bytes = Buffer.from(encoded, 'base64')
   if (bytes.byteLength !== claimedSize || bytes.byteLength > CHAT_IMAGE_MAX_BYTES) return undefined
   return { bytes, mimeType: 'image/jpeg', width, height, sizeBytes: bytes.byteLength }
-}
-
-export class SupabaseChatMediaStore implements ChatMediaStore {
-  private readonly storage
-
-  constructor(config: SupabaseBridgeConfig) {
-    this.storage = createClient(config.url, config.serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    }).storage.from('chat-media')
-  }
-
-  async upload(path: string, image: ChatImageUpload): Promise<void> {
-    const { error } = await this.storage.upload(path, image.bytes, { contentType: image.mimeType, upsert: false })
-    if (error && !/already exists|duplicate/i.test(error.message)) throw new Error('chat_media_upload_failed')
-  }
-
-  async sign(path: string): Promise<string> {
-    const { data, error } = await this.storage.createSignedUrl(path, 60 * 60)
-    if (error || !data?.signedUrl) throw new Error('chat_media_signing_failed')
-    return data.signedUrl
-  }
-
-  async remove(path: string): Promise<void> {
-    const { error } = await this.storage.remove([path])
-    if (error && !/not found/i.test(error.message)) throw new Error('chat_media_delete_failed')
-  }
 }

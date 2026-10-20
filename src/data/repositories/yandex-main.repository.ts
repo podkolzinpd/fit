@@ -470,6 +470,21 @@ function errorForStatus(status: number, code?: string): RepositoryError {
   return new RepositoryError('invalid_request', 'Сервер не принял запрос. Проверьте данные и повторите.')
 }
 
+function favoriteSaveErrorForStatus(status: number, code?: string): Error {
+  if (status === 422 && code === 'favorite_workout_limit_reached') {
+    return new RepositoryError(code, 'Можно сохранить не больше 10 тренировок в избранном. Удалите одну, чтобы добавить новую.')
+  }
+  if (status === 400 || status === 422) {
+    return new RepositoryError('invalid_favorite_workout', 'Проверьте название и упражнения перед сохранением в избранное.')
+  }
+  if (status >= 500) {
+    // A lost/failed response cannot prove that the write was not committed.
+    // Keep the draft, expose the request ID and never replay this POST.
+    return new RepositoryError('service_unavailable', 'Сервер не подтвердил сохранение в избранное. Название осталось в форме. Перед повторной попыткой проверьте список избранного.')
+  }
+  return errorForStatus(status, code)
+}
+
 function trainingSummaryErrorForStatus(status: number, code?: string): Error {
   if (code && status !== 401 && status !== 403 && status !== 404) {
     return trainingSummaryGenerationError(code)
@@ -1240,6 +1255,7 @@ export function createYandexMainRepository(
           queries, '/v1/favorite-workouts', 'POST',
           { title, exercises: workoutExerciseDraftsPayload(exercises) },
           favoriteWorkoutSchema,
+          favoriteSaveErrorForStatus,
         )
         return favoriteWorkout(payload)
       },

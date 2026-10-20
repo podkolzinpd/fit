@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isEanBarcode, parseCatalogFood, parseOpenFoodFactsBarcode, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError } from './nutrition-catalog.js'
+import { FallbackNutritionCatalog, isEanBarcode, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -74,6 +74,45 @@ describe('read-only public food source', () => {
   )
 })
 
+describe('Perek API source', () => {
+  const perek = { id: 'burger-king/vopper', name: 'Воппер', url: 'https://perek.us/food/burger-king/vopper', per100: {
+    kcal: 262.77, protein: 9.85, fat: 16.06, carbs: 19.34,
+  } }
+
+  it('uses the documented server-side search, country filter and manufacturer', async () => {
+    const call = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ foods: [perek], more: false })))
+    const catalog = new PerekNutritionCatalog('pk_test_key', call)
+    const result = await catalog.search('воппер', 2)
+    expect(call).toHaveBeenCalledTimes(1)
+    const [url, options] = call.mock.calls[0]!
+    expect(url).toBe('https://perek.us/api/v1/foods/search?q=%D0%B2%D0%BE%D0%BF%D0%BF%D0%B5%D1%80&limit=10&offset=10&market=ru&full=true')
+    expect(options?.headers).toMatchObject({ 'x-api-key': 'pk_test_key' })
+    expect(result).toMatchObject({ foods: [{ name: 'Воппер', manufacturer: 'Burger King' }], hasMore: false })
+    expect(publicNutritionFood(result.foods[0]!)).toHaveProperty('manufacturer', 'Burger King')
+  })
+
+  it('rejects products without a safe product link or bounded nutrition', () => {
+    expect(parsePerekFood({ ...perek, url: 'https://not-perek.example/food/a' })).toBeNull()
+    expect(parsePerekFood({ ...perek, per100: { ...perek.per100, protein: 150 } })).toBeNull()
+  })
+})
+
+describe('source fallback', () => {
+  const food: CatalogFood = { id: '6c29d0c8-9350-4cbc-8a5b-123456789abc', sourceId: 1, name: 'Рис', basis: '100g', calories: 116, protein: 2.2, fat: 0.5, carbs: 24.9 }
+  const catalog = (search: NutritionCatalog['search'], barcode?: NutritionCatalog['barcode']): NutritionCatalog => ({
+    search,
+    details: () => Promise.resolve(null),
+    ...(barcode === undefined ? {} : { barcode }),
+  })
+
+  it('falls back only after a Perek miss or outage', async () => {
+    const fallback = vi.fn<NutritionCatalog['search']>().mockResolvedValue({ foods: [food], hasMore: false })
+    const combined = new FallbackNutritionCatalog(catalog(() => Promise.reject(new NutritionCatalogUnavailableError())), catalog(fallback))
+    expect(await combined.search('рис', 1)).toEqual({ foods: [food], hasMore: false })
+    expect(fallback).toHaveBeenCalledOnce()
+  })
+})
+
 describe('barcode normalization', () => {
   it('accepts only valid EAN checksums and maps a bounded Open Food Facts response', () => {
     expect(isEanBarcode('5449000000996')).toBe(true)
@@ -81,5 +120,14 @@ describe('barcode normalization', () => {
     expect(parseOpenFoodFactsBarcode({ product: { product_name_ru: 'Вода', nutriments: {
       'energy-kcal_100g': 0, proteins_100g: 0, fat_100g: 0, carbohydrates_100g: 0,
     } } }, '5449000000996')).toMatchObject({ name: 'Вода', calories: 0 })
+  })
+  it('continues to Open Food Facts when the retailer barcode tool is unavailable', async () => {
+    const call = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('unsupported', { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ product: { product_name_ru: 'Вода', nutriments: {
+        'energy-kcal_100g': 0, proteins_100g: 0, fat_100g: 0, carbohydrates_100g: 0,
+      } } })))
+    await expect(new VkusvillNutritionCatalog(call).barcode('5449000000996')).resolves.toMatchObject({ name: 'Вода', calories: 0 })
+    expect(call.mock.calls[1]?.[0]).toBe('https://world.openfoodfacts.org/api/v3/product/5449000000996.json')
   })
 })

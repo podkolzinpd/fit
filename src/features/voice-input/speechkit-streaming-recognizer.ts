@@ -32,15 +32,31 @@ export class SpeechKitStreamingSession implements StreamingSpeechSession {
     const configuredUrl = String(import.meta.env.VITE_SPEECHKIT_RELAY_URL ?? '').trim()
     if (import.meta.env.PROD && configuredUrl !== PRODUCTION_RELAY_URL) throw new Error('Потоковое распознавание недоступно в этом браузере.')
     const url = configuredUrl || (import.meta.env.PROD ? '' : DEFAULT_RELAY_URL)
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
-    if (this.stopped) {
-      stream.getTracks().forEach((track) => track.stop())
-      throw new Error('Запрос микрофона отменён.')
+    // iOS may keep a context created after the microphone permission promise
+    // in `suspended` state. Create and resume it while the record-button user
+    // gesture is still active, then verify it again after getUserMedia.
+    const context = new AudioContext()
+    this.context = context
+    const resume = () => typeof context.resume === 'function' ? context.resume() : Promise.resolve()
+    const initialResume = resume()
+    let stream: MediaStream | null = null
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      await initialResume
+      if (context.state !== 'running') await resume()
+      if (this.stopped) {
+        stream.getTracks().forEach((track) => track.stop())
+        throw new Error('Запрос микрофона отменён.')
+      }
+    } catch (error) {
+      stream?.getTracks().forEach((track) => track.stop())
+      if (this.context === context) this.context = null
+      await context.close()
+      throw error
     }
     this.stream = stream
     this.onPartial = onPartial
     this.onFinal = onFinal
-    this.context = new AudioContext()
     this.source = this.context.createMediaStreamSource(this.stream)
     this.processor = this.context.createScriptProcessor(4096, 1, 1)
     this.processor.onaudioprocess = (event) => {
