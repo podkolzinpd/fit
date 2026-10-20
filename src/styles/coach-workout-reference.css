@@ -236,13 +236,19 @@
 .coach-workout-reference .coach-catalog-count { flex: 1; color: rgb(255 255 255 / 60%); font-size: 14px; line-height: 16px; white-space: nowrap }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-filter-trigger { display: inline-flex; gap: 4px; align-items: center; padding: 8px 0; border: 0; border-radius: 0; background: transparent; font-weight: 400; font-size: 14px; line-height: 16px }
 .coach-workout-reference .coach-reference-catalog .picker-create-action:not(.coach-catalog-create-floating) { width: 100%; background: transparent; border: 0; color: var(--lime-text-secondary) }
-.coach-workout-reference .coach-catalog-create-bar { display: flex; justify-content: flex-end; flex-shrink: 0; padding: 12px 20px max(16px, env(safe-area-inset-bottom)); background: #1a1a1c }
+.coach-workout-reference .coach-catalog-create-bar { display: grid; grid-template-columns: minmax(0, 1fr) 140px minmax(0, 1fr); align-items: center; min-height: 96px; flex-shrink: 0; padding: 12px 20px max(16px, env(safe-area-inset-bottom)); background: var(--lime-surface) }
+.coach-workout-reference .coach-catalog-clear { grid-column: 1; grid-row: 1; justify-self: start; min-width: 0; padding-inline: 0; font-size: 12px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog button.coach-catalog-add { grid-column: 2; grid-row: 1; width: 140px; height: 60px; min-height: 60px; padding: 16px 8px; border: 0; border-radius: 20px; background: var(--lime-pink); color: var(--lime-text); font-size: 14px; line-height: 20px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog button.coach-catalog-add:disabled { background: var(--lime-surface-high); color: var(--lime-text-secondary) }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog button.coach-catalog-create-floating { position: static; width: 68px; height: 68px; min-width: 68px; padding: 22px; border: 0; border-radius: 99px; background: var(--lime-accent); color: #000 }
+.coach-workout-reference .coach-catalog-create-floating { grid-column: 3; grid-row: 1; justify-self: end }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog.has-selection button.coach-catalog-create-floating { width: 44px; height: 44px; min-width: 44px; padding: 10px; background: var(--lime-surface-high) }
+.coach-workout-reference .coach-reference-catalog.has-selection .coach-catalog-create-floating img { filter: invert(1) }
 .coach-workout-reference .coach-reference-catalog .picker-active-filters { padding-inline: 20px; margin-bottom: 12px }
 .coach-workout-reference .coach-reference-catalog .picker-list { min-height: 0; gap: 2px; padding: 0 2px 12px; scroll-padding-bottom: 12px }
 .coach-workout-reference .coach-reference-catalog.has-selection .picker-list { padding-bottom: 12px }
 .phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-item { grid-template-columns: minmax(0, 1fr) 68px; gap: 0; min-height: 112px; border: 0; border-radius: 32px; background: #252529; color: #fff }
-.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-item.selected { background: #252529; box-shadow: inset 0 0 0 1px var(--lime-accent) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-item.selected { background: var(--lime-surface-raised); box-shadow: none }
 .coach-workout-reference .coach-reference-catalog .picker-item-technique { padding: 16px 0 16px 16px; gap: 20px; background: transparent }
 .coach-workout-reference .coach-reference-catalog .picker-item-copy { gap: 8px }
 .coach-workout-reference .coach-reference-catalog .picker-item-name { font-size: 16px; line-height: 16px; font-weight: 400; -webkit-line-clamp: 3 }
@@ -252,9 +258,11 @@
 .coach-workout-reference .coach-reference-catalog .picker-item.playing .exercise-image-picker { width: 65px }
 .coach-workout-reference .coach-reference-catalog .picker-item-play { right: 20px; bottom: 28px; width: 24px; height: 24px; border: 0; border-radius: 0; background: transparent; overflow: hidden }
 .coach-workout-reference .coach-reference-catalog .picker-item-play img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 53.4121px; height: 55.3104px; max-width: none }
-.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-select-mark { width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin-right: 24px; border: 0; border-radius: 99px; background: #3b3b40; color: #fff }
-.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-item.selected .picker-select-mark { background: var(--lime-accent); color: #000 }
-.coach-workout-reference .coach-reference-catalog .picker-select-mark svg { width: 24px; height: 24px }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-select-mark { position: relative; width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin-right: 24px; border: 0; border-radius: 99px; background: transparent; color: var(--lime-text) }
+.coach-workout-reference .coach-reference-catalog .picker-select-mark::before { content: ''; position: absolute; inset: 2px; border-radius: inherit; background: var(--lime-surface-high) }
+.phone-frame.fit-lime-shell.coach-workout-reference .coach-reference-catalog .picker-item.selected .picker-select-mark { background: transparent; color: var(--lime-text) }
+.coach-workout-reference .coach-reference-catalog .picker-item.selected .picker-select-mark::before { background: var(--lime-pink) }
+.coach-workout-reference .coach-reference-catalog .picker-select-mark svg { position: relative; width: 24px; height: 24px }
 .coach-workout-reference .coach-reference-catalog .picker-filter-panel { min-height: 0; padding: 32px 20px 24px; gap: 0 }
 .phone-frame.fit-lime-shell.coach-workout-reference .live-rest-sheet { display: flex; flex-direction: column; max-height: min(680px, calc(var(--app-visible-height, 100dvh) - 24px)) }
 .coach-workout-reference .live-rest-sheet > * { flex-shrink: 0 }
