@@ -143,3 +143,7 @@ WebKit390, источник45713f8f, duration-baseline: при сохранён�
 
 ## Финальное обновление PR1 после общей серии
 Source3f8f708e от mainb6e9ea67 (#1742–1745 слиты). Собственный допуск/плотность/анимации повторно проверены без расширения scope: unit59/59, policy+resolver45/45, WebKit/Chromium22/22 light/dark390/430 и обе плотности; licensed fonts2/2. Внешние HTTP/WS блокированы. Финальный CI обновлённого head обязателен перед merge; флаги выключены до read-only инспекции настоящих привязок. Настоящий iPhone недоступен: devicectl0 физических устройств; физический ввод НЕ ПРОВЕРЕН.
+
+## Интеграционный checkpoint после #1745
+21.10 — YAFIT-641 integrated source4ab7920e/mainb6e9ea67: все штатные стадии check exit0 (2799frontend,1453API+185штатныхDBskip), localworkers2 без смены timeout/coverage. Повторены clientcatalog16, clienteditor22, dates14, trainercatalog12, targeted124. Общий дизайн-контракт diff0. Публикация и exact-head CI каждого этапа ещё впереди; physical iPhone НЕ ПРОВЕРЕН.
+Логи: outputs/client-workout-reference-20261020/main1745-{integrated-check,catalog-browser,catalog-trainer,editor-browser,dates-browser,targeted-unit}.log. Shared header принимает ReactNode для существующего счётчика фильтров; reset клиентских фильтров учитывает видимый поиск, тренерская геометрия сохранена. Продуктовые date/time controls не переписывались.
