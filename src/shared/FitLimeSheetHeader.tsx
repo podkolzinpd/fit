@@ -13,6 +13,6 @@ export function FitLimeSheetHeader({ title, backLabel, onBack, disabled = false,
   return <header className="client-lime-sheet-header">
     <button type="button" aria-label={backLabel} disabled={disabled} onClick={onBack}>{backLabel === 'Закрыть' ? <CloseIcon /> : <BackIcon />}</button>
     <h1 id={titleId}>{title}</h1>
-    {onConfirm && <button type="button" aria-label={confirmLabel} disabled={disabled} onClick={onConfirm}><CheckSmallIcon /></button>}
+    {onConfirm && <button type="button" className="client-lime-sheet-confirm" aria-label={confirmLabel} disabled={disabled} onClick={onConfirm}><CheckSmallIcon /></button>}
   </header>
 }

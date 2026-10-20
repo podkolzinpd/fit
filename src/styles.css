@@ -1881,10 +1881,11 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .preset-workout-card small { color:var(--muted); font-size:12px; }
 .preset-workout-card > button { flex:0 0 auto; min-height:40px; padding-inline:14px; border-radius:14px; font-size:13px; }
 .favorite-workouts-section { margin-bottom:18px; }
-.favorite-workout-cards { display:grid; gap:10px; }
-.favorite-workout-card { align-items:center; }
+.favorite-workout-cards { display:grid; grid-template-columns:minmax(0, 1fr); gap:10px; }
+/* Название из пользователя может быть одним длинным словом: переносим его, а не растягиваем карточку за экран. */
+.favorite-workout-card { min-width:0; align-items:center; }
 .favorite-workout-card > div:first-child { display:grid; gap:2px; min-width:0; }
-.favorite-workout-card strong { font-size:15px; }
+.favorite-workout-card strong { font-size:15px; overflow-wrap:anywhere; }
 .favorite-workout-card small { color:var(--muted); font-size:12px; }
 .favorite-workout-card-actions { flex:0 0 auto; display:flex; align-items:center; gap:6px; }
 .favorite-workout-card-actions > button.secondary { min-height:40px; padding-inline:14px; border-radius:14px; font-size:13px; }
@@ -2960,6 +2961,8 @@ button.workout-duration-trigger:disabled { cursor:default; opacity:1 }
 .catalog-system-section .chips { max-height: 320px; overflow-y: auto; margin: 0; padding: 0 16px 16px; border-top: 1px solid var(--border) }
 .theme-light .catalog-custom-section, .theme-light .catalog-system-section { background: var(--surface-elevated) }
 .today-exercise { display:grid; }.today-exercise.planned-exercise { padding:10px 0 12px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }.today-exercise-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }.today-exercise-editor { display:grid; gap:7px; padding-top:7px; }.today-exercise-editor summary { color:var(--accent-strong); font-weight:750; cursor:pointer; }.today-exercise-actions { display:flex; align-items:center; gap:12px; }.today-exercise-actions .link { min-height:30px; padding:2px 0; color:var(--muted); font-size:13px; }.today-exercise-actions .link:last-child { color:var(--accent-strong); }.today-set-list { display:grid; gap:0; }.today-set-editor { align-items:center; }.today-set-editor > label { display:contents; }.today-set-editor .planned-set-input, .today-set-editor .planned-set-rpe { width:100%; }.today-add-set { justify-self:start; }
+/* Время с подписями «мин/сек» выше соседних полей: по центру поле повторов съезжает вниз. */
+.planned-set:has(.workout-duration-parts), .today-set-editor:has(.workout-duration-parts) { align-items:start; }
 .today-review-order-toolbar { min-height:var(--tap); display:flex; align-items:center; justify-content:flex-end; margin-top:-4px; }
 .today-review-order-toolbar > .link { min-height:var(--tap); padding:6px 0; color:var(--accent-strong); font-size:14px; font-weight:750; }
 .today-review-order-toolbar .reorder-mode { width:100%; min-height:var(--tap); justify-content:space-between; padding:7px 12px; }
