@@ -2,7 +2,7 @@ const OAUTH_STATE_KEY = 'fit.yandexIdPilot.oauthState'
 const OAUTH_VERIFIER_KEY = 'fit.yandexIdPilot.oauthVerifier'
 const OAUTH_INTENT_KEY = 'fit.yandexIdPilot.oauthIntent'
 const NATIVE_REGISTRATION_KEY = 'fit.yandexIdPilot.nativeRegistration'
-export type YandexAuthorizationIntent = 'pilot' | 'link' | 'app' | 'register'
+export type YandexAuthorizationIntent = 'pilot' | 'app' | 'register'
 
 export interface PendingYandexNativeRegistration {
   accountRole: 'trainer' | 'client'
@@ -82,7 +82,8 @@ export function peekPendingYandexAuthorizationIntent(
   storage: Pick<Storage, 'getItem'> = sessionStorage,
 ): YandexAuthorizationIntent {
   const value = storage.getItem(OAUTH_INTENT_KEY)
-  return value === 'link' || value === 'app' || value === 'register' ? value : 'pilot'
+  if (value === 'link') return 'app' // Retired callbacks use the ordinary login error screen.
+  return value === 'app' || value === 'register' ? value : 'pilot'
 }
 
 export function savePendingYandexNativeRegistration(
@@ -158,8 +159,10 @@ export function consumeYandexAuthorizationCallback(
   const params = new URLSearchParams(search.replace(/^\?/, ''))
   const expectedState = storage.getItem(OAUTH_STATE_KEY)
   const verifier = storage.getItem(OAUTH_VERIFIER_KEY)
+  const retiredLinking = storage.getItem(OAUTH_INTENT_KEY) === 'link'
   const intent = peekPendingYandexAuthorizationIntent(storage)
   clearPendingYandexAuthorization(storage)
+  if (retiredLinking) throw new Error('Привязка через старую сессию больше недоступна. Начните вход через Yandex ID заново.')
 
   const errorCode = params.get('error')
   if (errorCode !== null) throw new Error(yandexAuthorizationErrorMessage(errorCode))

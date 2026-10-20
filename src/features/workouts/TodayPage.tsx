@@ -57,7 +57,6 @@ import { NotificationOnboarding } from '../notifications'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, KeyboardIcon } from '../../shared/icons'
 import { ChatHeaderAction } from '../chat'
 import { TrainerDiscoveryHomeCard } from '../clients/TrainerDiscoveryHomeCard'
-import { YandexAccountLinkingCard } from '../auth'
 import { prepareZeroReplacement } from '../../shared/numeric-input'
 import { QuickStartWorkout, TrainerActiveWorkouts } from './QuickStartWorkout'
 import { defaultWorkoutTrainingFormat } from './workout-training-format'
@@ -871,7 +870,6 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
 
   return <Page title={pageTitle} hideTitle={header.hideTitle} className="today-page today-start-page" action={<div className="today-header-actions"><ChatHeaderAction />{header.showProfileAvatar && <Link className="today-profile-avatar" to={clientMode ? '/me/profile' : '/profile'} aria-label="Открыть профиль">{profileInitial}</Link>}</div>}>
     {actor && !limePlanning && !(clientLime && requestedClientDraft) && screen === 'compose' && !textComposerOpen && <><AppInstallPrompt userId={actor.userId} /><NotificationOnboarding userId={actor.userId} role={clientMode ? 'client' : 'trainer'} /></>}
-    {actor && screen === 'compose' && <YandexAccountLinkingCard actor={actor} />}
     {screen === 'compose' ? <section className={`today-composer today-voice-home voice-phase-${voicePhase}`}>
       {limePlanning ? <div><button type="button" className="link today-review-back" onClick={() => navigate(returnTo)}>← В календарь</button><h1>Составить план</h1><p className="muted">{planMetadata.title || 'Новая тренировка'} · {formatLocalDate(workoutDate)}</p></div> : !greetingHeaderPilotEnabled && !(clientLime && requestedClientDraft) && <p className="today-greeting">{greeting} 👋</p>}
       {clientMode && !textComposerOpen ? <><ClientHomeOverview

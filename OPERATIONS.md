@@ -938,7 +938,7 @@ delete/replace и любые сопутствующие изменения datab
 - `SUPABASE_DB_PASSWORD` — пароль новой БД;
 - `SUPABASE_PROJECT_ID` — `xwfuzfkuhblswpdludbc`.
 
-Это **legacy Supabase secrets** для сохранённых legacy linking/media/rollback путей.
+Это **legacy Supabase secrets** для сохранённых legacy media/rollback путей.
 Новые изменения схемы в `supabase/migrations` больше не добавляются. Workflow
 `.github/workflows/deploy-database.yml` пока технически существует и сработает,
 если изменить legacy migration-файлы в `main`; не используйте его для новой
@@ -1338,48 +1338,15 @@ Frontend allowlist не является авторизацией: Yandex API о
 тренера и владельца каждой финансовой записи. `VITE_TRAINER_FINANCE_ENABLED=false` служит аварийным
 kill switch. Изменение значений требует новой production-сборки frontend.
 
-Привязка существующего FIT-аккаунта к Yandex ID использует общие публичные
-настройки Yandex ID и глобальный build-time switch:
-
-```text
-VITE_YANDEX_OAUTH_CLIENT_ID=<public Yandex OAuth client id>
-VITE_YANDEX_API_BASE_URL=<https Yandex stage API base URL>
-VITE_YANDEX_SESSION_LINKING_ENABLED=true
-VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true
-```
-
-При точном значении `true` блок показывается всем непривязанным авторизованным
-пользователям на главной странице. Stage API по текущей Supabase-сессии
-возвращает только `linked: true/false`: непривязанный профиль видит действие,
-а после успешной привязки блок полностью исчезает. Во время первичной проверки
-блок не показывается; при ошибке доступен явный retry, а auth-запрос ограничен
-таймаутом. Значение кроме точного `true` является глобальным аварийным
-выключателем. Его изменение требует нового deployment. Публичный OAuth Client
-ID виден во frontend bundle и не является границей авторизации: callback и
-проверка статуса передают текущую Supabase-сессию в stage API, а данные и
-мутации защищаются backend ownership/RLS-проверками. OAuth Client Secret в
-Vite/frontend build variables не добавляется.
-
-Linking не требует предварительного tenant import только для корневой identity:
-после проверки Supabase access token stage читает через его RLS точную строку
-`profiles` и, для trainer, `trainers`, атомарно создаёт отсутствующий root в
-Yandex DB и затем связывает Yandex subject. Эта операция не создаёт rollout
-assignment, не переносит клиентов/тренировки и не разрешает Yandex-сессию до
-отдельного `yandex/read_write` назначения.
-
-Отдельный `VITE_YANDEX_ACCOUNT_LINK_REQUIRED=true` превращает существующую
-привязку в обязательный шаг для всех пользователей с Supabase-сессией. Gate
-проверяется до любого защищённого продуктового маршрута: связанный профиль и
-пользователь с действующей Yandex app-session проходят без дополнительного
-действия, непривязанный видит только PKCE-привязку, юридические документы и
-выход. Ошибка проверки не открывает приложение автоматически и показывает
-`Повторить`; отсутствие полной публичной linking-конфигурации также закрывает
-доступ с явной ошибкой. Реализация остаётся default-off, но в Yandex production
-frontend build глобально включены оба linking-флага: персонального allowlist нет,
-а локальная разработка не затронута. Gate не создаёт rollout
-assignment, не включает Yandex app-session и не меняет выбранный data backend.
-Для аварийного возврата необязательной привязки нужен новый deployment со
-значением `false`.
+Supabase-based linking выведен из эксплуатации 20.10.2026. Удалены UI-карточка,
+обязательный gate, transport и GET/POST `/v1/auth/yandex/link` (404).
+`VITE_YANDEX_SESSION_LINKING_ENABLED` и `VITE_YANDEX_ACCOUNT_LINK_REQUIRED`
+больше не читаются и не возвращают старый сценарий при наличии в старой сборочной
+конфигурации. Существующие `app_private.auth_identities` и native Yandex
+app-session/registration не меняются; миграции и identity-записи не удаляются.
+Незавершённый legacy OAuth intent `link` очищается с предложением повторить
+обычный вход, без передачи его кода в API. Supabase credentials пока нужны
+media/legacy functions/migration/rollback и этой задачей не удаляются.
 
 Stage API CORS allowlist обязан содержать production web origin, точный
 `capacitor://localhost` для iOS и точный `https://localhost` для Android.
@@ -1451,7 +1418,7 @@ Stale Supabase session не выбирает production auth/data backend. Но�
 при старых frontend env. Авторизованный пользователь без подходящей app-session
 остаётся в закрытом Yandex состоянии. Сборки web/Android/iOS не требуют Supabase
 переменных; rollout требует штатного выпуска соответствующих bundles. Серверные
-Supabase secrets сохраняются для legacy linking/media/migration/rollback.
+Supabase secrets сохраняются для legacy media/migration/rollback.
 Локальная разработка сохраняет свои legacy настройки.
 
 Не включайте frontend раньше server revision. Порядок cutover: maintenance →
@@ -1501,7 +1468,7 @@ allowlisted category/code без текста ошибки, токенов и pr
 Down возвращает прежние функции входа/recovery, но не восстанавливает уже
 удалённые недействительные сессии. Ручной production SQL не требуется.
 
-Frontend ограничивает OAuth exchange, linking, восстановление и отзыв Yandex
+Frontend ограничивает OAuth exchange, восстановление и отзыв Yandex
 ID-сессии 12 секундами. При таймауте сохранённый token остаётся доступен для
 повтора, но экран больше не может оставаться в бесконечном loading. Действие
 «Сбросить сессию Yandex ID» удаляет только ключ
@@ -1993,7 +1960,7 @@ Cloud.ru API/frontend release workflows are unchanged.
 обычным способом. Старые email/пароль больше не проверяются в этом сценарии,
 непривязанная история не присоединяется к новому аккаунту автоматически.
 SQL migration history, профили и identity не удаляются. Supabase configuration
-пока нужна startup, legacy linking и media; удаление recovery ещё не разрешает
+пока нужна startup и legacy media; удаление recovery ещё не разрешает
 удалить все Supabase secrets или проект. Проверка целевого production-поведения
 требует выпуска API и frontend/native вместе; один frontend deployment не
 доказывает удаление серверного endpoint.

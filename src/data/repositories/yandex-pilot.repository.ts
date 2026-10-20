@@ -64,15 +64,6 @@ const authHandoffSchema = z.object({
   }),
 })
 
-const linkedYandexIdentitySchema = z.object({
-  profileId: z.uuid(),
-  appSession: appSessionSchema.optional(),
-})
-
-const yandexIdentityLinkStatusSchema = z.object({
-  linked: z.boolean(),
-})
-
 const clientSchema = z.object({
   id: z.uuid(),
   canArchive: z.boolean(),
@@ -330,8 +321,6 @@ const generatedSummarySchema = z.object({
 export type YandexPilotSession = z.infer<typeof sessionSchema>
 export type YandexAppSession = z.infer<typeof appSessionSchema>
 export type YandexAppSessionProfile = z.infer<typeof appSessionProfileSchema>
-export type YandexLinkedIdentity = z.infer<typeof linkedYandexIdentitySchema>
-export type YandexIdentityLinkStatus = z.infer<typeof yandexIdentityLinkStatusSchema>
 export type YandexPilotClient = z.infer<typeof clientSchema>
 export type YandexPilotMembership = z.infer<typeof membershipSchema>
 export type YandexPilotInvitation = z.infer<typeof invitationSchema>
@@ -451,25 +440,6 @@ function responseFailure(response: Response, error: Error, errorCode?: string): 
 
 function connectionFailure(caught: unknown, message = 'Не удалось подключиться к Yandex Cloud stage.'): Error {
   return attachRequestDiagnostics(new Error(message), getRequestDiagnostics(caught) ?? undefined)
-}
-
-function linkResponseError(status: number): Error {
-  if (status === 401) {
-    return new Error('Не удалось подтвердить текущий FIT-аккаунт или Yandex ID. Войдите заново.')
-  }
-  if (status === 403) return new Error('Недостаточно прав для связывания Yandex ID.')
-  if (status === 404) return new Error('Профиль текущего FIT-аккаунта не найден.')
-  if (status === 409) {
-    return new Error('Этот Yandex ID уже связан с другим профилем или профиль уже связан с другим Yandex ID.')
-  }
-  if (status === 503) return new Error('Связывание Yandex ID временно недоступно. Попробуйте позднее.')
-  return new Error('Не удалось связать Yandex ID с FIT-профилем.')
-}
-
-function linkStatusResponseError(status: number): Error {
-  if (status === 401) return new Error('Сессия FIT истекла. Войдите заново.')
-  if (status === 503) return new Error('Не удалось проверить привязку Yandex ID. Попробуйте ещё раз.')
-  return new Error('Не удалось проверить статус Yandex ID.')
 }
 
 function clientsResponseError(status: number): Error {
@@ -698,46 +668,6 @@ export const yandexPilotRepository = {
     if (response.status !== 204) {
       throw new Error('Stage не подтвердил изменение профиля.')
     }
-  },
-  async linkYandexAccount(
-    apiBaseUrl: string,
-    supabaseAccessToken: string,
-    code: string,
-    codeVerifier: string,
-  ): Promise<YandexLinkedIdentity> {
-    let response: Response
-    try {
-      response = await yandexPilotQueries.linkYandexAccount(
-        apiBaseUrl,
-        supabaseAccessToken,
-        code,
-        codeVerifier,
-      )
-    } catch (caught) {
-      throw yandexAuthConnectionError(caught)
-    }
-    if (!response.ok) throw responseFailure(response, linkResponseError(response.status))
-    const result = linkedYandexIdentitySchema.safeParse(await response.json())
-    if (!result.success) throw new Error('Stage вернул неподдерживаемый результат связывания.')
-    return result.data
-  },
-  async getYandexAccountLinkStatus(
-    apiBaseUrl: string,
-    supabaseAccessToken: string,
-  ): Promise<YandexIdentityLinkStatus> {
-    let response: Response
-    try {
-      response = await yandexPilotQueries.getYandexAccountLinkStatus(
-        apiBaseUrl,
-        supabaseAccessToken,
-      )
-    } catch (caught) {
-      throw yandexAuthConnectionError(caught)
-    }
-    if (!response.ok) throw responseFailure(response, linkStatusResponseError(response.status))
-    const result = yandexIdentityLinkStatusSchema.safeParse(await response.json())
-    if (!result.success) throw new Error('Stage вернул неподдерживаемый статус Yandex ID.')
-    return result.data
   },
   async listClients(
     apiBaseUrl: string,

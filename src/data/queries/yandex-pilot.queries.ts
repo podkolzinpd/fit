@@ -173,29 +173,6 @@ export const yandexPilotQueries = {
     },
     body: JSON.stringify(input),
   }),
-  linkYandexAccount: (
-    apiBaseUrl: string,
-    supabaseAccessToken: string,
-    code: string,
-    codeVerifier: string,
-  ) => yandexOAuthCodeFetch(apiBaseUrl, `${apiBaseUrl}/v1/auth/yandex/link`, {
-    method: 'POST',
-    cache: 'no-store',
-    headers: {
-      'content-type': 'application/json',
-      'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
-    },
-    body: JSON.stringify({ code, codeVerifier }),
-  }),
-  getYandexAccountLinkStatus: (
-    apiBaseUrl: string,
-    supabaseAccessToken: string,
-  ) => yandexAuthFetch(`${apiBaseUrl}/v1/auth/yandex/link`, {
-    cache: 'no-store',
-    headers: {
-      'x-supabase-authorization': `Bearer ${supabaseAccessToken}`,
-    },
-  }),
   listClients: (
     apiBaseUrl: string,
     sessionToken: string,

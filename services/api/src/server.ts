@@ -40,10 +40,6 @@ import { DatabasePilotTrainingSummaries } from './training-summary.js'
 import { SupabaseWorkoutParser } from './legacy-workout-parser.js'
 import { YandexWorkoutParser } from './legacy-workout-parser.js'
 import { readSupabaseBridgeConfig, SupabaseBridge } from './supabase-bridge.js'
-import {
-  DatabaseYandexAccountLinker,
-  SupabaseExistingActorProvider,
-} from './yandex-account-linking.js'
 import { DatabaseYandexNativeRegistrar } from './yandex-native-registration.js'
 import { DatabaseYandexAuthHandoffService } from './yandex-auth-handoff.js'
 import {
@@ -135,10 +131,6 @@ const fitLimeAutoActivator = databasePool === undefined
 const assistantFeatureLinksAutoActivator = databasePool === undefined
   ? undefined
   : new DatabaseAssistantFeatureLinksAutoActivator(databasePool)
-const yandexAccountLinker =
-  databasePool === undefined
-    ? undefined
-    : new DatabaseYandexAccountLinker(databasePool)
 const yandexNativeRegistrationEnabled =
   process.env.YANDEX_NATIVE_REGISTRATION_ENABLED === 'true'
 const yandexOnlyAuthEnabled =
@@ -267,10 +259,6 @@ const vitalMediaSigner = yandexMediaStorage !== undefined
   : supabaseBridgeConfig === undefined
     ? undefined
     : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
-const existingActorProvider =
-  supabaseBridgeConfig === undefined
-    ? undefined
-    : new SupabaseExistingActorProvider(new SupabaseBridge(supabaseBridgeConfig))
 const legacyWorkoutParser =
   !aiEnabled || supabaseBridgeConfig === undefined
     || process.env.YANDEX_CLOUD_API_KEY === undefined
@@ -326,10 +314,8 @@ const app = buildApp(
       ? {}
       : { assistantFeatureLinksAutoActivator }),
     ...(vitalMediaSigner === undefined ? {} : { vitalMediaSigner }),
-    ...(yandexAccountLinker === undefined ? {} : { yandexAccountLinker }),
     ...(yandexNativeRegistrar === undefined ? {} : { yandexNativeRegistrar }),
     ...(yandexAuthHandoffService === undefined ? {} : { yandexAuthHandoffService }),
-    ...(existingActorProvider === undefined ? {} : { existingActorProvider }),
     yandexOnlyAuthEnabled,
     ...(pilotTrainingDataReader === undefined ? {} : { pilotTrainingDataReader }),
     ...(databasePool === undefined ? {} : { clientWorkoutStatsReader: new DatabaseClientWorkoutStatsReader(databasePool) }),

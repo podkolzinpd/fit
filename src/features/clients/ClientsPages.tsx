@@ -18,7 +18,6 @@ import { useDataBackend } from '../../app/data-backend-context'
 import { AnalyticsIcon, ChevronRightIcon, HistoryIcon, KeyboardIcon, RecordIcon, ScheduleIcon } from '../../shared/icons'
 import { InvitationShareButton } from '../auth/InvitationShareActions'
 import { canOpenClientChat, ChatStartButton, ChatThreadsNotice, useChatThreads } from '../chat'
-import { YandexAccountLinkingCard } from '../auth'
 import { isRepositoryConflict } from '../../data/repositories/error'
 import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isTrainerScheduleV2Enabled } from '../../app/trainer-schedule-v2'
@@ -69,7 +68,6 @@ export function MyClientPage() {
   useClientRealtime(query.data?.id)
   if (query.data) return <TodayPage clientMode />
   return <Page title="Кабинет" className="client-home-page">
-    {actor && <YandexAccountLinkingCard actor={actor} />}
     <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>
       <ClientFirstRunIntro actions={<section className="client-home-self-training primary">
         <section className="quick-start-workout"><div className="quick-start-copy"><h2>Начать тренировку</h2><p>Тренировка начнётся сразу. Упражнения добавите по ходу.</p></div><button type="button" className="quick-start-button" disabled={beginFirstLive.isPending} onClick={() => beginFirstLive.mutate()}>{beginFirstLive.isPending ? 'Начинаем…' : 'Начать тренировку'}</button>{beginFirstLive.error && <p role="alert">Не удалось начать тренировку. Повторите попытку.</p>}</section>

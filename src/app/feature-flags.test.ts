@@ -6,7 +6,6 @@ import {
   getYandexAppSessionEntryConfig,
   getYandexNativeRegistrationConfig,
   getYandexOnlyAuthConfig,
-  getYandexSessionLinkingConfig,
   isAssistantNavPilotEnabled,
   isContestWinnerPilotEnabled,
   isTodayGreetingPilotEnabled,
@@ -16,10 +15,8 @@ import {
   isWearablesPilotEnabled,
   isYandexAssistantRoutingPilotEnabled,
   isYandexAppSessionEnabled,
-  isYandexAccountLinkRequired,
   isYandexMainRoutingEnabled,
   isYandexOnlyAuthEnabled,
-  isYandexSessionLinkingEnabled,
   trainerHomePath,
 } from './feature-flags'
 
@@ -268,61 +265,6 @@ describe('Yandex ID pilot config', () => {
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'http://stage.example.test')
     expect(getYandexIdPilotConfig()).toBeNull()
-  })
-})
-
-describe('Yandex session linking global flag', () => {
-  it('is disabled when the enabled flag is missing or not exactly "true"', () => {
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', '')
-    expect(isYandexSessionLinkingEnabled()).toBe(false)
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'TRUE')
-    expect(isYandexSessionLinkingEnabled()).toBe(false)
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', '1')
-    expect(isYandexSessionLinkingEnabled()).toBe(false)
-  })
-
-  it('is enabled globally when the flag is exactly "true"', () => {
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
-    expect(isYandexSessionLinkingEnabled()).toBe(true)
-  })
-
-  it('requires the base Yandex public config before exposing the linking config', () => {
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
-    vi.stubEnv('VITE_YANDEX_API_BASE_URL', '')
-    expect(getYandexSessionLinkingConfig()).toBeNull()
-
-    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test/')
-    expect(getYandexSessionLinkingConfig()).toEqual({
-      apiBaseUrl: 'https://stage.example.test',
-      clientId: 'public-client-id',
-    })
-  })
-
-  it('does not depend on the legacy read-only Yandex ID pilot switch', () => {
-    vi.stubEnv('VITE_YANDEX_SESSION_LINKING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_ID_PILOT_ENABLED', '')
-    vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
-    vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
-
-    expect(getYandexSessionLinkingConfig()).toEqual({
-      apiBaseUrl: 'https://stage.example.test',
-      clientId: 'public-client-id',
-    })
-  })
-})
-
-describe('required Yandex account link gate', () => {
-  it('is default-off and requires the exact value "true"', () => {
-    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', '')
-    expect(isYandexAccountLinkRequired()).toBe(false)
-    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'TRUE')
-    expect(isYandexAccountLinkRequired()).toBe(false)
-    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', '1')
-    expect(isYandexAccountLinkRequired()).toBe(false)
-    vi.stubEnv('VITE_YANDEX_ACCOUNT_LINK_REQUIRED', 'true')
-    expect(isYandexAccountLinkRequired()).toBe(true)
   })
 })
 

@@ -79,13 +79,6 @@ import type {
   YandexAppSessionRevoker,
 } from './yandex-app-session.js'
 import {
-  ExistingActorUnavailableError,
-  YandexAccountLinkError,
-  type ExistingActor,
-  type ExistingActorProvider,
-  type YandexAccountLinker,
-} from './yandex-account-linking.js'
-import {
   YandexAuthHandoffError,
   type YandexAuthHandoffService,
 } from './yandex-auth-handoff.js'
@@ -236,8 +229,6 @@ interface BuildAppOptions {
   pilotTrainingSummaryReader?: PilotTrainingSummaryReader
   legacyWorkoutParser?: LegacyWorkoutParser
   legacySummaryHandler?: LegacySummaryHandler
-  existingActorProvider?: ExistingActorProvider
-  yandexAccountLinker?: YandexAccountLinker
   yandexAuthHandoffService?: YandexAuthHandoffService
   yandexOnlyAuthEnabled?: boolean
   yandexNativeRegistrar?: YandexNativeRegistrar
@@ -1621,140 +1612,6 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         })
       }
       request.log.error({ failure: 'unexpected' }, 'Trainer Schedule V2 claim failed')
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-  })
-
-  app.get('/v1/auth/yandex/link', async (request, reply) => {
-    const existingAuthorization = request.headers['x-supabase-authorization']
-    const actorToken = readBearerToken(
-      typeof existingAuthorization === 'string'
-        ? existingAuthorization
-        : undefined,
-    )
-    if (actorToken === undefined) {
-      request.log.warn({ failure: 'missing_existing_session' }, 'Yandex account link status rejected')
-      return reply.code(401).send({ error: 'unauthorized' })
-    }
-    if (
-      options.existingActorProvider === undefined
-      || options.yandexAccountLinker === undefined
-    ) {
-      request.log.warn({ failure: 'service_not_configured' }, 'Yandex account link status unavailable')
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-
-    try {
-      const actor = await options.existingActorProvider.resolveActor(actorToken)
-      if (actor === undefined) {
-        request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link status rejected')
-        return reply.code(401).send({ error: 'unauthorized' })
-      }
-      const status = await options.yandexAccountLinker.readStatus(actor)
-      return reply.header('cache-control', 'no-store').send(status)
-    } catch (error) {
-      if (error instanceof ExistingActorUnavailableError) {
-        request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link status unavailable')
-      } else {
-        request.log.error({ failure: 'unexpected' }, 'Yandex account link status unavailable')
-      }
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-  })
-
-  app.post('/v1/auth/yandex/link', async (request, reply) => {
-    const existingAuthorization = request.headers['x-supabase-authorization']
-    const actorToken = readBearerToken(
-      typeof existingAuthorization === 'string'
-        ? existingAuthorization
-        : undefined,
-    )
-    if (actorToken === undefined) {
-      request.log.warn({ failure: 'missing_existing_session' }, 'Yandex account link rejected')
-      return reply.code(401).send({ error: 'unauthorized' })
-    }
-    const command = readYandexCodeRequest(request.body)
-    if (command === undefined) {
-      request.log.warn({ failure: 'invalid_request' }, 'Yandex account link rejected')
-      return reply.code(400).send({ error: 'invalid_request' })
-    }
-    if (
-      options.oauthCodeProvider === undefined ||
-      options.identityProvider === undefined ||
-      options.existingActorProvider === undefined ||
-      options.yandexAccountLinker === undefined
-    ) {
-      request.log.warn({ failure: 'service_not_configured' }, 'Yandex account link unavailable')
-      return reply.code(503).send({ error: 'service_unavailable' })
-    }
-
-    let actor: ExistingActor
-    try {
-      const resolvedActor = await options.existingActorProvider.resolveActor(actorToken)
-      if (resolvedActor === undefined) {
-        request.log.warn({ failure: 'existing_session_invalid' }, 'Yandex account link rejected')
-        return reply.code(401).send({ error: 'unauthorized' })
-      }
-      actor = resolvedActor
-    } catch (error) {
-      if (error instanceof ExistingActorUnavailableError) {
-        request.log.warn({ failure: 'existing_provider_unavailable' }, 'Yandex account link unavailable')
-        return reply.code(503).send({ error: 'service_unavailable' })
-      }
-      throw error
-    }
-
-    let subjectHash: string
-    try {
-      const resolvedSubjectHash = await readYandexSubjectHash(command)
-      if (resolvedSubjectHash === undefined) {
-        return reply.code(503).send({ error: 'service_unavailable' })
-      }
-      subjectHash = resolvedSubjectHash
-    } catch (error) {
-      const response = sendYandexOAuthFailure(reply, error)
-      if (response !== undefined) {
-        request.log.warn({ failure: 'oauth_exchange_failed' }, 'Yandex account link rejected')
-        return response
-      }
-      throw error
-    }
-
-    try {
-      const link = await options.yandexAccountLinker.linkActor(actor, subjectHash)
-      let appSession
-      try {
-        appSession = await options.yandexAppSessionIssuer?.issue(subjectHash)
-      } catch (error) {
-        if (!(error instanceof YandexAppSessionDeniedError)) throw error
-      }
-      if (appSession !== undefined && appSession.profile.id !== link.profileId) {
-        request.log.error({ failure: 'session_profile_mismatch' }, 'Yandex account link unavailable')
-        return reply.code(503).send({ error: 'service_unavailable' })
-      }
-      request.log.info(
-        { appSessionIssued: appSession !== undefined },
-        'Yandex account link completed',
-      )
-      return reply.header('cache-control', 'no-store').send({
-        ...link,
-        ...(appSession === undefined ? {} : { appSession }),
-      })
-    } catch (error) {
-      if (error instanceof YandexAccountLinkError) {
-        request.log.warn({ failure: error.failure }, 'Yandex account link rejected')
-        if (error.failure === 'conflict') {
-          return reply.code(409).send({ error: 'yandex_identity_conflict' })
-        }
-        if (error.failure === 'not_found') {
-          return reply.code(404).send({ error: 'profile_not_found' })
-        }
-        if (error.failure === 'invalid') {
-          return reply.code(400).send({ error: 'invalid_request' })
-        }
-        return reply.code(403).send({ error: 'action_not_allowed' })
-      }
-      request.log.error({ failure: 'unexpected' }, 'Yandex account link unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })
