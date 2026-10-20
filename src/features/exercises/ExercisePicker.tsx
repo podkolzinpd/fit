@@ -118,6 +118,7 @@ interface ExercisePickerProps {
   initialMode?: ExercisePickerMode
   techniqueActionLabel?: string
   reference?: boolean
+  referenceAppearance?: boolean
   clientLime?: boolean
   onClose: () => void
 }
@@ -150,7 +151,7 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, clientLime = false, onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, onClose }: ExercisePickerProps) {
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
   )
@@ -456,8 +457,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     }
     return <article className={`picker-item${checked ? ' selected' : ''}${playing ? ' playing' : ''}`} key={`${keyPrefix}-${exercise.source}-${exercise.ref}`}>
       <button type="button" className={`picker-item-technique${hasTechniqueMedia ? '' : ' without-media'}`} aria-label={`${playing ? 'Открыть технику' : hasTechniqueVideo ? 'Проиграть технику' : hasTechniqueMedia ? 'Открыть технику' : 'Посмотреть технику'}: ${exercise.name}`} aria-pressed={hasTechniqueVideo ? playing : undefined} onClick={showTechnique}>
-        {hasTechniqueMedia && <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} customPhotoPath={exercise.imagePath} alt={exercise.name} variant="picker" playVideo={playing} />{hasTechniqueVideo && !playing && <span className="picker-item-play" aria-hidden="true">{reference ? <img src={coachWorkoutReferenceAssets.play} alt="" /> : <PlayIcon />}</span>}</span>}
-        <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small>{reference && exercise.source === 'custom' && <small className="coach-catalog-own">Моё</small>}{playing && <small className="picker-item-playing-note">Нажмите ещё раз, чтобы открыть технику</small>}</span>
+        {hasTechniqueMedia && <span className="picker-item-media"><ExerciseImage src={exercise.imageUrl} motionSrc={exercise.motionImageUrl} videoSrc={exercise.techniqueVideoUrl} customPhotoPath={exercise.imagePath} alt={exercise.name} variant="picker" playVideo={playing} />{hasTechniqueVideo && !playing && <span className="picker-item-play" aria-hidden="true">{referenceAppearance ? <img src={coachWorkoutReferenceAssets.play} alt="" /> : <PlayIcon />}</span>}</span>}
+        <span className="picker-item-copy"><span className="picker-item-name">{exercise.name}</span><small>{[exercise.equipment, MUSCLE_GROUP_LABELS[exercise.muscleGroup]].filter(Boolean).join(' · ')}</small>{referenceAppearance && exercise.source === 'custom' && <small className="coach-catalog-own">Моё</small>}{playing && <small className="picker-item-playing-note">Нажмите ещё раз, чтобы открыть технику</small>}</span>
       </button>
       <button type="button" className="picker-select-mark" aria-label={checked ? `Убрать: ${exercise.name}` : multiple ? `Выбрать: ${exercise.name}` : `Добавить: ${exercise.name}`} aria-pressed={multiple ? checked : undefined} data-exercise-ref={exercise.ref} data-exercise-source={exercise.source} onClick={() => pick(exercise)}>{checked ? <CheckIcon /> : <AddIcon />}</button>
     </article>
@@ -524,9 +525,9 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     }
   }
 
-  const referenceList = reference && !previewExercise && !creating
+  const referenceList = referenceAppearance && !previewExercise && !creating
   return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onClick={() => { if (!addingSelected) onClose() }}>
-    <section ref={dialogRef} tabIndex={reference || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${reference ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
+    <section ref={dialogRef} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
       {clientLime ? <FitLimeSheetHeader
         title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? 'Фильтры' : 'Выберите упражнения'}
         backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}
@@ -560,16 +561,16 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       </div> : <>
         {(!reference || !filtersOpen) && <><div className="picker-search-control">{clientLime && filtersOpen && <label htmlFor="client-picker-search">Название упражнения</label>}<input id={clientLime ? 'client-picker-search' : undefined} ref={searchRef} className="picker-search" aria-label="Поиск упражнения" placeholder={activeMode === 'running' ? 'Бег или СБУ' : 'Название упражнения'} value={search} onFocus={() => { if (!clientLime) setFiltersOpen(false) }} onKeyDown={handleSearchKeyDown} onChange={(event) => setSearch(event.target.value)} />{search && <button type="button" className="picker-search-clear" aria-label="Очистить поиск" onClick={clearSearch}><CloseIcon /></button>}</div>
         {(!clientLime || !filtersOpen) && <div className="picker-toolbar">
-          {reference && <span className="coach-catalog-count">{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>}
-          <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" disabled={clientLime && addingSelected} aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>{reference ? 'Фильтровать' : 'Фильтры'}{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}{(reference || clientLime) && <img className={clientLime ? 'client-lime-filter-icon' : undefined} src={coachWorkoutReferenceAssets.filter} width="16" height="16" alt="" />}</button>
-          {(!reference || selected.size > 0) && <button type="button" className="secondary picker-create-action" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}>Создать упражнение</button>}
+          {referenceAppearance && <span className="coach-catalog-count">{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>}
+          <button ref={filterButtonRef} type="button" className="secondary picker-filter-trigger" disabled={clientLime && addingSelected} aria-expanded={filtersOpen} aria-controls={filtersOpen ? 'picker-filter-panel' : undefined} onClick={() => { searchRef.current?.blur(); if (filtersOpen) closeFilters(true); else { filterListScrollTop.current = listRef.current?.scrollTop ?? 0; setFiltersOpen(true) } }}>{referenceAppearance ? 'Фильтровать' : 'Фильтры'}{activeFilterChips.length ? ` (${activeFilterChips.length})` : ''}{(referenceAppearance || clientLime) && <img className={clientLime ? 'client-lime-filter-icon' : undefined} src={coachWorkoutReferenceAssets.filter} width="16" height="16" alt="" />}</button>
+          {(!referenceAppearance || selected.size > 0) && <button type="button" className="secondary picker-create-action" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}>Создать упражнение</button>}
         </div>}
         {(!clientLime || !filtersOpen) && activeFilterChips.length > 0 && <div className="picker-active-filters" role="group" aria-label="Выбранные фильтры">
           {activeFilterChips.map((chip) => <button type="button" key={chip.key} aria-label={`Убрать фильтр: ${chip.label}`} onClick={() => { chip.remove(); requestAnimationFrame(() => filterButtonRef.current?.focus()) }}><span>{chip.label}</span><CloseIcon /></button>)}
         </div>}</>}
         {filtersOpen ? <div id="picker-filter-panel" className="picker-filter-panel" role="region" aria-label="Фильтры упражнений" onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); closeFilters(true) } }}>
-          <div className="picker-filter-panel-heading">{!reference && !clientLime && <h2>Фильтры</h2>}{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>
-          {reference && <div className="picker-filter-strip"><button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button></div>}
+          <div className="picker-filter-panel-heading">{!referenceAppearance && !clientLime && <h2>Фильтры</h2>}{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>
+          {referenceAppearance && <div className="picker-filter-strip"><button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button></div>}
           <p className="picker-filter-label">Группа мышц</p>
           <div className="picker-filter-strip" role="group" aria-label="Группа мышц">
             {PICKER_MUSCLE_GROUPS.map((item) => <button type="button" key={item} aria-pressed={category === item} className={category === item ? 'active' : ''} disabled={category !== item && !groupOptions.includes(item)} onClick={() => applyFilter(() => selectGroup(item))}>{pickerMuscleGroupLabel(item)}</button>)}
@@ -578,7 +579,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           <div className="picker-filter-strip picker-quick-filter-strip" role="group" aria-label="Тип упражнения">
             <button type="button" aria-pressed={activeMode === 'running'} className={activeMode === 'running' ? 'active' : ''} onClick={() => applyFilter(selectRunningMode)}>Бег</button>
             {EXERCISE_PURPOSES.map((item) => <button type="button" key={item} aria-pressed={purpose === item} className={purpose === item ? 'active' : ''} disabled={purpose !== item && !purposeOptions.includes(item)} onClick={() => applyFilter(() => selectPurpose(item))}>{item === 'mobility' ? 'Растяжка' : EXERCISE_PURPOSE_LABELS[item]}</button>)}
-            {!reference && <button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button>}
+            {!referenceAppearance && <button type="button" aria-pressed={customOnly} className={customOnly ? 'active' : ''} disabled={!customOnly && !canEnableCustomOnly} onClick={() => applyFilter(() => { setMode('all'); setCustomOnly((current) => !current) })}>Только мои</button>}
           </div>
           {category !== 'all' && muscles.length > 1 && <><p className="picker-filter-label">Мышца</p><div className="picker-filter-strip picker-muscle-filter-strip" role="group" aria-label="Мышца">
             {muscles.map((item) => <button type="button" key={item} aria-pressed={muscle === item} className={muscle === item ? 'active' : ''} onClick={() => applyFilter(() => selectMuscle(muscle === item ? null : item))}>{item}</button>)}
@@ -603,7 +604,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           </>}
           {!runningExercise && !catalog.loading && <p className="state">Базовое упражнение «Бег» не найдено</p>}
         </div> : <>
-          {!reference && hasVisibleExercises && <div className="picker-list-meta"><span>{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>}
+          {!referenceAppearance && hasVisibleExercises && <div className="picker-list-meta"><span>{hasFilters || search.trim() ? `Найдено: ${filtered.length}` : exerciseCountLabel(filtered.length)}</span>{hasFilters && <button type="button" className="link" onClick={resetFilters}>Сбросить</button>}</div>}
           {catalog.loading && <p className="state">Загрузка…</p>}
           {catalog.error && <div className="state"><p className="error">{catalog.error.message}</p><button type="button" className="secondary" onClick={catalog.retry}>Повторить</button></div>}
           {!catalog.loading && !catalog.error && hasVisibleExercises && <div ref={listRef} className="picker-list">
@@ -619,8 +620,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
           </div>}
         </>}
         {selectionError && <p className="error" role="alert">{selectionError}</p>}
-        {reference && !filtersOpen && selected.size === 0 && <div className="coach-catalog-create-bar"><button type="button" className="secondary picker-create-action coach-catalog-create-floating" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}><img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /></button></div>}
-        {multiple && (visibleSelection.size > 0 || showEmptySelection) && ((!reference && !clientLime) || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {visibleSelection.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${visibleSelection.size}`}</button></div>}
+        {referenceAppearance && !filtersOpen && selected.size === 0 && <div className="coach-catalog-create-bar"><button type="button" className="secondary picker-create-action coach-catalog-create-floating" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}><img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /></button></div>}
+        {multiple && (visibleSelection.size > 0 || showEmptySelection) && ((!referenceAppearance && !clientLime) || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {visibleSelection.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${visibleSelection.size}`}</button></div>}
       </>}
     </section>
   </div>

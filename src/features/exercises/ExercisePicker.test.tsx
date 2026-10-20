@@ -67,6 +67,27 @@ function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (ex
 }
 
 describe('ExercisePicker', () => {
+  it('client reference appearance retains filter search and normalized batch retry without trainer behavior', async () => {
+    const user = userEvent.setup()
+    const onPickMany = vi.fn().mockRejectedValueOnce(new Error('internal-sensitive-detail')).mockResolvedValueOnce(undefined)
+    render(<ExercisePicker clientLime referenceAppearance multiple catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onPickMany={onPickMany} onClose={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Выбрать: Присед (Штанга)' }))
+    await user.click(screen.getByRole('button', { name: /^Фильтровать/ }))
+    const search = screen.getByRole('textbox', { name: 'Поиск упражнения' })
+    expect(screen.getByLabelText('Название упражнения')).toBe(search)
+    await user.type(search, 'Присед')
+    await user.click(screen.getByRole('button', { name: 'Ноги' }))
+    await user.click(screen.getByRole('button', { name: 'Показать упражнения' }))
+    expect(search).toHaveValue('Присед')
+    expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /^Добавить.*1/ }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Выбор сохранён')
+    expect(screen.getByRole('alert')).not.toHaveTextContent('internal-sensitive-detail')
+    await user.click(screen.getByRole('button', { name: /^Добавить.*1/ }))
+    expect(onPickMany).toHaveBeenCalledTimes(2)
+    expect(onPickMany.mock.calls[1]).toEqual(onPickMany.mock.calls[0])
+  })
+
   it('client Lime filters retain search, consecutive facets and selection until applied', async () => {
     const user = userEvent.setup()
     render(<ExercisePicker clientLime multiple catalog={catalog({ exercises: ENRICHED })} onPick={vi.fn()} onClose={vi.fn()} />)
