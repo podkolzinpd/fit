@@ -107,6 +107,12 @@ Primary: сохранить тренировку; внутри каталога 
 Источник: workout-editor-catalog (SHA256/индексы — FIT_LIME_SOURCE_CATALOG).
 Нативное окно времени — платформенное поведение, не второй самодельный picker.
 
+Интеграция PR1 после очереди: предыдущий1741 слит в actualmain979eda75.
+Diff3fea4580..979eda75 по src/e2e/AGENTS/workflow пуст: предварительная
+совместимость115unit+32route относится к тому же коду предыдущего изменения.
+PR1 rebased cleanly от actualmain, исходный time-component diff сохранён.
+Свежие local/CI/release проверки обязательны; предыдущий initial CI не заменяет их.
+
 | Этап | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12 оба движка375/390/430/1440+negative; private visual1/1; check exit0 frontend2779/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
