@@ -77,19 +77,19 @@ function normalizedFoodTerm(value: string): string {
 }
 
 export class BasicNutritionCatalog implements NutritionCatalog {
-  async search(query: string, page: number) {
+  search(query: string, page: number) {
     const normalized = normalizedFoodTerm(query)
     if (normalized.length < 2 || normalized.length > 120 || !Number.isSafeInteger(page) || page < 1 || page > 100) {
-      throw new NutritionCatalogUnavailableError()
+      return Promise.reject(new NutritionCatalogUnavailableError())
     }
-    if (page !== 1) return { foods: [], hasMore: false }
+    if (page !== 1) return Promise.resolve({ foods: [], hasMore: false })
     const foods = BASIC_FOODS.filter(food => [food.name, ...food.aliases]
       .some(term => normalizedFoodTerm(term).includes(normalized) || normalized.includes(normalizedFoodTerm(term))))
-    return { foods, hasMore: false }
+    return Promise.resolve({ foods, hasMore: false })
   }
 
-  async details(sourceId: number) {
-    return BASIC_FOODS.find(food => food.sourceId === sourceId) ?? null
+  details(sourceId: number) {
+    return Promise.resolve(BASIC_FOODS.find(food => food.sourceId === sourceId) ?? null)
   }
 }
 
