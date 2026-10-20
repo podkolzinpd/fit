@@ -38,7 +38,7 @@ export function readNativeNutritionPilot(enabled: string | undefined, raw: strin
 export function readNutritionBarcodePilot(enabled: string | undefined, loginHash: string | undefined): NutritionBarcodePilot | null {
   if (enabled !== 'true' || typeof loginHash !== 'string') return null
   const loginHashes = loginHash.split(',')
-  return loginHashes.length >= 1 && loginHashes.length <= 3
+  return loginHashes.length >= 1 && loginHashes.length <= 5
     && loginHashes.every(value => hashPattern.test(value)) && new Set(loginHashes).size === loginHashes.length
     ? { loginHashes }
     : null

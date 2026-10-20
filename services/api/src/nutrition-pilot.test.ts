@@ -96,8 +96,8 @@ describe('native nutrition cohort', () => {
   it('admits one or two explicit barcode identities and rejects malformed or broadened input', async () => {
     const barcode = readNutritionBarcodePilot('true', `${hashes[0]},${hashes[1]}`)!
     expect(barcode).toEqual({ loginHashes: [hashes[0], hashes[1]] })
-    expect(readNutritionBarcodePilot('true', `${hashes[0]},${hashes[1]},${hashes[2]}`)).toEqual({ loginHashes: hashes.slice(0, 3) })
-    for (const value of ['', `${hashes[0]},${hashes[0]}`, `${hashes[0]},${hashes[1]},${hashes[2]},${hashes[3]}`, 'bad']) {
+    expect(readNutritionBarcodePilot('true', hashes.join(','))).toEqual({ loginHashes: hashes })
+    for (const value of ['', `${hashes[0]},${hashes[0]}`, `${hashes.join(',')},${'6'.repeat(64)}`, 'bad']) {
       expect(readNutritionBarcodePilot('true', value)).toBeNull()
     }
     const f = fixture([{ login_hash: hashes[1] }])

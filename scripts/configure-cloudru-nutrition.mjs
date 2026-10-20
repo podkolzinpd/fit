@@ -19,7 +19,7 @@ export function prepareCloudruNutrition(raw) {
 
 export function parseBarcodeLoginHashes(value) {
   const hashes = typeof value === 'string' ? value.split(',') : []
-  if (hashes.length < 1 || hashes.length > 3 || hashes.some(hash => !/^[0-9a-f]{64}$/.test(hash))
+  if (hashes.length < 1 || hashes.length > 5 || hashes.some(hash => !/^[0-9a-f]{64}$/.test(hash))
     || new Set(hashes).size !== hashes.length) throw new Error('nutrition_barcode_cohort_rejected')
   return hashes
 }

@@ -23,10 +23,10 @@ test('Cloud.ru enable fails closed for malformed, substituted or differently siz
   assert.throws(() => mergeCloudruNutritionEnv(base.replace('fit_api', 'fit_owner'), '', 'disable'))
 })
 
-test('Cloud.ru accepts at most three unique barcode hashes', () => {
-  const first = 'a'.repeat(64), second = 'b'.repeat(64), third = 'c'.repeat(64)
-  assert.deepEqual(parseBarcodeLoginHashes(`${first},${second},${third}`), [first, second, third])
-  for (const barcodeLoginHash of ['', `${first},${first}`, `${first},${second},${third},${'d'.repeat(64)}`, 'bad']) {
+test('Cloud.ru accepts at most five unique barcode hashes', () => {
+  const values = ['a', 'b', 'c', 'd', 'e'].map(value => value.repeat(64))
+  assert.deepEqual(parseBarcodeLoginHashes(values.join(',')), values)
+  for (const barcodeLoginHash of ['', `${values[0]},${values[0]}`, `${values.join(',')},${'f'.repeat(64)}`, 'bad']) {
     assert.throws(() => parseBarcodeLoginHashes(barcodeLoginHash))
   }
 })
