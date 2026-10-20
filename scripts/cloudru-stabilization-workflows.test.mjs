@@ -369,3 +369,18 @@ test('request diagnostics correlate only the requested UUID and never export err
   assert.match(step,/epoch \+ 120/)
   assert.doesNotMatch(step,/secrets\.|--env-file|podman run|systemctl (?:restart|stop)|psql/)
 })
+
+
+test('both public workout API proxies stream request bodies without a temp-file dependency', () => {
+  for (const target of ['web','api']) {
+    const source=read(`infra/cloudru/nginx-public-${target}.conf`)
+    const locations=[...source.matchAll(/    location [^\n]+\{\n[\s\S]*?\n    }/g)].map(match=>match[0])
+    const api=locations.find(location=>location.includes('proxy_pass http://127.0.0.1:18080'))
+    assert.ok(api)
+    assert.match(api,/proxy_request_buffering off;/)
+    assert.match(api,/proxy_http_version 1\.1;/)
+    assert.match(source,/client_max_body_size 50m;/)
+    assert.match(api,/proxy_set_header Host \$host;/)
+    assert.doesNotMatch(api,/proxy_set_header (?:Authorization|X-Fit-Session)|proxy_pass_request_body off/)
+  }
+})

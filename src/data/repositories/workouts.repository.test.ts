@@ -674,6 +674,25 @@ describe('copyWorkout blocks', () => {
 })
 
 describe('workoutToFavoriteTemplate', () => {
+  it('preserves partial plans and factual legacy minutes/distance without mutating the original workout', () => {
+    const source: Workout = {
+      ...workoutWithExercises([
+        { ...exercise('a', 0, 'b1', 'single', [{ id: 'x', position: 0, durationSec: 1800, distanceKm: 3,
+          fact: { durationMin: 11.5, distanceKm: 1 }, confirmedAt: 't', version: 1 }]),
+        ref: 'running', inputKind: 'distance', muscleGroup: 'cardio' },
+        exercise('b', 1, 'b2', 'single', [{ id: 'y', position: 0, weightKg: 15, reps: 10, fact: {}, confirmedAt: null, version: 1 }]),
+      ]), status: 'done',
+    }
+    const before = structuredClone(source)
+    const completed = workoutToFavoriteTemplate(source)
+    expect(completed[0]?.sets[0]).toMatchObject({ durationSec: 690, distanceKm: 1 })
+    expect(completed[0]?.sets[0]?.durationMin).toBeUndefined()
+    expect(completed[1]?.sets[0]).toMatchObject({ weightKg: 15, reps: 10 })
+    const planned = workoutToFavoriteTemplate({ ...source, status: 'planned' })
+    expect(planned[0]?.sets[0]).toMatchObject({ durationSec: 1800, distanceKm: 3 })
+    expect(source).toEqual(before)
+  })
+
   it('снимает снэпшот по факту завершённой тренировки, как copyWorkout', () => {
     const source: Workout = {
       ...workoutWithExercises([
