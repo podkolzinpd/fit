@@ -468,6 +468,20 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference f
   expect(sent[0]!.exercises.map(exercise => exercise.name)).toEqual(['Планка', 'Присед со штангой'])
   expect(sent[0]!.exercises[1]!.sets[0]!.weightKg).toBe(27.5)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+// These were the second half of each full-editor case. Keep every assertion,
+// viewport and engine, but give the independent schedule lifecycle its own
+// fixture and unchanged test budget instead of spending it on editor setup.
+for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference schedule guides and filters ${width}`, async ({ page }, info) => {
+  const pilot = width === 430 ? 'c0ac0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001'
+  await page.setViewportSize({ width, height: width === 1440 ? 1000 : 932 })
+  // Same occupied day/time and plan title as the editor's saved state. Saving,
+  // request idempotency, exercise values and draft restoration stay above.
+  const savedPlan: MockWorkout = { ...workout, id: newWorkoutId, createdBy: pilot,
+    title: 'На всё тело: силовая тренировка', workoutDate: '2026-09-24', status: 'planned',
+    startTime: '12:00', endTime: '13:00', completedAt: null, trainingFormat: 'with_trainer', prepSeconds: 10 }
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [savedPlan], unseenCoachmarks: [...scheduleCoachmarks, dayGuideId] })
   await page.goto('/schedule?week=2026-09-21')
   const filters = page.locator('.coach-schedule-filter-options')
   const guide = page.locator('.coachmark-bubble')

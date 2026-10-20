@@ -105,7 +105,11 @@ const columns = "id, day::text, meal, name, basis, grams::text, calories::text, 
 export class DatabaseNutritionDiary {
   private readonly searchTimes = new Map<string, number>()
   constructor(private readonly pool: DatabasePool, private readonly catalog: NutritionCatalog, private readonly pilot: NutritionPilot | null,
-    private readonly barcodePilot: NutritionBarcodePilot | null = null) {}
+    private readonly barcodePilot: NutritionBarcodePilot | null = null,
+    // The richer source is intentionally bound to the barcode allow-list. It
+    // must never become a silent catalog expansion for the whole nutrition
+    // cohort merely because its runtime key is configured.
+    private readonly barcodeCatalog: NutritionCatalog | undefined = undefined) {}
 
   private async actor(client: DatabaseClient, role?: 'client' | 'trainer'): Promise<ActorRow> {
     if (this.pilot === null) throw new PilotDomainCommandError('forbidden')
@@ -122,11 +126,14 @@ export class DatabaseNutritionDiary {
     return withYandexActorSession(this.pool, session, async (client) => work(client, await this.actor(client, role)))
   }
   async search(session: YandexActorSession, query: string, page: number) {
-    const actorId = await this.withActor(session, (_client, actor) => Promise.resolve(actor.id), 'client')
+    const actor = await this.withActor(session, async (client, profile) => ({
+      id: profile.id,
+      barcodeAllowed: await nutritionBarcodeProfileAllowed(client, this.pilot, this.barcodePilot, profile.id, profile.account_role),
+    }), 'client')
     const now = Date.now()
-    if (now - (this.searchTimes.get(actorId) ?? 0) < 400) throw new NutritionSearchRateLimitError()
-    this.searchTimes.set(actorId, now)
-    const result = await this.catalog.search(query, page)
+    if (now - (this.searchTimes.get(actor.id) ?? 0) < 400) throw new NutritionSearchRateLimitError()
+    this.searchTimes.set(actor.id, now)
+    const result = await (actor.barcodeAllowed ? this.barcodeCatalog ?? this.catalog : this.catalog).search(query, page)
     return this.withActor(session, async (client) => {
       for (const food of result.foods) {
         await client.query(`insert into app_private.nutrition_food_catalog (id, source_id, name, calories, protein, fat, carbs)
@@ -141,7 +148,7 @@ export class DatabaseNutritionDiary {
       if (!await nutritionBarcodeProfileAllowed(client, this.pilot, this.barcodePilot, profile.id, profile.account_role)) throw new PilotDomainCommandError('forbidden')
       return profile.id
     }, 'client')
-    const result = await this.catalog.barcode?.(barcode)
+    const result = await (this.barcodeCatalog ?? this.catalog).barcode?.(barcode)
     if (result === undefined) throw new NutritionCatalogUnavailableError()
     if (result === null) return { food: null }
     return this.withActor(session, async (client) => {

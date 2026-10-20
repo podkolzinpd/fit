@@ -9,6 +9,14 @@ on:
         description: Read only sanitized API command error-code counts for the last 24 hours
         type: boolean
         default: false
+      api_request_id:
+        description: Read sanitized technical diagnostics for one request UUID from the last 24 hours
+        type: string
+        default: ''
+      api_request_time:
+        description: Optional UTC time from copied diagnostics, YYYY-MM-DDTHH:MM:SSZ (narrows the read to four minutes)
+        type: string
+        default: ''
       speech_diagnostics:
         description: Read only aggregate SpeechKit relay lifecycle statuses for the last 15 minutes
         type: boolean
@@ -51,6 +59,28 @@ jobs:
           test "$(hostname)" = fit-stage-app
           sudo timeout 15 journalctl CONTAINER_NAME=fit-api-stage --since="24 hours ago" --lines=5000 --output=json --no-pager 2>/dev/null |
             python3 scripts/cloudru-api-command-diagnostics.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Read only bounded diagnostics for one API request
+        if: github.event_name == 'workflow_dispatch' && inputs.api_request_id != ''
+        env:
+          REQUEST_ID: ${{ inputs.api_request_id }}
+          REQUEST_TIME: ${{ inputs.api_request_time }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          [[ "$REQUEST_ID" =~ ^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$ ]]
+          bounds=(--since="24 hours ago")
+          if test -n "$REQUEST_TIME"; then
+            [[ "$REQUEST_TIME" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]
+            epoch=$(date -u -d "$REQUEST_TIME" +%s)
+            now=$(date -u +%s)
+            test "$epoch" -le "$now"
+            test "$epoch" -ge "$((now - 86400))"
+            bounds=(--since="@$((epoch - 120))" --until="@$((epoch + 120))")
+          fi
+          sudo timeout 15 journalctl CONTAINER_NAME=fit-api-stage "${bounds[@]}" --lines=5000 --output=json --no-pager 2>/dev/null |
+            python3 scripts/cloudru-api-request-diagnostics.py "$REQUEST_ID" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Read only aggregate SpeechKit relay lifecycle statuses
         if: github.event_name == 'workflow_dispatch' && inputs.speech_diagnostics
         run: |

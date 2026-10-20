@@ -45,10 +45,19 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
     await page.setViewportSize({ width, height: 932 })
     await card.scrollIntoViewIfNeeded()
     await expect.poll(() => card.evaluate(element => getComputedStyle(element).display)).toBe('grid')
-    const bounds = (await card.boundingBox())!
     const add = card.getByRole('link', { name: 'Добавить еду' })
-    const button = (await add.boundingBox())!
-    const totals = (await card.locator('.nutrition-totals').boundingBox())!
+    // Async home sections can move the whole card between browser round trips.
+    // Read related rectangles in one renderer task, not three different frames.
+    const { bounds, button, totals } = await card.evaluate(element => {
+      const add = element.querySelector('.nutrition-summary-add')
+      const totals = element.querySelector('.nutrition-totals')
+      if (!add || !totals) throw new Error('Nutrition geometry elements missing')
+      const box = (node: Element) => {
+        const { x, y, width, height } = node.getBoundingClientRect()
+        return { x, y, width, height }
+      }
+      return { bounds: box(element), button: box(add), totals: box(totals) }
+    })
     expect(button.height).toBeGreaterThanOrEqual(48)
     expect(button.y).toBeGreaterThanOrEqual(totals.y + totals.height)
     expect(button.x).toBeGreaterThanOrEqual(bounds.x)
@@ -67,8 +76,10 @@ for (const theme of ['light', 'dark']) test(`nutrition home uses one vertical su
   await page.reload()
   await expect(card.getByRole('alert')).toContainText('Не удалось загрузить питание.')
   await expect(card.getByText('Сегодня записей нет')).toHaveCount(0)
+  const retry = card.getByRole('button', { name: 'Повторить' })
+  await expect(retry).toBeVisible()
   state.mode = 'data'
-  await card.getByRole('button', { name: 'Повторить' }).click()
+  await retry.click()
   await expect(card.getByText('228,3 ккал')).toBeVisible()
 })
 
