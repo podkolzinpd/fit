@@ -133,6 +133,19 @@ export function readLiveOperationRequest(
     : { expectedVersion, operationId }
 }
 
+// Пауза Live (YAFIT-627): только явный признак и идентификатор операции.
+export function readLivePauseRequest(
+  body: unknown,
+): { paused: boolean; operationId: string } | undefined {
+  const input = record(body)
+  if (input === undefined || typeof input.paused !== 'boolean') return undefined
+  const operationId = typeof input.operationId === 'string'
+    && UUID_PATTERN.test(input.operationId)
+    ? input.operationId
+    : undefined
+  return operationId === undefined ? undefined : { paused: input.paused, operationId }
+}
+
 export function readLiveSetRequest(body: unknown): LiveSetRequest | undefined {
   const operation = readLiveOperationRequest(body)
   const input = record(body)
