@@ -14,7 +14,10 @@
     "selectionColor": "#BA60EA",
     "selectedItem": { "elementIndex": 2163, "visualWidth": 40, "visualHeight": 40, "radius": 20, "hitTarget": 44, "meaning": "Deselect, not delete" },
     "addSelected": { "elementIndex": 2172, "width": 140, "height": 60, "radius": 20 },
-    "activeFilters": { "elementIndices": [2103, 2108], "implementationStage": "PR4 of YAFIT-640" },
+    "activeFilters": { "elementIndices": [2103, 2108], "implementationStage": "PR4 of YAFIT-640", "token": "--lime-pink", "textToken": "--lime-text", "height": 60, "radius": 20, "customOnlyWidth": 133 },
+    "filterCount": { "elementIndex": 2094, "width": 20, "height": 20, "radius": 10, "token": "--lime-accent" },
+    "sheetConfirmation": { "elementIndex": 2092, "visualWidth": 40, "visualHeight": 40, "radius": 20, "hitTarget": 44, "token": "--lime-surface-high" },
+    "resetRow": { "provenance": "derived-geometry", "elementIndex": 2097, "height": 56, "meaning": "Reset existing facets, retaining the existing return-to-list handler" },
     "unchangedLimeRoles": ["filter count", "own exercise label", "unselected create FAB"],
     "sourceWhiteTextContrast": 3.53
   },
