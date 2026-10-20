@@ -29,7 +29,7 @@
 
 ### PR4. Каталог и фильтры
 Используем исправленные общие компоненты нового дизайна. Сохраняем поиск, предпросмотр, множественный выбор, добавление и восстановление после ошибки.
-Статус: запланирован.
+Статус: Draft #1751, обновлён до sourcebae6cd59/main2eeb+PR3/03964c6a. Свежие client16/trainer12 и полный check2800frontend/1454API+186DBskip прошли; актуальная main-база после родителя и финальный CI/публикация впереди.
 
 ### PR5. Дата, время и связанные окна
 Согласуем оформление с новым редактором. Сохраняем применение, отмену, проверки времени и существующее поведение календаря.
@@ -188,3 +188,7 @@ PR2 слит в main2eeb0a71 после CI39514497216success33/3штатныхsk
 
 ### Финальная локальная приёмка PR3 на main2eeb0a71
 21.10 — все штатные стадии check exit0:2799frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild. Local Vitestworkers2; timeout/retries/coverage не менялись. Client26/26, copy4/4, read-only boundary6/6; editor и copy snapshots просмотрены. Diff общего дизайн-кода/каталогаSVG пуст относительно main. Финальный CI/merge/публикация и успешное разрешение5профилей ещё впереди. Физический iPhone и realOAuth НЕ ПРОВЕРЕНО. Лог outputs/client-workout-reference-20261020/pr3-final-check.log.
+
+## Повторный preflight PR4 после финального редактора
+Сборкаbae6cd59 включает main2eeb0a71 и PR3/03964c6a. #1744–1745 уже слиты; прежний пункт их ожидания закрыт. Новых UI-правок при обновлении не потребовалось. Уже работает: поиск в фильтрах/preview/мультивыбор/retry и исправленныеSVGсостояния. Переиспользуем ExercisePicker/FitLimeSheetHeader, текущие темы, новые общий CSS и ID-safe черновик редактора. Меняем только ранее согласованное scoped-представление этого этапа. НЕ ПРОВЕРЕНО: physicaliPhone/realOAuth и опубликованный новый пилот.
+Свежие WebKit/Chromium client16/16+trainer12/12 прошли; actualYSGeo загружен; catalog-selected/filters-bottom и fullscroll просмотрены. Все штатные стадии check exit0:2800frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild; localworkers2, timeout/retries/coverage прежние. Логи pr4-refreshed-client-browser/pr4-refreshed-trainer-browser/pr4-refreshed-check в outputs/client-workout-reference-20261020. Следующий гейт: после выпуска #1750 обновить main, пройти точный CI и штатную публикацию.
