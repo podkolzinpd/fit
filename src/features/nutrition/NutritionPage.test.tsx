@@ -107,6 +107,8 @@ it('shows barcode camera and SpeechKit food entry only for the server-authorized
   fixture.barcodeEnabled = true
   const { user } = setup()
   expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeVisible()
+  expect(screen.getByLabelText('Выбрать фото')).toHaveAttribute('type', 'file')
+  expect(screen.queryByLabelText('Штрихкод')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Надиктовать еду' }))
   await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('рис отварной', 1))
 })
