@@ -27,8 +27,12 @@ class FakeWebSocket {
 }
 
 class FakeAudioContext {
+  static instances: FakeAudioContext[] = []
   sampleRate = 48_000
   destination = {}
+  state: AudioContextState = 'suspended'
+  resume = vi.fn(() => { this.state = 'running'; return Promise.resolve() })
+  constructor() { FakeAudioContext.instances.push(this) }
   createMediaStreamSource() { return { connect: vi.fn(), disconnect: vi.fn() } }
   createScriptProcessor() { return { connect: vi.fn(), disconnect: vi.fn(), onaudioprocess: null } }
   close() { return Promise.resolve() }
@@ -37,6 +41,7 @@ class FakeAudioContext {
 describe('SpeechKitStreamingSession final flush', () => {
   beforeEach(() => {
     FakeWebSocket.instances = []
+    FakeAudioContext.instances = []
     vi.stubGlobal('WebSocket', FakeWebSocket)
     vi.stubGlobal('AudioContext', FakeAudioContext)
     Object.defineProperty(navigator, 'mediaDevices', {
@@ -99,5 +104,25 @@ describe('SpeechKitStreamingSession final flush', () => {
     const stopping = session.stop()
     next.emit({ type: 'done' })
     await stopping
+  })
+
+  it('resumes a fresh audio context for each recording attempt', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_SPEECHKIT_RELAY_URL', 'wss://api.fit-training.ru/stt')
+    const first = new SpeechKitStreamingSession()
+    await first.start(vi.fn(), vi.fn())
+    expect(FakeAudioContext.instances).toHaveLength(1)
+    expect(FakeAudioContext.instances[0]!.resume).toHaveBeenCalled()
+    const firstStopping = first.stop()
+    FakeWebSocket.instances[0]!.emit({ type: 'done' })
+    await firstStopping
+
+    const second = new SpeechKitStreamingSession()
+    await second.start(vi.fn(), vi.fn())
+    expect(FakeAudioContext.instances).toHaveLength(2)
+    expect(FakeAudioContext.instances[1]!.resume).toHaveBeenCalled()
+    const secondStopping = second.stop()
+    FakeWebSocket.instances[1]!.emit({ type: 'done' })
+    await secondStopping
   })
 })
