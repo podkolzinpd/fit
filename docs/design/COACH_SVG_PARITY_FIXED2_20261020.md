@@ -139,7 +139,7 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12; fresh check2785frontend/1453API+185standardDBskip/build; exact CI/mainCI/Cloud.ru/public212/native213 passed | выпущен в original fixed2 |
 | PR 2 | source date header/month/relative date | unit18/18; source/client routes20/20; calendar6/6; private cancel/apply/time1/1; fresh check2786frontend/1453API+185standardDBskip/build; exact CI39489962668 success | слит1662bede; production/native проверяются |
 | PR 3 | ясные headings, purple selection/CTA | picker64/64; integrated routes32/32; stable source visual1/1; fresh check2787frontend/1453API+185standardDBskip/build; дерево actualmain integration идентично proof18abd27f | локально проверен; fresh CI/release впереди |
-| PR 4 | purple filters, badges, reset | existing picker tests + route | запланирован |
+| PR 4 | purple filters, badges, reset | picker64/64; routes16/16 (оба fixed2+negative trainer/client); stable visual1/1 | локальные целевые проверки пройдены; fullcheck/CI/release впереди |
 
 PR1: отдельный диагностический asset-test первоначально ожидал имя файла в
 `img.src`, но Vite корректно встраивает этот SVG как data URI. Проверка исправлена:
@@ -147,6 +147,19 @@ PR1: отдельный диагностический asset-test первона
 ради теста не менялся. Первый browser-запуск без harness-флага был skipped,
 не засчитывается; финальный12/12 выполнен с FIT_SCHEDULE_V2_VISUAL=1.
 Полный inventory/SHA256 не обновлялся: shared/spec diff получает full CI.
+
+PR4 preflight: integrated5c421a9d, main0e07a888, trainer dark fixed2,
+`/workouts/new`→catalog→filters; baseline1/1 со шрифтами2/2, original frame2060,
+2676 сравнен. Уже работают все facets/dependencies/search/reset; переиспользуем
+ExercisePicker/activeFilterChips/resetFilters, original icons и существующие
+tokens. Меняем только состояние purple/white,20px count badges и reset row56px;
+custom-only133×60/r20, остальные chips сохраняют адаптивную ширину по тексту.
+Не проверено: physical iPhone/OAuth и production ветки. Полный набор групп,
+включая мышцы/оборудование ниже source crop, сохранён, как и disabled options.
+Подтверждение общей source-sheet шапки сохраняет hit44, видимая подложка40
+по SVG2092; original check24 не растягивается. Остальные размеры полей не меняются.
+Сохранение скрытого фильтрами выбора проверено только390px/оба движка: это
+поведенческий контракт, нет размножения длинной цепочки на все viewport.
 
 PR3 preflight: integrated31572014, main0e07a888, trainer dark fixed2,
 `/workouts/new`→catalog; baseline1/1 и source frame2515,2676 просмотрены.
