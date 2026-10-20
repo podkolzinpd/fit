@@ -50,7 +50,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, settings }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, settings }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -64,6 +64,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   onRestExpire?: (deadline: number) => void
   /** Presentation-only pilot: the existing phase/gong/expiry owner remains this subtree. */
   referenceStartedAt?: string | null
+  /** Client presentation follows the existing signed manual-work indicator. */
+  referenceWorkOvertime?: boolean
   /** Updates the pilot header only at the rest boundary, not on every tick. */
   onReferenceRestActiveChange?: (active: boolean) => void
   /** Редкие настройки тренировки над временем таймера, чтобы не занимать экран Live. */
@@ -261,7 +263,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const reference = referenceStartedAt !== undefined
   const elapsed = referenceStartedAt ? Math.max(0, Math.floor((now - Date.parse(referenceStartedAt)) / 1000)) : 0
   const bigSeconds = phaseRemaining ?? (active ? signedRemaining : null) ?? elapsed
-  const bigTime = formatReferenceClock(bigSeconds)
+  const bigTime = referenceWorkOvertime && phaseOvertime !== null
+    ? `+${formatReferenceClock(phaseOvertime)}` : formatReferenceClock(bigSeconds)
 
   return <>
     {reference && <div className={`coach-live-clock${active && !phase ? ' coach-live-clock-rest' : ''}`}>
