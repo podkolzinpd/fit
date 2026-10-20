@@ -1,0 +1,24 @@
+/* Independent test-client presentation. Existing Live inputs own their state. */
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density {
+  --client-live-field-height: 54px;
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-compact {
+  --client-live-field-height: 48px;
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density :is(.live-set-grid, .live-set-input, .live-set-check, .live-set-save) {
+  min-height: var(--client-live-field-height);
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-setting .schedule-density-options {
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-setting .schedule-density-options button {
+  min-height: 44px;
+  border-radius: 999px;
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-setting .schedule-density-options button[aria-checked='true'] {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}

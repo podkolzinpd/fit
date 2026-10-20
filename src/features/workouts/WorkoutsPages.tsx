@@ -1,3 +1,5 @@
+import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
+import { useClientLiveDensity } from '../../app/client-live-density'
 import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
 import { AddActionLabel } from '../../shared/AddActionLabel'
@@ -2707,6 +2709,8 @@ export function LiveWorkoutPage() {
   const { workoutId = '' } = useParams()
   const { actor } = useAuth()
   const clientLime = isClientLimeEnabled(actor)
+  const clientReference = isClientWorkoutRedesignEnabled(actor)
+  const clientLiveDensity = useClientLiveDensity(actor?.userId)
   const directLiveInput = clientLime || isFitLimeEnabled(actor)
   const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
@@ -4165,7 +4169,7 @@ export function LiveWorkoutPage() {
   </div> : null}</>} />
   // Back returns to the entry screen without finishing. A direct Live link
   // falls back to its workout detail because the tab bar is hidden here.
-  return <Page title="Live-тренировка" hideTitle className={`live-workout-page workout-focused-page${densityEnabled ? ` coach-live-density coach-live-density-${liveDensity}` : ''}`} back={`/workouts/${workoutId}`} onBack={goBack}
+  return <Page title="Live-тренировка" hideTitle className={`live-workout-page workout-focused-page${clientReference ? ` client-live-density client-live-density-${clientLiveDensity}` : ''}${densityEnabled ? ` coach-live-density coach-live-density-${liveDensity}` : ''}`} back={`/workouts/${workoutId}`} onBack={goBack}
     action={coachReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
         <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>

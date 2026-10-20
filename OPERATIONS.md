@@ -2084,3 +2084,19 @@ content-addressed ZIP, signed manifest и provenance; key задаётся че�
 нужны полный native/CI/device цикл и подтверждение правил RuStore. Согласие на
 обычную web-выкладку само по себе не включает OTA. Никакие production build flags,
 allowlists, CORS/API/БД/старый Yandex-контур из этой подготовки не меняются.
+
+## Client workout reference test pilot (YAFIT-641)
+
+Independent build variables: `VITE_CLIENT_WORKOUT_REDESIGN_ENABLED` (only exact `true`)
+and `VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS` (nonempty, distinct UUID list).
+A missing/invalid list fails closed. The actor must also be a client with Client Lime.
+No trainer/nutrition/global Lime cohort grants access. The owner explicitly approved
+the existing test accounts on20.10.2026; resolve them read-only with
+`Inspect approved client workout test profiles`, then set this feature's own variables
+and rebuild web/native. Do not print UUIDs or cohort contacts.
+The resolver reads only existing approved native bindings, writes no identities,
+roles, sessions or rollout assignments, and stores a short-lived private artifact.
+Rollback: set the independent enabled variable to `false` and publish a verified build.
+Changing density does not reset animation preference or data. Client animation defaults
+to on, original density defaults to original; density is stored per client account
+on the device under its own preference key. The common design-code files are unchanged.

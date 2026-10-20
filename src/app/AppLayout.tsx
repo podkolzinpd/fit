@@ -1,3 +1,4 @@
+import { isClientWorkoutRedesignEnabled } from './client-workout-redesign'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AnalyticsIcon, AssistantIcon, ClientsIcon, HomeIcon, ProfileIcon, ScheduleIcon, TodayIcon } from '../shared/icons'
@@ -147,6 +148,7 @@ export function AppLayout() {
     fitLimeShell ? 'fit-lime-shell fit-lime' : '',
     isCoachWorkoutRedesignEnabled(actor) ? 'coach-workout-reference' : '',
     clientLimeShell ? 'fit-client-lime' : '',
+    clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'client-workout-reference' : '',
     clientCompose ? 'client-workout-compose' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',
