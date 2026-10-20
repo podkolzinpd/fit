@@ -66,6 +66,11 @@ export function formatLocalDate(value: LocalDate, locale = 'ru-RU'): string {
     .format(new Date(year ?? 0, (month ?? 1) - 1, day))
 }
 
+/** Relative copy uses the parent's calendar day, never a new UTC conversion. */
+export function formatRelativeLocalDate(value: LocalDate, today: LocalDate): string {
+  return value === today ? 'Сегодня' : value === addDays(today, 1) ? 'Завтра' : formatLocalDate(value)
+}
+
 // Compact numeric date (e.g. 23.07.2026) for tight spots like stat tiles.
 export function formatLocalDateShort(value: LocalDate, locale = 'ru-RU'): string {
   const [year, month, day] = value.split('-').map(Number)

@@ -8,7 +8,7 @@ import { isFitLimeEnabled } from '../../app/fit-lime'
 import { isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { FitLimeDatePicker } from '../../shared/FitLimeDatePicker'
 import { AddIcon, ArrowUpIcon, BackIcon, CloseIcon, KeyboardIcon, MicIcon } from '../../shared/icons'
-import { formatLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
+import { formatLocalDate, formatRelativeLocalDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
 import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
@@ -164,7 +164,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     onClose()
   }
   const today = todayInTimeZone(actor?.timezone)
-  const dateLabel = selectedDate === today ? 'Сегодня' : selectedDate.slice(0, 4) === today.slice(0, 4)
+  const dateLabel = reference ? formatRelativeLocalDate(selectedDate, today) : selectedDate === today ? 'Сегодня' : selectedDate.slice(0, 4) === today.slice(0, 4)
     ? formatLocalDate(selectedDate).replace(/\s+\d{4}\s*г\.$/, '') : formatLocalDate(selectedDate)
   if (!isFitLimeEnabled(actor) || saved?.recordCompleted) return null
   const options = <>
@@ -188,7 +188,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       <fieldset disabled={mutation.isPending}>
         <div className="fit-lime-plan-controls">
           <button type="button" className="fit-lime-plan-chip" onClick={() => setPickerOpen(true)} aria-label={`Клиент: ${selectedClient?.fullName ?? 'Выберите клиента'}`}>{selectedClient ? <span className="fit-lime-plan-avatar">{selectedClient.fullName.slice(0, 1)}</span> : <AddIcon />}<span>{selectedClient?.fullName ?? 'Клиент'}</span></button>
-          <FitLimeDatePicker value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
+          <FitLimeDatePicker today={today} value={selectedDate} onChange={setSelectedDate} time={time} onTimeChange={setTime} reference={reference} triggerLabel={`${dateLabel}${time.start ? ` ${time.start}` : ''}`} />
           {reference && (clientId ? <button type="submit" className="fit-lime-plan-send" aria-label="Сохранить план" aria-busy={mutation.isPending}><ArrowUpIcon /></button> : <button type="button" className="fit-lime-plan-mic" aria-label="Надиктовать тренировку" onClick={() => openComposer('voice')}><MicIcon /></button>)}
         </div>
         {!reference && options}
