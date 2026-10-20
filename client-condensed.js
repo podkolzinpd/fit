@@ -9,11 +9,11 @@
   document.body.append(archive);
   const base=document.createElement('section');
   base.className='slide client-ai-story client-story client-base';
-  base.dataset.section='05 · ДЛЯ КЛИЕНТА';base.dataset.version='6.10';
+  base.dataset.section='05 · ДЛЯ СПОРТСМЕНА';base.dataset.version='6.10';
   base.dataset.slideType='product-flow';base.dataset.golden='linear/03-linear-product-flow.png';
   const names=['Работа с тренером','Прогресс и достижения','Питание'];
   const copy=['Находишь тренера или добавляешь своего.<br>Тренер видит результаты и помогает<br>скорректировать занятия.','Сравниваешь свои результаты за месяц<br>и видишь нагрузку по группам мышц.<br>Отмечаешь свои достижения.','Все приёмы пищи — в одном дневнике.<br>Ты и тренер видите, сколько калорий<br>ты съел за день.'];
-  base.innerHTML='<div class="eyebrow"><span class="design-number">05</span> · ДЛЯ КЛИЕНТА</div><h2>Для клиента</h2><div class="cb-list">'+names.map((name,i)=>`<button class="cb-item" data-base-step="${i}"><strong><small>0${i+1}</small>${name}</strong><span>${copy[i]}</span></button>`).join('')+'</div>';
+  base.innerHTML='<div class="eyebrow"><span class="design-number">05</span> · ДЛЯ СПОРТСМЕНА</div><h2>Твои тренировки —<br>в системе</h2><div class="cb-list">'+names.map((name,i)=>`<button class="cb-item" data-base-step="${i}"><strong>${name}</strong><span>${copy[i]}</span></button>`).join('')+'</div>';
   ai.slide.before(base);
   const panels=[coach,progress,food].map((story,i)=>{
     story.render(i===2?1:0,false,()=>null,true);
@@ -48,6 +48,11 @@
   voice.slide.append(tech);
   window.FIT_CLIENT_AI_PHONE=baseStory;
   window.FIT_CLIENT_STORIES=[voice,ai,community];
+  [voice,ai,community].forEach(({slide})=>{
+    slide.dataset.section=slide.dataset.section.replace('ДЛЯ КЛИЕНТА','ДЛЯ СПОРТСМЕНА');
+    const eyebrow=slide.querySelector('.eyebrow');
+    if(eyebrow)eyebrow.innerHTML=eyebrow.innerHTML.replace('ДЛЯ КЛИЕНТА','ДЛЯ СПОРТСМЕНА');
+  });
   document.addEventListener('DOMContentLoaded',()=>panels.forEach((panel,i)=>{
     const selected=['calendar','progress','home'][i];
     panel.querySelectorAll('.du-nav [data-tab]').forEach(t=>{const on=t.dataset.tab===selected;t.classList.toggle('active',on);if(on)t.setAttribute('aria-current','page');else t.removeAttribute('aria-current');});
