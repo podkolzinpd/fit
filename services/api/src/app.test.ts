@@ -2717,6 +2717,7 @@ const OPERATION_IDS = {
   save: '305a5b42-8b8b-44a9-a1e3-7c188511b25f',
   confirm: '3c6c84f1-80e6-4ba5-94cc-550fca410dbd',
   finish: '65331570-913c-4faa-9771-4a60d7a5e9f0',
+  pause: '65331570-913c-4faa-9771-4a60d7a5e9f1',
   removeSet: '2fdba3b8-f688-40c9-955b-f84173970d31',
   removeRound: '2fdba3b8-f688-40c9-955b-f84173970d32',
   split: '2fdba3b8-f688-40c9-955b-f84173970d33',
@@ -2738,6 +2739,7 @@ function buildWorkoutsWriter(error?: Error): {
   deletePlanned: ReturnType<typeof vi.fn>
   deleteWorkout: ReturnType<typeof vi.fn>
   finishLive: ReturnType<typeof vi.fn>
+  setLivePause: ReturnType<typeof vi.fn>
   removeLiveSet: ReturnType<typeof vi.fn>
   removeLastLiveRound: ReturnType<typeof vi.fn>
   splitLiveSuperset: ReturnType<typeof vi.fn>
@@ -2799,6 +2801,7 @@ function buildWorkoutsWriter(error?: Error): {
   const saveLiveSet = vi.fn(() => result({ version: 2, replayed: false }))
   const confirmLiveSet = vi.fn(() => result({ version: 3, replayed: false }))
   const finishLive = vi.fn(() => result({ version: 3, replayed: false }))
+  const setLivePause = vi.fn(() => result({ version: 4, replayed: false }))
   const removeLiveSet = vi.fn(() => result({
     resourceId: WORKOUT_SET_ID,
     version: 5,
@@ -2854,6 +2857,7 @@ function buildWorkoutsWriter(error?: Error): {
       deletePlanned,
       deleteWorkout,
       finishLive,
+      setLivePause,
       removeLiveSet,
       removeLastLiveRound,
       splitLiveSuperset,
@@ -2881,6 +2885,7 @@ function buildWorkoutsWriter(error?: Error): {
     deletePlanned,
     deleteWorkout,
     finishLive,
+    setLivePause,
     removeLiveSet,
     removeLastLiveRound,
     splitLiveSuperset,
@@ -5313,6 +5318,34 @@ describe('pilot live workout core commands', () => {
     expect(invalidSet.statusCode).toBe(400)
     expect(writer.startLive).not.toHaveBeenCalled()
     expect(writer.saveLiveSet).not.toHaveBeenCalled()
+  })
+
+  // YAFIT-627: пауза — явный признак без ожидаемой версии; без него запрос отклоняется.
+  it('passes an explicit Live pause to the writer and rejects a missing flag', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({
+      pilotWorkoutsWriter: writer.pilotWorkoutsWriter,
+      logger: false,
+    })
+    apps.push(app)
+
+    const paused = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/pause`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { paused: true, operationId: OPERATION_IDS.pause },
+    })
+    const invalid = await app.inject({
+      method: 'POST',
+      url: `/v1/workouts/${WORKOUT_ID}/pause`,
+      headers: { 'x-fit-pilot-session': sessionToken },
+      payload: { operationId: OPERATION_IDS.pause },
+    })
+
+    expect(paused.json()).toEqual({ workout: { id: WORKOUT_ID, version: 4, replayed: false } })
+    expect(writer.setLivePause).toHaveBeenCalledWith(sessionToken, WORKOUT_ID, true, OPERATION_IDS.pause)
+    expect(invalid.statusCode).toBe(400)
+    expect(writer.setLivePause).toHaveBeenCalledOnce()
   })
 
   it('requires the opaque session for live commands', async () => {

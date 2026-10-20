@@ -290,6 +290,8 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'live-timer-2026-09',
       'live-phase-timer-2026-10',
       'live-timer-mode-2026-10',
+      'live-timer-mode-pause-2026-10',
+      'live-timer-pause-2026-10',
       'coach-workout-gestures-2026-10',
       'coach-live-number-gestures-2026-10',
       'coach-live-set-swipe-2026-10-16',
@@ -580,6 +582,19 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       const id = url.pathname.split('/')[3]
       const finished = url.pathname.endsWith('/finish')
       workouts = workouts.map((item) => item.id === id ? { ...item, status: finished ? 'done' : 'in_progress', completedAt: finished ? '2026-09-24T12:00:00Z' : null, version: item.version + 1 } : item)
+      body = { workout: { version: workouts.find((item) => item.id === id)!.version } }
+    } else if (/^\/v1\/workouts\/[0-9a-f-]+\/pause$/.test(url.pathname) && route.request().method() === 'POST') {
+      // Как сервер: пауза запоминает момент, снятие копит её длительность.
+      const id = url.pathname.split('/')[3]
+      const { paused } = route.request().postDataJSON() as { paused: boolean }
+      workouts = workouts.map((item) => {
+        if (item.id !== id) return item
+        const current = item as typeof item & { pausedAt?: string; pausedSeconds?: number }
+        const added = !paused && current.pausedAt ? Math.round((Date.now() - Date.parse(current.pausedAt)) / 1000) : 0
+        const { pausedAt: _previous, ...rest } = current
+        void _previous
+        return { ...rest, ...(paused ? { pausedAt: current.pausedAt ?? new Date().toISOString() } : {}), pausedSeconds: (current.pausedSeconds ?? 0) + added, version: item.version + 1 }
+      })
       body = { workout: { version: workouts.find((item) => item.id === id)!.version } }
     } else if (/^\/v1\/workouts\/[^/]+\/feedback$/.test(url.pathname) && route.request().method() === 'PUT') {
       const draft = route.request().postDataJSON() as { sessionRpe:number; wellbeing:'good' | 'normal' | 'bad'; discomfort:boolean; comment:string; expectedVersion:number }

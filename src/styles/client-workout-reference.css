@@ -64,6 +64,11 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-exercise-markers > .current { outline-color: var(--lime-accent-ink); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-exercise-markers > .done { background: var(--lime-accent-ink); }
 
+/* Reuse the released workout pause action on the reference clock. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock { appearance: none; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: center; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock.paused { color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-pause { font-family: var(--lime-font); font-size: clamp(48px, 16vw, 64px); line-height: 1.2; font-weight: 500; letter-spacing: 0; }
+
 /* Planning uses the existing reference geometry, with the client's controls
    and current theme. No new input, coordinator or plan permission is added. */
 .phone-frame.fit-client-lime.client-workout-reference {
