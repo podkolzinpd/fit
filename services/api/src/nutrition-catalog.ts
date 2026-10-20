@@ -12,6 +12,7 @@ export interface NutritionFood extends NutritionValues {
   name: string
   basis: '100g'
   manufacturer?: string
+  servings?: readonly { label: string; grams: number }[]
 }
 
 export interface CatalogFood extends NutritionFood {
@@ -82,8 +83,8 @@ export function parseCatalogFood(value: unknown): CatalogFood | null {
 }
 
 export function publicNutritionFood(food: CatalogFood): NutritionFood {
-  const { id, name, basis, calories, protein, fat, carbs, manufacturer } = food
-  return { id, name, basis, calories, protein, fat, carbs, ...(manufacturer === undefined ? {} : { manufacturer }) }
+  const { id, name, basis, calories, protein, fat, carbs, manufacturer, servings } = food
+  return { id, name, basis, calories, protein, fat, carbs, ...(manufacturer === undefined ? {} : { manufacturer }), ...(servings === undefined ? {} : { servings }) }
 }
 
 export function isEanBarcode(value: string): boolean {
@@ -114,6 +115,24 @@ function stableCatalogId(namespace: string, sourceId: string, name: string, calo
     numericId: Number.parseInt(hex.slice(0, 12), 16) }
 }
 
+function foodWords(value: string): string[] {
+  return value.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').match(/[\p{L}\p{N}]+/gu) ?? []
+}
+
+/**
+ * The retailer endpoint sometimes returns loosely-associated goods (for
+ * example, confectionery for "глазунья"). It is useful as a coverage
+ * fallback, but it must never masquerade as an exact food match.
+ */
+export function isRelevantCatalogSearch(query: string, foodName: string): boolean {
+  const queryWords = foodWords(query).filter(word => word.length >= 3)
+  if (queryWords.length === 0) return true
+  const nameWords = foodWords(foodName)
+  const stem = (word: string) => word.slice(0, Math.min(word.length, 5))
+  if (queryWords.length === 1) return stem(nameWords[0] ?? '') === stem(queryWords[0]!)
+  return queryWords.every(word => nameWords.some(candidate => stem(candidate) === stem(word)))
+}
+
 export function parsePerekFood(value: unknown): CatalogFood | null {
   const product = object(value), per100 = object(product?.per100)
   const sourceId = typeof product?.id === 'string' ? product.id : ''
@@ -131,10 +150,14 @@ export function parsePerekFood(value: unknown): CatalogFood | null {
   const protein = read('protein', 100), fat = read('fat', 100), carbs = read('carbs', 100)
   if (protein === undefined || fat === undefined || carbs === undefined || (protein ?? 0) + (fat ?? 0) + (carbs ?? 0) > 101) return null
   const stable = stableCatalogId('fit-food:perek', sourceId, name, calories, protein, fat, carbs)
+  const servings = Array.isArray(product?.servings) ? product.servings.map(object).flatMap(serving => typeof serving?.label === 'string' && typeof serving.grams === 'number' && Number.isFinite(serving.grams) && serving.grams > 0 && serving.grams <= 20_000 ? [{ label: plainText(serving.label), grams: serving.grams }] : []).filter(serving => serving.label.length > 0 && serving.label.length <= 80).slice(0, 8) : []
+  const brand = object(product?.brand)
+  const explicitManufacturer = typeof brand?.name === 'string' ? plainText(brand.name) : ''
   const manufacturerSlug = new URL(url).pathname.split('/').filter(Boolean).at(1)
-  const manufacturer = manufacturerSlug === undefined ? undefined : manufacturerSlug.split('-').map(part => part[0]?.toUpperCase() + part.slice(1)).join(' ')
+  const manufacturer = explicitManufacturer.length > 0 && explicitManufacturer.length <= 80 ? explicitManufacturer
+    : manufacturerSlug === undefined ? undefined : manufacturerSlug.split('-').map(part => part[0]?.toUpperCase() + part.slice(1)).join(' ')
   return { id: stable.id, sourceId: stable.numericId, name, basis: '100g', calories, protein, fat, carbs,
-    ...(manufacturer === undefined ? {} : { manufacturer }) }
+    ...(manufacturer === undefined ? {} : { manufacturer }), ...(servings.length === 0 ? {} : { servings }) }
 }
 
 export class PerekNutritionCatalog implements NutritionCatalog {
@@ -236,7 +259,7 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
       mode: 'custom', fields: ['id', 'name', 'properties'],
     })
     if (!Array.isArray(data.items)) throw new NutritionCatalogUnavailableError()
-    const foods = data.items.map(parseCatalogFood).filter((food): food is CatalogFood => food !== null)
+    const foods = data.items.map(parseCatalogFood).filter((food): food is CatalogFood => food !== null && isRelevantCatalogSearch(query, food.name))
     return { foods, hasMore: data.items.length === 10 }
   }
 

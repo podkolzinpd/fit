@@ -89,12 +89,18 @@ it('normalizes a single free-text product before searching and keeps its grams',
 it('shows the manufacturer instead of an external catalog source', async () => {
   fixture.search.mockResolvedValue({ foods: [{ id: 'f00d0000-6010-4000-8000-000000000014', name: 'Воппер', basis: '100g',
     calories: 262.77, protein: 9.85, fat: 16.06, carbs: 19.34,
-    manufacturer: 'Burger King' }], hasMore: false })
+    manufacturer: 'Бургер Кинг', servings: [{ label: 'Порция', grams: 274 }] }], hasMore: false })
   const { user } = setup()
   await user.type(screen.getByRole('searchbox'), 'воппер')
-  expect(await screen.findByText('Burger King')).toBeVisible()
+  expect(await screen.findByText('Бургер Кинг')).toBeVisible()
   expect(screen.getByText('262,8 ккал · Б 9,9 · Ж 16,1 · У 19,3 на 100 г')).toBeVisible()
   expect(screen.queryByText(/Данные: perek\.us/)).toBeNull()
+  await user.click(screen.getByRole('button', { name: /Воппер.*Бургер Кинг/i }))
+  expect(screen.getByRole('button', { name: 'Граммы' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Порции' })).toBeVisible()
+  expect(screen.getByLabelText('Сколько порций')).toHaveValue('1')
+  await user.click(screen.getByRole('button', { name: 'Граммы' }))
+  expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('274')
 })
 
 it('shows barcode camera and SpeechKit food entry only for the server-authorized cohort', async () => {
