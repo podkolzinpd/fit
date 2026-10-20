@@ -33,7 +33,7 @@
 
 ### PR5. Дата, время и связанные окна
 Согласуем оформление с новым редактором. Сохраняем применение, отмену, проверки времени и существующее поведение календаря.
-Статус: запланирован.
+Статус: Draft #1752. На обновлённой сборке3517ff52 WebKit/Chromium14/14 и все штатные стадии check2800frontend/1454API+186DBskip прошли. Product source diff vs PR4 пуст; финальный main-refresh/CI/публикация впереди.
 
 ## Обязательные механики (не менять смысл и нумерацию)
 1. Быстрая замена числа. При первом нажатии на вес или повторы выделяется всё значение. Новое число заменяет старое без долгого выделения. Переход между полями сохраняется.
@@ -192,3 +192,7 @@ PR2 слит в main2eeb0a71 после CI39514497216success33/3штатныхsk
 ## Повторный preflight PR4 после финального редактора
 Сборкаbae6cd59 включает main2eeb0a71 и PR3/03964c6a. #1744–1745 уже слиты; прежний пункт их ожидания закрыт. Новых UI-правок при обновлении не потребовалось. Уже работает: поиск в фильтрах/preview/мультивыбор/retry и исправленныеSVGсостояния. Переиспользуем ExercisePicker/FitLimeSheetHeader, текущие темы, новые общий CSS и ID-safe черновик редактора. Меняем только ранее согласованное scoped-представление этого этапа. НЕ ПРОВЕРЕНО: physicaliPhone/realOAuth и опубликованный новый пилот.
 Свежие WebKit/Chromium client16/16+trainer12/12 прошли; actualYSGeo загружен; catalog-selected/filters-bottom и fullscroll просмотрены. Все штатные стадии check exit0:2800frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild; localworkers2, timeout/retries/coverage прежние. Логи pr4-refreshed-client-browser/pr4-refreshed-trainer-browser/pr4-refreshed-check в outputs/client-workout-reference-20261020. Следующий гейт: после выпуска #1750 обновить main, пройти точный CI и штатную публикацию.
+
+## Повторная финальная приёмка PR5
+Сборка3517ff52 включает main2eeb/03964c6a и текущий каталог; последующий merge88900843 меняет только документы. Уже работает: ClientWorkoutDateControl/FitLimeDatePicker, circles36/hit44, единый header,48px поля и исходная валидация. Переиспользуем их целиком. Новых пользовательских исходников нет; меняется только приёмочный spec/документ. НЕ ПРОВЕРЕНО: physicaliPhone/systempicker/realOAuth и новый опубликованный пилот.
+WebKit/Chromium14/14 light/dark390/430, actualYSGeo, fullscroll, Apply/cancel/clear/Escape/Enter/фокус, year rollover, missingstart/midnight, Todayplan+fact/Back прошли. Dark430WebKit/light390Chromium date-window просмотрены; browser-native AM/PM не объявляется собственным UI/ошибкой приложения. Все штатные стадии check exit0:2800frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild; localworkers2, timeout/retries/coverage прежние. Логи pr5-refreshed-browser/pr5-refreshed-check, screenshots pr5-browser. Main-refresh/точныйCI/публикация ещё впереди.
