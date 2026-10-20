@@ -128,7 +128,7 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 | --- | --- | --- | --- |
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12 оба движка375/390/430/1440+negative; private visual1/1; check exit0 frontend2779/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
 | PR 2 | source date header/month/relative date | unit18/18; routes16/16; calendar6/6; private cancel/apply/time proof1/1; check exit0 frontend2780/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
-| PR 3 | ясные headings, purple selection/CTA | existing picker tests + route | запланирован |
+| PR 3 | ясные headings, purple selection/CTA | picker64/64; existing full-editor/compact12 passed; final catalog8/8; stable source visual1/1 | локальные целевые проверки пройдены; fullcheck/CI/release впереди |
 | PR 4 | purple filters, badges, reset | existing picker tests + route | запланирован |
 
 PR1: отдельный диагностический asset-test первоначально ожидал имя файла в
@@ -137,6 +137,23 @@ PR1: отдельный диагностический asset-test первона
 ради теста не менялся. Первый browser-запуск без harness-флага был skipped,
 не засчитывается; финальный12/12 выполнен с FIT_SCHEDULE_V2_VISUAL=1.
 Полный inventory/SHA256 не обновлялся: shared/spec diff получает full CI.
+
+PR3 preflight: integrated31572014, main0e07a888, trainer dark fixed2,
+`/workouts/new`→catalog; baseline1/1 и source frame2515,2676 просмотрены.
+Уже работают recent sources/order/dedup/multiselect/create/retry; переиспользуем
+ExercisePicker и original icons/--lime-pink. Меняем только source-state markup,
+названия и scoped styles. Не проверено: physical iPhone/OAuth/production ветки.
+Глобальные client/legacy labels/selection сохраняются, проверены обоими unit
+вариантами. Рядом с центральной140×60/r20 CTA сохранены «Очистить» и secondary
+create44 как продуктовые адаптации: создание/очистка не теряются, верхний toolbar
+не меняет высоту после выбора. Visually40px circle отдельно от hit44.
+Тест первоначально ожидал повторное «Применить» после Reset, но существующий
+resetFilters уже возвращает к списку; исправлен тест, обработчик не менялся.
+Старый общий pill-selector перекрывал r20; scoped CSS усилен, финальные8/8
+проверяют effective geometry/color, не только наличие класса. WebKit snapshot
+после двух paint frames подтверждает шапку/toolbar: промежуточный снимок не
+принят за продуктовый дефект. Source semantic map добавлен в общий дизайн-код
+и JSON-индекс; raw SVG/коммерческий пакет не публикуются.
 
 PR2 preflight: локальный integrated e153ce8e, main0e07a888, trainer dark fixed2,
 `/workouts/new?client=fixture&date=2026-09-24`: baseline1/1 с проверенными
