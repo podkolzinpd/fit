@@ -3984,18 +3984,16 @@ export function LiveWorkoutPage() {
     ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
     : activeLiveExercise?.sets.find((set) => !set.confirmedAt)
   const currentSetTimed = Boolean(currentLiveSet && timedSetSeconds(currentLiveSet) !== null)
-  // Режим «Ведёт таймер» запускает тренировку сам: подготовка, если задана,
-  // иначе сразу первый подход со временем. «Веду сам» — прежний поток отдыха.
+  // Подготовка, если задана, идёт в обоих режимах. «Ведёт таймер» без неё сразу
+  // запускает первый подход со временем; «Веду сам» без подготовки ждёт человека.
   useEffect(() => {
     const workout = query.data
     if (!workout || workout.status !== 'in_progress') return
-    if (!timerLeads) {
-      const phase = livePhaseRef.current
-      if (phase && !(phase.kind === 'work' && phase.manual)) setLivePhase(null)
-      return
-    }
+    const running = livePhaseRef.current
+    if (!timerLeads && running?.kind === 'work' && !running.manual) setLivePhase(null)
     if (workout.exercises.some((exercise) => exercise.sets.some((set) => set.confirmedAt))) return
     if (livePhaseRef.current || restEndsAt !== null) return
+    if (!timerLeads && !workout.prepSeconds) return
     // Попытку тратим, только когда есть что запустить: сразу после старта
     // тренировки текущий подход ещё может быть не выбран — тогда ждём его.
     if (!workout.prepSeconds && (!currentLiveSet || timedSetSeconds(currentLiveSet) === null)) return
@@ -4068,12 +4066,18 @@ export function LiveWorkoutPage() {
     const phase = livePhaseRef.current
     if (phase?.kind === 'work' && !phase.manual) confirmWorkFromTimer(phase, Date.now())
   }
+  // После подготовки первый подход со временем стартует сам в обоих режимах:
+  // в «Веду сам» — как нажатие ▶, дальше человек ведёт подходы сам.
+  function startAfterPrep() {
+    setLivePhase(null)
+    if (timerLeads) startWorkTimer(currentLiveSet, activeLiveExercise)
+    else if (currentLiveSet) startPersonWorkTimer(currentLiveSet)
+  }
   function handlePhaseExpire(phase: LivePhaseTimer) {
     // «Веду сам»: на нуле только сигнал, подход засчитывает человек.
     if (phase.kind === 'work' && phase.manual) return
     if (phase.kind === 'prep') {
-      setLivePhase(null)
-      startWorkTimer(currentLiveSet, activeLiveExercise)
+      startAfterPrep()
       return
     }
     confirmWorkFromTimer(phase, phase.endsAt)
@@ -4097,13 +4101,11 @@ export function LiveWorkoutPage() {
   }, [restExpiryPending, confirm.isPending, currentLiveSet?.id])
   function handleTimerPrimary(): boolean {
     if (finishPersonWorkTimer(true)) return true
+    if (livePhaseRef.current?.kind === 'prep') { startAfterPrep(); return true }
     if (!timerLeads) return false
     const phase = livePhaseRef.current
     const action = livePhasePrimaryAction({ phase, restEndsAt, now: Date.now(), currentSetTimed })
-    if (action === 'skip-prep') {
-      setLivePhase(null)
-      startWorkTimer(currentLiveSet, activeLiveExercise)
-    } else if (action === 'confirm-work' && phase?.kind === 'work') {
+    if (action === 'confirm-work' && phase?.kind === 'work') {
       confirmWorkFromTimer(phase, Date.now())
     } else if (action === 'stop-rest' && restEndsAt !== null) {
       const restoreRestUntil = restEndsAt
@@ -4188,7 +4190,7 @@ export function LiveWorkoutPage() {
           <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} />}
             <Coachmark id={timerLeads ? 'live-timer-mode-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру.'}>
               <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
-                phase={livePhase} onPrimary={timerLeads || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
+                phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
                 referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} onReferenceRestActiveChange={coachReference ? setReferenceRestActive : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
                   {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}

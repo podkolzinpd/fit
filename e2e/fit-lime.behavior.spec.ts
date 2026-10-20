@@ -431,8 +431,22 @@ test('Live manual mode times a set from Start and records the time past zero', a
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
   await page.getByRole('button', { name: /^Засчитать подход:/ }).click()
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
-  expect(drafts.at(-1)).toMatchObject({ durationSec: 5 })
+  // Часы теста идут и в реальном времени, поэтому допускаем лишнюю секунду.
+  expect([5, 6]).toContain(drafts.at(-1)?.durationSec)
   expect(drafts.at(-1)?.timerConfirmed).toBeUndefined()
+})
+
+// Подготовка идёт и в «Веду сам»: после неё первый подход со временем стартует как от ▶.
+test('Live manual mode runs preparation and then starts the first timed set', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(2, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подготовка 0:02')
+  await page.clock.fastForward(2_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход +0:02')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
 })
 
 test('Live manual set timer ignores an accidental second tap right after Start', async ({ page }) => {
