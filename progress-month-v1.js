@@ -8,12 +8,13 @@
   const reserve=document.createElement('template');reserve.id='client-overview-reserve';
   old.after(reserve);reserve.content.append(old);
   // Ten completed workouts across five calendar weeks; two plateaus and a deload.
-  const history=[['05.09',46],['08.09',46],['11.09',48],['14.09',48],['18.09',48],['21.09',50],['24.09',50],['27.09',48],['30.09',50],['04.10',52]];
-  const points=history.map(([date,weight],i)=>({date,weight,x:36+i*35,y:145-(weight-44)*14}));
+  const history=[['05.09',10],['08.09',10],['11.09',11],['14.09',11],['18.09',11],['21.09',11],['24.09',11],['27.09',10],['30.09',11],['04.10',12]];
+  const chartY=weight=>117-(weight-10)*42;
+  const points=history.map(([date,weight],i)=>({date,weight,x:36+i*35,y:chartY(weight)}));
   const line=points.map(p=>`${p.x},${p.y}`).join(' ');
   const badge=(id,cls='')=>`<span class="pm-badge ${cls}"><img src="assets/progress-month/${id}.webp" alt=""></span>`;
   const phone=(title,body)=>`<div class="cs-phone pm-phone"><div class="cs-status"><span>9:41</span><span>▂▃▅ ▰</span></div><header class="cs-app-head"><span>‹</span><strong>${title}</strong><i>ФИТ</i></header><div class="cs-phone-body">${body}</div><div class="cs-home" aria-hidden="true"></div></div>`;
-  const notes='Демонстрационный профиль, не реальные результаты пользователей Fit. 10 завершённых тренировок: '+history.map(([d,v])=>d+' — '+v+' кг').join('; ')+'. Максимальный записанный вес в приседе, не тоннаж и не оценка роста силы. Последняя тренировка: присед 3×10×52 кг. Награды и оригинальные иллюстрации взяты из приложения: src/shared/athlete-achievements.ts и src/assets/achievements. «Десятка тренировок»: завершить 10 тренировок; «Четыре недели»: завершить тренировку 4 недели подряд; «Первый рекорд»: первый личный рекорд в завершённой тренировке. Все три условия выполнены этой демонстрационной историей.';
+  const notes='Демонстрационный профиль, не реальные результаты пользователей Fit. 10 завершённых тренировок: '+history.map(([d,v])=>d+' — '+v+' кг').join('; ')+'. Максимальный записанный вес одной гантели в подъёме на бицепс, не тоннаж и не оценка роста силы. Последняя тренировка: подъём гантелей на бицепс, 3×10, по 12 кг. CJ — декоративная пасхалка, не карта мышц. Награды и оригинальные иллюстрации взяты из приложения: src/shared/athlete-achievements.ts и src/assets/achievements. «Десятка тренировок»: завершить 10 тренировок; «Четыре недели»: завершить тренировку 4 недели подряд; «Первый рекорд»: первый личный рекорд в завершённой тренировке. Все три условия выполнены этой демонстрационной историей.';
   function scene(section,heading,body,golden){
     const s=document.createElement('section');s.className='slide client-ai-story client-story progress-month '+section;
     Object.assign(s.dataset,{section:'05 · ДЛЯ КЛИЕНТА · '+(section==='pm-trend'?'ПРОГРЕСС':'ДОСТИЖЕНИЯ'),version:'7.0',slideType:'metric-hero',golden});
@@ -22,22 +23,22 @@
   }
   const trend=scene('pm-trend','Видишь, как растут<br>результаты',`
     <div class="pm-copy"><p>Сравниваешь свои результаты за месяц<br>и видишь нагрузку по группам мышц</p>
-      <div class="pm-main-result"><span>Присед со штангой</span><div><b>46</b><em>→</em><b class="pm-lime">52<small> кг</small></b></div><span>Максимальный вес в упражнении</span></div>
-      <div class="pm-summary"><strong>+6 кг</strong><span>за месяц · 10 тренировок</span></div>
+      <div class="pm-main-result"><span>Подъём гантелей на бицепс</span><div><b>10</b><em>→</em><b class="pm-lime">12<small> кг</small></b></div><span>Вес одной гантели</span></div>
+      <div class="pm-summary"><strong>+2 кг</strong><span>за месяц · 10 тренировок</span></div>
     </div>
     ${phone('Мой прогресс',`<div class="pm-period"><span>5 сентября — 4 октября</span><small>Пример за месяц</small></div>
-      <div class="pm-card pm-trend-card"><span class="cs-app-label">Присед со штангой</span><div class="pm-phone-result"><strong>52 <small>кг</small></strong><span>+6 кг за месяц</span></div>
-        <svg class="pm-chart" viewBox="0 0 384 185" role="img" aria-label="Максимальный вес: 46, 46, 48, 48, 48, 50, 50, 48, 50, 52 кг">
-          ${[46,48,50,52].map(w=>`<line x1="32" x2="354" y1="${145-(w-44)*14}" y2="${145-(w-44)*14}" stroke="#303034"/><text x="3" y="${150-(w-44)*14}" fill="#93939c" font-size="13">${w}</text>`).join('')}
+      <div class="pm-card pm-trend-card"><span class="cs-app-label">Подъём гантелей на бицепс</span><div class="pm-phone-result"><strong>12 <small>кг</small></strong><span>+2 кг за месяц</span></div>
+        <svg class="pm-chart" viewBox="0 0 384 185" role="img" aria-label="Вес одной гантели: 10, 10, 11, 11, 11, 11, 11, 10, 11, 12 кг">
+          ${[10,11,12].map(w=>`<line x1="32" x2="354" y1="${chartY(w)}" y2="${chartY(w)}" stroke="#303034"/><text x="3" y="${chartY(w)+5}" fill="#93939c" font-size="13">${w}</text>`).join('')}
           <polyline class="pm-chart-line" points="${line}" fill="none" stroke="#b6ef4d" stroke-width="3" stroke-linejoin="round" pathLength="1"/>
           ${points.map((p,i)=>`<circle class="${i===9?'pm-last-point':''}" cx="${p.x}" cy="${p.y}" r="${i===9?6:3.5}" fill="#b6ef4d"/>`).join('')}
           <text x="32" y="178" fill="#93939c" font-size="13">5 сен</text><text x="183" y="178" fill="#93939c" font-size="13">21 сен</text><text x="316" y="178" fill="#93939c" font-size="13">4 окт</text>
-        </svg><div class="pm-last"><span>Последняя тренировка</span><b>3 × 10 · 52 кг</b></div>
+        </svg><div class="pm-last"><span>Последняя тренировка</span><b>3 × 10 · по 12 кг</b></div>
       </div>
       <div class="pm-card pm-load"><div class="pm-load-title"><strong>Нагрузка</strong><span>4 октября</span></div>
         <div class="pm-map-row"><svg class="pm-body-map" viewBox="100 0 824 1536" role="img" aria-label="Си-Джей из GTA San Andreas — пасхалка">
           <image href="assets/progress-month/cj-low-poly.png" width="1024" height="1536"/></svg>
-          <div><span class="pm-dot"></span><h4>Передняя<br>поверхность бедра</h4><p>Присед со штангой</p><strong>3 подхода</strong></div>
+          <div><span class="pm-dot"></span><h4>Бицепс</h4><p>Подъём гантелей</p><strong>3 подхода</strong></div>
         </div>
       </div>`)}
   `,'whoop/11-whoop-progress-trend.png');
@@ -57,5 +58,5 @@
     }else animate(slide.querySelector('.pm-hero-badge'),[{transform:'scale(.94)',opacity:.4},{transform:'scale(1)',opacity:1}],500);
   }});
   stories.splice(1,0,makeStory(trend,'Результаты за месяц'),makeStory(awards,'Достижения'));
-  window.FIT_PROGRESS_DEMO={history,workouts:10,from:46,to:52,awards:['workouts-10','weeks-4','records-1']};
+  window.FIT_PROGRESS_DEMO={history,workouts:10,from:10,to:12,awards:['workouts-10','weeks-4','records-1']};
 })();
