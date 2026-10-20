@@ -410,6 +410,11 @@ export const workoutsRepository = {
     if (result.error) throw repositoryError(result.error)
     return result.data
   },
+  // Пауза Live есть только у Yandex API; замороженный Supabase её не поддерживает.
+  setLivePause(workout: Workout, paused: boolean): Promise<number> {
+    void workout; void paused
+    return Promise.reject(new Error('Пауза тренировки недоступна'))
+  },
   async remove(workout: Workout): Promise<void> {
     const result = await workoutQueries.remove(workout.id, workout.version)
     if (result.error) throw repositoryError(result.error)

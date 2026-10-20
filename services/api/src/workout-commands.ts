@@ -521,6 +521,20 @@ export function finishLiveWorkout(
   )
 }
 
+// Пауза всей Live-тренировки (YAFIT-627): переключатель без ожидаемой версии.
+export function setLiveWorkoutPause(
+  client: DatabaseClient,
+  workoutId: string,
+  paused: boolean,
+  operationId: string,
+): Promise<PilotLiveCommandResult> {
+  return runLiveCommand(
+    client,
+    'select version, replayed from public.set_live_workout_pause($1, $2, $3)',
+    [workoutId, paused, operationId],
+  )
+}
+
 export function appendLiveExercise(
   client: DatabaseClient,
   workoutId: string,

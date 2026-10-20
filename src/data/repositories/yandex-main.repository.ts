@@ -622,6 +622,8 @@ function workout(value: YandexPilotTrainingData['workouts'][number]): Workout {
     favoriteTitle: value.favoriteTitle ?? null,
     prepSeconds: value.prepSeconds ?? null,
     ...(value.executionMode ? { executionMode: value.executionMode } : {}),
+    ...(value.pausedAt ? { pausedAt: value.pausedAt } : {}),
+    ...(value.pausedSeconds ? { pausedSeconds: value.pausedSeconds } : {}),
     title: value.title ?? null,
     trainingFormat: value.trainingFormat ?? 'self',
     startedBy: value.startedBy,
@@ -1638,6 +1640,12 @@ export function createYandexMainRepository(
       },
       async replaceLiveExercise(item, exerciseId, exercise) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'PUT', item.version, { exercise: { source: exercise.source, ref: exercise.ref, customExerciseId: exercise.customExerciseId ?? null, name: exercise.name, muscleGroup: exercise.muscleGroup, inputKind: exercise.inputKind } }) },
       async finish(item) { return liveCommand(`/v1/workouts/${item.id}/finish`, 'POST', item.version) },
+      // Пауза — переключатель без ожидаемой версии (YAFIT-627); ответ несёт новую версию тренировки.
+      async setLivePause(item, paused) {
+        const payload = await writeJson(queries, `/v1/workouts/${item.id}/pause`, 'POST', { paused, operationId: crypto.randomUUID() },
+          z.object({ workout: z.object({ version: z.number().int().positive() }) }))
+        invalidate(); return payload.workout.version
+      },
       async remove(item) { await writeJson(queries, `/v1/workouts/${item.id}`, 'DELETE', { expectedVersion: item.version }, z.object({ workout: z.object({ version: z.number().int().positive() }) })); invalidate() },
     },
     invitations: {
