@@ -22,3 +22,39 @@
   background: var(--lime-accent);
   color: var(--lime-text-on-accent);
 }
+
+/* Existing trainer Live geometry, themed through current client Lime tokens.
+   These variables never change trainer colours or the shared design contract. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity {
+  --workout-live-bg: var(--lime-bg);
+  --workout-live-card: var(--lime-surface-raised);
+  --workout-live-field: var(--lime-surface-high);
+  --workout-live-surface: var(--lime-surface);
+  --workout-live-text: var(--lime-text);
+  --workout-live-accent: var(--lime-accent-ink);
+  --workout-live-warning: var(--warning-fg);
+}
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-digits { font-family: 'REM', sans-serif; font-variation-settings: normal; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-status { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-status.resting { color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-colon::before { background: currentColor; color: var(--lime-accent-ink); box-shadow: 0 .28em 0 currentColor; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-clock-rest .coach-live-colon::before { color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-rest-trigger > img { background: currentColor; mask: url('../../docs/design/figma-20261008/assets/coach-rest.svg') center / contain no-repeat; object-position: -9999px; }
+/* Keep the approved client animation on the left, never the trainer number
+   handle. With animation off the title gets all the released horizontal space. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head { grid-template-columns: minmax(0, 1fr) 44px; min-height: 0; text-align: left; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head:has(.workout-exercise-header-main) { grid-template-columns: 72px minmax(0, 1fr) 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .workout-exercise-header-main { display: contents; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head :is(.live-header-animation, .exercise-thumbnail) { grid-column: 1; grid-row: 1; width: 72px; height: 72px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head > :is(.workout-exercise-header-copy, .exercise-technique-trigger, h2, h3) { grid-column: 1; grid-row: 1; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .workout-exercise-header-main > :is(.workout-exercise-header-copy, .exercise-technique-trigger, h2, h3) { grid-column: 2; grid-row: 1; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head :is(.exercise-technique-trigger, h2, h3) { text-align: left; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .exercise-head-actions { grid-column: -2; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-upcoming .live-exercise-head { padding: 16px 0 8px; margin: 0; border: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-upcoming { padding: 0 16px 12px; gap: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-upcoming .live-upcoming-row { justify-content: space-between; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-utilities { margin-top: 8px; padding-bottom: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-utilities :is(.live-add-set, .live-exercise-note summary) { height: 44px; min-height: 44px; padding: 0 8px; margin: 0; border: 0; border-radius: 16px; background: transparent; font-size: 14px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set.current :is(.live-set-input, .live-set-rpe) { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-confirm .live-set-check { padding: 12px; font-size: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback:has(.save-status:empty) { display: none; }
