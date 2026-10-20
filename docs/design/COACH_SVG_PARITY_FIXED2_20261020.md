@@ -116,7 +116,7 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 | Этап | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12 оба движка375/390/430/1440+negative; private visual1/1; check exit0 frontend2779/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
-| PR 2 | source date header/month/relative date | existing picker tests + route | запланирован |
+| PR 2 | source date header/month/relative date | unit18/18; routes16/16; calendar6/6; private cancel/apply/time proof1/1 | локальные целевые проверки пройдены; fullcheck/CI/release впереди |
 | PR 3 | ясные headings, purple selection/CTA | existing picker tests + route | запланирован |
 | PR 4 | purple filters, badges, reset | existing picker tests + route | запланирован |
 
@@ -126,3 +126,17 @@ PR1: отдельный диагностический asset-test первона
 ради теста не менялся. Первый browser-запуск без harness-флага был skipped,
 не засчитывается; финальный12/12 выполнен с FIT_SCHEDULE_V2_VISUAL=1.
 Полный inventory/SHA256 не обновлялся: shared/spec diff получает full CI.
+
+PR2 preflight: локальный integrated e153ce8e, main0e07a888, trainer dark fixed2,
+`/workouts/new?client=fixture&date=2026-09-24`: baseline1/1 с проверенными
+YS Geo2/2. Уже работает parent-owned date/time/cancel/apply; переиспользуем
+FitLimeDatePicker/local-date/original sun; меняем только source presentation.
+Не проверено: physical iPhone/OAuth и production текущей ветки.
+Source: `workout-editor-catalog` frame2060,1606; header«Дата», sun24,
+single weekdays/divider,375px sheet и continuous months. Навигационные arrows
+сохранены как существующая доступная продуктовая адаптация для истории;
+месяцы подгружаются только в UI, без API/изменения модели даты. Client variant
+сохраняет собственную шапку, месяц, поля и weekday labels.
+Диагностические снимки быстрых повторных showModal могут поймать промежуточную
+WebKit-перерисовку; для visual принят стабильный first-open после fonts.ready,
+отдельно проверены cancel→focus return→reopen и apply с сохранением HH:mm.

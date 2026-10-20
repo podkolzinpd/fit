@@ -42,7 +42,7 @@ import { claimLiveAutostart, DEFAULT_EXECUTION_MODE, effectiveExecutionMode, ela
 import { cancelNativeRestTimerNotification, scheduleNativeRestTimerNotification } from './rest-timer-notification'
 import {
   addDays, currentTimeInTimeZone, dayOfMonth, daysBetween, formatLocalDate, formatMonth, formatWeekRange, localDate, todayInTimeZone, weekdayShort,
-  type LocalDate,
+  formatRelativeLocalDate, type LocalDate,
 } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, StatePanel, useConfirm } from '../../shared/ui'
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
@@ -1654,7 +1654,7 @@ export function WorkoutFormPage() {
           <button type="button" className="coach-plan-client" aria-label={`Клиент: ${selectedClientName ?? 'Выберите клиента'}`} disabled={clientContextLocked || mutation.isPending} onClick={() => setReferenceClientPickerOpen(true)}>{refinedPlan && selectedClientName ? <span className="coach-plan-avatar" aria-hidden="true">{clientInitials(selectedClientName)}</span> : <img src={coachWorkoutReferenceAssets.clients} alt="" width={24} height={24} />}<span>{selectedClientName ?? (clients.isLoading ? 'Загрузка клиента…' : 'Клиент')}</span></button>
           {clientSelectionError && <p className="error" role="alert">{clientSelectionError}</p>}
           {clients.error && <p className="error" role="alert">{clients.error.message} <button type="button" className="link" onClick={() => void clients.refetch()}>Повторить</button></p>}
-          <div className="coach-plan-date"><FitLimeDatePicker reference disabled={mutation.isPending} triggerIcon={<img src={coachWorkoutReferenceAssets.date} alt="" width={24} height={24} />} value={entryDate} onChange={(date) => { setEntryDate(date); setFormTimeError(null) }} triggerLabel={entryDate === today ? 'Сегодня' : formatLocalDate(entryDate)} /></div>
+          <div className="coach-plan-date"><FitLimeDatePicker reference today={today} disabled={mutation.isPending} triggerIcon={<img src={coachWorkoutReferenceAssets.date} alt="" width={24} height={24} />} value={entryDate} onChange={(date) => { setEntryDate(date); setFormTimeError(null) }} triggerLabel={formatRelativeLocalDate(entryDate, today)} /></div>
           <CoachPlanTimeField referencePolish={refinedPlan} name="startTime" label="Начало" value={startTime} onChange={(next, form) => { setStartTime(next); setFormTimeError(null); (form?.elements.namedItem('endTime') as HTMLInputElement | null)?.setCustomValidity('') }} />
           <CoachPlanTimeField referencePolish={refinedPlan} name="endTime" label="Окончание" value={endTime} onChange={(next) => { setEndTime(next); setShowEndTime(Boolean(next)); setFormTimeError(null) }} />
           {formTimeError && <p className="error" role="alert">{formTimeError}</p>}
