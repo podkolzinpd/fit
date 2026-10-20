@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react'
 import { BackIcon, CheckSmallIcon, CloseIcon } from './icons'
 
 /** Client sheet composition from the approved Lime SVG. Business actions stay with the caller. */
 export function FitLimeSheetHeader({ title, backLabel, onBack, disabled = false, onConfirm, confirmLabel, titleId }: {
-  title: string
+  title: ReactNode
   titleId?: string
   backLabel: string
   onBack: () => void

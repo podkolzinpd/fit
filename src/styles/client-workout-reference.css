@@ -136,3 +136,7 @@
 
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .coach-catalog-add:not(:disabled) { color: var(--lime-text-on-accent); }
 .phone-frame.fit-client-lime.client-workout-reference.theme-light .client-reference-catalog.has-selection .coach-catalog-create-floating img { filter: none; }
+
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .client-lime-sheet-header h1 { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .coach-filter-reset { display: block; margin: 0 -20px 24px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-strip button.active { color: var(--lime-text-on-accent); }

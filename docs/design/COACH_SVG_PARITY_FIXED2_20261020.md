@@ -95,6 +95,19 @@ Live-механику не переделываем: оригинальные п
 
 ## Preflight и evidence (добавления; исходный план выше не изменяется)
 
+PR4 integration21.10: actual main `28083500` после merge PR1744.
+Дерево PR3 headf854ad7c полностью равно actualmain28083500. При rebase PR4
+конфликты затронули только исторические статусы Markdown; исходный acceptance
+план сохранён. Все non-Markdown файлы (runtime,тесты,build inputs,SVG metadata)
+равны локально проверенномуd495a5de, включая финальную геометрию шапки.
+Полный check2787frontend/1453API+185standardDBskip/build,32browser+1private
+source diagnostic относятся к тому же коду; повтор без нового сигнала не нужен.
+Свежий exact-head CI на actualmain обязателен. PR4 merge ждёт production/native3.
+PR2 полностью выпущен: mainCI39495273625, Cloud.ru39499560344,
+public212/212+health/compiled/frozen, native213/213/install/launch passed.
+PR3 exactCI39495454306 success, слит28083500; mainCI39500438150 и native3
+ещё проверяются. Никаких изменений cohorts/механики/продуктовых данных нет.
+
 PR3 integration: actual main `1662bede` после merge PR1743. Полное дерево
 PR2 head3f848bc0 равно дереву actualmain1662bede. После clean rebase PR3
 полное дерево равно локально проверенному18abd27f: runtime, тесты, build inputs
@@ -137,9 +150,9 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 | Этап | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12; fresh check2785frontend/1453API+185standardDBskip/build; exact CI/mainCI/Cloud.ru/public212/native213 passed | выпущен в original fixed2 |
-| PR 2 | source date header/month/relative date | unit18/18; source/client routes20/20; calendar6/6; private cancel/apply/time1/1; fresh check2786frontend/1453API+185standardDBskip/build; exact CI39489962668 success | слит1662bede; production/native проверяются |
-| PR 3 | ясные headings, purple selection/CTA | picker64/64; integrated routes32/32; stable source visual1/1; fresh check2787frontend/1453API+185standardDBskip/build; дерево actualmain integration идентично proof18abd27f | локально проверен; fresh CI/release впереди |
-| PR 4 | purple filters, badges, reset | existing picker tests + route | запланирован |
+| PR 2 | source date header/month/relative date | unit18/18; routes20/20; calendar6/6; private1/1; fresh check2786frontend/1453API+185standardDBskip/build; exact CI/mainCI/Cloud.ru/public212/native213 passed | выпущен в original fixed2 |
+| PR 3 | ясные headings, purple selection/CTA | picker64/64; routes32/32; private1/1; fresh check2787frontend/1453API+185standardDBskip/build; exactCI39495454306 success | слит28083500; production/native проверяются |
+| PR 4 | purple filters, badges, reset | picker64/64; routes32/32 (оба fixed2+negative trainer/client+client forms); private1/1; final check2787frontend/1453API+185standardDBskip/build; non-md tree равно proofd495a5de | локально проверен; fresh CI/release впереди |
 
 PR1: отдельный диагностический asset-test первоначально ожидал имя файла в
 `img.src`, но Vite корректно встраивает этот SVG как data URI. Проверка исправлена:
@@ -147,6 +160,28 @@ PR1: отдельный диагностический asset-test первона
 ради теста не менялся. Первый browser-запуск без harness-флага был skipped,
 не засчитывается; финальный12/12 выполнен с FIT_SCHEDULE_V2_VISUAL=1.
 Полный inventory/SHA256 не обновлялся: shared/spec diff получает full CI.
+
+PR4 preflight: integrated5c421a9d, main0e07a888, trainer dark fixed2,
+`/workouts/new`→catalog→filters; baseline1/1 со шрифтами2/2, original frame2060,
+2676 сравнен. Уже работают все facets/dependencies/search/reset; переиспользуем
+ExercisePicker/activeFilterChips/resetFilters, original icons и существующие
+tokens. Меняем только состояние purple/white,20px count badges и reset row56px;
+custom-only133×60/r20, остальные chips сохраняют адаптивную ширину по тексту.
+Не проверено: physical iPhone/OAuth и production ветки. Полный набор групп,
+включая мышцы/оборудование ниже source crop, сохранён, как и disabled options.
+Подтверждение общей source-sheet шапки сохраняет hit44, видимая подложка40
+по SVG2092; original check24 не растягивается. Остальные размеры полей не меняются.
+Финальная сверка SVG2091/2094: центр текста заголовка2247.26 совпадает с центром
+375px-sheet2247.5, badge располагается справа, не сдвигая надпись. Уточнена
+композиция span/absolute badge вместо центрирования суммарной группы. Регрессия
+проверяет effective центр подписи с допуском1px, а не наличие класса. Это правка
+внутри PR4, не пятый PR и не смена продуктового поведения; remote initial CI
+fbebcaf5 не подтверждает этот локальный follow-up до следующего свежего CI.
+Из source2092: visible circle справа20/сверху25. При hit44 и inset2 это
+header padding18 по горизонтали,23 сверху,20 снизу (+1 border):88px. Сохранены
+source bounds и доступная область одновременно; e2e проверяет offsets рисунка.
+Сохранение скрытого фильтрами выбора проверено только390px/оба движка: это
+поведенческий контракт, нет размножения длинной цепочки на все viewport.
 
 PR3 preflight: integrated31572014, main0e07a888, trainer dark fixed2,
 `/workouts/new`→catalog; baseline1/1 и source frame2515,2676 просмотрены.

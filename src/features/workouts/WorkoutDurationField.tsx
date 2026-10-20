@@ -18,7 +18,7 @@ export function formatWorkoutDuration(seconds: number | undefined): string {
 }
 
 /** A set duration is always stored as seconds; keyboard and wheel are presentation only. */
-export function WorkoutDurationField({ durationSec, onCommit, name, label, className = '', disabled = false, planHint = false, compact = false, planInput = false }: {
+export function WorkoutDurationField({ durationSec, onCommit, name, label, className = '', disabled = false, planHint = false, compact = false, planInput = false, emptyLabel }: {
   durationSec?: number
   onCommit?: (seconds: number | undefined) => void
   name?: string
@@ -28,6 +28,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
   planHint?: boolean
   compact?: boolean
   planInput?: boolean
+  emptyLabel?: string
 }) {
   const wheelEnabled = useWorkoutTimeWheel()
   const pickerEnabled = wheelEnabled || compact && !planInput
@@ -114,9 +115,10 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
     if (value !== current) commit(value, false)
   }
 
+  const displayLabel = current === undefined && emptyLabel !== undefined ? emptyLabel : compact && current === undefined ? '—' : formatWorkoutDuration(current)
   return <>
     {name && <input ref={input} type="hidden" name={name} value={current ?? ''} readOnly disabled={disabled} />}
-    {pickerEnabled ? <button ref={trigger} type="button" className={`workout-duration-trigger ${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: ${current === undefined ? 'не указано' : formatWorkoutDuration(current)}`} disabled={disabled} onClick={openPicker}>{compact && current === undefined ? '—' : formatWorkoutDuration(current)}</button> : <div ref={partsGroup} className="workout-duration-parts" role="group" aria-label={label}>
+    {pickerEnabled ? <button ref={trigger} type="button" className={`workout-duration-trigger ${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: ${current === undefined ? 'не указано' : formatWorkoutDuration(current)}`} disabled={disabled} onClick={openPicker}>{displayLabel}</button> : <div ref={partsGroup} className="workout-duration-parts" role="group" aria-label={label}>
       <label className="workout-duration-part">
         <input type="text" inputMode="numeric" enterKeyHint={planInput ? 'next' : undefined} pattern={planInput ? '[0-9]{0,3}' : '[0-9]*'} autoComplete="off" className={`${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: минуты`} aria-invalid={Number(parts.minutes) > DEFAULT_MAX_MINUTES || undefined} placeholder="—" value={parts.minutes} disabled={disabled} onFocus={(event) => event.currentTarget.select()} onChange={(event) => changePart('minutes', event.target.value)} onBlur={commitParts} />
         <span>мин</span>

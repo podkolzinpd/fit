@@ -13,6 +13,17 @@ function choose(user: ReturnType<typeof userEvent.setup>, column: 'минуты'
 describe('WorkoutDurationField', () => {
   afterEach(() => setWorkoutTimeWheel(false))
 
+  it.each([false, true])('an empty display label never changes the keyboard/wheel choice %s', (wheel) => {
+    setWorkoutTimeWheel(wheel)
+    render(<WorkoutDurationField label="Время" emptyLabel="—" />)
+    if (wheel) expect(screen.getByRole('button', { name: 'Время: не указано' })).toHaveTextContent('—')
+    else {
+      expect(screen.getByRole('textbox', { name: 'Время: минуты' })).toHaveValue('')
+      expect(screen.queryByRole('button', { name: 'Время: не указано' })).not.toBeInTheDocument()
+    }
+  })
+
+
   it('plan input respects keyboard preference despite compact layout and commits before blur', async () => {
     const user = userEvent.setup()
     const commit = vi.fn()
