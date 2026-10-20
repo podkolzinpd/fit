@@ -92,7 +92,8 @@ it('shows the manufacturer instead of an external catalog source', async () => {
     manufacturer: 'Burger King' }], hasMore: false })
   const { user } = setup()
   await user.type(screen.getByRole('searchbox'), 'воппер')
-  expect(await screen.findByText('Burger King · 262,8 ккал на 100 г')).toBeVisible()
+  expect(await screen.findByText('Burger King')).toBeVisible()
+  expect(screen.getByText('262,8 ккал · Б 9,9 · Ж 16,1 · У 19,3 на 100 г')).toBeVisible()
   expect(screen.queryByText(/Данные: perek\.us/)).toBeNull()
 })
 
