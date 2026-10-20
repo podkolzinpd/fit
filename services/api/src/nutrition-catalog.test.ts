@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
+import { BasicNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -103,6 +103,29 @@ describe('Perek API source', () => {
   it('rejects products without a safe product link or bounded nutrition', () => {
     expect(parsePerekFood({ ...perek, url: 'https://not-perek.example/food/a' })).toBeNull()
     expect(parsePerekFood({ ...perek, per100: { ...perek.per100, protein: 150 } })).toBeNull()
+  })
+})
+
+describe('reviewed basic foods', () => {
+  it.each(['яичница', 'глазунья', 'жареное яйцо'])('finds the canonical fried-egg record for %s', async (query) => {
+    await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{
+      name: 'Яичница-глазунья', calories: 196, protein: 13.61, fat: 14.84, carbs: 0.83,
+      servings: [{ label: '1 яйцо', grams: 46 }],
+    }] })
+  })
+
+  it('also offers the cooked egg for a broad egg search', async () => {
+    await expect(new BasicNutritionCatalog().search('яйцо', 1)).resolves.toMatchObject({ foods: [{ name: 'Яичница-глазунья' }] })
+  })
+
+  it.each([
+    ['бананы', 'Банан', 85, { label: '1 банан', grams: 110 }],
+    ['молоко', 'Молоко 3,2%', 60, { label: '1 стакан', grams: 249 }],
+    ['куриная голень', 'Куриная голень без кожи, тушёная', 156, { label: '1 голень', grams: 94.7 }],
+    ['помидоры черри', 'Помидоры черри', 27, { label: '5 помидоров', grams: 49.7 }],
+    ['брокколи', 'Брокколи, сырая', 31, { label: '1 чашка', grams: 76 }],
+  ])('finds the reviewed Foundation food for %s', async (query, name, calories, serving) => {
+    await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{ name, calories, servings: [serving] }] })
   })
 })
 

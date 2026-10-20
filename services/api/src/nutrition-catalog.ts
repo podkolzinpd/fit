@@ -25,6 +25,74 @@ export interface NutritionCatalog {
   barcode?(barcode: string): Promise<CatalogFood | null>
 }
 
+interface BasicFood extends CatalogFood { readonly aliases: readonly string[] }
+
+// Common cooked foods are not reliably represented by a retailer catalog or a
+// barcode. Keep the small, reviewed base separate from retailer adapters so a
+// user never receives a confectionery item for a dish name. Every record is a
+// specific food, not a guessed average. Values are per 100 g edible portion.
+// Sources: USDA FoodData Central (CC0), SR Legacy FDC 173423 and Foundation
+// Foods release 2026-04-30 (the corresponding FDC IDs are sourceId values).
+const BASIC_FOODS: readonly BasicFood[] = [
+  {
+    id: '17342300-0000-4000-8000-000000000000', sourceId: 173423,
+    name: 'Яичница-глазунья', aliases: ['яичница', 'глазунья', 'жареное яйцо'], basis: '100g',
+    calories: 196, protein: 13.61, fat: 14.84, carbs: 0.83,
+    servings: [{ label: '1 яйцо', grams: 46 }],
+  },
+  {
+    id: '11050730-0000-4000-8000-000000000000', sourceId: 1105073,
+    name: 'Банан', aliases: ['бананы'], basis: '100g',
+    calories: 85, protein: 0.73, fat: 0.22, carbs: 20.1,
+    servings: [{ label: '1 банан', grams: 110 }],
+  },
+  {
+    id: '74678200-0000-4000-8000-000000000000', sourceId: 746782,
+    name: 'Молоко 3,2%', aliases: ['молоко', 'молоко цельное'], basis: '100g',
+    calories: 60, protein: 3.27, fat: 3.2, carbs: 4.63,
+    servings: [{ label: '1 стакан', grams: 249 }],
+  },
+  {
+    id: '33189700-0000-4000-8000-000000000000', sourceId: 331897,
+    name: 'Куриная голень без кожи, тушёная', aliases: ['голень куриная', 'куриная голень'], basis: '100g',
+    calories: 156, protein: 23.9, fat: 5.95, carbs: 0,
+    servings: [{ label: '1 голень', grams: 94.7 }],
+  },
+  {
+    id: '32136000-0000-4000-8000-000000000000', sourceId: 321360,
+    name: 'Помидоры черри', aliases: ['помидор черри', 'томаты черри'], basis: '100g',
+    calories: 27, protein: 0.83, fat: 0.63, carbs: 5.51,
+    servings: [{ label: '5 помидоров', grams: 49.7 }],
+  },
+  {
+    id: '74744700-0000-4000-8000-000000000000', sourceId: 747447,
+    name: 'Брокколи, сырая', aliases: ['брокколи'], basis: '100g',
+    calories: 31, protein: 2.57, fat: 0.34, carbs: 6.27,
+    servings: [{ label: '1 чашка', grams: 76 }],
+  },
+]
+
+function normalizedFoodTerm(value: string): string {
+  return value.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+}
+
+export class BasicNutritionCatalog implements NutritionCatalog {
+  search(query: string, page: number) {
+    const normalized = normalizedFoodTerm(query)
+    if (normalized.length < 2 || normalized.length > 120 || !Number.isSafeInteger(page) || page < 1 || page > 100) {
+      return Promise.reject(new NutritionCatalogUnavailableError())
+    }
+    if (page !== 1) return Promise.resolve({ foods: [], hasMore: false })
+    const foods = BASIC_FOODS.filter(food => [food.name, ...food.aliases]
+      .some(term => normalizedFoodTerm(term).includes(normalized) || normalized.includes(normalizedFoodTerm(term))))
+    return Promise.resolve({ foods, hasMore: false })
+  }
+
+  details(sourceId: number) {
+    return Promise.resolve(BASIC_FOODS.find(food => food.sourceId === sourceId) ?? null)
+  }
+}
+
 export class NutritionCatalogUnavailableError extends Error {
   constructor() {
     super('Food search is temporarily unavailable')
