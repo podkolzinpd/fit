@@ -1,0 +1,22 @@
+/* Approved gym portrait: decoration only, visible on the dictation step. */
+#deck>.cs-voice>.cs-gym-photo {
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:url("assets/voice-gym-woman.png") center top / 100% 100% no-repeat;
+  mask-image:linear-gradient(to right,transparent 40%,#000 66%),linear-gradient(to bottom,#000 28%,transparent 64%);
+  mask-composite:intersect;
+  opacity:1;
+  transition:opacity 450ms ease;
+}
+#deck>.cs-voice[data-cs-step="1"]>.cs-gym-photo{opacity:0}
+#deck>.cs-voice>.eyebrow,
+#deck>.cs-voice>h2,
+#deck>.cs-voice>.cs-lead,
+#deck>.cs-voice>.cs-dictation,
+#deck>.cs-voice>.cs-voice-result,
+#deck>.cs-voice>.cs-steps{z-index:1}
+@media(prefers-reduced-motion:reduce){
+  #deck>.cs-voice>.cs-gym-photo{transition:none}
+}

@@ -10096,7 +10096,7 @@ show(current, false)
 <script>
 // Update both cover layers together without changing the existing title reveal.
 document.querySelectorAll('.m-cover-base,.m-cover-title').forEach(img => {
-  img.src = 'cover-people-friendly-v4.png';
+  img.src = 'cover-people-friendly-v5.png';
 });
 </script>
 <style>
@@ -10133,4 +10133,17 @@ document.querySelectorAll('.m-cover-base,.m-cover-title').forEach(img => {
 <link rel="stylesheet" href="device-unified.css?v=unified-1">
 <script src="device-unified.js?v=unified-1"></script>
 <link rel="stylesheet" href="product-phone-alignment.css?v=20261018">
+<link rel="stylesheet" href="voice-gym-photo.css?v=20261020">
+<script>
+// Decorative photo only; the existing phrase-to-phone transition stays intact.
+{
+ const voice=document.querySelector('#deck>.cs-voice');
+ if(voice){
+   const photo=document.createElement('div');
+   photo.className='cs-gym-photo';
+   photo.setAttribute('aria-hidden','true');
+   voice.prepend(photo);
+ }
+}
+</script>
 </body></html>
