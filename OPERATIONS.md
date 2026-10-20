@@ -2072,3 +2072,32 @@ Its build context is public infra/cloudru source, never the backup directory.
 Retention preserves an API image if Podman reports it is still used by a
 container and continues other bounded cleanup; any other removal error fails.
 It never force-removes that container or performs system/volume pruning.
+
+## Android OTA — подготовка, без production-публикации
+
+План: `docs/design/ANDROID_OTA_20261019.md`, протокол публикации/отката и Nginx:
+`infra/cloudru/mobile-updates/README.md`. `FIT_ANDROID_OTA_ENABLED` имеет default-off
+семантику (включено только при точном `true`); штатная web-сборка OTA не проверяет.
+Тестовый Android APK1.1.0/code4 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
+и canonical API origin `https://api.fit-training.ru`; production env-файлы локально
+не создаются. Native-состав и **все lock-зависимости** входят в консервативный ABI:
+их изменение требует нового APK. Публичный OTA RSA-ключ закреплён в
+`config/android-ota-public-key.pem`, private key хранится отдельно/ignored,
+mode0600, не входит в APK/артефакты/Git/URL/логи; резервная копия обязательна.
+Не путать с APK signing keystore. Native ZIP-клиент SDK получает одну общую
+константу `fit-self-hosted` вместо уникального device ID; Capawesome Cloud,
+регистрация устройств и sync/stats не используются.
+
+`npm run android:ota:package -- DIST NEW_OUTPUT SHA` создаёт только offline
+content-addressed ZIP, signed manifest и provenance; key задаётся через
+`FIT_ANDROID_OTA_PRIVATE_KEY_PATH`. Повтор команды с `--reset` и новым sequence
+готовит возврат к builtin при следующем старте; старый manifest не копируется
+из-за replay-защиты. Native `readyTimeout=20000`, `autoBlockRolledBackBundles=true`,
+`autoUpdateStrategy=none`; JS никогда не вызывает `reload()`. Ошибка проверки
+выдаёт только стабильный код `FIT_ANDROID_OTA_CHECK_FAILED`, без error payload/PII.
+
+Новый feed хранится независимо от frontend/API retention. Публикация feed,
+добавление Nginx location и отправка нового APK в RuStore не выполнены. До них
+нужны полный native/CI/device цикл и подтверждение правил RuStore. Согласие на
+обычную web-выкладку само по себе не включает OTA. Никакие production build flags,
+allowlists, CORS/API/БД/старый Yandex-контур из этой подготовки не меняются.
