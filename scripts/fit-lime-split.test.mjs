@@ -136,7 +136,7 @@ test('real Playwright partitions preserve the 669-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 104) // Existing100 + compact Live layout assertions.
+    assert.equal(scoped.length, 106) // Existing104 + two critical YAFIT-627 timer-mode Live cases.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }
