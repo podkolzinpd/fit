@@ -102,6 +102,9 @@ calendar-коммита перенесены без конфликтов, исх
 2785/2785 frontend +1453 API/185 standard DB skips,12/12 browser, exact-head
 CI39486603586 success. PR1 production/native ещё проверяются; PR2 merge ждёт их.
 Свежие проверки календаря на этом actualmain обязательны до PR2 merge.
+Первый browser-проход actualmain PR2:12/12 WebKit/Chromium375/390/430/1440
+и negative guard. Проверка клиента, полного check и свежего CI продолжается;
+эти результаты не заменяются initial CI до rebase. База PR2 теперь main.
 
 Baseline: main `0e07a888`, локальная WebKit-сборка, trainer dark fixed2 fixture,
 реальный маршрут `/workouts/new?client=fixture&date=2026-09-24`.
