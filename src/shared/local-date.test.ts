@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays, addMonths, DEFAULT_TIME_ZONE, endOfMonth, endOfWeek, formatLocalDate, formatLocalDateShort,
-  currentTimeInTimeZone, formatMonth, isValidTimeZone, localDate, normalizeTimeZone, startOfMonth, startOfWeek, todayInTimeZone,
+  currentTimeInTimeZone, formatMonth, formatRelativeLocalDate, isValidTimeZone, localDate, normalizeTimeZone, startOfMonth, startOfWeek, todayInTimeZone,
 } from './local-date'
 
 describe('LocalDate', () => {
+  it('formats today and tomorrow across a year boundary without changing stored dates', () => {
+    const today = localDate('2026-12-31')
+    expect(formatRelativeLocalDate(today, today)).toBe('Сегодня')
+    expect(formatRelativeLocalDate(localDate('2027-01-01'), today)).toBe('Завтра')
+    expect(formatRelativeLocalDate(localDate('2027-01-02'), today)).toBe(formatLocalDate(localDate('2027-01-02')))
+  })
   it('не сдвигает календарный день через UTC', () => {
     expect(todayInTimeZone('Europe/Moscow', new Date('2026-07-20T21:05:00.000Z'))).toBe('2026-07-21')
   })
