@@ -547,6 +547,9 @@ export interface Workout {
   prepSeconds?: number | null
   /** Кто ведёт Live; отсутствие у старых тренировок читается как «manual». */
   executionMode?: WorkoutExecutionMode
+  /** Live на паузе с этого момента (YAFIT-627); время пауз вычитается из длительности. */
+  pausedAt?: string
+  pausedSeconds?: number
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate

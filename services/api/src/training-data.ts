@@ -47,6 +47,8 @@ interface WorkoutRow extends QueryResultRow {
   favorite_title: string | null
   prep_seconds: number | null
   execution_mode: 'timer' | 'manual' | null
+  paused_at: Date | string | null
+  paused_seconds: number
   title: string | null
   training_format: 'self' | 'with_trainer'
   started_by: string | null
@@ -219,6 +221,8 @@ export interface PilotWorkout {
   favoriteTitle: string | null
   prepSeconds?: number | null
   executionMode?: 'timer' | 'manual'
+  pausedAt?: string
+  pausedSeconds?: number
   title?: string | null
   trainingFormat?: 'self' | 'with_trainer'
   startedBy: string | null
@@ -334,6 +338,8 @@ export async function readAccessibleTrainingData(
         workout.favorite_title,
         workout.prep_seconds,
         workout.execution_mode,
+        workout.paused_at,
+        workout.paused_seconds,
         workout.title,
         workout.training_format,
         workout.started_by,
@@ -523,6 +529,8 @@ export async function readAccessibleTrainingData(
         favoriteTitle: row.favorite_title,
         ...(row.prep_seconds === null || row.prep_seconds === undefined ? {} : { prepSeconds: row.prep_seconds }),
         ...(row.execution_mode === null || row.execution_mode === undefined ? {} : { executionMode: row.execution_mode }),
+        ...(row.paused_at ? { pausedAt: new Date(row.paused_at).toISOString() } : {}),
+        ...(row.paused_seconds > 0 ? { pausedSeconds: row.paused_seconds } : {}),
         title: row.title ?? null,
         trainingFormat: row.training_format,
         startedBy: row.started_by,

@@ -2657,19 +2657,21 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
 // Live elapsed workout time counting up from the start timestamp, "42:07".
 // Кнопка в ячейке времени для режима «Веду сам»: до старта — ▶, во время
 // подхода — сам отсчёт (после нуля «+0:12»), нажатие засчитывает подход.
-function LiveSetWorkTimer({ phase, disabled, onStart, onFinish }: {
+function LiveSetWorkTimer({ phase, disabled, onStart, onFinish, pausedAt = null }: {
   phase: { startedAt: number; endsAt: number } | null
   disabled: boolean
   onStart: () => void
   onFinish: () => void
+  pausedAt?: number | null
 }) {
-  const [now, setNow] = useState(Date.now)
+  const [liveNow, setNow] = useState(Date.now)
+  const now = pausedAt ?? liveNow
   useEffect(() => {
-    if (!phase) return
+    if (!phase || pausedAt !== null) return
     const interval = window.setInterval(() => setNow(Date.now()), 250)
     setNow(Date.now())
     return () => window.clearInterval(interval)
-  }, [phase])
+  }, [phase, pausedAt])
   if (!phase) return <button type="button" className="live-set-work-start" aria-label="Старт подхода" disabled={disabled} onClick={onStart}><PlayIcon /></button>
   const over = now >= phase.endsAt
   const clock = over ? `+${formatRest(Math.floor((now - phase.endsAt) / 1000))}` : formatRest(Math.max(0, Math.ceil((phase.endsAt - now) / 1000)))
@@ -2692,16 +2694,30 @@ function formatElapsed(seconds: number): string {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimer({ startedAt, resting = false }: { startedAt: string | null; resting?: boolean }) {
+// Часы тренировки без пауз. С onToggle это кнопка паузы всей тренировки
+// (YAFIT-627): на паузе — надпись «Пауза» и жёлтый цвет, без лишних подписей.
+function WorkoutTimer({ startedAt, resting = false, pausedAt = null, pausedSeconds = 0, onToggle }: {
+  startedAt: string | null
+  resting?: boolean
+  pausedAt?: number | null
+  pausedSeconds?: number
+  onToggle?: () => void
+}) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
-  const className = `live-timer${resting ? ' resting' : ''}`
+  const paused = pausedAt !== null
+  const className = `live-timer${resting ? ' resting' : ''}${paused ? ' paused' : ''}`
   if (!startedAt) return <span className={className}><span className="live-dot-mark" aria-hidden="true" />LIVE</span>
-  const elapsed = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
-  return <span className={className}><span className="live-dot-mark" aria-hidden="true" />{formatElapsed(elapsed)}</span>
+  const elapsed = Math.max(0, Math.floor(((pausedAt ?? now) - Date.parse(startedAt)) / 1000) - pausedSeconds)
+  const content = <><span className="live-dot-mark" aria-hidden="true" />{paused ? 'Пауза' : formatElapsed(elapsed)}</>
+  return onToggle
+    ? <button type="button" className={`${className} live-timer-toggle`} aria-pressed={paused}
+        aria-label={paused ? `Продолжить тренировку, прошло ${formatElapsed(elapsed)}` : `Поставить тренировку на паузу, прошло ${formatElapsed(elapsed)}`}
+        onClick={onToggle}>{content}</button>
+    : <span className={className}>{content}</span>
 }
 
 export function LiveWorkoutPage() {
@@ -3069,6 +3085,10 @@ export function LiveWorkoutPage() {
   const [liveModeOverride, setLiveModeOverride] = useState<WorkoutExecutionMode | null>(null)
   const liveExecutionMode = effectiveExecutionMode(query.data?.executionMode, liveModeOverride)
   const timerLeads = Boolean(query.data) && !coachReference && liveExecutionMode === 'timer'
+  // Пауза всей тренировки (YAFIT-627) — только у клиента: часы, отдых и подход
+  // замирают, на сервере время паузы вычитается из длительности.
+  const canPauseWorkout = clientMode && !coachReference && query.data?.status === 'in_progress'
+  const livePausedAt = query.data?.pausedAt ? Date.parse(query.data.pausedAt) : null
   const [phaseNotice, setPhaseNotice] = useState<
     | { kind: 'work-confirmed'; setId: string; exerciseId: string; seconds: number; shownAt: number }
     | { kind: 'rest-stopped'; restoreRestUntil: number; shownAt: number }
@@ -3892,7 +3912,7 @@ export function LiveWorkoutPage() {
     const workPhase = livePhase?.kind === 'work' ? livePhase : null
     const ownPhase = workPhase?.setId === set.id ? workPhase : null
     const personWorkTimer = !coachReference && !set.confirmedAt && timedSetSeconds(set) !== null && (!timerLeads || ownPhase)
-      ? <LiveSetWorkTimer phase={ownPhase} disabled={Boolean(workPhase) || confirm.isPending}
+      ? <LiveSetWorkTimer phase={ownPhase} pausedAt={livePausedAt} disabled={Boolean(workPhase) || confirm.isPending}
           onStart={() => startPersonWorkTimer(set)} onFinish={() => ownPhase?.manual ? finishPersonWorkTimer(true) : confirmRunningTimerSet()} />
       : undefined
     const restSeconds = query.data ? restSecondsAfterSet(query.data, exercise, set) : 0
@@ -3955,6 +3975,7 @@ export function LiveWorkoutPage() {
                 }}
                 onClick={(event) => {
                   prepareGong()
+                  resumeWorkoutIfPaused()
                   const running = livePhaseRef.current
                   if (running?.kind === 'work' && running.manual && running.setId === set.id) {
                     skipBlurForSet.current = null
@@ -4000,7 +4021,7 @@ export function LiveWorkoutPage() {
     const running = livePhaseRef.current
     if (!timerLeads && running?.kind === 'work' && !running.manual) setLivePhase(null)
     if (workout.exercises.some((exercise) => exercise.sets.some((set) => set.confirmedAt))) return
-    if (livePhaseRef.current || restEndsAt !== null) return
+    if (livePhaseRef.current || restEndsAt !== null || livePausedAt !== null) return
     if (!timerLeads && !workout.prepSeconds) return
     // Попытку тратим, только когда есть что запустить: сразу после старта
     // тренировки текущий подход ещё может быть не выбран — тогда ждём его.
@@ -4048,9 +4069,40 @@ export function LiveWorkoutPage() {
     if (!switchedOn || query.data?.status !== 'in_progress' || livePhaseRef.current) return
     if (restEndsAt === null || restEndsAt <= Date.now()) startWorkTimer(currentLiveSet, activeLiveExercise)
   }, [timerLeads])
+  const pauseWorkout = useMutation({
+    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean }) => workoutsRepository.setLivePause(workout, paused),
+    onSuccess: (version) => queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout ? { ...workout, version } : workout),
+    onError: () => { void query.refetch() },
+  })
+  // Пауза замораживает всё сразу на экране; сервер фиксирует её следом.
+  // Снятие сдвигает отдых и идущий подход на длительность паузы.
+  function setWorkoutPaused(paused: boolean) {
+    const workout = query.data
+    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null)) return
+    const now = Date.now()
+    if (paused) {
+      void cancelNativeRestTimerNotification(workoutId)
+      queryClient.setQueryData<Workout>(['workout', workoutId], (current) => current ? { ...current, pausedAt: new Date(now).toISOString() } : current)
+    } else {
+      const shift = livePausedAt === null ? 0 : Math.max(0, now - livePausedAt)
+      if (restEndsAt !== null) startRestUntil(restEndsAt + shift)
+      const phase = livePhaseRef.current
+      if (phase) setLivePhase({ ...phase, startedAt: phase.startedAt + shift, endsAt: phase.endsAt + shift })
+      queryClient.setQueryData<Workout>(['workout', workoutId], (current) => current
+        ? { ...current, pausedAt: undefined, pausedSeconds: (current.pausedSeconds ?? 0) + Math.round(shift / 1000) }
+        : current)
+    }
+    trackGoal(paused ? 'live_workout_paused' : 'live_workout_resumed')
+    pauseWorkout.mutate({ workout, paused })
+  }
+  /** Действие с подходом значит, что человек вернулся к тренировке, — пауза снимается сама. */
+  function resumeWorkoutIfPaused() {
+    if (livePausedAt !== null) setWorkoutPaused(false)
+  }
   // «Веду сам»: подход со временем человек запускает сам, таймер отсчитывает
   // и сигналит на нуле, засчитывает подход повторное нажатие или «Готово».
   function startPersonWorkTimer(set: WorkoutSet) {
+    resumeWorkoutIfPaused()
     const seconds = timedSetSeconds(set)
     if (timerLeads || coachReference || seconds === null || livePhaseRef.current || pendingSetConfirmations.current.has(set.id)) return
     prepareGong()
@@ -4062,6 +4114,7 @@ export function LiveWorkoutPage() {
   }
   /** true — нажатие относилось к подходу «Веду сам» (засчитан или проглочен как случайный). */
   function finishPersonWorkTimer(guardAccidentalTap: boolean): boolean {
+    resumeWorkoutIfPaused()
     const phase = livePhaseRef.current
     if (phase?.kind !== 'work' || !phase.manual) return false
     const now = Date.now()
@@ -4071,6 +4124,7 @@ export function LiveWorkoutPage() {
   }
   /** «Ведёт таймер»: нажатие на отсчёт в строке засчитывает подход раньше нуля, как нажатие на таймер. */
   function confirmRunningTimerSet() {
+    resumeWorkoutIfPaused()
     const phase = livePhaseRef.current
     if (phase?.kind === 'work' && !phase.manual) confirmWorkFromTimer(phase, Date.now())
   }
@@ -4102,12 +4156,13 @@ export function LiveWorkoutPage() {
   }
   useEffect(() => {
     // Пока подтверждение в пути, тот же подход не запускаем повторно — ждём ответа.
-    if (!restExpiryPending || confirm.isPending) return
+    if (!restExpiryPending || confirm.isPending || livePausedAt !== null) return
     setRestExpiryPending(false)
     if (!timerLeads || livePhaseRef.current || (restEndsAt !== null && restEndsAt > Date.now())) return
     if (!startWorkTimer(currentLiveSet, activeLiveExercise)) startRestUntil(null)
   }, [restExpiryPending, confirm.isPending, currentLiveSet?.id])
   function handleTimerPrimary(): boolean {
+    resumeWorkoutIfPaused()
     if (finishPersonWorkTimer(true)) return true
     if (livePhaseRef.current?.kind === 'prep') { startAfterPrep(); return true }
     if (!timerLeads) return false
@@ -4195,9 +4250,10 @@ export function LiveWorkoutPage() {
         return (
         /* Закреплённый блок: таймер + отдых + прогресс активной круговой. */
         <><div ref={haloRef} className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
-          <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} />}
-            <Coachmark id={timerLeads ? 'live-timer-mode-2026-10' : 'live-timer-2026-09'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру.'}>
-              <LiveRestTimer workoutId={workoutId} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
+          <div className="live-timer-toolbar">{!coachReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} pausedAt={livePausedAt} pausedSeconds={query.data.pausedSeconds ?? 0}
+              onToggle={canPauseWorkout ? () => setWorkoutPaused(livePausedAt === null) : undefined} />}
+            <Coachmark id={coachReference ? 'live-timer-2026-09' : timerLeads ? 'live-timer-mode-pause-2026-10' : 'live-timer-pause-2026-10'} userId={actor?.userId} title={coachReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому. Нажатие на часы тренировки ставит её на паузу.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру. Нажатие на часы тренировки ставит её на паузу.'}>
+              <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
                 referenceStartedAt={coachReference ? query.data.startedAt ?? null : undefined} onReferenceRestActiveChange={coachReference ? setReferenceRestActive : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
