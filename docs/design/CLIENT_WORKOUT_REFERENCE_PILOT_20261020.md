@@ -25,7 +25,7 @@
 
 ### PR3. Создание и редактирование
 Применяем новую компактную композицию параметров и упражнений. Сохраняем голосовой, текстовый и ручной ввод, черновики, копирование, проверку и сохранение тренировки.
-Статус: Draft #1750 обновлён от main2eeb0a71; client26/26 (включая copy4), targeted59/59 и inspection6/6. Финальные fullcheck/CI/публикация впереди.
+Статус: Draft #1750 обновлён от main2eeb0a71; client26/26 (включая copy4), targeted59/59 и inspection6/6. Финальный fullcheck passed2799frontend/1454API+186штатныхDBskip; exact-head CI/публикация впереди.
 
 ### PR4. Каталог и фильтры
 Используем исправленные общие компоненты нового дизайна. Сохраняем поиск, предпросмотр, множественный выбор, добавление и восстановление после ошибки.
@@ -152,3 +152,6 @@ Baseline: outputs/client-workout-reference-20261020/pause-baseline, sourceada9bf
 PR3 copy26/26 финальной матрицы редактора (WebKit/Chromium,390/430/light/dark) прошли после scoped reuse draft freeze. Четыре copy-сценария проверили перенос факт→план, редактирование, новые IDs, отсутствие fact/confirmedAt и отсутствие записи в исходную тренировку. Снимки copy-edit/copy-save сохранены.
 
 PR2 слит в main2eeb0a71 после CI39514497216success33/3штатныхskip. Read-only inspect39516069450 остановился fail-closed внутри resolver, не экспортировал профили; флаги пока выключены. В PR3 добавлена только безопасная диагностика фиксированными phase/reason (6/6): никаких текстов ошибок БД, контактов, UUID или секретов. Причина не объявляется установленной до результата следующего trusted-main запуска. Для активации по-прежнему требуются5точных существующих клиентов и2тренера без изменения данных/допуска; предположительный allowlist запрещён.
+
+### Финальная локальная приёмка PR3 на main2eeb0a71
+21.10 — все штатные стадии check exit0:2799frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild. Local Vitestworkers2; timeout/retries/coverage не менялись. Client26/26, copy4/4, read-only boundary6/6; editor и copy snapshots просмотрены. Diff общего дизайн-кода/каталогаSVG пуст относительно main. Финальный CI/merge/публикация и успешное разрешение5профилей ещё впереди. Физический iPhone и realOAuth НЕ ПРОВЕРЕНО. Лог outputs/client-workout-reference-20261020/pr3-final-check.log.
