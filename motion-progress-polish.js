@@ -16,7 +16,7 @@
   const fin124 = window.FIT_FIN124;
   // Вставные слайды без анимации (.fit-extra-slide) — одна остановка, индексы соседних слайдов сохраняются.
   const extraSlides = all.map((s,i)=>s.classList.contains('fit-extra-slide')?i:-1).filter(i=>i>=0);
-  const motionCount = 9 + clientStories.length + (fin124 ? fin124.stops.length - 1 : 0) + extraSlides.length;
+  let motionCount = 9 + clientStories.length + (fin124 ? fin124.stops.length - 1 : 0) + extraSlides.length;
   const originalShow = window.show;
   if (scope.length !== 10 || !originalShow) return;
   const q = (s, r = document) => r.querySelector(s);
@@ -343,6 +343,17 @@
     seek:(i,n=0)=>{stop();go(i,n);},
     transitionTo:(i,n=0)=>{stop();if(i!==index)return go(i,n);n=Math.max(0,Math.min(max[index]||0,n));apply(n,n!==step,step);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
+  // Appendix: retain the growth scene and its two stops, but move it out of the pitch.
+  const growthIndex=all.indexOf(growth);
+  while(timeline.length<all.length){timeline.push([0]);max.push(0);labels.push(['']);}
+  [all,slides,timeline,max,labels].forEach(list=>list.push(list.splice(growthIndex,1)[0]));
+  document.querySelector('#deck').append(growth);
+  growth.dataset.section='МАТЕРИАЛЫ · РОСТ ПЛАТФОРМЫ';
+  q('.eyebrow',growth).textContent='МАТЕРИАЛЫ · РОСТ ПЛАТФОРМЫ';
+  q('select',toolbar).innerHTML=all.map((s,i)=>`<option value="${i}">${s===growth?'Материалы · ':i?s.dataset.version+' · ':''}${q('h2',s).textContent}</option>`).join('');
+  motionCount=all.length;
+  index=Math.max(0,Math.min(all.length-1,Number(location.hash.slice(1))-1||0));
+  originalShow(index,false);
   if(params.has('step'))step=Math.max(0,Math.min(max[index]||0,Number(params.get('step'))||0));
   apply(staticMode&&index<motionCount?max[index]:step,false);
   revealCover();
