@@ -1,7 +1,7 @@
 import type { ClientTrainingSummary } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
-import { invokeLegacyCloudFunction } from './legacy-cloud-functions'
+import { legacyCloudApiBaseUrl } from './legacy-api-base-url'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
 import { verifiedSupabaseAccessToken } from './verified-supabase-session'
 import { yandexAppSessionTransport } from '../yandex-app-session-transport'
@@ -52,18 +52,9 @@ export const trainingSummaryQueries = {
         return { data: null, error: error instanceof Error ? error : new Error('summary_function_request_failed') }
       }
     }
-    const bridged = await invokeLegacyCloudFunction<{
-      error?: string
-      cached?: boolean
-      data?: { generated_at?: string }
-    }>('summarize-client-training', {
-      client_id: clientId,
-      period_start: periodStart,
-      period_end: periodEnd,
-      force,
-      trigger_reason: triggerReason,
-    })
-    if (bridged !== undefined) return bridged
+    if (legacyCloudApiBaseUrl() !== undefined) {
+      return { data: null, error: new Error('Старый AI API отключён. Используйте вход через Yandex ID.') }
+    }
     let accessToken: string
     try {
       accessToken = await verifiedSupabaseAccessToken()

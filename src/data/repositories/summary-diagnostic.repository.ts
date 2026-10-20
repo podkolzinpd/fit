@@ -1,4 +1,4 @@
-import { legacySummaryDiagnosticQuery, summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
+import { summaryDiagnosticQuery } from '../queries/summary-diagnostic.queries'
 
 export type SummaryDiagnostic = {
   fingerprint?: string
@@ -15,9 +15,8 @@ export async function getSummaryDiagnostic(apiBaseUrl: string, sessionToken: str
   return parseSummaryDiagnostic(value)
 }
 
-export async function getLegacySummaryDiagnostic(clientId: string, periodStart: string, periodEnd: string): Promise<SummaryDiagnostic> {
-  return parseSummaryDiagnostic(await legacySummaryDiagnosticQuery(clientId, periodStart, periodEnd))
-}
+export const getLegacySummaryDiagnostic: (clientId: string, periodStart: string, periodEnd: string) => Promise<SummaryDiagnostic> = () =>
+  Promise.reject(new Error('Диагностика старого AI API отключена. Используйте вход через Yandex ID.'))
 
 function parseSummaryDiagnostic(value: unknown): SummaryDiagnostic {
   if (!value || typeof value !== 'object' || !('diagnostic' in value) || value.diagnostic !== true || !('ready' in value) || typeof value.ready !== 'boolean' || !('code' in value) || typeof value.code !== 'string') throw new Error('Неожиданный ответ диагностики.')

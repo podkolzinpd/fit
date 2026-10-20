@@ -37,12 +37,11 @@ it('shows the exact failed stage and permits only another free preflight', async
   expect(screen.getByRole('button', { name: 'Запустить preflight без ИИ' })).toBeEnabled()
 })
 
-it('uses the legacy preflight for a Supabase-backed client', async () => {
-  vi.mocked(getLegacySummaryDiagnostic).mockResolvedValueOnce(preflight)
+it('shows retired legacy diagnostics as unavailable without a native request', async () => {
+  vi.mocked(getLegacySummaryDiagnostic).mockRejectedValueOnce(new Error('Диагностика старого AI API отключена. Используйте вход через Yandex ID.'))
   mount('supabase')
-
   await userEvent.click(screen.getByRole('button', { name: 'Запустить preflight без ИИ' }))
-  expect(getLegacySummaryDiagnostic).toHaveBeenCalledWith('client-1', '2026-08-16', '2026-09-15')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Диагностика старого AI API отключена')
   expect(getSummaryDiagnostic).not.toHaveBeenCalled()
-  expect(await screen.findByText(/Preflight пройден/)).toBeVisible()
+  expect(screen.queryByText(/Preflight пройден/)).not.toBeInTheDocument()
 })
