@@ -9,11 +9,36 @@ const MINUTES = Array.from({ length: 60 }, (_, index) => index)
 const format = (hours: number, minutes: number) => `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 
 /** A time of day, not a set duration. Keep HH:mm and the existing form contract. */
-export function CoachPlanTimeField({ name, label, value, onChange, referencePolish = false }: {
+type CoachPlanTimeFieldProps = {
   name: string; label: string; value: string
   referencePolish?: boolean
   onChange: (next: string, form: HTMLFormElement | null) => void
-}) {
+}
+
+export function CoachPlanTimeField(props: CoachPlanTimeFieldProps) {
+  return props.referencePolish ? <NativePlanTimeField {...props} /> : <LegacyPlanTimeField {...props} />
+}
+
+/** One native control covers both icon and value. Its popup belongs to the OS. */
+function NativePlanTimeField({ name, label, value, onChange }: CoachPlanTimeFieldProps) {
+  const input = useRef<HTMLInputElement>(null)
+  function commit(next: string) {
+    input.current?.setCustomValidity('')
+    onChange(next, input.current?.form ?? null)
+  }
+  return <div className="coach-plan-time coach-plan-time-native">
+    <label className="coach-plan-native-control">
+      <img src={value ? coachWorkoutReferenceAssets.clock : coachWorkoutReferenceAssets.addMuted} alt="" width={24} height={24} />
+      <span aria-hidden="true">{value || label}</span>
+      <input ref={input} name={name} type="time" step={60} aria-label={label} value={value}
+        onChange={(event) => commit(event.currentTarget.value)}
+        onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); event.currentTarget.blur() } }} />
+    </label>
+    {value && <button type="button" className="coach-plan-time-clear" aria-label={`Убрать время: ${label}`} onClick={() => commit('')}><CloseIcon /></button>}
+  </div>
+}
+
+function LegacyPlanTimeField({ name, label, value, onChange, referencePolish = false }: CoachPlanTimeFieldProps) {
   const [open, setOpen] = useState(false)
   const [hours, setHours] = useState(12)
   const [minutes, setMinutes] = useState(0)
