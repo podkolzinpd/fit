@@ -50,7 +50,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, settings }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, settings, pausedAt = null }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -68,8 +68,11 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   onReferenceRestActiveChange?: (active: boolean) => void
   /** Редкие настройки тренировки над временем таймера, чтобы не занимать экран Live. */
   settings?: ReactNode
+  /** Пауза всей тренировки (YAFIT-627): время замирает на этом моменте, ничего не истекает. */
+  pausedAt?: number | null
 }) {
-  const [now, setNow] = useState(Date.now)
+  const [liveNow, setNow] = useState(Date.now)
+  const now = pausedAt ?? liveNow
   const [open, setOpen] = useState(false)
   const [minutes, setMinutes] = useState(1)
   const [seconds, setSeconds] = useState(30)
@@ -108,7 +111,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   }, [referenceStartedAt, tickDeadline])
 
   useEffect(() => {
-    if (tickDeadline === null) return
+    if (tickDeadline === null || pausedAt !== null) return
     const signal = (end: number, returningFromBackground: boolean) => {
       if (notified.current === end || gongWasPlayed(workoutId, end)) return
       notified.current = end
@@ -150,7 +153,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('pageshow', wake)
     }
-  }, [deadline, phase, tickDeadline, workoutId])
+  }, [deadline, phase, tickDeadline, workoutId, pausedAt])
   useEffect(() => () => { if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current) }, [])
 
   useEffect(() => {
