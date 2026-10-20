@@ -130,7 +130,7 @@ describe('ExercisePicker', () => {
     expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' }).querySelector('[data-icon="close"]')).toBeInTheDocument()
     expect(document.querySelector('.picker-toolbar .picker-create-action')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Создать упражнение' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Очистить', exact: true })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Очистить' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Добавить выбранные упражнения' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Нет связи')
     expect(screen.getByRole('button', { name: 'Убрать: Присед (Штанга)' })).toHaveAttribute('aria-pressed', 'true')

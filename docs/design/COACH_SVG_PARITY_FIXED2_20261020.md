@@ -128,7 +128,7 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 | --- | --- | --- | --- |
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12 оба движка375/390/430/1440+negative; private visual1/1; check exit0 frontend2779/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
 | PR 2 | source date header/month/relative date | unit18/18; routes16/16; calendar6/6; private cancel/apply/time proof1/1; check exit0 frontend2780/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
-| PR 3 | ясные headings, purple selection/CTA | picker64/64; existing full-editor/compact12 passed; final catalog8/8; stable source visual1/1 | локальные целевые проверки пройдены; fullcheck/CI/release впереди |
+| PR 3 | ясные headings, purple selection/CTA | picker64/64; final routes24/24; stable source visual1/1; check exit0 frontend2781/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
 | PR 4 | purple filters, badges, reset | existing picker tests + route | запланирован |
 
 PR1: отдельный диагностический asset-test первоначально ожидал имя файла в
