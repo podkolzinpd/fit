@@ -1,5 +1,18 @@
 # Feature parity с trainer-app
 
+## Favorites save failure acceptance — YAFIT-636
+
+Personal client favorites retain the source workout/history and snapshot actual
+metrics for completed workouts, falling back to planned values where no fact
+exists. Local HTTP→PostgreSQL coverage verifies persistence, mixed metrics,
+partial exercise snapshots, ten-item limit, ownership, invalid input and session
+requirements. The production-composition browser test covers request diagnostics,
+copy privacy, pending/double-submit protection, retained title, explicit retry,
+success, reload and reuse as a new draft. No automatic POST replay is added.
+The original production failure is NOT established or resolved by these tests;
+correlation and authenticated production acceptance remain open in
+`docs/design/FAVORITE_SAVE_FAILURE_20261020.md`.
+
 18.10 — Нейтральное обращение в ИИ-анализе: mandatory direct-address guard,
 безопасная локальная коррекция и recheck без дополнительных платных вызовов.
 Пол не передаётся; цифры/тренерский текст/данные прежние. Старый анализ обновляется
