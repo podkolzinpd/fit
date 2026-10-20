@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 import { coachGestureWorkout, mockPilot, workoutId } from './fit-lime-fixtures'
 
+test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
+
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
 test.beforeEach(async ({ page }) => {
