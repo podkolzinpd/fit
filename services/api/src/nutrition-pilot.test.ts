@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { DatabasePool, DatabaseClient } from './db/types.js'
 import { DatabaseNutritionAutoActivator, nutritionLoginHash, nutritionProfileAllowed, readNativeNutritionPilot,
-  withNutritionProfileDecision } from './nutrition-pilot.js'
+  nutritionBarcodeProfileAllowed, readNutritionBarcodePilot, withNutritionProfileDecision } from './nutrition-pilot.js'
 
 const hashes = Array.from({ length: 5 }, (_, i) => String(i + 1).repeat(64))
 const raw = JSON.stringify({ clients: hashes.slice(0, 3), trainers: hashes.slice(3) })
@@ -92,5 +92,17 @@ describe('native nutrition cohort', () => {
     expect(await nutritionProfileAllowed(f.client, pilot, 'profile', 'client')).toBe(false)
     expect(await nutritionProfileAllowed(f.client, null, 'profile', 'client')).toBe(false)
     expect(await withNutritionProfileDecision(f.client, undefined, pilot)).toBeUndefined()
+  })
+  it('admits one or two explicit barcode identities and rejects malformed or broadened input', async () => {
+    const barcode = readNutritionBarcodePilot('true', `${hashes[0]},${hashes[1]}`)!
+    expect(barcode).toEqual({ loginHashes: [hashes[0], hashes[1]] })
+    expect(readNutritionBarcodePilot('true', hashes.join(','))).toEqual({ loginHashes: hashes })
+    for (const value of ['', `${hashes[0]},${hashes[0]}`, `${hashes.join(',')},${'6'.repeat(64)}`, 'bad']) {
+      expect(readNutritionBarcodePilot('true', value)).toBeNull()
+    }
+    const f = fixture([{ login_hash: hashes[1] }])
+    expect(await nutritionBarcodeProfileAllowed(f.client, pilot, barcode, 'profile', 'client')).toBe(true)
+    f.query.mockResolvedValue([{ login_hash: hashes[2] }])
+    expect(await nutritionBarcodeProfileAllowed(f.client, pilot, barcode, 'profile', 'client')).toBe(false)
   })
 })
