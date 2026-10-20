@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseIcon, TimerIcon } from '../../shared/icons'
 import { playGong, prepareGong } from '../../shared/gong'
@@ -49,7 +50,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, settings }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -65,6 +66,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   referenceStartedAt?: string | null
   /** Updates the pilot header only at the rest boundary, not on every tick. */
   onReferenceRestActiveChange?: (active: boolean) => void
+  /** Редкие настройки тренировки над временем таймера, чтобы не занимать экран Live. */
+  settings?: ReactNode
 }) {
   const [now, setNow] = useState(Date.now)
   const [open, setOpen] = useState(false)
@@ -90,6 +93,9 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     return overdue === 0 ? 0 : -overdue
   }, [deadline, now])
   const phaseRemaining = phase ? Math.max(0, Math.ceil((phase.endsAt - now) / 1000)) : null
+  // Подход «Веду сам» после нуля считает в плюс, пока человек его не засчитает.
+  const phaseOvertime = phase?.kind === 'work' && phase.manual && now >= phase.endsAt ? Math.floor((now - phase.endsAt) / 1000) : null
+  const phaseClock = phaseOvertime !== null ? `+${formatRest(phaseOvertime)}` : phaseRemaining !== null ? formatRest(phaseRemaining) : ''
   const tickDeadline = phase?.endsAt ?? deadline
 
   useEffect(() => {
@@ -241,14 +247,14 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const copy = phase ? PHASE_COPY[phase.kind] : null
   const stateClass = phase ? ` phase-${phase.kind}` : active ? ' resting' : overdue ? ' rest-overdue' : ''
   const triggerLabel = copy && phaseRemaining !== null
-    ? `${copy.sheet}: ${formatRest(phaseRemaining)}, ${copy.tap}`
+    ? `${copy.sheet}: ${phaseClock}, ${copy.tap}`
     : active && signedRemaining !== null
       ? `Таймер отдыха: ${formatRest(signedRemaining)}${onPrimary ? ', нажмите, чтобы закончить отдых' : ''}`
       : overdue && signedRemaining !== null
         ? `Отдых превышен на ${formatRest(Math.abs(signedRemaining))}`
         : 'Таймер отдыха'
   const triggerText = copy && phaseRemaining !== null
-    ? `${copy.label} ${formatRest(phaseRemaining)}`
+    ? `${copy.label} ${phaseClock}`
     : signedRemaining !== null ? `Отдых ${formatRest(signedRemaining)}` : 'Таймер'
   const sheetTitle = copy?.sheet ?? 'Таймер отдыха'
 
@@ -272,8 +278,9 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
         <header className="picker-header"><h2>{sheetTitle}</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>
+        {settings}
         {copy && phase && phaseRemaining !== null ? <>
-          <p className="live-rest-countdown">{formatRest(phaseRemaining)}</p>
+          <p className="live-rest-countdown">{phaseClock}</p>
           <div className="rest-controls"><button type="button" className="secondary" aria-label="Минус 15 секунд" onClick={() => shift(-15)}>−15 сек</button><button type="button" className="secondary" aria-label="Плюс 15 секунд" onClick={() => shift(15)}>+15 сек</button></div>
           <button type="button" className="secondary" aria-label={copy.stop} onClick={() => { onPhaseChange?.(null); setOpen(false) }}>{copy.stop}</button>
         </> : <>
