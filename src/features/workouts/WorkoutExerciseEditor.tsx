@@ -108,6 +108,7 @@ interface WorkoutExerciseEditorProps {
   /** Родитель закончил восстановление исходного плана/черновика. */
   initialExercisesReady?: boolean
   reference?: boolean
+  referenceAppearance?: boolean
   safePlanInput?: boolean
   refinedPlan?: boolean
   disabled?: boolean
@@ -129,7 +130,7 @@ function PlanNumberField({ label, placeholder, name, value, decimal, disabled, o
     defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -324,13 +325,13 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     const durationSec = set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
     const distanceCapable = !allowsDurationWeight(exercise) && (exercise.inputKind === 'distance' || (exercise.inputKind === 'duration' && (allowsOptionalDistance(exercise) || exercise.sets.some((item) => item.distanceKm !== undefined))))
     const inputClass = 'planned-set-input'
-    const metric = (content: ReactNode, unit: string) => reference ? <span className={`coach-plan-metric${unit === 'RPE' ? ' coach-plan-rpe' : ''}`}>{content}<span className="coach-plan-field-unit" aria-hidden="true">{unit}</span></span> : content
+    const metric = (content: ReactNode, unit: string) => referenceAppearance ? <span className={`coach-plan-metric${unit === 'RPE' ? ' coach-plan-rpe' : ''}`}>{content}<span className="coach-plan-field-unit" aria-hidden="true">{unit}</span></span> : content
     const weightField = safePlanInput
       ? <PlanNumberField label={`Вес, подход ${setIndex + 1}`} placeholder={refinedPlan ? '—' : 'кг'} name={`${exercise.blockId}-${set.position}-weight`} value={set.weightKg} decimal disabled={disabled} onChange={(next) => updateSet(exerciseIndex, setIndex, { weightKg: next })} />
-      : <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder="кг" value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
+      : <input className={inputClass} aria-label={`${entryMode === 'fact' ? 'Фактический вес' : 'Вес'}, подход ${setIndex + 1}`} type="number" inputMode="decimal" min="0" step="any" placeholder={referenceAppearance && !reference ? '—' : 'кг'} value={set.weightKg ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { weightKg: inputNumber(event.target.value) })} />
     const repsField = safePlanInput
       ? <PlanNumberField label={`Повторы, подход ${setIndex + 1}`} placeholder={refinedPlan ? '—' : 'повт.'} name={`${exercise.blockId}-${set.position}-reps`} value={set.reps} disabled={disabled} onChange={(next) => updateSet(exerciseIndex, setIndex, { reps: next })} />
-      : <input className={inputClass} aria-label={`${entryMode === 'fact' && exercise.inputKind === 'strength' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder="повт." value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
+      : <input className={inputClass} aria-label={`${entryMode === 'fact' && exercise.inputKind === 'strength' ? 'Фактические повторы' : 'Повторы'}, подход ${setIndex + 1}`} type="number" inputMode="numeric" min="0" placeholder={referenceAppearance && !reference ? '—' : 'повт.'} value={set.reps ?? ''} onFocus={(event) => prepareZeroReplacement(event.currentTarget)} onChange={(event) => updateSet(exerciseIndex, setIndex, { reps: inputNumber(event.target.value) })} />
     const rpeField = showRpe ? <select className="planned-set-rpe" aria-label={`${entryMode === 'fact' ? 'Фактический' : 'Целевой'} RPE, подход ${setIndex + 1}`} value={set.rpe ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, { rpe: inputNumber(event.target.value) })}>
       <option value="">—</option>
       {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -341,21 +342,21 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'reps') return <>
-      {metric(<WorkoutDurationField compact={reference} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(<WorkoutDurationField compact={referenceAppearance} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
       {metric(repsField, 'повт.')}
       {rpeField && metric(rpeField, 'RPE')}
     </>
     if (exercise.inputKind === 'duration' && !distanceCapable) return <>
       {allowsDurationWeight(exercise) && metric(weightField, 'кг')}
-      {metric(<WorkoutDurationField compact={reference} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
+      {metric(<WorkoutDurationField compact={referenceAppearance} planInput={safePlanInput} className={inputClass} label={`Время, подход ${setIndex + 1}`} durationSec={durationSec} onCommit={(next) => updateSet(exerciseIndex, setIndex, { durationSec: next, durationMin: undefined })} />, 'мин:сек')}
       {!allowsDurationWeight(exercise) && <span aria-hidden="true" />}
       {rpeField && metric(rpeField, 'RPE')}
     </>
     return <>
       <RunMetricsFields
-        reference={reference}
+        reference={referenceAppearance}
         planInput={safePlanInput}
-        compactDuration={reference}
+        compactDuration={referenceAppearance}
         loadField={isLoadedDistance(exercise) ? metric(weightField, 'кг') : undefined}
         key={`${exercise.name}-${set.position}`}
         idPrefix={`plan-run-${exerciseIndex}-${setIndex}`}

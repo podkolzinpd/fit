@@ -13,9 +13,9 @@ const exercises: WorkoutExerciseDraft[] = [{
   sets: [{ position: 0, weightKg: 52.5, reps: 10 }, { position: 1, reps: 8 }],
 }]
 
-function EditorHarness({ onOpenPicker }: { onOpenPicker: () => void }) {
+function EditorHarness({ onOpenPicker, referenceAppearance = false }: { onOpenPicker: () => void; referenceAppearance?: boolean }) {
   const [draft, setDraft] = useState(exercises)
-  return <WorkoutExerciseEditor exercises={draft} onChange={setDraft} onOpenPicker={onOpenPicker} onReplaceExercise={vi.fn()} />
+  return <WorkoutExerciseEditor referenceAppearance={referenceAppearance} exercises={draft} onChange={setDraft} onOpenPicker={onOpenPicker} onReplaceExercise={vi.fn()} />
 }
 
 function ZeroValueEditorHarness() {
@@ -500,4 +500,19 @@ describe('workout exercise editor rules', () => {
     expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
     expect(screen.getByRole('group', { name: 'Удалить подход 1: Присед' })).not.toHaveAttribute('tabindex')
   })
+})
+
+
+it('reference appearance reuses units while keeping client numeric editing and direct set removal', async () => {
+  const user = userEvent.setup()
+  render(<EditorHarness onOpenPicker={vi.fn()} referenceAppearance />)
+  expect(document.querySelector('.coach-plan-metric')).toBeInTheDocument()
+  expect(document.querySelector('[data-workout-swipe], .workout-drag-handle')).not.toBeInTheDocument()
+  const weight = screen.getByLabelText('Вес, подход 1')
+  await user.clear(weight)
+  await user.type(weight, '60.5')
+  expect(weight).toHaveValue(60.5)
+  await user.click(screen.getByRole('button', { name: 'Удалить подход 1' }))
+  expect(screen.getAllByLabelText(/^Вес, подход/)).toHaveLength(1)
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
 })
