@@ -714,3 +714,13 @@ legacy DNS403, offsite S3 403 и authenticated acceptance остаются от�
 Production streaming требует canonical WSS; до его настройки сохранён recorder fallback.
 Legacy writers и независимое расхождение БД требуют контролируемого решения;
 повторный initial import/замена непустой Cloud.ru БД запрещены.
+
+## Android OTA — 19 октября 2026
+
+Новая платформенная возможность, не V1 parity. План и acceptance:
+`docs/design/ANDROID_OTA_20261019.md`. Android1.1.0/code4: подписанные manifest/ZIP,
+строгая совместимость/expiry/sequence, staged activation без reload и native
+builtin rollback. По умолчанию выключено; локальная реализация подготовлена,
+native/CI и signed candidate passed; physical-device/pilot и store distribution
+ещё впереди. Не Implemented
+как опубликованный пользовательский сценарий; 1.0.2 остаётся bundled-only.

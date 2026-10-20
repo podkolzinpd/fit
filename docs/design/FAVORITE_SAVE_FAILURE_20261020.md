@@ -68,4 +68,3 @@
 - Защитная проверка перед нашим merge обнаружила уже изменившийся main и не делала повторную мутацию. Наша ветка1731 обновлена отed4f205d штатнымmerge без конфликтов. Новый localcheck/CI, подтверждённый mainCI и фактическое применение ingress ещё обязательны.
 - Original user request correlation и authenticated acceptance на реальном тестовом профиле не заменяются синтетическими401-пробами; это ограничение остаётся явным.
 - После интеграцииed4f205d новый полный Node22check exit0:frontend2783/API1451+184standardDBskip/infra331/calendar12/hosting170/build/startup. Production-composition Yandex build и WebKit-сценарий1/1 (обе темы390/430,4.4s) passed; свежий светлый390 screenshot просмотрен. Нового изменения схемы нет; cleanPG174+1skip ранее прошёл на той же SQL/API-цепочке. Exact-final-head CI ещё обязателен.
-

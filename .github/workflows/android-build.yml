@@ -8,6 +8,8 @@ on:
       - 'src/**'
       - 'public/**'
       - 'scripts/generate-app-icons.mjs'
+      - 'scripts/*android*'
+      - 'config/android-ota-public-key.pem'
       - 'capacitor.config.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -19,6 +21,8 @@ on:
       - 'src/**'
       - 'public/**'
       - 'scripts/generate-app-icons.mjs'
+      - 'scripts/*android*'
+      - 'config/android-ota-public-key.pem'
       - 'capacitor.config.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -29,7 +33,7 @@ permissions:
 
 jobs:
   assemble:
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/codex/android-ota'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,10 +46,13 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: npm ci
+      - run: npm run android:ota:test
       - run: npm run android:sync:local
-      - run: ./gradlew assembleDebug
+      - run: node scripts/generate-android-ota-native-fixtures.mjs
+      - run: ./gradlew testDebugUnitTest assembleDebug
         working-directory: android
       - uses: actions/upload-artifact@v4
+        if: github.event_name != 'workflow_dispatch'
         with:
           name: fit-android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -100,3 +107,105 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
+
+  ota-candidate:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/android-ota'
+    needs: assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: fit-frontend-candidate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Build OTA-enabled production candidate
+        env:
+          FIT_ANDROID_OTA_ENABLED: 'true'
+          FIT_SOURCE_COMMIT: ${{ github.sha }}
+          FIT_LIME_FONTS_REQUIRED: 'true'
+          FIT_LIME_YS_GEO_REGULAR_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_REGULAR_BASE64_PART1 }}
+          FIT_LIME_YS_GEO_REGULAR_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_REGULAR_BASE64_PART2 }}
+          FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART1 }}
+          FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2: ${{ secrets.FIT_LIME_YS_GEO_MEDIUM_BASE64_PART2 }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          VITE_YANDEX_API_BASE_URL: https://api.fit-training.ru
+          VITE_SPEECHKIT_RELAY_URL: ${{ vars.CLOUDRU_SPEECHKIT_RELAY_URL || '' }}
+          VITE_YANDEX_OAUTH_CLIENT_ID: fdc7e12c472b475690fbb387d8698663
+          VITE_YANDEX_APP_SESSION_ENABLED: 'true'
+          VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true'
+          VITE_YANDEX_NATIVE_REGISTRATION_ENABLED: 'true'
+          VITE_YANDEX_ONLY_AUTH_ENABLED: 'true'
+          VITE_ASSISTANT_PROGRAM_ENABLED: ${{ vars.CLOUDRU_AI_ENABLED == 'true' && 'true' || 'false' }}
+          VITE_MAINTENANCE_MODE: 'false'
+          VITE_SERVICE_NOTICE_ENABLED: 'true'
+          VITE_CONTEST_WINNER_ENABLED: ${{ vars.VITE_CONTEST_WINNER_ENABLED || 'true' }}
+          VITE_CONTEST_WINNER_PILOT_USER_IDS: ${{ vars.VITE_CONTEST_WINNER_PILOT_USER_IDS || '' }}
+          VITE_CLIENT_LIME_ENABLED: ${{ vars.VITE_CLIENT_LIME_ENABLED || 'false' }}
+          VITE_TRAINER_FINANCE_ENABLED: ${{ vars.VITE_TRAINER_FINANCE_ENABLED || 'true' }}
+          VITE_TRAINER_FINANCE_PILOT_USER_IDS: ${{ vars.VITE_TRAINER_FINANCE_PILOT_USER_IDS || '' }}
+          VITE_NUTRITION_ENABLED: ${{ vars.VITE_NUTRITION_ENABLED || 'false' }}
+          VITE_NUTRITION_NATIVE_COHORT: ${{ vars.VITE_NUTRITION_NATIVE_COHORT || 'false' }}
+          VITE_NUTRITION_PILOT_USER_IDS: ${{ vars.VITE_NUTRITION_PILOT_USER_IDS || '' }}
+          VITE_COACH_WORKOUT_REDESIGN_ENABLED: ${{ vars.VITE_COACH_WORKOUT_REDESIGN_ENABLED || 'false' }}
+          VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: ${{ vars.VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS || '' }}
+          VITE_COACH_PLAN_INPUT_ENABLED: ${{ vars.VITE_COACH_PLAN_INPUT_ENABLED || 'false' }}
+          VITE_COACH_PLAN_INPUT_PILOT_USER_IDS: ${{ vars.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS || '' }}
+          VITE_COACH_PLAN_LAYOUT_ENABLED: ${{ vars.VITE_COACH_PLAN_LAYOUT_ENABLED || 'false' }}
+          VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS: ${{ vars.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS || '' }}
+          VITE_COACH_LIVE_DENSITY_ENABLED: ${{ vars.VITE_COACH_LIVE_DENSITY_ENABLED || 'false' }}
+          VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS: ${{ vars.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS || '' }}
+        run: |
+          node scripts/check-production-api-routing.mjs
+          npm run ios:env:check
+          npm run build
+          npx cap sync android
+      - run: ./gradlew assembleRelease
+        working-directory: android
+      - name: Sign and verify candidate APK
+        shell: bash
+        env:
+          FIT_ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.FIT_ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          FIT_ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.FIT_ANDROID_RELEASE_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$FIT_ANDROID_RELEASE_KEYSTORE_BASE64"
+          test -n "$FIT_ANDROID_RELEASE_STORE_PASSWORD"
+          keyfile="$RUNNER_TEMP/fit-release.p12"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$FIT_ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keyfile"
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$signer"
+          tools_dir=$(dirname "$signer")
+          mkdir -p ota-candidate
+          echo "Aligning unsigned release"
+          "$tools_dir/zipalign" -P 16 -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/fit-aligned.apk"
+          echo "Signing with existing release key"
+          "$signer" sign --ks "$keyfile" --ks-key-alias fit-release --ks-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --key-pass env:FIT_ANDROID_RELEASE_STORE_PASSWORD --out ota-candidate/fit-1.1.0-ota-release.apk "$RUNNER_TEMP/fit-aligned.apk"
+          echo "Verifying APK signature"
+          "$signer" verify --verbose --print-certs ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/signature.txt
+          echo "Checking original certificate"
+          node scripts/verify-android-apk-signature.mjs ota-candidate/signature.txt a933c356832d86e306408963056e3662094c3cd2cd7d779118dad86a79bb6978
+          echo "Checking 16KB alignment"
+          "$tools_dir/zipalign" -c -P 16 4 ota-candidate/fit-1.1.0-ota-release.apk
+          "$tools_dir/aapt" dump badging ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/package-info.txt
+          head -n 1 ota-candidate/package-info.txt
+          echo "Checking release identity"
+          if grep -q '^application-debuggable' ota-candidate/package-info.txt; then exit 1; fi
+          grep -q "package: name='com.coachspace.fit' versionCode='4' versionName='1.1.0'" ota-candidate/package-info.txt
+          sha256sum ota-candidate/fit-1.1.0-ota-release.apk > ota-candidate/SHA256SUMS
+          printf '%s\n' "Source commit: $GITHUB_SHA" > ota-candidate/source.txt
+          cp dist/android-ota-build.json ota-candidate/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fit-android-ota-signed-1.1.0
+          path: ota-candidate/
+          if-no-files-found: error
+          retention-days: 14
