@@ -276,3 +276,21 @@ describe('Live phase timer', () => {
     expect(onRestExpire).toHaveBeenCalledExactlyOnceWith(101_000)
   })
 })
+
+
+describe('client reference manual work display', () => {
+  it('shows the same positive overtime as the existing trigger, preserving default trainer display and callbacks', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(147_000)
+    const phase = { kind: 'work', setId: 'set-1', startedAt: 100_000, endsAt: 145_000, manual: true } as const
+    const onChange = vi.fn()
+    const view = render(<LiveRestTimer workoutId="client-reference-overtime" deadline={null} phase={phase} referenceStartedAt={new Date(0).toISOString()} referenceWorkOvertime onChange={onChange} />)
+    expect(screen.getByLabelText('Подход: +00:02')).toBeVisible()
+    expect(document.querySelector('.live-rest-trigger')).toHaveTextContent('Подход +0:02')
+    expect(onChange).not.toHaveBeenCalled()
+    view.rerender(<LiveRestTimer workoutId="client-reference-overtime" deadline={null} phase={phase} referenceStartedAt={new Date(0).toISOString()} onChange={onChange} />)
+    expect(screen.getByLabelText('Подход: 00:00')).toBeVisible()
+    expect(document.querySelector('.live-rest-trigger')).toHaveTextContent('Подход +0:02')
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})

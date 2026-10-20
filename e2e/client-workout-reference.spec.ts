@@ -304,6 +304,7 @@ test('client reference Live manual mode times a set from Start and records the t
   await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
   await page.clock.fastForward(5_000)
   await expect(page.locator('.live-rest-trigger')).toContainText('Подход +0:02')
+  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', 'Подход: +00:02')
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
   await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toHaveCSS('border-radius', '16px')
   await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toHaveCSS('min-height', '54px')
