@@ -333,6 +333,10 @@ for (const lime of [false, true]) {
 
 test.beforeEach(async ({ page }) => {
   legacyRequestCounts.set(page, 0)
+  await page.route('**/v1/auth/yandex/link', route => {
+    legacyRequestCounts.set(page, (legacyRequestCounts.get(page) ?? 0) + 1)
+    return route.abort('connectionrefused')
+  })
   await page.route(/^https?:\/\/(?:127\.0\.0\.1|localhost):54321(?:\/|$)/, (route) => {
     legacyRequestCounts.set(page, (legacyRequestCounts.get(page) ?? 0) + 1)
     return route.abort('connectionrefused')
@@ -340,7 +344,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.afterEach(({ page }) => {
-  expect(legacyRequestCounts.get(page), 'Yandex-only auth must not call local Supabase').toBe(0)
+  expect(legacyRequestCounts.get(page), 'Yandex-only auth must not call Supabase or retired linking').toBe(0)
 })
 
 for (const role of ['trainer', 'client'] as const) {
@@ -501,6 +505,27 @@ test('Yandex workout completion reads personal records once without paginated Pr
   }
   expect(recordReads).toBe(1)
   expect(progressReads).toBe(0)
+})
+
+test('retired Supabase linking callback offers a fresh Yandex login without exchanging its code', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires native Yandex auth.')
+  let authRequests = 0
+  await page.route('https://stage.example.test/v1/auth/yandex/**', route => {
+    authRequests += 1
+    return route.abort('failed')
+  })
+  await page.addInitScript(() => {
+    sessionStorage.setItem('fit.yandexIdPilot.oauthState', 'retired-state')
+    sessionStorage.setItem('fit.yandexIdPilot.oauthVerifier', 'v'.repeat(43))
+    sessionStorage.setItem('fit.yandexIdPilot.oauthIntent', 'link')
+  })
+  await page.goto('/auth/yandex/callback?code=retired-code&state=retired-state')
+  await expect(page.getByText('Привязка через старую сессию больше недоступна. Начните вход через Yandex ID заново.').first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Повторить вход' })).toHaveAttribute('href', '/auth')
+  expect(new URL(page.url()).search).toBe('')
+  expect(await page.evaluate(() => sessionStorage.getItem('fit.yandexIdPilot.oauthVerifier'))).toBeNull()
+  expect(authRequests).toBe(0)
+  await page.screenshot({ path: testInfo.outputPath('retired-linking-callback.png'), fullPage: true })
 })
 
 test('Yandex-only entry has one primary action at 390 and 430 px', async ({ page }, testInfo) => {

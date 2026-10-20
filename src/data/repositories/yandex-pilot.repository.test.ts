@@ -5,7 +5,6 @@ import {
   yandexPilotRepository,
 } from './yandex-pilot.repository'
 import { PRIVACY_VERSION, TERMS_VERSION } from '../../shared/legal'
-import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 
 const queries = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
@@ -14,8 +13,6 @@ const queries = vi.hoisted(() => ({
   completeYandexRegistration: vi.fn(),
   getAppSession: vi.fn(),
   revokeAppSession: vi.fn(),
-  linkYandexAccount: vi.fn(),
-  getYandexAccountLinkStatus: vi.fn(),
   listClients: vi.fn(),
   listConnections: vi.fn(),
   listTrainingData: vi.fn(),
@@ -205,8 +202,6 @@ describe('yandexPilotRepository', () => {
     queries.completeYandexRegistration.mockReset()
     queries.getAppSession.mockReset()
     queries.revokeAppSession.mockReset()
-    queries.linkYandexAccount.mockReset()
-    queries.getYandexAccountLinkStatus.mockReset()
     queries.listClients.mockReset()
     queries.listConnections.mockReset()
     queries.listTrainingData.mockReset()
@@ -517,90 +512,6 @@ describe('yandexPilotRepository', () => {
       'code',
       'verifier',
     )).rejects.toThrow('Сервис входа через Yandex ID сейчас недоступен')
-  })
-
-  it('links Yandex ID to the existing FIT profile with a validated result', async () => {
-    queries.linkYandexAccount.mockResolvedValue(new Response(JSON.stringify({
-      profileId: session.profile.id,
-    }), { status: 200 }))
-
-    await expect(yandexPilotRepository.linkYandexAccount(
-      'https://stage.example.test',
-      'supabase-session',
-      'code',
-      'verifier',
-    )).resolves.toEqual({ profileId: session.profile.id })
-    expect(queries.linkYandexAccount).toHaveBeenCalledWith(
-      'https://stage.example.test',
-      'supabase-session',
-      'code',
-      'verifier',
-    )
-  })
-
-  it('maps Yandex ID linking conflicts without exposing identifiers', async () => {
-    queries.linkYandexAccount.mockResolvedValue(new Response('{}', { status: 409 }))
-
-    await expect(yandexPilotRepository.linkYandexAccount(
-      'https://stage.example.test',
-      'supabase-session',
-      'code',
-      'verifier',
-    )).rejects.toThrow('уже связан')
-  })
-
-  it('preserves correlation metadata when Yandex ID linking cannot reach the API', async () => {
-    queries.linkYandexAccount.mockRejectedValue(attachRequestDiagnostics(
-      new Error('Load failed'),
-      {
-        requestId: '18940d82-9075-48d2-a847-8feee301b4d7',
-        occurredAt: '2026-09-20T10:15:30.000Z',
-        backend: 'yandex',
-        operation: 'POST /v1/auth/yandex/link',
-        stage: 'network',
-      },
-    ))
-
-    let caught: unknown
-    try {
-      await yandexPilotRepository.linkYandexAccount(
-        'https://stage.example.test',
-        'supabase-session',
-        'code',
-        'verifier',
-      )
-    } catch (error) {
-      caught = error
-    }
-
-    expect(caught).toMatchObject({ message: 'Не удалось подключиться к Yandex Cloud stage.' })
-    expect(getRequestDiagnostics(caught)?.requestId).toBe('18940d82-9075-48d2-a847-8feee301b4d7')
-  })
-
-  it('validates the current profile Yandex ID link status', async () => {
-    queries.getYandexAccountLinkStatus.mockResolvedValue(
-      new Response(JSON.stringify({ linked: true }), { status: 200 }),
-    )
-
-    await expect(yandexPilotRepository.getYandexAccountLinkStatus(
-      'https://stage.example.test',
-      'supabase-session',
-    )).resolves.toEqual({ linked: true })
-    expect(queries.getYandexAccountLinkStatus).toHaveBeenCalledWith(
-      'https://stage.example.test',
-      'supabase-session',
-    )
-  })
-
-  it('rejects unsupported link status responses', async () => {
-    queries.getYandexAccountLinkStatus.mockResolvedValue(
-      new Response(JSON.stringify({ linked: 'yes' }), { status: 200 }),
-    )
-
-    await expect(yandexPilotRepository.getYandexAccountLinkStatus(
-      'https://stage.example.test',
-      'supabase-session',
-    )).rejects.toThrow('неподдерживаемый статус Yandex ID')
   })
 
   it('keeps non-allowlisted identities outside the pilot', async () => {

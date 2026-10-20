@@ -237,27 +237,6 @@ export function getYandexMainRoutingConfig(): YandexIdPilotConfig | null {
   return getYandexPublicConfig()
 }
 
-// Привязка существующего FIT-профиля к Yandex ID показывается всем
-// авторизованным пользователям. Отдельный глобальный kill switch позволяет
-// скрыть вход при массовой недоступности OAuth/API, но персонального allowlist
-// здесь больше нет.
-export function isYandexSessionLinkingEnabled(): boolean {
-  return import.meta.env.VITE_YANDEX_SESSION_LINKING_ENABLED === 'true'
-}
-
-// Обязательная привязка — отдельный default-off gate поверх уже существующего
-// linking flow. Она не включает Yandex app-session и не меняет data backend.
-// Если gate включён без публичной linking-конфигурации, UI должен fail closed
-// с явной ошибкой, а не молча пропустить пользователя в приложение.
-export function isYandexAccountLinkRequired(): boolean {
-  return import.meta.env.VITE_YANDEX_ACCOUNT_LINK_REQUIRED === 'true'
-}
-
-export function getYandexSessionLinkingConfig(): YandexIdPilotConfig | null {
-  if (!isYandexSessionLinkingEnabled()) return null
-  return getYandexPublicConfig()
-}
-
 // Available to both authenticated product roles; the server keeps trainer
 // ownership and client self-only authorization separate from this UI switch.
 export function isAssistantProgramEnabled(userId: string): boolean {

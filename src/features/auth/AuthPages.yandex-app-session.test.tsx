@@ -149,6 +149,18 @@ describe('Yandex app session auth flow', () => {
     sessionStorage.clear()
   })
 
+  it('ends a retired linking callback with the normal login retry and no API exchange', async () => {
+    const search = await appCallbackSearch()
+    sessionStorage.setItem('fit.yandexIdPilot.oauthIntent', 'link')
+    window.history.replaceState(null, '', `/auth/yandex/callback${search}`)
+    render(<MemoryRouter><YandexPilotCallbackPage /></MemoryRouter>)
+    expect((await screen.findAllByText('Привязка через старую сессию больше недоступна. Начните вход через Yandex ID заново.'))[0]).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Повторить вход' })).toHaveAttribute('href', '/auth')
+    expect(repository.exchangeCodeForAppSession).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('fit.yandexIdPilot.oauthVerifier')).toBeNull()
+    expect(window.location.search).toBe('')
+  })
+
   it('uses Yandex ID as the primary login while keeping email sign-in available', () => {
     render(<MemoryRouter><AuthPage /></MemoryRouter>)
 

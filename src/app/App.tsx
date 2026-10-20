@@ -7,7 +7,7 @@ import { AppLayout } from './AppLayout'
 import { ClientLimeStandaloneLayout } from './ClientLimeStandaloneLayout'
 import { AppViewportProvider } from './app-viewport'
 import { isAssistantNavPilotEnabled, isTrainerFinancePilotEnabled, trainerHomePath } from './feature-flags'
-import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAccountLinkRequiredGate, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from '../features/auth'
+import { AuthCallbackPage, AuthPage, ForgotPasswordPage, InvitationPage, JoinPage, ResetPasswordPage, YandexAppSessionPage, YandexAssistantFeaturesRefreshPage, YandexPilotCallbackPage } from '../features/auth'
 import { ArchivedClientsPage, ClientDetailPage, ClientFormPage, ClientProfilePage, ClientProfileSettingsPage, ClientsPage, GoalPage, MyClientEditPage, MyClientPage, MyGoalPage, MyProgressPage, MyWorkoutsPage } from '../features/clients'
 import { ExercisesPage } from '../features/exercises'
 import { ProgressPage } from '../features/progress'
@@ -29,7 +29,7 @@ function Protected() {
   if (loading) return <StartupSplash />
   if (!actor) return <Navigate to="/auth" state={{ from: `${location.pathname}${location.search}${location.hash}` }} replace />
   if (error) return <main className={`${systemStateClass} error`}>{error}</main>
-  return <LegalAcceptanceGate><YandexAccountLinkRequiredGate><Outlet /></YandexAccountLinkRequiredGate></LegalAcceptanceGate>
+  return <LegalAcceptanceGate><Outlet /></LegalAcceptanceGate>
 }
 
 function TrainerOnly() {
@@ -65,7 +65,7 @@ function InvitationRoute() {
   const { actor } = useAuth()
   return actor === null
     ? <InvitationPage />
-    : <LegalAcceptanceGate><YandexAccountLinkRequiredGate><InvitationPage /></YandexAccountLinkRequiredGate></LegalAcceptanceGate>
+    : <LegalAcceptanceGate><InvitationPage /></LegalAcceptanceGate>
 }
 
 function AssistantPage() {

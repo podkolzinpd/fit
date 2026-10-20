@@ -63,23 +63,18 @@ describe('Yandex ID pilot OAuth', () => {
     )).toThrow('Не удалось безопасно подтвердить вход')
   })
 
-  it('marks account-linking authorization and consumes the intent with the verifier', async () => {
-    const authorizationUrl = new URL(await createYandexAuthorizationUrl(
-      'public-client-id',
-      'http://localhost:5173/auth/yandex/callback',
-      storageAdapter,
-      'link',
-    ))
-    const state = authorizationUrl.searchParams.get('state')
-    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('link')
-
-    const result = consumeYandexAuthorizationCallback(`?code=oauth-code&state=${state}`, storageAdapter)
-
-    expect(result.intent).toBe('link')
-    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('pilot')
+  it('rejects and clears a retired linking callback without reusing its OAuth code', async () => {
+    const url = new URL(await createYandexAuthorizationUrl('client', 'http://localhost/auth/yandex/callback', storageAdapter, 'app'))
+    storageAdapter.setItem('fit.yandexIdPilot.oauthIntent', 'link')
+    expect(peekPendingYandexAuthorizationIntent(storageAdapter)).toBe('app')
+    expect(() => consumeYandexAuthorizationCallback(`?code=old-code&state=${url.searchParams.get('state')}`, storageAdapter))
+      .toThrow('Начните вход через Yandex ID заново')
+    expect(storageAdapter.getItem('fit.yandexIdPilot.oauthState')).toBeNull()
+    expect(storageAdapter.getItem('fit.yandexIdPilot.oauthVerifier')).toBeNull()
+    expect(storageAdapter.getItem('fit.yandexIdPilot.oauthIntent')).toBeNull()
   })
 
-  it('keeps the app-session intent separate from read-only pilot and linking', async () => {
+  it('keeps the app-session intent separate from read-only pilot', async () => {
     const authorizationUrl = new URL(await createYandexAuthorizationUrl(
       'public-client-id',
       'http://localhost:5173/auth/yandex/callback',
