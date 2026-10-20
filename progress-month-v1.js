@@ -35,9 +35,8 @@
         </svg><div class="pm-last"><span>Последняя тренировка</span><b>3 × 10 · 52 кг</b></div>
       </div>
       <div class="pm-card pm-load"><div class="pm-load-title"><strong>Нагрузка</strong><span>4 октября</span></div>
-        <div class="pm-map-row"><svg class="pm-body-map" viewBox="42 0 476 1000" role="img" aria-label="Карта тела из Fit: передняя поверхность бедра, 3 подхода в приседе">
-          <defs><clipPath id="pm-body-clip"><rect width="476" height="1000"/></clipPath></defs><g clip-path="url(#pm-body-clip)"><image href="assets/progress-month/body.png" width="952" height="1000"/>
-          <g class="pm-load-overlay" fill="#b6ef4d" fill-opacity=".35" stroke="#b6ef4d" stroke-width="2"><path d="M184 533 C207 524 238 525 261 535 C262 561 251 602 244 627 C238 646 229 659 218 661 C204 659 192 650 184 634 C175 607 176 565 184 533 Z"/><path d="M292 535 C314 525 346 524 371 533 C379 564 377 605 368 634 C360 650 348 659 334 661 C324 659 315 646 309 627 C302 602 292 561 292 535 Z"/></g></g></svg>
+        <div class="pm-map-row"><svg class="pm-body-map" viewBox="100 0 824 1536" role="img" aria-label="Си-Джей из GTA San Andreas — пасхалка">
+          <image href="assets/progress-month/cj-low-poly.png" width="1024" height="1536"/></svg>
           <div><span class="pm-dot"></span><h4>Передняя<br>поверхность бедра</h4><p>Присед со штангой</p><strong>3 подхода</strong></div>
         </div>
       </div>`)}
