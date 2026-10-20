@@ -117,6 +117,16 @@ describe('reviewed basic foods', () => {
   it('also offers the cooked egg for a broad egg search', async () => {
     await expect(new BasicNutritionCatalog().search('яйцо', 1)).resolves.toMatchObject({ foods: [{ name: 'Яичница-глазунья' }] })
   })
+
+  it.each([
+    ['бананы', 'Банан', 85, { label: '1 банан', grams: 110 }],
+    ['молоко', 'Молоко 3,2%', 60, { label: '1 стакан', grams: 249 }],
+    ['куриная голень', 'Куриная голень без кожи, тушёная', 156, { label: '1 голень', grams: 94.7 }],
+    ['помидоры черри', 'Помидоры черри', 27, { label: '5 помидоров', grams: 49.7 }],
+    ['брокколи', 'Брокколи, сырая', 31, { label: '1 чашка', grams: 76 }],
+  ])('finds the reviewed Foundation food for %s', async (query, name, calories, serving) => {
+    await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{ name, calories, servings: [serving] }] })
+  })
 })
 
 describe('source fallback', () => {
