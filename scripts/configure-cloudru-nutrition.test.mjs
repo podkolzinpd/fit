@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
-import { mergeCloudruNutritionEnv, prepareCloudruNutrition } from './configure-cloudru-nutrition.mjs'
+import { mergeCloudruNutritionEnv, parseBarcodeLoginHashes, prepareCloudruNutrition } from './configure-cloudru-nutrition.mjs'
 
 const base = 'DATABASE_HOST=10.70.10.67\nDATABASE_PORT=5432\nDATABASE_NAME=fit\nDATABASE_USER=fit_api\nDATABASE_SSL_MODE=require\nFIT_MEDIA_STORAGE_PROVIDER=cloudru\nFIT_AI_FUNCTIONS_ENABLED=false\nFIT_AI_SUMMARY_GENERATION_DISABLED=true\nCORS_ALLOWED_ORIGINS=https://fit-training.ru\nCLOUDRU_MEDIA_KEY_SECRET=synthetic\n'
 
@@ -21,6 +21,14 @@ test('Cloud.ru enable fails closed for malformed, substituted or differently siz
   }
   assert.throws(() => mergeCloudruNutritionEnv(base, '', 'unknown'))
   assert.throws(() => mergeCloudruNutritionEnv(base.replace('fit_api', 'fit_owner'), '', 'disable'))
+})
+
+test('Cloud.ru accepts at most three unique barcode hashes', () => {
+  const first = 'a'.repeat(64), second = 'b'.repeat(64), third = 'c'.repeat(64)
+  assert.deepEqual(parseBarcodeLoginHashes(`${first},${second},${third}`), [first, second, third])
+  for (const barcodeLoginHash of ['', `${first},${first}`, `${first},${second},${third},${'d'.repeat(64)}`, 'bad']) {
+    assert.throws(() => parseBarcodeLoginHashes(barcodeLoginHash))
+  }
 })
 
 test('nutrition release uses green exact current main, existing runner, private staging, schema probe and rollback', () => {
