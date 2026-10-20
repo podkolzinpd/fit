@@ -12,7 +12,7 @@ import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { AsyncView, Coachmark, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, Skeleton, Switch, useConfirm } from '../../shared/ui'
 import { nutritionDecimal, readNutritionForm, removeNutritionForm, storeNutritionForm, type NutritionForm } from './draft'
 import { parseFoodText } from './free-text'
-import { BarcodeScanner } from './BarcodeScanner'
+import { BarcodePhotoPicker, BarcodeScanner } from './BarcodeScanner'
 import './nutrition.css'
 import { ChatStartButton } from '../chat'
 import { VoiceInputButton } from '../voice-input'
@@ -105,7 +105,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
   const [portionMode, setPortionMode] = useState(false), [portionCount, setPortionCount] = useState('1')
   const parsedSearch = useRef<string | null>(null)
-  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [scannerOpen, setScannerOpen] = useState(false)
+  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [scannerOpen, setScannerOpen] = useState(false), [manualBarcodeEntry, setManualBarcodeEntry] = useState(false)
   const cache = useQueryClient(), active = useRef(true), [confirm, dialog] = useConfirm()
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   useEffect(() => {
@@ -206,10 +206,12 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
             return () => form.setValue('search', previous)
           }}
         />}
-        {actor?.experiments?.nutritionBarcode === true && <section className="nutrition-barcode" aria-label="Штрихкод продукта"><Field label="Штрихкод"><input inputMode="numeric" value={barcode} maxLength={13} placeholder="8 или 13 цифр" onChange={(event) => setBarcode(event.target.value)} /></Field>
-          <div className="nutrition-barcode-actions"><button type="button" className="secondary" disabled={barcodePending} aria-busy={barcodePending} onClick={() => void lookupBarcode()}>{barcodePending ? 'Ищем…' : 'Найти по штрихкоду'}</button>
-            <button type="button" className="secondary" disabled={barcodePending} onClick={() => setScannerOpen(true)}>Сканировать камерой</button></div>
-          {scannerOpen && <BarcodeScanner onClose={() => setScannerOpen(false)} onDetected={(code) => { setBarcode(code); setScannerOpen(false); void lookupBarcode(code) }} />}
+        {actor?.experiments?.nutritionBarcode === true && <section className="nutrition-barcode" aria-label="Штрихкод продукта">
+          <div className="nutrition-barcode-actions"><button type="button" className="secondary" disabled={barcodePending} onClick={() => { setBarcodeError(null); setScannerOpen(true) }}>Сканировать камерой</button>
+            <BarcodePhotoPicker onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); void lookupBarcode(code) }} onUnrecognized={() => { setManualBarcodeEntry(true); setBarcodeError('На фото не найден EAN‑8 или EAN‑13. Введите штрихкод вручную.') }} /></div>
+          {manualBarcodeEntry && <><Field label="Штрихкод"><input inputMode="numeric" value={barcode} maxLength={13} placeholder="8 или 13 цифр" onChange={(event) => setBarcode(event.target.value)} /></Field>
+            <button type="button" className="secondary" disabled={barcodePending} aria-busy={barcodePending} onClick={() => void lookupBarcode()}>{barcodePending ? 'Ищем…' : 'Найти по штрихкоду'}</button></>}
+          {scannerOpen && <BarcodeScanner onClose={() => setScannerOpen(false)} onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); setScannerOpen(false); void lookupBarcode(code) }} />}
           {barcodeError && <p className="muted" role="status">{barcodeError}</p>}
         </section>}
         {parsedFood.length > 1 && <section className="nutrition-parsed-food" aria-label="Разобранная еда"><p className="muted">Выберите продукт по очереди — вес уже подставится. КБЖУ не угадываем.</p>
