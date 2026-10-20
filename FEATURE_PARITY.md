@@ -1,5 +1,8 @@
 # Feature parity с trainer-app
 
+20.10 — три legacy AI HTTP API закрыты по решению владельца; native AI и
+Cloud Functions сохранены. Приёмка: `docs/design/REMOVE_LEGACY_AI_API_20261020.md`.
+
 20.10 — Supabase linking retired по решению владельца: UI/gate/transport/API
 удалены; существующие Yandex identities и обычный PKCE/app-session/native
 registration сохранены. Старый callback очищается без обмена кода и даёт
