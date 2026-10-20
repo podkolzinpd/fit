@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { FallbackNutritionCatalog, isEanBarcode, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
+import { FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -65,6 +65,15 @@ describe('read-only public food source', () => {
     const json = await response({ items: [fixture(verifiedValues)] }).text()
     const call = vi.fn<typeof fetch>().mockResolvedValue(new Response(`event: message\ndata: ${json}\n\n`))
     expect((await new VkusvillNutritionCatalog(call).search('курица', 1)).foods).toHaveLength(1)
+  })
+  it('does not return loosely associated retailer goods as a food match', async () => {
+    const call = vi.fn<typeof fetch>().mockResolvedValue(response({ items: [
+      fixture(verifiedValues, 'Зефир на сиропе топинамбура в молочном шоколаде'),
+      fixture(verifiedValues, 'Глазунья из двух яиц'),
+    ] }))
+    await expect(new VkusvillNutritionCatalog(call).search('глазунья', 1)).resolves.toMatchObject({ foods: [{ name: 'Глазунья из двух яиц' }] })
+    expect(isRelevantCatalogSearch('яичница', 'Оладьи на кефире')).toBe(false)
+    expect(isRelevantCatalogSearch('куриная грудка', 'Филе куриной грудки')).toBe(true)
   })
   it.each([new Response('private upstream body', { status: 429 }), new Response('{}'), new Response('<html>')])(
     'reports source errors safely, never as empty results', async (upstream) => {

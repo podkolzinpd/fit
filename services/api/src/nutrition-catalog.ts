@@ -115,6 +115,24 @@ function stableCatalogId(namespace: string, sourceId: string, name: string, calo
     numericId: Number.parseInt(hex.slice(0, 12), 16) }
 }
 
+function foodWords(value: string): string[] {
+  return value.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').match(/[\p{L}\p{N}]+/gu) ?? []
+}
+
+/**
+ * The retailer endpoint sometimes returns loosely-associated goods (for
+ * example, confectionery for "глазунья"). It is useful as a coverage
+ * fallback, but it must never masquerade as an exact food match.
+ */
+export function isRelevantCatalogSearch(query: string, foodName: string): boolean {
+  const queryWords = foodWords(query).filter(word => word.length >= 3)
+  if (queryWords.length === 0) return true
+  const nameWords = foodWords(foodName)
+  const stem = (word: string) => word.slice(0, Math.min(word.length, 5))
+  if (queryWords.length === 1) return stem(nameWords[0] ?? '') === stem(queryWords[0]!)
+  return queryWords.every(word => nameWords.some(candidate => stem(candidate) === stem(word)))
+}
+
 export function parsePerekFood(value: unknown): CatalogFood | null {
   const product = object(value), per100 = object(product?.per100)
   const sourceId = typeof product?.id === 'string' ? product.id : ''
@@ -241,7 +259,7 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
       mode: 'custom', fields: ['id', 'name', 'properties'],
     })
     if (!Array.isArray(data.items)) throw new NutritionCatalogUnavailableError()
-    const foods = data.items.map(parseCatalogFood).filter((food): food is CatalogFood => food !== null)
+    const foods = data.items.map(parseCatalogFood).filter((food): food is CatalogFood => food !== null && isRelevantCatalogSearch(query, food.name))
     return { foods, hasMore: data.items.length === 10 }
   }
 
