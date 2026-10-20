@@ -95,6 +95,16 @@ Live-механику не переделываем: оригинальные п
 
 ## Preflight и evidence (добавления; исходный план выше не изменяется)
 
+PR3 integration: actual main `1662bede` после merge PR1743. Полное дерево
+PR2 head3f848bc0 равно дереву actualmain1662bede. После clean rebase PR3
+полное дерево равно локально проверенному18abd27f: runtime, тесты, build inputs
+и источники SVG не изменились. Поэтому fullcheck2787frontend/1453API+185standard
+DB skips/build,32browser+1private diagnostic относятся к тому же коду; повтор
+без нового сигнала не нужен. Ниже обновлены только статусы/доказательства.
+Свежий exact-head CI на actualmain обязателен, PR3 merge ждёт production/native2.
+PR1 полностью выпущен: mainCI39489534388, Cloud.ru39494214530,
+public212/212+health/compiled/frozen, native213/213/install/launch passed.
+
 PR2 integration: actual main `c3a58c90` после merge PR1742; собственные два
 calendar-коммита перенесены без конфликтов, исходный план не изменён.
 Переиспользуем существующий DatePicker и родительские date/time/draft/save;
@@ -126,9 +136,9 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 
 | Этап | Видимый результат | Проверка | Статус |
 | --- | --- | --- | --- |
-| PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12 оба движка375/390/430/1440+negative; private visual1/1; check exit0 frontend2779/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
-| PR 2 | source date header/month/relative date | unit18/18; routes16/16; calendar6/6; private cancel/apply/time proof1/1; check exit0 frontend2780/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
-| PR 3 | ясные headings, purple selection/CTA | existing picker tests + route | запланирован |
+| PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12; fresh check2785frontend/1453API+185standardDBskip/build; exact CI/mainCI/Cloud.ru/public212/native213 passed | выпущен в original fixed2 |
+| PR 2 | source date header/month/relative date | unit18/18; source/client routes20/20; calendar6/6; private cancel/apply/time1/1; fresh check2786frontend/1453API+185standardDBskip/build; exact CI39489962668 success | слит1662bede; production/native проверяются |
+| PR 3 | ясные headings, purple selection/CTA | picker64/64; integrated routes32/32; stable source visual1/1; fresh check2787frontend/1453API+185standardDBskip/build; дерево actualmain integration идентично proof18abd27f | локально проверен; fresh CI/release впереди |
 | PR 4 | purple filters, badges, reset | existing picker tests + route | запланирован |
 
 PR1: отдельный диагностический asset-test первоначально ожидал имя файла в
@@ -137,6 +147,23 @@ PR1: отдельный диагностический asset-test первона
 ради теста не менялся. Первый browser-запуск без harness-флага был skipped,
 не засчитывается; финальный12/12 выполнен с FIT_SCHEDULE_V2_VISUAL=1.
 Полный inventory/SHA256 не обновлялся: shared/spec diff получает full CI.
+
+PR3 preflight: integrated31572014, main0e07a888, trainer dark fixed2,
+`/workouts/new`→catalog; baseline1/1 и source frame2515,2676 просмотрены.
+Уже работают recent sources/order/dedup/multiselect/create/retry; переиспользуем
+ExercisePicker и original icons/--lime-pink. Меняем только source-state markup,
+названия и scoped styles. Не проверено: physical iPhone/OAuth/production ветки.
+Глобальные client/legacy labels/selection сохраняются, проверены обоими unit
+вариантами. Рядом с центральной140×60/r20 CTA сохранены «Очистить» и secondary
+create44 как продуктовые адаптации: создание/очистка не теряются, верхний toolbar
+не меняет высоту после выбора. Visually40px circle отдельно от hit44.
+Тест первоначально ожидал повторное «Применить» после Reset, но существующий
+resetFilters уже возвращает к списку; исправлен тест, обработчик не менялся.
+Старый общий pill-selector перекрывал r20; scoped CSS усилен, финальные8/8
+проверяют effective geometry/color, не только наличие класса. WebKit snapshot
+после двух paint frames подтверждает шапку/toolbar: промежуточный снимок не
+принят за продуктовый дефект. Source semantic map добавлен в общий дизайн-код
+и JSON-индекс; raw SVG/коммерческий пакет не публикуются.
 
 PR2 preflight: локальный integrated e153ce8e, main0e07a888, trainer dark fixed2,
 `/workouts/new?client=fixture&date=2026-09-24`: baseline1/1 с проверенными
