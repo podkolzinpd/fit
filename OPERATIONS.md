@@ -1357,7 +1357,12 @@ media/legacy functions/migration/rollback и этой задачей не уда
 Native AI routes и model configuration прежние. Исходники Cloud Functions,
 их shared adapters, prompts и deploy workflows сохранены. Supabase credentials
 не удалять: они ещё нужны legacy media/functions/tooling. CORS legacy header
-остаётся нужен media bridge. Старые explicit local legacy API overrides получают404.
+остаётся нужен media bridge. Frontend transport к этим трём API удалён. `VITE_YANDEX_LEGACY_FUNCTIONS_API_BASE_URL`
+сохранён для media bridge; при заданном валидном override legacy AI generation
+завершается локальной ошибкой без HTTP/refresh и без переключения на Cloud Function.
+Без override прежний прямой Cloud Function-путь сохранён. Native app-session имеет
+приоритет и не зависит от этого override. Legacy diagnostics закрыта без сети;
+native diagnostics не менялась.
 
 Stage API CORS allowlist обязан содержать production web origin, точный
 `capacitor://localhost` для iOS и точный `https://localhost` для Android.
