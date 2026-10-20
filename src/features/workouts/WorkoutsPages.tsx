@@ -3385,6 +3385,10 @@ export function LiveWorkoutPage() {
       ...(byTimer ? { timerConfirmed: true as const } : {}),
     }
     liveSetAutosave.clear(set.id)
+    // Засчёт убирает отсчёт из строки; WebKit шлёт форме blur при исчезновении
+    // нажатой кнопки, и автосохранение записало бы плановое время поверх факта.
+    skipBlurForSet.current = set.id
+    window.setTimeout(() => { if (skipBlurForSet.current === set.id) skipBlurForSet.current = null }, 0)
     prepareGong()
     confirm.mutate({ set, draft })
     setPhaseNotice({ kind: 'work-confirmed', setId: set.id, exerciseId: exercise.id, seconds, shownAt: Date.now() })
