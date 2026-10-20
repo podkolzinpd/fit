@@ -7,6 +7,7 @@ import type { WorkoutExerciseDraft } from '../../shared/domain'
 import { localDate } from '../../shared/local-date'
 import { adjustWorkoutLoad, clearWorkoutLoad, roundToStep, WorkoutExerciseEditor } from './WorkoutExerciseEditor'
 import { CoachPlanTimeField } from './CoachPlanTimeField'
+import { setWorkoutTimeWheel } from '../../app/workout-time-input'
 
 const exercises: WorkoutExerciseDraft[] = [{
   source: 'system', ref: 'squat', name: 'Присед', muscleGroup: 'legs', inputKind: 'strength', position: 0,
@@ -71,6 +72,23 @@ function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
 }
 
 describe('workout exercise editor rules', () => {
+  it.each([false, true])('client appearance preserves the explicit time-wheel preference %s', (wheel) => {
+    setWorkoutTimeWheel(wheel)
+    const onChange = vi.fn()
+    const view = render(<WorkoutExerciseEditor referenceAppearance exercises={[{ ...exercises[0]!, ref: 'plank', name: 'Планка', inputKind: 'duration', sets: [{ position: 0, durationSec: 90 }] }]} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
+    try {
+      if (wheel) expect(screen.getByRole('button', { name: 'Время, подход 1: 1:30' })).toBeVisible()
+      else {
+        const seconds = screen.getByLabelText('Время, подход 1: секунды')
+        expect(seconds).toHaveValue('30')
+        expect(screen.queryByRole('button', { name: 'Время, подход 1: 1:30' })).not.toBeInTheDocument()
+        fireEvent.change(seconds, { target: { value: '42' } })
+        fireEvent.blur(seconds)
+        expect(onChange.mock.calls.at(-1)?.[0]).toEqual([expect.objectContaining({ sets: [expect.objectContaining({ durationSec: 102 })] })])
+      }
+    } finally { view.unmount(); setWorkoutTimeWheel(false) }
+  })
+
   it('reference clock uses one native minute-precision input, clears inline and never submits on Enter', async () => {
     const submit = vi.fn((event: React.FormEvent) => event.preventDefault())
     function Clock() {
