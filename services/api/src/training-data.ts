@@ -46,6 +46,7 @@ interface WorkoutRow extends QueryResultRow {
   origin: 'manual' | 'ai'
   favorite_title: string | null
   prep_seconds: number | null
+  execution_mode: 'timer' | 'manual' | null
   title: string | null
   training_format: 'self' | 'with_trainer'
   started_by: string | null
@@ -143,6 +144,7 @@ interface WorkoutSetRow extends QueryResultRow {
   fact_duration_source: 'unknown' | 'planned' | 'entered'
   fact_distance_source: 'unknown' | 'planned' | 'entered'
   fact_rpe_source: 'unknown' | 'planned' | 'entered'
+  timer_confirmed: boolean
   confirmed_at: Date | null
   version: string
 }
@@ -180,6 +182,8 @@ export interface PilotWorkoutSet {
     rpe: number | null
   }
   metricSources?: { duration: 'unknown' | 'planned' | 'entered'; distance: 'unknown' | 'planned' | 'entered'; rpe: 'unknown' | 'planned' | 'entered' }
+  /** Засчитан таймером и ещё не подтверждён человеком (YAFIT-627). */
+  timerConfirmed?: boolean
   confirmedAt: string | null
   version: number
 }
@@ -214,6 +218,7 @@ export interface PilotWorkout {
   origin: 'manual' | 'ai'
   favoriteTitle: string | null
   prepSeconds?: number | null
+  executionMode?: 'timer' | 'manual'
   title?: string | null
   trainingFormat?: 'self' | 'with_trainer'
   startedBy: string | null
@@ -328,6 +333,7 @@ export async function readAccessibleTrainingData(
         workout.origin,
         workout.favorite_title,
         workout.prep_seconds,
+        workout.execution_mode,
         workout.title,
         workout.training_format,
         workout.started_by,
@@ -424,7 +430,7 @@ export async function readAccessibleTrainingData(
           fact_weight_kg, fact_reps, fact_duration_min, fact_duration_sec,
           fact_distance_km, fact_rpe,
           fact_duration_source, fact_distance_source, fact_rpe_source,
-          confirmed_at, version
+          timer_confirmed, confirmed_at, version
         from public.workout_sets
         where workout_exercise_id = any($1::uuid[])
         order by workout_exercise_id, position, id
@@ -457,6 +463,7 @@ export async function readAccessibleTrainingData(
         distance: row.fact_distance_source,
         rpe: row.fact_rpe_source,
       },
+      ...(row.timer_confirmed ? { timerConfirmed: true } : {}),
       confirmedAt: row.confirmed_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'workout set version'),
     })
@@ -515,6 +522,7 @@ export async function readAccessibleTrainingData(
         origin: row.origin,
         favoriteTitle: row.favorite_title,
         ...(row.prep_seconds === null || row.prep_seconds === undefined ? {} : { prepSeconds: row.prep_seconds }),
+        ...(row.execution_mode === null || row.execution_mode === undefined ? {} : { executionMode: row.execution_mode }),
         title: row.title ?? null,
         trainingFormat: row.training_format,
         startedBy: row.started_by,

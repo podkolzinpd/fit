@@ -451,7 +451,12 @@ export interface WorkoutDraft {
   trainingFormat?: WorkoutTrainingFormat
   /** Обратный отсчёт «Подготовка» перед первым подходом Live; null — выключено, отсутствие ключа сохраняет текущее значение. */
   prepSeconds?: number | null
+  /** Кто ведёт Live (YAFIT-627); отсутствие ключа сохраняет текущее значение. */
+  executionMode?: WorkoutExecutionMode
 }
+
+/** «timer» — таймер ведёт подходы со временем и засчитывает их на нуле; «manual» — человек подтверждает сам. */
+export type WorkoutExecutionMode = 'timer' | 'manual'
 
 export type WorkoutTrainingFormat = 'self' | 'with_trainer'
 
@@ -488,12 +493,16 @@ export interface LiveSetDraft {
   /** Фактическая субъективная нагрузка: 6–10, шаг 0,5. */
   rpe?: number
   metricSources?: WorkoutMetricSources
+  /** Черновик сохраняет таймер перед автоподтверждением; любое другое сохранение снимает пометку. */
+  timerConfirmed?: true
 }
 
 export interface WorkoutSet extends WorkoutSetDraft {
   id: UUID
   fact: LiveSetDraft
   metricSources?: WorkoutMetricSources
+  /** Засчитан таймером и ещё не подтверждён человеком. */
+  timerConfirmed?: boolean
   confirmedAt: string | null
   version: number
 }
@@ -536,6 +545,8 @@ export interface Workout {
   trainingFormat?: WorkoutTrainingFormat
   /** Обратный отсчёт «Подготовка» перед первым подходом Live; null/отсутствие — без подготовки. */
   prepSeconds?: number | null
+  /** Кто ведёт Live; отсутствие у старых тренировок читается как «manual». */
+  executionMode?: WorkoutExecutionMode
   startedBy?: UUID | null
   completedBy?: UUID | null
   workoutDate: LocalDate

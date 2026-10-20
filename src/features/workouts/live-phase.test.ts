@@ -1,18 +1,45 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { claimLiveAutostart, elapsedWorkSeconds, formatPrepOption, livePhasePrimaryAction, restoreLivePhase, storeLivePhase, timedSetSeconds } from './live-phase'
+import { claimLiveAutostart, DEFAULT_EXECUTION_MODE, effectiveExecutionMode, elapsedWorkSeconds, formatPrepOption, personWorkSeconds, livePhasePrimaryAction, restoreLiveExecutionMode, restoreLivePhase, storeLiveExecutionMode, storeLivePhase, timedSetSeconds, timerAssumesPlannedValues } from './live-phase'
 
 describe('live phase timer', () => {
   beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
 
-  it('times only unconfirmed duration sets with a planned duration', () => {
-    expect(timedSetSeconds({ inputKind: 'duration' }, { durationSec: 45, confirmedAt: null })).toBe(45)
-    expect(timedSetSeconds({ inputKind: 'duration' }, { durationMin: 1.5, confirmedAt: null })).toBe(90)
-    expect(timedSetSeconds({ inputKind: 'duration' }, { confirmedAt: null })).toBeNull()
-    expect(timedSetSeconds({ inputKind: 'duration' }, { durationSec: 45, confirmedAt: '2026-10-06T10:00:00Z' })).toBeNull()
-    expect(timedSetSeconds({ inputKind: 'reps' }, { durationSec: 60, confirmedAt: null })).toBe(60)
-    expect(timedSetSeconds({ inputKind: 'reps' }, { confirmedAt: null })).toBeNull()
-    expect(timedSetSeconds({ inputKind: 'strength' }, { durationSec: 45, confirmedAt: null })).toBeNull()
-    expect(timedSetSeconds({ inputKind: 'distance' }, { durationSec: 600, confirmedAt: null })).toBeNull()
+  // В режиме «Ведёт таймер» время в плане главнее типа упражнения (YAFIT-627).
+  it('times every unconfirmed set with a planned time, whatever the exercise type', () => {
+    expect(timedSetSeconds({ durationSec: 45, confirmedAt: null })).toBe(45)
+    expect(timedSetSeconds({ durationMin: 1.5, confirmedAt: null })).toBe(90)
+    expect(timedSetSeconds({ confirmedAt: null })).toBeNull()
+    expect(timedSetSeconds({ durationSec: 0, confirmedAt: null })).toBeNull()
+    expect(timedSetSeconds({ durationSec: 45, confirmedAt: '2026-10-06T10:00:00Z' })).toBeNull()
+  })
+
+  // «Веду сам»: после нуля время идёт дальше, засчитывается фактическое, а не план.
+  it('records the actual time of a person-led set past the planned zero', () => {
+    expect(personWorkSeconds({ startedAt: 0 }, 23_400)).toBe(23)
+    expect(personWorkSeconds({ startedAt: 0 }, 200)).toBe(1)
+  })
+
+  it('asks to check only sets where the timer took values it does not measure', () => {
+    expect(timerAssumesPlannedValues({})).toBe(false)
+    expect(timerAssumesPlannedValues({ reps: 15 })).toBe(true)
+    expect(timerAssumesPlannedValues({ weightKg: 0 })).toBe(true)
+    expect(timerAssumesPlannedValues({ distanceKm: 1 })).toBe(true)
+  })
+
+  it('defaults new and old workouts to the person leading them', () => {
+    expect(DEFAULT_EXECUTION_MODE).toBe('manual')
+    expect(effectiveExecutionMode(undefined, null)).toBe('manual')
+    expect(effectiveExecutionMode('timer', null)).toBe('timer')
+    expect(effectiveExecutionMode('timer', 'manual')).toBe('manual')
+  })
+
+  it('remembers the mode chosen in Live for this workout session only', () => {
+    expect(restoreLiveExecutionMode('w1')).toBeNull()
+    storeLiveExecutionMode('w1', 'manual')
+    expect(restoreLiveExecutionMode('w1')).toBe('manual')
+    expect(restoreLiveExecutionMode('w2')).toBeNull()
+    sessionStorage.setItem('fit:live-execution-mode:w3', 'auto')
+    expect(restoreLiveExecutionMode('w3')).toBeNull()
   })
 
   it('records the elapsed time on an early tap and stops at the plan', () => {

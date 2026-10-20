@@ -7316,3 +7316,28 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .service-notice-close:focus-visible { outline:2px solid var(--accent-ring); outline-offset:-2px }
 .service-notice strong { font-size:15px; font-weight:700; color:var(--warning-fg) }
 .service-notice p { margin:0; font-size:14px; line-height:1.4; color:var(--fg) }
+
+/* Кто ведёт Live: таймер или человек (YAFIT-627). Тот же сегментный выбор, что «Как сохранить». */
+.live-mode-switch { display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-top:var(--space-2); padding:3px; border:1px solid var(--border); border-radius:13px; background:var(--surface) }
+.live-mode-switch button { min-height:44px; padding:8px 10px; border:0; border-radius:10px; background:transparent; color:var(--muted); box-shadow:none; font-weight:700 }
+.live-mode-switch button.active { background:var(--surface-raised); color:var(--fg) }
+.live-rest-sheet .live-mode-switch { margin:0 0 var(--space-3) }
+/* Засчитанное таймером ждёт подтверждения на карточке упражнения. */
+.live-timer-pending { position:relative }
+.live-timer-pending > .workout-exercise-compact { padding-right:124px }
+.live-timer-confirm { position:absolute; top:50%; right:0; min-height:44px; padding:0 12px; border:1px solid var(--warning-border); border-radius:10px; background:var(--warning-surface); color:var(--warning-fg); box-shadow:none; font-size:13px; font-weight:600; transform:translateY(-50%) }
+.live-set-check.done.timer { color:var(--warning-fg) }
+.live-set-check.done.timer svg { width:18px; height:18px }
+/* Опция «Таймер сам ведёт подходы» в конструкторе: одна строка с переключателем и подписью. */
+.workout-execution-mode { display:grid; gap:2px; margin-top:var(--space-2) }
+.workout-execution-mode .switch-row { min-height:48px; padding:6px 0 }
+.workout-execution-mode small { color:var(--muted); font-size:12px; line-height:1.35 }
+/* «Веду сам»: старт и отсчёт подхода в ячейке времени, поле остаётся для ручного ввода. */
+.live-set-time-cell { position:relative; display:block; min-width:0 }
+.live-set-time-cell:has(.live-set-work-start) .live-set-input { padding-right:44px }
+.live-set-work-start { position:absolute; top:50%; right:0; width:44px; height:44px; min-height:44px; display:grid; place-items:center; padding:0; border:0; border-radius:999px; background:transparent; color:var(--accent-strong); box-shadow:none; transform:translateY(-50%) }
+.live-set-work-start svg { width:20px; height:20px }
+.live-set-work-start:disabled { color:var(--muted); opacity:.5 }
+.live-set-work-timer { position:absolute; inset:0; width:100%; min-height:44px; padding:0 6px; border:1px solid var(--accent-strong); border-radius:inherit; background:var(--surface-raised); color:var(--fg); box-shadow:none; font-size:17px; font-weight:700; font-variant-numeric:tabular-nums }
+.live-set-work-timer.over { border-color:var(--warning-border); background:var(--warning-surface); color:var(--warning-fg) }
+.workout-timer-confirmed-note { display:block; margin-top:2px; color:var(--warning-fg); font-size:13px; font-weight:600 }

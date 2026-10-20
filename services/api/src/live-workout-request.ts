@@ -14,6 +14,8 @@ export interface LiveSetDraft {
   distanceKm: number | null
   rpe: number | null
   metricSources?: { duration: 'unknown' | 'planned' | 'entered'; distance: 'unknown' | 'planned' | 'entered'; rpe: 'unknown' | 'planned' | 'entered' }
+  /** Черновик сохраняется таймером перед автоподтверждением (YAFIT-627). */
+  timerConfirmed?: true
 }
 
 export interface LiveSetRequest extends LiveOperationRequest {
@@ -147,6 +149,7 @@ export function readLiveSetRequest(body: unknown): LiveSetRequest | undefined {
   const validSource = (entry: unknown) => entry === 'unknown' || entry === 'planned' || entry === 'entered'
   if (draftInput.metricSources != null && (!sourceInput
     || !validSource(sourceInput.duration) || !validSource(sourceInput.distance) || !validSource(sourceInput.rpe))) return undefined
+  if (draftInput.timerConfirmed !== undefined && draftInput.timerConfirmed !== true) return undefined
   if (
     weightKg === undefined
     || reps === undefined
@@ -171,6 +174,7 @@ export function readLiveSetRequest(body: unknown): LiveSetRequest | undefined {
         distance: sourceInput.distance as 'unknown' | 'planned' | 'entered',
         rpe: sourceInput.rpe as 'unknown' | 'planned' | 'entered',
       } } : {}),
+      ...(draftInput.timerConfirmed === true ? { timerConfirmed: true as const } : {}),
     },
   }
 }

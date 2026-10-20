@@ -17,6 +17,7 @@ export interface WorkoutFormDraft {
   exercises: WorkoutDraft['exercises']
   trainingFormat?: WorkoutTrainingFormat
   prepSeconds?: number
+  executionMode?: 'timer' | 'manual'
 }
 
 function isDraft(value: unknown): value is WorkoutFormDraft {
@@ -37,6 +38,7 @@ function isDraft(value: unknown): value is WorkoutFormDraft {
     && Array.isArray(draft.exercises)
     && (draft.trainingFormat === undefined || draft.trainingFormat === 'self' || draft.trainingFormat === 'with_trainer')
     && (draft.prepSeconds === undefined || (Number.isInteger(draft.prepSeconds) && draft.prepSeconds >= 0 && draft.prepSeconds <= 600))
+    && (draft.executionMode === undefined || draft.executionMode === 'timer' || draft.executionMode === 'manual')
 }
 
 export function workoutFormDraftKey(userId: string, sourceId = 'new'): string {

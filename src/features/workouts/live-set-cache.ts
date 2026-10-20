@@ -22,7 +22,7 @@ export function applyLiveSetDraft(workout: Workout, setId: string, draft: LiveSe
     ...workout,
     exercises: workout.exercises.map((exercise) => ({
       ...exercise,
-      sets: exercise.sets.map((set) => set.id === setId ? { ...set, fact: { ...draft }, metricSources: draft.metricSources ?? set.metricSources, version } : set),
+      sets: exercise.sets.map((set) => set.id === setId ? { ...set, fact: draftFact(draft), metricSources: draft.metricSources ?? set.metricSources, timerConfirmed: draft.timerConfirmed === true, version } : set),
     })),
   }
 }
@@ -31,7 +31,14 @@ export function applyLiveSetDraft(workout: Workout, setId: string, draft: LiveSe
  * успел отдать серверную версию. Так быстрый переход между подходами не стирает
  * введённые числа из компактного представления. */
 export function setWithLocalDraft(set: WorkoutSet, draft: LiveSetDraft | undefined): WorkoutSet {
-  return draft ? { ...set, fact: { ...draft }, metricSources: draft.metricSources ?? set.metricSources } : set
+  return draft ? { ...set, fact: draftFact(draft), metricSources: draft.metricSources ?? set.metricSources, timerConfirmed: draft.timerConfirmed === true } : set
+}
+
+// Пометка таймера относится к подходу, а не к фактическим значениям.
+function draftFact(draft: LiveSetDraft): LiveSetDraft {
+  const { timerConfirmed: _timer, ...fact } = draft
+  void _timer
+  return fact
 }
 
 function carriedWeightSource(exercise: Pick<Workout['exercises'][number], 'sets'>, set: WorkoutSet): WorkoutSet | undefined {
@@ -86,6 +93,8 @@ export function sameLiveSetDraft(left: LiveSetDraft, right: LiveSetDraft): boole
     && left.durationMin === right.durationMin
     && left.distanceKm === right.distanceKm
     && left.rpe === right.rpe
+    // «Всё верно» с теми же числами снимает пометку таймера — это другое сохранение.
+    && (left.timerConfirmed === true) === (right.timerConfirmed === true)
     && (!left.metricSources || !right.metricSources || (
       left.metricSources.duration === right.metricSources.duration
       && left.metricSources.distance === right.metricSources.distance
