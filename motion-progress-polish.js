@@ -343,6 +343,14 @@
     seek:(i,n=0)=>{stop();go(i,n);},
     transitionTo:(i,n=0)=>{stop();if(i!==index)return go(i,n);n=Math.max(0,Math.min(max[index]||0,n));apply(n,n!==step,step);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
+  // The approved channels are complete screens, followed by a separate event scene.
+  if(window.FIT_CHANNELS){
+    const events=window.FIT_CHANNELS.build(scope[7],scope[8]);
+    [scope[7],scope[8]].forEach(s=>{const i=all.indexOf(s);timeline[i]=[0];max[i]=0;labels[i]=[q('h2',s).textContent];});
+    const at=all.indexOf(scope[7])+1;
+    all.splice(at,0,events);slides.splice(at,0,events);
+    timeline.splice(at,0,[0]);max.splice(at,0,0);labels.splice(at,0,['Спорт объединяет']);
+  }
   // Appendix: retain the growth scene and its two stops, but move it out of the pitch.
   const growthIndex=all.indexOf(growth);
   while(timeline.length<all.length){timeline.push([0]);max.push(0);labels.push(['']);}
