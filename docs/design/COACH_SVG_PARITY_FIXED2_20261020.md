@@ -139,7 +139,7 @@ PR1 rebased cleanly от actualmain, исходный time-component diff сох
 | PR 1 | native time, пустое/заполненное/clear | component33/33; route12/12; fresh check2785frontend/1453API+185standardDBskip/build; exact CI/mainCI/Cloud.ru/public212/native213 passed | выпущен в original fixed2 |
 | PR 2 | source date header/month/relative date | unit18/18; source/client routes20/20; calendar6/6; private cancel/apply/time1/1; fresh check2786frontend/1453API+185standardDBskip/build; exact CI39489962668 success | слит1662bede; production/native проверяются |
 | PR 3 | ясные headings, purple selection/CTA | picker64/64; integrated routes32/32; stable source visual1/1; fresh check2787frontend/1453API+185standardDBskip/build; дерево actualmain integration идентично proof18abd27f | локально проверен; fresh CI/release впереди |
-| PR 4 | purple filters, badges, reset | picker64/64; routes16/16 (оба fixed2+negative trainer/client); stable visual1/1 | локальные целевые проверки пройдены; fullcheck/CI/release впереди |
+| PR 4 | purple filters, badges, reset | picker64/64; final routes24/24 (оба fixed2+negative trainer/client); stable visual1/1; final check exit0 frontend2781/API1451+184standardDBskip/build | локально проверен; CI/release впереди |
 
 PR1: отдельный диагностический asset-test первоначально ожидал имя файла в
 `img.src`, но Vite корректно встраивает этот SVG как data URI. Проверка исправлена:
