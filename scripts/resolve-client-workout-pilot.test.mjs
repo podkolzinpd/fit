@@ -48,3 +48,17 @@ test('profile inspection is current-main, bounded, private and does not change p
   assert.equal(blocks.length, 1)
   for (const block of blocks) assert.equal(spawnSync('bash', ['-n'], {input:block[1].split('\n').map(l => l.startsWith('          ') ? l.slice(10) : l).join('\n'),encoding:'utf8'}).status, 0)
 })
+
+// Execute the actual jq boundary, not just Bash syntax: a double-escaped
+// control class rejects every valid database configuration before PG is read.
+test('profile inspection accepts safe config and rejects controls and another database target', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/inspect-client-workout-pilot.yml', import.meta.url), 'utf8')
+  const filter = workflow.match(/jq -e '([\s\S]+?)' <<</)?.[1]
+  assert.ok(filter)
+  const config = { MIGRATION_DATABASE_HOST: '10.70.10.67', MIGRATION_DATABASE_PORT: '5432', MIGRATION_DATABASE_NAME: 'fit', MIGRATION_DATABASE_USER: 'fit_owner', MIGRATION_DATABASE_PASSWORD: 'synthetic-only-password' }
+  const accepted = value => spawnSync('jq', ['-e', filter], { input: JSON.stringify(value), encoding: 'utf8' }).status === 0
+  assert.equal(accepted(config), true)
+  for (const value of ['a\nvalue', 'a\u0000value', 'a\u007fvalue']) assert.equal(accepted({ ...config, MIGRATION_DATABASE_PASSWORD: value }), false)
+  for (const [key, value] of [['MIGRATION_DATABASE_HOST', '127.0.0.1'], ['MIGRATION_DATABASE_PORT', '5433'], ['MIGRATION_DATABASE_USER', 'another_owner'], ['MIGRATION_DATABASE_NAME', 'another_database'], ['MIGRATION_DATABASE_URL', 'postgres://synthetic']]) assert.equal(accepted({ ...config, [key]: value }), false)
+  assert.match(workflow, /uses: actions\/setup-node@v4\n\s+with:\n\s+node-version: 22/)
+})

@@ -147,6 +147,7 @@ export function AppLayout() {
     trainerScheduleV2Route ? 'trainer-schedule-v2-shell' : '',
     fitLimeShell ? 'fit-lime-shell fit-lime' : '',
     isCoachWorkoutRedesignEnabled(actor) ? 'coach-workout-reference' : '',
+    isCoachWorkoutRedesignEnabled(actor) || clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'workout-live-reference' : '',
     clientLimeShell ? 'fit-client-lime' : '',
     clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'client-workout-reference' : '',
     clientCompose ? 'client-workout-compose' : '',
