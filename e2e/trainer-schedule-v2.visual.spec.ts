@@ -2106,14 +2106,16 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) {
         screen: 'save', text: 'Жим гантелей сидя 2×10 — 30 кг', choices: {}, clientId,
         items: [{ line: 'Жим гантелей сидя 2×10 — 30 кг', exercise: { source: 'system', ref: 'dumbbell-shoulder-press', name: 'Жим гантелей сидя', muscleGroup: 'shoulders', inputKind: 'strength' },
           sets: [{ position: 0, weightKg: 30, reps: 10 }, { position: 1, weightKg: 30, reps: 10 }], hasValues: true }],
+        // Минус после отдыха — контракт режима «Веду сам», он же режим новой тренировки по умолчанию (YAFIT-627).
         recordMode: 'planned', workoutDate: '2026-10-08', startTime: '', prepSeconds: 0,
       }))
     }, { clientId, theme })
     await page.goto('/me?draft=rest-contract&view=save')
     const request = page.waitForRequest((request) => new URL(request.url()).pathname === '/v1/workouts' && request.method() === 'POST')
     await page.getByRole('button', { name: 'Запланировать тренировку', exact: true }).click()
-    const payload = (await request).postDataJSON() as { exercises: { restBetweenSetsSec: number }[] }
+    const payload = (await request).postDataJSON() as { executionMode: string; exercises: { restBetweenSetsSec: number }[] }
     expect(payload.exercises[0]!.restBetweenSetsSec).toBe(90)
+    expect(payload.executionMode).toBe('manual')
     await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}$`))
     await page.getByRole('button', { name: 'Начать тренировку', exact: true }).click()
     await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()

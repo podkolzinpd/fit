@@ -40,6 +40,17 @@ describe('applyLiveSetDraft', () => {
     expect(sameLiveSetDraft({}, local)).toBe(false)
   })
 
+  // «Всё верно» сохраняет те же числа без пометки таймера — это не дубль.
+  it('treats a timer-confirmed draft and the person’s acceptance as different saves', () => {
+    const byTimer = { durationSec: 45, timerConfirmed: true as const }
+    expect(sameLiveSetDraft({ durationSec: 45 }, byTimer)).toBe(false)
+    expect(sameLiveSetDraft(byTimer, { ...byTimer })).toBe(true)
+    const marked = applyLiveSetDraft(workout, 'set-1', byTimer, 2).exercises[0]!.sets[0]!
+    expect(marked).toMatchObject({ timerConfirmed: true, fact: { durationSec: 45 } })
+    expect(marked.fact).not.toHaveProperty('timerConfirmed')
+    expect(applyLiveSetDraft(workout, 'set-1', { durationSec: 45 }, 3).exercises[0]!.sets[0]!.timerConfirmed).toBe(false)
+  })
+
   it('carries the latest confirmed fact through the same planned-weight group', () => {
     const exercise = {
       ...workout.exercises[0]!,

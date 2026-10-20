@@ -43,6 +43,14 @@ describe('live workout request validation', () => {
       metricSources: { ...metricSources, duration: 'measured_by_watch' } } })).toBeUndefined()
   })
 
+  it('passes the timer confirmation marker only as an explicit true', () => {
+    expect(readLiveSetRequest({ operationId, expectedVersion: 4, draft: { durationSec: 45, timerConfirmed: true } })?.draft)
+      .toMatchObject({ timerConfirmed: true })
+    expect(readLiveSetRequest({ operationId, expectedVersion: 4, draft: { durationSec: 45 } })?.draft)
+      .not.toHaveProperty('timerConfirmed')
+    expect(readLiveSetRequest({ operationId, expectedVersion: 4, draft: { durationSec: 45, timerConfirmed: 'yes' } })).toBeUndefined()
+  })
+
   it.each([
     { operationId: 'not-a-uuid', expectedVersion: 1 },
     { operationId, expectedVersion: 0 },

@@ -87,7 +87,7 @@ test('finance/template visual matrices cannot grow back into full business chain
   assert.doesNotMatch(bodies.get('template'), /page\.clock|page\.reload|commands|\/health|rows\.size/)
 })
 
-test('real Playwright partitions preserve the 662-case union without duplicates in either engine', () => {
+test('real Playwright partitions preserve the 669-case union without duplicates in either engine', () => {
   const collect = (args) => {
     const result = spawnSync(process.execPath, [join(root, 'node_modules/playwright/cli.js'), ...args, '--list', '--reporter=json'],
       { cwd: root, encoding: 'utf8', timeout: 60000, env: { ...process.env, FIT_SCHEDULE_V2_VISUAL: '1' } })
@@ -103,7 +103,7 @@ test('real Playwright partitions preserve the 662-case union without duplicates 
   }
   for (const { project } of engines) {
     const full = collect(fitLimeArgs(project, 'full').args)
-    assert.equal(full.length, 662) // Previous658 + four independently-fixtured schedule halves of the full-editor cases.
+    assert.equal(full.length, 669) // Previous662 + seven YAFIT-627 Live execution-mode cases (timer/person, confirm, prep in person mode).
     for (const width of [375, 390, 430, 1440]) {
       assert.equal(full.filter(key => key.endsWith(`Figma workout Coach reference full editor ${width}`)).length, 1)
       assert.equal(full.filter(key => key.endsWith(`Figma workout Coach reference schedule guides and filters ${width}`)).length, 1)
@@ -136,7 +136,7 @@ test('real Playwright partitions preserve the 662-case union without duplicates 
     const scoped = collect(fitLimeArgs(project, 'scoped', 'critical,finance').args)
     const scopedParts = fitLimePartitions('scoped').flatMap(({ lane, shard }) =>
       collect(fitLimeArgs(project, 'scoped', 'critical,finance', lane, shard).args))
-    assert.equal(scoped.length, 104) // Existing100 + compact Live layout assertions.
+    assert.equal(scoped.length, 106) // Existing104 + two critical YAFIT-627 timer-mode Live cases.
     assert.equal(new Set(scopedParts).size, scopedParts.length)
     assert.deepEqual(scopedParts.sort(), scoped.sort())
   }

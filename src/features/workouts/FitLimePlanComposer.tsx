@@ -13,6 +13,9 @@ import { Coachmark } from '../../shared/ui'
 import { ClientPicker } from '../clients'
 import { hasWorkoutFormContent, quickPlanDraftChoices, retainQuickPlanDraft, removeWorkoutFormDraft, workoutFormDraftKey, writeWorkoutFormDraft, type WorkoutFormDraft } from './workout-form-draft'
 import { readTodayDraft, todayDraftKey, writeTodayDraft } from './today-draft'
+import { DEFAULT_EXECUTION_MODE } from './live-phase'
+import { WorkoutExecutionModeField } from './WorkoutExecutionModeField'
+import type { WorkoutExecutionMode } from '../../shared/domain'
 
 /** Figma's quick planned-workout entry. Live and completed entry stay separate. */
 export function FitLimePlanComposer({ date, returnTo, onClose, onBack }: {
@@ -85,6 +88,9 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   const [error, setError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [trainingFormat, setTrainingFormat] = useState(saved?.trainingFormat ?? 'with_trainer')
+  // Режим Live: явный выбор или по формату (с тренером — вручную, самостоятельно — таймер).
+  const [executionMode, setExecutionMode] = useState<WorkoutExecutionMode | undefined>(saved?.executionMode)
+  const effectiveMode = executionMode ?? DEFAULT_EXECUTION_MODE
   const submitting = useRef(false)
   const savedSuccessfully = useRef(false)
   const clients = useQuery({ queryKey: ['clients', false], queryFn: () => clientsRepository.list(false) })
@@ -93,6 +99,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
     clientId, title, requestId, workoutDate: selectedDate, startTime: time.start,
     endTime: time.end, notes: saved?.notes ?? '', stageId: saved?.stageId ?? '',
     recordCompleted: false, exercises: saved?.exercises ?? [], trainingFormat, prepSeconds: saved?.prepSeconds,
+    ...(executionMode ? { executionMode } : {}),
   }
   useEffect(() => {
     if (saved?.recordCompleted) {
@@ -105,7 +112,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
   useEffect(() => { if (!savedSuccessfully.current && !saved?.recordCompleted && hasWorkoutFormContent(draft, date)) writeWorkoutFormDraft(key, draft) }, [key, draft, date, saved?.recordCompleted])
   const mutation = useMutation({
     mutationFn: () => workouts.save({
-      ...draft, title: title.trim() || null, stageId: draft.stageId || null,
+      ...draft, executionMode: effectiveMode, title: title.trim() || null, stageId: draft.stageId || null,
       startTime: time.start || undefined, endTime: time.end || undefined,
     }),
     onSuccess: async (id) => {
@@ -150,6 +157,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       })),
       clientId, workoutDate: selectedDate, startTime: time.start, endTime: time.end,
       trainingFormat, title, requestId, sourceFormDraftKey: key, recordMode: 'planned',
+      ...(executionMode ? { executionMode } : {}),
     })
     const params = new URLSearchParams({ view: 'compose', entry, date: selectedDate, plan: requestId })
     navigate(`/today?${params}`, { state: { returnTo, planClientId: clientId, planStartTime: time.start, planEndTime: time.end, planTrainingFormat: trainingFormat, planTitle: title, planRequestId: requestId, sourceFormDraftKey: key } })
@@ -165,6 +173,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
       <button type="button" className={trainingFormat === 'with_trainer' ? 'active' : ''} aria-pressed={trainingFormat === 'with_trainer'} onClick={() => setTrainingFormat('with_trainer')}>С тренером</button>
       <button type="button" className={trainingFormat === 'self' ? 'active' : ''} aria-pressed={trainingFormat === 'self'} onClick={() => setTrainingFormat('self')}>Самостоятельно</button>
     </div>
+    <WorkoutExecutionModeField value={effectiveMode} onChange={setExecutionMode} />
     <div className="fit-lime-plan-input-methods">
       <button type="button" onClick={() => openComposer('voice')}><MicIcon />Надиктовать тренировку</button>
       <button type="button" onClick={() => openComposer('text')}><KeyboardIcon />Ввести текстом</button>

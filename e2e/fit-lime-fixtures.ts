@@ -178,7 +178,7 @@ export async function checkEditorAction(page: Page, screenshotPath: string) {
   await expect(page.getByRole('menu')).toHaveCount(0)
 }
 
-export function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
+export function restTimerWorkout(prepSeconds = 0, timed = false, executionMode?: 'timer' | 'manual'): MockWorkout {
   const exercise: WorkoutExercise = {
     id: '10000000-0000-4000-8000-000000000080', source: 'system', ref: timed ? 'plank' : 'squat',
     name: timed ? 'Планка' : 'Приседания', muscleGroup: 'legs', inputKind: timed ? 'duration' : 'strength', position: 0,
@@ -187,7 +187,7 @@ export function restTimerWorkout(prepSeconds = 0, timed = false): MockWorkout {
     sets: [82, 83].map((suffix, position) => ({ id: `10000000-0000-4000-8000-0000000000${suffix}`, position,
       ...(timed ? { durationSec: 3 } : { weightKg: 20, reps: 10 }), fact: {}, confirmedAt: null, version: 1 })),
   }
-  return { ...workout, status: 'in_progress', startedAt: '2026-10-08T09:00:00Z', ...(prepSeconds > 0 ? { prepSeconds } : {}), exercises: [exercise] }
+  return { ...workout, status: 'in_progress', startedAt: '2026-10-08T09:00:00Z', ...(prepSeconds > 0 ? { prepSeconds } : {}), ...(executionMode ? { executionMode } : {}), exercises: [exercise] }
 }
 
 export const workout = {
@@ -289,6 +289,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       'missed-workout-actions-2026-08',
       'live-timer-2026-09',
       'live-phase-timer-2026-10',
+      'live-timer-mode-2026-10',
       'coach-workout-gestures-2026-10',
       'coach-live-number-gestures-2026-10',
       'coach-live-set-swipe-2026-10-16',
@@ -550,12 +551,18 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       body = { set: { version: workouts.find((item) => item.id === workoutId)!.version } }
     } else if (/^\/v1\/workout-sets\/[0-9a-f-]+\/(draft|confirm)$/.test(url.pathname)) {
       const id = url.pathname.split('/')[3]
-      const command = route.request().postDataJSON() as { expectedVersion: number; draft?: { reps?: number; weightKg?: number } }
+      const command = route.request().postDataJSON() as { expectedVersion: number; draft?: { reps?: number; weightKg?: number; timerConfirmed?: true } }
       const confirmed = url.pathname.endsWith('/confirm')
       if (confirmed && failFirstSetConfirm) { failFirstSetConfirm = false; await route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }); return }
       workouts = workouts.map((item) => ({ ...item, exercises: item.exercises.map((exercise) => ({ ...exercise,
-        sets: exercise.sets.map((set) => set.id === id ? { ...set, fact: command.draft ?? set.fact,
-          confirmedAt: confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 } : set),
+        sets: exercise.sets.map((set) => {
+          if (set.id !== id) return set
+          // Как сервер: пометку ставит только черновик таймера, любое другое сохранение снимает.
+          const { timerConfirmed: previousTimer, ...rest } = set as typeof set & { timerConfirmed?: true }
+          const timerConfirmed = command.draft ? command.draft.timerConfirmed === true : previousTimer === true
+          return { ...rest, fact: command.draft ?? set.fact, ...(timerConfirmed ? { timerConfirmed: true as const } : {}),
+            confirmedAt: confirmed ? '2026-09-24T09:01:00Z' : set.confirmedAt, version: command.expectedVersion + 1 }
+        }),
       })) }))
       body = { set: { version: command.expectedVersion + 1 } }
     } else if (/^\/v1\/workouts\/[0-9a-f-]+\/blocks\/[0-9a-f-]+\/move$/.test(url.pathname) && route.request().method() === 'POST') {
@@ -624,7 +631,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         return
       }
       const completed = url.pathname.endsWith('/completed')
-      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
+      const draft = route.request().postDataJSON() as { workoutDate: string; startTime?: string | null; endTime?: string | null; title?: string | null; trainingFormat?: 'self' | 'with_trainer'; prepSeconds?: number; executionMode?: 'timer' | 'manual'; actualDurationSec?: number | null; exercises?: WorkoutExerciseDraft[] }
       lastSavedStartTime = draft.startTime ?? null
       const exercises: WorkoutExercise[] = (draft.exercises ?? []).map((exercise, index) => ({ ...exercise,
         id: `10000000-0000-4000-8000-${String(100 + index).padStart(12, '0')}`, blockId: `10000000-0000-4000-8000-${String(200 + index).padStart(12, '0')}`,
@@ -633,7 +640,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
         sets: exercise.sets.map((set, setIndex) => ({ ...set, id: `10000000-0000-4000-8000-${String(300 + index * 10 + setIndex).padStart(12, '0')}`, fact: completed ? set : {}, confirmedAt: completed ? '2026-09-24T12:00:00Z' : null, version: 1 })),
       }))
       workouts = [...workouts.filter((item) => item.id !== newWorkoutId), { ...workout, exercises, trainingFormat: draft.trainingFormat, id: newWorkoutId, title: draft.title, workoutDate: draft.workoutDate, startTime: draft.startTime ?? null, endTime: draft.endTime ?? null,
-        createdBy: profileId, status: completed ? 'done' : 'planned', ...(draft.prepSeconds ? { prepSeconds: draft.prepSeconds } : {}), actualDurationSec: draft.actualDurationSec,
+        createdBy: profileId, status: completed ? 'done' : 'planned', ...(draft.prepSeconds ? { prepSeconds: draft.prepSeconds } : {}), ...(draft.executionMode ? { executionMode: draft.executionMode } : {}), actualDurationSec: draft.actualDurationSec,
         completedAt: completed ? '2026-09-24T12:00:00Z' : null }]
       body = { workout: { id: newWorkoutId } }
     } else if (url.pathname === `/v1/workouts/${workoutId}` && route.request().method() === 'PUT') {

@@ -96,3 +96,14 @@
   .fit-lime-shell.live-identity .live-workout-page { padding-inline: 16px }
 }
 .phone-frame.fit-lime-shell.live-identity .workout-cta { border-radius: 999px; font-weight: 500; }
+/* YAFIT-627: режим ведения в шторке таймера и подтверждение засчитанного таймером.
+   «Всё верно» — подтверждение фактов, а не завершение с потерей, поэтому акцент, не danger. */
+.fit-lime-shell .live-mode-switch { border-color: var(--lime-divider); background: var(--lime-surface); }
+.fit-lime-shell .live-mode-switch button { color: var(--lime-text-secondary); }
+.fit-lime-shell .live-mode-switch button.active { background: var(--lime-accent); color: var(--lime-text-on-accent); }
+.fit-lime-shell.live-identity .finish-confirm.timer-review .workout-cta[data-variant='primary'] {
+  border-color: var(--lime-accent);
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+.fit-lime-shell .live-timer-confirm { border-color: var(--lime-accent); background: transparent; color: var(--lime-accent-ink); }
