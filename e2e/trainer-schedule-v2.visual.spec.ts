@@ -831,7 +831,18 @@ for (const width of [375, 390, 430, 1440]) test(`Figma workout Coach reference c
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('width', '20px')
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('height', '20px')
   await expect(picker.locator('.coach-filter-count')).toHaveCSS('background-color', 'rgb(182, 239, 77)')
+  const titleCenterOffset = await picker.locator('.coach-catalog-sheet-title').evaluate(node => {
+    const title = node.getBoundingClientRect(), sheet = node.closest('.coach-reference-catalog')!.getBoundingClientRect()
+    return Math.abs(title.x + title.width / 2 - sheet.x - sheet.width / 2)
+  })
+  expect(titleCenterOffset).toBeLessThan(1)
   expect(await picker.locator('.coach-sheet-confirm').evaluate(node => ({ hit: node.getBoundingClientRect().width, paint: getComputedStyle(node, '::before').width }))).toEqual({ hit: 44, paint: '40px' })
+  const confirmSourceOffset = await picker.locator('.coach-sheet-confirm').evaluate(node => {
+    const hit = node.getBoundingClientRect(), sheet = node.closest('.coach-reference-catalog')!.getBoundingClientRect()
+    return { right: sheet.right - hit.right + 2, top: hit.top - sheet.top + 2 }
+  })
+  expect(confirmSourceOffset.right).toBeCloseTo(20, 0)
+  expect(confirmSourceOffset.top).toBeCloseTo(25, 0)
   await expect(filters.getByRole('button', { name: 'Только мои', exact: true })).toHaveCSS('width', '133px')
   await expect(filters.getByRole('combobox', { name: 'Оборудование' })).toBeVisible()
   await page.screenshot({ path: info.outputPath('coach-catalog-filters.png') })

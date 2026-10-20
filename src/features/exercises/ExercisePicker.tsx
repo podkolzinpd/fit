@@ -534,7 +534,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         disabled={addingSelected}
       /> : referenceList ? <header className="picker-header coach-reference-sheet-header">
         <button type="button" className="picker-close" disabled={addingSelected} aria-label={filtersOpen ? 'Назад к упражнениям' : 'Закрыть'} onClick={filtersOpen ? () => closeFilters(true) : onClose}>{filtersOpen ? <BackIcon /> : <CloseIcon />}</button>
-        <h1>{filtersOpen ? 'Фильтры' : 'Добавить упражнение'}{filtersOpen && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</h1>
+        <h1><span className="coach-catalog-sheet-title">{filtersOpen ? 'Фильтры' : 'Добавить упражнение'}{filtersOpen && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</span></h1>
         {(filtersOpen || multiple) && <button type="button" className="coach-sheet-confirm" aria-label={filtersOpen ? 'Применить фильтры' : 'Добавить выбранные упражнения'} disabled={!filtersOpen && (addingSelected || selected.size === 0)} onClick={filtersOpen ? () => closeFilters(true) : () => void addSelected()}><CheckSmallIcon /></button>}
       </header> : <header className={`picker-header${previewExercise ? ' picker-technique-header' : ''}`}>
         {previewExercise && <button type="button" className="picker-close picker-back" aria-label="Назад к выбору" onClick={closeTechnique}><BackIcon /></button>}
