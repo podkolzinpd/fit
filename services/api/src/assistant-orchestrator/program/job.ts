@@ -1,5 +1,4 @@
 import { createHash, randomUUID } from 'node:crypto'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ProgramBrief } from './brief.js'
 
 type ProgramGenerationJobArgs = {
@@ -17,36 +16,6 @@ export type ProgramGenerationJobState = {
 export interface ProgramGenerationJobStore {
   run(args: ProgramGenerationJobArgs): Promise<ProgramGenerationJobState>
   release(args: Omit<ProgramGenerationJobArgs, 'result'>): Promise<void>
-}
-
-export function supabaseProgramGenerationJobs(
-  service: SupabaseClient,
-  actorId: string,
-): ProgramGenerationJobStore {
-  return {
-    async run(args) {
-      const response = await service.rpc('assistant_program_generation_job', {
-        p_id: args.id,
-        p_owner_id: actorId,
-        p_client_id: args.clientId,
-        p_lease_id: args.leaseId,
-        ...(args.result === undefined ? {} : { p_result: args.result }),
-      })
-      if (response.error || !response.data || typeof response.data !== 'object') {
-        throw new Error('program_job_unavailable')
-      }
-      return response.data as ProgramGenerationJobState
-    },
-    async release(args) {
-      const response = await service.rpc('release_assistant_program_generation_job', {
-        p_id: args.id,
-        p_owner_id: actorId,
-        p_client_id: args.clientId,
-        p_lease_id: args.leaseId,
-      })
-      if (response.error) throw new Error('program_job_release_failed')
-    },
-  }
 }
 
 export function programGenerationKey(actorId: string, clientId: string, brief: ProgramBrief, fingerprint: string): string {

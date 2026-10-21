@@ -8,10 +8,10 @@ import { PROGRAM_CATALOG, PROGRAM_EQUIPMENT } from './catalog.js'
 import { addDays, materializeProgram, programBriefIssues, ProgramValidationError, validateProgramLoad, validateProgramTemplate } from './generate.js'
 import { programIamToken, programModelAuthorization, programModelJson } from './model.js'
 import { explicitBriefAnswer, type BriefAnswerContext } from './answer.js'
-import type { loadProgramContext } from './source.js'
+import type { ProgramSourceSnapshot } from './source-contract.js'
+export type { ProgramSourceSnapshot } from './source-contract.js'
 
 export type ProgramClient = { id: string; fullName: string; ageYears: number | null; goal: string | null }
-export type ProgramSourceSnapshot = Awaited<ReturnType<typeof loadProgramContext>>
 type Dependencies = {
   actorId: string; turnId: string; today: string; duplicateTurn: boolean;
   loadContext: (client: ProgramClient) => Promise<ProgramSourceSnapshot>;
