@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useBeforeUnload, useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
+import { isClientLimeEnabled } from '../../app/client-lime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { replaceExercise } from '../../data/repositories/workout-rules'
 import type { ExerciseSnapshot, FavoriteWorkoutTemplate, WorkoutExerciseDraft } from '../../shared/domain'
@@ -17,19 +18,20 @@ const returnTo = '/me/workouts?tab=presets'
 export function FavoriteWorkoutEditorPage() {
   const { favoriteId = '' } = useParams()
   const { actor } = useAuth()
+  const lime = isClientLimeEnabled(actor)
   const { favoriteWorkouts } = useDataBackend()
   const query = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkouts.list() })
   const favorite = query.data?.find((item) => item.id === favoriteId)
-  return <Page title="Редактировать тренировку" hideTitle back={returnTo} className="workout-form-page workout-focused-page workout-editor-reference client-reference-form client-editor-refined client-editor-polish favorite-workout-editor-page">
+  return <Page title="Редактировать тренировку" hideTitle back={returnTo} className={`workout-form-page workout-focused-page favorite-workout-editor-page${lime ? ' workout-editor-reference client-reference-form client-editor-refined client-editor-polish' : ''}`}>
     <AsyncView loading={query.isLoading} error={query.data ? null : query.error} onRetry={() => void query.refetch()}>
       {query.data && query.error && <InlineRequestError error={query.error} />}
-      {favorite && actor ? <FavoriteWorkoutEditor key={`${actor.userId}:${favorite.id}`} favorite={favorite} userId={actor.userId} />
+      {favorite && actor ? <FavoriteWorkoutEditor key={`${actor.userId}:${favorite.id}`} lime={lime} favorite={favorite} userId={actor.userId} />
         : <StatePanel tone="info" title="Тренировка больше недоступна" description="Возможно, она была удалена из избранного." action={<Link className="button secondary" to={returnTo}>К готовым тренировкам</Link>} />}
     </AsyncView>
   </Page>
 }
 
-function FavoriteWorkoutEditor({ favorite, userId }: { favorite: FavoriteWorkoutTemplate; userId: string }) {
+function FavoriteWorkoutEditor({ lime, favorite, userId }: { lime: boolean; favorite: FavoriteWorkoutTemplate; userId: string }) {
   const { favoriteWorkouts } = useDataBackend()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -95,8 +97,8 @@ function FavoriteWorkoutEditor({ favorite, userId }: { favorite: FavoriteWorkout
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><h2>Упражнения</h2></div>
         <WorkoutExerciseEditor exercises={exercises} onChange={update} onOpenPicker={() => setPicker('add')} onReplaceExercise={setPicker}
-          exerciseCatalog={catalog.exercises} collapseInitialExercises reference safePlanInput commentLabel="Заметка" disabled={save.isPending} />
-        <WorkoutCta type="button" variant="secondary" disabled={save.isPending || exercises.length >= 60} onClick={() => setPicker('add')}><AddActionLabel>Упражнение</AddActionLabel></WorkoutCta>
+          exerciseCatalog={catalog.exercises} collapseInitialExercises reference={lime} safePlanInput={lime} commentLabel="Заметка" disabled={save.isPending} />
+        {lime && <WorkoutCta type="button" variant="secondary" disabled={save.isPending || exercises.length >= 60} onClick={() => setPicker('add')}><AddActionLabel>Упражнение</AddActionLabel></WorkoutCta>}
       </section>
       {exercises.length > 60 && <p className="error" role="alert">В избранном можно сохранить до 60 упражнений.</p>}
       {save.error && <InlineRequestError error={save.error} />}
@@ -111,7 +113,7 @@ function FavoriteWorkoutEditor({ favorite, userId }: { favorite: FavoriteWorkout
       {storageError && <p className="error" role="alert">Не удалось сохранить черновик на устройстве. Не закрывайте экран до сохранения изменений.</p>}
       <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!dirty || !title.trim() || !exercises.length || exercises.length > 60}>Сохранить изменения</WorkoutCta></div>
     </form>
-    {picker !== null && <ExercisePicker clientLime referenceAppearance catalog={catalog} multiple={picker === 'add'} onPick={(selected) => {
+    {picker !== null && <ExercisePicker clientLime={lime} referenceAppearance={lime} catalog={catalog} multiple={picker === 'add'} onPick={(selected) => {
       if (picker === 'add') add([selected])
       else { update(replaceExercise(exercises, picker, selected)); setPicker(null) }
     }} onPickMany={add} onClose={() => setPicker(null)} techniqueActionLabel={picker === 'add' ? 'Добавить упражнение' : 'Заменить упражнение'} />}

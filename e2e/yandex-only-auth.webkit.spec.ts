@@ -76,6 +76,9 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await page.goto('/me/workouts?tab=presets')
   const card = page.locator('.favorite-workout-card')
   await expect(card).toContainText('Приседание')
+  const shortCardBox = (await card.boundingBox())!
+  const shortMenuBox = (await card.getByRole('button', { name: 'Действия с тренировкой Ноги и корпус' }).boundingBox())!
+  expect(shortCardBox.x + shortCardBox.width - shortMenuBox.x - shortMenuBox.width).toBeLessThanOrEqual(24)
   await expect(page.locator('.state-panel-error')).toHaveCount(0)
   await expect(page.getByText('Управление избранным', { exact: true })).toBeVisible()
   await page.locator('.coachmark-bubble').filter({ hasText: 'Управление избранным' }).getByRole('button', { name: 'Понятно', exact: true }).click()

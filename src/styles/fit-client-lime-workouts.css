@@ -1,6 +1,7 @@
 /* Existing client content and workout actions, expressed through Lime tokens. */
 .phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding: 20px;
   border-radius: var(--lime-radius-card);
@@ -49,6 +50,13 @@
   max-height: calc(min(var(--app-visible-height, 100dvh), 100dvh) - 12px);
   overflow-y: auto;
 }
+.phone-frame.fit-client-lime .favorite-workout-rename-sheet {
+  padding-top: 0;
+  padding-inline: 20px;
+  border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0;
+  background: var(--lime-surface);
+}
+.phone-frame.fit-client-lime .favorite-workout-rename-sheet .client-lime-sheet-header { margin-inline: -20px; padding: 16px 20px; }
 .phone-frame.fit-client-lime.client-home-identity :is(.quick-start-workout, .voice-action,
   .app-install-card, .client-home-next, .client-home-past-plan, .client-home-week,
   .client-home-highlight, .first-run-benefits, .client-home-progress) {

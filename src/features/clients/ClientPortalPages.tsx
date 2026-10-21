@@ -18,6 +18,7 @@ import { clientWorkoutCardLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
 import { AthleteAchievementPreview } from '../achievements/AthleteAchievements'
 import { useWorkoutHistoryCalendar, useWorkoutPlannedCalendar } from './use-workout-history-calendar'
+import { FitLimeSheetHeader } from '../../shared/FitLimeSheetHeader'
 
 function favoriteExerciseCountLabel(count: number): string {
   const lastTwo = count % 100
@@ -204,13 +205,13 @@ export function MyWorkoutsPage() {
     </>}
   </AsyncView></Page>
   {confirmRemoveFavoriteDialog}
-  {renaming && <FavoriteRenameSheet key={renaming.id} favorite={renaming} pending={renameFavorite.isPending} error={renameFavorite.error}
+  {renaming && <FavoriteRenameSheet key={renaming.id} lime={isClientLimeEnabled(actor)} favorite={renaming} pending={renameFavorite.isPending} error={renameFavorite.error}
     onSave={(title) => renameFavorite.mutate({ favorite: renaming, title })} onClose={() => { if (!renameFavorite.isPending) setRenaming(null) }} />}
   </>
 }
 
-function FavoriteRenameSheet({ favorite, pending, error, onSave, onClose }: {
-  favorite: FavoriteWorkoutTemplate; pending: boolean; error: Error | null; onSave: (title: string) => void; onClose: () => void
+function FavoriteRenameSheet({ lime, favorite, pending, error, onSave, onClose }: {
+  lime: boolean; favorite: FavoriteWorkoutTemplate; pending: boolean; error: Error | null; onSave: (title: string) => void; onClose: () => void
 }) {
   const [title, setTitle] = useState(favorite.title)
   const ref = useRef<HTMLElement>(null)
@@ -220,7 +221,7 @@ function FavoriteRenameSheet({ favorite, pending, error, onSave, onClose }: {
     return () => previous?.focus()
   }, [])
   return <div className="sheet-overlay favorite-workout-rename-overlay" onClick={() => !pending && onClose()}>
-    <section ref={ref} className="workout-decision-sheet workout-favorite-save-sheet" role="dialog" aria-modal="true" aria-label="Переименовать тренировку" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
+    <section ref={ref} className="workout-decision-sheet workout-favorite-save-sheet favorite-workout-rename-sheet" role="dialog" aria-modal="true" aria-label="Переименовать тренировку" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
       if (event.key === 'Escape' && !pending) { event.preventDefault(); onClose() }
       if (event.key !== 'Tab') return
       const controls = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)') ?? [])
@@ -228,7 +229,8 @@ function FavoriteRenameSheet({ favorite, pending, error, onSave, onClose }: {
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
     }}>
-      <header className="picker-header"><h2>Переименовать тренировку</h2><button type="button" className="picker-close" aria-label="Закрыть" disabled={pending} onClick={onClose}><CloseIcon /></button></header>
+      {lime ? <FitLimeSheetHeader title="Переименовать тренировку" backLabel="Закрыть" onBack={onClose} disabled={pending} />
+        : <header className="picker-header"><h2>Переименовать тренировку</h2><button type="button" className="picker-close" aria-label="Закрыть" disabled={pending} onClick={onClose}><CloseIcon /></button></header>}
       <form className="stack compact" onSubmit={(event) => { event.preventDefault(); if (!pending && title.trim()) onSave(title.trim()) }}>
         <Field label="Название"><input value={title} maxLength={120} required disabled={pending} onChange={(event) => setTitle(event.target.value)} /></Field>
         {error && <InlineRequestError error={error} />}

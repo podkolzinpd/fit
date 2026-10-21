@@ -198,3 +198,53 @@ WebKit CRUD/save2/2 и protected error-state Chromium2/2 прошли. Наст�
 локальный API/SQL дополнительно подтвердил изменение веса/повторов,
 durationSec, distanceKm и отдыха75с с readback и неизменностью истории.
 Новый обязательный CI требуется для исправленного commit.
+
+## Приёмка после обновления main с §8.1
+
+Main beb1a3bb (#1763) добавил обязательную карту вложенных состояний.
+Поведение и тема подтверждались действительным DOM, без подстановки root-классов
+в браузере. Role=client, базовый gate clientLime. На новом маршруте
+/me/workouts/favorites/:id/edit reference-класс служит ограниченным адаптером
+представления уже согласованного редактора. Он не включает клиентский Live
+пилот, его настройки/allowlist или тренерские gates на других маршрутах.
+
+Переименование — approved-adaptation, не отдельный готовый SVG-экран:
+используются действующие FitLimeSheetHeader, Field, WorkoutCta и source-backed
+токены поверхности/радиуса шторки. Вне Lime сохранена прежняя оболочка.
+Базовые Identity-классы, алиасы и шрифтовые fallback не удалялись.
+
+| Состояние | Ожидаемо и наблюдение | Доказательство | Компонент |
+| --- | --- | --- | --- |
+| Ready: loading/empty/error/retry | Собственные состояния, не ошибка истории; hidden tabs не монтируют ошибки | CRUD browser + неизменённый protected loading/error/empty/keyboard2/2 | MyWorkoutsPage, AsyncView |
+| Заполненное избранное, длинное имя | Разделы, состав, перенос, действия44×44, нет overflow | WebKit/Chromium390/430 light/dark, снимки и geometry assertions | OverflowMenu, favorite card |
+| Меню и уведомление | Edit/rename/delete; одна краткая подсказка, dismiss сохраняется | CRUD и scoped production coachmark probe | OverflowMenu, Coachmark |
+| Переименование и клавиатура | Текущий текст, Lime header, блокировка pending, поле над уменьшенным viewport | rename-keyboard screenshot, name-only PUT | FitLimeSheetHeader, Field, WorkoutCta |
+| Удаление: cancel/pending/error/retry/success | Подтверждение;503 не убирает карточку; явный повтор204 | Browser + API/SQL cross-owner checks | useConfirm, InlineRequestError |
+| Editor: load/missing/error/retry | Не появляется пустая форма; cached draft сохраняется | Component + browser cases | FavoriteWorkoutEditorPage |
+| Editor: форма и выход | Без клиента/даты/статуса, стабильный ввод, dirty exit, явное сохранение | Component + browser edit/reload/retry | WorkoutHeader, WorkoutExerciseEditor |
+| Каталог и порядок | Добавление, замена, перемещение, удаление с подтверждением | Browser реальных общих контролов | ExercisePicker, WorkoutGestureList, WorkoutSwipe |
+| Время и дистанция | Общие min/sec и distance поля в строке, собственные значения не теряются | Nested-state WebKit light/dark + настоящий mixed-metric PUT/readback | WorkoutDurationField, RunMetricsFields |
+| Отдых и настройки упражнения | Прежние настройки75/90с и тема портала, без новой логики отдыха | Nested-state screenshots + SQL readback | Exercise settings sheet |
+| Conflict/disabled/pending/save error | Старая версия не повышается молча; ввод остаётся, можно явно загрузить текущую | Component/repository/API200/409/503 и browser | InlineRequestError, WorkoutCta |
+| Тренерский потребитель | Прежний текст и оформление, без новой клиентской роли | Shared117, trainer-template WebKit2, визуальный1440 | WorkoutTemplatesPages, WorkoutExerciseEditor |
+
+Вложенные кадры: /private/tmp/fit-ready-state-audit-20261021-results;
+проверены реальные вычисленные тема/геометрия и каскад текущих компонентов.
+Жизненный цикл Live, завершённые подходы, отдых после нуля и его уведомления
+здесь неприменимы: это редактор шаблона, не выполнение тренировки.
+Существующий дополнительный режим TimeWheel не объявляется заново перенесённым:
+его общая композиция относится к отдельному R10/PR6 плана Lime-аудита.
+Физический iPhone, реальная системная клавиатура, фон/звук и production-запись
+под аккаунтом пользователя НЕ ПРОВЕРЕНЫ. Уменьшенный viewport и iOS-симулятор
+не будут выданы за физическое устройство.
+
+После подключения общего заголовка фактические computed styles в четырёх
+состояниях390/430 light/dark: YS Geo загружен,16px/500, радиус40px,
+light surface rgb255/255/255 и текст32/35/28; dark surface26/26/28 и белый текст.
+Nested-state/тренер1440 WebKit3/3 пройдены и снимки осмотрены. Явная
+minmax(0,1fr) колонка карточки сохраняет правое положение меню и у короткого
+названия/состава; добавлен geometry assertion. Вне clientLime редактор/каталог
+сохраняют обычный общий контур, без переноса пилотного оформления.
+Полный check после main уже проходил; финальная стабилизация прошла exit0
+тем же полным набором (frontend2803/API1436). Итоговые run/production/native evidence фиксируются в
+YAFIT-642, без отдельного служебного PR после выпуска.
