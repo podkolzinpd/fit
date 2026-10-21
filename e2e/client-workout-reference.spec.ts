@@ -1253,6 +1253,14 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`cli
   const rest = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })
   await expect(rest).toHaveClass(/client-reference-time-sheet/)
   await expect(rest.locator('.client-lime-sheet-header')).toBeVisible()
+  const mode = rest.getByRole('group', { name: 'Кто ведёт тренировку', exact: true })
+  await expect(mode).toHaveCSS('border-radius', '20px')
+  for (const button of await mode.getByRole('button').all()) {
+    await expect(button).toHaveCSS('border-radius', '16px')
+    await expect(button).toHaveCSS('min-height', '48px')
+    await expect(button).toHaveCSS('font-weight', '500')
+  }
+  await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await rest.getByRole('listbox', { name: 'минуты', exact: true }).getByRole('option', { name: '00 минуты', exact: true }).click()
   await rest.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '00 секунды', exact: true }).click()
   await expect(rest.getByRole('button', { name: 'Начать отдых · 0:00', exact: true })).toBeDisabled()
@@ -1273,6 +1281,24 @@ for (const role of ['trainer', 'client']) test(`time sheet client adaptation sta
   await page.getByRole('button', { name: /Фактическое время:/ }).first().click()
   await expect(page.locator('.workout-duration-sheet')).toBeVisible()
   await expect(page.locator('.client-reference-time-sheet')).toHaveCount(0)
+})
+
+test('client rest mode selection survives close and reload without recording strength facts', async ({ page }) => {
+  const source = coachGestureWorkout(); source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const initial = JSON.stringify(backend.getWorkouts()[0]!.exercises)
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-rest-trigger').click()
+  const mode = page.getByRole('group', { name: 'Кто ведёт тренировку', exact: true })
+  await mode.getByRole('button', { name: 'Ведёт таймер', exact: true }).click()
+  await expect(mode.getByRole('button', { name: 'Ведёт таймер', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await mode.getByRole('button', { name: 'Веду сам', exact: true }).click()
+  await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
+  await page.reload()
+  await page.locator('.live-rest-trigger').click()
+  await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(initial)
 })
 
 test.describe('assistant duration consumers', () => {
