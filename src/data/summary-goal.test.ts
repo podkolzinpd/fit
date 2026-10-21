@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTrainingGoalContext } from '../../supabase/functions/summarize-client-training/summary-goal'
+import { buildTrainingGoalContext } from '../../services/api/src/legacy-summary/summary-goal'
 
 describe('training summary goal context', () => {
   it('prefers the structured active goal and current stage', () => {

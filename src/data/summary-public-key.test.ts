@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveSupabasePublicKey } from '../../supabase/functions/summarize-client-training/supabase-public-key'
+import { resolveSupabasePublicKey } from '../../services/api/src/legacy-summary/supabase-public-key'
 
 describe('summary function Supabase public key', () => {
   it('uses the hosted publishable key dictionary', () => {
