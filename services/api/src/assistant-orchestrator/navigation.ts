@@ -1,4 +1,4 @@
-import type { AssistantTurnResponse } from './index.js'
+import type { AssistantTurnResponse } from './core.js'
 
 type Role = 'trainer' | 'client'
 

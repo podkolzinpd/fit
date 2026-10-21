@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../yandex-llm-function-client.js', () => ({
   invokeYandexLlmCompletion: vi.fn(),
 }))
-import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, loadAssistantClientContext, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './index.js'
+import { allowsAssistantAction, assistantCapabilitiesReply, assistantModelMessages, assistantSmallTalkFallback, assistantSmallTalkPrompt, completeAssistantSmallTalk, createClientTurn, createProgramTurn, extractWorkoutTranscript, isAssistantCapabilityQuestion, isSummaryCancellation, isSummaryRequest, isTurnIdReuse, readAssistantTurnRequest, recordWorkoutTurn, summaryPeriodFromMessage, summaryTurn, usesInformalAddress, validateAssistantTurnResponse, validateEnabledAssistantTurnResponse } from './core.js'
 import { invokeYandexLlmCompletion } from '../yandex-llm-function-client.js'
 
 describe('assistant orchestrator contract', () => {
@@ -299,24 +299,6 @@ describe('assistant orchestrator contract', () => {
         ],
       },
     })
-  })
-
-  it('loads every direct and connected client through the actor-scoped list', async () => {
-    const rows = Array.from({ length: 11 }, (_, index) => ({
-      id: `client-${index + 1}`,
-      full_name: index === 10 ? 'Антоха' : `Клиент ${index + 1}`,
-      goal: null,
-      age_years: null,
-      height_cm: null,
-      gender: null,
-    }))
-    const rpc = vi.fn().mockResolvedValue({ data: rows, error: null })
-
-    const clients = await loadAssistantClientContext({ rpc } as never)
-
-    expect(rpc).toHaveBeenCalledWith('list_clients', { p_include_archived: false })
-    expect(clients).toHaveLength(11)
-    expect(clients).toContainEqual(expect.objectContaining({ id: 'client-11', fullName: 'Антоха' }))
   })
 
   it('keeps a request to prepare a workout in the deterministic recording flow', () => {

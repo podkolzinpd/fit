@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AssistantAction } from './index.js'
-import { recordWorkoutTurn } from './index.js'
+import type { AssistantAction } from './core.js'
+import { recordWorkoutTurn } from './core.js'
 import { chooseAssistantRoute, isAssistantChatPrompt, latestActiveAssistantTool, readAssistantRoute, routedAssistantTurn } from './router.js'
 import { programModelJson } from './program/model.js'
 import { CONFIRM_PROGRAM_BRIEF } from './program/brief.js'
