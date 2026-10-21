@@ -57,3 +57,5 @@
   auth config; AI fixtures открываются на нём. Прежний server/auth fixtures и
   production config/only-auth switch не меняются. Новых cases/projects нет. Legacy non-AI tests сохранены.
 - Финальный npm run check exit0: frontend2796/API1434+186conditionalDBskip, infra332/calendar12/hosting184/lint/typecheck/build/startup. CI ожидается; timings before/after не замерены.
+
+CI initial attempt выявил случайную замену signIn в соседнем body-map test. Восстановлена исходная строка; assertions/эталоны неизменны, весь CI повторяется на исправленном head.

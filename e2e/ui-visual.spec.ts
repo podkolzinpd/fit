@@ -430,7 +430,7 @@ test('body maps keep route, gender and saved-list preferences without AI request
     }
     return route.fallback()
   })
-  await page.goto(trainer ? '/today' : '/me')
+  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
   await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
