@@ -1,4 +1,3 @@
-import { SupabaseBridge, SupabaseBridgeError } from './supabase-bridge.js'
 import {
   ApiKeyYandexAiAuthorization,
   type YandexAiAuthorization,
@@ -70,11 +69,6 @@ function validateGoalSuggestion(value: unknown, catalog: WorkoutParserExercise[]
     return { message: raw.message.trim(), exerciseRefs: raw.exerciseRefs.filter((ref): ref is string => typeof ref === 'string' && refs.has(ref)).slice(0, 4) }
   })
   return { criteria, needsInput, unsupportedReason: value.unsupportedReason }
-}
-
-export interface LegacyWorkoutParser {
-  parse(actorToken: string, value: unknown): Promise<WorkoutParseResponse>
-  suggest?(actorToken: string, value: unknown): Promise<GoalCriteriaSuggestionResponse>
 }
 
 export class YandexWorkoutParser {
@@ -174,54 +168,5 @@ export class YandexWorkoutParser {
       throw new WorkoutParseError(400, 'invalid_request')
     }
     return { text: value.text, systemCatalog: value.systemCatalog }
-  }
-}
-
-export class SupabaseWorkoutParser implements LegacyWorkoutParser {
-  constructor(
-    private readonly supabase: SupabaseBridge,
-    private readonly yandexApiKey: string,
-    private readonly yandexFolderId: string,
-    private readonly modelId = 'yandexgpt',
-    private readonly request = fetch,
-  ) {}
-
-  async parse(actorToken: string, value: unknown): Promise<WorkoutParseResponse> {
-    const userId = await this.supabase.authenticatedUserId(actorToken)
-    if (userId === undefined) throw new WorkoutParseError(401, 'unauthorized')
-    let customs: Array<{ id: string; name: string; input_kind: string }>
-    try {
-      customs = await this.supabase.select('custom_exercises?select=id,name,input_kind,archived_at&archived_at=is.null', actorToken)
-    } catch (error) {
-      if (error instanceof SupabaseBridgeError && error.status === 503) throw new WorkoutParseError(503, 'supabase_unavailable')
-      throw new WorkoutParseError(502, 'parse_failed')
-    }
-    const custom = customs.flatMap((raw): WorkoutParserExercise[] =>
-      typeof raw.id === 'string' && typeof raw.name === 'string' && typeof raw.input_kind === 'string'
-        ? [{ source: 'custom', ref: raw.id, name: raw.name, inputKind: raw.input_kind }]
-        : [])
-    return new YandexWorkoutParser(
-      this.yandexApiKey,
-      this.yandexFolderId,
-      this.modelId,
-      this.request,
-    ).parse(value, custom)
-  }
-
-  async suggest(actorToken: string, value: unknown): Promise<GoalCriteriaSuggestionResponse> {
-    const userId = await this.supabase.authenticatedUserId(actorToken)
-    if (userId === undefined) throw new WorkoutParseError(401, 'unauthorized')
-    try {
-      const [customExercises, customMetrics] = await Promise.all([
-        this.supabase.select<Array<{ id: string; name: string; input_kind: string }>>('custom_exercises?select=id,name,input_kind,archived_at&archived_at=is.null', actorToken),
-        this.supabase.select<Array<{ id: string; name: string; unit: string | null }>>('client_custom_metrics?select=id,name,unit,archived_at&archived_at=is.null', actorToken),
-      ])
-      const custom = customExercises.map((raw) => ({ source: 'custom' as const, ref: raw.id, name: raw.name, inputKind: raw.input_kind }))
-      return new YandexWorkoutParser(this.yandexApiKey, this.yandexFolderId, this.modelId, this.request).suggest(value, custom, customMetrics)
-    } catch (error) {
-      if (error instanceof WorkoutParseError) throw error
-      if (error instanceof SupabaseBridgeError && error.status === 503) throw new WorkoutParseError(503, 'supabase_unavailable')
-      throw new WorkoutParseError(502, 'parse_failed')
-    }
   }
 }
