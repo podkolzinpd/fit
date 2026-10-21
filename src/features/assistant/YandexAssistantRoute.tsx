@@ -1,12 +1,6 @@
-import { localLegacyAvailable } from '#fit/local-assistant'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
-import {
-  getYandexAppSessionEntryConfig,
-  isYandexAssistantRoutingPilotEnabled,
-  isYandexAppSessionEnabled,
-  isYandexMainRoutingEnabled,
-} from '../../app/feature-flags'
+import { getYandexAppSessionEntryConfig } from '../../app/feature-flags'
 import { useYandexAppSession } from '../../app/yandex-app-session-context'
 import { createYandexAssistantBackend } from '../../data/repositories/yandex-assistant.repository'
 import { StatePanel } from '../../shared/ui'
@@ -18,23 +12,17 @@ export function YandexAssistantRoute() {
   const { session, loading, error, signOut } = useYandexAppSession()
   const [authorizing, setAuthorizing] = useState(false)
   const config = getYandexAppSessionEntryConfig()
-  const routedToYandex = actor !== null
-    && (!localLegacyAvailable || isYandexAssistantRoutingPilotEnabled(actor.userId)
-      || isYandexMainRoutingEnabled()
-      || isYandexAppSessionEnabled())
-  const backend = useMemo(() => !routedToYandex || config === null
+  const backend = useMemo(() => config === null
     || session === null || actor === null
     || session.profile.id !== actor.userId
     ? null
     : createYandexAssistantBackend(config.apiBaseUrl, session.session.token), [
     actor?.userId,
     config?.apiBaseUrl,
-    routedToYandex,
     session?.profile.id,
     session?.session.token,
   ])
 
-  if (localLegacyAvailable && !routedToYandex) return <AssistantHistoryPage />
   if (loading) return <main className="assistant-page">
     <StatePanel
       tone="info"

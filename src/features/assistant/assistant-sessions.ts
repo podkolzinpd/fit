@@ -1,16 +1,16 @@
 import { todayInTimeZone, type LocalDate } from '../../shared/local-date'
-import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
+import type { AssistantOrchestratorAction } from '../../data/assistant-contract'
 import type {
   AssistantActionRow,
   AssistantConversation,
   AssistantMessage,
-} from '../../data/repositories/assistant.repository'
+} from '../../data/assistant-contract'
 
 export type {
   AssistantActionRow,
   AssistantConversation,
   AssistantMessage,
-} from '../../data/repositories/assistant.repository'
+} from '../../data/assistant-contract'
 
 export type AssistantConversationGroup = {
   date: LocalDate

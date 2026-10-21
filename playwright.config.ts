@@ -24,7 +24,12 @@ export default defineConfig({
       : `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort + 1000}`,
     url: `http://127.0.0.1:${testPort + 1000}`, reuseExistingServer: !process.env.CI,
     env: { VITE_YANDEX_OAUTH_CLIENT_ID: 'fixture-client-id', VITE_YANDEX_API_BASE_URL: process.env.VITE_YANDEX_API_BASE_URL ?? 'http://127.0.0.1:4100',
-      VITE_YANDEX_APP_SESSION_ENABLED: 'true', VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true' },
+      VITE_YANDEX_APP_SESSION_ENABLED: 'true', VITE_YANDEX_MAIN_ROUTING_ENABLED: 'true',
+      // A separate synthetic actor enables Assistant without changing other native AI fixtures.
+      VITE_ASSISTANT_NAV_ENABLED: 'true', VITE_ASSISTANT_NAV_PILOT_USER_IDS: [
+        process.env.VITE_ASSISTANT_NAV_ENABLED === 'true' ? process.env.VITE_ASSISTANT_NAV_PILOT_USER_IDS ?? '' : '',
+        'a5510000-0000-4000-8000-000000000001',
+      ].join(',') },
   }],
   projects: [
     { name: 'lime-acceptance-webkit', testMatch: /(?:trainer-schedule-v2\.visual|fit-lime\.behavior)\.spec\.ts/, use: { ...devices['iPhone 13'] } },

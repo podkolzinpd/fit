@@ -4,7 +4,7 @@ import { isAssistantProgramSurfaceEnabled } from './assistant-program-availabili
 afterEach(() => vi.unstubAllEnvs())
 
 describe('assistant program surface availability', () => {
-  it.each(['supabase', 'yandex'])('enables programs on the %s backend', (cacheKey) => {
+  it.each(['yandex'])('enables programs on the %s backend', (cacheKey) => {
     vi.stubEnv('VITE_ASSISTANT_PROGRAM_ENABLED', 'true')
 
     expect(isAssistantProgramSurfaceEnabled(cacheKey, 'client-account')).toBe(true)
@@ -16,6 +16,7 @@ describe('assistant program surface availability', () => {
 
     vi.stubEnv('VITE_ASSISTANT_PROGRAM_ENABLED', 'true')
     expect(isAssistantProgramSurfaceEnabled('unknown', 'client-account')).toBe(false)
+    expect(isAssistantProgramSurfaceEnabled('supabase', 'client-account')).toBe(false)
     expect(isAssistantProgramSurfaceEnabled('yandex')).toBe(false)
   })
 })

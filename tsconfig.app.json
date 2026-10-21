@@ -16,8 +16,7 @@
     "moduleResolution": "Bundler",
     "paths": {
       "#fit/local-auth": ["./src/app/local-auth-composition.ts"],
-      "#fit/local-data": ["./src/app/local-data-composition.ts"],
-      "#fit/local-assistant": ["./src/app/local-assistant-composition.ts"]
+      "#fit/local-data": ["./src/app/local-data-composition.ts"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

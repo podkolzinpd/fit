@@ -77,6 +77,40 @@ describe('Yandex Assistant repository', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('creates conversations with server ownership instead of a supplied owner ID', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(input => Promise.resolve(String(input).endsWith('/health')
+      ? new Response('{}', { headers: { 'x-fit-request-id': 'fixture-health' } })
+      : Response.json({ conversation: { id: ACTOR_ID, title: null, createdAt: '2026-09-01T09:00:00.000Z' } }, { headers: { 'x-fit-request-id': 'fixture-create' } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await createYandexAssistantRepository(API_BASE_URL, SESSION_TOKEN).createConversation(CLIENT_ID)
+    expect(result.data?.id).toBe(ACTOR_ID)
+    const calls = fetchMock.mock.calls.filter(([url]) => !String(url).endsWith('/health'))
+    expect(calls).toHaveLength(1)
+    const [url, init] = calls[0]!
+    expect(url).toBe(`${API_BASE_URL}/v1/assistant/conversations`)
+    expect(init?.method).toBe('POST')
+    expect(init?.body).toBe(JSON.stringify({ title: null }))
+    expect(new Headers(init?.headers).get('x-fit-session')).toBe(SESSION_TOKEN)
+  })
+
+  it.each([200, 503])('sends the whole turn through native API with HTTP %s and never inserts browser messages', async status => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(input => Promise.resolve(String(input).endsWith('/health')
+      ? new Response('{}', { headers: { 'x-fit-request-id': 'fixture-health' } })
+      : Response.json({ reply: 'Ответ', action: null }, { status, headers: { 'x-fit-request-id': 'fixture-turn' } })))
+    vi.stubGlobal('fetch', fetchMock)
+    const turn = createYandexAssistantRepository(API_BASE_URL, SESSION_TOKEN).sendTurn(ACTOR_ID, SUMMARY_ID, 'Покажи прогресс')
+    if (status === 200) await expect(turn).resolves.toEqual({ reply: 'Ответ', action: null })
+    else await expect(turn).rejects.toThrow('Assistant в Yandex Cloud временно недоступен.')
+    const calls = fetchMock.mock.calls.filter(([url]) => !String(url).endsWith('/health'))
+    expect(calls).toHaveLength(1)
+    const [url, init] = calls[0]!
+    expect(url).toBe(`${API_BASE_URL}/v1/assistant/turn`)
+    expect(init?.method).toBe('POST')
+    expect(init?.body).toBe(JSON.stringify({ conversation_id: ACTOR_ID, turn_id: SUMMARY_ID, message: 'Покажи прогресс' }))
+    expect(new Headers(init?.headers).get('x-fit-session')).toBe(SESSION_TOKEN)
+    expect(new Headers(init?.headers).has('x-supabase-authorization')).toBe(false)
+  })
+
   it('returns an explicit Yandex error and never falls back after a failed request', async () => {
     const fetchMock = vi.fn<typeof fetch>()
       .mockResolvedValue(new Response('{}', { status: 503 }))

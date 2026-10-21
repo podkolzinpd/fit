@@ -210,20 +210,6 @@ export function isYandexOnlyAuthEnabled(): boolean {
   return getYandexOnlyAuthConfig() !== null
 }
 
-// Sticky routing основного Assistant — отдельный default-off rollout. Он не
-// переиспользует allowlist входа: после включения выбранный профиль работает
-// только с Yandex API и не откатывает отдельные запросы на Supabase.
-export function isYandexAssistantRoutingPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_YANDEX_ASSISTANT_ROUTING_ENABLED !== 'true') return false
-  const pilotUserIds = String(
-    import.meta.env.VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS ?? '',
-  )
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-  return pilotUserIds.length === 1 && pilotUserIds[0] === userId
-}
-
 // Основной интерфейс выбирает один источник данных на всю Yandex ID сессию.
 // Персональную границу задаёт серверный rollout assignment, а frontend хранит
 // только общий kill switch. Ошибка Yandex API не переключает отдельный запрос

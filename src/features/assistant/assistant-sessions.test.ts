@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AssistantOrchestratorAction } from '../../data/repositories/assistant.repository'
+import type { AssistantOrchestratorAction } from '../../data/assistant-contract'
 import type { LocalDate } from '../../shared/local-date'
 import { compactAssistantContent, conversationTitle, filterTerminalAssistantMessages, groupAssistantConversations, groupWorkoutDictationReceipts, isInteractiveAssistantAction, isReadOnlyConversation, isWorkoutDictationReceipt, latestActiveAssistantAction, latestActiveWorkoutAction, latestAssistantSurfaceAction, mergeAssistantMessages, selectTodayConversation, workoutDictationFragmentLabel } from './assistant-sessions'
 
