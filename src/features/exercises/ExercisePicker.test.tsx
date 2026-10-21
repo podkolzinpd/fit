@@ -918,6 +918,18 @@ describe('ExercisePicker', () => {
     ])
   })
 
+  it('ignores a retargeted backdrop click that started inside the picker', () => {
+    const onClose = vi.fn()
+    render(<ExercisePicker catalog={catalog()} onPick={vi.fn()} onClose={onClose} clientLime />)
+    const overlay = document.querySelector<HTMLElement>('.exercise-picker-overlay')!
+    fireEvent.pointerDown(screen.getByLabelText('Поиск упражнения'))
+    fireEvent.click(overlay, { detail: 1 })
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.pointerDown(overlay)
+    fireEvent.click(overlay, { detail: 1 })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps the selection draft after closing and lets the user clear it explicitly', async () => {
     const user = userEvent.setup()
     render(<PickerDraftHarness />)

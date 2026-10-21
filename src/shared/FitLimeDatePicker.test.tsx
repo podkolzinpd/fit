@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FitLimeDatePicker } from './FitLimeDatePicker'
 import { localDate } from './local-date'
 
@@ -25,6 +25,19 @@ function Harness({ clientLime = true, showEndTime = false, reference = false, di
 }
 
 describe('FitLimeDatePicker', () => {
+  it('does not treat a gesture started on an action as a backdrop dismissal after layout changes', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByRole('button', { name: 'Выбрать дату и время' }))
+    const dialog = screen.getByRole('dialog')
+    vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ top: 200 } as DOMRect)
+    fireEvent.pointerDown(within(dialog).getByRole('button', { name: 'Применить дату' }), { clientY: 120 })
+    fireEvent.click(dialog, { clientY: 120, detail: 1 })
+    expect(dialog).toHaveAttribute('open')
+    fireEvent.pointerDown(dialog, { clientY: 120 })
+    fireEvent.click(dialog, { clientY: 120, detail: 1 })
+    expect(dialog).not.toHaveAttribute('open')
+  })
   it('cancels client date/time edits and resets the draft when reopened', async () => {
     const user = userEvent.setup()
     render(<Harness />)

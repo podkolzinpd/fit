@@ -525,8 +525,16 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
     }
   }
 
+  const backdropStart = useRef<boolean | null>(null)
   const referenceList = referenceAppearance && !previewExercise && !creating
-  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`} onClick={() => { if (!addingSelected) onClose() }}>
+  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`}
+    onPointerDownCapture={(event) => { backdropStart.current = event.target === event.currentTarget }}
+    onPointerCancel={() => { backdropStart.current = null }}
+    onClick={(event) => {
+      const intended = backdropStart.current === true || backdropStart.current === null && event.detail === 0
+      backdropStart.current = null
+      if (intended && event.target === event.currentTarget && !addingSelected) onClose()
+    }}>
     <section ref={dialogRef} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
       {clientLime ? <FitLimeSheetHeader
         title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? <>Фильтры{referenceAppearance && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</> : 'Выберите упражнения'}

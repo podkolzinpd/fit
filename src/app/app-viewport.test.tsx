@@ -37,7 +37,7 @@ function installMobileViewport(height = 844) {
 
 function Probe() {
   const { keyboardOpen } = useAppViewport()
-  return <><output>{keyboardOpen ? 'keyboard' : 'full'}</output><textarea aria-label="Ответ" /></>
+  return <><output>{keyboardOpen ? 'keyboard' : 'full'}</output><textarea aria-label="Ответ" /><button type="button">Применить</button></>
 }
 
 afterEach(() => {
@@ -97,5 +97,52 @@ describe('AppViewportProvider', () => {
 
     expect(document.documentElement.style.getPropertyValue('--app-viewport-height')).toBe('')
     expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('')
+  })
+
+  it('keeps the measured keyboard height when focus moves to an action before the keyboard closes', () => {
+    vi.useFakeTimers()
+    const mobileViewport = installMobileViewport()
+    render(<AppViewportProvider><Probe /></AppViewportProvider>)
+    act(() => screen.getByRole('textbox').focus())
+    mobileViewport.viewport.height = 420
+    act(() => mobileViewport.emit('resize'))
+    act(() => screen.getByRole('button').focus())
+    act(() => vi.advanceTimersByTime(400))
+    expect(screen.getByText('keyboard')).toBeInTheDocument()
+    expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('420px')
+    mobileViewport.viewport.height = 844
+    act(() => mobileViewport.emit('resize'))
+    expect(screen.getByText('full')).toBeInTheDocument()
+    expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('844px')
+  })
+
+  it('does not schedule viewport recovery for an ordinary button gesture without a keyboard', () => {
+    vi.useFakeTimers()
+    const mobileViewport = installMobileViewport()
+    render(<AppViewportProvider><Probe /></AppViewportProvider>)
+    mobileViewport.scrollTo.mockClear()
+    act(() => document.dispatchEvent(new Event('pointerdown')))
+    act(() => document.dispatchEvent(new Event('pointerup')))
+    act(() => vi.advanceTimersByTime(400))
+    expect(mobileViewport.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('does not recover stale WebKit dimensions in the middle of a pointer gesture', () => {
+    vi.useFakeTimers()
+    const mobileViewport = installMobileViewport()
+    render(<AppViewportProvider><Probe /></AppViewportProvider>)
+    const input = screen.getByRole('textbox')
+    act(() => input.focus())
+    mobileViewport.viewport.height = 508
+    mobileViewport.setInnerHeight(508)
+    act(() => mobileViewport.emit('resize'))
+    act(() => document.dispatchEvent(new Event('pointerdown')))
+    act(() => input.blur())
+    act(() => mobileViewport.emit('resize'))
+    act(() => vi.advanceTimersByTime(400))
+    expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('508px')
+    act(() => document.dispatchEvent(new Event('pointerup')))
+    act(() => vi.advanceTimersByTime(400))
+    expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('844px')
   })
 })
