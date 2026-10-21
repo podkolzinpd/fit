@@ -47,7 +47,10 @@ Scope — существующий client-workout-reference пилот, без �
 8 set cancel/delete/edit/confirmed,8 exercise с/без тренера и ON/OFF,
 4 error/retry/conflict,2 tap/swipe/hold,2 atomic round.
 Наборы set8/exercise8/retry4/compact2/round2 прошли поэтапно;
-унаследованные168 и полный check проверяются отдельно перед фиксацией.
+унаследованный набор:166/168 passed,2 WebKit note cases выявили перехват summary.
+После исправления повторные4 note cases WebKit/Chromium passed.
+35 gesture unit и2 coach swipe regression passed. Окончательный полный check
+проверяется перед публикацией.
 Целевые35 unit WorkoutGestures прошли после правки; исходный набор40 включал
 другие gesture-потребители. Новые тесты не изменяют защищённый общий fixture.
 
