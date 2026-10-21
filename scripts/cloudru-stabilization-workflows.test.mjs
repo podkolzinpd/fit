@@ -347,11 +347,14 @@ test('request diagnostics correlate only the requested UUID and never export err
   const lines = [row({reqId:id,req:{body:'private-body'},msg:'private-msg'}),
     row({reqId:id,err:{type:'TypeError',code:'FST_ERR_FAILED_ERROR_SERIALIZATION',message:'private-sql',stack:'private-sql\n at x (/app/dist/planned-workout-request.js:120:3)'}}),
     row({reqId:id,res:{statusCode:500}}),row({reqId:'another',err:{type:'RangeError'}}),
-    row({reqId:id,err:{type:'private-type',code:'private-code',stack:'private-stack'}}), 'null', 'invalid']
+    row({reqId:id,err:{type:'private-type',code:'private-code',stack:'private-stack'}}),
+    row({reqId:id,planSaveStep:'stage',planSaveReason:'forbidden',body:'private-body'}),
+    row({reqId:id,planSaveStep:'private-step',planSaveReason:'private-reason'}), 'null', 'invalid']
   const result = spawnSync('python3',['scripts/cloudru-api-request-diagnostics.py',id],{input:lines.join('\n'),encoding:'utf8'})
   assert.equal(result.status,0)
   const report = JSON.parse(result.stdout)
-  assert.equal(report.matchedEntries,4)
+  assert.equal(report.matchedEntries,6)
+  assert.deepEqual(report.planSaveFailures,[{step:'stage',reason:'forbidden'}])
   assert.deepEqual(report.statuses,[500])
   assert.deepEqual(report.errors,[{type:'TypeError',code:'FST_ERR_FAILED_ERROR_SERIALIZATION',frames:['planned-workout-request.js:120:3']},{type:'unknown',code:'unknown',frames:[]}])
   assert.doesNotMatch(result.stdout,/private-|another|reqId|body|message|stack/)

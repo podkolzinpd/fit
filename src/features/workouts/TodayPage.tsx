@@ -180,7 +180,9 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   const [pickerFromCompose, setPickerFromCompose] = useState(false)
   const [replaceIndex, setReplaceIndex] = useState<number | null>(null)
   const [clientId, setClientId] = useState(limePlanning ? entryState?.planClientId ?? '' : '')
-  const effectiveClientId = clientMode ? mine.data?.id ?? clientId : clientId
+  // A restored draft is not proof of current ownership. Never submit its old
+  // card while the current profile is unavailable; keep the draft intact.
+  const effectiveClientId = clientMode ? (mine.isSuccess && !mine.isFetching ? mine.data?.id ?? '' : '') : clientId
   const clientWorkouts = useQuery({ queryKey: ['client-exercises-frequency', effectiveClientId], queryFn: () => workoutsRepository.list(undefined, undefined, effectiveClientId), enabled: Boolean(effectiveClientId) && pickerOpen })
   const [recordMode, setRecordMode] = useState<RecordMode>('planned')
   const [missingCardioTime, setMissingCardioTime] = useState<string | null>(null)
@@ -390,6 +392,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
   }, [noMatches, text])
   const save = useMutation({
     mutationFn: async (mode: RecordMode) => {
+      if (clientMode && !effectiveClientId) throw new Error('Не удалось открыть профиль спортсмена. Повторите загрузку профиля.')
       const draft = { ...(limePlanning && mode === 'planned' ? { title: planMetadata.title?.trim() || null, requestId: planMetadata.requestId, endTime: planMetadata.endTime || undefined } : {}), clientId: effectiveClientId, workoutDate, startTime: startTime || undefined, ...(mode === 'completed' ? { actualDurationSec: actualWorkoutDurationSeconds(actualDurationMinutes) } : { prepSeconds: prepSeconds || null, executionMode: executionMode ?? DEFAULT_EXECUTION_MODE }), trainingFormat: clientMode ? 'self' as const : trainingFormat ?? 'self', exercises: planOnly ? planExercises : items.map(draftExercise) }
       return mode === 'planned' ? workoutsRepository.save(draft) : workoutsRepository.saveCompleted(draft)
     },
@@ -1051,7 +1054,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {clientMode
         ? effectiveClientId
           ? <p className="today-assignment-self">Тренировка будет сохранена в ваш кабинет</p>
-          : mine.isLoading
+          : mine.isFetching
             ? <p className="today-assignment-self">Проверяем профиль…</p>
             : <div className="error" role="alert">Не удалось открыть профиль спортсмена. <button type="button" className="link" onClick={() => void mine.refetch()}>Повторить</button></div>
         : <ClientPicker userId={actor?.userId} clients={clients.data ?? []} selectedId={clientId} onChange={(id) => { trainingFormatTouched.current = false; setTrainingFormat(undefined); setClientId(id) }} label="Для кого тренировка" loading={clients.isLoading} error={clients.error} onRetry={() => void clients.refetch()} onCreate={createQuickClient} />}
@@ -1069,7 +1072,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
               <p>У «{missingCardioTime}» есть дистанция, но нет фактического времени. Добавьте время на шаге проверки или сохраните результат без оценки активных калорий FIT.</p>
               <div className="actions workout-action-row">
                 <WorkoutCta type="button" onClick={() => { setMissingCardioTime(null); setScreen('review') }}>Внести время</WorkoutCta>
-                <WorkoutCta type="button" variant="secondary" pending={save.isPending} pendingLabel="Сохраняем…" onClick={() => save.mutate('completed')}>Сохранить без оценки</WorkoutCta>
+                <WorkoutCta type="button" variant="secondary" disabled={!effectiveClientId} pending={save.isPending} pendingLabel="Сохраняем…" onClick={() => save.mutate('completed')}>Сохранить без оценки</WorkoutCta>
               </div>
             </div>
           : <WorkoutCta type="button" className="wide" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!items.length || !effectiveClientId} onClick={() => {

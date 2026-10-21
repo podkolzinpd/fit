@@ -1948,6 +1948,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         return reply.code(422).send({ error: 'invalid_domain_data' })
       }
       if (error instanceof PilotWorkoutCommandError) {
+        if (error.planSaveDiagnostic) {
+          reply.request.log.warn({ planSaveStep: error.planSaveDiagnostic.step,
+            planSaveReason: error.planSaveDiagnostic.reason }, 'Planned workout command rejected')
+          reply.header('x-fit-error-category', `planned_workout_${error.planSaveDiagnostic.step}`)
+            .header('x-fit-error-code', error.planSaveDiagnostic.reason)
+        }
         if (error.failure === 'active') {
           return reply.code(409).send({ error: 'active_workout_exists' })
         }

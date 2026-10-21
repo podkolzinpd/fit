@@ -5654,7 +5654,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         runtimePool,
         MEMBER_TRAINER_ID,
         (client) => savePlannedWorkout(client, updatedDraft, updated.version),
-      )).rejects.toMatchObject({ failure: 'not_found' })
+      // Private membership no longer grants current coaching access: reject
+      // at the client authorization boundary, before locating the workout.
+      )).rejects.toMatchObject({ failure: 'forbidden' })
 
       const workoutRows = await ownerPool.query<WorkoutAuditRow>(
         `

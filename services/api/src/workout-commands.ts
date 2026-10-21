@@ -43,11 +43,14 @@ export type PilotWorkoutCommandFailure =
   | 'not_found'
 
 export class PilotWorkoutCommandError extends Error {
-  constructor(readonly failure: PilotWorkoutCommandFailure) {
+  constructor(readonly failure: PilotWorkoutCommandFailure,
+    readonly planSaveDiagnostic?: { step: PlanSaveStep; reason: PilotWorkoutCommandFailure }) {
     super(`Pilot workout command failed: ${failure}`)
     this.name = 'PilotWorkoutCommandError'
   }
 }
+
+type PlanSaveStep = 'save' | 'stage' | 'format' | 'notification'
 
 export interface SavedPilotWorkout {
   id: string
@@ -134,11 +137,15 @@ function safeVersion(value: string): number {
   return version
 }
 
-async function runCommand<Result>(work: () => Promise<Result>): Promise<Result> {
+async function runCommand<Result>(work: () => Promise<Result>, planSaveStep?: () => PlanSaveStep): Promise<Result> {
   try {
     return await work()
   } catch (error) {
-    throw commandError(error) ?? error
+    const mapped = commandError(error)
+    if (mapped && planSaveStep) {
+      throw new PilotWorkoutCommandError(mapped.failure, { step: planSaveStep(), reason: mapped.failure })
+    }
+    throw mapped ?? error
   }
 }
 
@@ -185,6 +192,7 @@ export function savePlannedWorkout(
   draft: PlannedWorkoutDraft,
   expectedVersion: number | null,
 ): Promise<SavedPilotWorkout> {
+  let step: PlanSaveStep = 'save'
   return runCommand(async () => {
     const rows = await client.query<SavedWorkoutRow>(
       `
@@ -196,19 +204,22 @@ export function savePlannedWorkout(
     const saved = rows[0]
     if (saved === undefined) throw new Error('Workout was not saved')
     if (saved.replayed) return { id: saved.workout_id, version: safeVersion(saved.version) }
+    step = 'stage'
     await client.query('select public.attach_workout_stage($1, $2)', [saved.workout_id, draft.stageId ?? null])
+    step = 'format'
     const formatted = await client.query<{ version: string }>(
       'select public.set_workout_training_format($1, $2, $3, $4) as version',
       [saved.workout_id, draft.trainingFormat ?? null, saved.version, expectedVersion === null],
     )
     if (expectedVersion === null) {
+      step = 'notification'
       await client.query(
         'select app_private.enqueue_workout_scheduled_notification($1)',
         [saved.workout_id],
       )
     }
     return { id: saved.workout_id, version: safeVersion(formatted[0]?.version ?? saved.version) }
-  })
+  }, () => step)
 }
 
 export function saveCompletedWorkout(

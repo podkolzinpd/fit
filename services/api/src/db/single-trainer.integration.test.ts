@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { readdir } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { runner } from 'node-pg-migrate'
 import { Pool, type QueryResultRow } from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -106,6 +106,61 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     expect(await actor(f.first, 'select note from public.client_trainers where client_id=$1', [f.card])).toEqual([])
     await expect(actor(f.second, 'select * from public.quick_start_live_workout($1,$2)', [f.card, randomUUID()])).rejects.toMatchObject({ message: 'client_forbidden' })
     expect(await actor(f.athlete, 'select trainer_id from public.list_accessible_client_trainers() where client_id=$1', [f.card])).toEqual([{ trainer_id: f.first }])
+  })
+
+  it('saves and copies plans with an active relationship but no private membership, without widening access', async () => {
+    const f = await fixture()
+    await pool.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)', [f.card,f.first,f.athlete])
+    const draft: PlannedWorkoutDraft = { id: null, clientId: f.card, workoutDate: '2026-10-22',
+      startTime: null, endTime: null, notes: 'Synthetic plan', exercises: [], trainingFormat: 'self' }
+    await pool.query('insert into app_private.fit_lime_pilot_allowlist(login_sha256,profile_id,enabled) values($1,$2,true)', ['a'.repeat(64),f.first])
+    const limeDraft = { ...draft, title: 'Synthetic Lime plan', requestId: randomUUID() }
+    const first = await command(f.first, db => savePlannedWorkout(db, limeDraft, null))
+    expect(await command(f.first, db => savePlannedWorkout(db, limeDraft, null))).toEqual(first)
+    const source = await command(f.first, db => readAccessibleTrainingData(db, { limit: 50, offset: 0, scope: 'workouts' }))
+    const copy = await command(f.first, db => savePlannedWorkout(db, { ...draft, notes: 'Synthetic copy' }, null))
+    expect(copy.id).not.toBe(first.id)
+    const after = await command(f.first, db => readAccessibleTrainingData(db, { limit: 50, offset: 0, scope: 'workouts' }))
+    expect(after.workouts.find(w => w.id === first.id)).toEqual(source.workouts.find(w => w.id === first.id))
+    await command(f.first, db => savePlannedWorkout(db, { ...draft, id: copy.id, notes: 'Updated copy' }, copy.version))
+    expect((await counts(f.card))?.memberships).toBe(0)
+    await command(f.athlete, db => savePlannedWorkout(db, draft, null))
+    await actor(f.first, 'select public.leave_client_space($1)', [f.card])
+    // Old metadata can never revive a disconnected trainer's write access.
+    await pool.query('insert into public.client_trainers(client_id,trainer_id) values($1,$2)', [f.card,f.first])
+    for (const id of [f.first, f.second, f.outsider]) {
+      await expect(command(id, db => savePlannedWorkout(db, draft, null))).rejects.toMatchObject({ failure: 'forbidden' })
+    }
+    await command(f.athlete, db => savePlannedWorkout(db, draft, null))
+    const before = (await pool.query('select id from public.workouts where client_id=$1', [f.card])).rows
+    // A late validation failure rolls the newly inserted workout back too.
+    await expect(command(f.athlete, db => savePlannedWorkout(db, { ...draft, stageId: randomUUID() }, null)))
+      .rejects.toMatchObject({ failure: 'invalid', planSaveDiagnostic: { step: 'stage', reason: 'invalid' } })
+    expect((await pool.query('select id from public.workouts where client_id=$1', [f.card])).rows).toEqual(before)
+    const own = await command(f.athlete, db => savePlannedWorkout(db, draft, null))
+    await expect(command(f.second, db => savePlannedWorkout(db, { ...draft, id: own.id }, own.version))).rejects.toThrow()
+    await pool.query('update public.clients set archived_at=now() where id=$1', [f.card])
+    await expect(command(f.athlete, db => savePlannedWorkout(db, draft, null))).rejects.toMatchObject({ failure: 'forbidden' })
+  })
+
+  it('rolls the plan-access migration down and up without data changes or grant changes', async () => {
+    const client = await pool.connect()
+    const [up, down] = (await readFile(new URL('../../db/migrations/000154_planned_workout_active_trainer_access.sql', import.meta.url), 'utf8')).split('-- Down Migration')
+    if (!up || !down) throw new Error('Migration sections missing')
+    const snapshot = () => client.query(`select pg_get_functiondef(oid) definition, proacl::text grants
+      from pg_proc where oid in ('app_private.save_planned_workout_without_title(jsonb,bigint)'::regprocedure,
+      'app_private.save_planned_workout_without_cross_partition_snapshots(jsonb,bigint)'::regprocedure) order by oid`)
+    try {
+      await client.query('begin')
+      const before = (await snapshot()).rows
+      await client.query(down)
+      expect((await snapshot()).rows.every(row => String(row.definition).includes('public.client_trainers membership'))).toBe(true)
+      await client.query(up)
+      expect((await snapshot()).rows).toEqual(before)
+    } finally {
+      await client.query('rollback')
+      client.release()
+    }
   })
 
   it.each(['code', 'link'] as const)('creates one period through %s, retries safely, and cannot resurrect a disconnected relationship', async (entry) => {
