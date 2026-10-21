@@ -812,6 +812,18 @@ Supabase. `enable` берёт краткие `SHARE` locks на защищённ
 Выключение окна до успешного smoke не означает безопасный rollback после первой
 Yandex-записи: обратный перенос всё равно нужен отдельно.
 
+## Supabase credentials в deploy Cloud Functions — retired
+
+Deploy summary и Assistant больше не проверяет и не монтирует
+`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+Существующий Lockbox `fit-summarize-client-training-supabase` сохраняет имя:
+его используют другие legacy paths; native LLM keys и immutable version pinning
+сохранены. Это не удаление/ротация remote secrets или IAM permissions.
+Deploy push sender больше не извлекает dispatch secret для записи в Supabase
+Vault и не вызывает Supabase Management API. Native dispatch/VAPID mounts,
+function package, release verification и rollback остаются прежними.
+Существующие Vault entries не удаляются; это не отключение legacy producer.
+
 ## Первый запуск Yandex push pipeline
 
 `Background dispatch failed` означает перехваченную ошибку обработчика и HTTP

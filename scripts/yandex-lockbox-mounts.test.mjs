@@ -55,6 +55,16 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   assert.doesNotMatch(summary, /api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_ID\/secrets/)
   assert.doesNotMatch(summary, /lockbox secret add-version/)
 
+  for (const [name, source, expectedKeys] of [
+    ['summary', summary, ['YANDEX_CLOUD_API_KEY', 'YANDEX_CLOUD_FOLDER_ID', 'YANDEX_CLOUD_MODEL_ID']],
+    ['assistant', assistant, ['YANDEX_CLOUD_FOLDER_ID', 'YANDEX_CLOUD_MODEL_ID']],
+  ]) {
+    assert.doesNotMatch(source, /SUPABASE_(?:URL|ANON_KEY|PUBLISHABLE_KEY|SERVICE_ROLE_KEY)/, `${name} must not request or mount Supabase credentials`)
+    const keys = [...source.matchAll(/--secret\s+[^\s]+,key=([^,\s]+),environment-variable=\1/g)].map(match => match[1])
+    assert.deepEqual(keys, expectedKeys, `${name} must preserve its existing native credentials`)
+    assert.match(source, /verify-yandex-function-release\.mjs[\s\S]*?--expected-version-id[\s\S]*?--previous-version-id/)
+  }
+
   const push = readFileSync(join(workflowsDirectory, 'deploy-yandex-push-function.yml'), 'utf8')
   assert.match(push, /Resolve or bootstrap the immutable Lockbox version/)
   assert.match(push, /elif grep -qiE 'NOT_FOUND\|not found'/)
@@ -62,8 +72,9 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   assert.match(push, /randomBytes\(32\)\.toString\('base64url'\)/)
   assert.match(push, /webPush\.generateVAPIDKeys\(\)/)
   assert.match(push, /if \[\[ "\$status" == '403' \]\]; then[\s\S]*?serverless function allow-unauthenticated-invoke "\$PUSH_FUNCTION_NAME"/)
-  assert.match(push, /lockbox payload get[\s\S]*?--version-id "\$PUSH_LOCKBOX_VERSION_ID"[\s\S]*?--key PUSH_DISPATCH_SECRET/)
-  assert.match(push, /echo "::add-mask::\$dispatch_secret"[\s\S]*?sync-supabase-push-transport\.mjs/)
+  assert.doesNotMatch(push, /SUPABASE_|sync-supabase-push-transport|lockbox payload get/)
+  assert.match(push, /key=PUSH_DISPATCH_SECRET,environment-variable=PUSH_DISPATCH_SECRET/)
+  assert.match(push, /Verify the candidate and roll back on smoke failure[\s\S]*?verify-yandex-function-release\.mjs/)
   assert.doesNotMatch(push, /PUSH_DISPATCH_SECRET=.*>> "\$GITHUB_ENV"/)
   assert.doesNotMatch(push, /resource-manager folder add-access-binding/)
   assert.doesNotMatch(push, /serverless function set-access-bindings/)
