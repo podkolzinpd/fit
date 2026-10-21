@@ -2,6 +2,24 @@ import { createRequire } from 'node:module'
 import { writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
+const profileUuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
+
+export class ClientWorkoutProfilesNotReadyError extends Error {
+  constructor(cohort, rows) {
+    super('client_workout_profiles_not_ready')
+    const ready = hashes => hashes.filter(hash => {
+      const matches = rows.filter(row => row.hash === hash)
+      const row = matches[0]
+      return matches.length === 1 && row.enabled === true && profileUuid.test(row.id)
+        && rows.filter(other => other.id === row.id).length === 1
+        && row.role === (cohort.clients.includes(hash) ? 'client' : 'trainer')
+    })
+    const clients = ready(cohort.clients)
+    this.readiness = { readyClients: clients.length, readyTrainers: ready(cohort.trainers).length,
+      missingClientHashes: cohort.clients.filter(hash => !clients.includes(hash)) }
+  }
+}
+
 export async function resolveClientWorkoutProfiles(client, cohort) {
   if (!cohort || !Array.isArray(cohort.clients) || !Array.isArray(cohort.trainers)
     || cohort.clients.length !== 5 || cohort.trainers.length !== 2
@@ -17,14 +35,21 @@ export async function resolveClientWorkoutProfiles(client, cohort) {
       p.account_role as role, a.enabled
       from app_private.nutrition_native_bindings b
       join public.profiles p on p.id = b.profile_id and p.account_role = b.account_role
+      join app_private.auth_identities i on i.profile_id = p.id and i.provider = 'yandex'
+        and i.provider_subject_sha256 = b.subject_sha256
       join app_private.profile_rollout_assignments a on a.profile_id = p.id
-      where b.login_sha256 = any($1::text[]) limit 8`, [[...cohort.clients, ...cohort.trainers]])
+        and a.target_backend = 'yandex' and a.access_mode = 'read_write'
+      where b.login_sha256 = any($1::text[])
+        and (b.account_role = 'client' and exists (select 1 from public.clients c
+          where c.auth_user_id = p.id and c.merged_into_client_id is null and c.archived_at is null)
+          or b.account_role = 'trainer' and exists (select 1 from public.trainers t where t.profile_id = p.id))
+      limit 8`, [[...cohort.clients, ...cohort.trainers]])
     const rows = result.rows
-    if (rows.length !== 7 || new Set(rows.map(r => r.id)).size !== 7 || new Set(rows.map(r => r.hash)).size !== 7
-      || rows.filter(r => r.role === 'client').length !== 5 || rows.filter(r => r.role === 'trainer').length !== 2
-      || rows.some(r => !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(r.id) || r.enabled !== true
+    if (rows.length < 5 || rows.length > 7 || new Set(rows.map(r => r.id)).size !== rows.length || new Set(rows.map(r => r.hash)).size !== rows.length
+      || rows.filter(r => r.role === 'client').length !== 5 || rows.filter(r => r.role === 'trainer').length > 2
+      || rows.some(r => !profileUuid.test(r.id) || r.enabled !== true
         || !(r.role === 'client' ? cohort.clients : r.role === 'trainer' ? cohort.trainers : []).includes(r.hash))) {
-      throw new Error('client_workout_profiles_not_ready')
+      throw new ClientWorkoutProfilesNotReadyError(cohort, rows)
     }
     await client.query('commit')
     return { clientProfileIds: rows.filter(r => r.role === 'client').map(r => r.id).sort(),
@@ -60,7 +85,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (JSON.stringify(first) !== JSON.stringify(second)) throw new Error('client_workout_readback_differs')
       phase = 'artifact'
       writeFileSync('/result/client-workout-pilot-ids.json', JSON.stringify(first) + '\n', { flag: 'wx', mode: 0o600 })
-      console.log('Verified five existing test-client profiles and two trainer profiles; read only, no admission changes.')
+      writeFileSync('/result/client-workout-pilot-readiness.json', JSON.stringify({ readyClients: 5, readyTrainers: first.trainerProfileIds.length, missingClientHashes: [] }) + '\n', { flag: 'wx', mode: 0o600 })
+      console.log('Verified exactly five existing test-client profiles; trainer nutrition bindings are not an activation prerequisite. Read only, no admission changes.')
     } finally { await client.end() }
-  } catch (error) { console.error(clientWorkoutInspectionFailure(error, phase)); process.exitCode = 1 }
+  } catch (error) {
+    if (error instanceof ClientWorkoutProfilesNotReadyError) writeFileSync('/result/client-workout-pilot-readiness.json', JSON.stringify(error.readiness) + '\n', { flag: 'wx', mode: 0o600 })
+    console.error(clientWorkoutInspectionFailure(error, phase)); process.exitCode = 1
+  }
 }

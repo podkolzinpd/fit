@@ -2094,6 +2094,7 @@ No trainer/nutrition/global Lime cohort grants access. The owner explicitly appr
 the existing test accounts on20.10.2026; resolve them read-only with
 `Inspect approved client workout test profiles`, then set this feature's own variables
 and rebuild web/native. Do not print UUIDs or cohort contacts.
+All five approved client bindings are mandatory; trainer nutrition bindings are optional and do not grant client access. Native identity, enabled read-write admission and live client domain records are checked. If clients are missing, a one-day private readiness artifact contains only approved missing login hashes and aggregate counts, never profile IDs. No partial client list is activated.
 The resolver reads only existing approved native bindings, writes no identities,
 roles, sessions or rollout assignments, and stores a short-lived private artifact.
 Rollback: set the independent enabled variable to `false` and publish a verified build.

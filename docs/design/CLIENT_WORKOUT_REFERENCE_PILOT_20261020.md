@@ -29,7 +29,7 @@
 
 ### PR4. Каталог и фильтры
 Используем исправленные общие компоненты нового дизайна. Сохраняем поиск, предпросмотр, множественный выбор, добавление и восстановление после ошибки.
-Статус: запланирован.
+Статус: Draft #1751, обновлён до sourcebae6cd59/main2eeb+PR3/03964c6a. Свежие client16/trainer12 и полный check2800frontend/1454API+186DBskip прошли; актуальная main-база после родителя и финальный CI/публикация впереди.
 
 ### PR5. Дата, время и связанные окна
 Согласуем оформление с новым редактором. Сохраняем применение, отмену, проверки времени и существующее поведение календаря.
@@ -105,6 +105,20 @@ Client reference не подменяет coachReference/limePlan/safePlanInput, 
 
 Полный checkpoint PR3 на5db66dab: все штатные стадии check exit0, frontend2792/2792, API1453passed+185standardDBskip, lint/type/coverage/policies/build/postbuild. Включает client manual overtime из dbea4182. Лог outputs/client-workout-reference-20261020/pr3-check-controlled.log. PR2 подготовлен Draft#1749; ни один этап пока не опубликован.
 
+## Preflight PR4
+Рабочий source0656ece2 (PR3), remote main1662bede/#1743. #1744 и #1745 активны, их свежие исправления каталога/фильтров совмещаем и перепроверяем до выпуска. WebKit390 реальные /workouts/new → выбор, поиск, фильтры пройдены; отдельно открыт действующий тренерский reference на синтетическом profile1. outputs/client-workout-reference-20261020/pr4-baseline. Первый пробный harness использовал обычную тренерскую учётку; за reference-доказательство принят только повтор с действующим synthetic trainer gate.
+
+| Уже работает | Переиспользуем | Действительно меняем | НЕ ПРОВЕРЕНО |
+|---|---|---|---|
+| Поиск внутри клиентских фильтров, фасеты, техника/preview и отдельная кнопка выбора, множественный выбор, собственное упражнение, повтор добавления | ExercisePicker, селекторы/selectionDraft/pendingSelection, FitLimeSheetHeader, утверждённые SVG и геометрия тренерского каталога | Только referenceAppearance и пилотные стили/карточки/панель действий; coach reference не подменяется. Все клиентские точки: редактор, Today compose/review, Live. /exercises находится под TrainerOnly, клиентский новый раздел не создаём | Реальный iPhone/OAuth; окончательное совмещение #1744–1745 до их merge |
+
+Поиск не скрываем при фильтрах; нормализованные клиентские ошибки не заменяем сырыми Error.message. Сохранение/добавление/права и текущая механика preview/выбора не меняются. Общий дизайн-код не редактируем.
+
+### Локальный checkpoint PR4
+Presentation-only referenceAppearance не подменяет role reference, клиентские search/filter/error-ветки сохранены. Общая CSS-геометрия каталога выделена без соседних set/block/schedule-правил. WebKit/Chromium16/16: темы390/430, preview без выбора, выбор2 и сохранённый поиск/фасеты, все три точки входа, nonpilot, Live partial-commit/retry с прежним idempotent request и подтверждённым фактом, пустой поиск/создание503/retry. Новый unit-контракт +существующие64/64; trainer375/390/430/1440 и оба профиля12/12. Все штатные стадии check exit0:2793frontend/1453API+185DBskip, локальные workers2 без изменения timeout/coverage; снимки просмотрены. Поля оборудования и кнопка применения больше не накладываются в новом варианте. Окончательное совмещение исправленных #1744–1745 и fresh-main проверки обязательны до выпуска. Physical iPhone НЕ ПРОВЕРЕН.
+
+Уточнение окружения PR4 (21.10): в новой worktree не были скопированы ignored licensed font-файлы (имена lowercase, прежний glob не совпал). Файлы перенесены из утверждённого набора, checksum prepare-fit-lime-fonts2/2. После этого вся client16/16 и trainer12/12 матрица повторена и снимки просмотрены; добавлена проверка document.fonts.load, потому что computed font-family не доказывает загрузку. Product CSS/JS и шрифтовые токены по этой причине не менялись.
+
 ### Проверка ввода времени PR3 — выявленный до публикации побочный эффект
 WebKit390, источник45713f8f, duration-baseline: при сохранённом fit.workoutTimeWheel=false обычный клиент показывает4 прямых поля минут/секунд на2 подходах; reference-клиент показывает2 trigger и0 прямых полей. Причина в коде: compact у WorkoutDurationField принудительно включает picker при !planInput. Новое referenceAppearance нельзя передавать в этот поведенческий параметр. Подтверждённая правка: вернуть прежние compact/compactDuration на role reference в редакторе и прежнее отсутствие compact в Today. Стиль metric wrappers остаётся новым, настройка выбора способа ввода сохраняется. Live уже использовал compact безусловно до серии, его не меняем. Добавляем narrow regression для видов метрик, plan/fact и wheel on/off.
 
@@ -155,3 +169,15 @@ PR2 слит в main2eeb0a71 после CI39514497216success33/3штатныхsk
 
 ### Финальная локальная приёмка PR3 на main2eeb0a71
 21.10 — все штатные стадии check exit0:2799frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild. Local Vitestworkers2; timeout/retries/coverage не менялись. Client26/26, copy4/4, read-only boundary6/6; editor и copy snapshots просмотрены. Diff общего дизайн-кода/каталогаSVG пуст относительно main. Финальный CI/merge/публикация и успешное разрешение5профилей ещё впереди. Физический iPhone и realOAuth НЕ ПРОВЕРЕНО. Лог outputs/client-workout-reference-20261020/pr3-final-check.log.
+
+## Повторный preflight PR4 после финального редактора
+Сборкаbae6cd59 включает main2eeb0a71 и PR3/03964c6a. #1744–1745 уже слиты; прежний пункт их ожидания закрыт. Новых UI-правок при обновлении не потребовалось. Уже работает: поиск в фильтрах/preview/мультивыбор/retry и исправленныеSVGсостояния. Переиспользуем ExercisePicker/FitLimeSheetHeader, текущие темы, новые общий CSS и ID-safe черновик редактора. Меняем только ранее согласованное scoped-представление этого этапа. НЕ ПРОВЕРЕНО: physicaliPhone/realOAuth и опубликованный новый пилот.
+Свежие WebKit/Chromium client16/16+trainer12/12 прошли; actualYSGeo загружен; catalog-selected/filters-bottom и fullscroll просмотрены. Все штатные стадии check exit0:2800frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild; localworkers2, timeout/retries/coverage прежние. Логи pr4-refreshed-client-browser/pr4-refreshed-trainer-browser/pr4-refreshed-check в outputs/client-workout-reference-20261020. Следующий гейт: после выпуска #1750 обновить main, пройти точный CI и штатную публикацию.
+
+## Операционная проверка допуска: клиентский пилот не зависит от питания тренеров
+PR3#1750 слит в main3eb69d4c после exactCI39516995616success33/3штатныхskip; дерево совпадает с проверенным03964c6a, squash-конфликты PR4 разрешены с сохранением его diff. Повторный read-only inspect39518870128 установил phase=profiles/reason=client_workout_profiles_not_ready: соединение/guard/модули исправны, полный прежний набор7 не подтверждён. Уже выполненный штатный nutrition audit39411979608 содержал только aggregate4client/1trainer/outside0; новых nutrition операций не запускалось. Нельзя выдавать это за текущий список или угадывать UUID.
+Найдена лишняя реализационная зависимость: операция клиентского пилота требовала2пищевые привязки тренеров. Утверждённый пользовательский scope требует ровно5клиентов, тренерская часть не переключается. В PR4 обязательны все5точных клиентов;0–2существующие тренерские привязки допустимы и ничего не включают. Уточнены native identity/subject, read-write admission и живой client domain по уже работающему каноническому контракту. Не используются email/names/UUID другого эксперимента, не меняются identities/admission/bindings/данные или nutrition flags. Неполный клиентский набор по-прежнему fail-closed; частичный rollout не разрешён.
+При ошибке приватный readiness artifact на1день содержит только counts и недостающие approvedloginhashes, без частичных UUID. Unit8/8 проверяет обязательность5, optionaltrainer, readonly/target/невалидные/disabled/duplicate/roleconflicts и безопасную диагностику. Product UI diff после этого изменения пуст; ранее свежие16client/12trainer сохраняют силу. Финальный полный check выполняется, затем exact-headCI/публикация4 и повторный read-only результат определят возможность включения.
+
+### Финальный checkpoint PR4 на слитом main3eb69d4c
+Все штатные стадии check после уточнения read-only допуска exit0:2800frontend/1454API+186штатныхDBskip, boundary8/8, lint/types/coverage/policies/hosting/build/postbuild; localworkers2, timeout/retries/coverage неизменны. Клиентские16/16+тренерские12/12 проверяли тот же продуктовый UI: дополнительный diff только scripts/workflow/operations/docs; повторно менять UI не потребовалось. Новая main3eb69d4c побайтово совпала с уже включённым03964c6a; финальная база обновлена. Exact-headCI/публикация/повторная проверка5профилей ещё впереди. Лог outputs/client-workout-reference-20261020/pr4-final-check.log.

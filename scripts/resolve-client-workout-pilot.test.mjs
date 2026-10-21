@@ -69,3 +69,35 @@ test('inspection failures expose only an allowlisted phase and reason', () => {
   assert.equal(clientWorkoutInspectionFailure({code:'42501',message:'private database context'}, 'connection'), 'client_workout_profile_inspection_failed_closed phase=connection reason=42501')
   assert.equal(clientWorkoutInspectionFailure({code:'synthetic-secret',message:'synthetic-secret'}, 'synthetic-secret'), 'client_workout_profile_inspection_failed_closed phase=unknown reason=unclassified')
 })
+
+// The client pilot must not depend on another feature being used by trainers.
+test('all five exact clients are required, trainer nutrition binding is optional', async () => {
+  for (const values of [rows.slice(0, 5), rows.slice(0, 6), rows]) {
+    const client = fixture(values)
+    const result = await resolveClientWorkoutProfiles(client, cohort)
+    assert.equal(result.clientProfileIds.length, 5)
+    assert.equal(result.trainerProfileIds.length, values.length - 5)
+    const select = client.calls.find(call => call.sql.includes('from app_private')).sql
+    assert.match(select, /join app_private.auth_identities/)
+    assert.match(select, /i.provider_subject_sha256 = b.subject_sha256/)
+    assert.match(select, /a.access_mode = 'read_write'/)
+    assert.match(select, /c.merged_into_client_id is null and c.archived_at is null/)
+  }
+  await assert.rejects(resolveClientWorkoutProfiles(fixture(rows.slice(1)), cohort), error => {
+    assert.equal(error.readiness.readyClients, 4)
+    assert.deepEqual(error.readiness.missingClientHashes, [cohort.clients[0]])
+    assert.doesNotMatch(JSON.stringify(error.readiness), /10000000-/)
+    return true
+  })
+})
+
+test('private readiness excludes disabled, invalid and ambiguous client records', async () => {
+  for (const values of [rows.map((row, i) => i ? row : {...row, enabled:false}), rows.map((row, i) => i ? row : {...row, id:'invalid'}), rows.map((row, i) => i ? row : {...row, id:rows[1].id})]) {
+    await assert.rejects(resolveClientWorkoutProfiles(fixture(values), cohort), error => {
+      assert.ok(error.readiness.readyClients < 5)
+      assert.ok(error.readiness.missingClientHashes.includes(cohort.clients[0]))
+      assert.doesNotMatch(JSON.stringify(error.readiness), /invalid|10000000-/)
+      return true
+    })
+  }
+})
