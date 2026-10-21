@@ -6,7 +6,7 @@ import {
   parseYandexJson,
   shouldUseClientCache,
   yandexHttpError,
-} from "../../supabase/functions/summarize-client-training/self-service"
+} from "../../services/api/src/legacy-summary/self-service"
 
 const client = {
   id: "client-1",

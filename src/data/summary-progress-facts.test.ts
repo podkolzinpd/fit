@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSummaryProgressFacts } from '../../supabase/functions/summarize-client-training/summary-progress-facts'
+import { buildSummaryProgressFacts } from '../../services/api/src/legacy-summary/summary-progress-facts'
 
 describe('buildSummaryProgressFacts', () => {
   it('keeps verified strength values and integer percentages', () => {

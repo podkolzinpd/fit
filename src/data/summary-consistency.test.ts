@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSummaryConsistency } from '../../supabase/functions/summarize-client-training/summary-consistency'
+import { buildSummaryConsistency } from '../../services/api/src/legacy-summary/summary-consistency'
 
 describe('AI summary consistency window', () => {
   it('starts a short history at the first completed workout without extrapolating beyond a week', () => {

@@ -5,7 +5,7 @@ import {
   deriveExerciseObservations,
   deriveMeasurementChanges,
   TARGET_SUMMARY_MODEL_INPUT_CHARS,
-} from '../../supabase/functions/summarize-client-training/summary-model-input'
+} from '../../services/api/src/legacy-summary/summary-model-input'
 
 describe('buildSummaryModelInput', () => {
   it('keeps every unique exercise while compacting repetitive sessions', () => {

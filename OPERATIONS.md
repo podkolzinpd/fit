@@ -968,11 +968,19 @@ frontend больше нет. Историческая таблица `public.us
 для `anon` и `authenticated`; её физическое удаление выполняется только через
 отдельное согласованное окно destructive migration.
 
-Изменения `summarize-client-training` после merge выкатывает отдельный
-`.github/workflows/deploy-summary-function.yml`. Он публикует только эту Edge
-Function через Supabase API, не использует Docker и получает project id и access
-token только из GitHub Secrets. `verify_jwt=false` сохраняется намеренно:
-функция самостоятельно проверяет пользователя и его роль по bearer token.
+Старые Supabase Edge Functions `parse-workout` и `summarize-client-training`,
+их deploy-workflows и локальная config-запись summary удалены. Native API и
+Yandex Cloud Functions сохраняются; это удаление исходников и deployment-путей,
+а не удалённое отключение ранее опубликованных ресурсов.
+
+`npm run ai:smoke` использует prompt/schema/quality из существующего native core
+`services/api/src/legacy-summary`. Требуются Node.js 22.18+ и переменные окружения
+`YANDEX_CLOUD_API_KEY`, `YANDEX_CLOUD_FOLDER_ID`; модель задаётся через
+`YANDEX_CLOUD_MODEL_ID` (по умолчанию `yandexgpt`). Старый неявный env-файл в
+Supabase больше не читается. Явные аргументы остаются совместимыми:
+`npm run ai:smoke -- <env-file> <fixture-file> <model-id>`; относительные пути,
+как раньше, разрешаются относительно smoke-скрипта. Smoke выполняет платные
+LLM-вызовы, поэтому в автоматических проверках используется offline fetch fixture.
 
 Workflow не использует GitHub Environment: для приватного репозитория на GitHub Free эта возможность недоступна. Переход на environment secrets выполняется отдельно после подключения подходящего тарифа.
 

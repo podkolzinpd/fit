@@ -2,15 +2,14 @@ import { readFile } from "node:fs/promises"
 import {
   SUMMARY_JSON_SCHEMA,
   SUMMARY_SYSTEM_PROMPT,
-} from "../supabase/functions/summarize-client-training/summary-contract.ts"
+} from "../services/api/src/legacy-summary/summary-contract.ts"
 import {
   summaryQualityIssues,
-} from "../supabase/functions/summarize-client-training/summary-quality.ts"
+} from "../services/api/src/legacy-summary/summary-quality.ts"
 
-const envPath = new URL(
-  process.argv[2] ?? "../supabase/functions/.env.local",
-  import.meta.url,
-)
+const envPath = process.argv[2]
+  ? new URL(process.argv[2], import.meta.url)
+  : null
 const fixturePath = new URL(
   process.argv[3] ?? "./fixtures/yandex-progress-6m.json",
   import.meta.url,
@@ -42,7 +41,7 @@ function mask(value, secret) {
     .replace(/(?:AQAD-|y[01]_|t[01]_)[A-Za-z0-9_-]+/g, "[MASKED]")
 }
 
-const localEnv = parseEnv(await readFile(envPath, "utf8"))
+const localEnv = envPath ? parseEnv(await readFile(envPath, "utf8")) : process.env
 const apiKey = required(localEnv.YANDEX_CLOUD_API_KEY, "YANDEX_CLOUD_API_KEY")
 const folderId = required(
   localEnv.YANDEX_CLOUD_FOLDER_ID,

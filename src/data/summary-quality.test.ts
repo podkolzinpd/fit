@@ -4,7 +4,7 @@ import {
   repairSummaryQuality,
   summaryQualityIssueCodes,
   summaryQualityIssues,
-} from '../../supabase/functions/summarize-client-training/summary-quality'
+} from '../../services/api/src/legacy-summary/summary-quality'
 
 const trainingData = {
   consistency: {

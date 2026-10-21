@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completedWorkoutsInPeriod } from '../../supabase/functions/summarize-client-training/workout-source'
+import { completedWorkoutsInPeriod } from '../../services/api/src/legacy-summary/workout-source'
 
 describe('AI summary workout source', () => {
   it('uses only completed, active workouts dated inside the requested period', () => {
