@@ -20,7 +20,8 @@ window.FIT_CHANNELS = {
       ['Бенефит для компаний','Спорт для сотрудников и команд'],
       ['Директ','Продвижение услуг тренеров'],
       ['Лавка · Еда · Маркет','Заказы питания и инвентаря']
-    ])+`<div class="ce-visual ce-scenarios"><figure><img src="assets/editorial/video-barefoot.png" alt="Спортсменка выполняет упражнение босиком, тренер наблюдает в маленьком окне"><figcaption>Видеотренировка</figcaption></figure><div class="ce-order"><img src="assets/editorial/products.png" alt="Питание и спортивный инвентарь"><div><h3>Питание и инвентарь</h3><span>Подтвердить заказ</span></div></div></div><p class="ce-status">Предлагаемые интеграции</p>`;
+    ])+`<div class="ce-visual ce-scenarios"><figure><img src="assets/editorial/video-barefoot-v2.png" alt="Спортсменка тренируется дома босиком, тренер наблюдает из зала"><figcaption>Видеотренировка</figcaption></figure><div class="ce-order"><h3>От рекомендаций — к заказу</h3><div class="ce-services"><div><img src="assets/editorial/lavka.png" alt="Яндекс Лавка"><h4>Лавка</h4><p>Продукты</p></div><div><img src="assets/editorial/eda.ico" alt="Яндекс Еда"><h4>Еда</h4><p>Готовые блюда</p></div><div><img src="assets/editorial/market.png" alt="Яндекс Маркет"><h4>Маркет</h4><p>Спортивный<br>инвентарь</p></div></div></div></div>`;
+    value.dataset.notes += ' Предлагаемые интеграции: концепции сценариев, не заявление об уже запущенных интеграциях. Заказ подтверждает пользователь.';
     const events=document.createElement('section');
     events.className='slide ce-slide ce-events';
     events.dataset.section='07 · СПОРТИВНЫЕ СОБЫТИЯ';

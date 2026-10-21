@@ -12,13 +12,16 @@
 #deck .ce-offer h3 {font-size:29px!important;margin:10px 0!important;color:#f5f4ef!important;}
 #deck .ce-offer p {font-size:20px;color:#99a1a4;margin:0;}
 #deck .ce-scenarios {top:230px;}
-#deck .ce-scenarios figure {margin:0;}
+#deck .ce-scenarios figure {width:85%;margin:0 0 0 auto;}
 #deck .ce-scenarios figure>img {display:block;width:100%;aspect-ratio:16/9;object-fit:contain;border-radius:14px;}
 #deck .ce-scenarios figcaption {font-size:18px;color:#99a1a4;margin-top:9px;}
-#deck .ce-order {display:flex;gap:22px;align-items:center;margin-top:22px;padding:16px;background:#1b2225;border:1px solid #30383b;border-radius:14px;}
-#deck .ce-order>img {width:250px;height:110px;object-fit:cover;border-radius:8px;}
-#deck .ce-order h3 {font-size:21px!important;margin:0 0 20px!important;color:#f5f4ef!important;}
-#deck .ce-order span {display:block;background:#d6f500;color:#111719;font-size:20px;font-weight:650;text-align:center;padding:14px 17px;border-radius:10px;}
+#deck .ce-order {margin-top:22px;padding:20px 28px;background:#1b2225;border:1px solid #30383b;border-radius:14px;}
+#deck .ce-order h3 {font-size:27px!important;margin:0 0 18px!important;color:#f5f4ef!important;}
+#deck .ce-services {display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+#deck .ce-services>div+div {border-left:1px solid #394144;padding-left:24px;}
+#deck .ce-services img {width:44px;height:44px;border-radius:10px;display:block;margin-bottom:8px;}
+#deck .ce-services h4 {font-size:24px;line-height:1.2;margin:0 0 6px;color:#f5f4ef;}
+#deck .ce-services p {font-size:20px;line-height:1.25;color:#adb4b6;margin:0;}
 #deck .ce-status {position:absolute;left:76px;bottom:45px;margin:0;font-size:16px;color:#929b9f;}
 #deck .ce-lead {position:absolute;left:76px;top:207px;font-size:27px;color:#adb4b6;margin:0;}
 #deck .ce-event-pair {position:absolute;left:76px;right:76px;top:285px;display:grid;grid-template-columns:1fr 1fr;gap:28px;}
