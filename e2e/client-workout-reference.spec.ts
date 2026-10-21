@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId } from './fit-lime-fixtures'
+import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -946,4 +946,201 @@ for (const mode of ['planned', 'completed']) test(`client date reference Today s
   await page.getByRole('button', { name: mode === 'planned' ? 'Запланировать тренировку' : 'Записать тренировку', exact: true }).click()
   await expect.poll(() => backend.getSaveAttempts()).toBe(1)
   expect(backend.getWorkouts()[0]!.startTime).toBe('12:30')
+})
+
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client swipe set cancel delete protects facts ${theme} ${density}`, async ({ page, browserName }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+  }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(), exercise = source.exercises[0]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  exercise.sets[0]!.confirmedAt = new Date().toISOString()
+  exercise.sets[0]!.fact = { weightKg: 30, reps: 10 }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let attempts = 0
+  await page.route('**/v1/workout-sets/*', route => { if (route.request().method() === 'DELETE') attempts += 1; return route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const first = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
+  const second = page.locator(`form[data-live-set-id="${exercise.sets[1]!.id}"]`)
+  const gesture = await beginClientGesture(page, second, browserName, second.getByLabel('Фактический вес', { exact: true }))
+  await gesture.move(60); await gesture.end()
+  const remove = second.getByRole('button', { name: /Удалить подход 2:/ })
+  await expect(remove).toBeVisible()
+  await expect(second.getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
+  await expect(first.locator('.workout-swipe-action')).toHaveCount(0)
+  await remove.click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  expect(attempts).toBe(0)
+  const again = await beginClientGesture(page, second, browserName, second.locator('.live-set-number'))
+  await again.move(36); await again.end()
+  await remove.click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect(second).toHaveCount(0)
+  expect(attempts).toBe(1)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets).toHaveLength(1)
+  await page.locator('.workout-exercise-compact').click()
+  await expect(first.getByLabel('Фактический вес', { exact: true })).toHaveValue('30')
+  const protectedGesture = await beginClientGesture(page, first, browserName, first.locator('.live-set-number'))
+  await protectedGesture.move(36); await protectedGesture.end()
+  await expect(first.locator('.workout-swipe-action')).toHaveCount(0)
+  await first.getByLabel('Фактический вес', { exact: true }).fill('32')
+  await first.getByLabel('Фактический вес', { exact: true }).blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(32)
+  await expect(first).toHaveClass(/confirmed/)
+  await page.screenshot({ path: info.outputPath('client-set-swipe.png') })
+})
+
+for (const withTrainer of [true, false]) for (const animation of [true, false]) test(`client swipe exercise preserves unrelated rest trainer-${withTrainer} animation-${animation}`, async ({ page, browserName }, info) => {
+  await page.addInitScript(({ id, animation }) => localStorage.setItem(`fit.liveExerciseAnimation.${id}`, String(animation)), { id: pilotId, animation })
+  const source = coachGestureWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  if (!withTrainer) { source.trainerId = pilotId; source.createdBy = pilotId; source.trainingFormat = 'self' }
+  const exercise = source.exercises[0]!, target = source.exercises[1]!
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source], ...(withTrainer ? {} : { clientTrainerId: pilotId }) })
+  let attempts = 0
+  await page.route('**/v1/workouts/*/exercises/*', async route => {
+    if (route.request().method() !== 'DELETE') return route.fallback()
+    attempts += 1
+    const current = backend.getWorkouts()[0]!
+    current.exercises = current.exercises.filter(item => item.id !== target.id).map((item, position) => ({ ...item, position }))
+    current.version += 1
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout: { version: current.version } }) })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const first = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
+  await first.getByLabel('Фактический вес', { exact: true }).fill('27.5')
+  await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(first).toHaveClass(/confirmed/)
+  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /отдыха/)
+  const card = page.locator(`[data-workout-block="${target.blockId}"]`)
+  const title = page.getByRole('heading', { name: target.name, exact: true })
+  // The heading is a button in the client composition; short taps and full-card
+  // holds remain available while a horizontal gesture can reveal deletion.
+  const surface = page.locator('[data-workout-swipe]').filter({ has: title }).first()
+  const gesture = await beginClientGesture(page, surface, browserName, title)
+  await gesture.move(100); await gesture.end()
+  const remove = surface.getByRole('button', { name: 'Удалить', exact: true })
+  await expect(remove).toBeVisible()
+  await remove.click()
+  await expect(page.getByRole('alertdialog')).toContainText('включая выполненные')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  expect(attempts).toBe(0)
+  const again = await beginClientGesture(page, surface, browserName, title)
+  await again.move(100); await again.end()
+  await remove.click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect(title).toHaveCount(0)
+  expect(attempts).toBe(1)
+  expect(backend.getWorkouts()[0]!.exercises.map(item => item.name)).toEqual([source.exercises[0]!.name, source.exercises[2]!.name])
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
+  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /отдыха/)
+  await expect(first).toHaveClass(/confirmed/)
+  await expect(card).toHaveCount(0)
+  await page.screenshot({ path: info.outputPath('client-exercise-swipe.png') })
+})
+
+for (const conflict of [false, true]) test(`client swipe retry protects concurrent result conflict-${conflict}`, async ({ page, browserName }) => {
+  const source = restTimerWorkout(), target = source.exercises[0]!.sets[1]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let attempts = 0
+  await page.route('**/v1/workout-sets/*', async route => {
+    if (route.request().method() !== 'DELETE') return route.fallback()
+    attempts += 1
+    if (conflict) {
+      const current = backend.getWorkouts()[0]!, set = current.exercises[0]!.sets[1]!
+      current.version += 1; set.version += 1; set.confirmedAt = new Date().toISOString(); set.fact = { weightKg: 42.5, reps: 8 }
+      return route.fulfill({ status: 409, json: { error: 'workout_conflict' } })
+    }
+    if (attempts === 1) return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+    return route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`form[data-live-set-id="${target.id}"]`)
+  const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true }))
+  await gesture.move(60); await gesture.end()
+  await row.getByRole('button', { name: /Удалить подход 2:/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  const retry = page.getByRole('button', { name: 'Повторить удаление подхода', exact: true })
+  if (conflict) {
+    await expect(row).toHaveClass(/confirmed/)
+    await expect(retry).toBeDisabled()
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('42.5')
+    expect(attempts).toBe(1)
+  } else {
+    await expect(retry).toBeEnabled()
+    await retry.click()
+    await expect(row).toHaveCount(0)
+    expect(attempts).toBe(2)
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets).toHaveLength(1)
+  }
+})
+
+test('client compact card trusted tap swipe and full-card hold remain distinct', async ({ page, browserName }) => {
+  const source = coachGestureWorkout(), target = source.exercises[1]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  target.sets.forEach(set => { set.confirmedAt = new Date().toISOString(); set.fact = { weightKg: 25, reps: 10 } })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const card = page.locator(`[data-workout-block="${target.blockId}"]`)
+  const compact = card.locator('.workout-exercise-compact')
+  await compact.tap()
+  await expect(card.locator('form[data-live-set-id]')).toHaveCount(2)
+  // Reload returns to the saved completed-card representation.
+  await page.reload()
+  const gesture = await beginClientGesture(page, card, browserName, compact)
+  await gesture.move(100); await gesture.end()
+  await expect(card.getByRole('button', { name: 'Удалить', exact: true })).toBeVisible()
+  await expect(card.locator('form[data-live-set-id]')).toHaveCount(0)
+  await card.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await holdClientLiveCard(page, target.blockId)
+  await page.keyboard.press('Escape')
+  await page.mouse.up()
+  await expect(card).not.toHaveClass(/dragging/)
+  await expect(compact).toBeVisible()
+})
+
+test('client swipe last added superset round uses existing atomic removal', async ({ page, browserName }) => {
+  const source = coachGestureWorkout(true, 2), first = source.exercises[0]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const commands: string[] = []
+  await page.route('**/blocks/*/rounds', async route => {
+    const current = backend.getWorkouts()[0]!
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+    current.exercises.forEach((exercise, index) => { exercise.sets.push({ ...exercise.sets.at(-1)!, id: `c11e0000-6010-4000-8000-0000000008${index}2`, position: 2, fact: {}, confirmedAt: null }); exercise.blockRounds = 3 })
+    current.version += 1; commands.push('append')
+    await route.fulfill({ json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+  })
+  await page.route('**/blocks/*/rounds/2', async route => {
+    const current = backend.getWorkouts()[0]!
+    expect(route.request().method()).toBe('DELETE')
+    expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+    expect(current.exercises.every(exercise => exercise.sets.at(-1)?.position === 2 && !exercise.sets.at(-1)?.confirmedAt && Object.keys(exercise.sets.at(-1)!.fact).length === 0)).toBe(true)
+    current.exercises.forEach(exercise => { exercise.sets = exercise.sets.filter(set => set.position !== 2); exercise.blockRounds = 2 })
+    current.version += 1; commands.push('remove')
+    await route.fulfill({ json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const group = page.locator('.exercise-block.live')
+  await group.getByRole('button', { name: 'Круг', exact: true }).click()
+  await expect(group.locator('.circuit-round')).toHaveCount(3)
+  const round = group.locator('.circuit-round').last()
+  await round.getByRole('button', { name: /Круг 3/ }).click()
+  const row = round.locator('[data-live-set-id]').first()
+  const swipe = async () => { const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true })); await gesture.move(60); await gesture.end() }
+  await swipe()
+  await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  expect(commands).toEqual(['append'])
+  await swipe()
+  await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Убрать', exact: true }).click()
+  await expect(group.locator('.circuit-round')).toHaveCount(2)
+  expect(commands).toEqual(['append', 'remove'])
+  expect(backend.getWorkouts()[0]!.exercises.map(exercise => exercise.sets.length)).toEqual([2, 2])
 })

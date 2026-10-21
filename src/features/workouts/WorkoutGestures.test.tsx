@@ -31,6 +31,77 @@ function pointer(target: Element, type: string, pointerId: number, isPrimary = t
   fireEvent(target, event)
   return event
 }
+
+function setupCompactSwipe(kind: 'compact' | 'title' = 'compact') {
+  const open = vi.fn(), remove = vi.fn(), move = vi.fn(), removeSet = vi.fn()
+  render(<WorkoutGestureList blocks={['a', 'b']} disabled={false} onMove={move} holdCards nativeSwipe>
+    <WorkoutDragBlock id="a" holdToDrag label="Жим">
+      <WorkoutSwipe id="a" disabled={false} onDelete={remove} swipeFromCardButton>
+        <button type="button" className={kind === 'compact' ? 'workout-exercise-compact' : 'exercise-technique-trigger'} onClick={open}>Жим</button>
+        <button type="button" aria-label="Меню карточки">Меню</button>
+        <details><summary>Моя заметка</summary><textarea aria-label="Заметка" /></details>
+        <WorkoutSwipe id="set:s1" variant="set" disabled={false} onDelete={removeSet} actionLabel="Удалить подход 1">
+          <span data-testid="compact-row-number">1</span>
+        </WorkoutSwipe>
+      </WorkoutSwipe>
+    </WorkoutDragBlock>
+  </WorkoutGestureList>)
+  return { open, remove, move, removeSet, card: screen.getByRole('button', { name: 'Жим' }) }
+}
+
+it.each(['compact', 'title'] as const)('%s client card keeps its short tap and requires an explicit swipe deletion action', (kind) => {
+  const { open, remove, card } = setupCompactSwipe(kind)
+  pointer(card, 'pointerdown', 7)
+  pointer(card, 'pointerup', 7)
+  fireEvent.click(card)
+  expect(open).toHaveBeenCalledTimes(1)
+  pointer(card, 'pointerdown', 8)
+  pointer(card, 'pointermove', 8, true, 100, 60)
+  pointer(card, 'pointerup', 8, true, 100, 60)
+  fireEvent.click(card)
+  expect(open).toHaveBeenCalledTimes(1)
+  expect(remove).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Удалить' }))
+  expect(remove).toHaveBeenCalledTimes(1)
+})
+
+it('swipe leaves a note summary native pointer action untouched', () => {
+  setupCompactSwipe()
+  const note = screen.getByText('Моя заметка')
+  const down = new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 })
+  Object.defineProperties(down, { pointerId: { value: 7 }, isPrimary: { value: true } })
+  fireEvent(note, down)
+  expect(down.defaultPrevented).toBe(false)
+})
+
+it('holding a compact swipe card still enters full-card drag and cancellation writes nothing', () => {
+  vi.useFakeTimers()
+  const { open, remove, move, card } = setupCompactSwipe()
+  pointer(card, 'pointerdown', 7)
+  act(() => vi.advanceTimersByTime(351))
+  expect(card.closest('[data-workout-block]')).toHaveClass('dragging')
+  expect(screen.queryByRole('button', { name: 'Удалить' })).not.toBeInTheDocument()
+  pointer(card, 'pointercancel', 7)
+  expect(card.closest('[data-workout-block]')).not.toHaveClass('dragging')
+  expect(open).not.toHaveBeenCalled()
+  expect(remove).not.toHaveBeenCalled()
+  expect(move).not.toHaveBeenCalled()
+})
+
+it('holding a set number preserves its own swipe instead of starting a whole-card drag', () => {
+  vi.useFakeTimers()
+  const { remove, move, removeSet } = setupCompactSwipe()
+  const number = screen.getByTestId('compact-row-number')
+  pointer(number, 'pointerdown', 8)
+  act(() => vi.advanceTimersByTime(500))
+  expect(number.closest('[data-workout-block]')).not.toHaveClass('dragging')
+  pointer(number, 'pointermove', 8, true, 100, 60)
+  pointer(number, 'pointerup', 8, true, 100, 60)
+  expect(screen.getByRole('button', { name: 'Удалить подход 1' })).toBeVisible()
+  expect(move).not.toHaveBeenCalled()
+  expect(remove).not.toHaveBeenCalled()
+  expect(removeSet).not.toHaveBeenCalled()
+})
 it('holding a card activates the existing drag without remounting its edited input', () => {
   vi.useFakeTimers()
   const { move } = setup(false, true)
