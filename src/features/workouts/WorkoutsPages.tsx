@@ -1336,6 +1336,7 @@ export function WorkoutFormPage() {
   const completedMode = recordCompleted || recordPlannedResult || Boolean(workoutId && source.data?.status === 'done')
   const limePlan = isFitLimeEnabled(actor) && !completedMode
   const coachReference = limePlan && isCoachWorkoutRedesignEnabled(actor)
+  const clientReference = isClientWorkoutRedesignEnabled(actor)
   const safePlanInput = coachReference && isCoachPlanInputEnabled(actor) && (!workoutId || source.data?.status === 'planned')
   const refinedPlan = coachReference && isCoachPlanLayoutEnabled(actor) && (!workoutId || source.data?.status === 'planned')
   const planDraftKey = safePlanInput && workoutId ? workoutFormDraftKey(actor?.userId ?? 'anonymous', `edit-${workoutId}`) : draftKey
@@ -1383,7 +1384,7 @@ export function WorkoutFormPage() {
     } else if (initial) {
       // copyWorkout generates block IDs. Freeze the reference editor draft
       // once so unrelated form/query renders cannot remount an active card.
-      if (coachReference) setDraftExercises(initial.exercises)
+      if (coachReference || clientReference) setDraftExercises(initial.exercises)
       setEntryDate(initial.workoutDate)
       // PostgreSQL возвращает time как HH:MM:SS, а нативный input[type=time]
       // без шага секунд принимает HH:MM. Иначе браузер молча блокирует submit.
@@ -1403,7 +1404,7 @@ export function WorkoutFormPage() {
       trainingFormatTouched.current = Boolean(workoutId)
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, coachReference, draftKey, planDraftKey, safePlanInput, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
+  }, [actor, clientMode, coachReference, clientReference, draftKey, planDraftKey, safePlanInput, favorites.isLoading, formDraftReady, initial, mine.isLoading, plannedFromFavorite, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
 
   useEffect(() => {
     if (clientMode) { setTrainingFormat('self'); return }
@@ -1640,7 +1641,7 @@ export function WorkoutFormPage() {
   const saveErrorMessage = (getRequestDiagnostics(mutation.error)?.status ?? 0) >= 500
     ? 'Не удалось сохранить тренировку. Введённые данные остались в форме. Попробуйте сохранить ещё раз.'
     : undefined
-  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
+  return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${coachReference || clientReference ? ' workout-editor-reference' : ''}${clientReference ? ' client-reference-form client-editor-refined client-editor-polish' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
     <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch() }}>{editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
@@ -1714,7 +1715,7 @@ export function WorkoutFormPage() {
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} safePlanInput={safePlanInput} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId)} initialExercisesReady={formDraftReady} reference={coachReference} referenceAppearance={coachReference || clientReference} safePlanInput={safePlanInput} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {!refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}

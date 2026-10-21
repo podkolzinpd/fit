@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockPilot, workoutId } from './fit-lime-fixtures'
+import { coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -374,4 +374,196 @@ test('client reference Live manual mode times a set from Start and records the t
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
   expect(drafts.at(-1)).toMatchObject({ durationSec: 5 })
   expect(drafts.at(-1)?.timerConfirmed).toBeUndefined()
+})
+
+
+for (const mode of ['planned', 'done'] as const) for (const wheel of [false, true]) test(`client editor reference metric kinds preserve ${mode} wheel-${wheel}`, async ({ page }, info) => {
+  await page.setViewportSize({ width: mode === 'planned' ? 390 : 430, height: 844 })
+  await page.addInitScript(({ id, wheel, mode }) => { localStorage.setItem('fit.workoutTimeWheel', String(wheel)); localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'); localStorage.setItem(`fit.clientLime.theme.${id}`, mode === 'planned' ? 'dark' : 'light') }, { id: pilotId, wheel, mode })
+  const source = coachGestureWorkout()
+  source.createdBy = pilotId; source.trainingFormat = 'self'; source.status = mode
+  source.startedAt = mode === 'done' ? '2026-10-20T09:00:00Z' : null
+  source.completedAt = mode === 'done' ? '2026-10-20T10:00:00Z' : null
+  source.exercises = source.exercises.map((exercise, index) => ({ ...exercise,
+    name: ['Планка', 'Бег с длинным названием тренировки', 'Упражнение на повторы'][index]!,
+    ref: ['plank', 'running', 'push-ups'][index]!, inputKind: (['duration', 'distance', 'reps'] as const)[index]!,
+    sets: [{ ...exercise.sets[0]!, weightKg: undefined, durationSec: index === 1 ? 600 : index === 2 && mode === 'planned' ? undefined : 90, distanceKm: index === 1 ? 1.5 : undefined, reps: index === 2 ? 12 : undefined, rpe: 7,
+      confirmedAt: mode === 'done' ? '2026-10-20T09:10:00Z' : null,
+      fact: mode === 'done' ? { durationSec: index === 1 ? 500 : 45, distanceKm: index === 1 ? 2 : undefined, reps: index === 2 ? 10 : undefined, rpe: 6 } : {} }] }))
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const writes: Array<{ exercises: Array<{ sets: Array<{ durationSec?: number; distanceKm?: number; reps?: number }> }> }> = []
+  await page.route(`**/v1/workouts/${workoutId}`, route => { if (route.request().method() === 'PUT') writes.push(route.request().postDataJSON() as typeof writes[number]); return route.fallback() })
+  // Completed edits use the existing separate endpoint; the common fixture covers plan PUT.
+  await page.route(`**/v1/workouts/${workoutId}/completed`, route => { if (route.request().method() !== 'PUT') return route.fallback(); writes.push(route.request().postDataJSON() as typeof writes[number]); return route.fulfill({ json: { workout: { id: workoutId } } }) })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  const plank = page.locator('.planned-exercise').nth(0)
+  const run = page.locator('.planned-exercise').nth(1)
+  const reps = page.locator('.planned-exercise').nth(2)
+  if (wheel) {
+    const clock = plank.getByRole('button', { name: mode === 'done' ? 'Время, подход 1: 0:45' : 'Время, подход 1: 1:30', exact: true })
+    await expect(clock).toBeVisible()
+    await clock.click()
+    const picker = page.getByRole('dialog', { name: 'Время, подход 1', exact: true })
+    await expect(picker).toBeVisible()
+    await page.screenshot({ path: info.outputPath('duration-picker.png') })
+    await picker.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+  } else {
+    await expect(plank.locator('.workout-duration-trigger')).toHaveCount(0)
+    await expect(plank.getByLabel('Время, подход 1: секунды', { exact: true })).toHaveValue(mode === 'done' ? '45' : '30')
+  }
+  const distance = run.getByLabel('Расстояние, подход 1', { exact: true })
+  await expect(distance).toHaveValue(mode === 'done' ? '2' : '1.5')
+  await distance.fill('2.75'); await distance.press('Tab')
+  await run.getByLabel('Единица расстояния, подход 1', { exact: true }).selectOption('m')
+  await expect(distance).toHaveValue('2750')
+  await run.getByLabel('Единица расстояния, подход 1', { exact: true }).selectOption('km')
+  await expect(distance).toHaveValue('2.75')
+  await expect(reps.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue(mode === 'done' ? '10' : '12')
+  if (mode === 'planned' && wheel) await expect(reps.getByRole('button', { name: 'Время, подход 1: не указано', exact: true })).toHaveText('—')
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('mixed-metrics.png') })
+  await reps.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath('mixed-metrics-last.png') })
+  await page.getByRole('button', { name: mode === 'done' ? 'Сохранить изменения' : 'Сохранить план', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]!.exercises[0]!.sets[0]!.durationSec).toBe(mode === 'done' ? 45 : 90)
+  expect(writes[0]!.exercises[1]!.sets[0]!.distanceKm).toBe(2.75)
+  expect(writes[0]!.exercises[2]!.sets[0]!.reps).toBe(mode === 'done' ? 10 : 12)
+})
+
+for (const [theme, width] of [['dark', 390], ['light', 430]] as const) test(`client editor reference copy edits and saves a new plan ${theme}`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = coachGestureWorkout(false, 1)
+  source.createdBy = pilotId; source.status = 'done'; source.workoutDate = '2026-10-20'; source.completedAt = '2026-10-20T09:10:00Z'
+  source.exercises[0]!.sets[0]!.confirmedAt = source.completedAt
+  source.exercises[0]!.sets[0]!.fact = { weightKg: 25, reps: 9 }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const copies: Array<{ exercises: Array<{ blockId?: string; sets: Array<{ weightKg?: number; reps?: number; fact?: unknown; confirmedAt?: unknown }> }> }> = []
+  const originalWrites: string[] = []
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname
+    if (path === '/v1/workouts' && request.method() === 'POST') copies.push(request.postDataJSON() as typeof copies[number])
+    if (path === `/v1/workouts/${workoutId}` && ['PUT', 'DELETE'].includes(request.method())) originalWrites.push(request.method())
+  })
+  await page.goto('/me/workouts')
+  await page.getByRole('tab', { name: 'История', exact: true }).click()
+  await page.getByRole('link', { name: /^Скопировать тренировку за/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/new\\?copy=${workoutId}`))
+  await expect(page.locator('.client-reference-form')).toBeVisible()
+  await expect(page.getByText(/Скопировано/).first()).toBeVisible()
+  const exercise = page.locator('.planned-exercise').first()
+  await exercise.locator('.compact-editor-exercise-toggle').click()
+  const weight = exercise.getByLabel('Вес, подход 1', { exact: true })
+  await expect(weight).toHaveValue('25')
+  await expect(exercise.getByLabel('Повторы, подход 1', { exact: true })).toHaveValue('9')
+  await expect(exercise.getByLabel('Вес, подход 2', { exact: true })).toHaveValue('20')
+  await weight.fill('27.5')
+  await exercise.getByLabel('Повторы, подход 1', { exact: true }).fill('8')
+  await expectClientEditorFits(page)
+  await weight.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath('copy-edit.png') })
+  const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+  await save.scrollIntoViewIfNeeded()
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('copy-save.png') })
+  await save.click()
+  await expect.poll(() => copies.length).toBe(1)
+  expect(copies[0]!.exercises[0]!.sets[0]).toMatchObject({ weightKg: 27.5, reps: 8 })
+  expect(copies[0]!.exercises[0]!.sets[1]).toMatchObject({ weightKg: 20, reps: 10 })
+  expect(copies[0]!.exercises[0]!.sets[0]!.fact).toBeUndefined()
+  expect(copies[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeUndefined()
+  expect(copies[0]!.exercises[0]!.blockId).not.toBe(source.exercises[0]!.blockId)
+  expect(originalWrites).toEqual([])
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}`))
+})
+
+async function expectClientEditorFits(page: Page) {
+  const overflow = await page.locator('.content').evaluate(el => el.scrollWidth - el.clientWidth)
+  expect(overflow).toBeLessThanOrEqual(1)
+  const outside = await page.locator('.planned-set, .workout-editor-footer, .today-exercise-title').evaluateAll((nodes: Element[]): string[] => nodes.filter(el => {
+    const r = el.getBoundingClientRect()
+    return el.getClientRects().length > 0 && (r.left < -1 || r.right > innerWidth + 1)
+  }).map(el => el.getAttribute('class') ?? ''))
+  expect(outside).toEqual([])
+}
+
+for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`client editor reference geometry ${theme} ${width}`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const plan = coachGestureWorkout()
+  plan.status = 'planned'; plan.startedAt = null; plan.createdBy = pilotId
+  plan.exercises[0] = { ...plan.exercises[0]!, ref: 'barbell-squat', name: 'Присед со штангой на плечах' }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [plan] })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await expect(page.locator('.client-reference-form')).toBeVisible()
+  const field = page.getByLabel('Вес, подход 1', { exact: true }).first()
+  await expect(field).toHaveCSS('height', '48px')
+  await expect(field).toHaveCSS('border-radius', '16px')
+  await expect(field).toHaveCSS('font-family', /YS Geo/)
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('editor-top.png') })
+  await page.locator('.content').evaluate(el => { el.scrollTop = el.scrollHeight })
+  await expect(page.getByRole('button', { name: 'Действия с планом', exact: true })).toBeVisible()
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('editor-bottom.png') })
+  await page.goto('/me?entry=workout')
+  await page.getByLabel('Тренировка', { exact: true }).fill('Жим лёжа один подход десять повторений 40 кг')
+  await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
+  await page.getByText('Править подходы', { exact: true }).click()
+  await expect(page.locator('.client-reference-flow .coach-plan-metric').first()).toBeVisible()
+  await expect(page.locator('.client-reference-flow .planned-set-input').first()).toHaveCSS('height', '48px')
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('review.png') })
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Запланировать тренировку', exact: true })).toBeVisible()
+  await expectClientEditorFits(page)
+  await page.screenshot({ path: info.outputPath('save.png') })
+})
+
+test('client reference voice cancel, review edits and failed save retain the draft', async ({ page }) => {
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [], failFirstSave: true })
+  await mockClientStreamingVoice(page, 'Приседания один подход десять повторений')
+  await page.goto('/me?entry=workout')
+  const text = page.getByLabel('Тренировка', { exact: true })
+  await text.fill('Жим лёжа один подход десять повторений 40 кг')
+  await page.getByRole('button', { name: 'Надиктовать тренировку', exact: true }).click()
+  await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+  await expect(text).toHaveValue('Жим лёжа один подход десять повторений 40 кг')
+  await page.getByRole('button', { name: 'Разобрать тренировку', exact: true }).click()
+  await page.getByText('Править подходы', { exact: true }).click()
+  const weight = page.getByRole('spinbutton', { name: /: вес, подход 1$/ }).first()
+  await weight.fill('22.5')
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать тренировку', exact: true }).click()
+  await expect.poll(() => backend.getSaveAttempts()).toBe(1)
+  await expect(page.getByRole('heading', { name: 'Сохраните тренировку', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '← К проверке', exact: true }).click()
+  await page.getByText('Править подходы', { exact: true }).click()
+  await expect(weight).toHaveValue('22.5')
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  await page.getByRole('button', { name: 'Запланировать тренировку', exact: true }).click()
+  await expect.poll(() => backend.getSaveAttempts()).toBe(2)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}`))
+})
+
+test('another client and a trainer never receive client editor geometry', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: 'c11e0000-6010-4000-8000-000000000002', clientLime: true, workouts: [] })
+  await page.goto('/workouts/new')
+  await expect(page.locator('.workout-form')).toBeVisible()
+  await expect(page.locator('.client-reference-form, .client-reference-flow')).toHaveCount(0)
+  await mockPilot(page, { profileId: pilotId, fitLime: true, workouts: [] })
+  await page.goto('/workouts/new')
+  await expect(page.locator('.workout-form')).toBeVisible()
+  await expect(page.locator('.client-reference-form, .client-reference-flow')).toHaveCount(0)
+})
+
+
+test('client reference cannot edit an assigned trainer plan', async ({ page }) => {
+  const plan = coachGestureWorkout(); plan.status = 'planned'; plan.startedAt = null
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [plan] })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await expect(page.getByText('Редактирование недоступно', { exact: true })).toBeVisible()
+  await expect(page.locator('.workout-form')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toHaveCount(0)
 })

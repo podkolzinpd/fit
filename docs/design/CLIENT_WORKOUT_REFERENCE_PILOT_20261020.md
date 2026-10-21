@@ -17,15 +17,15 @@
 
 ### PR1. Пилот и настройки
 Отдельный флаг только подтверждённых тестовых клиентских профилей. Добавляем выбор «Оригинальный / Компактный» и сохранение настройки. Разделяем плотность и анимации. Подключаем клиентские варианты существующих компонентов.
-Статус: PR #1746 слит и подготовительная часть опубликована на5daaa93b с выключенным флагом. Включение пяти профилей ещё не выполнено: read-only guard исправляется в PR2.
+Статус: PR #1746 слит и подготовительная часть опубликована на5daaa93b с выключенным флагом. Guard исправлен в PR2; инспекция39516069450 остановилась fail-closed в resolver. Включение5профилей ещё не выполнено; безопасная диагностика добавлена в PR3, без предположительных IDs.
 
 ### PR2. Live в двух вариантах
 Переносим оформление шапки, таймера, отдыха, карточек и подходов. Меняем геометрию и представление, сохраняя текущие компоненты ввода, перенос веса, сохранение и обработку клавиатуры.
-Статус: Draft #1749, совмещён с main9d365030/#1747; client62/62 и pause19unit/46policy локально прошли. Финальный полный check, exact-head CI и публикация ещё впереди.
+Статус: PR #1749 слит в main2eeb0a71 после exact-head CI39514497216. Локальные client62/62+finalpause8/8, trainer/nonpilot/cardio30/30, fullcheck2794frontend/1454API+186DBskip прошли. MainCI/публикация выполняются; независимое включение ожидает точной read-only проверки профилей.
 
 ### PR3. Создание и редактирование
 Применяем новую компактную композицию параметров и упражнений. Сохраняем голосовой, текстовый и ручной ввод, черновики, копирование, проверку и сохранение тренировки.
-Статус: запланирован.
+Статус: Draft #1750 обновлён от main2eeb0a71; client26/26 (включая copy4), targeted59/59 и inspection6/6. Финальный fullcheck passed2799frontend/1454API+186штатныхDBskip; exact-head CI/публикация впереди.
 
 ### PR4. Каталог и фильтры
 Используем исправленные общие компоненты нового дизайна. Сохраняем поиск, предпросмотр, множественный выбор, добавление и восстановление после ошибки.
@@ -60,9 +60,9 @@ LiveSetInput, live-input-visibility, live-set-cache, текущий coordinator 
 ## Матрица исполнения
 | Пункт | Видимый результат | Проверка | Статус |
 |---|---|---|---|
-| PR1 | Изолированный доступ, две плотности, анимации независимо | gate/preference unit + settings route + nonpilot | В работе |
-| PR2 | Новый Live обеих плотностей, сохранены механики1–6 | targeted behavior + visual/browser + native evidence | Локальные54/54 после #1741; выпуск впереди |
-| PR3 | Новый редактор без изменения сценариев | create/edit/copy/voice/retry/rights | Запланирован |
+| PR1 | Изолированный доступ, две плотности, анимации независимо | unit59, browser22, public212+disabled4 | Опубликован выключенным; activation pending |
+| PR2 | Новый Live обеих плотностей, сохранены механики1–6 | client62+pause8, trainer/nonpilot/cardio30, fullcheck, exactCI39514497216 | Слит2eeb0a71; publication pending |
+| PR3 | Новый редактор без изменения сценариев | create/edit/copy/voice/retry/rights26, targeted59, inspection6 | Локально проверен; финальные fullcheck/CI/publication pending |
 | PR4 | Новый каталог/фильтры без потери выбора | query/preview/batch/failure/nonpilot | Запланирован |
 | PR5 | Дата/время/окна без изменения значений | apply/cancel/clear/validation/back | Запланирован |
 
@@ -88,8 +88,29 @@ API после обновления1453passed/185штатныхskip с лока�
 
 Полный набор штатных стадий check после #1741 завершён exit0 с workers2:2790frontend/1453API+185штатныхDBskip, lint/types/coverage/policies/hosting/APIbuild/frontendbuild/postbuild. Ограничение только локальной конкуренции, исходные тесты, таймауты и пороги не менялись. Лог outputs/client-workout-reference-20261020/pr2-check-controlled.log.
 
+## Preflight PR3
+Актуальная рабочая база ac1668fd/979eda75 (#1741); PR1 ещё в CI. WebKit390 три реальных маршрута/сценария прошли: /workouts/new; /workouts/:id/edit; /me?entry=workout → проверка → сохранение. Пройдены верх и низ формы; screenshots outputs/client-workout-reference-20261020/pr3-baseline. Внешние HTTP/WS заблокированы, данные синтетические.
+
+| Уже работает | Переиспользуем | Действительно меняем | НЕ ПРОВЕРЕНО |
+|---|---|---|---|
+| Голос/текст/ручной выбор, черновики, разбор, date/time control, таблицы/добавление/удаление подходов, RPE/отдых/группы, план/факт, сохранение и права | Существующие числовые и временные поля, metric wrappers/геометрия планового редактора тренера, WorkoutExerciseHeader/SetTable/Row, QuickWorkoutEntry/WorkoutComposer | Представление карточек, полей и форм для client reference; единицы внутри полей,48px/r16, карточки32px, исходные токены темы. Состав клиентских полей и существующие действия остаются прежними | Физический iPhone и реальные OAuth тестовых учёток |
+
+Client reference не подменяет coachReference/limePlan/safePlanInput, не добавляет тренерский выбор спортсмена или новые поля данных. Тренерские свайпы и ограничения удаления остаются привязаны к существующему reference. Для клиента сохраняются его кнопки удаления/перестановки. Дата/время сохраняют текущую механику ClientWorkoutDateControl до PR5; каталог/фильтры — до PR4. Новую композицию применяем к обоим путям клиента, а не только отдельному редактору.
+
+### Локальный checkpoint PR3
+Клиентские creation/edit/review/save и роли WebKit/Chromium14/14; все39 целевых unit-тестов редактора/тренерского плана прошли. При выделении CSS сохранён исходный порядок базовых правил и refined/polish; устранены перенос RPE на вторую строку и потеря разделителя, обнаруженные до публикации. Текстовое действие «Изменить все» не получает44px icon-only ширину.
+Регрессия тренерского редактора19/20. Единственный оставшийся WebKit `refined plan ...duration labels quiet` при уменьшении окна844→400 не проходит и на исходной ветке Live/ac1668fd без PR3: viewport ratio0 у поля минут; Chromium на обеих версиях проходит. Логи pr3-trainer.log и pr3-trainer-baseline.log. Исходный защищённый тест, retry/таймауты и прокрутка не менялись; это зафиксированное ограничение локальной проверки, не доказанная новая регрессия. Реальный iPhone НЕ ПРОВЕРЕН. Полный check ещё выполняется/требует завершения после исправления только типов тестового harness.
 ### PR2: подписанный ручной отсчёт в крупном индикаторе
 Проверка текущего runtime подтвердила: при ручном превышении2сек существующий trigger показывает«Подход +0:02», новый крупный indicator до уточнения показывал«Подход:00:00» (pr2-overtime-before.log, обе платформы). Клиентский reference использует уже рассчитанный phaseOvertime и существующий formatReferenceClock; только отображение, без изменения deadline, phase/expiry/gong/API/сохранения. Новая необязательная view-prop по умолчаниюfalse сохраняет тренерский reference. После уточнения крупный indicator«Подход:+00:02», фактические5сек сохраняются: WebKit/Chromium2/2; все18unit LiveRestTimer прошли, включая неизменность default trainer display и callbacks. Новый полный check будет проверен после обновления базы перед PR2.
+
+Полный checkpoint PR3 на5db66dab: все штатные стадии check exit0, frontend2792/2792, API1453passed+185standardDBskip, lint/type/coverage/policies/build/postbuild. Включает client manual overtime из dbea4182. Лог outputs/client-workout-reference-20261020/pr3-check-controlled.log. PR2 подготовлен Draft#1749; ни один этап пока не опубликован.
+
+### Проверка ввода времени PR3 — выявленный до публикации побочный эффект
+WebKit390, источник45713f8f, duration-baseline: при сохранённом fit.workoutTimeWheel=false обычный клиент показывает4 прямых поля минут/секунд на2 подходах; reference-клиент показывает2 trigger и0 прямых полей. Причина в коде: compact у WorkoutDurationField принудительно включает picker при !planInput. Новое referenceAppearance нельзя передавать в этот поведенческий параметр. Подтверждённая правка: вернуть прежние compact/compactDuration на role reference в редакторе и прежнее отсутствие compact в Today. Стиль metric wrappers остаётся новым, настройка выбора способа ввода сохраняется. Live уже использовал compact безусловно до серии, его не меняем. Добавляем narrow regression для видов метрик, plan/fact и wheel on/off.
+
+Пустое время при wheel=true и RPE=true также просмотрено со скроллом: прежний длинный label в новой ячейке обрезался до «Добавить …». Добавлен отдельный presentation-only emptyLabel («—», как в существующем reference), без влияния на pickerEnabled. Keyboard/wheel остаётся пользовательской настройкой; компактность больше не подменяет её для клиента.
+
+Проверка исправления PR3:59/59 targeted editor/duration/run unit;22/22 WebKit/Chromium client editor, включая8 новых metric cases plan/fact × wheel on/off, включённый RPE, пустое время, м↔км, фактические значения и исходящие plan/completed payload. Полный scroll до последней карточки просмотрен. Completed edits используют существующий отдельный PUT /completed; отсутствие его в fixture сначала дало404, исправлена только fixture. Lint/types прошли. Финальный полный check свежего общего source и exact-head CI остаются обязательными.
 
 ## Финальное обновление PR1 после общей серии
 Source3f8f708e от mainb6e9ea67 (#1742–1745 слиты). Собственный допуск/плотность/анимации повторно проверены без расширения scope: unit59/59, policy+resolver45/45, WebKit/Chromium22/22 light/dark390/430 и обе плотности; licensed fonts2/2. Внешние HTTP/WS блокированы. Финальный CI обновлённого head обязателен перед merge; флаги выключены до read-only инспекции настоящих привязок. Настоящий iPhone недоступен: devicectl0 физических устройств; физический ввод НЕ ПРОВЕРЕН.
@@ -116,3 +137,21 @@ Baseline: outputs/client-workout-reference-20261020/pause-baseline, sourceada9bf
 ### Финальный локальный checkpoint PR2 после #1747
 21.10 — YAFIT-641 PR2 source68c6c25e/main9d365030: все штатные стадии check exit0,2794frontend/1454API+186штатныхDBskip, localVitestworkers2 без изменения timeout/coverage. Client62/62 и finalpause8/8, shared trainer+nonpilotpause+cardio30/30, timerunit19/19, policy46/46. Default trainer, ввод/клавиатура/coordinator/API не переписаны. Final CI и активация5профилей после успешной readonly инспекции ещё впереди.
 Лог outputs/client-workout-reference-20261020/pr2-main9d-check.log; proof браузеров pr2-main9d-full-browser/pr2-pause-browser-final/pr2-main9d-trainer-browser. Полный62-прогон дополнен финальными8 проверками границ кнопок и стабильного snapshot, продуктовый source тот же. Более ранний #1747 уже опубликован (frontend39513632287/API39513632332), CI39512028136 green. #1748 явно оставленopen/no deployment и не обновлялся после22:12:17Z; обходим по прямому разрешению владельца для неактивных PR.
+
+## Повторный preflight PR3 на текущем родителе
+Выбранный source2cfda007 (PR2, main9d365030 внутри), local WebKit390/client/syntheticgate. Копирование пройдено заново через /me/workouts → «История» → кнопку копирования → раскрытие упражнения. Исходный факт25кг×9 уже становится новым планом; невыполненный подход остаётся20кг×10. Снимок outputs/client-workout-reference-20261020/copy-baseline/current-copy.png в подкаталоге теста; точное имя в copy-baseline.log.
+
+| Уже работает | Переиспользуем | Действительно меняем | НЕ ПРОВЕРЕНО |
+|---|---|---|---|
+| Копирование завершённой тренировки, новые block IDs, факт→план и fallback плана, клиентский маршрут/История, ручное раскрытие карточки | copyWorkout, источник draft, существующий WorkoutsForm/Editor, create/update API и DateControl | Уже подготовленное оформление PR3; дополнительно приёмка copy→edit→save и отсутствия изменения исходной тренировки. Новую функцию копирования не создаём | Реальные OAuth-сессии/физический iPhone; финальный main после merge родителя и production |
+
+Первые external harness пробы использовали тренерский /workouts, затем неверно подменили clientId ID профиля и не раскрыли карточку. Исправлены только маршрут/fixture/шаг раскрытия; продукт не менялся по неподтверждённой гипотезе. Финальный baseline прошёл1/1 и соответствует существующему контракту copyWorkout.
+
+Уточнение preflight PR3 после обоих движков: неизменённый родитель2cfda007 проходит WebKit, но Chromium воспроизводимо теряет раскрытие копии (copy-baseline-both.log,1pass/1fail). Причина установлена в WorkoutsForm: copyWorkout при каждом render создаёт новые blockId; готовый draft фиксируется только coachReference. Уже работающая тренерская защита распространена только на clientReference, без изменения copyWorkout/API/данных и обычного клиента. Это необходимая сохранность карточки/ввода при клиентском переносе, а не новая функция. Проверка copy→edit→save теперь должна пройти оба движка и обе темы390/430; реальный iPhone остаётся НЕ ПРОВЕРЕНО.
+
+PR3 copy26/26 финальной матрицы редактора (WebKit/Chromium,390/430/light/dark) прошли после scoped reuse draft freeze. Четыре copy-сценария проверили перенос факт→план, редактирование, новые IDs, отсутствие fact/confirmedAt и отсутствие записи в исходную тренировку. Снимки copy-edit/copy-save сохранены.
+
+PR2 слит в main2eeb0a71 после CI39514497216success33/3штатныхskip. Read-only inspect39516069450 остановился fail-closed внутри resolver, не экспортировал профили; флаги пока выключены. В PR3 добавлена только безопасная диагностика фиксированными phase/reason (6/6): никаких текстов ошибок БД, контактов, UUID или секретов. Причина не объявляется установленной до результата следующего trusted-main запуска. Для активации по-прежнему требуются5точных существующих клиентов и2тренера без изменения данных/допуска; предположительный allowlist запрещён.
+
+### Финальная локальная приёмка PR3 на main2eeb0a71
+21.10 — все штатные стадии check exit0:2799frontend/1454API+186штатныхDBskip, lint/types/coverage/policies/hosting/build/postbuild. Local Vitestworkers2; timeout/retries/coverage не менялись. Client26/26, copy4/4, read-only boundary6/6; editor и copy snapshots просмотрены. Diff общего дизайн-кода/каталогаSVG пуст относительно main. Финальный CI/merge/публикация и успешное разрешение5профилей ещё впереди. Физический iPhone и realOAuth НЕ ПРОВЕРЕНО. Лог outputs/client-workout-reference-20261020/pr3-final-check.log.
