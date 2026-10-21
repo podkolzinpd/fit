@@ -105,7 +105,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
   const [portionMode, setPortionMode] = useState(false), [portionCount, setPortionCount] = useState('1')
   const parsedSearch = useRef<string | null>(null)
-  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [scannerOpen, setScannerOpen] = useState(false), [manualBarcodeEntry, setManualBarcodeEntry] = useState(false)
+  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [barcodeImportOpen, setBarcodeImportOpen] = useState(false), [scannerOpen, setScannerOpen] = useState(false), [manualBarcodeEntry, setManualBarcodeEntry] = useState(false)
   const cache = useQueryClient(), active = useRef(true), [confirm, dialog] = useConfirm()
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   useEffect(() => {
@@ -195,23 +195,27 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     <form className="stack" onSubmit={form.handleSubmit(submit)}>
       <fieldset className="stack nutrition-fields" disabled={mutation.isPending}>
       {!selection && !manual ? <>
-        <Field label="Поиск еды"><input type="search" maxLength={120} autoFocus placeholder="Например, куриная грудка 300 г, рис отварной 100 г" {...form.register('search')} /></Field>
+        <Field label="Поиск по названию"><span className="nutrition-search-input"><input type="search" maxLength={120} autoFocus placeholder="Например, куриная грудка 300 г, рис отварной 100 г" {...form.register('search')} />
         {actor?.experiments?.nutritionBarcode === true && <VoiceInputButton
           source="nutrition"
           idleLabel="Надиктовать еду"
+          variant="icon"
           showCancel
           onTranscript={(text) => {
             const previous = form.getValues('search')
             form.setValue('search', text)
             return () => form.setValue('search', previous)
           }}
-        />}
+        />}</span></Field>
         {actor?.experiments?.nutritionBarcode === true && <section className="nutrition-barcode" aria-label="Штрихкод продукта">
-          <div className="nutrition-barcode-actions"><button type="button" className="secondary" disabled={barcodePending} onClick={() => { setBarcodeError(null); setScannerOpen(true) }}>Сканировать камерой</button>
-            <BarcodePhotoPicker onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); void lookupBarcode(code) }} onUnrecognized={() => { setManualBarcodeEntry(true); setBarcodeError('На фото не найден EAN‑8 или EAN‑13. Введите штрихкод вручную.') }} /></div>
+          <button type="button" className="secondary wide" disabled={barcodePending} onClick={() => { setBarcodeError(null); setBarcodeImportOpen(true) }}>Сканировать штрихкод</button>
+          {barcodeImportOpen && <section className="nutrition-barcode-import" role="dialog" aria-label="Импорт штрихкода">
+            <header><strong>Сканировать штрихкод</strong><button type="button" className="link" onClick={() => { setScannerOpen(false); setBarcodeImportOpen(false) }}>Закрыть</button></header>
+            {scannerOpen ? <BarcodeScanner onClose={() => setScannerOpen(false)} onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); setScannerOpen(false); setBarcodeImportOpen(false); void lookupBarcode(code) }} /> : <div className="nutrition-barcode-actions"><button type="button" className="secondary" disabled={barcodePending} onClick={() => setScannerOpen(true)}>Камера</button>
+              <BarcodePhotoPicker onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); setBarcodeImportOpen(false); void lookupBarcode(code) }} onUnrecognized={() => { setBarcodeImportOpen(false); setManualBarcodeEntry(true); setBarcodeError('На фото не найден EAN‑8 или EAN‑13. Введите штрихкод вручную.') }} /></div>}
+          </section>}
           {manualBarcodeEntry && <><Field label="Штрихкод"><input inputMode="numeric" value={barcode} maxLength={13} placeholder="8 или 13 цифр" onChange={(event) => setBarcode(event.target.value)} /></Field>
             <button type="button" className="secondary" disabled={barcodePending} aria-busy={barcodePending} onClick={() => void lookupBarcode()}>{barcodePending ? 'Ищем…' : 'Найти по штрихкоду'}</button></>}
-          {scannerOpen && <BarcodeScanner onClose={() => setScannerOpen(false)} onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); setScannerOpen(false); void lookupBarcode(code) }} />}
           {barcodeError && <p className="muted" role="status">{barcodeError}</p>}
         </section>}
         {parsedFood.length > 1 && <section className="nutrition-parsed-food" aria-label="Разобранная еда"><p className="muted">Выберите продукт по очереди — вес уже подставится. КБЖУ не угадываем.</p>
@@ -223,11 +227,12 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           {foods.data?.pages.every((page) => page.foods.length === 0) && <p className="muted">Подходящей еды не нашлось. Можно добавить свою.</p>}
           <div className="nutrition-food-list">{foods.data?.pages.flatMap((page) => page.foods).map((food) => <div className="nutrition-food-result" key={food.id}><button type="button" className="secondary nutrition-food" onClick={() => choose(food)}><span>{food.name}{food.manufacturer && <small>{food.manufacturer}</small>}<small>{nutritionNumber(food.calories)} ккал · Б {nutritionNumber(food.protein)} · Ж {nutritionNumber(food.fat)} · У {nutritionNumber(food.carbs)} на 100 г</small></span><ChevronRightIcon /></button></div>)}</div>
           {foods.hasNextPage && <button type="button" className="secondary" disabled={foods.isFetchingNextPage} onClick={() => void foods.fetchNextPage()}>{foods.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
-        </AsyncView> : <><h2>Недавняя еда</h2><AsyncView loading={recent.isLoading} error={recent.error} onRetry={() => void recent.refetch()}>
+        </AsyncView> : null}
+        <button type="button" className="secondary" onClick={() => form.setValue('manual', true)}>Добавить свое блюдо</button>
+        {search.length < 2 && <><h2>Недавняя еда</h2><AsyncView loading={recent.isLoading} error={recent.error} onRetry={() => void recent.refetch()}>
           {!recent.data?.length && <p className="muted">Здесь появятся ваши записи для быстрого повторения.</p>}
           <div className="nutrition-food-list">{recent.data?.map((food) => <button type="button" className="secondary nutrition-food" key={food.id} onClick={() => choose(food)}><span>{food.name}<small>{food.grams ? `${nutritionNumber(food.grams)} г · ` : ''}{nutritionNumber(food.totals.calories)} ккал</small></span><ChevronRightIcon /></button>)}</div>
         </AsyncView></>}
-        <button type="button" className="secondary" onClick={() => form.setValue('manual', true)}>Добавить свою еду</button>
       </> : <>
         {manual ? <><Field label="Название" error={form.formState.errors.name?.message}><input aria-label="Название" aria-invalid={!!form.formState.errors.name} maxLength={160} autoFocus {...form.register('name')} /></Field>
           <Switch label="На 100 г" checked={values.per100 ?? false} onChange={(value) => form.setValue('per100', value)} disabled={mutation.isPending} />

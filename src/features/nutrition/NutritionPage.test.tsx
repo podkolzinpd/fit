@@ -106,8 +106,11 @@ it('shows the manufacturer instead of an external catalog source', async () => {
 it('shows barcode camera and SpeechKit food entry only for the server-authorized cohort', async () => {
   fixture.barcodeEnabled = true
   const { user } = setup()
-  expect(screen.getByRole('button', { name: 'Сканировать камерой' })).toBeVisible()
-  expect(screen.getByLabelText('Выбрать фото')).toHaveAttribute('type', 'file')
+  expect(screen.getByRole('button', { name: 'Сканировать штрихкод' })).toBeVisible()
+  await user.click(screen.getByRole('button', { name: 'Сканировать штрихкод' }))
+  expect(screen.getByRole('dialog', { name: 'Импорт штрихкода' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Камера' })).toBeVisible()
+  expect(screen.getByLabelText('Галерея')).toHaveAttribute('type', 'file')
   expect(screen.queryByLabelText('Штрихкод')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Надиктовать еду' }))
   await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('рис отварной', 1))
@@ -115,7 +118,7 @@ it('shows barcode camera and SpeechKit food entry only for the server-authorized
 
 it('manual portion needs only name and calories; unknown macros remain null', async () => {
   const { user } = setup()
-  await user.click(screen.getByRole('button', { name: 'Добавить свою еду' }))
+  await user.click(screen.getByRole('button', { name: 'Добавить свое блюдо' }))
   await user.click(screen.getByRole('button', { name: 'Сохранить' }))
   expect(await screen.findByText('Укажите название еды')).toBeVisible()
   expect(fixture.save).not.toHaveBeenCalled()
