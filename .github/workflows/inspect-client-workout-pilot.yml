@@ -53,3 +53,10 @@ jobs:
           path: result/client-workout-pilot-ids.json
           retention-days: 1
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-workout-pilot-readiness
+          path: result/client-workout-pilot-readiness.json
+          retention-days: 1
+          if-no-files-found: ignore
