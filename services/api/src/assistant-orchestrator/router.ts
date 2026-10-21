@@ -1,4 +1,4 @@
-import type { AssistantAction, AssistantTurnResponse } from './index.js'
+import type { AssistantAction, AssistantTurnResponse } from './core.js'
 import { CONFIRM_ACTIVITY_OVERLAP, CONFIRM_PROGRAM_BRIEF, HISTORY_COMPLETE, HISTORY_INCOMPLETE } from './program/brief.js'
 import { programModelJson } from './program/model.js'
 

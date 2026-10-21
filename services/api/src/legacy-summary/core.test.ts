@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { buildProgressData, requestYandexSummary, requestYandexSummaryDeduplicated, summarizeClientTraining } from './index.js'
+import { buildProgressData, requestYandexSummary, requestYandexSummaryDeduplicated } from '../training-summary-core.js'
 import { buildSummaryModelInput } from './summary-model-input.js'
 import { assessSummaryQuality, repairSummaryQuality } from './summary-quality.js'
 
@@ -137,7 +137,7 @@ describe('neutral client summary address', () => {
   })
 })
 
-describe('summarizeClientTraining cloud handler', () => {
+describe('summary model core', () => {
   it('repairs direct address in the actual model path using only the original paid call', async () => {
     vi.stubEnv('YANDEX_CLOUD_API_KEY', 'test-key')
     vi.stubEnv('YANDEX_CLOUD_FOLDER_ID', 'test-folder')
@@ -182,25 +182,6 @@ describe('summarizeClientTraining cloud handler', () => {
     expect(fetchImpl).toHaveBeenCalledOnce()
     expect([first.shared, second.shared].sort()).toEqual([false, true])
     expect(first.result.summary).toEqual(second.result.summary)
-  })
-
-  it('runs in Node and retains the Edge Function request contract before contacting Supabase', async () => {
-    const response = await summarizeClientTraining(new Request('https://api.example.test/v1/legacy/summarize-client-training', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({}),
-    }))
-
-    expect(response.status).toBe(400)
-    expect(response.headers.get('x-fit-error-code')).toBe('invalid_client_id')
-    await expect(response.json()).resolves.toEqual({ error: 'invalid_client_id' })
-  })
-
-  it('retains the method guard', async () => {
-    const response = await summarizeClientTraining(new Request('https://api.example.test/v1/legacy/summarize-client-training'))
-
-    expect(response.status).toBe(405)
-    expect(response.headers.get('allow')).toBe('POST')
   })
 
   it('never turns one browser action into a second paid call after a rate limit', async () => {
