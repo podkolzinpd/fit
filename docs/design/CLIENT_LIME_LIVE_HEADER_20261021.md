@@ -42,3 +42,8 @@ REM и матричный gapD01 не изменяются. R02 сохранён
  pr4-preflight,pr4-header-final,pr4-unit-final,pr4-mechanics.
 - CI на свежем main/публикация/проверка реальной сборки ещё обязательны.
  Физический iPhone не проверен; браузерный viewport не заменяет устройство.
+
+## Дополнение перед интеграцией
+
+Окончательная проверка:16header+20unit+58связанных browser passed. Lint/types прошли; полный frontend2800 и API1434+186standardDBskip/все политики/build passed после повторения одного постороннего5sparser-timeout с2workers. Квитанция pr4-check-recovery.log,exit0. LLM-код/лимиты тестов не менялись.
+Свежий main/CI и реальная публикация ещё не проверены этим дополнением.
