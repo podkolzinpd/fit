@@ -180,3 +180,12 @@
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection) .coach-catalog-create-bar { position: absolute; inset: auto 20px max(16px, env(safe-area-inset-bottom)) auto; display: block; min-height: 0; padding: 0; background: transparent; pointer-events: none; z-index: 2; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection) .coach-catalog-create-floating { pointer-events: auto; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection):not(.client-lime-filters) .picker-list { padding-bottom: 96px; scroll-padding-bottom: 96px; }
+
+/* Time sheets adapt the released client date-sheet shell and existing controls;
+   TimeWheel owns draft/seconds/input behavior as before. */
+.phone-frame.fit-client-lime.client-workout-reference .workout-decision-sheet.client-reference-time-sheet { width: min(100%, 440px); max-height: calc(min(var(--app-visible-height, 100dvh), 100dvh) - 12px); padding: 0 20px max(20px, env(safe-area-inset-bottom)); border: 0; border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0; background: var(--lime-surface); color: var(--lime-text); gap: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .client-lime-sheet-header { flex-shrink: 0; margin-inline: -20px; padding: 16px 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .rest-time-picker { margin-block: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet > button.secondary,
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .rest-controls button { min-height: 48px; border: 0; border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font-family: var(--lime-font); font-size: 16px; font-weight: 400; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet :is(.workout-duration-apply, .live-rest-apply > button) { width: 100%; min-height: 60px; border: 0; border-radius: 20px; background: var(--lime-accent); color: var(--lime-text-on-accent); font-family: var(--lime-font); font-size: 16px; font-weight: 500; }
