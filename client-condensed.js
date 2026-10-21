@@ -44,8 +44,13 @@
   voice.slide.classList.add('client-technology');
   voice.slide.querySelector('h2').innerHTML='План и запись<br>тренировки';
   const tech=document.createElement('div');tech.className='ct-copy';
-  tech.innerHTML='<section><h3>Самостоятельно или с ИИ</h3><p>Составляешь программу самостоятельно<br>или с помощью ИИ — с учётом целей<br>и прошлых тренировок.</p></section><section><h3>Голосом или текстом</h3><p>Рассказываешь, что сделал.<br>FIT разбирает запись по упражнениям<br>и подходам.</p></section>';
+  tech.innerHTML='<section><h3>Голосом или текстом</h3><p>Рассказываешь, что сделал.<br>FIT разбирает запись по упражнениям и подходам.</p></section><section><h3>Самостоятельно или с ИИ</h3><p>Составляешь программу сам или с ИИ —<br>с учётом целей и прошлых тренировок.</p></section>';
+  voice.slide.dataset.techFocus='voice';
   voice.slide.append(tech);
+  ai.slide.classList.add('client-technology');
+  ai.slide.dataset.techFocus='ai';
+  ai.slide.querySelector('h2').innerHTML='План и запись<br>тренировки';
+  ai.slide.append(tech.cloneNode(true));
   window.FIT_CLIENT_AI_PHONE=baseStory;
   window.FIT_CLIENT_STORIES=[voice,ai,community];
   [voice,ai,community].forEach(({slide})=>{
