@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId } from './fit-lime-fixtures'
+import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -1273,4 +1273,59 @@ for (const role of ['trainer', 'client']) test(`time sheet client adaptation sta
   await page.getByRole('button', { name: /Фактическое время:/ }).first().click()
   await expect(page.locator('.workout-duration-sheet')).toBeVisible()
   await expect(page.locator('.client-reference-time-sheet')).toHaveCount(0)
+})
+
+test.describe('assistant duration consumers', () => {
+  test.skip(process.env.FIT_ASSISTANT_TIME_ACCEPTANCE !== '1', 'Requires isolated Assistant program fixture, never a live generation')
+  for (const entry of ['history', 'pilot']) for (const theme of ['light', 'dark']) test(`client assistant time sheet ${entry} ${theme}`, async ({ page }, info) => {
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      localStorage.setItem('fit.workoutTimeWheel', 'true')
+    }, { id: pilotId, theme })
+    await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [] })
+    const createdAt = new Date().toISOString()
+    const payload = entry === 'pilot'
+      ? { programPilot: true, step: 'confirm', briefState: { scope: 'single_workout' }, editableCatalog: [{ ref: 'plank', name: 'Планка', inputKind: 'duration' }],
+          canonicalWorkouts: [{ requestId: newWorkoutId, clientId, workoutDate: createdAt.slice(0, 10), exercises: [{ name: 'Планка', restBetweenSetsSec: 60, sets: [{ durationSec: 45, rpe: 6 }] }] }] }
+      : { step: 'confirm', clientId, clientName: 'Тестовый спортсмен', sessions: [{ day: 'Пн', title: 'Тестовая тренировка', exercises: [{ name: 'Планка', exerciseRef: 'plank', sets: 3, durationSec: 45 }] }] }
+    const action = { tool: 'create_program_draft', status: 'proposed', title: 'Тестовая тренировка', description: 'Черновик из тестовой фикстуры', payload }
+    const writes: string[] = []
+    await page.route('**/v1/assistant/**', route => {
+      const path = new URL(route.request().url()).pathname
+      if (route.request().method() !== 'GET') { writes.push(path); return route.abort() }
+      if (path.endsWith('/messages')) return route.fulfill({ json: { messages: [{ id: messageId, conversationId, turnId: null, author: 'assistant', content: 'Тестовый черновик', action, createdAt }] } })
+      if (path.endsWith('/conversations')) return route.fulfill({ json: { conversations: [{ id: conversationId, title: 'Тестовая беседа', createdAt }] } })
+      return route.fulfill({ json: { actions: [] } })
+    })
+    await page.goto('/assistant')
+    const session = page.locator('.assistant-program-sessions details').first()
+    await session.locator('summary').click()
+    if (entry === 'pilot') await session.getByRole('button', { name: 'Изменить', exact: true }).click()
+    const label = entry === 'pilot' ? 'Время упражнения' : 'Планка: время'
+    const trigger = page.getByRole('button', { name: `${label}: 0:45`, exact: true })
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      await trigger.click()
+      const dialog = page.getByRole('dialog', { name: label, exact: true })
+      await expect(dialog).toHaveClass(/client-reference-time-sheet/)
+      await expect(dialog).toHaveCSS('border-top-left-radius', '40px')
+      await expect(dialog.locator('.client-lime-sheet-header h1')).toHaveCSS('font-family', /YS Geo/)
+      await dialog.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '50 секунды', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+      await expect(trigger).toHaveAttribute('aria-label', `${label}: 0:45`)
+      await trigger.click()
+      await expect(dialog.getByRole('option', { name: '45 секунды', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await page.screenshot({ path: info.outputPath(`assistant-${entry}-${theme}-${width}.png`) })
+      await dialog.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '50 секунды', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Применить · 0:50', exact: true }).click()
+      await expect(page.getByRole('button', { name: `${label}: 0:50`, exact: true })).toBeVisible()
+      await page.getByRole('button', { name: `${label}: 0:50`, exact: true }).click()
+      await expect(dialog.getByRole('option', { name: '50 секунды', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await dialog.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '45 секунды', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Применить · 0:45', exact: true }).click()
+      await expect(trigger).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    expect(writes).toEqual([])
+  })
 })

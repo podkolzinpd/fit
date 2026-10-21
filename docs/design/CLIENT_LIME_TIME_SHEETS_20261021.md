@@ -37,14 +37,21 @@
 Дополнительная приёмка editor keyboard/wheel, manualwork/pause/Live keyboard
 и полный check выполняются перед публикацией. Контекст автоматически достигает
 Today/WorkoutExerciseEditor/RunMetricsFields/AssistantHistory/AssistantProgramPilotCard.
-Первые три покрываются клиентскими сценариями и общими unit; отдельный
-визуальный вход в оба ограниченных Assistant-потребителя этим проходом
-НЕ ПРОВЕРЕН. Их кодовая достижимость не выдаётся за просмотр UI.
+Первые три покрываются клиентскими сценариями и общими unit. Дополнительный
+проход22.10 открыл оба Assistant-потребителя через реальный /assistant с
+изолированными программными черновиками:8cases, обе темы/движка и390/430.
+Проверены отмена45→50 без применения, применение50секунд, повторное открытие
+и возврат45. Оба portal-окна наследуют клиентский контекст, заголовок YS Geo
+и радиус40; снимки просмотрены. Локально включены только необходимые
+Assistant-флаги для синтетического профиля; production-флаги не менялись.
+Ни генерация, ни сохранение программы не запускались; POST Assistant запрещён
+фикстурой. Команда включает FIT_ASSISTANT_TIME_ACCEPTANCE=1.
 
 Тренерский CoachPlanTimeField не меняется. Открытие окон вне пилота подтверждено
 с прежней оболочкой. Физический iPhone НЕ ПРОВЕРЕН. CI/точный main/публикация
 ещё обязательны. Локальные квитанции outputs/client-workout-reference-audit-20261021:
-pr6-preflight,pr6-sheets-final,pr6-unit,pr6-mechanics,pr6-check.
+pr6-preflight,pr6-sheets-final,pr6-unit,pr6-mechanics,pr6-check,
+pr6-assistant-consumers-final.log и соответствующие assistant-*.png.
 
 ## Дополнение перед интеграцией
 
