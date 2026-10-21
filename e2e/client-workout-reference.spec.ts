@@ -1355,3 +1355,92 @@ test.describe('assistant duration consumers', () => {
     expect(writes).toEqual([])
   })
 })
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client inline save feedback stays clear and stable ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(); source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let release!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/workout-sets/*/draft', async route => { await waiting; await route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator('form[data-live-set-id]').first()
+  const before = (await row.boundingBox())!.height
+  await row.getByLabel('Фактический вес', { exact: true }).fill('25')
+  await row.getByLabel('Фактические повторы', { exact: true }).click()
+  await expect(row.locator('.save-status-saving')).toBeVisible()
+  expect((await row.boundingBox())!.height).toBe(before)
+  release()
+  await expect(row.locator('.save-status-saved')).toBeVisible()
+  expect((await row.boundingBox())!.height).toBe(before)
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(25)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const status = row.locator('.save-status')
+    if (await status.count()) {
+      await expect(status).toHaveCSS('position', 'static')
+      const a = (await status.boundingBox())!, b = (await row.locator('.live-set-grid').boundingBox())!
+      expect(a.y).toBeGreaterThanOrEqual(b.y + b.height)
+    }
+    await page.screenshot({ path: info.outputPath(`save-feedback-${width}.png`) })
+  }
+  await expect(row.getByRole('button', { name: 'Готово, отдых', exact: true })).toBeEnabled()
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
+})
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client confirmation error readable and retry keeps facts ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(); source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source], failFirstSetConfirm: true })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator('form[data-live-set-id]').first(), confirm = row.getByRole('button', { name: 'Готово, отдых', exact: true })
+  await row.getByLabel('Фактический вес', { exact: true }).fill('27.5')
+  await confirm.click()
+  await expect(row.locator('.save-status-error')).toContainText('Не удалось подтвердить')
+  const a = (await row.locator('.save-status-error').boundingBox())!, b = (await row.locator('.live-set-grid').boundingBox())!
+  expect(a.y).toBeGreaterThanOrEqual(b.y + b.height)
+  const sync = page.locator('.live-sync-state.error')
+  await expect(sync).toHaveCSS('border-radius', '20px')
+  await expect(sync.locator('strong')).toHaveCSS('font-weight', '500')
+  await page.screenshot({ path: info.outputPath('confirmation-error.png') })
+  if (density === 'compact') {
+    // A blur autosave after a failed confirmation must not acknowledge away
+    // the pending command that the existing bottom retry needs.
+    await row.getByLabel('Фактический вес', { exact: true }).focus()
+    await row.getByLabel('Фактический вес', { exact: true }).blur()
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
+    await expect(sync.getByRole('button', { name: 'Повторить', exact: true })).toBeEnabled()
+    await sync.getByRole('button', { name: 'Повторить', exact: true }).click()
+  }
+  else await confirm.click()
+  await expect(row).toHaveClass(/confirmed/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
+})
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client phase feedback correction and rest undo keep semantics ${theme} ${density}`, async ({ page }, info) => {
+  await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(0, true, 'timer'); source.startedAt = '2026-10-21T08:58:00Z'; source.exercises[0]!.restBetweenSetsSec = 30
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.clock.fastForward(3500)
+  const notice = page.locator('.live-phase-notice')
+  await expect(notice).toContainText('Подход засчитан')
+  await expect(notice).toHaveCSS('border-radius', '20px')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const a = (await notice.locator('span').boundingBox())!, b = (await notice.getByRole('button').boundingBox())!
+    expect(a.x + a.width).toBeLessThanOrEqual(b.x)
+    await page.screenshot({ path: info.outputPath(`phase-notice-${width}.png`) })
+  }
+  const confirmed = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
+  await notice.getByRole('button', { name: 'Исправить', exact: true }).click()
+  await expect(notice).toHaveCount(0)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmed)
+  await page.locator('.live-rest-trigger').click()
+  await expect(notice).toContainText('Отдых остановлен')
+  await notice.getByRole('button', { name: 'Вернуть', exact: true }).click()
+  await expect(notice).toHaveCount(0)
+  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Таймер отдыха:/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).toBeNull()
+})
