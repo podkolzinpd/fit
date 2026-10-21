@@ -5,6 +5,97 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+async function modelKeyboard(page: Page) {
+  await page.addInitScript(() => {
+    const state = window as typeof window & { fitTestKeyboardHeight?: number }
+    if (visualViewport) Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => state.fitTestKeyboardHeight ?? innerHeight })
+  })
+}
+
+async function showModeledKeyboard(page: Page) {
+  await page.evaluate(() => {
+    ;(window as typeof window & { fitTestKeyboardHeight?: number }).fitTestKeyboardHeight = 420
+    visualViewport?.dispatchEvent(new Event('resize'))
+  })
+  await expect(page.locator('html')).toHaveClass(/app-keyboard-open/)
+}
+
+async function tapVisible(page: Page, target: ReturnType<Page['locator']>) {
+  await target.scrollIntoViewIfNeeded()
+  const box = await target.boundingBox()
+  if (!box) throw new Error('Action is not visible')
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+}
+
+for (const entry of ['live', 'new', 'today']) for (const action of ['create', 'add']) test(`client keyboard picker first tap ${entry} ${action}`, async ({ page }) => {
+  await modelKeyboard(page)
+  const source = coachGestureWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(entry === 'live' ? `/workouts/${workoutId}/live` : entry === 'new' ? '/workouts/new' : '/me?entry=workout')
+  await page.getByRole('button', { name: entry === 'live' ? 'Ещё упражнение' : entry === 'new' ? 'Выбрать упражнения' : 'Выбрать упражнения вручную', exact: true }).click()
+  const picker = page.locator('.client-reference-catalog')
+  const search = picker.getByLabel('Поиск упражнения', { exact: true })
+  await search.fill(action === 'create' ? 'zzzaudit-no-exercise' : 'план')
+  if (action === 'add') await picker.locator('.picker-select-mark').first().tap()
+  await search.focus()
+  await showModeledKeyboard(page)
+  await tapVisible(page, picker.locator(action === 'create' ? '.coach-catalog-create-floating' : '.coach-catalog-add'))
+  if (action === 'create') await expect(picker.getByRole('heading', { name: 'Своё упражнение' })).toBeVisible()
+  else if (entry === 'live') await expect.poll(() => backend.getWorkouts()[0]!.exercises.length).toBe(source.exercises.length + 1)
+  else await expect(picker).toHaveCount(0)
+})
+
+for (const density of ['original', 'compact']) for (const action of ['confirm', 'note', 'menu', 'append']) test(`client keyboard Live first tap ${density} ${action}`, async ({ page }) => {
+  await modelKeyboard(page)
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+  }, { id: pilotId, density })
+  const source = coachGestureWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  // Complete this scenario's append contract without extending the protected
+  // global fixture inventory. All writes remain in memory.
+  await page.route('**/v1/workout-exercises/*/sets', async route => {
+    const workout = backend.getWorkouts()[0]!
+    const exercise = workout.exercises.find(item => item.id === new URL(route.request().url()).pathname.split('/').at(-2))!
+    exercise.sets.push({ ...exercise.sets.at(-1)!, id: 'c11e0000-6010-4000-8000-000000000999', position: exercise.sets.length, fact: {}, confirmedAt: null })
+    workout.version += 1
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout: { version: workout.version } }) })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator('form[data-live-set-id]').first()
+  await row.getByLabel('Фактический вес', { exact: true }).fill('25')
+  await showModeledKeyboard(page)
+  const target = action === 'confirm' ? row.getByRole('button', { name: 'Готово, отдых', exact: true })
+    : page.locator(action === 'note' ? '.live-exercise-note summary' : action === 'menu' ? '.live-exercise .overflow-trigger' : '.live-add-set').first()
+  await tapVisible(page, target)
+  if (action === 'confirm') await expect(row).toHaveClass(/confirmed/)
+  if (action === 'note') await expect(page.locator('.live-exercise-note').first()).toHaveAttribute('open', '')
+  if (action === 'menu') await expect(page.getByRole('menu')).toBeVisible()
+  if (action === 'append') await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets.length).toBe(3)
+})
+
+test('client keyboard date confirmation applies the edited draft on first tap', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 844 })
+  await modelKeyboard(page)
+  const source = coachGestureWorkout()
+  source.createdBy = pilotId; source.status = 'planned'; source.startedAt = null
+  source.workoutDate = '2026-12-20'; source.startTime = '10:00'; source.endTime = '11:00'
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  const trigger = page.getByRole('button', { name: 'Выбрать дату и время', exact: true })
+  await trigger.click()
+  const dialog = page.getByRole('dialog', { name: 'Дата и время', exact: true })
+  await dialog.getByRole('button', { name: '1 декабря 2026 г.', exact: true }).click()
+  await dialog.getByLabel('Начало', { exact: true }).focus()
+  await showModeledKeyboard(page)
+  await tapVisible(page, dialog.getByRole('button', { name: 'Применить дату', exact: true }))
+  await expect(dialog).not.toBeVisible()
+  await expect(trigger).toContainText('1 декабря 2026 г.')
+})
+
 test.beforeEach(async ({ page }) => {
   // Only app GETs may reach the local server; every API write is fixture-bound.
   await page.route('**/*', route => {

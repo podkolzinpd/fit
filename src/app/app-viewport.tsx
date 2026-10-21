@@ -41,6 +41,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
     const root = document.documentElement
     const viewport = window.visualViewport
     const mobile = window.matchMedia('(max-width: 480px)')
+    const pointers = new Set<number>()
 
     const clearRecoveryTimers = () => {
       for (const timer of recoveryTimersRef.current) window.clearTimeout(timer)
@@ -58,7 +59,13 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
     }
 
     const recover = () => {
-      if (!mobile.matches || isKeyboardInput(document.activeElement)) return
+      if (!mobile.matches || isKeyboardInput(document.activeElement) || pointers.size) return
+      // A blur is not a closed keyboard. Keep the measured visual height while
+      // the layout viewport is still full-sized; otherwise a button moves
+      // between pointerdown and click. Only recover WebKit's stale geometry
+      // when both reported heights remained collapsed after the gesture.
+      const metrics = appViewportMetrics(window.innerHeight, viewport?.height ?? window.innerHeight, stableHeightRef.current)
+      if (metrics.keyboardOpen && window.innerHeight >= stableHeightRef.current - KEYBOARD_THRESHOLD) return
       setKeyboardOpen(false)
       root.classList.remove('app-keyboard-open')
       applyDimensions(stableHeightRef.current, stableHeightRef.current)
@@ -86,7 +93,7 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       const visualHeight = viewport?.height ?? window.innerHeight
       const metrics = appViewportMetrics(window.innerHeight, visualHeight, stableHeightRef.current)
       const activeInput = isKeyboardInput(document.activeElement)
-      const nextKeyboardOpen = metrics.keyboardOpen && activeInput
+      const nextKeyboardOpen = metrics.keyboardOpen && (activeInput || (viewport?.scale ?? 1) === 1)
 
       if (!metrics.keyboardOpen) {
         // Обновляем опорную высоту только вне клавиатуры. Так временно
@@ -112,6 +119,12 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       scheduleRecovery()
     }
 
+    const onPointerDown = (event: PointerEvent) => { pointers.add(event.pointerId) }
+    const onPointerEnd = (event: PointerEvent) => {
+      const held = pointers.delete(event.pointerId)
+      if (held && !pointers.size && root.classList.contains('app-keyboard-open') && !isKeyboardInput(document.activeElement)) scheduleRecovery()
+    }
+
     const onOrientationChange = () => {
       clearRecoveryTimers()
       recoveryTimersRef.current = [360].map((delay) => window.setTimeout(() => {
@@ -127,6 +140,9 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
     window.addEventListener('orientationchange', onOrientationChange)
     document.addEventListener('focusin', update)
     document.addEventListener('focusout', onFocusOut)
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('pointerup', onPointerEnd, true)
+    document.addEventListener('pointercancel', onPointerEnd, true)
     mobile.addEventListener('change', update)
     return () => {
       clearRecoveryTimers()
@@ -136,6 +152,9 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
       window.removeEventListener('orientationchange', onOrientationChange)
       document.removeEventListener('focusin', update)
       document.removeEventListener('focusout', onFocusOut)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('pointerup', onPointerEnd, true)
+      document.removeEventListener('pointercancel', onPointerEnd, true)
       mobile.removeEventListener('change', update)
       root.classList.remove('app-keyboard-open')
       root.style.removeProperty('--app-viewport-height')

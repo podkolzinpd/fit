@@ -24,6 +24,7 @@ export function FitLimeDatePicker({ value, onChange, time, onTimeChange, trigger
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const monthsBody = useRef<HTMLDivElement>(null)
+  const backdropStart = useRef(false)
   const sourceCalendar = reference && !clientLime
   const [draft, setDraft] = useState(value)
   const [month, setMonth] = useState(startOfMonth(value))
@@ -51,7 +52,14 @@ export function FitLimeDatePicker({ value, onChange, time, onTimeChange, trigger
     <dialog ref={dialog} className={`fit-lime-date-picker${reference ? ' coach-reference-sheet' : ''}${sourceCalendar ? ' coach-source-date-sheet' : ''}${clientLime ? ' client-lime-date-sheet' : ''}`} aria-labelledby={titleId} onKeyDown={(event) => {
       // The surrounding workout form must not submit before the modal is applied.
       if ((clientLime || sourceCalendar) && event.key === 'Enter' && event.target instanceof HTMLInputElement) { event.preventDefault(); event.stopPropagation(); event.target.blur() }
-    }} onClose={() => trigger.current?.focus()} onClick={(event) => { if (event.target === event.currentTarget && event.clientY < event.currentTarget.getBoundingClientRect().top) dialog.current?.close() }}>
+    }} onClose={() => trigger.current?.focus()}
+    onPointerDownCapture={(event) => { backdropStart.current = event.target === event.currentTarget && event.clientY < event.currentTarget.getBoundingClientRect().top }}
+    onPointerCancel={() => { backdropStart.current = false }}
+    onClick={(event) => {
+      const intended = backdropStart.current
+      backdropStart.current = false
+      if (intended && event.target === event.currentTarget && event.clientY < event.currentTarget.getBoundingClientRect().top) dialog.current?.close()
+    }}>
       {clientLime ? <FitLimeSheetHeader titleId={titleId} title={time ? 'Дата и время' : 'Выбрать дату'} backLabel="Закрыть календарь" onBack={() => dialog.current?.close()} onConfirm={apply} confirmLabel="Применить дату" disabled={disabled} /> : <header className={reference ? 'coach-reference-sheet-header' : undefined}><button type="button" aria-label="Закрыть календарь" onClick={() => dialog.current?.close()}><CloseIcon /></button><h2 id={titleId}>{time ? 'Дата и время' : sourceCalendar ? 'Дата' : 'Выбрать дату'}</h2><button type="button" className={reference ? 'coach-sheet-confirm' : undefined} aria-label="Применить дату" onClick={apply}>{reference ? <CheckSmallIcon /> : <CheckIcon />}</button></header>}
       <p className="fit-lime-date-selected" aria-live="polite">{sourceCalendar ? <span className="coach-date-sun" aria-hidden="true" style={{ maskImage: `url("${fitLimeOriginalIcons.sun}")` }} /> : clientLime && <ScheduleIcon />}{sourceCalendar && today ? formatRelativeLocalDate(draft, today) : formatLocalDate(draft)}</p>
       <div className="fit-lime-month-navigation"><button type="button" aria-label="Предыдущий месяц" onClick={() => { setMonth(addMonths(month, -1)); setVisibleMonths(3); if (monthsBody.current) monthsBody.current.scrollTop = 0 }}><BackIcon /></button>{sourceCalendar ? <div className="coach-date-weekdays" aria-hidden="true">{['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map(label => <span key={label}>{label}</span>)}</div> : <span>{formatMonth(month)}</span>}<button type="button" aria-label="Следующий месяц" onClick={() => { setMonth(addMonths(month, 1)); setVisibleMonths(3); if (monthsBody.current) monthsBody.current.scrollTop = 0 }}><ChevronRightIcon /></button></div>
