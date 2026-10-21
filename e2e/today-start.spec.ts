@@ -1,8 +1,9 @@
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test } from '@playwright/test'
 import { expectWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: import('@playwright/test').Page, items: unknown[]) {
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items, unmatched: [] }) })
   })
 }
@@ -41,13 +42,10 @@ async function mockStreamingVoice(page: import('@playwright/test').Page, transcr
 
 test('today: voice-first запускает запись, отменяет её и открывает review после transcript', async ({ page }) => {
   await mockWorkoutParser(page, [{ sourceText: 'Жим лёжа три подхода по десять 80 килограммов', exerciseRef: 'bench-press', confidence: 1, sets: [{ weightKg: 80, reps: 10 }, { weightKg: 80, reps: 10 }, { weightKg: 80, reps: 10 }] }])
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
   await mockStreamingVoice(page)
-  await page.goto('/today')
+  await page.goto(nativeAiUrl('/today'))
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Слушаю…' })).toBeVisible()
@@ -75,13 +73,10 @@ test('today: голосовой ввод сохраняет значения п�
   // Даже пустой ответ модели не должен терять безопасно найденные локально
   // упражнения и явно продиктованные числовые значения.
   await mockWorkoutParser(page, [])
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
   await mockStreamingVoice(page, transcript)
-  await page.goto('/today')
+  await page.goto(nativeAiUrl('/today'))
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
@@ -93,13 +88,10 @@ test('today: голосовой ввод сохраняет значения п�
 test('today: живая диктовка с паузами и числами словами открывает готовую проверку', async ({ page }) => {
   const transcript = 'Так, эээ, приседания с гирей, ну, три по десять, двадцать килограмм, дальше, эм, планка три по сорок пять секунд'
   await mockWorkoutParser(page, [])
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
   await mockStreamingVoice(page, transcript)
-  await page.goto('/today')
+  await page.goto(nativeAiUrl('/today'))
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
@@ -113,17 +105,14 @@ test('today: живая диктовка с паузами и числами с�
 
 test('today: недоступный AI-разбор сохраняет transcript и открывает ручное уточнение без повтора', async ({ page }) => {
   let parserRequests = 0
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     parserRequests += 1
     await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'temporary' }) })
   })
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
   await mockStreamingVoice(page, 'Неизвестное упражнение абракадабра')
-  await page.goto('/today')
+  await page.goto(nativeAiUrl('/today'))
 
   await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
   await page.getByRole('button', { name: 'Готово' }).click()
@@ -134,12 +123,9 @@ test('today: недоступный AI-разбор сохраняет transcrip
 })
 
 test('today: быстрый старт ведёт к единому выбору плана или завершённой тренировки', async ({ page }, testInfo) => {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
-  await page.goto('/today')
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
+  await page.goto(nativeAiUrl('/today'))
 
   await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeVisible()
@@ -319,15 +305,12 @@ test('создание из календаря: завершённая трен�
 })
 
 test('today: quick review наследует настройку RPE тренера', async ({ page }) => {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
 
-  await page.goto('/profile/settings')
+  await page.goto(nativeAiUrl('/profile/settings'))
   await page.getByRole('switch', { name: 'Показывать RPE', exact: true }).check()
-  await page.goto('/today')
+  await page.goto(nativeAiUrl('/today'))
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await mockWorkoutParser(page, [{
     sourceText: 'Присед со штангой 3×8 — 80 кг', exerciseRef: 'barbell-squat', confidence: 1,
@@ -345,12 +328,9 @@ test('today: quick review наследует настройку RPE тренер
 })
 
 test('today: черновик сохраняет финальный шаг и последовательные возвраты', async ({ page }) => {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/)
-  await page.goto('/today')
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
+  await page.goto(nativeAiUrl('/today'))
   await expect(page.getByRole('heading', { name: 'Составить тренировку' })).toBeVisible()
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByText('Новая тренировка', { exact: true })).toBeVisible()

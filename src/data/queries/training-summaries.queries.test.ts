@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { YandexAppSessionTransport } from '../yandex-app-session-transport'
 
-const { getSession, verifiedAccessToken, refreshAccessToken, appSession } = vi.hoisted(() => ({
-  getSession: vi.fn(), verifiedAccessToken: vi.fn(), refreshAccessToken: vi.fn(),
+const { getSession, appSession } = vi.hoisted(() => ({
+  getSession: vi.fn(),
   appSession: vi.fn<() => YandexAppSessionTransport | null>(),
 }))
 vi.mock('./client', () => ({ supabase: { auth: { getSession } } }))
-vi.mock('./verified-supabase-session', () => ({ verifiedSupabaseAccessToken: verifiedAccessToken, refreshSupabaseAccessToken: refreshAccessToken }))
 vi.mock('../yandex-app-session-transport', () => ({ yandexAppSessionTransport: appSession }))
 
 const generate = async () => {
@@ -19,7 +18,6 @@ beforeEach(() => {
   vi.clearAllMocks()
   appSession.mockReturnValue(null)
   getSession.mockResolvedValue({ data: { session: { access_token: 'legacy-token' } } })
-  verifiedAccessToken.mockResolvedValue('verified-token')
   vi.stubEnv('VITE_YANDEX_LEGACY_FUNCTIONS_API_BASE_URL', '')
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ cached: true }))))
 })
@@ -32,8 +30,6 @@ it('closes an explicit retired AI override without HTTP, token refresh or Cloud 
   expect(result.error).toBeInstanceOf(Error)
   expect(fetch).not.toHaveBeenCalled()
   expect(getSession).not.toHaveBeenCalled()
-  expect(verifiedAccessToken).not.toHaveBeenCalled()
-  expect(refreshAccessToken).not.toHaveBeenCalled()
 })
 
 it.each([200, 503])('preserves native summary HTTP %s despite a stale legacy override', async status => {
@@ -52,16 +48,11 @@ it.each([200, 503])('preserves native summary HTTP %s despite a stale legacy ove
   expect(request?.[1]?.body).toBe(JSON.stringify({ client_id: 'client-1', period_start: '2026-08-01', period_end: '2026-08-20', force: false, trigger_reason: 'manual_refresh' }))
   if (status === 200) expect(result).toEqual({ data: { cached: true }, error: null })
   else expect(result).toEqual({ data: null, error: { context: response } })
-  expect(verifiedAccessToken).not.toHaveBeenCalled()
-  expect(refreshAccessToken).not.toHaveBeenCalled()
 })
 
-it('preserves the existing direct Cloud Function request when no legacy override is configured', async () => {
-  expect(await generate()).toEqual({ data: { cached: true }, error: null })
-  expect(fetch).toHaveBeenCalledTimes(1)
-  expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/^https:\/\/functions\.yandexcloud\.net\//), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-supabase-authorization': 'Bearer verified-token' },
-    body: JSON.stringify({ client_id: 'client-1', period_start: '2026-08-01', period_end: '2026-08-20', force: false, trigger_reason: 'manual_refresh' }),
-  })
+it('rejects an absent native session without a remote fallback', async () => {
+  const result = await generate()
+  expect(result.data).toBeNull()
+  expect(result.error).toEqual(new Error('authentication_required'))
+  expect(fetch).not.toHaveBeenCalled()
 })

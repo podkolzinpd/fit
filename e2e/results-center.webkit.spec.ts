@@ -4,7 +4,7 @@ import { mockResultsHistory, verifyResultsSources } from './progress-results-fix
 test('iPhone results keep filters after source navigation while AI is unavailable', async ({ page }) => {
   await mockResultsHistory(page)
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ json: [] }))
-  for (const url of ['**/v1/legacy/summarize-client-training', '**/functions/v1/summarize-client-training']) {
+  for (const url of ['**/v1/clients/*/training-summaries/generate']) {
     await page.route(url, (route) => route.fulfill({ status: 503, json: { error: 'temporarily unavailable' } }))
   }
   await page.goto('/auth')

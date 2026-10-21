@@ -1,3 +1,4 @@
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test, type Page } from '@playwright/test'
 import { addDays, todayInTimeZone } from '../src/shared/local-date'
 import { comparisonWorkoutRow, verifyAnalysisShortcutKeepsShell } from './progress-results-fixture'
@@ -58,26 +59,20 @@ test('standalone client creates and formulates an own goal', async ({ page }, te
   await expect(page.getByText('Критерий подтверждён')).toBeVisible()
 })
 
-test('client explicitly confirms an LLM criterion before it can be saved', async ({ page }, testInfo) => {
-  await page.route('**/functions/v1/parse-workout', (route) => route.fulfill({
+test('client explicitly confirms an LLM criterion before it can be saved', async ({ page }) => {
+  await page.route('**/v1/assistant/yandex/suggest-goal-criteria', (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify({ criteria: [{
       metric: 'weight', operation: 'maintain_range', targetValue: null, rangeMin: 58.5, rangeMax: 59.5,
       unit: 'кг', secondaryTargetValue: null, secondaryUnit: null, exerciseRef: null, customMetricId: null,
       regularityPeriod: null, regularityMode: null,
     }], needsInput: [], unsupportedReason: null }),
   }))
-  await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Подтверждение ИИ')
-  await page.getByLabel('Email').fill(`llm-goal-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await expect(page).toHaveURL(/\/me$/)
+  await mockNativeAiSession(page, 'client')
+  await page.goto(nativeAiUrl('/me'))
 
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
-  await page.goto('/me/goal')
+  await page.goto(nativeAiUrl('/me/goal'))
   await page.getByLabel('Цель').fill('Держать вес 59 кг')
   await page.getByRole('switch', { name: 'Автоматическая оценка' }).check()
   await page.getByRole('button', { name: 'Предложить критерии с ИИ' }).click()
