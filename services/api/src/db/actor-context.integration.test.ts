@@ -633,12 +633,16 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const setsBefore = await ownerPool.query('select to_jsonb(workout_set) as snapshot from public.workout_sets workout_set order by id')
         const original = listed.json<{ favorites: { id: string; createdAt: string; version: number }[] }>().favorites.find((item) => item.id === firstId)!
         expect(original.version).toBe(1)
-        const changed = await request('PUT', 0, { title: 'Updated snapshot', expectedVersion: 1, exercises: snapshots[1] }, `/${firstId}`)
+        const edited = exercises.map((exercise, index) => ({
+          ...exercise, restBetweenSetsSec: 75,
+          sets: exercise.sets.map((set) => index === 0 ? { ...set, weightKg: 40, reps: 12 } : { ...set, durationSec: 1800, distanceKm: 5 }),
+        }))
+        const changed = await request('PUT', 0, { title: 'Updated snapshot', expectedVersion: 1, exercises: edited }, `/${firstId}`)
         expect(changed.statusCode).toBe(200)
-        expect(changed.json()).toMatchObject({ id: firstId, createdAt: original.createdAt, version: 2, exercises: snapshots[1] })
+        expect(changed.json()).toMatchObject({ id: firstId, createdAt: original.createdAt, version: 2, exercises: edited })
         const renamed = await request('PUT', 0, { title: 'Renamed only', expectedVersion: 2 }, `/${firstId}`)
         expect(renamed.statusCode).toBe(200)
-        expect(renamed.json()).toMatchObject({ version: 3, exercises: snapshots[1] })
+        expect(renamed.json()).toMatchObject({ version: 3, exercises: edited })
         const stale = await request('PUT', 0, { title: 'Must not overwrite', expectedVersion: 1, exercises }, `/${firstId}`)
         expect(stale.statusCode).toBe(409)
         expect(stale.json()).toEqual({ error: 'version_conflict' })

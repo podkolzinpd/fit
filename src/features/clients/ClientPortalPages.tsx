@@ -121,7 +121,7 @@ export function MyWorkoutsPage() {
         <button id="workouts-presets-tab" type="button" role="tab" aria-label="Готовые тренировки" aria-selected={workoutsView === 'presets'} aria-controls="workouts-presets-panel" className={workoutsView === 'presets' ? 'active' : ''} onClick={() => setWorkoutsView('presets')}>Готовые</button>
       </div>
       <div id="workouts-current-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-current-tab" hidden={workoutsView !== 'current'}>
-        <AsyncView loading={upcoming.isLoading || history.isLoading || trainers.isLoading} error={upcoming.error ?? history.error ?? trainers.error} onRetry={() => { void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}>
+        {workoutsView === 'current' && <AsyncView loading={upcoming.isLoading || history.isLoading || trainers.isLoading} error={upcoming.error ?? history.error ?? trainers.error} onRetry={() => { void upcoming.refetch(); void history.refetch(); void trainers.refetch() }}>
         {renderViewToggle('current')}
         {plannedCalendarState.view === 'list' ? hasCurrentWorkouts ? <div className="client-workouts-stack">
           {upcomingItems.length > 0 && <section className="client-workout-section"><div className="client-workout-section-head"><p className="eyebrow">БЛИЖАЙШЕЕ</p><h2>Предстоит</h2></div><div className="cards client-workout-cards">{upcomingItems.map((workout) => renderPlannedCard(workout, plannedReturnTo))}</div></section>}
@@ -143,10 +143,10 @@ export function MyWorkoutsPage() {
               onMonthChange={plannedCalendar.shiftMonth}
               onDateSelect={plannedCalendar.selectDate}
             />}
-        </AsyncView>
+        </AsyncView>}
       </div>
       <div id="workouts-history-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-history-tab" hidden={workoutsView !== 'history'}>
-        <AsyncView loading={history.isLoading || trainers.isLoading} error={history.error ?? trainers.error} onRetry={() => { void history.refetch(); void trainers.refetch() }}>
+        {workoutsView === 'history' && <AsyncView loading={history.isLoading || trainers.isLoading} error={history.error ?? trainers.error} onRetry={() => { void history.refetch(); void trainers.refetch() }}>
         {renderViewToggle('history')}
         <section className="client-workout-section client-history-section">
           <div className="client-workout-section-head client-history-section-head"><div><p className="eyebrow">РЕЗУЛЬТАТЫ</p><h2>История</h2></div></div>
@@ -167,9 +167,10 @@ export function MyWorkoutsPage() {
                 onDateSelect={calendar.selectDate}
               />}
         </section>
-        </AsyncView>
+        </AsyncView>}
       </div>
       <div id="workouts-presets-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-presets-tab" hidden={workoutsView !== 'presets'}>
+        {workoutsView === 'presets' && <>
         <section className="client-workout-section favorite-workouts-section">
           {workoutsView === 'presets' && Boolean(favorites.data?.length) ? <Coachmark id="favorite-workout-management-2026-10" userId={actor?.userId} title="Управление избранным" description="Редактирование, переименование и удаление — в меню «Ещё» у тренировки."><div className="client-workout-section-head"><p className="eyebrow">МОЁ</p><h2>Избранное</h2></div></Coachmark>
             : <div className="client-workout-section-head"><p className="eyebrow">МОЁ</p><h2>Избранное</h2></div>}
@@ -198,6 +199,7 @@ export function MyWorkoutsPage() {
           storeFirstWorkoutIntent(actor.userId, { mode: 'preset', presetId })
           navigate('/me')
         }} />
+        </>}
       </div>
     </>}
   </AsyncView></Page>

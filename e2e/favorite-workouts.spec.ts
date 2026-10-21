@@ -37,7 +37,7 @@ test('client saves a workout to favorites, then plans a new one from it', async 
   await page.goto('/me/workouts?tab=presets')
   const favoriteCard = page.locator('.favorite-workout-card').filter({ hasText: placeholder! })
   await expect(favoriteCard).toBeVisible()
-  await page.getByRole('button', { name: 'Понятно', exact: true }).click()
+  await page.locator('.coachmark-bubble').filter({ hasText: 'Управление избранным' }).getByRole('button', { name: 'Понятно', exact: true }).click()
   await expect(favoriteCard).toContainText('1 упражнение')
 
   // «Запланировать» переносит структуру в новый черновик без похода в историю.
