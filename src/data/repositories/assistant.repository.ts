@@ -1,5 +1,5 @@
 import { assistantHistoryQueries } from '../queries/assistant-history.queries'
-import { assistantOrchestratorUrl, sendAssistantTurn } from '../queries/assistant-orchestrator'
+import { isAssistantTransportAvailable, sendAssistantTurn } from '../queries/assistant-orchestrator'
 import { toJson } from '../queries/json'
 export type { AssistantOrchestratorAction } from '../queries/assistant-orchestrator'
 import type { AssistantOrchestratorReply } from '../queries/assistant-orchestrator'
@@ -102,7 +102,7 @@ function assistantResult<Value>(result: {
 }
 
 export const assistantRepository: AssistantDataRepository = {
-  isAvailable: () => assistantOrchestratorUrl() !== undefined,
+  isAvailable: () => isAssistantTransportAvailable(),
   listConversations: async () => assistantResult<AssistantConversation[]>(
     await assistantHistoryQueries.listConversations(),
   ),

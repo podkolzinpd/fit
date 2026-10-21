@@ -310,6 +310,7 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
   }, { token: sessionToken, profileId, showFeedbackNotice: options.showFeedbackNotice ?? false, unseenCoachmarks: options.unseenCoachmarks ?? [] })
   await page.route(`${apiOrigin}/v1/**`, async (route) => {
     const url = new URL(route.request().url())
+    if (url.pathname === '/v1/assistant/yandex/suggest-goal-criteria' || url.pathname === '/v1/assistant/yandex/parse-workout' || url.pathname === '/v1/assistant/turn' || url.pathname.endsWith('/training-summaries/generate')) return route.fallback()
     let body: unknown
     if (url.pathname === '/v1/auth/yandex/session' && route.request().method() === 'DELETE') {
       await route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' }, body: '' })

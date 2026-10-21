@@ -16,11 +16,6 @@ export type GoalCriteriaSuggestionResponse = {
   unsupportedReason: string | null
 }
 
-const parserUrl = 'https://functions.yandexcloud.net/d4eicdja8le8ivq53u9f'
-const isLocalSupabase = (import.meta.env.DEV || import.meta.env.MODE === 'development')
-  && typeof import.meta.env.VITE_SUPABASE_URL === 'string'
-  && import.meta.env.VITE_SUPABASE_URL.includes('127.0.0.1:54321')
-
 export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnapshot[]) => {
   const appSession = yandexAppSessionTransport()
   if (appSession) {
@@ -33,23 +28,7 @@ export const parseWorkout = (text: string, systemCatalog: readonly ExerciseSnaps
       : { data: null, error: { context: response } })
       .catch((error) => ({ data: null, error: error instanceof Error ? error : new Error('parse_workout_request_failed') }))
   }
-  if (isLocalSupabase) {
-    return supabase.functions.invoke<WorkoutParseResponse>('parse-workout', { body: { text, systemCatalog } })
-  }
-  return supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
-    try {
-      const response = await fetch(parserUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ text, systemCatalog }),
-      })
-      if (!response.ok) return { data: null, error: { context: response } }
-      return { data: await response.json() as WorkoutParseResponse, error: null }
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error : new Error('parse_workout_request_failed') }
-    }
-  })
+  return Promise.resolve({ data: null, error: new Error('authentication_required') })
 }
 
 export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnapshot[], metrics: readonly CustomMetric[]) => {
@@ -65,18 +44,7 @@ export const suggestGoalCriteria = (text: string, catalog: readonly ExerciseSnap
       : { data: null, error: { context: response } })
       .catch((error) => ({ data: null, error: error instanceof Error ? error : new Error('goal_suggestion_request_failed') }))
   }
-  if (isLocalSupabase) return supabase.functions.invoke<GoalCriteriaSuggestionResponse>('parse-workout', { body })
-  return supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (!session?.access_token) return { data: null, error: new Error('authentication_required') }
-    try {
-      const response = await fetch(parserUrl, { method: 'POST', headers: { 'content-type': 'application/json', 'x-supabase-authorization': `Bearer ${session.access_token}` }, body: JSON.stringify(body) })
-      return response.ok
-        ? { data: await response.json() as GoalCriteriaSuggestionResponse, error: null }
-        : { data: null, error: { context: response } }
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error : new Error('goal_suggestion_request_failed') }
-    }
-  })
+  return Promise.resolve({ data: null, error: new Error('authentication_required') })
 }
 
 const columns = 'id,name,muscle_group,input_kind,created_by,archived_at,version,primary_muscle_detail,equipment,description,image_path,image_mime_type,image_width,image_height,image_size_bytes'

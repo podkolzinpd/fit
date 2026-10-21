@@ -1,3 +1,4 @@
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test } from '@playwright/test'
 import { chooseWorkoutTime } from './workout-time-wheel'
 import { randomUUID } from 'node:crypto'
@@ -394,8 +395,7 @@ async function mockAutomaticSummaryGeneration(page: VisualPage) {
     contentType: 'application/json',
     body: JSON.stringify({ data: { generated_at: '2026-08-16T12:00:00Z' }, cached: true }),
   }
-  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill(response))
-  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
+  await page.route('**/v1/clients/*/training-summaries/generate', (route) => route.fulfill(response))
 }
 
 async function mockBodyMapClientGender(page: VisualPage, gender: 'male' | 'female' | null, trainer: boolean) {
@@ -430,7 +430,7 @@ test('body maps keep route, gender and saved-list preferences without AI request
     }
     return route.fallback()
   })
-  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
+  await page.goto(trainer ? '/today' : '/me')
   await mockClientWorkoutHistory(page, { includeBack: true, bestResults: true })
   await mockProgressPeriodSummary(page, '2026-07-17', '2026-08-16')
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
@@ -2171,7 +2171,8 @@ async function addCompletedBenchPress(page: import('@playwright/test').Page) {
 }
 
 async function openWorkoutReview(page: import('@playwright/test').Page, trainer: boolean, dark = false) {
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await mockNativeAiSession(page, trainer ? 'trainer' : 'client', { linkedClient: true })
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -2185,15 +2186,15 @@ async function openWorkoutReview(page: import('@playwright/test').Page, trainer:
       }),
     })
   })
-  await signIn(page, trainer ? 'trainer@fit.local' : 'client@fit.local', trainer ? /\/today$/ : /\/me$/)
-  await gotoStable(page, trainer ? '/profile/settings' : '/me/settings')
+  await page.goto(nativeAiUrl(trainer ? '/today' : '/me'))
+  await gotoStable(page, nativeAiUrl(trainer ? '/profile/settings' : '/me/settings'))
   const darkTheme = page.getByRole('switch', { name: 'Тёмная тема' })
   if (dark) await darkTheme.check()
   else await darkTheme.uncheck()
   await page.evaluate(() => Object.keys(localStorage)
     .filter((key) => key.startsWith('fit.today-draft.'))
     .forEach((key) => localStorage.removeItem(key)))
-  await gotoStable(page, trainer ? '/today' : '/me')
+  await gotoStable(page, nativeAiUrl(trainer ? '/today' : '/me'))
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Тренировка').fill('Жим лёжа 3×10 — 60 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
@@ -3198,8 +3199,7 @@ test('personal workout result stays on Home and remains available in Progress hi
     ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ workout_date: '2026-08-03' }) }) : route.fallback())
   await page.route('**/rest/v1/client_published_training_summaries?*', (route) => route.fulfill({ contentType: 'application/json', body: '[]' }))
   await page.route('https://functions.yandexcloud.net/**', rejectUnexpectedSummary)
-  await page.route('**/v1/legacy/summarize-client-training', rejectUnexpectedSummary)
-  await page.route('**/functions/v1/summarize-client-training', rejectUnexpectedSummary)
+  await page.route('**/v1/clients/*/training-summaries/generate', rejectUnexpectedSummary)
   await page.clock.install({ time: new Date('2026-08-16T18:00:00+03:00') })
   await signIn(page, 'client@fit.local', /\/me$/)
   const result = page.getByRole('region', { name: 'Последняя тренировка' })

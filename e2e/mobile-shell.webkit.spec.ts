@@ -1,3 +1,4 @@
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { mockResultsHistory } from './progress-results-fixture'
 import { chooseWorkoutTime } from './workout-time-wheel'
@@ -290,8 +291,7 @@ async function mockAutomaticSummaryGeneration(page: Page) {
     contentType: 'application/json',
     body: JSON.stringify({ data: { generated_at: '2026-08-20T08:00:00Z' }, cached: true }),
   }
-  await page.route('**/v1/legacy/summarize-client-training', (route) => route.fulfill(response))
-  await page.route('**/functions/v1/summarize-client-training', (route) => route.fulfill(response))
+  await page.route('**/v1/clients/*/training-summaries/generate', (route) => route.fulfill(response))
 }
 
 async function expectNoHorizontalOverflow(page: import('@playwright/test').Page) {
@@ -563,8 +563,9 @@ test('iPhone: компактные фильтры выдерживают узк�
 
 test('iPhone: поля бега не перекрываются в быстрой проверке тренера на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await loginAsTrainer(page)
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -862,15 +863,10 @@ test('iPhone: меню собственного плана клиента нах
   await page.screenshot({ path: testInfo.outputPath('client-plan-header-menu-430.png'), fullPage: true })
 })
 
-test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }, testInfo) => {
+test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/auth')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
-  await page.getByLabel('Тип аккаунта').selectOption('client')
-  await page.getByLabel('Имя').fill('Клиент')
-  await page.getByLabel('Email').fill(`client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`)
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await mockNativeAiSession(page, 'client')
+  await page.goto(nativeAiUrl('/me'))
 
   const compactActions = page.locator('.client-home-self-training .voice-action-buttons')
   await expect(compactActions).toBeVisible()
@@ -889,7 +885,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
     .forEach((key) => localStorage.removeItem(key)))
   await page.reload()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -914,7 +910,7 @@ test('iPhone: client voice-first home сохраняет тренировку т
   await page.getByRole('button', { name: 'Записать выполненную' }).click()
   await expect(page.getByRole('button', { name: 'Записать тренировку' })).toBeEnabled()
   await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
-  await page.goto('/me/profile')
+  await page.goto(nativeAiUrl('/me/profile'))
   await expect(page).toHaveURL(/\/me\/profile$/)
   await page.getByRole('link', { name: 'Изменить данные' }).click()
   await page.getByLabel('Имя').fill('Клиент Обновлённый')
@@ -927,9 +923,9 @@ test('iPhone: client voice-first home сохраняет тренировку т
   ])
   await expect(page.getByText(/Клиент Обновлённый/)).toBeVisible()
 
-  await page.goto('/me/profile')
+  await page.goto(nativeAiUrl('/me/profile'))
   await expect(page.getByText('Клиент Обновлённый', { exact: true })).toBeVisible()
-  await page.goto('/me/edit')
+  await page.goto(nativeAiUrl('/me/edit'))
   await expect(page.getByRole('heading', { name: 'Редактировать профиль' })).toBeVisible()
   await page.getByLabel('Имя').fill('Черновик отмены')
   await Promise.all([
@@ -1366,9 +1362,10 @@ async function confirmCurrentSet(page: Page) {
 }
 
 async function openReviewWithFixture(page: import('@playwright/test').Page, pathname = '/today') {
+  await mockNativeAiSession(page, pathname === '/me' ? 'client' : 'trainer')
   // Изолированная тестовая заглушка: не меняет LLM-клиент, промпт или обработку ошибок
   // в приложении, но стабильно создаёт самый плотный экран «Проверьте тренировку».
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -1386,7 +1383,7 @@ async function openReviewWithFixture(page: import('@playwright/test').Page, path
       }),
     })
   })
-  await page.goto(pathname)
+  await page.goto(nativeAiUrl(pathname))
   await page.getByRole('button', { name: 'Ввести текстом' }).click()
   await page.getByLabel('Тренировка').fill('Жим лёжа (Штанга) 3×8 — 80 кг')
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
@@ -1396,7 +1393,6 @@ async function openReviewWithFixture(page: import('@playwright/test').Page, path
 for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test(`iPhone: проверка тренировки клиента восстанавливает полную высоту после клавиатуры на ${viewport.width} px`, async ({ page }) => {
     await page.setViewportSize(viewport)
-    await login(page, 'client@fit.local')
     await openReviewWithFixture(page, '/me')
     await page.getByText('Править подходы', { exact: true }).click()
 

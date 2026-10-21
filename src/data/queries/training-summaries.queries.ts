@@ -1,13 +1,9 @@
 import type { ClientTrainingSummary } from '../../shared/domain'
 import { supabase } from './client'
 import { toJson } from './json'
-import { legacyCloudApiBaseUrl } from './legacy-api-base-url'
 import type { TrainingSummaryTriggerReason } from '../../shared/domain'
-import { verifiedSupabaseAccessToken } from './verified-supabase-session'
 import { yandexAppSessionTransport } from '../yandex-app-session-transport'
 import { fetchWithRequestDiagnostics } from './request-diagnostics'
-
-const summaryFunctionUrl = 'https://functions.yandexcloud.net/d4eq75uad5lps1chbidk'
 
 const internalColumns = 'id,client_id,period_start,period_end,trainer_summary,client_summary,display_metrics,generated_at,version'
 
@@ -52,44 +48,7 @@ export const trainingSummaryQueries = {
         return { data: null, error: error instanceof Error ? error : new Error('summary_function_request_failed') }
       }
     }
-    if (legacyCloudApiBaseUrl() !== undefined) {
-      return { data: null, error: new Error('Старый AI API отключён. Используйте вход через Yandex ID.') }
-    }
-    let accessToken: string
-    try {
-      accessToken = await verifiedSupabaseAccessToken()
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error : new Error('authentication_required') }
-    }
-
-    let response: Response
-    try {
-      response = await fetch(summaryFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-supabase-authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          period_start: periodStart,
-          period_end: periodEnd,
-          force,
-          trigger_reason: triggerReason,
-        }),
-      })
-    } catch (error) {
-      return { data: null, error: error instanceof Error ? error : new Error('summary_function_request_failed') }
-    }
-    if (!response.ok) return { data: null, error: { context: response } }
-    try {
-      return {
-        data: await response.json() as { error?: string; cached?: boolean; data?: { generated_at?: string } },
-        error: null,
-      }
-    } catch {
-      return { data: null, error: new Error('invalid_json') }
-    }
+    return { data: null, error: new Error('authentication_required') }
   },
   publish: (
     summaryId: string,

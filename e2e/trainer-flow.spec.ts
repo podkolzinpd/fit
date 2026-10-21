@@ -1,8 +1,9 @@
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 import { expect, test, type Page } from '@playwright/test'
 import { chooseWorkoutTime, expectWorkoutTime } from './workout-time-wheel'
 
 async function mockWorkoutParser(page: Page, items: unknown[]) {
-  await page.route('**/functions/v1/parse-workout', async (route) => {
+  await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items, unmatched: [] }) })
   })
 }
@@ -246,13 +247,11 @@ test('гребной тренажёр использует темп на 500 м 
 
 test('тренер объединяет распознанные упражнения в суперсет и сохраняет черновик без повторного разбора', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
+  await mockNativeAiSession(page, 'trainer')
+  await page.goto(nativeAiUrl('/today'))
   await expect(page.getByRole('heading', { level: 1, name: 'Сегодня' })).toBeVisible()
 
-  await page.goto('/today')
+  await page.goto(nativeAiUrl('/today'))
   await mockWorkoutParser(page, [
     { sourceText: 'Жим гантелей на наклон 3×8 24 кг', exerciseRef: 'fedb-incline-dumbbell-press', confidence: 1, sets: [{ weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }, { weightKg: 24, reps: 8 }] },
     { sourceText: 'Планка 45 секунд', exerciseRef: 'plank', confidence: 1, sets: [{ durationSec: 45 }] },
