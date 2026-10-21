@@ -1,0 +1,1053 @@
+{
+  "sourceCommit": "d060cab9b2be3605fe5699aa17dc9d0340c9d5d4",
+  "coverage": {
+    "files": 462,
+    "tsx": 144,
+    "ts": 279,
+    "css": 39,
+    "routes": 56,
+    "clientOrSharedRoutes": 33,
+    "legacyCssRuleCount": 2158,
+    "portalCount": 18,
+    "genericSurfaceInstances": 539,
+    "inlineVisualCount": 4
+  },
+  "routes": [
+    {
+      "path": "/auth",
+      "role": "standalone",
+      "element": "<AuthPage />",
+      "line": 84
+    },
+    {
+      "path": "/auth/forgot",
+      "role": "standalone",
+      "element": "<ForgotPasswordPage />",
+      "line": 85
+    },
+    {
+      "path": "/auth/reset",
+      "role": "standalone",
+      "element": "<ResetPasswordPage />",
+      "line": 86
+    },
+    {
+      "path": "/auth/callback",
+      "role": "standalone",
+      "element": "<AuthCallbackPage />",
+      "line": 87
+    },
+    {
+      "path": "/auth/yandex/callback",
+      "role": "standalone",
+      "element": "<YandexPilotCallbackPage />",
+      "line": 88
+    },
+    {
+      "path": "/auth/yandex/session",
+      "role": "standalone",
+      "element": "<YandexAppSessionPage />",
+      "line": 89
+    },
+    {
+      "path": "/auth/yandex/refresh-assistant",
+      "role": "standalone",
+      "element": "<YandexAssistantFeaturesRefreshPage />",
+      "line": 90
+    },
+    {
+      "path": "/legal/terms",
+      "role": "standalone",
+      "element": "<TermsPage />",
+      "line": 91
+    },
+    {
+      "path": "/legal/privacy",
+      "role": "standalone",
+      "element": "<PrivacyPage />",
+      "line": 92
+    },
+    {
+      "path": "/legal/delete-account",
+      "role": "standalone",
+      "element": "<AccountDeletionPage />",
+      "line": 93
+    },
+    {
+      "path": "/trainers/:publicId",
+      "role": "standalone",
+      "element": "<PublicTrainerProfilePage />",
+      "line": 94
+    },
+    {
+      "path": "/invite",
+      "role": "standalone",
+      "element": "<InvitationRoute />",
+      "line": 95
+    },
+    {
+      "path": "/join",
+      "role": "shared",
+      "element": "<JoinPage />",
+      "line": 99
+    },
+    {
+      "path": "/chat",
+      "role": "shared",
+      "element": "<ChatListPage />",
+      "line": 100
+    },
+    {
+      "path": "/chat/:conversationId",
+      "role": "shared",
+      "element": "<ChatConversationPage />",
+      "line": 101
+    },
+    {
+      "path": "/me",
+      "role": "client",
+      "element": "<MyClientPage />",
+      "line": 103
+    },
+    {
+      "path": "/me/edit",
+      "role": "client",
+      "element": "<MyClientEditPage />",
+      "line": 104
+    },
+    {
+      "path": "/me/workouts",
+      "role": "client",
+      "element": "<MyWorkoutsPage />",
+      "line": 105
+    },
+    {
+      "path": "/me/progress",
+      "role": "client",
+      "element": "<MyProgressPage />",
+      "line": 106
+    },
+    {
+      "path": "/me/achievements",
+      "role": "client",
+      "element": "<AthleteAchievementsPage />",
+      "line": 107
+    },
+    {
+      "path": "/me/goal",
+      "role": "client",
+      "element": "<MyGoalPage />",
+      "line": 108
+    },
+    {
+      "path": "/me/finance",
+      "role": "client",
+      "element": "<ClientFinancePage />",
+      "line": 109
+    },
+    {
+      "path": "/me/nutrition",
+      "role": "client",
+      "element": "<NutritionPage />",
+      "line": 110
+    },
+    {
+      "path": "/me/profile",
+      "role": "client",
+      "element": "<ClientProfilePage />",
+      "line": 111
+    },
+    {
+      "path": "/me/settings",
+      "role": "client",
+      "element": "<ClientProfileSettingsPage />",
+      "line": 112
+    },
+    {
+      "path": "/me/trainers",
+      "role": "client",
+      "element": "<TrainerCatalogPage />",
+      "line": 113
+    },
+    {
+      "path": "/workouts/new",
+      "role": "shared",
+      "element": "<WorkoutFormPage />",
+      "line": 116
+    },
+    {
+      "path": "/workouts/:workoutId/edit",
+      "role": "shared",
+      "element": "<WorkoutFormPage />",
+      "line": 118
+    },
+    {
+      "path": "/workouts/:workoutId",
+      "role": "shared",
+      "element": "<WorkoutDetailPage />",
+      "line": 119
+    },
+    {
+      "path": "/workouts/:workoutId/live",
+      "role": "shared",
+      "element": "<LiveWorkoutPage />",
+      "line": 120
+    },
+    {
+      "path": "/workouts/:workoutId/history/:exerciseRef",
+      "role": "shared",
+      "element": "<ExerciseHistoryPage />",
+      "line": 121
+    },
+    {
+      "path": "/assistant",
+      "role": "shared",
+      "element": "<AssistantPage />",
+      "line": 123
+    },
+    {
+      "path": "/today",
+      "role": "trainer",
+      "element": "<TrainerTodayPage />",
+      "line": 126
+    },
+    {
+      "path": "/clients",
+      "role": "trainer",
+      "element": "<ClientsPage />",
+      "line": 127
+    },
+    {
+      "path": "/clients/archive",
+      "role": "trainer",
+      "element": "<ArchivedClientsPage />",
+      "line": 128
+    },
+    {
+      "path": "/clients/new",
+      "role": "trainer",
+      "element": "<ClientFormPage />",
+      "line": 129
+    },
+    {
+      "path": "/finance",
+      "role": "trainer",
+      "element": "<TrainerFinanceOverviewPage />",
+      "line": 131
+    },
+    {
+      "path": "/clients/:clientId",
+      "role": "trainer",
+      "element": "<ClientDetailPage />",
+      "line": 134
+    },
+    {
+      "path": "/clients/:clientId/goal",
+      "role": "trainer",
+      "element": "<GoalPage />",
+      "line": 135
+    },
+    {
+      "path": "/clients/:clientId/edit",
+      "role": "trainer",
+      "element": "<ClientFormPage />",
+      "line": 136
+    },
+    {
+      "path": "/clients/:clientId/workouts",
+      "role": "trainer",
+      "element": "<ClientWorkoutsPage />",
+      "line": 137
+    },
+    {
+      "path": "/clients/:clientId/nutrition",
+      "role": "trainer",
+      "element": "<NutritionPage />",
+      "line": 138
+    },
+    {
+      "path": "/clients/:clientId/finance",
+      "role": "trainer",
+      "element": "<TrainerFinancePage />",
+      "line": 140
+    },
+    {
+      "path": "/progress/:clientId",
+      "role": "trainer",
+      "element": "<ProgressPage />",
+      "line": 142
+    },
+    {
+      "path": "/schedule",
+      "role": "trainer",
+      "element": "<SchedulePage />",
+      "line": 144
+    },
+    {
+      "path": "/schedule/templates",
+      "role": "trainer",
+      "element": "<WorkoutTemplatesPage />",
+      "line": 145
+    },
+    {
+      "path": "/schedule/templates/new",
+      "role": "trainer",
+      "element": "<WorkoutTemplateCreatePage />",
+      "line": 146
+    },
+    {
+      "path": "/schedule/templates/new/editor",
+      "role": "trainer",
+      "element": "<WorkoutTemplateEditorPage />",
+      "line": 147
+    },
+    {
+      "path": "/schedule/templates/from-workout",
+      "role": "trainer",
+      "element": "<WorkoutTemplateSourcePage />",
+      "line": 148
+    },
+    {
+      "path": "/schedule/templates/:templateId/edit",
+      "role": "trainer",
+      "element": "<WorkoutTemplateEditorPage />",
+      "line": 149
+    },
+    {
+      "path": "/schedule/templates/:templateId/assign",
+      "role": "trainer",
+      "element": "<WorkoutTemplateAssignPage />",
+      "line": 150
+    },
+    {
+      "path": "/exercises",
+      "role": "trainer",
+      "element": "<ExercisesPage />",
+      "line": 151
+    },
+    {
+      "path": "/profile",
+      "role": "trainer",
+      "element": "<ProfilePage />",
+      "line": 152
+    },
+    {
+      "path": "/profile/settings",
+      "role": "trainer",
+      "element": "<TrainerProfileSettingsPage />",
+      "line": 153
+    },
+    {
+      "path": "/profile/trainer",
+      "role": "trainer",
+      "element": "<TrainerProfileEditorPage />",
+      "line": 154
+    },
+    {
+      "path": "*",
+      "role": "shared",
+      "element": "<Navigate to=\"/\" replace />",
+      "line": 157
+    }
+  ],
+  "portals": [
+    {
+      "file": "src/features/achievements/AthleteAchievements.tsx",
+      "line": 102,
+      "host": "host"
+    },
+    {
+      "file": "src/features/auth/InvitationShareActions.tsx",
+      "line": 122,
+      "host": "host"
+    },
+    {
+      "file": "src/features/chat/ChatPages.tsx",
+      "line": 131,
+      "host": "document.body"
+    },
+    {
+      "file": "src/features/contest/ContestWinnerDialog.tsx",
+      "line": 79,
+      "host": "portalHost"
+    },
+    {
+      "file": "src/features/exercises/ExerciseTechnique.tsx",
+      "line": 70,
+      "host": "host"
+    },
+    {
+      "file": "src/features/profile/TrainerCatalogPage.tsx",
+      "line": 155,
+      "host": "host"
+    },
+    {
+      "file": "src/features/workouts/CoachPlanTimeField.tsx",
+      "line": 79,
+      "host": "document.querySelector('.phone-frame') ?? document.body"
+    },
+    {
+      "file": "src/features/workouts/LiveRestTimer.tsx",
+      "line": 292,
+      "host": "document.querySelector('.phone-frame') ?? document.body"
+    },
+    {
+      "file": "src/features/workouts/WorkoutDurationField.tsx",
+      "line": 131,
+      "host": "document.querySelector('.phone-frame') ?? document.body"
+    },
+    {
+      "file": "src/features/workouts/WorkoutExerciseEditor.tsx",
+      "line": 541,
+      "host": "host"
+    },
+    {
+      "file": "src/features/workouts/WorkoutsPages.tsx",
+      "line": 602,
+      "host": "document.body"
+    },
+    {
+      "file": "src/features/workouts/WorkoutsPages.tsx",
+      "line": 650,
+      "host": "document.body"
+    },
+    {
+      "file": "src/features/workouts/WorkoutsPages.tsx",
+      "line": 691,
+      "host": "document.body"
+    },
+    {
+      "file": "src/shared/FullscreenImageViewer.tsx",
+      "line": 107,
+      "host": "document.body"
+    },
+    {
+      "file": "src/shared/InvitationShareDialog.tsx",
+      "line": 136,
+      "host": "host"
+    },
+    {
+      "file": "src/shared/ui.tsx",
+      "line": 197,
+      "host": "host"
+    },
+    {
+      "file": "src/shared/ui.tsx",
+      "line": 276,
+      "host": "host"
+    },
+    {
+      "file": "src/shared/ui.tsx",
+      "line": 352,
+      "host": "host"
+    }
+  ],
+  "literalFontFamilies": [
+    {
+      "file": "src/styles/client-workout-reference.css",
+      "line": 36,
+      "selector": ".phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-digits",
+      "font": "'REM', sans-serif"
+    },
+    {
+      "file": "src/styles/client-workout-reference.css",
+      "line": 69,
+      "selector": ".phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-pause",
+      "font": "var(--lime-font)"
+    },
+    {
+      "file": "src/styles/coach-workout-reference.css",
+      "line": 1,
+      "selector": "/* YAFIT-601. Independent two-trainer pilot; never restyle the global Lime cohort. */\n@font-face",
+      "font": "'Doto'"
+    },
+    {
+      "file": "src/styles/fit-client-lime-sections.css",
+      "line": 197,
+      "selector": "/* Media canvas stays dark; body-portal controls inherit the client identity. */\nhtml.fit-client-lime-document .fullscreen-image-viewer :is(header button, .fullscreen-image-stage button, .fullscreen-image-controls button)",
+      "font": "inherit"
+    },
+    {
+      "file": "src/styles/fit-client-lime-sections.css",
+      "line": 225,
+      "selector": ".phone-frame.fit-client-lime.assistant-identity .assistant-program-card :is(input, select),\n.phone-frame.fit-client-lime.progress-identity .results-center-filters select",
+      "font": "inherit"
+    },
+    {
+      "file": "src/styles/fit-client-lime-type.css",
+      "line": 1,
+      "selector": "/* Client-only completion of the approved 400/500 contract. These are roles\n   observed in the route audit, not a blanket weight reset. REM stays intact. */\n@font-face",
+      "font": "'YS Geo Symbols'"
+    },
+    {
+      "file": "src/styles/fit-client-lime-type.css",
+      "line": 10,
+      "selector": "/* Medium has no approximation glyph. Reuse the licensed Regular for that\n   single codepoint; all other glyphs still come from their YS Geo text face. */\nhtml.fit-client-lime-document.ui-identity,\n.phone-frame.fit-lime-shell.fit-client-lime,\nhtml.fit-client-lime-document .fit-lime-chat-sheet",
+      "font": "'YS Geo Symbols', 'YS Geo', 'Onest Variable', sans-serif"
+    },
+    {
+      "file": "src/styles/fit-client-lime-workouts.css",
+      "line": 36,
+      "selector": ".phone-frame.fit-client-lime.live-identity .live-timer",
+      "font": "'REM', sans-serif"
+    },
+    {
+      "file": "src/styles/fit-lime-auth-entry.css",
+      "line": 5,
+      "selector": ".fit-client-lime .lime-auth-entry",
+      "font": "'YS Geo', 'Onest Variable', sans-serif"
+    },
+    {
+      "file": "src/styles/fit-lime-registration.css",
+      "line": 1,
+      "selector": "/* Registration reuses the existing standalone Lime scope before an actor exists.\n   No auth, trainer, Mono or global token overrides. */\n.fit-client-lime .lime-registration",
+      "font": "'YS Geo', 'Onest Variable', sans-serif"
+    },
+    {
+      "file": "src/styles/fit-lime-trainer-routes.css",
+      "line": 30,
+      "selector": "/* Portals live outside the phone frame. Tokens are inherited from the\n   layout-owned document flag, which is cleared when leaving the pilot. */\nhtml.fit-lime-document :is(.schedule-v2-sheet-backdrop, .fit-lime-chat-sheet, .fit-lime-action-backdrop)",
+      "font": "'YS Geo', 'Onest Variable', sans-serif"
+    },
+    {
+      "file": "src/styles/fit-lime-trainer-routes.css",
+      "line": 37,
+      "selector": "html.fit-lime-document .schedule-v2-sheet-backdrop :is(button, .schedule-v2-inbox-all)",
+      "font": "inherit"
+    },
+    {
+      "file": "src/styles/fit-lime-type.css",
+      "line": 1,
+      "selector": "/* Rights confirmed by the owner. Original commercial TTFs are never shipped\n   in Git; verified Latin/Cyrillic WOFF2s enter the trusted release build. */\n@font-face",
+      "font": "'YS Geo'"
+    },
+    {
+      "file": "src/styles/fit-lime-type.css",
+      "line": 9,
+      "selector": "@font-face",
+      "font": "'YS Geo'"
+    },
+    {
+      "file": "src/styles/fit-lime-type.css",
+      "line": 16,
+      "selector": "html.fit-client-lime-document.ui-identity,\n.phone-frame.fit-lime-shell",
+      "font": "'YS Geo', 'Onest Variable', sans-serif"
+    },
+    {
+      "file": "src/styles/fit-lime-type.css",
+      "line": 21,
+      "selector": ".fit-lime-shell :where(button, input, textarea, select)",
+      "font": "inherit"
+    },
+    {
+      "file": "src/styles/fit-lime-type.css",
+      "line": 28,
+      "selector": ".fit-lime-shell .schedule-v2-summary strong",
+      "font": "'REM', sans-serif"
+    },
+    {
+      "file": "src/styles/workout-live-reference.css",
+      "line": 22,
+      "selector": ".workout-live-reference.live-identity .coach-live-digits",
+      "font": "'Doto', monospace"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1,
+      "selector": ":root",
+      "font": "\"Onest Variable\", -apple-system, BlinkMacSystemFont, \"SF Pro Text\", Inter, system-ui, sans-serif"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3119,
+      "selector": "/* Foundation UI Identity v1 is global. Route classes below scope composition,\n   not old/new UI selection; light/dark values come only from the root tokens. */\n/* Branding/system shell: до монтирования route layout и при корневой ошибке\n   production UI не должен кратко возвращаться к legacy typography/palette.\n   Rollout=off не получает этот scope и сохраняет прежний fallback. */\n.system-state-identity",
+      "font": "\"Onest Variable\", -apple-system, BlinkMacSystemFont, \"SF Pro Text\", Inter, system-ui, sans-serif"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 5975,
+      "selector": ".assistant-identity .assistant-client-fields input,\n.assistant-identity .assistant-client-fields select,\n.assistant-identity .assistant-program-card input,\n.assistant-identity .assistant-program-draft input",
+      "font": "inherit"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6020,
+      "selector": ".assistant-identity .assistant-composer textarea,\n.assistant-identity .assistant-composer > input",
+      "font": "inherit"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6728,
+      "selector": ".state-panel .request-diagnostic-code strong",
+      "font": "ui-monospace,SFMono-Regular,Menlo,monospace"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6736,
+      "selector": ".request-error-inline .request-diagnostic-code strong",
+      "font": "ui-monospace,SFMono-Regular,Menlo,monospace"
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7245,
+      "selector": ".athlete-achievement-number",
+      "font": "inherit"
+    }
+  ],
+  "inlineVisuals": [
+    {
+      "file": "src/features/achievements/AthleteAchievements.tsx",
+      "line": 62,
+      "expression": "{{ backgroundPosition: `${art.column * (art.expansion ? 100 / 7 : 20)}% ${art.row * (art.expansion ? 100 / 6 : 20)}%` }}"
+    },
+    {
+      "file": "src/features/profile/MetroStationPicker.tsx",
+      "line": 13,
+      "expression": "{{ backgroundColor: line.color }}"
+    },
+    {
+      "file": "src/features/progress/ProgressChart.tsx",
+      "line": 164,
+      "expression": "{{ fontSize: '12px' }}"
+    },
+    {
+      "file": "src/features/workouts/WorkoutsPages.tsx",
+      "line": 4558,
+      "expression": "{{ fontSize: '12px' }}"
+    }
+  ],
+  "cssImports": [
+    {
+      "file": "src/features/nutrition/NutritionPage.tsx",
+      "line": 16,
+      "module": "./nutrition.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 8,
+      "module": "@fontsource-variable/onest/wght.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 9,
+      "module": "@fontsource/rem/latin-700.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 10,
+      "module": "./styles.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 11,
+      "module": "./styles/fit-lime-components.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 12,
+      "module": "./styles/fit-lime-shell.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 13,
+      "module": "./styles/fit-lime-today.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 14,
+      "module": "./styles/fit-lime-schedule.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 15,
+      "module": "./styles/fit-lime-actions.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 16,
+      "module": "./styles/fit-lime-inbox.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 17,
+      "module": "./styles/fit-lime-chat.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 18,
+      "module": "./styles/fit-lime-clients.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 19,
+      "module": "./styles/fit-lime-client-detail.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 20,
+      "module": "./styles/fit-lime-client-forms.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 21,
+      "module": "./styles/fit-lime-client-goal.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 22,
+      "module": "./styles/fit-lime-progress-history.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 23,
+      "module": "./styles/fit-lime-profile.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 24,
+      "module": "./styles/fit-lime-exercises.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 25,
+      "module": "./styles/fit-lime-workout-form.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 26,
+      "module": "./styles/fit-lime-workout-entry.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 27,
+      "module": "./styles/fit-lime-workout-detail.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 28,
+      "module": "./styles/fit-lime-workout-live.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 29,
+      "module": "./styles/coach-workout-reference.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 30,
+      "module": "./styles/fit-lime-workout-completion.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 31,
+      "module": "./styles/fit-lime-assistant.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 32,
+      "module": "./styles/fit-lime-trainer-routes.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 33,
+      "module": "./styles/fit-lime-type.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 34,
+      "module": "./styles/fit-client-lime.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 35,
+      "module": "./styles/fit-client-lime-workouts.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 36,
+      "module": "./styles/workout-live-reference.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 37,
+      "module": "./styles/workout-editor-reference.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 38,
+      "module": "./styles/workout-catalog-reference.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 39,
+      "module": "./styles/client-workout-reference.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 40,
+      "module": "./styles/fit-client-lime-sections.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 41,
+      "module": "./styles/fit-client-lime-type.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 42,
+      "module": "./styles/fit-client-lime-sheets.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 43,
+      "module": "./styles/fit-client-lime-calendar.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 44,
+      "module": "./styles/fit-client-lime-review.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 45,
+      "module": "./styles/fit-client-lime-date.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 46,
+      "module": "./styles/fit-lime-registration.css"
+    },
+    {
+      "file": "src/main.tsx",
+      "line": 47,
+      "module": "./styles/fit-lime-auth-entry.css"
+    }
+  ],
+  "componentConsumers": {
+    "TimeWheel": [
+      {
+        "file": "src/features/workouts/CoachPlanTimeField.tsx",
+        "line": 5,
+        "module": "./TimeWheel"
+      },
+      {
+        "file": "src/features/workouts/LiveRestTimer.tsx",
+        "line": 8,
+        "module": "./TimeWheel"
+      },
+      {
+        "file": "src/features/workouts/WorkoutDurationField.tsx",
+        "line": 5,
+        "module": "./TimeWheel"
+      }
+    ],
+    "WorkoutDurationField": [
+      {
+        "file": "src/features/assistant/AssistantHistoryPage.tsx",
+        "line": 30,
+        "module": "../workouts"
+      },
+      {
+        "file": "src/features/assistant/AssistantProgramPilotCard.tsx",
+        "line": 6,
+        "module": "../workouts"
+      },
+      {
+        "file": "src/features/workouts/RunMetricsFields.tsx",
+        "line": 10,
+        "module": "./WorkoutDurationField"
+      },
+      {
+        "file": "src/features/workouts/TodayPage.tsx",
+        "line": 43,
+        "module": "./WorkoutDurationField"
+      },
+      {
+        "file": "src/features/workouts/WorkoutExerciseEditor.tsx",
+        "line": 16,
+        "module": "./WorkoutDurationField"
+      },
+      {
+        "file": "src/features/workouts/WorkoutsPages.tsx",
+        "line": 92,
+        "module": "./WorkoutDurationField"
+      }
+    ],
+    "CoachPlanTimeField": [
+      {
+        "file": "src/features/workouts/WorkoutsPages.tsx",
+        "line": 7,
+        "module": "./CoachPlanTimeField"
+      }
+    ],
+    "LiveRestTimer": [
+      {
+        "file": "src/features/workouts/WorkoutsPages.tsx",
+        "line": 41,
+        "module": "./LiveRestTimer"
+      }
+    ],
+    "WorkoutExerciseCompact": [
+      {
+        "file": "src/features/workouts/WorkoutsPages.tsx",
+        "line": 104,
+        "module": "./WorkoutSurface"
+      }
+    ],
+    "FitLimeSheetHeader": [
+      {
+        "file": "src/features/exercises/ExercisePicker.tsx",
+        "line": 2,
+        "module": "../../shared/FitLimeSheetHeader"
+      },
+      {
+        "file": "src/shared/FitLimeDatePicker.tsx",
+        "line": 4,
+        "module": "./FitLimeSheetHeader"
+      }
+    ],
+    "SaveStatus": [
+      {
+        "file": "src/features/assistant/ProgramFeedbackForm.tsx",
+        "line": 4,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/contest/ContestWinnerDialog.tsx",
+        "line": 6,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/nutrition/NutritionPage.tsx",
+        "line": 12,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/AppFeedbackForm.tsx",
+        "line": 5,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/ScheduleDensitySetting.tsx",
+        "line": 3,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/SettingsSection.tsx",
+        "line": 4,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/TrainerProfileEditorPage.tsx",
+        "line": 13,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/workouts/WorkoutsPages.tsx",
+        "line": 49,
+        "module": "../../shared/ui"
+      }
+    ],
+    "Switch": [
+      {
+        "file": "src/features/clients/ClientProfilePage.tsx",
+        "line": 15,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/clients/GoalPages.tsx",
+        "line": 13,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/notifications/NotificationsSetting.tsx",
+        "line": 5,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/nutrition/NutritionPage.tsx",
+        "line": 12,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/ProfilePage.tsx",
+        "line": 15,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/TrainerCatalogPage.tsx",
+        "line": 10,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/profile/TrainerProfileEditorPage.tsx",
+        "line": 13,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/workouts/WorkoutExecutionModeField.tsx",
+        "line": 2,
+        "module": "../../shared/ui"
+      }
+    ],
+    "StatePanel": [
+      {
+        "file": "src/app/maintenance-page.tsx",
+        "line": 2,
+        "module": "../shared/ui"
+      },
+      {
+        "file": "src/features/assistant/YandexAssistantRoute.tsx",
+        "line": 6,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/auth/AuthPages.tsx",
+        "line": 30,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/auth/InvitationPage.tsx",
+        "line": 10,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/chat/ChatPages.tsx",
+        "line": 11,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/legal/LegalPages.tsx",
+        "line": 13,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/workout-templates/WorkoutTemplatesPages.tsx",
+        "line": 11,
+        "module": "../../shared/ui"
+      },
+      {
+        "file": "src/features/workouts/WorkoutsPages.tsx",
+        "line": 49,
+        "module": "../../shared/ui"
+      }
+    ],
+    "SettingsSection": [
+      {
+        "file": "src/features/clients/ClientProfilePage.tsx",
+        "line": 20,
+        "module": "../profile/SettingsSection"
+      },
+      {
+        "file": "src/features/profile/ProfilePage.tsx",
+        "line": 22,
+        "module": "./SettingsSection"
+      }
+    ]
+  },
+  "limitations": [
+    "Static references are not visual bugs or full dynamic reachability.",
+    "Portal host and font fallback require runtime inspection.",
+    "CSS hex/rgb and imported SVG are not exhaustively interpreted by this JSX scanner."
+  ]
+}
