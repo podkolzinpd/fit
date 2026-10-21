@@ -12,7 +12,7 @@
   base.dataset.section='05 · ДЛЯ СПОРТСМЕНА';base.dataset.version='6.10';
   base.dataset.slideType='product-flow';base.dataset.golden='linear/03-linear-product-flow.png';
   const names=['Работа с тренером','Прогресс и достижения','Питание'];
-  const copy=['Находишь тренера или добавляешь своего.<br>Тренер видит результаты и помогает<br>скорректировать занятия.','Сравниваешь свои результаты за месяц<br>и видишь нагрузку по группам мышц.<br>Отмечаешь свои достижения.','Все приёмы пищи — в одном дневнике.<br>Ты и тренер видите, сколько калорий<br>ты съел за день.'];
+  const copy=['Находишь тренера или добавляешь своего.<br>Он видит результаты и корректирует занятия.','Следишь за результатами и нагрузкой на мышцы.<br>Отмечаешь свои достижения.','Все приёмы пищи — в одном дневнике.<br>Калории за день видны тебе и тренеру.'];
   base.innerHTML='<div class="eyebrow"><span class="design-number">05</span> · ДЛЯ СПОРТСМЕНА</div><h2>Твои тренировки —<br>в системе</h2><div class="cb-list">'+names.map((name,i)=>`<button class="cb-item" data-base-step="${i}"><strong>${name}</strong><span>${copy[i]}</span></button>`).join('')+'</div>';
   ai.slide.before(base);
   const panels=[coach,progress,food].map((story,i)=>{
