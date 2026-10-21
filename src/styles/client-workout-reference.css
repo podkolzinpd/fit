@@ -162,3 +162,14 @@
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .client-lime-sheet-header h1 { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .coach-filter-reset { display: block; margin: 0 -20px 24px; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-strip button.active { color: var(--lime-text-on-accent); }
+
+/* live-header SVG14/18: equal actions184.5x60 at371px, gap2/r20.
+   Clock, phase and rest calculations remain in the existing timer subtree. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-timer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-timer-actions > button { width: 100%; height: 60px; min-height: 60px; margin: 0; border: 0; border-radius: 20px; padding: 0 16px; font-family: var(--lime-font); font-size: 14px; font-weight: 400; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause { position: relative; color: var(--lime-text); background: var(--lime-surface-raised); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause > :is(img, svg) { position: absolute; left: 16px; width: 16px; height: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause > img { background: var(--lime-text-secondary); mask: url('../shared/client-live-pause.svg') center / contain no-repeat; object-position: -9999px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause[aria-pressed='true'] { color: var(--warning-fg); }
+/* Compact mode keeps its released48px controls; both actions share that size. */
+.phone-frame.fit-lime-shell.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .client-reference-timer-actions > button { height: 48px; min-height: 48px; }
