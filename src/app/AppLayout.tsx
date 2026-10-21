@@ -38,7 +38,8 @@ export function AppLayout() {
   const todayStep = (pathname === '/today' || pathname === '/me') && ['review', 'save'].includes(new URLSearchParams(search).get('view') ?? '')
   const liveSession = /\/live$/.test(pathname)
   const workoutForm = pathname === '/workouts/new' || /\/workouts\/[^/]+\/edit$/.test(pathname)
-  const templateEditor = pathname === '/schedule/templates/new/editor' || /\/schedule\/templates\/[^/]+\/edit$/.test(pathname)
+  const favoriteEditor = /^\/me\/workouts\/favorites\/[^/]+\/edit$/.test(pathname)
+  const templateEditor = pathname === '/schedule/templates/new/editor' || /\/schedule\/templates\/[^/]+\/edit$/.test(pathname) || favoriteEditor
   const workoutDetail = pathname !== '/workouts/new' && /\/workouts\/[^/]+$/.test(pathname)
   const exerciseHistory = /\/workouts\/[^/]+\/history\/[^/]+$/.test(pathname)
   const monochromeClientHome = pathname === '/me' && !todayStep && !clientCompose
@@ -149,7 +150,7 @@ export function AppLayout() {
     isCoachWorkoutRedesignEnabled(actor) ? 'coach-workout-reference' : '',
     isCoachWorkoutRedesignEnabled(actor) || clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'workout-live-reference' : '',
     clientLimeShell ? 'fit-client-lime' : '',
-    clientLimeShell && isClientWorkoutRedesignEnabled(actor) ? 'client-workout-reference' : '',
+    clientLimeShell && (isClientWorkoutRedesignEnabled(actor) || favoriteEditor) ? 'client-workout-reference' : '',
     clientCompose ? 'client-workout-compose' : '',
     monochromeTrainerProgress ? 'trainer-progress-identity' : '',
     monochromeExerciseCatalog ? 'exercise-catalog-identity' : '',

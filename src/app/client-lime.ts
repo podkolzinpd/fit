@@ -10,5 +10,6 @@ export function isClientLimeShellRoute(actor: SessionActor | null | undefined, p
     '/me/goal', '/me/finance', '/me/nutrition', '/me/profile', '/me/settings', '/me/trainers',
     '/chat', '/assistant', '/join', '/workouts/new'].includes(pathname)
     || /^\/chat\/[^/]+$/.test(pathname)
+    || /^\/me\/workouts\/favorites\/[^/]+\/edit$/.test(pathname)
     || /^\/workouts\/[^/]+(?:\/(?:edit|live|history\/[^/]+))?$/.test(pathname)
 }

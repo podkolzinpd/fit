@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { exerciseCountText } from '../../shared/exercise-count'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
@@ -945,7 +946,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {voiceRefinement && (clientLime || voiceRefinement.state !== 'loading') && <p className={`today-llm-status ${voiceRefinement.state}`} role="status">{voiceRefinement.message}</p>}
       {(resolved.length > 0 || clarification || displayedUnparsed.length > 0) && <div className="today-parse-preview" aria-live="polite">
         {resolved.length > 0 && <section className="today-recognized" aria-label="Распознанные упражнения">
-          <p><strong>Распознано: {resolved.length}</strong></p>
+          <p><strong>{clientLime ? exerciseCountText(resolved.length) : `Распознано: ${resolved.length}`}</strong></p>
           <ul>{resolved.map((item, index) => <li key={`${item.exercise.ref}-${index}`}><strong>{item.exercise.name}</strong><span>{workoutParseSetSummary(item)}</span></li>)}</ul>
         </section>}
         {clarification && <section className="today-clarification" aria-label={clarification.title}><strong>{clarification.title}</strong><p>{clarification.text}</p></section>}
@@ -961,7 +962,7 @@ export function TodayPage({ clientMode = false }: TodayPageProps) {
       {!limePlanning && voicePhase === 'idle' && !restoredDraftScreen && <>{contextCard}{attentionSurface}</>}
       </>}
     </section> : <section className={`today-review workout-focused-page ${screen === 'save' ? 'today-save-step' : ''}${clientLime && screen === 'review' ? ' client-lime-review' : ''}${clientReference ? ' workout-editor-reference client-reference-flow client-editor-refined client-editor-polish' : ''}`}>
-      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : planOnly ? 'Сохраните план' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? clientLime ? <div className="client-review-meta"><span>{`Распознано: ${items.length}`}</span>{reviewOrderControl}</div> : `Распознано: ${items.length}` : undefined) : planOnly ? 'Проверьте клиента, дату и формат' : 'Выберите вариант и дату'} /></div>
+      <div className="today-review-head"><button type="button" className="link today-review-back" onClick={() => { setReordering(false); if (screen === 'review') { trackGoal('today_review_back_to_input'); reviewRequest.current += 1; setParsing(false); setScreen('compose') } else { trackGoal('today_save_back_to_review'); setScreen('review') } }}>{screen === 'review' ? '← Назад' : '← К проверке'}</button><WorkoutHeader eyebrow={screen === 'review' ? 'ПЛАН ТРЕНИРОВКИ' : 'ПОСЛЕДНИЙ ШАГ'} title={screen === 'review' ? 'Проверьте тренировку' : planOnly ? 'Сохраните план' : 'Сохраните тренировку'} state={screen === 'save' && recordMode === 'completed' ? 'completed' : 'planned'} meta={screen === 'review' ? (items.length > 0 ? clientLime ? <div className="client-review-meta"><span>{exerciseCountText(items.length)}</span>{reviewOrderControl}</div> : `Распознано: ${items.length}` : undefined) : planOnly ? 'Проверьте клиента, дату и формат' : 'Выберите вариант и дату'} /></div>
       {screen === 'review' && <>
       {!clientLime && reviewOrderControl && <div className="today-review-order-toolbar">{reviewOrderControl}</div>}
       {items.length > 0 ? <div className={`today-exercise-list ${reordering ? 'is-reordering' : ''}`}>{reviewBlocks.map((block, blockIndex) => <div className="today-review-block" key={block.id}>{block.items.length > 1 && <><span className="block-badge">{block.items[0]!.item.structure?.blockPreset === 'interval' ? 'Интервалы' : block.items[0]!.item.structure?.blockPreset === 'circuit' ? 'Круговая' : 'Суперсет'}</span>{block.items[0]!.item.structure?.blockPreset === 'set' && !reordering && <div className="today-review-round-actions">

@@ -791,6 +791,7 @@ const favoriteWorkoutSchema = z.object({
   id: uuid,
   title: z.string(),
   createdAt: yandexDateTimeSchema,
+  version: z.number().int().positive().default(1),
   exercises: z.array(favoriteWorkoutExerciseSchema),
 })
 const favoriteWorkoutsListSchema = z.object({ favorites: z.array(favoriteWorkoutSchema) })
@@ -800,6 +801,7 @@ function favoriteWorkout(payload: z.infer<typeof favoriteWorkoutSchema>): Favori
     id: payload.id,
     title: payload.title,
     createdAt: payload.createdAt,
+    version: payload.version,
     exercises: payload.exercises.map((exercise) => ({
       ...(exercise.sourceExerciseId ? { sourceExerciseId: exercise.sourceExerciseId } : {}),
       position: exercise.position,
@@ -1261,6 +1263,14 @@ export function createYandexMainRepository(
           { title, exercises: workoutExerciseDraftsPayload(exercises) },
           favoriteWorkoutSchema,
           favoriteSaveErrorForStatus,
+        )
+        return favoriteWorkout(payload)
+      },
+      async update(id: string, expectedVersion: number, title: string, exercises?: WorkoutExerciseDraft[]) {
+        const payload = await writeJson(
+          queries, `/v1/favorite-workouts/${id}`, 'PUT',
+          { expectedVersion, title, ...(exercises === undefined ? {} : { exercises: workoutExerciseDraftsPayload(exercises) }) },
+          favoriteWorkoutSchema,
         )
         return favoriteWorkout(payload)
       },

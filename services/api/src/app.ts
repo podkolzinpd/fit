@@ -1180,6 +1180,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     )
   })
 
+  app.put('/v1/favorite-workouts/:id', async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const { id } = request.params as { id?: unknown }
+    const input = typeof request.body === 'object' && request.body !== null ? request.body as Record<string, unknown> : undefined
+    const title = input ? readFavoriteWorkoutTitle(input.title) : undefined
+    const expectedVersion = input?.expectedVersion
+    const exercises = input && 'exercises' in input ? readFavoriteWorkoutExercises(input.exercises) : undefined
+    if (typeof id !== 'string' || !uuidPattern.test(id) || title === undefined
+      || typeof expectedVersion !== 'number' || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1
+      || expectedVersion > 2_147_483_647
+      || (input && 'exercises' in input && exercises === undefined)) return reply.code(400).send({ error: 'invalid_request' })
+    if (options.pilotFavoriteWorkouts === undefined) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply,
+      () => options.pilotFavoriteWorkouts!.update(session, id, expectedVersion, title, exercises),
+      (favorite) => reply.header('cache-control', 'no-store').send(favorite))
+  })
+
   app.delete('/v1/favorite-workouts/:id', async (request, reply) => {
     const session = readYandexActorSession(request.headers)
     if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
@@ -1849,6 +1868,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       if (error instanceof FavoriteWorkoutsError) {
         if (error.failure === 'forbidden') return reply.code(403).send({ error: 'action_not_allowed' })
         if (error.failure === 'not_found') return reply.code(404).send({ error: 'resource_not_found' })
+        if (error.failure === 'conflict') return reply.code(409).send({ error: 'version_conflict' })
         if (error.failure === 'limit_reached') return reply.code(422).send({ error: 'favorite_workout_limit_reached' })
         return reply.code(422).send({ error: 'invalid_favorite_workout' })
       }

@@ -22,3 +22,5 @@
 ## Проверки
 
 Локально passed: parser function 6/6, workflow policy 2/2, bash syntax 4/4 blocks; полный `VITEST_MAX_WORKERS=4 npm run check`: frontend2784/API1438+186conditionalDBskip/infra330/calendar12/hosting184, lint/typecheck/build/startup. Runtime/prompts неизменны по diff к main. CI точного head — обязательный гейт PR. Тяжёлые browser suites, защищённые inventory/baselines и CI gates не меняются; замера их ускорения нет. DB и remote/paid проверки для этого diff не требуются.
+
+Во время ожидания CI подлит новый main `f903545d` (#1764, ready workouts): единственный конфликт CURRENT_STATE разрешён сохранением обеих фактур, snapshot120 строк. Из-за нового runtime/тестов main полный локальный check повторяется; первый CI44979f82 не считается проверкой нового head. Наш diff к новому main по-прежнему ограничен parser deploy/orphan helper/tests/docs.

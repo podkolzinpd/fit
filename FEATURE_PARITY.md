@@ -1,5 +1,15 @@
 # Feature parity с trainer-app
 
+## Athlete ready workouts management — YAFIT-642
+
+Approved Lime extension: personal favorites support in-place versioned editing,
+rename and confirmed deletion through the trainer's shared menu, exercise editor
+and catalog. No trainer assignment controls are exposed to athletes. Existing
+favorite ids/content/creation timestamps survive migration153; workouts and
+history remain independent snapshots. Load failures do not become empty forms,
+failed writes retain input, and Ready stays available when history fails.
+Acceptance and release evidence: `docs/design/CLIENT_READY_WORKOUTS_20261021.md`.
+
 20.10 — три legacy AI HTTP API закрыты по решению владельца; native AI и
 Cloud Functions сохранены. Приёмка: `docs/design/REMOVE_LEGACY_AI_API_20261020.md`.
 
