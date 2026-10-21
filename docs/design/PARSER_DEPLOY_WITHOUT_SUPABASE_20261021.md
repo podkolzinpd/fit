@@ -4,7 +4,7 @@
 
 > Давай удалим supabase-public-key.ts с тестами и Supabase credentials из deploy Yandex parser, поправим FIT_API_BASE_URL и проверим контракт. Промпты и native-поведение сохраняем. Дождись зелёного CI.
 
-База: main `d060cab9b2be3605fe5699aa17dc9d0340c9d5d4`, поток assistant-ops. Проверяется локальная ветка; UI/роли/темы/флаги не меняются. Production и удалённый deploy не проверялись и не запускаются этой задачей. Supabase public-key helper вызывается только своими пятью тестами. Parser handler уже проксирует Fit session в native API, но workflow не передавал обязательный base URL. Canonical production origin подтверждён существующими Android builds и OPERATIONS.
+База: main `d060cab9b2be3605fe5699aa17dc9d0340c9d5d4`, поток assistant-ops. По прямой просьбе пользователя подлит main `beb1a3bb` (#1763); пришли только документы/синтетические материалы Lime, конфликты отсутствуют, runtime/dependencies не менялись. Новые UI-правила прочитаны, к этой server/deploy задаче UI-приёмка не применима. Проверяется локальная ветка; UI/роли/темы/флаги не меняются. Production и удалённый deploy не проверялись и не запускаются этой задачей. Supabase public-key helper вызывается только своими пятью тестами. Parser handler уже проксирует Fit session в native API, но workflow не передавал обязательный base URL. Canonical production origin подтверждён существующими Android builds и OPERATIONS.
 
 | Уже работает | Переиспользуем | Меняем | Не проверено |
 | --- | --- | --- | --- |
@@ -21,4 +21,4 @@
 
 ## Проверки
 
-Результаты ожидаются. Тяжёлые browser suites, защищённые inventory/baselines и CI gates не меняются; замера их ускорения нет. DB и remote/paid проверки для этого diff не требуются.
+Локально passed: parser function 6/6, workflow policy 2/2, bash syntax 4/4 blocks; полный `VITEST_MAX_WORKERS=4 npm run check`: frontend2784/API1438+186conditionalDBskip/infra330/calendar12/hosting184, lint/typecheck/build/startup. Runtime/prompts неизменны по diff к main. CI точного head — обязательный гейт PR. Тяжёлые browser suites, защищённые inventory/baselines и CI gates не меняются; замера их ускорения нет. DB и remote/paid проверки для этого diff не требуются.
