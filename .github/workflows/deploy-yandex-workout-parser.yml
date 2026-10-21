@@ -18,6 +18,7 @@ env:
   FUNCTION_NAME: fit-parse-workout
   RUNTIME_SA_NAME: fit-parse-workout
   LOCKBOX_NAME: fit-summarize-client-training-supabase
+  FIT_API_BASE_URL: https://api.fit-training.ru
 
 jobs:
   deploy:
@@ -53,7 +54,7 @@ jobs:
           yc lockbox secret add-access-binding "$lockbox_id" --role lockbox.payloadViewer --service-account-id "$runtime_sa_id"
           if ! yc serverless function get --name "$FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
             yc serverless function create "$FUNCTION_NAME" \
-              --description 'Production Fit workout parser, backed by Supabase Auth and data' \
+              --description 'Fit workout parser proxy to the native API' \
               --folder-id "$YC_FOLDER_ID"
           fi
           previous_version_id=$(yc serverless function version get-by-tag \
@@ -70,8 +71,7 @@ jobs:
             --execution-timeout 120s \
             --service-account-id "$runtime_sa_id" \
             --source-path .yandex-workout-parser-package \
-            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
-            --secret id="$lockbox_id",version-id="$lockbox_version_id",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
+            --environment "FIT_API_BASE_URL=$FIT_API_BASE_URL" \
             --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
             --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
             --secret id="$lockbox_id",version-id="$lockbox_version_id",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \

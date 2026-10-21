@@ -55,7 +55,12 @@ test('pins every Yandex Cloud Lockbox mount to an immutable version', () => {
   assert.doesNotMatch(summary, /api\.supabase\.com\/v1\/projects\/\$SUPABASE_PROJECT_ID\/secrets/)
   assert.doesNotMatch(summary, /lockbox secret add-version/)
 
+  const parser = readFileSync(join(workflowsDirectory, 'deploy-yandex-workout-parser.yml'), 'utf8')
+  assert.match(parser, /^  FIT_API_BASE_URL: https:\/\/api\.fit-training\.ru$/m)
+  assert.match(parser, /--environment "FIT_API_BASE_URL=\$FIT_API_BASE_URL"/)
+
   for (const [name, source, expectedKeys] of [
+    ['parser', parser, ['YANDEX_CLOUD_API_KEY', 'YANDEX_CLOUD_FOLDER_ID', 'YANDEX_CLOUD_MODEL_ID']],
     ['summary', summary, ['YANDEX_CLOUD_API_KEY', 'YANDEX_CLOUD_FOLDER_ID', 'YANDEX_CLOUD_MODEL_ID']],
     ['assistant', assistant, ['YANDEX_CLOUD_FOLDER_ID', 'YANDEX_CLOUD_MODEL_ID']],
   ]) {

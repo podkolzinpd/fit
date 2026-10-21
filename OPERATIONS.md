@@ -968,6 +968,14 @@ frontend больше нет. Историческая таблица `public.us
 для `anon` и `authenticated`; её физическое удаление выполняется только через
 отдельное согласованное окно destructive migration.
 
+Yandex parser workflow `.github/workflows/deploy-yandex-workout-parser.yml`
+передаёт `FIT_API_BASE_URL=https://api.fit-training.ru` в создаваемую ревизию:
+handler проксирует Fit app/pilot session в native parser/goal API. Supabase URL
+и public key больше не монтируются. Существующие native Lockbox mounts,
+закрепление версии и release verifier/rollback сохранены; имя Lockbox с
+историческим суффиксом `supabase` не меняется. Изменение workflow само по себе
+не обновляет уже опубликованную функцию: workflow остаётся ручным.
+
 Старые Supabase Edge Functions `parse-workout` и `summarize-client-training`,
 их deploy-workflows и локальная config-запись summary удалены. Native API и
 Yandex Cloud Functions сохраняются; это удаление исходников и deployment-путей,

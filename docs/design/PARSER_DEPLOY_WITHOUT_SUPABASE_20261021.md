@@ -1,0 +1,32 @@
+# Parser deploy без Supabase — 21.10.2026
+
+## Подтверждённая постановка
+
+> Давай удалим supabase-public-key.ts с тестами и Supabase credentials из deploy Yandex parser, поправим FIT_API_BASE_URL и проверим контракт. Промпты и native-поведение сохраняем. Дождись зелёного CI.
+
+База: main `d060cab9b2be3605fe5699aa17dc9d0340c9d5d4`, поток assistant-ops. По прямой просьбе пользователя подлит main `beb1a3bb` (#1763); пришли только документы/синтетические материалы Lime, конфликты отсутствуют, runtime/dependencies не менялись. Новые UI-правила прочитаны, к этой server/deploy задаче UI-приёмка не применима. Проверяется локальная ветка; UI/роли/темы/флаги не меняются. Production и удалённый deploy не проверялись и не запускаются этой задачей. Supabase public-key helper вызывается только своими пятью тестами. Parser handler уже проксирует Fit session в native API, но workflow не передавал обязательный base URL. Canonical production origin подтверждён существующими Android builds и OPERATIONS.
+
+| Уже работает | Переиспользуем | Меняем | Не проверено |
+| --- | --- | --- | --- |
+| Native parser/goal proxy | Handler, Fit session, immutable native mounts, release verifier/rollback | Workflow env/mounts, orphan helper/tests, contract tests | Remote deploy/paid AI calls |
+
+## Acceptance
+
+1. Удалить `services/api/src/legacy-summary/supabase-public-key.ts` и `src/data/summary-public-key.test.ts`: пять тестов проверяют только удаляемый orphan helper; runtime callers нет.
+2. Удалить только SUPABASE_URL/SUPABASE_PUBLISHABLE_KEY mounts parser workflow. Остальные native credentials, immutable Lockbox version, resource names и release verifier/rollback сохранить. Сам Lockbox и remote credentials не менять.
+3. Передавать FIT_API_BASE_URL=https://api.fit-training.ru в создаваемую ревизию parser. Закрепить config/mount в существующем workflow policy test.
+4. Расширить существующий parser function test: workout/goal routes, Fit app/pilot headers, request/response passthrough, missing base URL безопасно возвращает503 без fetch, upstream403 передаётся без fallback. Исправить устаревшее название JWT-теста; не дублировать CORS/session assertions. Новые cases ловят отсутствие deploy URL и ошибки proxy-контракта; browser матрица не меняется.
+5. Prompts, parser/proxy runtime, native API, media и остальные Cloud Functions/workflows не менять. Миграции/БД не затронуты.
+6. Выполнить targeted tests, полный check по classifier и дождаться зелёного CI точного head.
+
+## Проверки
+
+Локально passed: parser function 6/6, workflow policy 2/2, bash syntax 4/4 blocks; полный `VITEST_MAX_WORKERS=4 npm run check`: frontend2784/API1438+186conditionalDBskip/infra330/calendar12/hosting184, lint/typecheck/build/startup. Runtime/prompts неизменны по diff к main. CI точного head — обязательный гейт PR. Тяжёлые browser suites, защищённые inventory/baselines и CI gates не меняются; замера их ускорения нет. DB и remote/paid проверки для этого diff не требуются.
+
+Во время ожидания CI подлит новый main `f903545d` (#1764, ready workouts): единственный конфликт CURRENT_STATE разрешён сохранением обеих фактур, snapshot120 строк. Из-за нового runtime/тестов main полный локальный check повторяется; первый CI44979f82 не считается проверкой нового head. Наш diff к новому main по-прежнему ограничен parser deploy/orphan helper/tests/docs.
+
+Итоговая локальная проверка после mainf903545d: полный check exit0, frontend2798/API1440+186conditionalDBskip/infra330/calendar12/hosting184/lint/typecheck/build/startup passed. CURRENT_STATE120 строк; предыдущая история сохранена, объединены только связанные старые абзацы. Новый exact-head CI обязателен.
+
+Затем main продвинулся до `a5c3d649` (#1765, keyboard first actions); также подлит без конфликтов. Повторный локальный check и exact-head CI запускаются для окончательной актуальной интеграции. Наш diff не меняет пришедшие UI/runtime/тесты main.
+
+Финальный полный check после maina5c3d649: exit0, frontend2803/API1440+186conditionalDBskip/infra330/calendar12/hosting184/lint/typecheck/build/startup. Перед push origin/main проверен повторно, новых commits нет.
