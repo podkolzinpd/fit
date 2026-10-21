@@ -17,6 +17,176 @@ if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
 
 const legacyRequestCounts = new WeakMap<object, number>()
 
+test('Yandex ready workouts edits, renames, plans and deletes an independent favorite with explicit retries', async ({ page }, testInfo) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const actorId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
+  const id = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+  const exercise = { position: 0, source: 'system', ref: 'squat', customExerciseId: null, name: 'Приседание', muscleGroup: 'legs', inputKind: 'strength',
+    blockId: '8ffdb87b-078c-42d4-b6db-af8bc60f80f2', blockType: 'single', blockPreset: 'set', blockRounds: 1,
+    restBetweenExercisesSec: 0, restBetweenRoundsSec: 0, restBetweenSetsSec: 90, trainerComment: null,
+    sets: [{ position: 0, weightKg: 50, reps: 8, durationMin: null, durationSec: null, distanceKm: null, rpe: null }] }
+  let favorite: { id: string; title: string; version: number; createdAt: string; exercises: Record<string, unknown>[] } | null = {
+    id, title: 'Ноги и корпус', version: 1, createdAt: '2026-10-21T08:00:00Z', exercises: [exercise],
+  }
+  let editAttempts = 0, deleteAttempts = 0, loadError = false, historyError = true
+  const updates: unknown[] = []
+  await page.route('https://stage.example.test/**', async route => {
+    const request = route.request(), path = new URL(request.url()).pathname
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' }, headers: { 'x-fit-request-id': 'synthetic-ready-health', 'access-control-expose-headers': 'x-fit-request-id' } })
+    if (path === '/v1/auth/yandex/session') return route.fulfill({ json: { accessMode: 'read_write', profile: {
+      id: actorId, firstName: 'Тестовый спортсмен', lastName: null, timezone: 'Europe/Moscow', accountRole: 'client',
+      client: { id: clientId, trainerId: actorId, fullName: 'Тестовый спортсмен' }, experiments: { clientLime: true, fitLime: false, trainerScheduleV2: false },
+    } } })
+    if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
+    if (path === '/v1/clients') return route.fulfill({ json: { clients: [{
+      id: clientId, canArchive: false, hasAccount: true, fullName: 'Тестовый спортсмен', canonicalFullName: 'Тестовый спортсмен',
+      gender: null, ageYears: null, ageUpdatedAt: null, heightCm: null, goal: null, note: null, currentWeightKg: null, archivedAt: null, version: 1, membershipVersion: null,
+    }] } })
+    if (path === '/v1/connections') return route.fulfill({ json: { memberships: [], invitations: [] } })
+    if (path === '/v1/training-data' && !historyError) return route.fulfill({ json: {
+      accessMode: 'read_only', customExercises: [], attention: [], attentionPreferences: [], hasMoreWorkouts: false, totalWorkouts: 0, workouts: [],
+    } })
+    if (path === '/v1/favorite-workouts') return route.fulfill(loadError
+      ? { status: 503, json: { error: 'database_unavailable' } } : { json: { favorites: favorite ? [favorite] : [] } })
+    if (path === `/v1/favorite-workouts/${id}` && request.method() === 'PUT') {
+      const command = z.object({ expectedVersion: z.number(), title: z.string(), exercises: z.array(z.record(z.string(), z.unknown())).optional() }).parse(request.postDataJSON())
+      updates.push(command)
+      expect(command.expectedVersion).toBe(favorite?.version)
+      if (command.exercises) {
+        editAttempts++
+        expect(command.exercises[0]?.sets).toMatchObject([{ weightKg: 65, reps: 10 }])
+        if (editAttempts === 1) return route.fulfill({ status: 503, json: { error: 'database_unavailable' } })
+      }
+      favorite = { ...favorite!, title: command.title, exercises: command.exercises ?? favorite!.exercises, version: favorite!.version + 1 }
+      return route.fulfill({ json: favorite })
+    }
+    if (path === `/v1/favorite-workouts/${id}` && request.method() === 'DELETE') {
+      deleteAttempts++
+      if (deleteAttempts === 1) return route.fulfill({ status: 503, json: { error: 'database_unavailable' } })
+      favorite = null
+      return route.fulfill({ status: 204 })
+    }
+    // Even a failed history must not block the independent Ready section.
+    return route.fulfill({ status: 503, json: { error: 'synthetic_unused_read' } })
+  })
+  await page.addInitScript(({ actorId }) => {
+    localStorage.setItem('fit.yandexAppSession.v1', JSON.stringify({ token: 'a'.repeat(43), expiresAt: '2099-01-01T00:00:00Z' }))
+    if (!localStorage.getItem(`fit.clientLime.theme.${actorId}`)) localStorage.setItem(`fit.clientLime.theme.${actorId}`, 'light')
+  }, { actorId })
+  await page.goto('/me/workouts?tab=presets')
+  const card = page.locator('.favorite-workout-card')
+  await expect(card).toContainText('Приседание')
+  const shortCardBox = (await card.boundingBox())!
+  const shortMenuBox = (await card.getByRole('button', { name: 'Действия с тренировкой Ноги и корпус' }).boundingBox())!
+  expect(shortCardBox.x + shortCardBox.width - shortMenuBox.x - shortMenuBox.width).toBeLessThanOrEqual(24)
+  await expect(page.locator('.state-panel-error')).toHaveCount(0)
+  await expect(page.getByText('Управление избранным', { exact: true })).toBeVisible()
+  await page.locator('.coachmark-bubble').filter({ hasText: 'Управление избранным' }).getByRole('button', { name: 'Понятно', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировки Fit' })).toBeVisible()
+  historyError = false
+  await card.getByRole('button', { name: 'Действия с тренировкой Ноги и корпус' }).click()
+  await page.getByRole('menuitem', { name: 'Переименовать', exact: true }).click()
+  const rename = page.getByRole('dialog', { name: 'Переименовать тренировку' })
+  await rename.getByLabel('Название', { exact: true }).fill('Силовая')
+  await page.setViewportSize({ width: 390, height: 500 })
+  await expect.poll(async () => {
+    const bounds = await rename.getByLabel('Название', { exact: true }).boundingBox()
+    return bounds ? bounds.y + bounds.height : Infinity
+  }).toBeLessThanOrEqual(500)
+  await testInfo.attach('favorite-rename-keyboard', { body: await page.screenshot({ path: testInfo.outputPath('favorite-rename-keyboard.png') }), contentType: 'image/png' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await rename.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(rename).not.toBeVisible()
+  expect(updates).toEqual([{ expectedVersion: 1, title: 'Силовая' }])
+  await card.getByRole('button', { name: 'Действия с тренировкой Силовая' }).click()
+  await page.getByRole('menuitem', { name: 'Редактировать', exact: true }).click()
+  await expect(page.getByLabel('Название', { exact: true })).toHaveValue('Силовая')
+  await expect(page.getByLabel('Дата', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Тип тренировки' })).toHaveCount(0)
+  await page.getByLabel('Название', { exact: true }).fill('Моя силовая')
+  await page.getByRole('button', { name: 'Назад', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await page.getByRole('button', { name: 'Упражнение', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await picker.getByLabel('Поиск упражнения').fill('Планка')
+  await picker.locator('button[data-exercise-ref="plank"][data-exercise-source="system"]').click()
+  await picker.getByRole('button', { name: 'Добавить (1)', exact: true }).click()
+  await expect(page.locator('.planned-exercise')).toHaveCount(2)
+  const titles = page.locator('.compact-editor-exercise-title strong')
+  const addedName = await titles.nth(1).innerText()
+  const handle = page.getByRole('button', { name: `Переместить: ${addedName}`, exact: true })
+  await handle.focus()
+  await page.keyboard.press('Space'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('Enter')
+  await expect(titles.first()).toHaveText(addedName)
+  await handle.focus()
+  await page.keyboard.press('Space'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter')
+  await expect(titles.first()).toHaveText('Приседание')
+  await page.locator('.planned-exercise').nth(1).getByRole('button', { name: 'Ещё действия' }).click()
+  await page.getByRole('menuitem', { name: 'Заменить', exact: true }).click()
+  await picker.getByLabel('Поиск упражнения').fill('Скручивания')
+  await picker.locator('button[data-exercise-ref="crunches"][data-exercise-source="system"]').click()
+  await expect(titles.nth(1)).toHaveText('Скручивания')
+  await page.locator('.planned-exercise').nth(1).getByRole('button', { name: 'Ещё действия' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить упражнение', exact: true }).click()
+  await expect(page.locator('.planned-exercise')).toHaveCount(1)
+  await page.locator('.compact-editor-exercise-toggle').first().click()
+  await page.getByLabel('Вес, подход 1', { exact: true }).fill('65')
+  await page.getByLabel('Повторы, подход 1', { exact: true }).fill('10')
+  await testInfo.attach('favorite-editor', { body: await page.screenshot({ path: testInfo.outputPath('favorite-editor.png') }), contentType: 'image/png' })
+  await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'недоступен' })).toBeVisible()
+  expect(editAttempts).toBe(1)
+  await page.reload()
+  await expect(page.getByLabel('Название', { exact: true })).toHaveValue('Моя силовая')
+  await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
+  await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
+  await expect(card).toContainText('Моя силовая')
+  expect(editAttempts).toBe(2)
+  favorite!.title = 'СиловаяТренировкаБезПробелов'.repeat(4)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 932 })
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(({ actorId, theme }) => localStorage.setItem(`fit.clientLime.theme.${actorId}`, theme), { actorId, theme })
+      await page.reload()
+      await expect(card).toBeVisible()
+      const menu = card.getByRole('button', { name: /Действия с тренировкой/ })
+      const box = (await menu.boundingBox())!
+      expect(box.width).toBeGreaterThanOrEqual(44)
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(box.x + box.width).toBeLessThanOrEqual(width)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+      await testInfo.attach(`ready-${width}-${theme}`, { body: await page.screenshot({ path: testInfo.outputPath(`ready-${width}-${theme}.png`) }), contentType: 'image/png' })
+    }
+  }
+  favorite!.title = 'Моя силовая'
+  await page.reload()
+  await card.getByRole('button', { name: 'Запланировать', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/workouts/new\\?favorite=${id}$`))
+  await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
+  await page.goto('/me/workouts?tab=presets')
+  await card.getByRole('button', { name: 'Действия с тренировкой Моя силовая' }).click()
+  await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('Запланированные тренировки и история сохранятся.')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Повторить удаление' })).toBeVisible()
+  await expect(card).toBeVisible()
+  expect(deleteAttempts).toBe(1)
+  await page.getByRole('button', { name: 'Повторить удаление' }).click()
+  await expect(card).toHaveCount(0)
+  await expect(page.getByText('Пока нет сохранённых тренировок.')).toBeVisible()
+  await page.goto(`/workouts/new?favorite=${id}`)
+  await expect(page.getByRole('heading', { name: 'Тренировка больше недоступна' })).toBeVisible()
+  await expect(page.locator('form.workout-form')).toHaveCount(0)
+  loadError = true
+  await page.goto(`/me/workouts/favorites/${id}/edit`)
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByLabel('Название', { exact: true })).toHaveCount(0)
+  loadError = false
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Тренировка больше недоступна' })).toBeVisible()
+})
+
 test('Yandex favorite save keeps the title and exposes diagnostics without replaying a failed POST', async ({ page }, testInfo) => {
   test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
   const actorId = 'd2b80c5e-f60b-42b0-ae3f-308e91bbcb9b'
@@ -133,6 +303,7 @@ test('Yandex favorite save keeps the title and exposes diagnostics without repla
   await page.reload()
   const card = page.locator('.favorite-workout-card').filter({ hasText: 'Тестовый план' })
   await expect(card).toBeVisible()
+  await page.locator('.coachmark-bubble').filter({ hasText: 'Управление избранным' }).getByRole('button', { name: 'Понятно', exact: true }).click()
   await card.getByRole('button', { name: 'Запланировать' }).click()
   await expect(page).toHaveURL(/\/workouts\/new\?favorite=/)
   await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()

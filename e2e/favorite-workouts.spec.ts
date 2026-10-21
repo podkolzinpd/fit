@@ -37,6 +37,7 @@ test('client saves a workout to favorites, then plans a new one from it', async 
   await page.goto('/me/workouts?tab=presets')
   const favoriteCard = page.locator('.favorite-workout-card').filter({ hasText: placeholder! })
   await expect(favoriteCard).toBeVisible()
+  await page.locator('.coachmark-bubble').filter({ hasText: 'Управление избранным' }).getByRole('button', { name: 'Понятно', exact: true }).click()
   await expect(favoriteCard).toContainText('1 упражнение')
 
   // «Запланировать» переносит структуру в новый черновик без похода в историю.
@@ -58,7 +59,8 @@ test('client saves a workout to favorites, then plans a new one from it', async 
 
   // Удаление из избранного освобождает место в лимите на 10 тренировок.
   await page.goto('/me/workouts?tab=presets')
-  await favoriteCard.getByRole('button', { name: `Удалить «${placeholder}» из избранного` }).click()
+  await favoriteCard.getByRole('button', { name: `Действия с тренировкой ${placeholder}` }).click()
+  await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
   await expect(favoriteCard).toHaveCount(0)
 })
@@ -74,6 +76,7 @@ test('client sees a retry action, not a misleading empty state, when favorites f
   await expect(page).toHaveURL(/\/me$/)
 
   await page.goto('/me/workouts?tab=presets')
-  await expect(page.getByRole('alert').filter({ hasText: 'Не удалось загрузить избранное.' })).toBeVisible()
+  await expect(page.locator('.favorite-workouts-section').getByRole('alert')).toBeVisible()
+  await expect(page.locator('.favorite-workouts-section').getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
   await expect(page.getByText('Сохраняйте тренировки, которые вам нравятся')).not.toBeVisible()
 })

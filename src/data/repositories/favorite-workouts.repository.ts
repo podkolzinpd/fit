@@ -6,6 +6,7 @@ import { repositoryError } from './error'
 export interface FavoriteWorkoutsRepository {
   list(): Promise<FavoriteWorkoutTemplate[]>
   save(title: string, exercises: WorkoutExerciseDraft[]): Promise<FavoriteWorkoutTemplate>
+  update(id: string, expectedVersion: number, title: string, exercises?: WorkoutExerciseDraft[]): Promise<FavoriteWorkoutTemplate>
   remove(id: string): Promise<void>
 }
 
@@ -22,6 +23,7 @@ export function parseFavoriteWorkout(value: unknown): FavoriteWorkoutTemplate {
     id: favorite.id,
     title: favorite.title,
     createdAt: favorite.createdAt,
+    version: typeof favorite.version === 'number' ? favorite.version : 1,
     exercises: favorite.exercises as WorkoutExerciseDraft[],
   }
 }
@@ -36,6 +38,9 @@ export const favoriteWorkoutsRepository: FavoriteWorkoutsRepository = {
     const result = await supabase.rpc('save_favorite_workout', { p_title: title, p_exercises: toJson(exercises) })
     if (result.error) throw repositoryError(result.error)
     return parseFavoriteWorkout(result.data)
+  },
+  update() {
+    return Promise.reject(new Error('Редактирование избранного доступно в текущей версии Fit. Откройте fit-training.ru.'))
   },
   async remove(id) {
     const result = await supabase.rpc('delete_favorite_workout', { p_id: id })
