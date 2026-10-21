@@ -28,3 +28,8 @@ SHA перечислены в FIT_LIME_SOURCE_CATALOG.json. Поле поиск�
 pr5-preflight,pr5-actions,pr5-header-retry,pr5-unit,pr5-check.
 Свежий main/CI, последовательная публикация и реальные опубликованные
 JS/CSS остаются обязательны до закрытия R04/R05.
+
+## Дополнение перед интеграцией
+
+Дополнительные2header-batch-retry и66unit прошли. Полный npm run check окончательной версии exit0 (pr5-check.log).
+Свежий main/CI и реальная публикация ещё не проверены этим дополнением.
