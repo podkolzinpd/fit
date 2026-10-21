@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { useDataBackend } from '../../app/data-backend-context'
 import { isNutritionPilotEnabled } from '../../app/feature-flags'
@@ -10,7 +10,8 @@ import { addDays, currentTimeInTimeZone, formatLocalDate, localDate, todayInTime
 import { NUTRITION_MEALS, nutritionNumber, scaledNutrition, type NutritionConnection, type NutritionDraft, type NutritionEntry, type NutritionFood, type NutritionValues } from '../../shared/nutrition'
 import { BackIcon, ChevronRightIcon } from '../../shared/icons'
 import { AsyncView, Coachmark, Field, InlineRequestError, OverflowMenu, Page, SaveStatus, Skeleton, Switch, useConfirm } from '../../shared/ui'
-import { nutritionDecimal, readNutritionForm, removeNutritionForm, storeNutritionForm, type NutritionForm } from './draft'
+import { nutritionDecimal, removeNutritionForm } from './draft'
+import type { NutritionForm } from './draft'
 import { parseFoodText } from './free-text'
 import { BarcodePhotoPicker, BarcodeScanner } from './BarcodeScanner'
 import './nutrition.css'
@@ -97,17 +98,17 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     grams: existing?.grams?.toString() ?? '', manual: existing?.basis === 'portion', per100: existing?.basis === '100g',
     name: existing?.name ?? '', calories: existing?.calories.toString() ?? '', protein: existing?.protein?.toString() ?? '',
     fat: existing?.fat?.toString() ?? '', carbs: existing?.carbs?.toString() ?? '', search: '', selection: existing ?? null }
-  const form = useForm<NutritionForm>({ defaultValues: readNutritionForm(userId, key) ?? defaults })
+  const form = useForm<NutritionForm>({ defaultValues: defaults })
   const values = useWatch({ control: form.control }), selection = values.selection, manual = values.manual
   const selectedServing = selection && 'servings' in selection ? selection.servings?.[0] : undefined
   const selectedServingGrams = selectedServing?.grams ?? null
-  const [storageError, setStorageError] = useState(false), [search, setSearch] = useState('')
+  const [search, setSearch] = useState('')
   const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
   const [portionMode, setPortionMode] = useState(false), [portionCount, setPortionCount] = useState('1')
   const parsedSearch = useRef<string | null>(null)
   const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [barcodeImportOpen, setBarcodeImportOpen] = useState(false), [scannerOpen, setScannerOpen] = useState(false), [manualBarcodeEntry, setManualBarcodeEntry] = useState(false)
-  const cache = useQueryClient(), active = useRef(true), [confirm, dialog] = useConfirm()
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
+  const cache = useQueryClient(), active = useRef(true), allowNavigation = useRef(false), [confirm, dialog] = useConfirm()
+  useEffect(() => { active.current = true; removeNutritionForm(userId, key); return () => { active.current = false } }, [userId, key])
   useEffect(() => {
     const raw = values.search?.trim() ?? '', parsed = parseFoodText(raw)
     const singleWithGrams = parsed.length === 1 && parsed[0]?.grams !== null ? parsed[0] : null
@@ -116,19 +117,26 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     const timer = setTimeout(() => setSearch(singleWithGrams?.name ?? raw), 600)
     return () => clearTimeout(timer)
   }, [values.search])
-  useEffect(() => { setStorageError(!storeNutritionForm(userId, key, form.getValues())) }, [values, userId, key])
+  useEffect(() => {
+    if (!form.formState.isDirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [form.formState.isDirty])
   const recent = useQuery({ queryKey: [...queryKey(userId), 'recent'], queryFn: () => nutrition.recent(), retry: false })
   const foods = useInfiniteQuery({ queryKey: [...queryKey(userId), 'search', search], initialPageParam: 1,
     queryFn: ({ pageParam }) => nutrition.search(search, pageParam), getNextPageParam: (last, pages) => last.hasMore ? pages.length + 1 : undefined,
     enabled: search.length >= 2 && !manual && !selection, retry: false })
   const mutation = useMutation({ mutationFn: (draft: NutritionDraft) => nutrition.save(draft), onSuccess: async (entry) => {
     removeNutritionForm(userId, key)
+    form.reset(form.getValues())
+    allowNavigation.current = true
     await cache.invalidateQueries({ queryKey: queryKey(userId) })
     if (active.current) onSaved(entry)
   } })
   const choose = (food: NutritionFood | NutritionEntry) => {
-    form.setValue('selection', food)
-    form.setValue('grams', 'grams' in food ? food.grams?.toString() ?? '' : food.servings?.[0]?.grams.toString() ?? suggestedGrams ?? '')
+    form.setValue('selection', food, { shouldDirty: true })
+    form.setValue('grams', 'grams' in food ? food.grams?.toString() ?? '' : food.servings?.[0]?.grams.toString() ?? suggestedGrams ?? '', { shouldDirty: true })
     setPortionMode(!('grams' in food) && (food.servings?.length ?? 0) > 0); setPortionCount('1')
     setSuggestedGrams(null)
     parsedSearch.current = null
@@ -137,7 +145,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const parsedFood = !manual && !selection ? parseFoodText(values.search ?? '') : []
   const searchParsedFood = (name: string, grams: number | null) => {
     parsedSearch.current = name
-    form.setValue('search', name)
+    form.setValue('search', name, { shouldDirty: true })
     setSuggestedGrams(grams === null ? null : String(grams))
   }
   const lookupBarcode = async (source = barcode) => {
@@ -191,7 +199,33 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
     protein: nutritionDecimal(values.protein ?? ''), fat: nutritionDecimal(values.fat ?? ''), carbs: nutritionDecimal(values.carbs ?? '') } : form.getValues('selection')
   const basis = manual ? values.per100 ? '100g' : 'portion' : selection?.basis
   const preview = previewValues && basis ? scaledNutrition(previewValues, basis, nutritionDecimal(values.grams ?? '')) : null
-  return <Page title={existing ? 'Редактировать запись' : 'Добавить еду'} back={-1} onBack={onBack} className="nutrition-page">
+  const numberInRange = (value: string | undefined, min: number, max: number) => {
+    const number = nutritionDecimal(value ?? '')
+    return number !== null && number >= min && number <= max
+  }
+  const canSave = manual
+    ? (values.name?.trim().length ?? 0) > 0 && numberInRange(values.calories, 0, values.per100 ? 1000 : 50000) && (!values.per100 || numberInRange(values.grams, Number.EPSILON, 20000))
+    : selection !== null && (basis !== '100g' || ((portionMode && selectedServing) ? numberInRange(portionCount, Number.EPSILON, 100) : numberInRange(values.grams, Number.EPSILON, 20000)))
+  const discard = () => removeNutritionForm(userId, key)
+  const blocker = useBlocker(() => form.formState.isDirty && !mutation.isPending && !allowNavigation.current)
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    let active = true
+    void confirm({ message: 'Изменения не сохранены. Выйти без сохранения?', confirmLabel: 'Выйти', cancelLabel: 'Остаться', danger: true }).then((confirmed) => {
+      if (!active) return
+      if (confirmed) { discard(); allowNavigation.current = true; blocker.proceed() } else blocker.reset()
+    })
+    return () => { active = false }
+  }, [blocker, confirm])
+  const leave = async () => {
+    if (mutation.isPending) return
+    if (!form.formState.isDirty || await confirm({ message: 'Изменения не сохранены. Выйти без сохранения?', confirmLabel: 'Выйти', cancelLabel: 'Остаться', danger: true })) {
+      discard()
+      allowNavigation.current = true
+      onBack()
+    }
+  }
+  return <Page title={existing ? 'Редактировать запись' : 'Добавить еду'} back={-1} onBack={() => void leave()} className="nutrition-page">
     <form className="stack" onSubmit={form.handleSubmit(submit)}>
       <fieldset className="stack nutrition-fields" disabled={mutation.isPending}>
       {!selection && !manual ? <>
@@ -203,7 +237,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           showCancel
           onTranscript={(text) => {
             const previous = form.getValues('search')
-            form.setValue('search', text)
+            form.setValue('search', text, { shouldDirty: true })
             return () => form.setValue('search', previous)
           }}
         />}</span></Field>
@@ -228,14 +262,14 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           <div className="nutrition-food-list">{foods.data?.pages.flatMap((page) => page.foods).map((food) => <div className="nutrition-food-result" key={food.id}><button type="button" className="secondary nutrition-food" onClick={() => choose(food)}><span>{food.name}{food.manufacturer && <small>{food.manufacturer}</small>}<small>{nutritionNumber(food.calories)} ккал · Б {nutritionNumber(food.protein)} · Ж {nutritionNumber(food.fat)} · У {nutritionNumber(food.carbs)} на 100 г</small></span><ChevronRightIcon /></button></div>)}</div>
           {foods.hasNextPage && <button type="button" className="secondary" disabled={foods.isFetchingNextPage} onClick={() => void foods.fetchNextPage()}>{foods.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
         </AsyncView> : null}
-        <button type="button" className="secondary" onClick={() => form.setValue('manual', true)}>Добавить свое блюдо</button>
+        <button type="button" className="secondary" onClick={() => form.setValue('manual', true, { shouldDirty: true })}>Добавить свое блюдо</button>
         {search.length < 2 && <><h2>Недавняя еда</h2><AsyncView loading={recent.isLoading} error={recent.error} onRetry={() => void recent.refetch()}>
           {!recent.data?.length && <p className="muted">Здесь появятся ваши записи для быстрого повторения.</p>}
           <div className="nutrition-food-list">{recent.data?.map((food) => <button type="button" className="secondary nutrition-food" key={food.id} onClick={() => choose(food)}><span>{food.name}<small>{food.grams ? `${nutritionNumber(food.grams)} г · ` : ''}{nutritionNumber(food.totals.calories)} ккал</small></span><ChevronRightIcon /></button>)}</div>
         </AsyncView></>}
       </> : <>
         {manual ? <><Field label="Название" error={form.formState.errors.name?.message}><input aria-label="Название" aria-invalid={!!form.formState.errors.name} maxLength={160} autoFocus {...form.register('name')} /></Field>
-          <Switch label="На 100 г" checked={values.per100 ?? false} onChange={(value) => form.setValue('per100', value)} disabled={mutation.isPending} />
+          <Switch label="На 100 г" checked={values.per100 ?? false} onChange={(value) => form.setValue('per100', value, { shouldDirty: true })} disabled={mutation.isPending} />
           <Field label={values.per100 ? 'Калории на 100 г' : 'Калории съеденной порции'} error={form.formState.errors.calories?.message}><input aria-label={values.per100 ? 'Калории на 100 г' : 'Калории съеденной порции'} aria-invalid={!!form.formState.errors.calories} inputMode="decimal" {...form.register('calories')} /></Field>
           <details><summary>Указать БЖУ (необязательно)</summary><div className="nutrition-macros-form">{(['protein', 'fat', 'carbs'] as const).map((field, index) => <Field key={field} label={['Белки, г', 'Жиры, г', 'Углеводы, г'][index]!} error={form.formState.errors[field]?.message}><input aria-label={['Белки, г', 'Жиры, г', 'Углеводы, г'][index]!} aria-invalid={!!form.formState.errors[field]} inputMode="decimal" {...form.register(field)} /></Field>)}</div></details>
         </> : <h2>{selection?.name}</h2>}
@@ -248,20 +282,20 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
         {isRepositoryConflict(mutation.error) && <button type="button" className="secondary" onClick={async () => {
           if (!await confirm({ message: 'Запись уже изменили на другом устройстве. Вернуться к актуальному дневнику? Несохранённые изменения этой формы будут удалены.', confirmLabel: 'Вернуться к дневнику' })) return
           removeNutritionForm(userId, key)
+          form.reset(form.getValues())
+          allowNavigation.current = true
           await cache.invalidateQueries({ queryKey: queryKey(userId) })
           if (active.current) onBack()
         }}>Открыть актуальный дневник</button>}
-        <button type="submit" className="primary" disabled={mutation.isPending} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить'}</button>
+        <button type="submit" className="primary" disabled={mutation.isPending || !canSave} aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить'}</button>
         {existing && !manual && <button type="button" className="link" disabled={mutation.isPending} onClick={() => {
-          form.setValue('manual', true); form.setValue('per100', existing.basis === '100g')
-          form.setValue('name', existing.name); form.setValue('calories', String(existing.calories))
-          form.setValue('protein', existing.protein === null ? '' : String(existing.protein))
-          form.setValue('fat', existing.fat === null ? '' : String(existing.fat))
-          form.setValue('carbs', existing.carbs === null ? '' : String(existing.carbs))
+          form.setValue('manual', true, { shouldDirty: true }); form.setValue('per100', existing.basis === '100g', { shouldDirty: true })
+          form.setValue('name', existing.name, { shouldDirty: true }); form.setValue('calories', String(existing.calories), { shouldDirty: true })
+          form.setValue('protein', existing.protein === null ? '' : String(existing.protein), { shouldDirty: true })
+          form.setValue('fat', existing.fat === null ? '' : String(existing.fat), { shouldDirty: true }); form.setValue('carbs', existing.carbs === null ? '' : String(existing.carbs), { shouldDirty: true })
         }}>Изменить название и КБЖУ</button>}
-        {!existing && <button type="button" className="link" disabled={mutation.isPending} onClick={() => { form.setValue('selection', null); form.setValue('manual', false) }}>Выбрать другую еду</button>}
+        {!existing && <button type="button" className="link" disabled={mutation.isPending} onClick={() => { form.setValue('selection', null, { shouldDirty: true }); form.setValue('manual', false, { shouldDirty: true }) }}>Выбрать другую еду</button>}
       </>}
-      {storageError && <p className="muted" role="status">Черновик доступен только на этом экране. Не закрывайте его до сохранения.</p>}
       </fieldset>
     </form>
     {dialog}
