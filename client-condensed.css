@@ -16,7 +16,7 @@
 .client-base .cb-achievement{display:flex;align-items:center;gap:11px;padding:4px 12px;margin-top:10px;height:48px;box-sizing:border-box;border-radius:14px;background:#1b1e1f;font-size:16px}
 .client-base .cb-achievement img{width:37px;height:37px;object-fit:contain}
 .client-base .cb-achievement small{display:block;font-size:12px;margin-top:3px;color:#a4aaab}
-#deck>.client-technology>h2{left:60px;top:137px;width:690px;font-size:50px!important;line-height:1.1!important}
+#deck>.client-technology>h2,#deck>.client-technology[data-cs-step]>h2{left:60px;top:137px;width:690px;font-size:50px!important;line-height:1.1!important}
 #deck>.client-technology>.cs-lead,.client-technology .cs-voice-recap{display:none!important}
 .client-technology .ct-copy{position:absolute;left:60px;top:325px;width:720px;z-index:2}
 .client-technology .ct-copy section+section{margin-top:50px}
