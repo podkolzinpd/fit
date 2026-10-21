@@ -461,7 +461,7 @@ describe('Yandex main repository', () => {
       restBetweenExercisesSec: 0, restBetweenRoundsSec: 90, restBetweenSetsSec: 90,
       sets: [{ position: 0, weightKg: 60, reps: 5 }],
     }
-    const domainFavorite = { id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt, exercises: [domainExercise] }
+    const domainFavorite = { id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt, version: 1, exercises: [domainExercise] }
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ favorites: [wireFavorite] }))
       .mockResolvedValueOnce(jsonResponse(wireFavorite))
@@ -535,7 +535,7 @@ describe('Yandex main repository', () => {
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
 
     await expect(repository.favoriteWorkouts.list()).resolves.toEqual([{
-      id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt,
+      id: wireFavorite.id, title: wireFavorite.title, createdAt: wireFavorite.createdAt, version: 1,
       exercises: [{
         ref: 'crunches', name: 'Скручивания', source: 'system',
         blockId: '9f82cfad-2119-48e4-895d-a6dce5095597', position: 1,
@@ -544,6 +544,20 @@ describe('Yandex main repository', () => {
         sets: [{ rpe: 7, reps: 15, position: 0 }, { rpe: 7, reps: 15, position: 1 }],
       }],
     }])
+  })
+
+  it('updates a favorite in place and does not replay conflicts or failed PUTs', async () => {
+    const id = '12acc6d6-7ca8-43cd-b124-b4224c917fae'
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ id, title: 'Новое имя', createdAt: '2026-01-01T00:00:00Z', version: 2, exercises: [] }))
+      .mockResolvedValueOnce(jsonResponse({ error: 'version_conflict' }, 409))
+      .mockResolvedValueOnce(jsonResponse({ error: 'database_unavailable' }, 503))
+    vi.stubGlobal('fetch', fetchMock)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)
+    await expect(repository.favoriteWorkouts.update(id, 1, 'Новое имя')).resolves.toMatchObject({ id, version: 2 })
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'PUT', body: JSON.stringify({ expectedVersion: 1, title: 'Новое имя' }) })
+    await expect(repository.favoriteWorkouts.update(id, 1, 'Старая версия', [])).rejects.toThrow()
+    await expect(repository.favoriteWorkouts.update(id, 2, 'Повтор')).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it('requests and validates a page of public trainers', async () => {

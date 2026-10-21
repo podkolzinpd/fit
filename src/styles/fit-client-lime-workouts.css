@@ -1,4 +1,54 @@
 /* Existing client content and workout actions, expressed through Lime tokens. */
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--lime-radius-card);
+  background: var(--lime-surface);
+  border-color: var(--lime-divider);
+}
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card-head > div { display: grid; gap: 4px; min-width: 0; }
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card-head strong { font: inherit; font-weight: 500; overflow-wrap: anywhere; }
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card-head .overflow-menu { flex: 0 0 auto; }
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card :is(.overflow-trigger, .overflow-menu-trigger) { min-width: 44px; min-height: 44px; }
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-preview { margin: 0; color: var(--lime-text-secondary); overflow-wrap: anywhere; }
+.phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card-actions { justify-content: flex-end; }
+.phone-frame.fit-client-lime .favorite-workout-editor-page .workout-header-meta { overflow-wrap: anywhere; }
+.phone-frame.fit-client-lime .favorite-workout-editor-page .workout-header-contract { min-width: 0; margin-inline: 14px; }
+.phone-frame.fit-client-lime .favorite-workout-editor-page .workout-form-exercises > .workout-form-section-head { padding-inline: 14px; }
+.phone-frame.fit-client-lime .favorite-workout-editor-page .workout-form-exercises > .workout-cta { margin: 0 14px 8px; }
+.phone-frame.fit-client-lime .favorite-workout-editor-page .exercise-options summary { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime .favorite-workout-editor-page button.workout-drag-handle {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lime-text-secondary);
+  touch-action: none;
+  cursor: grab;
+}
+.phone-frame.fit-client-lime .favorite-workout-editor-page .workout-drag-block { position: relative; min-width: 0; }
+.phone-frame.fit-client-lime .favorite-workout-editor-page .workout-drag-block.dragging { opacity: .65; }
+.phone-frame.fit-client-lime .favorite-workout-rename-overlay {
+  top: var(--app-viewport-offset-top, 0px);
+  bottom: auto;
+  height: min(var(--app-visible-height, 100dvh), 100dvh);
+}
+.phone-frame.fit-client-lime .favorite-workout-rename-overlay > section {
+  max-height: calc(min(var(--app-visible-height, 100dvh), 100dvh) - 12px);
+  overflow-y: auto;
+}
 .phone-frame.fit-client-lime.client-home-identity :is(.quick-start-workout, .voice-action,
   .app-install-card, .client-home-next, .client-home-past-plan, .client-home-week,
   .client-home-highlight, .first-run-benefits, .client-home-progress) {

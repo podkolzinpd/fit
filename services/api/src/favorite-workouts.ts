@@ -7,6 +7,7 @@ export type FavoriteWorkoutTemplate = {
   id: string
   title: string
   createdAt: string
+  version?: number
   exercises: PlannedWorkoutExerciseDraft[]
 }
 
@@ -14,7 +15,7 @@ type FavoriteRow = QueryResultRow & { favorite: FavoriteWorkoutTemplate }
 type FavoritesRow = QueryResultRow & { favorites: FavoriteWorkoutTemplate[] }
 
 export class FavoriteWorkoutsError extends Error {
-  constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'limit_reached') {
+  constructor(public readonly failure: 'forbidden' | 'not_found' | 'invalid' | 'limit_reached' | 'conflict') {
     super(`Favorite workout command failed: ${failure}`)
     this.name = 'FavoriteWorkoutsError'
   }
@@ -24,6 +25,7 @@ function favoriteWorkoutsError(error: unknown) {
   if (!(error instanceof Error)) return undefined
   if (error.message === 'client_role_required') return new FavoriteWorkoutsError('forbidden')
   if (error.message === 'favorite_workout_not_found') return new FavoriteWorkoutsError('not_found')
+  if (error.message === 'favorite_workout_version_conflict') return new FavoriteWorkoutsError('conflict')
   if (error.message === 'favorite_workout_limit_reached') return new FavoriteWorkoutsError('limit_reached')
   if (error.message === 'invalid_favorite_workout_title' || error.message === 'invalid_favorite_workout_exercises') {
     return new FavoriteWorkoutsError('invalid')
@@ -34,6 +36,7 @@ function favoriteWorkoutsError(error: unknown) {
 export interface PilotFavoriteWorkouts {
   list(session: YandexActorSessionInput): Promise<FavoriteWorkoutTemplate[]>
   save(session: YandexActorSessionInput, title: string, exercises: PlannedWorkoutExerciseDraft[]): Promise<FavoriteWorkoutTemplate>
+  update(session: YandexActorSessionInput, id: string, expectedVersion: number, title: string, exercises?: PlannedWorkoutExerciseDraft[]): Promise<FavoriteWorkoutTemplate>
   remove(session: YandexActorSessionInput, id: string): Promise<void>
 }
 
@@ -62,6 +65,16 @@ export class DatabasePilotFavoriteWorkouts implements PilotFavoriteWorkouts {
       const rows = await client.query<FavoriteRow>(
         'select public.save_favorite_workout($1, $2) as favorite',
         [title, JSON.stringify(exercises)],
+      )
+      return rows[0]!.favorite
+    })
+  }
+
+  update(session: YandexActorSessionInput, id: string, expectedVersion: number, title: string, exercises?: PlannedWorkoutExerciseDraft[]) {
+    return this.run(session, async (client) => {
+      const rows = await client.query<FavoriteRow>(
+        'select public.update_favorite_workout($1, $2, $3, $4) as favorite',
+        [id, expectedVersion, title, exercises === undefined ? null : JSON.stringify(exercises)],
       )
       return rows[0]!.favorite
     })

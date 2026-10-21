@@ -97,6 +97,7 @@ interface WorkoutExerciseEditorProps {
   canOpenTechnique?: (exercise: WorkoutExerciseDraft) => boolean
   exerciseCatalog?: readonly ExerciseSnapshot[]
   showTrainerComments?: boolean
+  commentLabel?: string
   entryMode?: 'plan' | 'fact'
   /** Верхний вход в каталог уже есть у родительской формы. */
   hideEmptyAddAction?: boolean
@@ -130,7 +131,7 @@ function PlanNumberField({ label, placeholder, name, value, decimal, disabled, o
     defaultValue={value} step={decimal ? 'any' : 1} decimal={decimal} directInput disabled={disabled} onValueChange={onChange} />
 }
 
-export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
+export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onReplaceExercise, onOpenTechnique, canOpenTechnique, exerciseCatalog = [], showTrainerComments = true, commentLabel = 'Заметка спортсмену', entryMode = 'plan', hideEmptyAddAction = false, previousResults = new Map(), showRpeByDefault = false, showRestByDefault = false, collapseInitialExercises = false, initialExercisesReady = true, reference = false, referenceAppearance = reference, safePlanInput = false, refinedPlan = false, disabled = false }: WorkoutExerciseEditorProps) {
   const [reordering, setReordering] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
   const [roundError, setRoundError] = useState<string | null>(null)
@@ -434,7 +435,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}><AddActionLabel>Подход</AddActionLabel></button>
       </div>
       {!reference && canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
-      {showTrainerComments && <OptionalDetails className="exercise-comment-options" summary="Заметка спортсмену" initialOpen={Boolean(exercise.trainerComment)}>
+      {showTrainerComments && <OptionalDetails className="exercise-comment-options" summary={commentLabel} initialOpen={Boolean(exercise.trainerComment)}>
         {commentField(exercise, exerciseIndex)}
       </OptionalDetails>}
       </div>}

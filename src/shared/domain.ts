@@ -462,6 +462,7 @@ export type WorkoutTrainingFormat = 'self' | 'with_trainer'
 
 /** Личный шаблон, сохранённый клиентом из своей тренировки для повторного планирования без похода в историю. */
 export interface FavoriteWorkoutTemplate {
+  version: number
   id: UUID
   title: string
   createdAt: string

@@ -15,7 +15,7 @@ import { ProfilePage, PublicTrainerProfilePage, TrainerCatalogPage, TrainerProfi
 import { YandexAssistantRoute } from '../features/assistant'
 import { ClientWorkoutsPage, ExerciseHistoryPage, LiveWorkoutPage, SchedulePage, TodayPage, TrainerScheduleTodayPage, WorkoutDetailPage, WorkoutFormPage } from '../features/workouts'
 import { AccountDeletionPage, LegalAcceptanceGate, PrivacyPage, TermsPage } from '../features/legal'
-import { WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEditorPage, WorkoutTemplateSourcePage, WorkoutTemplatesPage } from '../features/workout-templates'
+import { FavoriteWorkoutEditorPage, WorkoutTemplateAssignPage, WorkoutTemplateCreatePage, WorkoutTemplateEditorPage, WorkoutTemplateSourcePage, WorkoutTemplatesPage } from '../features/workout-templates'
 import { CanonicalClientParamRoute, CanonicalWorkoutClientRoute } from './canonical-client-route'
 import { ChatConversationPage, ChatListPage } from '../features/chat'
 import { AthleteAchievementsPage } from '../features/achievements/AthleteAchievements'
@@ -103,6 +103,7 @@ const router = createBrowserRouter([
       { path: '/me', element: <MyClientPage /> },
       { path: '/me/edit', element: <MyClientEditPage /> },
       { path: '/me/workouts', element: <MyWorkoutsPage /> },
+      { path: '/me/workouts/favorites/:favoriteId/edit', element: <FavoriteWorkoutEditorPage /> },
       { path: '/me/progress', element: <MyProgressPage /> },
       { path: '/me/achievements', element: <AthleteAchievementsPage /> },
       { path: '/me/goal', element: <MyGoalPage /> },

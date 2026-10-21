@@ -964,8 +964,9 @@ describe('favorite workouts', () => {
   function favorites() {
     const list = vi.fn<PilotFavoriteWorkouts['list']>().mockResolvedValue([favorite])
     const save = vi.fn<PilotFavoriteWorkouts['save']>().mockResolvedValue(favorite)
+    const update = vi.fn<PilotFavoriteWorkouts['update']>().mockResolvedValue({ ...favorite, version: 2 })
     const remove = vi.fn<PilotFavoriteWorkouts['remove']>().mockResolvedValue(undefined)
-    return { service: { list, save, remove } satisfies PilotFavoriteWorkouts, list, save, remove }
+    return { service: { list, save, update, remove } satisfies PilotFavoriteWorkouts, list, save, update, remove }
   }
 
   it('lists favorites for any valid session', async () => {
@@ -989,6 +990,30 @@ describe('favorite workouts', () => {
     expect(response.statusCode).toBe(201)
     expect(response.json()).toEqual(favorite)
     expect(save).toHaveBeenCalledWith(session, 'Ноги и кор', [exercise])
+  })
+
+  it('updates a snapshot or only its title with the expected version', async () => {
+    const { service: pilotFavoriteWorkouts, update } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    for (const body of [{ title: 'Новое имя', expectedVersion: 1 }, { title: 'Новая структура', expectedVersion: 1, exercises: [exercise] }]) {
+      const response = await app.inject({ method: 'PUT', url: `/v1/favorite-workouts/${favorite.id}`, headers: { 'x-fit-session': session.token }, payload: body })
+      expect(response.statusCode).toBe(200)
+      expect(update).toHaveBeenLastCalledWith(session, favorite.id, 1, body.title, 'exercises' in body ? [exercise] : undefined)
+    }
+    update.mockRejectedValueOnce(new FavoriteWorkoutsError('conflict'))
+    expect((await app.inject({ method: 'PUT', url: `/v1/favorite-workouts/${favorite.id}`, headers: { 'x-fit-session': session.token }, payload: { title: 'Старый снимок', expectedVersion: 1 } })).statusCode).toBe(409)
+  })
+
+  it('rejects invalid, unauthenticated and read-only favorite updates before writing', async () => {
+    const { service: pilotFavoriteWorkouts, update } = favorites()
+    const app = buildApp({ pilotFavoriteWorkouts, logger: false }); apps.push(app)
+    const url = `/v1/favorite-workouts/${favorite.id}`
+    for (const body of [{ title: 'a' }, { title: '', expectedVersion: 1 }, { title: 'a', expectedVersion: 0 }, { title: 'a', expectedVersion: 1.5 }, { title: 'a', expectedVersion: 1, exercises: [] }, { title: 'a', expectedVersion: 1, exercises: null }]) {
+      expect((await app.inject({ method: 'PUT', url, headers: { 'x-fit-session': session.token }, payload: body })).statusCode).toBe(400)
+    }
+    expect((await app.inject({ method: 'PUT', url, payload: { title: 'a', expectedVersion: 1 } })).statusCode).toBe(401)
+    expect((await app.inject({ method: 'PUT', url, headers: { 'x-fit-pilot-session': session.token }, payload: { title: 'a', expectedVersion: 1 } })).statusCode).toBe(403)
+    expect(update).not.toHaveBeenCalled()
   })
 
   it('rejects a save with a malformed body or a read-only session', async () => {

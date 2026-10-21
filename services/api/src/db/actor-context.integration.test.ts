@@ -590,7 +590,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       const actors = [randomUUID(), randomUUID(), randomUUID()]
       const tokens = actors.map(() => randomBytes(32).toString('base64url'))
       const app = buildApp({ pilotFavoriteWorkouts: new DatabasePilotFavoriteWorkouts(runtimePool), logger: false })
-      const request = (method: 'GET' | 'POST' | 'DELETE', actor: number, payload?: object, suffix = '') => app.inject({
+      const request = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', actor: number, payload?: object, suffix = '') => app.inject({
         method, url: `/v1/favorite-workouts${suffix}`, headers: { 'x-fit-session': tokens[actor]! }, ...(payload ? { payload } : {}),
       })
       try {
@@ -628,12 +628,35 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         const listed = await request('GET', 0)
         expect(listed.statusCode).toBe(200)
         expect(listed.json<{ favorites: unknown[] }>().favorites).toHaveLength(10)
+        const before = await ownerPool.query('select to_jsonb(workout) as snapshot from public.workouts workout order by id')
+        const exercisesBefore = await ownerPool.query('select to_jsonb(exercise) as snapshot from public.workout_exercises exercise order by id')
+        const setsBefore = await ownerPool.query('select to_jsonb(workout_set) as snapshot from public.workout_sets workout_set order by id')
+        const original = listed.json<{ favorites: { id: string; createdAt: string; version: number }[] }>().favorites.find((item) => item.id === firstId)!
+        expect(original.version).toBe(1)
+        const changed = await request('PUT', 0, { title: 'Updated snapshot', expectedVersion: 1, exercises: snapshots[1] }, `/${firstId}`)
+        expect(changed.statusCode).toBe(200)
+        expect(changed.json()).toMatchObject({ id: firstId, createdAt: original.createdAt, version: 2, exercises: snapshots[1] })
+        const renamed = await request('PUT', 0, { title: 'Renamed only', expectedVersion: 2 }, `/${firstId}`)
+        expect(renamed.statusCode).toBe(200)
+        expect(renamed.json()).toMatchObject({ version: 3, exercises: snapshots[1] })
+        const stale = await request('PUT', 0, { title: 'Must not overwrite', expectedVersion: 1, exercises }, `/${firstId}`)
+        expect(stale.statusCode).toBe(409)
+        expect(stale.json()).toEqual({ error: 'version_conflict' })
+        expect((await request('PUT', 1, { title: 'Foreign', expectedVersion: 3 }, `/${firstId}`)).statusCode).toBe(404)
+        expect((await request('PUT', 2, { title: 'Trainer', expectedVersion: 3 }, `/${firstId}`)).statusCode).toBe(403)
+        expect((await request('GET', 0)).json<{ favorites: { id: string; title: string; version: number }[] }>().favorites.find((item) => item.id === firstId)).toMatchObject({ title: 'Renamed only', version: 3 })
+        const concurrent = await Promise.all(['Concurrent A', 'Concurrent B'].map((title) => request('PUT', 0, { title, expectedVersion: 3 }, `/${firstId}`)))
+        expect(concurrent.map((response) => response.statusCode).sort()).toEqual([200, 409])
         expect((await request('GET', 1)).json()).toEqual({ favorites: [] })
         expect((await request('DELETE', 1, undefined, `/${firstId}`)).statusCode).toBe(404)
         expect((await request('POST', 2, { title: 'Forbidden', exercises })).statusCode).toBe(403)
         expect((await request('POST', 0, { title: 'Invalid', exercises: [] })).statusCode).toBe(400)
         expect((await app.inject({ method: 'POST', url: '/v1/favorite-workouts', payload: { title: 'No session', exercises } })).statusCode).toBe(401)
         expect((await request('DELETE', 0, undefined, `/${firstId}`)).statusCode).toBe(204)
+        expect((await request('PUT', 0, { title: 'Deleted', expectedVersion: 3 }, `/${firstId}`)).statusCode).toBe(404)
+        expect((await ownerPool.query('select to_jsonb(workout) as snapshot from public.workouts workout order by id')).rows).toEqual(before.rows)
+        expect((await ownerPool.query('select to_jsonb(exercise) as snapshot from public.workout_exercises exercise order by id')).rows).toEqual(exercisesBefore.rows)
+        expect((await ownerPool.query('select to_jsonb(workout_set) as snapshot from public.workout_sets workout_set order by id')).rows).toEqual(setsBefore.rows)
         expect((await request('POST', 0, { title: 'Space available again', exercises })).statusCode).toBe(201)
         expect((await request('GET', 0)).json<{ favorites: unknown[] }>().favorites).toHaveLength(10)
       } finally {

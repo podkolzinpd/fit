@@ -14,7 +14,7 @@ describe('favorite workouts repository', () => {
       createdAt: '2026-09-19T09:00:00.000Z', exercises,
     })).toEqual({
       id: '12acc6d6-7ca8-43cd-b124-b4224c917fae', title: 'Ноги и кор',
-      createdAt: '2026-09-19T09:00:00.000Z', exercises,
+      createdAt: '2026-09-19T09:00:00.000Z', version: 1, exercises,
     })
   })
 

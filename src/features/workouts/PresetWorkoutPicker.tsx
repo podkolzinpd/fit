@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PRESET_WORKOUTS } from '../../shared/preset-workouts'
 import { ChevronRightIcon, ExerciseIcon } from '../../shared/icons'
+import { exerciseCountText } from '../../shared/exercise-count'
 
 function presetCountLabel(count: number): string {
   const mod100 = count % 100
@@ -17,13 +18,12 @@ function presetCountLabel(count: number): string {
 
 export function PresetWorkoutList({ onSelect, pending = false }: { onSelect: (presetId: string) => void; pending?: boolean }) {
   return <section className="preset-workout-picker" aria-label="Готовые тренировки">
-    <p className="preset-workout-picker-hint">Выберите тренировку — упражнения можно будет изменить перед сохранением</p>
     <div className="preset-workout-picker-list">
       {PRESET_WORKOUTS.map((preset) => <article className="preset-workout-card card" key={preset.id}>
         <div>
           <strong>{preset.title}</strong>
           <p>{preset.description}</p>
-          <small>{preset.exercises.length} упражнений · ~{preset.estimatedDurationMin} мин</small>
+          <small>{exerciseCountText(preset.exercises.length)} · ~{preset.estimatedDurationMin} мин</small>
         </div>
         <button type="button" className="secondary" disabled={pending} onClick={() => onSelect(preset.id)}>Выбрать</button>
       </article>)}
