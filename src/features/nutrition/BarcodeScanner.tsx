@@ -18,7 +18,7 @@ export function BarcodePhotoPicker({ onDetected, onUnrecognized }: { onDetected:
       URL.revokeObjectURL(url); setDecodingImage(false)
     }
   }
-  return <label className="secondary nutrition-photo-picker">{decodingImage ? 'Распознаём фото…' : 'Выбрать фото'}
+  return <label className="secondary nutrition-photo-picker">{decodingImage ? 'Распознаём фото…' : 'Галерея'}
     <input type="file" accept="image/*" hidden disabled={decodingImage} onChange={(event) => {
       void decodeImage(event.currentTarget.files?.[0])
       event.currentTarget.value = ''
