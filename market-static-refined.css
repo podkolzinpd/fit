@@ -1,0 +1,8 @@
+/* Cosmetic polish only: original SVG coordinates, values and dimensions retained. */
+#deck .market-static-refined .m-reveal {opacity:1!important;transition:none!important;translate:none!important;}
+#deck .market-static-refined svg g {font-family:inherit;}
+#deck .market-static-refined svg text {font-variant-numeric:tabular-nums;}
+#deck .market-static-refined svg text[font-size="19"] {font-size:20px;}
+#deck .market-static-refined svg text[font-size="15"] {font-size:17px;fill:#b5bfc3;}
+#deck .market-static-refined svg text[font-size="33"] {font-weight:650;letter-spacing:-.5px;}
+#deck .market-static-refined svg line {stroke:#465459;}

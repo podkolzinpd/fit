@@ -343,6 +343,17 @@
     seek:(i,n=0)=>{stop();go(i,n);},
     transitionTo:(i,n=0)=>{stop();if(i!==index)return go(i,n);n=Math.max(0,Math.min(max[index]||0,n));apply(n,n!==step,step);},settle,
     ready:()=>Promise.all([...animations].map(a=>a.finished.catch(()=>{})))};
+  // Market: retain the original chart geometry and every label; one static stop.
+  {
+    const i=all.indexOf(market);timeline[i]=[7];max[i]=0;labels[i]=['Аудитория и расходы на спорт'];
+    market.classList.add('market-static-refined');
+    const palette=['#d3d9db','#a7b2b7','#d6f500','#81949c','#6b8089','#566e79','#425b67'];
+    [stack,markers].forEach(group=>group.forEach((el,n)=>el.style.setProperty('fill',palette[n],'important')));
+    rects.forEach((el,n)=>el.style.setProperty('fill',['#40545e','#78909a','#bacbd0','#d6f500'][n],'important'));
+    paths.forEach(el=>{el.style.setProperty('stroke','#879da6','important');el.setAttribute('stroke-width','1.25');});
+    cat.forEach((el,n)=>el.style.setProperty('fill',n===2?'#d6f500':'#d1d7da','important'));
+    [a2025,a2031].forEach(group=>group.forEach((el,n)=>el.style.setProperty('fill',n===2?'#d6f500':'#f5f4ef','important')));
+  }
   // The approved channels are complete screens, followed by a separate event scene.
   if(window.FIT_CHANNELS){
     const events=window.FIT_CHANNELS.build(scope[7],scope[8]);
