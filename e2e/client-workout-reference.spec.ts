@@ -454,7 +454,7 @@ for (const density of ['original', 'compact']) test(`client reference pause cloc
   page.on('request', request => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
-  const clock = page.locator('button.coach-live-clock.live-timer-toggle')
+  const clock = page.locator('.client-reference-pause')
   await expect(clock).toHaveCount(1)
   await expect(clock).toHaveAttribute('aria-pressed', 'false')
   await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500)
@@ -463,7 +463,7 @@ for (const density of ['original', 'compact']) test(`client reference pause cloc
   // The test clock is frozen; deliver the existing query notification timer.
   await page.clock.runFor(1)
   await expect(clock).toHaveAttribute('aria-pressed', 'true')
-  await expect(clock).toHaveText('Пауза')
+  await expect(clock).toHaveText('Продолжить')
   const elapsed = (await clock.getAttribute('aria-label'))!.split(', прошло ')[1]!
   const frozen = await page.locator('.live-rest-trigger').innerText()
   await page.screenshot({ path: info.outputPath('paused-clock.png'), animations: 'disabled' })
@@ -489,16 +489,16 @@ for (const density of ['original', 'compact']) test(`client reference pause rest
   const pauses: boolean[] = []
   page.on('request', request => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
   await page.goto(`/workouts/${workoutId}/live`)
-  const clock = page.locator('button.coach-live-clock.live-timer-toggle')
+  const clock = page.locator('.client-reference-pause')
   await expect(clock).toHaveAttribute('aria-label', 'Продолжить тренировку, прошло 00:40')
-  await expect(clock).toHaveText('Пауза')
+  await expect(clock).toHaveText('Продолжить')
   await page.clock.fastForward(10_000)
   await page.reload()
   await expect(clock).toHaveAttribute('aria-label', 'Продолжить тренировку, прошло 00:40')
   expect(pauses).toEqual([])
   await page.getByRole('button', { name: 'Старт подхода' }).first().click()
   await expect(clock).toHaveAttribute('aria-pressed', 'false')
-  await expect(clock).not.toHaveText('Пауза')
+  await expect(clock).toHaveText('Пауза')
   await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
   await expect.poll(() => pauses).toEqual([false])
 })
@@ -1152,4 +1152,33 @@ test('client swipe last added superset round uses existing atomic removal', asyn
   await expect(group.locator('.circuit-round')).toHaveCount(2)
   expect(commands).toEqual(['append', 'remove'])
   expect(backend.getWorkouts()[0]!.exercises.map(exercise => exercise.sets.length)).toEqual([2, 2])
+})
+
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client header SVG paired actions preserve overdue rest ${theme} ${density}`, async ({ page }, info) => {
+  await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(); source.startedAt = '2026-10-21T08:58:00Z'
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('button.coach-live-clock')).toHaveCount(0)
+  const actions = page.locator('.client-reference-timer-actions'), pause = actions.locator('.client-reference-pause'), rest = actions.locator('.live-rest-trigger')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const a = (await pause.boundingBox())!, b = (await rest.boundingBox())!
+    expect(a.height).toBe(density === 'compact' ? 48 : 60); expect(b.height).toBe(a.height)
+    expect(Math.abs(a.width - b.width)).toBeLessThanOrEqual(1)
+    expect(b.x - (a.x + a.width)).toBe(2)
+    expect(a.y).toBe(b.y)
+    await expect(pause).toHaveCSS('border-radius', '20px')
+    await expect(rest).toHaveCSS('border-radius', '20px')
+    await page.screenshot({ path: info.outputPath(`header-${width}.png`) })
+  }
+  await page.locator('form[data-live-set-id]').first().getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', /Отдых:/)
+  await page.clock.fastForward(4000)
+  await expect(rest).toHaveAttribute('aria-label', /Отдых превышен/)
+  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', /Тренировка:/)
+  await expect(page.locator('.coach-live-status')).toContainText('Live')
+  await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /REM/)
 })

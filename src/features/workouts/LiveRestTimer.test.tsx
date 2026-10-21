@@ -42,6 +42,19 @@ describe('Live rest timer', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it('separates client pause and rest actions without changing phase ownership', () => {
+    vi.useFakeTimers(); vi.setSystemTime(100_000)
+    const toggle = vi.fn(), change = vi.fn()
+    const view = render(<LiveRestTimer workoutId="client-actions" deadline={101_000} onChange={change} referenceStartedAt={new Date(0).toISOString()} onReferencePauseToggle={toggle} referenceActions />)
+    expect(document.querySelector('button.coach-live-clock')).toBeNull()
+    const pause = screen.getByRole('button', { name: /Поставить тренировку на паузу/ })
+    expect(pause.parentElement).toBe(screen.getByRole('button', { name: 'Таймер отдыха: 0:01' }).parentElement)
+    fireEvent.click(pause); expect(toggle).toHaveBeenCalledTimes(1)
+    view.rerender(<LiveRestTimer workoutId="client-actions" deadline={101_000} onChange={change} referenceStartedAt={new Date(0).toISOString()} onReferencePauseToggle={toggle} referenceActions pausedAt={100_000} />)
+    expect(screen.getByRole('button', { name: /Продолжить тренировку/ })).toHaveTextContent('Продолжить')
+    expect(change).not.toHaveBeenCalled()
+  })
+
   it('formats the reference digits without losing negative time or hours', () => {
     expect(formatReferenceClock(0)).toBe('00:00')
     expect(formatReferenceClock(3599)).toBe('59:59')

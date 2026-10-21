@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { CloseIcon, TimerIcon } from '../../shared/icons'
+import { CloseIcon, PlayIcon, TimerIcon } from '../../shared/icons'
 import { playGong, prepareGong } from '../../shared/gong'
 import type { LivePhaseTimer } from './live-phase'
 import { wasNativeRestTimerNotificationScheduled } from './rest-timer-notification'
 import { TimeWheel } from './TimeWheel'
+import clientPauseIcon from '../../shared/client-live-pause.svg'
 import coachRestIcon from '../../../docs/design/figma-20261008/assets/coach-rest.svg'
 
 const LONG_PRESS_MS = 500
@@ -50,7 +51,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, settings, pausedAt = null }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, referenceActions = false, settings, pausedAt = null }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -69,6 +70,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   /** Existing workout pause accounting; client presentation only. */
   referencePausedSeconds?: number
   onReferencePauseToggle?: () => void
+  /** Client pilot uses the two separate actions measured in live-header SVG. */
+  referenceActions?: boolean
   /** Updates the pilot header only at the rest boundary, not on every tick. */
   onReferenceRestActiveChange?: (active: boolean) => void
   /** Редкие настройки тренировки над временем таймера, чтобы не занимать экран Live. */
@@ -278,17 +281,26 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     {!referencePaused && (active || phase) ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
   </>
 
-  return <>
-    {reference && (onReferencePauseToggle ? <button type="button" className={`${referenceClockClass} live-timer-toggle`} aria-pressed={referencePaused}
+  const referenceClock = reference && (onReferencePauseToggle && !referenceActions ? <button type="button" className={`${referenceClockClass} live-timer-toggle`} aria-pressed={referencePaused}
       aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
-      onClick={onReferencePauseToggle}>{referenceClockContent}</button> : <div className={referenceClockClass}>{referenceClockContent}</div>)}
-    <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
+      onClick={onReferencePauseToggle}>{referenceClockContent}</button> : <div className={referenceClockClass}>{referenceClockContent}</div>)
+  const restTrigger = <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
       onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
       onClick={onPrimary ? tap : openPicker}>
       {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
+  return <>
+    {referenceClock}
+    {referenceActions ? <div className="client-reference-timer-actions">
+      <button type="button" className="secondary client-reference-pause" disabled={!onReferencePauseToggle}
+        aria-pressed={referencePaused} aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
+        onClick={onReferencePauseToggle}>
+        {referencePaused ? <PlayIcon /> : <img src={clientPauseIcon} width="16" height="16" alt="" aria-hidden="true" />}
+        <span>{referencePaused ? 'Продолжить' : 'Пауза'}</span>
+      </button>{restTrigger}
+    </div> : restTrigger}
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
         <header className="picker-header"><h2>{sheetTitle}</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>
