@@ -1,6 +1,6 @@
 # Native-only frontend AI transport
 
-База main96a3f902, ветка codex/native-only-frontend-ai, поток assistant-ops.
+Исходная база main96a3f902; перед PR rebase на main3f4950cd (#1757), ветка codex/native-only-frontend-ai, поток assistant-ops.
 Открытых PR на старте нет. YAFIT не создавался. Production/resources вне scope.
 
 ## Подтверждённая постановка
@@ -51,6 +51,7 @@
   уже существующих в main prep/timer controls;390 также сообщает21px select.
   Actual screenshots просмотрены; UI/CSS не меняются. Это не зелёная локальная
   visual приёмка; Linux CI остаётся обязательным. Baselines не обновлялись.
+- Visual helper ждёт завершения native media signing retries перед существующим unavailable-media baseline; media runtime/эталоны/допуски прежние.
 - Изменение common native fixture добавляет fallback к scenario-specific AI
   routes. Отдельный Playwright dev server на testPort+1000 получает synthetic native
   auth config; AI fixtures открываются на нём. Прежний server/auth fixtures и

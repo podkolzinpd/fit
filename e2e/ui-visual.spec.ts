@@ -2200,6 +2200,8 @@ async function openWorkoutReview(page: import('@playwright/test').Page, trainer:
   await page.getByRole('button', { name: 'Разобрать тренировку' }).click()
   await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
   await expect(page.locator('.phone-frame')).toHaveClass(/workout-create-edit-identity/)
+  // Native signing retries must settle before comparing the existing unavailable-media baseline.
+  await expect(page.locator('.exercise-image-loading')).toHaveCount(0)
 }
 
 test('workout create keeps its visual baseline', async ({ page }, testInfo) => {
