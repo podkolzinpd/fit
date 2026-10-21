@@ -59,3 +59,5 @@
 - Финальный npm run check exit0: frontend2796/API1434+186conditionalDBskip, infra332/calendar12/hosting184/lint/typecheck/build/startup. CI ожидается; timings before/after не замерены.
 
 CI initial attempt выявил случайную замену signIn в соседнем body-map test. Восстановлена исходная строка; assertions/эталоны неизменны, весь CI повторяется на исправленном head.
+
+Linux CI подтвердил crop95/96px first-run card при замене всего auth setup. Сохранены исходные registration и visual fixture до AI; перед AI-сценарием переход на native app-session/API. Старый visual assertion/baseline/tolerance неизменен; native AI/profile assertions сохраняются.

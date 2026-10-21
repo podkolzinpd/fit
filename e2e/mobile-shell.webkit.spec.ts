@@ -863,10 +863,15 @@ test('iPhone: меню собственного плана клиента нах
   await page.screenshot({ path: testInfo.outputPath('client-plan-header-menu-430.png'), fullPage: true })
 })
 
-test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }) => {
+test('iPhone: client voice-first home сохраняет тренировку только себе, а Cancel профиля не мутирует данные на 390 px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await mockNativeAiSession(page, 'client')
-  await page.goto(nativeAiUrl('/me'))
+  await page.goto('/auth')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
+  await page.getByLabel('Тип аккаунта').selectOption('client')
+  await page.getByLabel('Имя').fill('Клиент')
+  await page.getByLabel('Email').fill(`client-profile-${testInfo.workerIndex}-${Date.now()}@fit.local`)
+  await page.getByLabel('Пароль').fill('FitLocal123!')
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click()
 
   const compactActions = page.locator('.client-home-self-training .voice-action-buttons')
   await expect(compactActions).toBeVisible()
@@ -885,6 +890,9 @@ test('iPhone: client voice-first home сохраняет тренировку т
     .forEach((key) => localStorage.removeItem(key)))
   await page.reload()
   await expect(page.getByRole('button', { name: 'Надиктовать тренировку' })).toBeInViewport()
+  // Preserve the original first-run visual fixture, then exercise AI through native auth/data.
+  await mockNativeAiSession(page, 'client')
+  await page.goto(nativeAiUrl('/me'))
   await page.route('**/v1/assistant/yandex/parse-workout', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
