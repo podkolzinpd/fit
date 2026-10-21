@@ -10,7 +10,7 @@ import type {
   AssistantMessage,
   AssistantRepositoryResult,
   AssistantBackend,
-} from './assistant.repository'
+} from '../assistant-contract'
 import { yandexPilotRepository } from './yandex-pilot.repository'
 import { trainingSummaryFromRow } from './training-summary-mappers'
 

@@ -13,9 +13,6 @@ export default defineConfig(({ mode }) => ({
     '#fit/local-data': fileURLToPath(new URL(isLocalLegacyBuild(mode)
       ? './src/app/local-data-composition.ts'
       : './src/app/native-only-composition.ts', import.meta.url)),
-    '#fit/local-assistant': fileURLToPath(new URL(isLocalLegacyBuild(mode)
-      ? './src/app/local-assistant-composition.ts'
-      : './src/app/native-only-composition.ts', import.meta.url)),
   } },
   plugins: [react(), {
     name: 'fit-native-composition-boundary',

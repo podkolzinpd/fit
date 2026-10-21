@@ -53,7 +53,7 @@ vi.mock('./yandex-app-session-context', () => ({
 
 // Auth must remain usable by offline UI fixtures without data/AI imports.
 vi.mock('../data/repositories/workouts.repository', () => { throw new Error('Auth imported workout data') })
-vi.mock('../data/repositories/assistant.repository', () => { throw new Error('Auth imported Assistant data') })
+vi.mock('../data/repositories/yandex-assistant.repository', () => { throw new Error('Auth imported Assistant data') })
 
 vi.mock('../data/repositories/auth.repository', () => ({
   authRepository: {

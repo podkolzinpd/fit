@@ -6,10 +6,10 @@ export function nativeAiUrl(path: string): string {
 }
 
 /** Native app-session/product data; AI responses remain scenario-specific. */
-export async function mockNativeAiSession(page: Page, role: 'trainer' | 'client', options: { linkedClient?: boolean } = {}) {
+export async function mockNativeAiSession(page: Page, role: 'trainer' | 'client', options: { linkedClient?: boolean; profileId?: string } = {}) {
   const fixture = await mockPilot(page, {
     role, fitLime: false, clientLime: false, pilot: false,
-    ...(role === 'client' ? { profileId: clientId } : {}),
+    ...(role === 'client' ? { profileId: clientId } : options.profileId ? { profileId: options.profileId } : {}),
     workouts: [],
     clientRecords: [{ id: clientId, fullName: 'Анна Смирнова', archivedAt: null, version: 1 }],
   })

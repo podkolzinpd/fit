@@ -45,8 +45,8 @@ vi.mock('../../data/repositories/yandex-assistant.repository', () => ({
 }))
 
 vi.mock('./AssistantHistoryPage', () => ({
-  AssistantHistoryPage: ({ backend }: { backend?: { cacheKey: string } }) =>
-    <p>{backend?.cacheKey ?? 'supabase'} assistant</p>,
+  AssistantHistoryPage: ({ backend }: { backend: { cacheKey: string } }) =>
+    <p>{backend.cacheKey} assistant</p>,
 }))
 
 const createAuthorizationUrl = vi.hoisted(() => vi.fn())
@@ -81,8 +81,6 @@ describe('YandexAssistantRoute', () => {
     })
     createBackend.mockClear()
     createAuthorizationUrl.mockReset()
-    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'true')
-    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', PROFILE_ID)
     vi.stubEnv('VITE_YANDEX_APP_SESSION_ENABLED', 'true')
     vi.stubEnv('VITE_YANDEX_OAUTH_CLIENT_ID', 'public-client-id')
     vi.stubEnv('VITE_YANDEX_API_BASE_URL', 'https://stage.example.test')
@@ -92,13 +90,20 @@ describe('YandexAssistantRoute', () => {
     vi.unstubAllEnvs()
   })
 
-  it('does not fall back to the legacy Assistant when Yandex app-session is enabled', () => {
-    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', OTHER_PROFILE_ID)
-
+  it('requires the native session even when retired routing flags are off', () => {
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'false')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', '')
     render(<YandexAssistantRoute />)
-
     expect(screen.getByRole('heading', { name: 'Подтвердите Yandex ID' })).toBeVisible()
     expect(createBackend).not.toHaveBeenCalled()
+  })
+
+  it('uses the matching native session without a legacy routing allowlist', () => {
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_ENABLED', 'false')
+    vi.stubEnv('VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS', '')
+    appSessionState.mockReturnValue({ session, loading: false, error: null, signOut })
+    render(<YandexAssistantRoute />)
+    expect(screen.getByText('yandex assistant')).toBeVisible()
   })
 
   it('does not load either backend until the routed user confirms Yandex ID', () => {

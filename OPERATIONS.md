@@ -1507,38 +1507,19 @@ ID-сессии 12 секундами. При таймауте сохранён�
 сброс: серверная сессия остаётся действительной до штатного отзыва или истечения
 14-дневного срока.
 
-Sticky routing основного Trainer Assistant имеет отдельный default-off rollout:
-
-```text
-VITE_YANDEX_ASSISTANT_ROUTING_ENABLED=true
-VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS=<one-auth-user-uuid>
-```
-
-Общий `VITE_ASSISTANT_NAV_ENABLED=false` остаётся глобальным kill switch:
-sticky-флаг выбирает backend и не может сам открыть скрытую вкладку
-или прямой маршрут.
-
-Флаг включается только при точном `true`; пустой/отсутствующий allowlist или
-профиль вне него сохраняет прежний Supabase Assistant. Для первой репетиции в
-списке должен быть ровно один заранее перенесённый тестовый trainer UUID. Этот
-же UUID обязан иметь действующую `read_write` app-session и серверное назначение `provider=yandex`,
-`access_mode=read_write`. UUID виден во frontend bundle и не
-является авторизацией: Yandex API повторно разрешает actor через opaque session,
-ownership и tenant-проверки.
-
-После выбора backend все зависимости Assistant — история, turns/actions,
-упражнения, разбор тренировки и сводки — используют только `x-fit-session` и
-Yandex API. Ошибка Yandex показывается пользователю; автоматического fallback
-на Supabase для отдельного запроса нет, чтобы один сценарий не создал записи в
-двух БД. Несовпадение UUID текущего FIT actor и Yandex app-session блокирует
-загрузку данных. Остальные вкладки и все пользователи вне rollout продолжают
-работать через Supabase.
-
-Изменение обеих build-time переменных требует нового deployment. Безопасный
-rollback — установить `VITE_YANDEX_ASSISTANT_ROUTING_ENABLED=false` (или убрать
-pilot UUID) и выполнить новый deployment; данные между backend автоматически
-не синхронизируются, поэтому переключение допускается только после проверки
-export/import и отсутствия незавершённых mutations.
+Assistant использует native app-session/API во всех сборках. Legacy Assistant
+repository/history queries, локальная composition и отдельный sticky rollout
+удалены. `VITE_YANDEX_ASSISTANT_ROUTING_ENABLED` и
+`VITE_YANDEX_ASSISTANT_ROUTING_PILOT_USER_IDS` больше не используются и не
+переключают backend. Общий контракт находится в `src/data/assistant-contract.ts`.
+Native history, turns/actions, payloads и error mapping прежние; без native
+сессии показывается существующий session/config guard, Supabase fallback нет.
+`VITE_ASSISTANT_NAV_ENABLED=false` сохраняет kill switch вкладки и прямого
+маршрута. Серверные ownership и tenant-проверки остаются источником доступа.
+Существующие диалоги и SQL-данные не удаляются. Промпты, model routing,
+Cloud Functions и media не меняются. Local fixtures используют synthetic native
+app-session/API; history error/retry проверяет восстановление существующего
+диалога без создания нового и без Supabase HTTP.
 
 Sticky routing всего основного интерфейса имеет собственный общий kill switch:
 

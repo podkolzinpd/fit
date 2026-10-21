@@ -1,4 +1,3 @@
-import { getLocalAssistantBackend } from '#fit/local-assistant'
 import { Link } from 'react-router-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -9,7 +8,7 @@ import { useAppViewport } from '../../app/app-viewport'
 import {
   type AssistantBackend,
   type AssistantOrchestratorAction,
-} from '../../data/repositories/assistant.repository'
+} from '../../data/assistant-contract'
 import { VoiceInputButton, type VoiceInputPhase } from '../voice-input'
 import { clientSchema } from '../../shared/validation'
 import { currentTimeInTimeZone, formatLocalDate, todayInTimeZone } from '../../shared/local-date'
@@ -34,8 +33,8 @@ import { extractAssistantNavigationLinks } from './assistant-navigation-links'
 
 type FailedTurn = { turnId: string; message: string }
 
-export function AssistantHistoryPage({ backend = getLocalAssistantBackend() }: {
-  backend?: AssistantBackend
+export function AssistantHistoryPage({ backend }: {
+  backend: AssistantBackend
 }) {
   const { actor } = useAuth()
   const { keyboardOpen } = useAppViewport()
