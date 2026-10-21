@@ -303,6 +303,12 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
     onClickCapture={(event) => { if (suppressClick.current && !(event.target as Element).closest('.workout-swipe-action')) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false } }}>
     {side && <button type="button" className={`workout-swipe-action ${side}`} disabled={inactive}
       aria-label={side === 'delete' ? actionLabel : undefined}
+      onMouseDown={(event) => {
+        // A rail tap must reach click before an edited client field blurs and
+        // makes the rail pending/disabled. The confirmation then takes focus;
+        // deletion still waits for the existing save coordinator to become idle.
+        if (event.button === 0 && (swipeFromFields || swipeFromCardButton)) event.preventDefault()
+      }}
       onClick={() => { context.setOpen(null); if (side === 'delete') onDelete(); else onReplace?.() }}>{side === 'delete' ? 'Удалить' : 'Заменить'}</button>}
     <div className="workout-swipe-content" style={{ transform: `translateX(${offset || (side === 'delete' ? -96 : side === 'replace' ? 96 : 0)}px)` }}>{children}</div>
   </div>
