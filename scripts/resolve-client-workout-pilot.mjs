@@ -1,7 +1,13 @@
+import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
+// Explicit owner approval on 21.10.2026: exactly four confirmed targets may
+// launch while this one approved client's native binding is pending. Contacts
+// stay private; the complete approved client set is pinned, not an arbitrary subset.
+export const pendingClientWorkoutLoginHash = '6d066220dea64fde80afc931c603074e9984be7c09e3f67c51364006fd146cd8'
+const approvedClientSetDigest = '09930ba8dfa6b41e5eee8f58b303ed4668594bc8ab3cfcad7c23e67f044caebf'
 const profileUuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
 
 export class ClientWorkoutProfilesNotReadyError extends Error {
@@ -20,11 +26,14 @@ export class ClientWorkoutProfilesNotReadyError extends Error {
   }
 }
 
-export async function resolveClientWorkoutProfiles(client, cohort) {
+export async function resolveClientWorkoutProfiles(client, cohort, { allowPendingTestClient = false } = {}) {
   if (!cohort || !Array.isArray(cohort.clients) || !Array.isArray(cohort.trainers)
     || cohort.clients.length !== 5 || cohort.trainers.length !== 2
     || new Set([...cohort.clients, ...cohort.trainers]).size !== 7
     || [...cohort.clients, ...cohort.trainers].some(x => !/^[a-f0-9]{64}$/.test(x))) throw new Error('client_workout_cohort_rejected')
+  if (typeof allowPendingTestClient !== 'boolean' || (allowPendingTestClient
+    && createHash('sha256').update([...cohort.clients].sort().join(',')).digest('hex') !== approvedClientSetDigest)) throw new Error('client_workout_cohort_rejected')
+  const requiredClients = allowPendingTestClient ? cohort.clients.filter(hash => hash !== pendingClientWorkoutLoginHash) : cohort.clients
   await client.query('begin read only')
   try {
     await client.query("set local statement_timeout = '5s'")
@@ -45,14 +54,17 @@ export async function resolveClientWorkoutProfiles(client, cohort) {
           or b.account_role = 'trainer' and exists (select 1 from public.trainers t where t.profile_id = p.id))
       limit 8`, [[...cohort.clients, ...cohort.trainers]])
     const rows = result.rows
-    if (rows.length < 5 || rows.length > 7 || new Set(rows.map(r => r.id)).size !== rows.length || new Set(rows.map(r => r.hash)).size !== rows.length
-      || rows.filter(r => r.role === 'client').length !== 5 || rows.filter(r => r.role === 'trainer').length > 2
+    if (rows.length < requiredClients.length || rows.length > 7 || new Set(rows.map(r => r.id)).size !== rows.length || new Set(rows.map(r => r.hash)).size !== rows.length
+      || rows.filter(r => r.role === 'client').length < requiredClients.length || rows.filter(r => r.role === 'client').length > 5
+      || requiredClients.some(hash => !rows.some(r => r.hash === hash && r.role === 'client'))
+      || rows.filter(r => r.role === 'trainer').length > 2
       || rows.some(r => !profileUuid.test(r.id) || r.enabled !== true
         || !(r.role === 'client' ? cohort.clients : r.role === 'trainer' ? cohort.trainers : []).includes(r.hash))) {
       throw new ClientWorkoutProfilesNotReadyError(cohort, rows)
     }
     await client.query('commit')
-    return { clientProfileIds: rows.filter(r => r.role === 'client').map(r => r.id).sort(),
+    return { readiness: new ClientWorkoutProfilesNotReadyError(cohort, rows).readiness,
+      targetClientCount: 5, partialAuthorized: allowPendingTestClient, clientProfileIds: rows.filter(r => r.role === 'client').map(r => r.id).sort(),
       trainerProfileIds: rows.filter(r => r.role === 'trainer').map(r => r.id).sort() }
   } catch (error) { await client.query('rollback'); throw error }
 }
@@ -79,14 +91,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     try {
       phase = 'profiles'
       const cohort = JSON.parse(process.env.CLIENT_WORKOUT_LOGIN_COHORT ?? '')
-      const first = await resolveClientWorkoutProfiles(client, cohort)
+      const inspectionOptions = { allowPendingTestClient: process.env.CLIENT_WORKOUT_ALLOW_PENDING_TEST_CLIENT === 'true' }
+      const first = await resolveClientWorkoutProfiles(client, cohort, inspectionOptions)
       phase = 'readback'
-      const second = await resolveClientWorkoutProfiles(client, cohort)
+      const second = await resolveClientWorkoutProfiles(client, cohort, inspectionOptions)
       if (JSON.stringify(first) !== JSON.stringify(second)) throw new Error('client_workout_readback_differs')
       phase = 'artifact'
       writeFileSync('/result/client-workout-pilot-ids.json', JSON.stringify(first) + '\n', { flag: 'wx', mode: 0o600 })
-      writeFileSync('/result/client-workout-pilot-readiness.json', JSON.stringify({ readyClients: 5, readyTrainers: first.trainerProfileIds.length, missingClientHashes: [] }) + '\n', { flag: 'wx', mode: 0o600 })
-      console.log('Verified exactly five existing test-client profiles; trainer nutrition bindings are not an activation prerequisite. Read only, no admission changes.')
+      writeFileSync('/result/client-workout-pilot-readiness.json', JSON.stringify(first.readiness) + '\n', { flag: 'wx', mode: 0o600 })
+      console.log(JSON.stringify({ event: 'client_workout_profiles_verified', confirmedClients: first.clientProfileIds.length, targetClients: 5, partialAuthorized: first.partialAuthorized, readOnly: true }))
     } finally { await client.end() }
   } catch (error) {
     if (error instanceof ClientWorkoutProfilesNotReadyError) writeFileSync('/result/client-workout-pilot-readiness.json', JSON.stringify(error.readiness) + '\n', { flag: 'wx', mode: 0o600 })
