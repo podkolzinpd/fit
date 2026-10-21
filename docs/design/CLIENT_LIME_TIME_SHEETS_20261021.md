@@ -27,9 +27,9 @@
 
 ## Проверки
 
-12новых browser cases прошли:2темы×390/430×2движка проверяют оба окна,
+8новых основных browser cases прошли:2темы×390/430×2движка проверяют оба окна,
 точные10секунд, отмену черновика, повторное открытие, remove, нулевой disabled
-отдых, пресет/старт/остановку; ещё4cases изолируют тренера и клиента вне пилота.
+отдых, пресет/старт/остановку; ещё4cases (итого12) изолируют тренера и клиента вне пилота.
 31unit duration/rest passed, включая наследование через portal/отмену/105секунд.
 Первый browser assert предполагал aria-activedescendant, которого у TimeWheel
 нет; исправлен тест на существующий option aria-selected, UI не менялся.
@@ -45,3 +45,8 @@ Today/WorkoutExerciseEditor/RunMetricsFields/AssistantHistory/AssistantProgramPi
 с прежней оболочкой. Физический iPhone НЕ ПРОВЕРЕН. CI/точный main/публикация
 ещё обязательны. Локальные квитанции outputs/client-workout-reference-audit-20261021:
 pr6-preflight,pr6-sheets-final,pr6-unit,pr6-mechanics,pr6-check.
+
+## Дополнение перед интеграцией
+
+Дополнительные36browser cases editor keyboard/wheel, ручной таймер/пауза/Live keyboard прошли; полный npm run check exit0 (pr6-check.log).
+Свежий main/CI и реальная публикация ещё не проверены этим дополнением.
