@@ -353,6 +353,21 @@
     paths.forEach(el=>{el.style.setProperty('stroke','#879da6','important');el.setAttribute('stroke-width','1.25');});
     cat.forEach((el,n)=>el.style.setProperty('fill',n===2?'#d6f500':'#d1d7da','important'));
     [a2025,a2031].forEach(group=>group.forEach((el,n)=>el.style.setProperty('fill',n===2?'#d6f500':'#f5f4ef','important')));
+    // Variant 1: round the combined silhouette, never individual segment joins.
+    const svg=q('svg',market), ns='http://www.w3.org/2000/svg';
+    const defs=document.createElementNS(ns,'defs');svg.prepend(defs);
+    [[rects,0,112,140,362.5,'audience'],[stack,754,128,100,346.5,'spend']].forEach(([group,x,y,width,height,key])=>{
+      const clip=document.createElementNS(ns,'clipPath');
+      clip.id=`market-rounded-${key}`;clip.setAttribute('clipPathUnits','userSpaceOnUse');
+      const silhouette=document.createElementNS(ns,'rect');
+      Object.entries({x,y,width,height,rx:11,ry:11}).forEach(([k,v])=>silhouette.setAttribute(k,v));
+      clip.append(silhouette);defs.append(clip);
+      group.forEach(el=>el.setAttribute('clip-path',`url(#${clip.id})`));
+      const outline=silhouette.cloneNode();
+      outline.setAttribute('fill','none');outline.setAttribute('stroke','#b7c9ce');
+      outline.setAttribute('stroke-opacity','.55');outline.setAttribute('stroke-width','1');
+      outline.setAttribute('pointer-events','none');svg.append(outline);
+    });
   }
   // The approved channels are complete screens, followed by a separate event scene.
   if(window.FIT_CHANNELS){
