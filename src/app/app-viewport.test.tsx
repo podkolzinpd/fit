@@ -116,6 +116,17 @@ describe('AppViewportProvider', () => {
     expect(document.documentElement.style.getPropertyValue('--app-visible-height')).toBe('844px')
   })
 
+  it('does not schedule viewport recovery for an ordinary button gesture without a keyboard', () => {
+    vi.useFakeTimers()
+    const mobileViewport = installMobileViewport()
+    render(<AppViewportProvider><Probe /></AppViewportProvider>)
+    mobileViewport.scrollTo.mockClear()
+    act(() => document.dispatchEvent(new Event('pointerdown')))
+    act(() => document.dispatchEvent(new Event('pointerup')))
+    act(() => vi.advanceTimersByTime(400))
+    expect(mobileViewport.scrollTo).not.toHaveBeenCalled()
+  })
+
   it('does not recover stale WebKit dimensions in the middle of a pointer gesture', () => {
     vi.useFakeTimers()
     const mobileViewport = installMobileViewport()

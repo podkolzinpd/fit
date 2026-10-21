@@ -121,8 +121,8 @@ export function AppViewportProvider({ children }: PropsWithChildren) {
 
     const onPointerDown = (event: PointerEvent) => { pointers.add(event.pointerId) }
     const onPointerEnd = (event: PointerEvent) => {
-      pointers.delete(event.pointerId)
-      if (!pointers.size && !isKeyboardInput(document.activeElement)) scheduleRecovery()
+      const held = pointers.delete(event.pointerId)
+      if (held && !pointers.size && root.classList.contains('app-keyboard-open') && !isKeyboardInput(document.activeElement)) scheduleRecovery()
     }
 
     const onOrientationChange = () => {
