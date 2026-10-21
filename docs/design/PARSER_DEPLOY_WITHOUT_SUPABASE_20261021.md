@@ -26,3 +26,7 @@
 Во время ожидания CI подлит новый main `f903545d` (#1764, ready workouts): единственный конфликт CURRENT_STATE разрешён сохранением обеих фактур, snapshot120 строк. Из-за нового runtime/тестов main полный локальный check повторяется; первый CI44979f82 не считается проверкой нового head. Наш diff к новому main по-прежнему ограничен parser deploy/orphan helper/tests/docs.
 
 Итоговая локальная проверка после mainf903545d: полный check exit0, frontend2798/API1440+186conditionalDBskip/infra330/calendar12/hosting184/lint/typecheck/build/startup passed. CURRENT_STATE120 строк; предыдущая история сохранена, объединены только связанные старые абзацы. Новый exact-head CI обязателен.
+
+Затем main продвинулся до `a5c3d649` (#1765, keyboard first actions); также подлит без конфликтов. Повторный локальный check и exact-head CI запускаются для окончательной актуальной интеграции. Наш diff не меняет пришедшие UI/runtime/тесты main.
+
+Финальный полный check после maina5c3d649: exit0, frontend2803/API1440+186conditionalDBskip/infra330/calendar12/hosting184/lint/typecheck/build/startup. Перед push origin/main проверен повторно, новых commits нет.
