@@ -249,3 +249,13 @@ export function isClientLimePilotEnabled(userId: string, serverAssigned = false)
   return import.meta.env.VITE_CLIENT_LIME_ENABLED === 'true'
     && userId.trim().length > 0 && serverAssigned === true
 }
+
+// Independent client workout UI. A missing/invalid cohort always fails closed.
+export function isClientWorkoutRedesignPilotEnabled(userId: string): boolean {
+  if (import.meta.env.VITE_CLIENT_WORKOUT_REDESIGN_ENABLED !== 'true') return false
+  const ids = String(import.meta.env.VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS ?? '')
+    .split(',').map(id => id.trim().toLowerCase()).filter(Boolean)
+  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/
+  return ids.length > 0 && ids.length <= 50 && new Set(ids).size === ids.length
+    && ids.every(id => uuid.test(id)) && ids.includes(userId.trim().toLowerCase())
+}

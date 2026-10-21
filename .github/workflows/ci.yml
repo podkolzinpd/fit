@@ -291,6 +291,9 @@ jobs:
             --env VITE_NUTRITION_NATIVE_COHORT=true \
             --env VITE_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt \
             --env FIT_YANDEX_E2E_REQUIRED \
+            --env FIT_CLIENT_WORKOUT_ACCEPTANCE=1 \
+            --env VITE_CLIENT_WORKOUT_REDESIGN_ENABLED=true \
+            --env VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS=c11e0000-6010-4000-8000-000000000001 \
             --env VITE_CLIENT_LIME_ENABLED \
             --env VITE_YANDEX_OAUTH_CLIENT_ID \
             --env VITE_YANDEX_API_BASE_URL \
@@ -301,7 +304,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts --project=iphone-13-webkit --workers=1 --fail-on-flaky-tests'
+            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

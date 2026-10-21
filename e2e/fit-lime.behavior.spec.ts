@@ -450,6 +450,39 @@ test('Live manual mode runs preparation and then starts the first timed set', as
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
 })
 
+// Пауза всей тренировки (YAFIT-627): часы — кнопка; на паузе подход замирает,
+// повторное нажатие продолжает с того же места.
+test('Live pause freezes the running set until the workout clock is tapped again', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true, 'timer')] })
+  const pauses: boolean[] = []
+  page.on('request', (request) => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.locator('.live-timer-toggle').click()
+  await expect(page.locator('.live-timer-toggle')).toHaveText('Пауза')
+  await page.clock.fastForward(10_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
+  await page.locator('.live-timer-toggle').click()
+  await expect(page.locator('.live-timer-toggle')).not.toHaveText('Пауза')
+  await page.clock.fastForward(3_000)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
+  expect(pauses).toEqual([true, false])
+})
+
+// Действие с подходом значит, что человек вернулся: пауза снимается сама.
+test('Live pause ends by itself when the person confirms a set', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-timer-toggle').click()
+  await expect(page.locator('.live-timer-toggle')).toHaveText('Пауза')
+  await page.getByRole('button', { name: 'Старт подхода' }).first().click()
+  await expect(page.locator('.live-timer-toggle')).not.toHaveText('Пауза')
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+})
+
 test('Live manual set timer ignores an accidental second tap right after Start', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
   await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })

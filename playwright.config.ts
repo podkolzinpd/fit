@@ -13,7 +13,7 @@ export default defineConfig({
     ? `npx --no-install vite preview --host 127.0.0.1 --port ${testPort}`
     : `npm run dev:frontend -- --host 127.0.0.1 --port ${testPort}`, url: `http://127.0.0.1:${testPort}`, reuseExistingServer: !process.env.CI,
     // Synthetic fixture identities only; never used in a production build.
-    env: { VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
+    env: { VITE_CLIENT_WORKOUT_REDESIGN_ENABLED: 'true', VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c11e0000-6010-4000-8000-000000000001', VITE_COACH_WORKOUT_REDESIGN_ENABLED: 'true', VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
       VITE_COACH_PLAN_INPUT_ENABLED: 'true', VITE_COACH_PLAN_INPUT_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
       VITE_COACH_PLAN_LAYOUT_ENABLED: 'true', VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
       VITE_COACH_LIVE_DENSITY_ENABLED: 'true', VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS: 'c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002',
@@ -25,7 +25,7 @@ export default defineConfig({
     { name: 'mobile-chromium', testIgnore: [/.*\.webkit\.spec\.ts/, /ui-visual\.spec\.ts/], use: { ...devices['Pixel 7'] } },
     // Отдельный iPhone smoke покрывает реальный движок iOS и ширину 390 px,
     // не дублируя полный Chromium-набор. Он обязателен и локально, и в CI.
-    { name: 'iphone-13-webkit', testMatch: [/.*\.webkit\.spec\.ts/, /assistant-layout\.spec\.ts/], use: { ...devices['iPhone 13'] } },
+    { name: 'iphone-13-webkit', testMatch: [/.*\.webkit\.spec\.ts/, /assistant-layout\.spec\.ts/, /client-workout-reference\.spec\.ts/], use: { ...devices['iPhone 13'] } },
     {
       name: 'schedule-density-webkit',
       testMatch: /trainer-schedule-v2\.visual\.spec\.ts/,

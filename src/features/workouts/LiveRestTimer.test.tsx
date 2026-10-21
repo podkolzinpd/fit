@@ -15,6 +15,33 @@ afterEach(() => {
 })
 
 describe('Live rest timer', () => {
+  it('keeps the client pause action and cumulative pause time on the reference clock without another timer owner', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(100_000)
+    const onToggle = vi.fn(), onChange = vi.fn(), onExpire = vi.fn()
+    const common = { workoutId: 'client-pause-reference', referenceStartedAt: new Date(0).toISOString(), onReferencePauseToggle: onToggle, onChange, onRestExpire: onExpire }
+    const view = render(<LiveRestTimer {...common} deadline={101_000} referencePausedSeconds={20} />)
+    expect(screen.getByRole('button', { name: 'Поставить тренировку на паузу, прошло 01:20' })).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(screen.getByRole('button', { name: /Поставить тренировку на паузу/ }))
+    expect(onToggle).toHaveBeenCalledTimes(1)
+    view.rerender(<LiveRestTimer {...common} deadline={101_000} referencePausedSeconds={20} pausedAt={100_000} />)
+    expect(screen.getByRole('button', { name: 'Продолжить тренировку, прошло 01:20' })).toHaveTextContent('Пауза')
+    expect(document.querySelector('.coach-live-elapsed')).toBeNull()
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(screen.getByRole('button', { name: 'Таймер отдыха: 0:01' })).toBeVisible()
+    expect(playGong).not.toHaveBeenCalled()
+    expect(onExpire).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /Продолжить тренировку/ }))
+    expect(onToggle).toHaveBeenCalledTimes(2)
+    // The existing caller shifts the deadline and accounts for the pause.
+    view.rerender(<LiveRestTimer {...common} deadline={111_000} referencePausedSeconds={30} />)
+    expect(screen.getByRole('button', { name: 'Поставить тренировку на паузу, прошло 01:20' })).toHaveAttribute('aria-pressed', 'false')
+    act(() => vi.advanceTimersByTime(1_000))
+    expect(playGong).toHaveBeenCalledTimes(1)
+    expect(onExpire).toHaveBeenCalledTimes(1)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('formats the reference digits without losing negative time or hours', () => {
     expect(formatReferenceClock(0)).toBe('00:00')
     expect(formatReferenceClock(3599)).toBe('59:59')
@@ -274,5 +301,23 @@ describe('Live phase timer', () => {
     render(<LiveRestTimer workoutId="workout-1" deadline={101_000} onChange={vi.fn()} onPrimary={() => true} onRestExpire={onRestExpire} />)
     act(() => vi.advanceTimersByTime(2_000))
     expect(onRestExpire).toHaveBeenCalledExactlyOnceWith(101_000)
+  })
+})
+
+
+describe('client reference manual work display', () => {
+  it('shows the same positive overtime as the existing trigger, preserving default trainer display and callbacks', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(147_000)
+    const phase = { kind: 'work', setId: 'set-1', startedAt: 100_000, endsAt: 145_000, manual: true } as const
+    const onChange = vi.fn()
+    const view = render(<LiveRestTimer workoutId="client-reference-overtime" deadline={null} phase={phase} referenceStartedAt={new Date(0).toISOString()} referenceWorkOvertime onChange={onChange} />)
+    expect(screen.getByLabelText('Подход: +00:02')).toBeVisible()
+    expect(document.querySelector('.live-rest-trigger')).toHaveTextContent('Подход +0:02')
+    expect(onChange).not.toHaveBeenCalled()
+    view.rerender(<LiveRestTimer workoutId="client-reference-overtime" deadline={null} phase={phase} referenceStartedAt={new Date(0).toISOString()} onChange={onChange} />)
+    expect(screen.getByLabelText('Подход: 00:00')).toBeVisible()
+    expect(document.querySelector('.live-rest-trigger')).toHaveTextContent('Подход +0:02')
+    expect(onChange).not.toHaveBeenCalled()
   })
 })

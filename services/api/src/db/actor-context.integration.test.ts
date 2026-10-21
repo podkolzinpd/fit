@@ -85,6 +85,7 @@ import {
   cancelPlannedWorkout,
   confirmLiveSet,
   finishLiveWorkout,
+  setLiveWorkoutPause,
   mergeLiveBlockWithNext,
   recordPlannedWorkoutResult,
   removeLiveSet,
@@ -6643,6 +6644,50 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         )
         expect(cleared.rows).toEqual([{ timer_confirmed: false, fact_duration_sec: 38 }])
         await withActorTransaction(runtimePool, ACTOR_ID, (client) => finishLiveWorkout(client, created.id, started.version, randomUUID()))
+      } finally {
+        await ownerPool.query('delete from public.workouts where id = $1', [created.id])
+      }
+    })
+
+    // YAFIT-627: паузы копятся и вычитаются из длительности; незакрытую паузу закрывает завершение.
+    it('subtracts finished and open Live pauses from the workout duration on finish', async () => {
+      if (ownerPool === undefined || runtimePool === undefined) {
+        throw new Error('Database pools are not ready')
+      }
+      const today = (await ownerPool.query<{ today: string }>(
+        'select app_private.client_today($1)::text as today', [CLIENT_ID],
+      )).rows[0]!.today
+      const plan: PlannedWorkoutDraft = {
+        id: null, clientId: CLIENT_ID, workoutDate: today, startTime: null, endTime: null, notes: 'Проверка паузы',
+        exercises: [{
+          position: 0, source: 'system', ref: 'plank', customExerciseId: null, name: 'Планка',
+          muscleGroup: 'core', inputKind: 'duration', blockId: randomUUID(), blockType: 'single',
+          blockPreset: 'set', blockRounds: 1, restBetweenExercisesSec: 0, restBetweenRoundsSec: 90,
+          restBetweenSetsSec: 30, trainerComment: null,
+          sets: [{ position: 0, weightKg: null, reps: null, durationMin: null, durationSec: 45, distanceKm: null, rpe: null }],
+        }],
+      }
+      const created = await withActorTransaction(runtimePool, ACTOR_ID, (client) => savePlannedWorkout(client, plan, null))
+      try {
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => startLiveWorkout(client, created.id, created.version, randomUUID()))
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => setLiveWorkoutPause(client, created.id, true, randomUUID()))
+        await ownerPool.query("update public.workouts set paused_at = paused_at - interval '120 seconds' where id = $1", [created.id])
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => setLiveWorkoutPause(client, created.id, false, randomUUID()))
+        const pausedAgain = await withActorTransaction(runtimePool, ACTOR_ID, (client) => setLiveWorkoutPause(client, created.id, true, randomUUID()))
+        const reading = await withActorTransaction(runtimePool, ACTOR_ID, readAccessibleTrainingData)
+        const pausedReading = reading.workouts.find((workout) => workout.id === created.id)
+        expect(pausedReading?.pausedSeconds).toBe(120)
+        expect(typeof pausedReading?.pausedAt).toBe('string')
+        await ownerPool.query(
+          "update public.workouts set paused_at = paused_at - interval '60 seconds', started_at = started_at - interval '600 seconds' where id = $1",
+          [created.id],
+        )
+        await withActorTransaction(runtimePool, ACTOR_ID, (client) => finishLiveWorkout(client, created.id, pausedAgain.version, randomUUID()))
+        const finished = await ownerPool.query<{ paused_at: Date | null; paused_seconds: number; actual_duration_sec: number }>(
+          'select paused_at, paused_seconds, actual_duration_sec from public.workouts where id = $1', [created.id],
+        )
+        expect(finished.rows[0]).toMatchObject({ paused_at: null, paused_seconds: 180 })
+        expect(Math.abs(finished.rows[0]!.actual_duration_sec - 420)).toBeLessThanOrEqual(2)
       } finally {
         await ownerPool.query('delete from public.workouts where id = $1', [created.id])
       }

@@ -1,0 +1,147 @@
+/* Independent test-client presentation. Existing Live inputs own their state. */
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density {
+  --client-live-field-height: 54px;
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-compact {
+  --client-live-field-height: 48px;
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density :is(.live-set-grid, .live-set-input, .live-set-check, .live-set-save) {
+  min-height: var(--client-live-field-height);
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-setting .schedule-density-options {
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: var(--lime-surface-raised);
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-setting .schedule-density-options button {
+  min-height: 44px;
+  border-radius: 999px;
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-live-density-setting .schedule-density-options button[aria-checked='true'] {
+  background: var(--lime-accent);
+  color: var(--lime-text-on-accent);
+}
+
+/* Existing trainer Live geometry, themed through current client Lime tokens.
+   These variables never change trainer colours or the shared design contract. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity {
+  --workout-live-bg: var(--lime-bg);
+  --workout-live-card: var(--lime-surface-raised);
+  --workout-live-field: var(--lime-surface-high);
+  --workout-live-surface: var(--lime-surface);
+  --workout-live-text: var(--lime-text);
+  --workout-live-accent: var(--lime-accent-ink);
+  --workout-live-warning: var(--warning-fg);
+}
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-digits { font-family: 'REM', sans-serif; font-variation-settings: normal; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-status { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-status.resting { color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-colon::before { background: currentColor; color: var(--lime-accent-ink); box-shadow: 0 .28em 0 currentColor; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-clock-rest .coach-live-colon::before { color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-rest-trigger > img { background: currentColor; mask: url('../../docs/design/figma-20261008/assets/coach-rest.svg') center / contain no-repeat; object-position: -9999px; }
+/* Keep the approved client animation on the left, never the trainer number
+   handle. With animation off the title gets all the released horizontal space. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head { grid-template-columns: minmax(0, 1fr) 44px; min-height: 0; text-align: left; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head:has(.workout-exercise-header-main) { grid-template-columns: 72px minmax(0, 1fr) 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .workout-exercise-header-main { display: contents; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head :is(.live-header-animation, .exercise-thumbnail) { grid-column: 1; grid-row: 1; width: 72px; height: 72px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head > :is(.workout-exercise-header-copy, .exercise-technique-trigger, h2, h3) { grid-column: 1; grid-row: 1; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .workout-exercise-header-main > :is(.workout-exercise-header-copy, .exercise-technique-trigger, h2, h3) { grid-column: 2; grid-row: 1; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head :is(.exercise-technique-trigger, h2, h3) { text-align: left; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .exercise-head-actions { grid-column: -2; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-upcoming .live-exercise-head { padding: 16px 0 8px; margin: 0; border: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-upcoming { padding: 0 16px 12px; gap: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-upcoming .live-upcoming-row { justify-content: space-between; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-utilities { margin-top: 8px; padding-bottom: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-utilities :is(.live-add-set, .live-exercise-note summary) { height: 44px; min-height: 44px; padding: 0 8px; margin: 0; border: 0; border-radius: 16px; background: transparent; font-size: 14px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set.current :is(.live-set-input, .live-set-rpe) { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-confirm .live-set-check { padding: 12px; font-size: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback:has(.save-status:empty) { display: none; }
+/* The released manual work timer stays inside its original time field. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-time-cell { height: var(--client-live-field-height); border-radius: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-work-timer { height: var(--client-live-field-height); min-height: var(--client-live-field-height); border-radius: 16px; font-size: 16px; font-weight: 400; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-exercise-markers > .current { outline-color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-exercise-markers > .done { background: var(--lime-accent-ink); }
+
+/* Reuse the released workout pause action on the reference clock. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock { appearance: none; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: center; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock.paused { color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-pause { font-family: var(--lime-font); font-size: clamp(48px, 16vw, 64px); line-height: 1.2; font-weight: 500; letter-spacing: 0; }
+
+/* Planning uses the existing reference geometry, with the client's controls
+   and current theme. No new input, coordinator or plan permission is added. */
+.phone-frame.fit-client-lime.client-workout-reference {
+  --workout-editor-bg: var(--lime-bg);
+  --workout-editor-card: var(--lime-surface-raised);
+  --workout-editor-field: var(--lime-surface-high);
+  --workout-editor-surface: var(--lime-surface);
+  --workout-editor-text: var(--lime-text);
+}
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .workout-form-section:first-child { padding: 0 14px 16px; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .compact-editor-exercise-toggle { text-align: left; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .compact-editor-exercise-head:has(.block-reorder) { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .planned-set,
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow .planned-set:has(.planned-set-remove) { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) 44px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .planned-set.rpe-visible,
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow .planned-set.rpe-visible:has(.planned-set-remove) { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) 48px 44px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow .planned-set.rpe-visible:not(:has(.planned-set-remove)) { grid-template-columns: 44px repeat(2, minmax(0, 1fr)) 48px; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .coach-plan-rpe { grid-column: auto; order: 0; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .planned-set-number { min-height: 48px; background: transparent; border: 0; font-size: 13px; font-weight: 400; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .planned-set-remove { width: 44px; min-width: 44px; height: 48px; padding: 10px; border: 0; background: transparent; color: var(--lime-text-secondary); }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .loaded-distance-time { grid-column: 2 / -1; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-list { gap: 2px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise { padding: 16px; margin: 0; border: 0; border-radius: 32px; background: var(--lime-surface-raised); }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-title { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: start; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-title .workout-exercise-header-main { display: contents; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-title :is(.exercise-thumbnail, .exercise-image) { grid-column: 1; grid-row: 1; width: 44px; height: 44px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-title :is(.exercise-technique-trigger, strong) { grid-column: 2; grid-row: 1; padding: 0; margin: 0; text-align: left; font-size: 24px; line-height: 28px; font-weight: 500; overflow-wrap: anywhere; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-title .exercise-head-actions { grid-column: 3; grid-row: 1; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .overflow-trigger:not(.overflow-trigger-text) { width: 44px; height: 44px; min-height: 44px; padding: 10px; border: 0; background: transparent; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .overflow-trigger svg[data-icon='more'] { width: 24px; height: 24px; background: var(--lime-text); mask: url('../../docs/design/figma-20261008/assets/coach-more.svg') center / contain no-repeat; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) .overflow-trigger svg[data-icon='more'] > * { opacity: 0; }
+.phone-frame.fit-client-lime.client-workout-reference .today-text-fallback { border: 0; border-radius: 32px; padding: 16px; background: var(--lime-surface-raised); }
+.phone-frame.fit-client-lime.client-workout-reference .today-text-fallback .workout-composer-card { border: 0; border-radius: 16px; padding: 16px; background: var(--lime-surface-high); }
+.phone-frame.fit-client-lime.client-workout-reference .today-text-fallback .workout-composer-card textarea { min-height: 144px; border-radius: 16px; font-size: 16px; line-height: 22px; }
+
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .workout-editor-footer { flex-wrap: wrap; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .workout-editor-footer .overflow-menu { min-width: 0; max-width: 100%; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form .workout-editor-footer .overflow-trigger-text { width: auto; max-width: 100%; white-space: normal; }
+
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-list { padding: 0; border-radius: 0; background: transparent; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise > p { margin-left: 52px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-flow.client-lime-review .today-exercise-editor > summary { margin-left: 52px; }
+.phone-frame.fit-client-lime.client-workout-reference :is(.client-reference-form, .client-reference-flow) :is(.planned-set-input, .planned-set-rpe):focus-visible:not(:invalid) { outline-color: var(--lime-accent-ink); }
+
+/* Client-only catalogue presentation; selection/search controllers remain unchanged. */
+.client-workout-reference {
+  --workout-catalog-surface: var(--lime-surface);
+  --workout-catalog-card: var(--lime-surface-raised);
+  --workout-catalog-high: var(--lime-surface-high);
+  --workout-catalog-text: var(--lime-text);
+  --workout-catalog-muted: var(--lime-text-secondary);
+  --workout-catalog-placeholder: var(--lime-text-secondary);
+}
+.phone-frame.fit-client-lime.client-workout-reference .exercise-picker.client-reference-catalog { width: min(100%, 430px); gap: 0; padding: 0; background: var(--lime-surface); }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .client-lime-sheet-header { flex-shrink: 0; margin: 0; padding: 16px 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-item:not(.selected) { padding: 0; border: 0; border-radius: 32px; background: var(--lime-surface-raised); }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-item small { font-size: 14px; line-height: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog.client-lime-filters .picker-filter-panel { gap: 0; padding: 0 20px 24px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog.client-lime-filters .picker-search-control { flex-shrink: 0; margin: 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog.client-lime-filters .picker-search-control input { min-height: 48px; padding: 12px 44px 12px 12px; border: 1px solid var(--lime-divider); border-radius: 16px; background: var(--lime-surface-raised); font-size: 16px; line-height: 22px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog.client-lime-filters .picker-filter-label { margin: 28px 0 16px; color: var(--lime-text); font-size: 16px; line-height: 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog.client-lime-filters .picker-filter-strip { gap: 6px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog.client-lime-filters .picker-filter-strip button { min-height: 60px; padding: 20px 24px; border-radius: 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-done { position: static; min-height: 48px; border-radius: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-select-mark { color: var(--lime-text); }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-item.selected .picker-select-mark { color: var(--lime-text-on-accent); }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-trigger { min-height: 44px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-trigger img { filter: none; }
+.phone-frame.fit-client-lime.client-workout-reference.theme-light .client-reference-catalog .picker-filter-trigger img { filter: invert(1); }
+
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .coach-catalog-add:not(:disabled) { color: var(--lime-text-on-accent); }
+.phone-frame.fit-client-lime.client-workout-reference.theme-light .client-reference-catalog.has-selection .coach-catalog-create-floating img { filter: none; }
+
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .client-lime-sheet-header h1 { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .coach-filter-reset { display: block; margin: 0 -20px 24px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-strip button.active { color: var(--lime-text-on-accent); }

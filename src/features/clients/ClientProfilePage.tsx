@@ -1,3 +1,4 @@
+import { ClientLiveDensitySetting } from './ClientLiveDensitySetting'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { setClientLimeThemePreference, useClientLimeTheme } from '../../app/client-lime-theme'
 import { useQuery } from '@tanstack/react-query'
@@ -90,6 +91,7 @@ export function ClientProfileSettingsPage() {
 
     <SettingsSection title="Тренировки">
       <div className="profile-settings">
+        <ClientLiveDensitySetting />
         <Switch label={isClientLimeEnabled(actor) ? 'Анимация в Live' : 'Анимация упражнения'} checked={showLiveExerciseAnimation} onChange={(checked) => setLiveExerciseAnimation(actor.userId, checked)} />
         <Switch label="Ввод времени колёсиком" checked={useTimeWheel} onChange={setWorkoutTimeWheel} />
       </div>

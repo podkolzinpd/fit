@@ -50,7 +50,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, settings }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, settings, pausedAt = null }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -64,12 +64,20 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   onRestExpire?: (deadline: number) => void
   /** Presentation-only pilot: the existing phase/gong/expiry owner remains this subtree. */
   referenceStartedAt?: string | null
+  /** Client presentation follows the existing signed manual-work indicator. */
+  referenceWorkOvertime?: boolean
+  /** Existing workout pause accounting; client presentation only. */
+  referencePausedSeconds?: number
+  onReferencePauseToggle?: () => void
   /** Updates the pilot header only at the rest boundary, not on every tick. */
   onReferenceRestActiveChange?: (active: boolean) => void
   /** Редкие настройки тренировки над временем таймера, чтобы не занимать экран Live. */
   settings?: ReactNode
+  /** Пауза всей тренировки (YAFIT-627): время замирает на этом моменте, ничего не истекает. */
+  pausedAt?: number | null
 }) {
-  const [now, setNow] = useState(Date.now)
+  const [liveNow, setNow] = useState(Date.now)
+  const now = pausedAt ?? liveNow
   const [open, setOpen] = useState(false)
   const [minutes, setMinutes] = useState(1)
   const [seconds, setSeconds] = useState(30)
@@ -108,7 +116,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   }, [referenceStartedAt, tickDeadline])
 
   useEffect(() => {
-    if (tickDeadline === null) return
+    if (tickDeadline === null || pausedAt !== null) return
     const signal = (end: number, returningFromBackground: boolean) => {
       if (notified.current === end || gongWasPlayed(workoutId, end)) return
       notified.current = end
@@ -150,7 +158,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       document.removeEventListener('visibilitychange', wake)
       window.removeEventListener('pageshow', wake)
     }
-  }, [deadline, phase, tickDeadline, workoutId])
+  }, [deadline, phase, tickDeadline, workoutId, pausedAt])
   useEffect(() => () => { if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current) }, [])
 
   useEffect(() => {
@@ -259,15 +267,21 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const sheetTitle = copy?.sheet ?? 'Таймер отдыха'
 
   const reference = referenceStartedAt !== undefined
-  const elapsed = referenceStartedAt ? Math.max(0, Math.floor((now - Date.parse(referenceStartedAt)) / 1000)) : 0
+  const elapsed = referenceStartedAt ? Math.max(0, Math.floor((now - Date.parse(referenceStartedAt)) / 1000) - referencePausedSeconds) : 0
   const bigSeconds = phaseRemaining ?? (active ? signedRemaining : null) ?? elapsed
-  const bigTime = formatReferenceClock(bigSeconds)
+  const bigTime = referenceWorkOvertime && phaseOvertime !== null
+    ? `+${formatReferenceClock(phaseOvertime)}` : formatReferenceClock(bigSeconds)
+  const referencePaused = !!onReferencePauseToggle && pausedAt !== null
+  const referenceClockClass = `coach-live-clock${active && !phase ? ' coach-live-clock-rest' : ''}${referencePaused ? ' paused' : ''}`
+  const referenceClockContent = <>
+    {referencePaused ? <span className="coach-live-pause">Пауза</span> : <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (active ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime.split(':').map((part, index) => <span className="coach-live-digit-group" key={index}>{index > 0 && <span className="coach-live-colon" aria-hidden="true">:</span>}{part}</span>)}</span>}
+    {!referencePaused && (active || phase) ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
+  </>
 
   return <>
-    {reference && <div className={`coach-live-clock${active && !phase ? ' coach-live-clock-rest' : ''}`}>
-      <span className={`coach-live-digits${bigTime.length > 5 ? ' coach-live-digits-long' : ''}`} aria-label={`${copy?.label ?? (active ? 'Отдых' : 'Тренировка')}: ${bigTime}`}>{bigTime.split(':').map((part, index) => <span className="coach-live-digit-group" key={index}>{index > 0 && <span className="coach-live-colon" aria-hidden="true">:</span>}{part}</span>)}</span>
-      {active || phase ? <span className="coach-live-elapsed">Тренировка · {formatReferenceClock(elapsed)}</span> : null}
-    </div>}
+    {reference && (onReferencePauseToggle ? <button type="button" className={`${referenceClockClass} live-timer-toggle`} aria-pressed={referencePaused}
+      aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
+      onClick={onReferencePauseToggle}>{referenceClockContent}</button> : <div className={referenceClockClass}>{referenceClockContent}</div>)}
     <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
       onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}

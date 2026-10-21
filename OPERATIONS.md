@@ -2084,3 +2084,20 @@ content-addressed ZIP, signed manifest и provenance; key задаётся че�
 нужны полный native/CI/device цикл и подтверждение правил RuStore. Согласие на
 обычную web-выкладку само по себе не включает OTA. Никакие production build flags,
 allowlists, CORS/API/БД/старый Yandex-контур из этой подготовки не меняются.
+
+## Client workout reference test pilot (YAFIT-641)
+
+Independent build variables: `VITE_CLIENT_WORKOUT_REDESIGN_ENABLED` (only exact `true`)
+and `VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS` (nonempty, distinct UUID list).
+A missing/invalid list fails closed. The actor must also be a client with Client Lime.
+No trainer/nutrition/global Lime cohort grants access. The owner explicitly approved
+the existing test accounts on20.10.2026; resolve them read-only with
+`Inspect approved client workout test profiles`, then set this feature's own variables
+and rebuild web/native. Do not print UUIDs or cohort contacts.
+All five approved client bindings are required by default. On21.10.2026 the owner explicitly approved launching the four confirmed clients while the one fixed test-client binding is pending. Only this exact exception is available via manual `allow_pending_test_client=true`: the complete five-client login digest is pinned and all four other bindings remain mandatory. A different missing client, smaller subset, invalid/disabled/ambiguous binding or role substitution fails closed. The fifth target remains pending and is included only if its binding becomes valid. Trainer nutrition bindings are optional and never grant client access. Native identity, enabled read-write admission and live client domain records are checked; no identities or admission records are changed. Readiness counts/hashes and resolved IDs stay in separate one-day artifacts; do not print or publish them. Inspection does not enable the pilot: set only its independent variables and rebuild, then verify the actual compiled allowlist and excluded roles/users.
+The resolver reads only existing approved native bindings, writes no identities,
+roles, sessions or rollout assignments, and stores a short-lived private artifact.
+Rollback: set the independent enabled variable to `false` and publish a verified build.
+Changing density does not reset animation preference or data. Client animation defaults
+to on, original density defaults to original; density is stored per client account
+on the device under its own preference key. The common design-code files are unchanged.

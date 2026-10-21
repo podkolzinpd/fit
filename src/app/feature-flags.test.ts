@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   isClientLimePilotEnabled,
+  isClientWorkoutRedesignPilotEnabled,
   isNutritionPilotEnabled,
   getYandexIdPilotConfig,
   getYandexAppSessionEntryConfig,
@@ -449,5 +450,28 @@ describe('single-account client Lime pilot', () => {
     expect(isClientLimePilotEnabled('client-1', false)).toBe(false)
     vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'false')
     expect(isClientLimePilotEnabled('client-1', true)).toBe(false)
+  })
+})
+
+describe('independent client workout reference pilot', () => {
+  const id = 'c11e0000-6010-4000-8000-000000000001'
+  it('requires its own explicit flag and a valid distinct nonempty cohort', () => {
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', id)
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(false)
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(true)
+    expect(isClientWorkoutRedesignPilotEnabled('c11e0000-6010-4000-8000-000000000002')).toBe(false)
+    for (const ids of ['', 'invalid', id + ',' + id]) {
+      vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', ids)
+      expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(false)
+    }
+  })
+  it('cannot inherit Lime, trainer or nutrition access', () => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS', id)
+    vi.stubEnv('VITE_NUTRITION_PILOT_USER_IDS', id)
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    expect(isClientWorkoutRedesignPilotEnabled(id)).toBe(false)
   })
 })
