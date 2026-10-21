@@ -75,9 +75,6 @@ jobs:
           lockbox_version_id=$(jq -er '.current_version.id' <<<"$lockbox")
 
           for required_key in \
-            SUPABASE_URL \
-            SUPABASE_PUBLISHABLE_KEY \
-            SUPABASE_SERVICE_ROLE_KEY \
             YANDEX_CLOUD_API_KEY \
             YANDEX_CLOUD_FOLDER_ID \
             YANDEX_CLOUD_MODEL_ID; do
@@ -112,7 +109,7 @@ jobs:
           set -euo pipefail
           if ! yc serverless function get --name "$SUMMARY_FUNCTION_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
             yc serverless function create "$SUMMARY_FUNCTION_NAME" \
-              --description 'Production Fit training summary, backed by Supabase Auth and data' \
+              --description 'Production Fit training summary via native API' \
               --folder-id "$YC_FOLDER_ID"
           fi
           previous_version_id=$(yc serverless function version get-by-tag \
@@ -129,9 +126,6 @@ jobs:
             --execution-timeout 120s \
             --service-account-id "$SUMMARY_RUNTIME_SA_ID" \
             --source-path .yandex-summary-package \
-            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=SUPABASE_URL,environment-variable=SUPABASE_URL \
-            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=SUPABASE_PUBLISHABLE_KEY,environment-variable=SUPABASE_PUBLISHABLE_KEY \
-            --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=SUPABASE_SERVICE_ROLE_KEY,environment-variable=SUPABASE_SERVICE_ROLE_KEY \
             --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=YANDEX_CLOUD_API_KEY,environment-variable=YANDEX_CLOUD_API_KEY \
             --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=YANDEX_CLOUD_FOLDER_ID,environment-variable=YANDEX_CLOUD_FOLDER_ID \
             --secret id="$SUMMARY_LOCKBOX_ID",version-id="$SUMMARY_LOCKBOX_VERSION_ID",key=YANDEX_CLOUD_MODEL_ID,environment-variable=YANDEX_CLOUD_MODEL_ID \
