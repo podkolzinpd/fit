@@ -541,6 +541,9 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}
         onBack={previewExercise ? closeTechnique : creating ? closeCreate : filtersOpen ? () => closeFilters(true) : onClose}
         disabled={addingSelected}
+        onConfirm={referenceList && (filtersOpen || multiple) ? filtersOpen ? () => closeFilters(true) : () => void addSelected() : undefined}
+        confirmLabel={filtersOpen ? 'Применить фильтры' : 'Добавить выбранные упражнения'}
+        confirmDisabled={addingSelected || !filtersOpen && selected.size === 0}
       /> : referenceList ? <header className="picker-header coach-reference-sheet-header">
         <button type="button" className="picker-close" disabled={addingSelected} aria-label={filtersOpen ? 'Назад к упражнениям' : 'Закрыть'} onClick={filtersOpen ? () => closeFilters(true) : onClose}>{filtersOpen ? <BackIcon /> : <CloseIcon />}</button>
         <h1><span className="coach-catalog-sheet-title">{filtersOpen ? 'Фильтры' : 'Добавить упражнение'}{filtersOpen && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</span></h1>
@@ -629,7 +632,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
         </>}
         {selectionError && <p className="error" role="alert">{selectionError}</p>}
         {referenceAppearance && !filtersOpen && <div className="coach-catalog-create-bar">
-          {multiple && (visibleSelection.size > 0 || showEmptySelection) && <><button type="button" className="link coach-catalog-clear" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button><button type="button" className="primary coach-catalog-add" disabled={addingSelected || selected.size === 0} aria-busy={addingSelected} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить (${visibleSelection.size})`}</button></>}
+          {multiple && (visibleSelection.size > 0 || showEmptySelection && !clientLime) && <><button type="button" className="link coach-catalog-clear" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button><button type="button" className="primary coach-catalog-add" disabled={addingSelected || selected.size === 0} aria-busy={addingSelected} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить (${visibleSelection.size})`}</button></>}
           <button type="button" className="secondary picker-create-action coach-catalog-create-floating" disabled={addingSelected} aria-label="Создать упражнение" onClick={openCreate}><img src={coachWorkoutReferenceAssets.plus} width="24" height="24" alt="" /></button>
         </div>}
         {!referenceAppearance && multiple && (visibleSelection.size > 0 || showEmptySelection) && (!clientLime || !filtersOpen) && <div className="picker-selection-bar"><span className="picker-selection-summary"><span>Выбрано: {visibleSelection.size}</span><button type="button" className="link" disabled={addingSelected || selected.size === 0} onClick={clearSelection}>Очистить</button></span><button type="button" className="primary" disabled={addingSelected || selected.size === 0} onClick={() => void addSelected()}>{addingSelected ? 'Добавляем…' : `Добавить ${visibleSelection.size}`}</button></div>}

@@ -173,3 +173,10 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause[aria-pressed='true'] { color: var(--warning-fg); }
 /* Compact mode keeps its released48px controls; both actions share that size. */
 .phone-frame.fit-lime-shell.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .client-reference-timer-actions > button { height: 48px; min-height: 48px; }
+
+/* Catalog SVG zero-selection state: float Create without reserving a blank
+   action row. The selected-state Add/Clear/Create controls retain their paths. */
+.phone-frame.fit-client-lime.client-workout-reference .exercise-picker.client-reference-catalog { position: relative; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection) .coach-catalog-create-bar { position: absolute; inset: auto 20px max(16px, env(safe-area-inset-bottom)) auto; display: block; min-height: 0; padding: 0; background: transparent; pointer-events: none; z-index: 2; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection) .coach-catalog-create-floating { pointer-events: auto; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection):not(.client-lime-filters) .picker-list { padding-bottom: 96px; scroll-padding-bottom: 96px; }
