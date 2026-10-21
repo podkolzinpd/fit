@@ -47,3 +47,13 @@ REM и матричный gapD01 не изменяются. R02 сохранён
 
 Окончательная проверка:16header+20unit+58связанных browser passed. Lint/types прошли; полный frontend2800 и API1434+186standardDBskip/все политики/build passed после повторения одного постороннего5sparser-timeout с2workers. Квитанция pr4-check-recovery.log,exit0. LLM-код/лимиты тестов не менялись.
 Свежий main/CI и реальная публикация ещё не проверены этим дополнением.
+
+## Интеграция на слитый PR3 — 22.10
+
+База d696aaf5 (#1768), включая исправление первого Delete R07.1.
+После переноса дерево реализации совпало с проверенной предварительной
+интеграцией. Свежие16/16 browser cases верха/паузы прошли; новые снимки
+light compact/dark original просмотрены. Полный npm run check exit0:
+2809frontend,1440API+186 штатных DB skips, lint/types/политики/build.
+Квитанции pr4-fresh-main-browser.log и pr4-fresh-main-check.log.
+Публикация/CI этого PR ещё обязательны; scope по-прежнему четыре профиля.
