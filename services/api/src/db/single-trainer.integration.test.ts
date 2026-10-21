@@ -147,7 +147,7 @@ describe.skipIf(source === undefined)('one active trainer through every connecti
     const client = await pool.connect()
     const [up, down] = (await readFile(new URL('../../db/migrations/000154_planned_workout_active_trainer_access.sql', import.meta.url), 'utf8')).split('-- Down Migration')
     if (!up || !down) throw new Error('Migration sections missing')
-    const snapshot = () => client.query(`select pg_get_functiondef(oid) definition, proacl::text grants
+    const snapshot = () => client.query<{ definition: string; grants: string | null }>(`select pg_get_functiondef(oid) definition, proacl::text grants
       from pg_proc where oid in ('app_private.save_planned_workout_without_title(jsonb,bigint)'::regprocedure,
       'app_private.save_planned_workout_without_cross_partition_snapshots(jsonb,bigint)'::regprocedure) order by oid`)
     try {
