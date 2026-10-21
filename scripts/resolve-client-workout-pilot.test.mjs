@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { clientWorkoutInspectionFailure, resolveClientWorkoutProfiles } from './resolve-client-workout-pilot.mjs'
+import { clientWorkoutInspectionFailure, pendingClientWorkoutLoginHash, resolveClientWorkoutProfiles } from './resolve-client-workout-pilot.mjs'
 
 const cohort = { clients: [1, 2, 3, 4, 5].map(n => String(n).repeat(64)), trainers: [6, 7].map(n => String(n).repeat(64)) }
 const rows = [...cohort.clients, ...cohort.trainers].map((hash, i) => ({ hash, id: `10000000-0000-4000-8000-00000000000${i + 1}`, role: i < 5 ? 'client' : 'trainer', enabled: true }))
@@ -100,4 +100,57 @@ test('private readiness excludes disabled, invalid and ambiguous client records'
       return true
     })
   }
+})
+
+// Only the owner-approved fixed four may start without the one pending binding.
+const approvedClients = ["c04908d54f928f24a1d3d2d53b666a78546a4e0ab6306a250b48863fc463a488","f0afe245c0ed9fd6c2447048feb3b620175e5a887c7a7c50283aba9408139904","6d066220dea64fde80afc931c603074e9984be7c09e3f67c51364006fd146cd8","34652151590409f4c58648511682016a84c0fe05be5dae11e52f585587e952b2","82c7dc46c1fe4e1eadb45b0fd1c26625133eb3813c6a00973d489c5ef3c682f2"]
+const approvedCohort = { clients: approvedClients, trainers: cohort.trainers }
+const approvedRows = [...approvedClients, ...cohort.trainers].map((hash, i) => ({ hash, id: rows[i].id, role: i < 5 ? 'client' : 'trainer', enabled: true }))
+const fourRows = approvedRows.filter(row => row.hash !== pendingClientWorkoutLoginHash)
+const partialOptions = { allowPendingTestClient: true }
+
+test('explicit fixed-four approval does not weaken the default five-client boundary', async () => {
+  await assert.rejects(resolveClientWorkoutProfiles(fixture(fourRows), approvedCohort), /profiles_not_ready/)
+  for (const values of [fourRows.filter(row => row.role === 'client'), fourRows, approvedRows]) {
+    const client = fixture(values)
+    const result = await resolveClientWorkoutProfiles(client, approvedCohort, partialOptions)
+    const clientCount = values.filter(row => row.role === 'client').length
+    assert.equal(result.clientProfileIds.length, clientCount)
+    assert.equal(result.targetClientCount, 5)
+    assert.equal(result.partialAuthorized, true)
+    assert.equal(result.readiness.readyClients, clientCount)
+    assert.deepEqual(result.readiness.missingClientHashes, clientCount === 4 ? [pendingClientWorkoutLoginHash] : [])
+    assert.ok(client.calls.every(call => !/insert|update|delete|alter|create|drop/i.test(call.sql)))
+    assert.equal(client.calls.at(-1).sql, 'commit')
+  }
+})
+
+test('fixed-four approval rejects every other missing target, invalid binding and smaller subset', async () => {
+  for (const required of approvedClients.filter(hash => hash !== pendingClientWorkoutLoginHash)) {
+    const absent = fourRows.filter(row => row.hash !== required)
+    const fiveMissingOther = approvedRows.filter(row => row.hash !== required)
+    const disabled = fourRows.map(row => row.hash === required ? { ...row, enabled: false } : row)
+    const invalid = fourRows.map(row => row.hash === required ? { ...row, id: 'invalid' } : row)
+    const wrongRole = fourRows.map(row => row.hash === required ? { ...row, role: 'trainer' } : row)
+    for (const values of [absent, fiveMissingOther, disabled, invalid, wrongRole]) {
+      const client = fixture(values)
+      await assert.rejects(resolveClientWorkoutProfiles(client, approvedCohort, partialOptions), /profiles_not_ready/)
+      assert.equal(client.calls.at(-1).sql, 'rollback')
+    }
+  }
+  for (const values of [[...fourRows, fourRows[0]], fourRows.map((row, i) => i ? row : { ...row, hash: 'f'.repeat(64) }), approvedRows.map(row => row.hash === pendingClientWorkoutLoginHash ? { ...row, enabled: false } : row)]) {
+    await assert.rejects(resolveClientWorkoutProfiles(fixture(values), approvedCohort, partialOptions), /profiles_not_ready/)
+  }
+})
+
+test('partial mode requires the exact approved login set and explicit boolean input', async () => {
+  for (const [value, options] of [[cohort, partialOptions], [{ ...approvedCohort, clients: [...approvedClients.slice(1), 'f'.repeat(64)] }, partialOptions], [approvedCohort, { allowPendingTestClient: 'true' }]]) {
+    const client = fixture()
+    await assert.rejects(resolveClientWorkoutProfiles(client, value, options), /cohort_rejected/)
+    assert.equal(client.calls.length, 0)
+  }
+  const workflow = readFileSync(new URL('../.github/workflows/inspect-client-workout-pilot.yml', import.meta.url), 'utf8')
+  assert.match(workflow, /allow_pending_test_client:[\s\S]*type: boolean\n\s+default: false/)
+  assert.match(workflow, /CLIENT_WORKOUT_ALLOW_PENDING_TEST_CLIENT: \$\{\{ inputs\.allow_pending_test_client == true/)
+  assert.match(workflow, /printf 'CLIENT_WORKOUT_ALLOW_PENDING_TEST_CLIENT=%s/)
 })
