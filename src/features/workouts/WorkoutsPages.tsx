@@ -4308,9 +4308,10 @@ export function LiveWorkoutPage() {
             // упражнения сжимаются в итог (тап открывает их исключительно для
             // исправления факта), а будущие не показывают таблицу и RPE раньше
             // времени. Это presentation-only: порядок, факт и RPC не меняются.
-            // Только что завершённое упражнение остаётся раскрытым на отдыхе после
-            // него, а начатая правка подхода не схлопывается по концу отдыха.
-            const justCompleted = exercise.id === recentExerciseId && restEndsAt !== null
+            // The client pilot folds a completed card independently of the rest
+            // deadline: manual rest deliberately remains present past zero.
+            // Explicitly reopened results and ongoing edits stay expanded.
+            const justCompleted = !clientReference && exercise.id === recentExerciseId && restEndsAt !== null
             const editing = exercise.sets.some((set) => editingSets.has(set.id))
             const collapsed = allDone && !expandedExercises.has(exercise.id) && !justCompleted && !editing
             if (collapsed) {

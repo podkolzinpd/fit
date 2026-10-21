@@ -5,6 +5,67 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const animation of [false, true]) test(`client completed cards stay compact ${theme} ${density} animation-${animation}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density, animation }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, String(animation))
+  }, { id: pilotId, theme, density, animation })
+  const source = coachGestureWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  source.exercises[0]!.ref = 'barbell-squat'
+  source.exercises[1]!.name = 'Жим гантелей на наклонной скамье с длинным названием упражнения'
+  for (const exercise of source.exercises) for (const set of exercise.sets) {
+    set.confirmedAt = new Date(Date.now() - 60000).toISOString(); set.fact = { weightKg: 30, reps: 10 }
+  }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.workout-exercise-compact')).toHaveCount(3)
+    const geometry = await page.locator('.live-completed-gesture-head').first().evaluate(card => {
+      const button = card.querySelector('.workout-exercise-compact')!, copy = card.querySelector('.workout-exercise-compact-copy')!
+      const thumb = card.querySelector('.exercise-thumbnail'), menu = card.querySelector('.overflow-trigger')!
+      const b = button.getBoundingClientRect(), c = copy.getBoundingClientRect(), m = menu.getBoundingClientRect(), t = thumb?.getBoundingClientRect()
+      return { height: card.getBoundingClientRect().height, copyX: c.x, buttonX: b.x, copyRight: c.right, menuX: m.x, thumbRight: t?.right }
+    })
+    expect(geometry.height).toBeLessThan(140)
+    expect(geometry.copyRight).toBeLessThanOrEqual(geometry.menuX)
+    if (animation) expect(geometry.thumbRight).toBeLessThan(geometry.copyX)
+    else expect(geometry.copyX).toBe(geometry.buttonX)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`completed-${width}.png`) })
+  }
+})
+
+for (const density of ['original', 'compact']) test(`client folds completed exercise without stopping overdue rest ${density}`, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  await page.addInitScript(({ id, density }) => localStorage.setItem(`fit.clientLiveDensity.${id}`, density), { id: pilotId, density })
+  const source = coachGestureWorkout()
+  source.startedAt = '2026-10-21T08:58:00Z'
+  const exercise = source.exercises[0]!
+  exercise.restBetweenExercisesSec = 2
+  exercise.restBetweenSetsSec = 2
+  exercise.sets[0]!.confirmedAt = '2026-10-21T08:59:00Z'
+  exercise.sets[0]!.fact = { weightKg: 20, reps: 10 }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('form[data-live-set-id]').nth(1).getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  const compact = page.locator('.workout-exercise-compact').first()
+  await expect(compact).toBeVisible()
+  await page.clock.fastForward(4000)
+  await expect(compact).toBeVisible()
+  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+  await compact.click()
+  const row = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
+  await row.getByLabel('Фактический вес', { exact: true }).fill('35')
+  await row.getByLabel('Фактический вес', { exact: true }).blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
+  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
+})
+
 async function modelKeyboard(page: Page) {
   await page.addInitScript(() => {
     const state = window as typeof window & { fitTestKeyboardHeight?: number }
