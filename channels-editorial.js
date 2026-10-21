@@ -15,12 +15,12 @@ window.FIT_CHANNELS = {
       ['Спортивные события','Тренировки, челленджи, мероприятия']
     ])+`<div class="ce-visual ce-club"><img src="assets/editorial/club-dumbbell.png" alt="Клубная карта FIT, Плюс и гантель"><div class="ce-offer"><strong>0 ₽</strong><h3>Вступление с Плюсом</h3><p>Предложение · условия согласуем</p></div></div>`;
     value.innerHTML=header('08 · ЦЕННОСТЬ ДЛЯ ЯНДЕКСА','Что FIT даёт Яндексу')+rows([
-      ['Мессенджер · Телемост','Общение и видеотренировки'],
-      ['Pay · Сплит','Оплата занятий и пакетов'],
-      ['Бенефит для компаний','Спорт для сотрудников и команд'],
-      ['Директ','Продвижение услуг тренеров'],
-      ['Лавка · Еда · Маркет','Заказы питания и инвентаря']
-    ])+`<div class="ce-visual ce-scenarios"><figure><img src="assets/editorial/video-barefoot-v2.png" alt="Спортсменка тренируется дома босиком, тренер наблюдает из зала"><figcaption>Видеотренировка</figcaption></figure><div class="ce-order"><h3>От рекомендаций — к заказу</h3><div class="ce-services"><div><img src="assets/editorial/lavka.png" alt="Яндекс Лавка"><h4>Лавка</h4><p>Продукты</p></div><div><img src="assets/editorial/eda.ico" alt="Яндекс Еда"><h4>Еда</h4><p>Готовые блюда</p></div><div><img src="assets/editorial/market.png" alt="Яндекс Маркет"><h4>Маркет</h4><p>Спортивный<br>инвентарь</p></div></div></div></div>`;
+      ['Мессенджер · Телемост','Новые сценарии общения и видеотренировок'],
+      ['Pay · Сплит','Платежи за занятия и пакеты'],
+      ['Бенефит для компаний','Спортивный сервис для сотрудников'],
+      ['Директ','Тренеры как рекламодатели'],
+      ['Лавка · Еда · Маркет','Заказы из рекомендаций FIT']
+    ])+`<div class="ce-visual ce-scenarios"><figure class="ce-laptop"><div class="ce-laptop-display"><div class="ce-camera"></div><div class="ce-call"><img src="assets/editorial/video-barefoot-v2.png" alt="Спортсменка тренируется дома босиком, тренер наблюдает из зала"><div class="ce-call-bar"><span>Видеотренировка</span><div class="ce-call-controls" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-4 0h8"/></svg><svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></svg><span class="ce-hangup"><svg viewBox="0 0 24 24"><path d="M4 14v-3q8-7 16 0v3l-5-1v-3M9 10v3l-5 1"/></svg></span></div></div></div></div><div class="ce-laptop-base"></div></figure><div class="ce-order"><h3>От рекомендаций — к заказу</h3><div class="ce-services"><div><img src="assets/editorial/lavka.png" alt="Яндекс Лавка"><h4>Лавка</h4><p>Продукты</p></div><div><img src="assets/editorial/eda.ico" alt="Яндекс Еда"><h4>Еда</h4><p>Готовые блюда</p></div><div><img src="assets/editorial/market.png" alt="Яндекс Маркет"><h4>Маркет</h4><p>Спортивный<br>инвентарь</p></div></div></div></div>`;
     value.dataset.notes += ' Предлагаемые интеграции: концепции сценариев, не заявление об уже запущенных интеграциях. Заказ подтверждает пользователь.';
     const events=document.createElement('section');
     events.className='slide ce-slide ce-events';
