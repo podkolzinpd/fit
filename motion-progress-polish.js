@@ -29,7 +29,7 @@
   const animations = new Set();
   // Presenter stops, mapped to the existing scene vocabulary. No duplicate final
   // overview stops; numbers, source diagrams and the moving object stay intact.
-  const timeline = [[1],Array.from({length:14},(_,i)=>i),[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
+  const timeline = [[1],Array.from({length:window.FIT_PROBLEMS.titles.length},(_,i)=>i),[3,7],[0,1],[1,2,3,4],[0],[2,4],[0,4],[0,4],[0,1,2]];
   timeline.splice(5,1,...clientStories.map(story=>story.stops||[0,1,2]));
   if(fin124)timeline.splice(timeline.length-1,1,...fin124.stops.map(n=>[...Array(n).keys()]));
   extraSlides.forEach(i=>timeline.splice(i,0,[0]));

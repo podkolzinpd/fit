@@ -1,17 +1,15 @@
-/* Approved opening: fourteen reversible presenter stops; no market figures. */
+/* Approved opening: seven athlete and four trainer presenter stops. */
 window.FIT_PROBLEMS = (() => {
   const titles = [
     'Хочу заниматься. Не знаю, с чего начать','Как найти подходящего тренера?',
     'Сколько было килограммов и подходов?','План есть. Но сегодня всё иначе',
     'Тренируюсь. А что изменилось?','План, питание и результаты — в разных местах',
     'Пропустил тренировку. Потом ещё одну',
-    'Тренировать умею. Клиентов нужно искать','Занятие длится час. Работа — не только в зале',
-    'Что делали в прошлый раз? Ищу в переписке','Один перенёс, другой отменил. Собираю расписание заново',
-    'Занятие провёл. Об оплате снова напоминаю','Программу отправил. Как прошла тренировка — не знаю',
-    'Клиентов больше. На каждого — меньше времени'
+    'Сложно найти клиентов и показать свою квалификацию','Время на подготовку',
+    'Что делали в прошлый раз? Ищу в переписке','Переносы, оплаты и сообщения — всё вручную'
   ];
   const short = ['Не знаю, с чего начать','Сложно найти тренера','Не помню веса и подходы','План не подходит','Не вижу результата','Всё разбросано','Теряю регулярность',
-    'Сложно найти клиентов','Много времени на подготовку','История теряется в переписке','Постоянные переносы','Напоминаю об оплате','Не хватает обратной связи','Не успеваю ответить всем'];
+    'Поиск клиентов и доверие','Время на подготовку','История теряется в переписке','Переносы, оплаты и сообщения'];
   const sources=['athlete-1','athlete-2','trainer-1','trainer-2'];
   // Decode even hidden scenes before allowing an empty photo to enter the stage.
   const ready=Promise.all(sources.map(name=>{const img=new Image();img.src='assets/problems-'+name+'.png';return img.decode();}));
@@ -32,10 +30,10 @@ window.FIT_PROBLEMS = (() => {
         ? [1024,1536,local%2?536:32,local<2?(group==='athlete'?96:92):(group==='athlete'?797:806),457,local<2?(group==='athlete'?504:550):(group==='athlete'?532:522)]
         : [1774,887,30+(local-4)*584,98,545,group==='athlete'?581:534];
       const [w,h,x,y,cw,ch]=box;
-      const card=document.createElement('article');card.className='ps-card';
+      const card=document.createElement('article');card.className='ps-card'+(group==='trainer'?' ps-trainer-card':'');
       const photo=document.createElement('div');photo.className='ps-photo';
       const crop=document.createElement('div');crop.className='ps-crop';
-      crop.style.width=Math.min(484,452*cw/ch)+'px';
+      crop.style.width=Math.min(484,(group==='trainer'?400:452)*cw/ch)+'px';
       crop.style.aspectRatio=cw+'/'+ch;
       crop.style.backgroundImage='url(assets/problems-'+group+'-'+sheet+'.png)';
       crop.style.backgroundSize=(w/cw*100)+'% '+(h/ch*100)+'%';
@@ -44,6 +42,11 @@ window.FIT_PROBLEMS = (() => {
       const caption=document.createElement('div');caption.className='ps-caption';
       caption.innerHTML='<span>0'+(local+1)+'</span><h3></h3>';
       caption.querySelector('h3').textContent=title;
+      if(i===7){
+        const detail=document.createElement('p');
+        detail.textContent='Новому клиенту нужны подтверждение квалификации, рейтинг и отзывы.';
+        caption.append(detail);
+      }
       card.append(photo,caption);root.querySelector('.ps-cards').append(card);return card;
     });
     render(0,false);
@@ -53,7 +56,7 @@ window.FIT_PROBLEMS = (() => {
     root.classList.toggle('ps-animate',motion);
     heading.textContent=group?'Хочу тренировать. Что отнимает время?':'Хочу заниматься. Что мешает?';
     chapter.textContent=group?'ТРЕНЕР':'СПОРТСМЕН';
-    counter.textContent=(group?'Тренер':'Спортсмен')+' · '+(local+1)+' из 7';
+    counter.textContent=(group?'Тренер':'Спортсмен')+' · '+(local+1)+' из '+(group?4:7);
     rail.replaceChildren();
     for(let j=0;j<=local;j++){
       const li=document.createElement('li');li.className=j===local?'ps-current':'';
