@@ -82,6 +82,9 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
     id, title: 'Ноги и корпус', version: 1, createdAt: '2026-10-21T08:00:00Z', exercises: [exercise],
   }
   let editAttempts = 0, deleteAttempts = 0, loadError = false, historyError = true, renameConflict = true
+  let editorConflict = false, favoriteReads = 0
+  let recoveryReadMode: 'normal' | 'error' | 'missing' | 'pending' = 'normal'
+  let releaseFavoriteRead: (() => void) | undefined
   const updates: unknown[] = []
   await page.route('https://stage.example.test/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname
@@ -99,11 +102,20 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
     if (path === '/v1/training-data' && !historyError) return route.fulfill({ json: {
       accessMode: 'read_only', customExercises: [], attention: [], attentionPreferences: [], hasMoreWorkouts: false, totalWorkouts: 0, workouts: [],
     } })
-    if (path === '/v1/favorite-workouts') return route.fulfill(loadError
-      ? { status: 503, json: { error: 'database_unavailable' } } : { json: { favorites: favorite ? [favorite] : [] } })
+    if (path === '/v1/favorite-workouts') {
+      favoriteReads++
+      if (recoveryReadMode === 'pending') await new Promise<void>(resolve => { releaseFavoriteRead = resolve })
+      return route.fulfill(loadError || recoveryReadMode === 'error'
+        ? { status: 503, json: { error: 'database_unavailable' } } : { json: { favorites: favorite && recoveryReadMode !== 'missing' ? [favorite] : [] } })
+    }
     if (path === `/v1/favorite-workouts/${id}` && request.method() === 'PUT') {
       const command = z.object({ expectedVersion: z.number(), title: z.string(), exercises: z.array(z.record(z.string(), z.unknown())).optional() }).parse(request.postDataJSON())
       updates.push(command)
+      if (command.exercises && editorConflict) {
+        editorConflict = false
+        favorite!.version++
+        return route.fulfill({ status: 409, json: { error: 'version_conflict' } })
+      }
       if (!command.exercises && renameConflict) {
         renameConflict = false
         favorite!.version++
@@ -217,6 +229,63 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
   await expect(card).toContainText('Моя силовая')
   expect(editAttempts).toBe(2)
+  // Recovery must read before discarding this editor's input, including 503/missing.
+  await card.getByRole('button', { name: 'Действия с тренировкой Моя силовая' }).click()
+  await page.getByRole('menuitem', { name: 'Редактировать', exact: true }).click()
+  await page.getByLabel('Название', { exact: true }).fill('Черновик для восстановления')
+  const editDraftKey = `fit.favorite-workout-edit.${actorId}.${id}`
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), editDraftKey)).toContain('Черновик для восстановления')
+  editorConflict = true
+  await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
+  const recover = page.getByRole('button', { name: 'Загрузить текущую версию', exact: true })
+  await expect(recover).toBeVisible()
+  const retainedEditorDraft = await page.evaluate(key => localStorage.getItem(key), editDraftKey)
+  const writesBeforeRecovery = updates.length, readsBeforeCancel = favoriteReads
+  await recover.click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  expect(favoriteReads).toBe(readsBeforeCancel)
+  expect(await page.evaluate(key => localStorage.getItem(key), editDraftKey)).toBe(retainedEditorDraft)
+  for (const failure of ['error', 'missing'] as const) {
+    recoveryReadMode = failure
+    await recover.click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Загрузить', exact: true }).click()
+    await expect(page.getByRole('alert')).toContainText(failure === 'error' ? 'Не удалось загрузить актуальную версию' : 'Тренировка больше недоступна')
+    await expect(page.getByLabel('Название', { exact: true })).toHaveValue('Черновик для восстановления')
+    expect(await page.evaluate(key => localStorage.getItem(key), editDraftKey)).toBe(retainedEditorDraft)
+    expect(updates).toHaveLength(writesBeforeRecovery)
+  }
+  favorite!.title = 'Серверная версия'
+  favorite!.exercises = [{ ...exercise, sets: [{ ...exercise.sets[0]!, weightKg: 80, reps: 12 }] }]
+  recoveryReadMode = 'pending'
+  let reloadNavigations = 0
+  const countReload = () => { reloadNavigations++ }
+  page.on('framenavigated', countReload)
+  const readsBeforePending = favoriteReads
+  await recover.click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Загрузить', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Загружаем…', exact: true })).toBeDisabled()
+  await expect(page.getByLabel('Название', { exact: true })).toBeDisabled()
+  expect(await page.evaluate(key => localStorage.getItem(key), editDraftKey)).toBe(retainedEditorDraft)
+  await page.locator('form.workout-form').evaluate(form => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(favoriteReads).toBe(readsBeforePending + 1)
+  expect(updates).toHaveLength(writesBeforeRecovery)
+  recoveryReadMode = 'normal'
+  releaseFavoriteRead?.()
+  await expect(page.getByLabel('Название', { exact: true })).toHaveValue('Серверная версия')
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), editDraftKey)).toBeNull()
+  expect(reloadNavigations).toBe(0)
+  page.off('framenavigated', countReload)
+  await expect(page.getByRole('button', { name: 'Сохранить изменения', exact: true })).toBeDisabled()
+  expect(updates).toHaveLength(writesBeforeRecovery)
+  await page.locator('.compact-editor-exercise-toggle').first().click()
+  await expect(page.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('80')
+  await page.getByLabel('Вес, подход 1', { exact: true }).fill('65')
+  await page.getByLabel('Повторы, подход 1', { exact: true }).fill('10')
+  await page.getByLabel('Название', { exact: true }).fill('Моя силовая')
+  const recoveredVersion = favorite!.version
+  await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
+  await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
+  expect(updates.at(-1)).toMatchObject({ expectedVersion: recoveredVersion, title: 'Моя силовая' })
   favorite!.title = 'СиловаяТренировкаБезПробелов'.repeat(4)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 932 })
