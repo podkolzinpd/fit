@@ -86,13 +86,11 @@ test('client always has a preset workout tab on My Workouts, before and after th
   await expect(page.getByRole('tab', { name: 'История' })).toBeVisible()
   await page.getByRole('tab', { name: 'Готовые тренировки' }).click()
   await expect(page).toHaveURL(/\/me\/workouts\?tab=presets$/)
-  await page.getByRole('article').filter({ hasText: 'Всё тело без инвентаря' }).getByRole('button', { name: 'Выбрать' }).click()
-  await expect(page).toHaveURL(/\/me$/)
-  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible()
-  await expect(page.getByText('Распознано: 5')).toBeVisible()
+  await page.getByRole('article').filter({ hasText: 'Всё тело без инвентаря' }).getByRole('button', { name: 'Запланировать' }).click()
+  await expect(page).toHaveURL(/\/workouts\/new\?preset=full-body-no-equipment$/)
+  await expect(page.locator('.planned-exercise')).toHaveCount(5)
 
-  await page.getByRole('button', { name: 'Далее' }).click()
-  await page.getByRole('button', { name: 'Записать выполненную' }).click()
+  await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
   await page.getByRole('button', { name: 'Записать тренировку' }).click()
   await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
 

@@ -134,7 +134,10 @@ test('Figma workout Coach plan input never leaks into a third Lime trainer', asy
   await expect(page.locator('.coach-schedule-toolbar')).toHaveCount(0)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Вид и фильтры расписания' })).toHaveCount(0)
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'История — в списке' })).toHaveCount(1)
+  await expect(page.locator('.coachmark-bubble')).toHaveCount(1)
+  await page.locator('.coachmark-bubble').filter({ hasText: 'История — в списке' }).getByRole('button', { name: 'Понятно', exact: true }).click()
   await expect(page.locator('.coachmark-bubble').filter({ hasText: 'Только ваши занятия' })).toHaveCount(1)
+  await expect(page.locator('.coachmark-bubble')).toHaveCount(1)
   await page.goto('/today?date=2026-09-24')
   await expect(page.locator('.schedule-day-view')).toBeVisible()
   await expect(page.locator('.coach-day-swipe, .coach-day-heading')).toHaveCount(0)
@@ -208,7 +211,7 @@ test('Figma workout Coach refined plan retains RPE inside supersets and after sp
 test('Figma workout Coach Live density setting persists for the second pilot only', async ({ page }) => {
   const pilot = 'c0ac0000-6010-4000-8000-000000000002'
   await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
-  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()], unseenCoachmarks: ['live-timer-2026-09', 'coach-live-finish-top-2026-10', 'coach-live-set-swipe-2026-10-16'] })
   await page.goto('/profile/settings')
   const group = page.getByRole('radiogroup', { name: 'Вид Live-тренировки', exact: true })
   const animation = page.getByRole('switch', { name: 'Анимация упражнения', exact: true })
@@ -244,6 +247,9 @@ test('Figma workout Coach Live density setting persists for the second pilot onl
   }, pilot)).toBe(true)
   expect(await page.evaluate(() => localStorage.getItem('fit.coachmarks-seen.c0ac0000-6010-4000-8000-000000000001'))).toBeNull()
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  // Density persistence starts after the preceding confirmation has reached
+  // the fixture, not just after the optimistic rest deadline was displayed.
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
   const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
   expect(deadline).not.toBeNull()
   await page.goto('/profile/settings')

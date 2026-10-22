@@ -217,7 +217,7 @@ export function MyWorkoutsPage() {
                 <div className="favorite-workout-card-actions"><button type="button" className="secondary" disabled={removeFavorite.isPending} onClick={() => navigate(`/workouts/new?favorite=${favorite.id}`)}>Запланировать</button></div>
               </article>)}
             </div>
-            {favorites.data.length >= 10 && <p className="muted favorite-workouts-limit-note">Сохранено {favorites.data.length} при лимите 10 — чтобы добавить новую, удалите одну.</p>}
+            {favorites.data.length >= 10 && <p className="muted favorite-workouts-limit-note">Сохранено {favorites.data.length} при лимите 10 — чтобы добавить новую, освободите место.</p>}
           </> : <div className="favorite-workouts-empty"><p className="muted">Пока нет сохранённых тренировок.</p><button type="button" className="link" onClick={() => setWorkoutsView('history')}>Открыть историю</button></div>}
           </AsyncView>
           {removeFavorite.error && <div className="favorite-workouts-error"><InlineRequestError error={removeFavorite.error} /><button type="button" className="secondary" disabled={removeFavorite.isPending} onClick={() => { if (removeFavorite.variables) removeFavorite.mutate(removeFavorite.variables) }}>Повторить удаление</button></div>}
