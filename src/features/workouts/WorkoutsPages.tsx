@@ -2732,6 +2732,7 @@ export function LiveWorkoutPage() {
   const advanceAfterConfirm = useRef<string | null>(null)
   const coachReference = isCoachWorkoutRedesignEnabled(actor)
   const visualReference = coachReference || clientReference
+  const liveSwipeEnabled = coachReference || clientReference
   const liveDrag = coachReference || clientLime
   const densityEnabled = isCoachLiveDensityEnabled(actor)
   const haloRef = useCoachLiveHalo(densityEnabled || clientReference)
@@ -3032,7 +3033,7 @@ export function LiveWorkoutPage() {
     if (savedDraft && pendingDraft && !sameLiveSetDraft(pendingDraft, savedDraft)) return
     // A blur autosave is not an acknowledgement of the requested confirmation.
     // Keep the pilot's draft available for the existing network retry until confirmed.
-    if (coachReference && !confirmationComplete && pendingSetConfirmations.current.has(setId)) return
+    if (visualReference && !confirmationComplete && pendingSetConfirmations.current.has(setId)) return
     pendingSetDrafts.current.delete(setId)
     if (actor?.userId) {
       removePendingLiveSetDraft(actor.userId, workoutId, setId)
@@ -3478,7 +3479,7 @@ export function LiveWorkoutPage() {
     onSuccess: async () => { setLastAddedRound(null); await query.refetch() },
   })
   const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => {
-    if (coachReference) {
+    if (liveSwipeEnabled) {
       const reason = coachLiveSetRemovalError(queryClient.getQueryData<Workout>(['workout', workoutId]) ?? workout, setId)
       if (reason) return Promise.reject(new Error(reason))
     }
@@ -3505,7 +3506,7 @@ export function LiveWorkoutPage() {
     onSuccess: async (_version, exercise) => {
       for (const set of exercise.sets) acknowledgeLiveDraft(set.id, undefined, true)
       setExpandedSetId(null)
-      if (!coachReference || exercise.id === restContextExerciseId || exercise.id === recentExerciseId) stopRest()
+      if (!liveSwipeEnabled || exercise.id === restContextExerciseId || exercise.id === recentExerciseId) stopRest()
       await query.refetch()
       void invalidateWorkoutResults(queryClient)
       void queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -3807,15 +3808,15 @@ export function LiveWorkoutPage() {
   }
   const liveSyncError = save.error ?? confirm.error
   const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? moveLiveBlock.error ?? mergeBlock.error ?? splitSuperset.error ?? replaceLive.error ?? commentLive.error ?? finish.error
-  const removalRetryReason = coachReference && removeSet.isError && removeSet.variables ? coachLiveSetRemovalError(query.data, removeSet.variables) : null
+  const removalRetryReason = liveSwipeEnabled && removeSet.isError && removeSet.variables ? coachLiveSetRemovalError(query.data, removeSet.variables) : null
   const gestureDisabled = rootMutationPending || save.isPending || confirm.isPending || Boolean(pendingMove.current)
   async function deleteLiveExercise(exercise: WorkoutExerciseModel) {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
   }
   function swipeLive(exercise: WorkoutExerciseModel, content: ReactNode, key = exercise.id) {
-    return coachReference ? <WorkoutSwipe key={key} id={key} disabled={gestureDisabled}
+    return liveSwipeEnabled ? <WorkoutSwipe key={key} id={key} disabled={gestureDisabled} swipeFromCardButton={clientReference}
       onDelete={() => { void deleteLiveExercise(exercise) }}
-      onReplace={() => { setReplaceExerciseId(exercise.id); setPickerOpen(true) }}>{content}</WorkoutSwipe> : content
+      onReplace={coachReference ? () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } : undefined}>{content}</WorkoutSwipe> : content
   }
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name) {
@@ -3931,14 +3932,14 @@ export function LiveWorkoutPage() {
     // восстановленные defaultValue.
     const recoveryKey = recoveredFormIds.has(set.id) ? 'recovered' : 'stable'
     const validationError = validationErrorSetIds.has(set.id)
-    const swipeSet = (content: ReactNode) => coachReference && canManageLiveStructure
+    const swipeSet = (content: ReactNode) => liveSwipeEnabled && canManageLiveStructure
       ? <WorkoutSwipe id={`set:${set.id}`} variant="set" swipeFromFields
           disabled={Boolean(set.confirmedAt) || !roundRemoval && (exercise.blockType !== 'single' || exercise.sets.length <= 1) || gestureDisabled}
           actionLabel={roundRemoval?.label ?? `Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`}
           onDelete={() => roundRemoval ? roundRemoval.remove() : void requestRemoveLiveSet(exercise, set)}>{content}</WorkoutSwipe>
       : content
     return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
-      if (coachReference && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
+      if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
       if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) {
@@ -3951,11 +3952,11 @@ export function LiveWorkoutPage() {
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
       // A utility action is not an edited metric. Closing its confirmation must
       // never turn untouched plan placeholders into a saved Live result.
-      if (coachReference && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
+      if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
       if (set.confirmedAt && !isEditing && !directLiveInput) return
       if (skipBlurForSet.current === set.id) { skipBlurForSet.current = null; return }
       if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
-      if (coachReference && !liveFormChanged(event.currentTarget) && !localSetDrafts.has(set.id)) return
+      if (liveSwipeEnabled && !liveFormChanged(event.currentTarget) && !localSetDrafts.has(set.id)) return
       if (!liveDistanceIsValid(event.currentTarget)) { liveSetAutosave.clear(set.id); return }
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
@@ -4254,10 +4255,10 @@ export function LiveWorkoutPage() {
         <><div ref={haloRef} className={`live-pinned${query.data.exercises.length === 0 ? ' live-pinned-empty' : ''}`}>
           <div className="live-timer-toolbar">{!visualReference && <WorkoutTimer startedAt={query.data.startedAt ?? null} pausedAt={livePausedAt} pausedSeconds={query.data.pausedSeconds ?? 0}
               onToggle={canPauseWorkout ? () => setWorkoutPaused(livePausedAt === null) : undefined} />}
-            <Coachmark id={clientReference ? 'client-live-reference-timer-2026-10' : coachReference ? 'live-timer-2026-09' : timerLeads ? 'live-timer-mode-pause-2026-10' : 'live-timer-pause-2026-10'} userId={actor?.userId} title={visualReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={clientReference ? `${timerLeads ? 'Подходы со временем идут по таймеру. Удержание открывает настройки.' : 'Галочка подхода включает отдых.'} Удерживайте карточку для переноса. Галочка вверху завершает тренировку. Нажатие на часы тренировки ставит её на паузу.` : coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому. Нажатие на часы тренировки ставит её на паузу.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру. Нажатие на часы тренировки ставит её на паузу.'}>
+            <Coachmark id={clientReference ? 'client-live-reference-timer-2026-10' : coachReference ? 'live-timer-2026-09' : timerLeads ? 'live-timer-mode-pause-2026-10' : 'live-timer-pause-2026-10'} userId={actor?.userId} title={visualReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={clientReference ? `${timerLeads ? 'Подходы со временем идут по таймеру. Удержание открывает настройки.' : 'Галочка подхода включает отдых.'} Удерживайте карточку для переноса. Галочка вверху завершает тренировку. Кнопка «Пауза» приостанавливает тренировку.` : coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому. Нажатие на часы тренировки ставит её на паузу.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру. Нажатие на часы тренировки ставит её на паузу.'}>
               <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
+                referenceActions={clientReference} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
                 referencePausedSeconds={clientReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={clientReference && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
                   {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}
@@ -4424,7 +4425,7 @@ export function LiveWorkoutPage() {
               {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {showNote && liveTrainerNote(exercise)}
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt,
-                coachReference && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
+                liveSwipeEnabled && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
                   ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
                   : undefined)}
               {showNote && liveCommentField(exercise, displayName)}
@@ -4435,14 +4436,14 @@ export function LiveWorkoutPage() {
         const content = renderBlock()
         return liveDrag ? <WorkoutDragBlock key={block.blockId} id={block.blockId} holdToDrag={clientLime && canManageLiveStructure && !reordering} label={block.exercises.map((exercise) => exercise.name).join(', ')}>{content}</WorkoutDragBlock> : content
       })
-        return liveDrag ? <>{clientLime && canManageLiveStructure && liveBlocks.length > 1 && <Coachmark id="client-live-card-drag-2026-10" userId={actor?.userId} title="Меняйте порядок упражнений" description="Удерживайте карточку за название или свободное место, затем перетащите. Поля и кнопки работают как обычно. В меню также есть «Изменить порядок»."><span className="sr-only">Перенос карточек</span></Coachmark>}<WorkoutGestureList nativeSwipe={coachReference} blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled} holdCards={clientLime}
+        return liveDrag ? <>{clientLime && canManageLiveStructure && liveBlocks.length > 1 && <Coachmark id="client-live-card-drag-2026-10" userId={actor?.userId} title="Меняйте порядок упражнений" description="Удерживайте карточку за название или свободное место, затем перетащите. Поля и кнопки работают как обычно. В меню также есть «Изменить порядок»."><span className="sr-only">Перенос карточек</span></Coachmark>}<WorkoutGestureList nativeSwipe={liveSwipeEnabled} blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled} holdCards={clientLime}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
       {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
       {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
       {coachReference && <FitLogo className="coach-live-footer-brand" />}
       {error && <p className="error">{error.message}</p>}
-      {coachReference && removeSet.isError && removeSet.variables && <>
+      {liveSwipeEnabled && removeSet.isError && removeSet.variables && <>
         {removalRetryReason && <p role="status">{removalRetryReason}</p>}
         <button type="button" className="secondary" disabled={rootMutationPending || save.isPending || confirm.isPending || Boolean(removalRetryReason)} onClick={() => removeSet.mutate(removeSet.variables!)}>Повторить удаление подхода</button>
       </>}

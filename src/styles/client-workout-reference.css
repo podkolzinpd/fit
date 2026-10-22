@@ -162,3 +162,48 @@
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .client-lime-sheet-header h1 { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .coach-filter-reset { display: block; margin: 0 -20px 24px; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog .picker-filter-strip button.active { color: var(--lime-text-on-accent); }
+
+/* live-header SVG14/18: equal actions184.5x60 at371px, gap2/r20.
+   Clock, phase and rest calculations remain in the existing timer subtree. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-timer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-timer-actions > button { width: 100%; height: 60px; min-height: 60px; margin: 0; border: 0; border-radius: 20px; padding: 0 16px; font-family: var(--lime-font); font-size: 14px; font-weight: 400; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause { position: relative; color: var(--lime-text); background: var(--lime-surface-raised); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause > :is(img, svg) { position: absolute; left: 16px; width: 16px; height: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause > img { background: var(--lime-text-secondary); mask: url('../shared/client-live-pause.svg') center / contain no-repeat; object-position: -9999px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause[aria-pressed='true'] { color: var(--warning-fg); }
+/* Compact mode keeps its released48px controls; both actions share that size. */
+.phone-frame.fit-lime-shell.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .client-reference-timer-actions > button { height: 48px; min-height: 48px; }
+
+/* Catalog SVG zero-selection state: float Create without reserving a blank
+   action row. The selected-state Add/Clear/Create controls retain their paths. */
+.phone-frame.fit-client-lime.client-workout-reference .exercise-picker.client-reference-catalog { position: relative; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection) .coach-catalog-create-bar { position: absolute; inset: auto 20px max(16px, env(safe-area-inset-bottom)) auto; display: block; min-height: 0; padding: 0; background: transparent; pointer-events: none; z-index: 2; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection) .coach-catalog-create-floating { pointer-events: auto; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-catalog:not(.has-selection):not(.client-lime-filters) .picker-list { padding-bottom: 96px; scroll-padding-bottom: 96px; }
+
+/* Time sheets adapt the released client date-sheet shell and existing controls;
+   TimeWheel owns draft/seconds/input behavior as before. */
+.phone-frame.fit-client-lime.client-workout-reference .workout-decision-sheet.client-reference-time-sheet { width: min(100%, 440px); max-height: calc(min(var(--app-visible-height, 100dvh), 100dvh) - 12px); padding: 0 20px max(20px, env(safe-area-inset-bottom)); border: 0; border-radius: var(--lime-radius-sheet) var(--lime-radius-sheet) 0 0; background: var(--lime-surface); color: var(--lime-text); gap: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .client-lime-sheet-header { flex-shrink: 0; margin-inline: -20px; padding: 16px 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .rest-time-picker { margin-block: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .live-mode-switch { gap: 2px; padding: 4px; border: 0; border-radius: 20px; background: var(--lime-surface-raised); }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .live-mode-switch button { min-height: 48px; border-radius: 16px; font-family: var(--lime-font); font-size: 16px; font-weight: 500; line-height: 20px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet > button.secondary,
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .rest-controls button { min-height: 48px; border: 0; border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font-family: var(--lime-font); font-size: 16px; font-weight: 400; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet :is(.workout-duration-apply, .live-rest-apply > button) { width: 100%; min-height: 60px; border: 0; border-radius: 20px; background: var(--lime-accent); color: var(--lime-text-on-accent); font-family: var(--lime-font); font-size: 16px; font-weight: 500; }
+/* Inline status rail: never paint saving/saved over a metric or confirmation.
+   Reserve one caption line even at idle so routine autosave does not shift rows.
+   A detailed error may wrap naturally instead of covering another control. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback { display: flex; justify-content: flex-end; align-items: flex-start; min-height: 16px; padding-left: 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback .save-status { position: static; z-index: auto; min-height: 16px; max-width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; white-space: normal; overflow-wrap: anywhere; font-size: 12px; line-height: 16px; text-align: right; pointer-events: none; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback .save-status-mark { flex-shrink: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback .save-status-mark svg { width: 12px; height: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-phase-notice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; min-height: 60px; padding: 8px 12px; border: 0; border-radius: 20px; background: var(--lime-surface-raised); color: var(--lime-text); font-family: var(--lime-font); font-size: 14px; line-height: 20px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-phase-notice > span { min-width: 0; overflow-wrap: anywhere; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-phase-notice > button { min-height: 44px; padding: 0 12px; border: 0; border-radius: 16px; background: var(--lime-surface-high); color: var(--lime-text); font-size: 14px; line-height: 20px; font-weight: 400; }
+/* The same Live save-error path also exposes the existing bottom sync state.
+   Preserve its danger/warning surfaces and retry; align only client geometry/type. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state { gap: 12px; padding: 12px 16px; border-radius: 20px; font-family: var(--lime-font); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state strong { font-weight: 500; line-height: 20px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state span { line-height: 16px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state button { min-height: 44px; border: 0; border-radius: 16px; background: var(--lime-surface-high); color: var(--lime-text); font-size: 14px; line-height: 20px; font-weight: 400; }

@@ -1,3 +1,4 @@
+import { ClientWorkoutReferenceContext } from '../../app/client-workout-reference-context'
 import { useState } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -12,6 +13,21 @@ function choose(user: ReturnType<typeof userEvent.setup>, column: 'минуты'
 
 describe('WorkoutDurationField', () => {
   afterEach(() => setWorkoutTimeWheel(false))
+
+  it('inherits client sheet presentation through a portal without changing draft or commit', async () => {
+    const user = userEvent.setup(), commit = vi.fn()
+    render(<ClientWorkoutReferenceContext value={true}><WorkoutDurationField compact label="Время" durationSec={90} onCommit={commit} /></ClientWorkoutReferenceContext>)
+    await user.click(screen.getByRole('button', { name: 'Время: 1:30' }))
+    expect(screen.getByRole('dialog')).toHaveClass('client-reference-time-sheet')
+    expect(screen.getByRole('heading', { name: 'Время' }).closest('.client-lime-sheet-header')).not.toBeNull()
+    await choose(user, 'секунды', 45)
+    await user.click(screen.getByRole('button', { name: 'Закрыть выбор времени' }))
+    expect(commit).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Время: 1:30' }))
+    await choose(user, 'секунды', 45)
+    await user.click(screen.getByRole('button', { name: 'Применить · 1:45' }))
+    expect(commit).toHaveBeenCalledExactlyOnceWith(105)
+  })
 
   it.each([false, true])('an empty display label never changes the keyboard/wheel choice %s', (wheel) => {
     setWorkoutTimeWheel(wheel)

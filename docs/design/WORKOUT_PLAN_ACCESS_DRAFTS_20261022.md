@@ -49,3 +49,10 @@ Loading/error/empty текущего профиля не разрешают muta
 - Полный npm check: все frontend2803/coverage/lint/typecheck/infra330/calendar12/hosting184 стадии прошли; API lint обнаружил require-await только в новом тестовом stub, после исправления API1445/typecheck/lint/build и frontend startup build прошли. Повторные целевые DB/UI проверки выполнены на финальной правке; exact-head CI обязателен.
 - local:verify остановлен внешней ошибкой Podman LegacyContainerCreateError при создании старого Supabase-контейнера. Старый persistent PostgreSQL содержал неоднозначные fixture-данные; не исправляли их. Независимый чистый контейнер fit-plan-access-pg-20261022 дал полный DB178/1conditional skip и Down→Up.
 
+## Интеграция перед публикацией
+
+- Первый финальный PR CI39685783252 прошёл. После ожидания main обновлён до7183066f (#1768–#1773 уже слиты); конфликты только импорта общего browser spec и rolling snapshot разрешены с сохранением обеих сторон. Пользователь отдельно разрешил выпуск раньше#1768, но фактического пропуска уже не потребовалось.
+- На новой базе полный npm run check завершился exit0: frontend2810, API1445/188conditional skips, lint/types/политики/coverage/build/startup. Целевые WebKit4+Chromium4 прошли повторно, включая голосовой сценарий, copy и восстановление черновиков.
+- Повторная чистая DB/RLS-chain:178passed/1conditional skip, включая Down→Up. Первый повтор на прежней синтетической базе нашёл4 истёкшие сессии от прошлого запуска; отдельное имя БД отклонено штатным local-only guard, поэтому пересоздана только собственная synthetic fit_actor_test в контейнере задачи. Guards/тесты не ослаблялись, production/чужие базы не затрагивались.
+- Новый exact-head CI, merge, main CI и публикация остаются обязательными.
+

@@ -38,11 +38,11 @@
 .fit-client-lime.live-identity .workout-drag-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500 }
 .coach-workout-reference .workout-drag-preview small,
 .fit-client-lime.live-identity .workout-drag-preview small { font-size: 12px; line-height: 16px; color: var(--lime-text-secondary) }
-.coach-workout-reference .workout-swipe { position: relative; overflow: hidden; border-radius: 24px; touch-action: pan-y; min-width: 0 }
-.coach-workout-reference .workout-swipe-content { position: relative; min-width: 0 }
-.coach-workout-reference button.workout-swipe-action { position: absolute; inset-block: 0; width: 96px; border: 0; border-radius: 20px; font-size: 14px; padding: 8px }
-.coach-workout-reference button.workout-swipe-action.delete { right: 0; background: var(--danger-surface); color: var(--danger) }
-.coach-workout-reference button.workout-swipe-action.replace { left: 0; background: var(--lime-surface-raised); color: var(--lime-accent) }
+:is(.coach-workout-reference, .client-workout-reference) .workout-swipe { position: relative; overflow: hidden; border-radius: 24px; touch-action: pan-y; min-width: 0 }
+:is(.coach-workout-reference, .client-workout-reference) .workout-swipe-content { position: relative; min-width: 0 }
+:is(.coach-workout-reference, .client-workout-reference) button.workout-swipe-action { position: absolute; inset-block: 0; width: 96px; border: 0; border-radius: 20px; font-size: 14px; padding: 8px }
+:is(.coach-workout-reference, .client-workout-reference) button.workout-swipe-action.delete { right: 0; background: var(--danger-surface); color: var(--danger) }
+:is(.coach-workout-reference, .client-workout-reference) button.workout-swipe-action.replace { left: 0; background: var(--lime-surface-raised); color: var(--lime-accent) }
 .coach-workout-reference .live-completed-gesture-head,
 .fit-client-lime.live-identity .live-completed-gesture-head { display: flex; align-items: center; gap: 4px }
 .coach-workout-reference .live-completed-gesture-head .workout-exercise-compact,

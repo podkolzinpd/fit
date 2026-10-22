@@ -145,6 +145,9 @@ export function WorkoutDragBlock({ id, children, holdToDrag = false, label = '' 
   }, [disabled, holdToDrag])
   function isControl(target: EventTarget) {
     if (!(target instanceof Element)) return true
+    // A set row owns its swipe/input gesture, including its number gutter.
+    // Holding that gutter must not start an exercise-level card drag.
+    if (target.closest('.workout-set-swipe')) return true
     const control = target.closest('button,input,textarea,select,a,details,summary,video,.exercise-thumbnail,.live-technique,[role="button"],[contenteditable="true"]')
     // A title/compact card keeps its short tap; holding its text may move it.
     return Boolean(control && !control.matches('.exercise-technique-trigger,.workout-exercise-compact'))
@@ -193,9 +196,9 @@ export function WorkoutDragHandle({ id, label, children }: { id: string; label: 
   </button>
 }
 
-export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, variant = 'exercise', actionLabel, swipeFromFields = false }: {
+export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, variant = 'exercise', actionLabel, swipeFromFields = false, swipeFromCardButton = false }: {
   id: string; disabled: boolean; onDelete: () => void; onReplace?: () => void; children: ReactNode
-  variant?: 'exercise' | 'set'; actionLabel?: string; swipeFromFields?: boolean
+  variant?: 'exercise' | 'set'; actionLabel?: string; swipeFromFields?: boolean; swipeFromCardButton?: boolean
 }) {
   const context = useWorkoutGestures()
   const start = useRef<{ x: number; y: number; pointerId: number; horizontal: boolean; side: 'delete' | 'replace' | null; field?: HTMLInputElement | HTMLButtonElement } | null>(null)
@@ -267,11 +270,14 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
     onPointerDown={(event) => {
       // A set row owns its pointer stream; the exercise must not also swipe.
       if ((event.target as Element).closest('[data-workout-swipe]') !== event.currentTarget) return
-      if (inactive || start.current || event.isPrimary === false || event.button !== 0 || (event.target as Element).closest('button,input,textarea,select,a,video,[role="button"],[contenteditable="true"]')) return
+      const control = (event.target as Element).closest('button,input,textarea,select,a,summary,video,[role="button"],[contenteditable="true"]')
+      const cardButton = swipeFromCardButton && control?.matches('.workout-exercise-compact, .exercise-technique-trigger')
+      if (inactive || start.current || event.isPrimary === false || event.button !== 0 || control && !cardButton) return
       // Native text selection can turn the next swipe into HTML drag-and-drop
       // and cancel its pointer stream. Editable controls are excluded above.
       event.preventDefault()
-      start.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, horizontal: false, side }; suppressClick.current = false
+      start.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, horizontal: false, side,
+        ...(cardButton && control instanceof HTMLButtonElement ? { field: control } : {}) }; suppressClick.current = false
       // The narrow set-number gutter ends before the horizontal threshold.
       // Keep its stream until direction is known; pan-y still permits native scrolling.
       if (variant === 'set') event.currentTarget.setPointerCapture(event.pointerId)
@@ -297,6 +303,12 @@ export function WorkoutSwipe({ id, disabled, onDelete, onReplace, children, vari
     onClickCapture={(event) => { if (suppressClick.current && !(event.target as Element).closest('.workout-swipe-action')) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false } }}>
     {side && <button type="button" className={`workout-swipe-action ${side}`} disabled={inactive}
       aria-label={side === 'delete' ? actionLabel : undefined}
+      onMouseDown={(event) => {
+        // A client exercise rail tap must reach click before its field blurs and
+        // makes the rail pending/disabled. The confirmation then takes focus;
+        // deletion still waits for the existing save coordinator to become idle.
+        if (event.button === 0 && swipeFromCardButton) event.preventDefault()
+      }}
       onClick={() => { context.setOpen(null); if (side === 'delete') onDelete(); else onReplace?.() }}>{side === 'delete' ? 'Удалить' : 'Заменить'}</button>}
     <div className="workout-swipe-content" style={{ transform: `translateX(${offset || (side === 'delete' ? -96 : side === 'replace' ? 96 : 0)}px)` }}>{children}</div>
   </div>
