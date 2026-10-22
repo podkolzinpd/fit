@@ -91,7 +91,7 @@ function FavoriteWorkoutEditor({ lime, favorite, userId }: { lime: boolean; favo
     if (!save.isPending && title.trim() && exercises.length && exercises.length <= 60) save.mutate()
   }
   return <>
-    <WorkoutHeader eyebrow="ИЗБРАННОЕ" title="Редактировать тренировку" meta={title} state="planned" showStatus={false} />
+    <WorkoutHeader eyebrow="ИЗБРАННОЕ" title="Редактировать тренировку" state="planned" showStatus={false} />
     <form className="stack workout-form workout-template-form" onSubmit={submit}>
       <section className="workout-form-section template-basics"><Field label="Название"><input value={title} maxLength={120} required disabled={save.isPending} onChange={(event) => { setTitle(event.target.value); setDirty(true) }} /></Field></section>
       <section className="workout-form-section workout-form-exercises">

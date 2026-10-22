@@ -277,7 +277,7 @@ export function OverflowMenu({ items, label = 'Ещё действия', trigger
       {items.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
         aria-label={item.description ? item.label : undefined} aria-description={item.description}
         className={item.danger ? 'overflow-item danger' : 'overflow-item'}
-        onClick={() => { setOpen(false); item.onClick() }}>{item.label}{item.description && <small className="overflow-item-description">{item.description}</small>}</button>)}
+        onClick={() => { triggerRef.current?.querySelector('button')?.focus(); setOpen(false); item.onClick() }}>{item.label}{item.description && <small className="overflow-item-description">{item.description}</small>}</button>)}
     </div>, host)}
   </div>
 }
@@ -296,7 +296,24 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
   const [portalHost, setPortalHost] = useState<Element | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
-  const visible = !dismissed && !isCoachmarkSeen(userId, id)
+  const pending = !dismissed && !isCoachmarkSeen(userId, id)
+  const [active, setActive] = useState(false)
+  const visible = pending && active
+
+  useLayoutEffect(() => {
+    const update = () => {
+      // DOM order is the queue; no shared mutable store or second tour system.
+      const first = document.querySelector('[role="dialog"] .coachmark-anchor[data-coachmark-pending]')
+        ?? document.querySelector('.coachmark-anchor[data-coachmark-pending]')
+      setActive(first === anchorRef.current)
+    }
+    document.addEventListener('fit:coachmark-queue', update)
+    document.dispatchEvent(new Event('fit:coachmark-queue'))
+    return () => {
+      document.removeEventListener('fit:coachmark-queue', update)
+      queueMicrotask(() => document.dispatchEvent(new Event('fit:coachmark-queue')))
+    }
+  }, [pending])
 
   const updatePosition = useCallback(() => {
     const anchor = anchorRef.current
@@ -311,15 +328,23 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
       bottom: window.innerHeight,
       left: 0,
     }
+    const viewport = window.visualViewport
+    const viewportTop = viewport?.offsetTop ?? 0
+    const viewportLeft = viewport?.offsetLeft ?? 0
+    const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight)
+    const viewportRight = viewportLeft + (viewport?.width ?? window.innerWidth)
+    const minTop = Math.max(viewportTop, frameRect.top) + 8
+    const bottom = Math.min(viewportBottom, frameRect.bottom || viewportBottom) - 8
     const gap = 10
-    const minLeft = frameRect.left + 8
-    const maxLeft = Math.max(minLeft, frameRect.right - bubbleRect.width - 8)
+    const minLeft = Math.max(viewportLeft, frameRect.left) + 8
+    const maxLeft = Math.max(minLeft, Math.min(viewportRight, frameRect.right || viewportRight) - bubbleRect.width - 8)
     const left = Math.min(Math.max(anchorRect.left, minLeft), maxLeft)
     const below = anchorRect.bottom + gap
-    const top = below + bubbleRect.height <= frameRect.bottom - 8
+    const idealTop = below + bubbleRect.height <= bottom
       ? below
-      : Math.max(frameRect.top + 8, anchorRect.top - bubbleRect.height - gap)
-    setPosition({ top, left })
+      : anchorRect.top - bubbleRect.height - gap
+    const top = Math.max(minTop, Math.min(idealTop, bottom - bubbleRect.height))
+    setPosition({ top, left, maxHeight: `calc(${Math.max(0, bottom - minTop)}px - env(safe-area-inset-bottom, 0px))`, overflowY: 'auto' })
   }, [])
 
   useLayoutEffect(() => {
@@ -328,9 +353,13 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
     updatePosition()
     window.addEventListener('resize', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
+    window.visualViewport?.addEventListener('resize', updatePosition)
+    window.visualViewport?.addEventListener('scroll', updatePosition)
     return () => {
       window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
+      window.visualViewport?.removeEventListener('resize', updatePosition)
+      window.visualViewport?.removeEventListener('scroll', updatePosition)
     }
   }, [visible, updatePosition])
 
@@ -347,7 +376,7 @@ export function Coachmark({ id, userId, title, description, children }: PropsWit
   }, [visible, dismiss])
 
   const host = portalHost ?? document.querySelector('.phone-frame') ?? document.body
-  return <div className="coachmark-anchor" ref={anchorRef}>
+  return <div className="coachmark-anchor" ref={anchorRef} data-coachmark-pending={pending ? '' : undefined}>
     {children}
     {visible && createPortal(
       <div ref={bubbleRef} className="coachmark-bubble" role="status" style={position ?? { visibility: 'hidden' }}>

@@ -614,7 +614,7 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         // metrics. Snapshot conversion is separately covered in workout-rules.
         const snapshots = [exercises, [{ ...base, sets: [{ ...base.sets[0]!, weightKg: 40, reps: 12 }] }]]
         let firstId = ''
-        for (let index = 0; index < 10; index += 1) {
+        for (let index = 0; index < 9; index += 1) {
           const snapshot = snapshots[index % snapshots.length]!
           const saved = await request('POST', 0, { title: `Synthetic favorite ${index}`, exercises: snapshot })
           expect(saved.statusCode).toBe(201)
@@ -622,6 +622,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
           if (index === 0) firstId = favorite.id
           expect(favorite.exercises).toEqual(snapshot)
         }
+        // Different sessions: refreshing a single session must not serialize away the race.
+        const otherSessionToken = randomBytes(32).toString('base64url')
+        await ownerPool.query("insert into app_private.yandex_app_sessions(token_sha256,profile_id,expires_at) values($1,$2,now()+interval '1 hour')", [hashPilotSessionToken(otherSessionToken), actors[0]])
+        const competing = await Promise.all([
+          request('POST', 0, { title: 'Concurrent A', exercises }),
+          app.inject({ method: 'POST', url: '/v1/favorite-workouts', headers: { 'x-fit-session': otherSessionToken }, payload: { title: 'Concurrent B', exercises } }),
+        ])
+        expect(competing.map((response) => response.statusCode).sort()).toEqual([201, 422])
         const limit = await request('POST', 0, { title: 'Over limit', exercises })
         expect(limit.statusCode).toBe(422)
         expect(limit.json()).toEqual({ error: 'favorite_workout_limit_reached' })
