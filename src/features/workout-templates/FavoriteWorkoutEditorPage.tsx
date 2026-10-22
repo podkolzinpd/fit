@@ -10,7 +10,7 @@ import { AsyncView, Field, InlineRequestError, Page, StatePanel, useConfirm } fr
 import { ExercisePicker, useExerciseCatalog } from '../exercises'
 import { WorkoutCta, WorkoutExerciseEditor, WorkoutHeader } from '../workouts'
 import { AddActionLabel } from '../../shared/AddActionLabel'
-import { getRequestDiagnostics } from '../../shared/request-diagnostics'
+import { attachRequestDiagnostics, getRequestDiagnostics } from '../../shared/request-diagnostics'
 import { readWorkoutTemplateDraft, removeWorkoutTemplateDraft, writeWorkoutTemplateDraft } from './workout-template-draft'
 
 const returnTo = '/me/workouts?tab=presets'
@@ -40,13 +40,14 @@ function FavoriteWorkoutEditor({ lime, favorite, userId }: { lime: boolean; favo
   const [stored] = useState(() => readWorkoutTemplateDraft(draftKey))
   const [title, setTitle] = useState(stored?.name ?? favorite.title)
   const [exercises, setExercises] = useState(stored?.exercises ?? favorite.exercises)
-  // Keep the version captured when editing began, even if a background read changes.
-  const [version] = useState(stored?.version ?? favorite.version)
+  // Only an explicitly confirmed, successful reload may replace this version.
+  const [version, setVersion] = useState(stored?.version ?? favorite.version)
   const [dirty, setDirty] = useState(Boolean(stored))
   const [storageError, setStorageError] = useState(false)
   const [picker, setPicker] = useState<number | 'add' | null>(null)
   const finished = useRef(false)
   const active = useRef(true)
+  const recoveryRequested = useRef(false)
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   useEffect(() => {
     if (!dirty || finished.current) return
@@ -62,11 +63,37 @@ function FavoriteWorkoutEditor({ lime, favorite, userId }: { lime: boolean; favo
       if (active.current) navigate(returnTo, { replace: true })
     },
   })
+  const reload = useMutation({
+    mutationFn: async () => {
+      let current: FavoriteWorkoutTemplate[]
+      try { current = await favoriteWorkouts.list() }
+      catch (error) {
+        throw attachRequestDiagnostics(new Error('Не удалось загрузить актуальную версию. Ваши изменения остались в форме. Повторите загрузку.'), getRequestDiagnostics(error) ?? undefined)
+      }
+      const latest = current.find((item) => item.id === favorite.id)
+      if (!latest) throw new Error('Тренировка больше недоступна. Ваши изменения остались в форме и в черновике.')
+      return { current, latest }
+    },
+    onSuccess: ({ current, latest }) => {
+      if (!active.current) return
+      setTitle(latest.title)
+      setExercises(latest.exercises)
+      setVersion(latest.version)
+      setDirty(false)
+      setStorageError(false)
+      removeWorkoutTemplateDraft(draftKey)
+      queryClient.setQueryData(['favorite-workouts'], current)
+      save.reset()
+    },
+    onSettled: () => { recoveryRequested.current = false },
+  })
+  const busy = save.isPending || reload.isPending
+  const formError = reload.error ?? save.error
   const [confirm, confirmDialog] = useConfirm()
-  const blocker = useBlocker(() => !finished.current && (dirty || save.isPending))
+  const blocker = useBlocker(() => !finished.current && (dirty || busy))
   useEffect(() => {
     if (blocker.state !== 'blocked') return
-    if (save.isPending) { blocker.reset(); return }
+    if (busy) { blocker.reset(); return }
     let current = true
     void confirm({ message: 'Выйти без сохранения изменений?', confirmLabel: 'Выйти', danger: true }).then((leave) => {
       if (!current) return
@@ -74,10 +101,17 @@ function FavoriteWorkoutEditor({ lime, favorite, userId }: { lime: boolean; favo
       else blocker.reset()
     })
     return () => { current = false }
-  }, [blocker, confirm, draftKey, save.isPending])
+  }, [blocker, busy, confirm, draftKey])
   useBeforeUnload((event) => {
-    if (!finished.current && (dirty || save.isPending)) { event.preventDefault(); event.returnValue = '' }
+    if (!finished.current && (dirty || busy)) { event.preventDefault(); event.returnValue = '' }
   })
+  async function reloadCurrentVersion() {
+    if (recoveryRequested.current || busy) return
+    recoveryRequested.current = true
+    const accepted = await confirm({ message: 'Загрузить текущую версию? Несохранённые изменения на этом устройстве будут удалены.', confirmLabel: 'Загрузить' })
+    if (!accepted || !active.current) { recoveryRequested.current = false; return }
+    reload.mutate()
+  }
   function update(next: WorkoutExerciseDraft[]) { setExercises(next); setDirty(true) }
   function add(selected: ExerciseSnapshot[]) {
     update([...exercises, ...selected.map((exercise, index) => ({
@@ -88,30 +122,23 @@ function FavoriteWorkoutEditor({ lime, favorite, userId }: { lime: boolean; favo
   }
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (!save.isPending && title.trim() && exercises.length && exercises.length <= 60) save.mutate()
+    if (!busy && !recoveryRequested.current && title.trim() && exercises.length && exercises.length <= 60) save.mutate()
   }
   return <>
     <WorkoutHeader eyebrow="ИЗБРАННОЕ" title="Редактировать тренировку" state="planned" showStatus={false} />
     <form className="stack workout-form workout-template-form" onSubmit={submit}>
-      <section className="workout-form-section template-basics"><Field label="Название"><input value={title} maxLength={120} required disabled={save.isPending} onChange={(event) => { setTitle(event.target.value); setDirty(true) }} /></Field></section>
+      <section className="workout-form-section template-basics"><Field label="Название"><input value={title} maxLength={120} required disabled={busy} onChange={(event) => { setTitle(event.target.value); setDirty(true) }} /></Field></section>
       <section className="workout-form-section workout-form-exercises">
         <div className="workout-form-section-head"><h2>Упражнения</h2></div>
         <WorkoutExerciseEditor exercises={exercises} onChange={update} onOpenPicker={() => setPicker('add')} onReplaceExercise={setPicker}
-          exerciseCatalog={catalog.exercises} collapseInitialExercises reference={lime} safePlanInput={lime} commentLabel="Заметка" disabled={save.isPending} />
-        {lime && <WorkoutCta type="button" variant="secondary" disabled={save.isPending || exercises.length >= 60} onClick={() => setPicker('add')}><AddActionLabel>Упражнение</AddActionLabel></WorkoutCta>}
+          exerciseCatalog={catalog.exercises} collapseInitialExercises reference={lime} safePlanInput={lime} commentLabel="Заметка" disabled={busy} />
+        {lime && <WorkoutCta type="button" variant="secondary" disabled={busy || exercises.length >= 60} onClick={() => setPicker('add')}><AddActionLabel>Упражнение</AddActionLabel></WorkoutCta>}
       </section>
       {exercises.length > 60 && <p className="error" role="alert">В избранном можно сохранить до 60 упражнений.</p>}
-      {save.error && <InlineRequestError error={save.error} />}
-      {getRequestDiagnostics(save.error)?.status === 409 && <button type="button" className="secondary" onClick={() => {
-        void confirm({ message: 'Загрузить текущую версию? Несохранённые изменения на этом устройстве будут удалены.', confirmLabel: 'Загрузить' }).then((accepted) => {
-          if (!accepted) return
-          finished.current = true
-          removeWorkoutTemplateDraft(draftKey)
-          window.location.reload()
-        })
-      }}>Загрузить текущую версию</button>}
+      {formError && <InlineRequestError error={formError} />}
+      {getRequestDiagnostics(save.error)?.status === 409 && <WorkoutCta type="button" variant="secondary" pending={reload.isPending} pendingLabel="Загружаем…" disabled={busy} onClick={() => void reloadCurrentVersion()}>Загрузить текущую версию</WorkoutCta>}
       {storageError && <p className="error" role="alert">Не удалось сохранить черновик на устройстве. Не закрывайте экран до сохранения изменений.</p>}
-      <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={!dirty || !title.trim() || !exercises.length || exercises.length > 60}>Сохранить изменения</WorkoutCta></div>
+      <div className="actions workout-action-row"><WorkoutCta type="submit" pending={save.isPending} pendingLabel="Сохраняем…" disabled={busy || !dirty || !title.trim() || !exercises.length || exercises.length > 60}>Сохранить изменения</WorkoutCta></div>
     </form>
     {picker !== null && <ExercisePicker clientLime={lime} referenceAppearance={lime} catalog={catalog} multiple={picker === 'add'} onPick={(selected) => {
       if (picker === 'add') add([selected])
