@@ -78,6 +78,12 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done { background: color-mix(in srgb, var(--success) 12%, var(--workout-live-field)); color: var(--success-fg); box-shadow: inset 0 0 0 1px var(--success-fg); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done svg[data-original-icon] { filter: none; }
 
+/* Without media, release the unused header height while retaining content
+   flow and the existing 44px menu target. Trainer/animation-on stay intact. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-exercise-head:not(:has(.live-header-animation, .exercise-thumbnail)) { min-height: 0; padding-block: 16px 8px; margin-bottom: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .live-exercise-head:not(:has(.live-header-animation, .exercise-thumbnail)) { padding-block: 12px 8px; margin-bottom: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .circuit-head .overflow-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+
 /* Reuse the released workout pause action on the reference clock. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock { appearance: none; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: center; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock.paused { color: var(--warning-fg); }

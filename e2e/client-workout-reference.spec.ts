@@ -1631,3 +1631,58 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(rows.first().getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
   await expect(page.locator('.live-rest-trigger')).not.toHaveAttribute('aria-label', /Отдых идёт/)
 })
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client Live media-off header and group menu ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10', 'client-live-card-drag-2026-10']))
+  }, { id: pilotId, theme, density })
+  const source = coachGestureWorkout(true)
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  source.exercises[0]!.ref = 'barbell-squat'
+  source.exercises[1]!.name = 'Жим гантелей на наклонной скамье с длинным названием упражнения'
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.client-workout-reference')).toBeVisible()
+  const header = page.locator('.live-exercise-head').first()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.live-header-animation, .live-exercise-head .exercise-thumbnail')).toHaveCount(0)
+    expect((await header.boundingBox())!.height).toBeLessThan(density === 'original' ? 100 : 80)
+    const geometry = await page.locator('.live-exercise-head').evaluateAll(headers => headers.map(element => {
+      const title = element.querySelector('h2, h3')!.getBoundingClientRect(), menu = element.querySelector('.overflow-trigger')?.getBoundingClientRect()
+      return { height: element.getBoundingClientRect().height, titleRight: title.right, menuLeft: menu?.left }
+    }))
+    for (const item of geometry) {
+      expect(item.height).toBeGreaterThanOrEqual(44)
+      if (item.menuLeft !== undefined) expect(item.titleRight).toBeLessThanOrEqual(item.menuLeft)
+    }
+    const menu = page.locator('.circuit-head .overflow-trigger').first()
+    await expect(menu).toHaveCSS('border-radius', '0px')
+    await expect(menu).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    const box = (await menu.boundingBox())!
+    expect(box.width).toBe(44); expect(box.height).toBe(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`media-off-${width}.png`) })
+  }
+  const weight = page.getByLabel('Фактический вес', { exact: true }).first()
+  await weight.fill('31.5')
+  const original = await weight.elementHandle()
+  if (!original) throw new Error('Live field missing')
+  await page.evaluate(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'true'); dispatchEvent(new Event('fit-live-exercise-animation-change')) }, pilotId)
+  await expect(header.locator('.live-header-animation, .exercise-thumbnail')).toBeVisible()
+  expect(await original.evaluate(element => element.isConnected)).toBe(true)
+  expect(await weight.evaluate((element, previous) => element === previous, original)).toBe(true)
+  await expect(weight).toHaveValue('31.5')
+  await expect(weight).toBeFocused()
+  await page.evaluate(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'); dispatchEvent(new Event('fit-live-exercise-animation-change')) }, pilotId)
+  await expect(header.locator('.live-header-animation, .exercise-thumbnail')).toHaveCount(0)
+  await expect(weight).toHaveValue('31.5')
+  await weight.blur()
+  await page.locator('.circuit-head .overflow-trigger').first().click()
+  await expect(page.getByRole('menu')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+})
