@@ -1,14 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { RepositoryError } from '../../data/repositories/error'
 import type { NutritionRepository } from '../../data/repositories/nutrition.repository'
 import { localDate } from '../../shared/local-date'
 import { scaledNutrition, type NutritionDay, type NutritionEntry } from '../../shared/nutrition'
 import { NutritionPage, NutritionSummary } from './NutritionPage'
-import { readNutritionForm } from './draft'
 
 const fixture = vi.hoisted(() => ({ enabled: true, barcodeEnabled: false, role: 'client', userId: 'f00d0000-6010-4000-8000-000000000001',
   day: vi.fn<NutritionRepository['day']>(), search: vi.fn<NutritionRepository['search']>(), barcode: vi.fn<NutritionRepository['barcode']>(), recent: vi.fn<NutritionRepository['recent']>(),
@@ -38,13 +37,14 @@ beforeEach(() => {
 })
 function setup(path = '/me/nutrition?date=2026-10-10&action=add') {
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  const result = render(<MemoryRouter initialEntries={[path]}><QueryClientProvider client={cache}><Routes>
-    <Route path="/me/nutrition" element={<NutritionPage />} />
-    <Route path="/clients/:clientId/nutrition" element={<NutritionPage />} />
-    <Route path="/me" element={<p>Кабинет</p>} />
-    <Route path="/summary" element={<NutritionSummary clientId="synthetic-client" />} />
-    <Route path="/own-summary" element={<NutritionSummary />} />
-  </Routes></QueryClientProvider></MemoryRouter>)
+  const router = createMemoryRouter([
+    { path: '/me/nutrition', element: <NutritionPage /> },
+    { path: '/clients/:clientId/nutrition', element: <NutritionPage /> },
+    { path: '/me', element: <p>Кабинет</p> },
+    { path: '/summary', element: <NutritionSummary clientId="synthetic-client" /> },
+    { path: '/own-summary', element: <NutritionSummary /> },
+  ], { initialEntries: [path] })
+  const result = render(<QueryClientProvider client={cache}><RouterProvider router={router} /></QueryClientProvider>)
   return { ...result, user: userEvent.setup(), cache }
 }
 
@@ -54,15 +54,13 @@ it('repeats the displayed snapshot and validates quantity without an automatic s
   expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('150')
   expect(fixture.save).not.toHaveBeenCalled()
   fireEvent.change(screen.getByLabelText('Сколько съели, г'), { target: { value: '0' } })
-  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
-  expect(await screen.findByText('Укажите вес больше 0 и не больше 20 000 г')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled()
   expect(fixture.save).not.toHaveBeenCalled()
   fireEvent.change(screen.getByLabelText('Сколько съели, г'), { target: { value: '200,5' } })
   await user.click(screen.getByRole('button', { name: 'Сохранить' }))
   await waitFor(() => expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 0, grams: 200.5,
     day: localDate('2026-10-10'), food: { kind: 'manual', name: entry.name, basis: '100g', calories: 152.2, protein: 9.8, fat: 4.2, carbs: 18.8 } })))
   await screen.findByText('Запись сохранена')
-  expect(readNutritionForm(fixture.userId, 'new')).toBeNull()
 })
 
 it('splits a typed food list and carries its explicit grams into the chosen catalog food', async () => {
@@ -119,8 +117,7 @@ it('shows barcode camera and SpeechKit food entry only for the server-authorized
 it('manual portion needs only name and calories; unknown macros remain null', async () => {
   const { user } = setup()
   await user.click(screen.getByRole('button', { name: 'Добавить свое блюдо' }))
-  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
-  expect(await screen.findByText('Укажите название еды')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled()
   expect(fixture.save).not.toHaveBeenCalled()
   await user.type(screen.getByLabelText('Название', { exact: true }), 'Домашний суп')
   await user.type(screen.getByLabelText('Калории съеденной порции'), '220')
@@ -128,6 +125,18 @@ it('manual portion needs only name and calories; unknown macros remain null', as
   await user.click(screen.getByRole('button', { name: 'Сохранить' }))
   await waitFor(() => expect(fixture.save).toHaveBeenCalledWith(expect.objectContaining({ grams: null,
     food: { kind: 'manual', name: 'Домашний суп', basis: 'portion', calories: 220, protein: null, fat: null, carbs: null } })))
+})
+
+it('confirms discarding unsaved food before leaving the form', async () => {
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox'), 'курица')
+  await user.click(screen.getByRole('button', { name: 'Назад' }))
+  expect(await screen.findByRole('alertdialog', { name: 'Изменения не сохранены. Выйти без сохранения?' })).toBeVisible()
+  await user.click(screen.getByRole('button', { name: 'Остаться' }))
+  expect(screen.getByRole('searchbox')).toHaveValue('курица')
+  await user.click(screen.getByRole('button', { name: 'Назад' }))
+  await user.click(await screen.findByRole('button', { name: 'Выйти' }))
+  expect(await screen.findByRole('heading', { name: 'Дневник питания' })).toBeVisible()
 })
 
 it('disables the form during saving and retries the same operation after a lost response', async () => {
@@ -147,7 +156,7 @@ it('disables the form during saving and retries the same operation after a lost 
   expect(fixture.save.mock.calls[1]?.[0]).toEqual(first)
 })
 
-it('preserves a conflicted edit until explicitly confirmed discard and loads the new version', async () => {
+it('keeps a conflicted edit in memory until explicitly discarded and loads the new version', async () => {
   fixture.day.mockResolvedValue({ ...empty, entries: [entry], totals: entry.totals })
   fixture.save.mockRejectedValueOnce(new RepositoryError('PT409', 'Данные уже изменились.'))
   const { user } = setup(`/me/nutrition?date=2026-10-10&edit=${entry.id}`)
@@ -155,7 +164,6 @@ it('preserves a conflicted edit until explicitly confirmed discard and loads the
   fireEvent.change(screen.getByLabelText('Сколько съели, г'), { target: { value: '180' } })
   await user.click(screen.getByRole('button', { name: 'Сохранить' }))
   await screen.findByRole('alert')
-  expect(readNutritionForm(fixture.userId, entry.id)?.grams).toBe('180')
   await user.click(screen.getByRole('button', { name: 'Открыть актуальный дневник' }))
   await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Отмена' }))
   expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('180')
