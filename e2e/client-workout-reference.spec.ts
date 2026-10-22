@@ -1528,3 +1528,66 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Таймер отдыха:/)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).toBeNull()
 })
+
+function liveContrast(foreground: string, background: string) {
+  const luminance = (color: string) => {
+    const channels = color.match(/[\d.]+/g)!.slice(0, 3).map(value => Number(value) / (color.startsWith('color(srgb') ? 1 : 255))
+      .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+    return channels[0]! * .2126 + channels[1]! * .7152 + channels[2]! * .0722
+  }
+  const a = luminance(foreground), b = luminance(background)
+  return (Math.max(a, b) + .05) / (Math.min(a, b) + .05)
+}
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client Live metric readability ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+  }, { id: pilotId, theme, density })
+  const source = coachGestureWorkout(false, 1), exercise = source.exercises[0]!
+  exercise.inputKind = 'distance'; exercise.ref = 'running'; exercise.name = 'Бег'; exercise.muscleGroup = 'cardio'
+  exercise.sets = exercise.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, distanceKm: 1.5, durationSec: 600, fact: {} }))
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.client-workout-reference')).toBeVisible()
+  const row = page.locator('.live-set.current').first()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const metrics = await row.locator('.run-distance-unit').evaluate(element => {
+      const style = getComputedStyle(element), box = element.getBoundingClientRect()
+      return { color: style.color, background: getComputedStyle(element.closest('.run-distance-control')!).backgroundColor, size: parseFloat(style.fontSize), height: box.height, width: box.width }
+    })
+    expect(liveContrast(metrics.color, metrics.background)).toBeGreaterThanOrEqual(4.5)
+    expect(metrics.size).toBeGreaterThanOrEqual(16)
+    expect(metrics.height).toBe(density === 'original' ? 54 : 48)
+    expect(metrics.width).toBeGreaterThanOrEqual(44)
+    const unit = row.locator('.coach-live-field-unit').first()
+    expect(await unit.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(12)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`readable-metrics-${width}.png`) })
+  }
+  await row.locator('.workout-duration-trigger').click()
+  const wheel = page.getByRole('listbox', { name: 'минуты', exact: true })
+  await wheel.focus()
+  const focus = await wheel.evaluate(element => {
+    const style = getComputedStyle(element)
+    return { color: style.outlineColor, background: getComputedStyle(element.closest('[role="dialog"]')!).backgroundColor, width: parseFloat(style.outlineWidth) }
+  })
+  expect(focus.width).toBeGreaterThanOrEqual(2)
+  expect(liveContrast(focus.color, focus.background)).toBeGreaterThanOrEqual(3)
+  await page.screenshot({ path: info.outputPath('readable-wheel.png') })
+})
+
+for (const theme of ['light', 'dark']) test(`client Live phase text contrast ${theme}`, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-22T09:00:00Z') })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(5, true, 'timer')] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const phase = page.locator('.live-rest-trigger')
+  for (const label of ['Подготовка', 'Подход']) {
+    await expect(phase).toContainText(label)
+    const colors = await phase.evaluate(element => ({ color: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor }))
+    expect(liveContrast(colors.color, colors.background)).toBeGreaterThanOrEqual(4.5)
+    if (label === 'Подготовка') await page.clock.fastForward(5000)
+  }
+})

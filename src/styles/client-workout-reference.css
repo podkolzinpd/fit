@@ -64,6 +64,14 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-exercise-markers > .current { outline-color: var(--lime-accent-ink); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-exercise-markers > .done { background: var(--lime-accent-ink); }
 
+/* Client-only readability. Shared trainer geometry and timer callbacks stay
+   unchanged; accent ink resolves to the existing accessible light/dark role. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity button.live-rest-trigger:is(.phase-prep, .phase-work),
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set.current .run-distance-unit { color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .coach-live-field-unit { font-size: var(--type-caption-size); line-height: var(--leading-snug); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .run-distance-unit { font-size: 16px; line-height: var(--leading-snug); }
+.phone-frame.fit-client-lime.client-workout-reference .rest-time-wheel:focus-visible { outline-color: var(--lime-accent-ink); }
+
 /* Reuse the released workout pause action on the reference clock. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock { appearance: none; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: center; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock.paused { color: var(--warning-fg); }
