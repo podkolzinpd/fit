@@ -211,7 +211,7 @@ function ConfirmDialog({ message, confirmLabel = 'Подтвердить', cance
 export interface OverflowMenuItem { label: string; onClick: () => void; danger?: boolean; disabled?: boolean; description?: string }
 // Меню «три точки» для редких действий, чтобы они не конкурировали с основными.
 // Пункты сохраняют свои названия (доступны по имени после раскрытия меню).
-export function OverflowMenu({ items, label = 'Ещё действия', trigger }: { items: OverflowMenuItem[]; label?: string; trigger?: ReactNode }) {
+export function OverflowMenu({ items, label = 'Ещё действия', trigger, placement = 'auto' }: { items: OverflowMenuItem[]; label?: string; trigger?: ReactNode; placement?: 'auto' | 'top' }) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState<CSSProperties | null>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
@@ -222,7 +222,7 @@ export function OverflowMenu({ items, label = 'Ещё действия', trigger
     const frame = document.querySelector<HTMLElement>('.phone-frame')
     if (!trigger || !menu) return
 
-    const triggerRect = trigger.getBoundingClientRect()
+    const triggerRect = (trigger.querySelector('button') ?? trigger).getBoundingClientRect()
     const menuRect = menu.getBoundingClientRect()
     // В приложении ограничиваемся рамкой телефона. В изолированных частях UI
     // (и их unit-тестах) оболочки может не быть — тогда граница это viewport.
@@ -232,29 +232,38 @@ export function OverflowMenu({ items, label = 'Ещё действия', trigger
       bottom: window.innerHeight,
       left: 0,
     }
+    const viewport = window.visualViewport
+    const viewportTop = viewport?.offsetTop ?? 0
+    const viewportLeft = viewport?.offsetLeft ?? 0
+    const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight)
+    const viewportRight = viewportLeft + (viewport?.width ?? window.innerWidth)
     const lowerBars = Array.from(document.querySelectorAll<HTMLElement>('.tab-bar, .live-bottom-bar'))
       .map((bar) => bar.getBoundingClientRect())
       .filter((bar) => bar.width > 0 && bar.height > 0 && bar.left < frameRect.right && bar.right > frameRect.left)
-    const bottomLimit = Math.min(frameRect.bottom, ...lowerBars.map((bar) => bar.top))
+    const bottomLimit = Math.min(viewportBottom, frameRect.bottom, ...lowerBars.map((bar) => bar.top))
     const gap = 6
-    const minTop = frameRect.top + 8
+    const minTop = Math.max(viewportTop, frameRect.top) + 8
     const maxTop = Math.max(minTop, bottomLimit - menuRect.height - 8)
-    const opensAbove = triggerRect.bottom + gap + menuRect.height > bottomLimit
+    const opensAbove = placement === 'top' || triggerRect.bottom + gap + menuRect.height > bottomLimit
     const proposedTop = opensAbove ? triggerRect.top - gap - menuRect.height : triggerRect.bottom + gap
     const top = Math.min(Math.max(proposedTop, minTop), maxTop)
-    const minLeft = frameRect.left + 8
-    const maxLeft = Math.max(minLeft, frameRect.right - menuRect.width - 8)
+    const minLeft = Math.max(viewportLeft, frameRect.left) + 8
+    const maxLeft = Math.max(minLeft, Math.min(viewportRight, frameRect.right) - menuRect.width - 8)
     const left = Math.min(Math.max(triggerRect.right - menuRect.width, minLeft), maxLeft)
     setPosition({ top, left })
-  }, [])
+  }, [placement])
 
   useLayoutEffect(() => {
     if (!open) { setPosition(null); return }
     updatePosition()
     window.addEventListener('resize', updatePosition)
+    window.visualViewport?.addEventListener('resize', updatePosition)
+    window.visualViewport?.addEventListener('scroll', updatePosition)
     window.addEventListener('scroll', updatePosition, true)
     return () => {
       window.removeEventListener('resize', updatePosition)
+      window.visualViewport?.removeEventListener('resize', updatePosition)
+      window.visualViewport?.removeEventListener('scroll', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
     }
   }, [open, updatePosition])
