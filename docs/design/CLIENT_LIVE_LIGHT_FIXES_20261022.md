@@ -51,7 +51,7 @@
 | --- | --- | --- | --- |
 | 1 / #1776 | L01,L02,L03,L06 | check +14visual/12assertions/54mechanics/6gates/8phase passed | 0a81a5f7: public212/API, browser26/cohort8, native213 install/launch verified |
 | 2 | L05 (+scope L03) | 8state +34mechanics +26final; fullcheck/offline exit0, finalbuild passed | CI/выпуск впереди; PR1 принят |
-| 3 | L04,L07 | Ожидает PR2 | Нет |
+| 3 | L04,L07 | 8geometry/8reopened/64mechanics и полный check passed | CI впереди; merge после публикации PR2 |
 | 4 | L08 | Ожидает PR3 | Нет |
 
 Внешний Tracker не изменён: предыдущая запись этой цепочки была отклонена автоматической проверкой. План и доказательства фиксируются в Git; запись в тикет не имитируется.
@@ -77,3 +77,17 @@ PR2 приёмка:8 state cases/390430 и34mechanics passed,26финальны�
 Более ранний #1777 слит1086a036; rebase выполнен без конфликтов. Diff базы затрагивает только FavoriteWorkoutEditor, его тесты/документы/auth-e2e; Live/таймеры/стили не менялись. Старый CI наблюдатель остановлен, его проверки не используются для merge новой базы. Обязательны новый полный check и26целевых browser cases, затем свежий CI. Выпуск предшествующей базы проверяется отдельно.
 
 PR2 на1086a036: новый полный check exit0 и26browser passed; приёмка предыдущих34механик остаётся применимой, поскольку Live-файлы базы не менялись. Новый CI после push обязателен.
+
+### PR3 preflight
+
+Источник main5bb27f29(#1778).6baseline cases снова подтверждают остаточную высотуOFF и круг группы;8browser-прототипов показали133→69/90→65 без пересечения названий/меню. Переиспользуем текущие WorkoutExerciseHeader/OverflowMenu/44px и существующие16/8,12/8 отступы. Меняем только отсутствие min-height при отсутствии медиа и плоское меню circuit-head; обработчики/DOM/сохранение прежние. Native PR2 уже sync/build/install/launch/213bytes verified; публичный выпуск PR2 ожидается. Physical iPhone НЕ ПРОВЕРЕНО.
+
+PR3 приёмка:8ON/OFF/geometry/menu,8reopened completed и64drag/swipe/keyboard/input/facts/atomic-round cases passed WebKit/Chromium; снимки просмотрены. Полный check exit0, flags/API/данные/обработчики не менялись. PR2#1778/5bb27f29 слит после зелёного CI; ложное Progress320/12.00006px прошло одним failed-job повтором без правок проверок. Выпуск вперёд старого1759 с завершённым красным CI/толькоnutrition выполнен по прежнему разрешению владельца; доказательство pr2-reviewed-queue-exception.json. PR2 public ещё проверяется, поэтому merge PR3 ждёт pr2-accepted.json.
+
+PR2 выпуск принят: #1778/5bb27f29; mainCI39753846061 attempt2/API39759240933/frontend39759241014 success. Public212/API exact,26published browser+8cohort/YSGeo, native213/startup verified. Первый mainCI остановлен той же неизменённой дробной геометрией Progress320, failed-job rerun без правок прошёл.
+
+PR3 интеграция соседней maincec32c79(#1779): только workflow инспекции/read-only audit script и документы, runtime Live не менялся. Конфликт CURRENT_STATE разрешён сохранением полной актуальной main и ровно собственной строки PR3. Новые main/CI/publication перед merge обязательны, исходные runtime файлы PR3 идентичны aa050b4e.
+
+PR3 на cec32c79: полный check exit0 и14browser(OFF/ON/menu+role gates) passed; CSS/e2e runtime идентичен прежнему PR3. Свежий CI нового head обязателен.
+
+PR3 обновлён от maina3bd2bd8 после #1759:6изменённых файлов питания, CSS nutrition-scoped, beforeunload/blocker снимаются с формой. Live/shared UI не менялись; runtime CSS и client reference e2e PR3 побайтно прежние3b5180f4. Rebase чистый. Повторные полный check и14браузерных случаев, новый обязательный CI и публикация именно этой базы остаются гейтами до merge. Исходный exact-base publication gate сохранён.
