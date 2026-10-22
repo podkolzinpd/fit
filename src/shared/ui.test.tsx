@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isCoachmarkSeen } from './coachmarks'
+import { attachRequestDiagnostics, getRequestDiagnostics } from './request-diagnostics'
 import { AsyncView, Coachmark, EmptyState, Field, OverflowMenu, Page, SaveStatus, StatePanel, Switch, useConfirm } from './ui'
 
 describe('AsyncView', () => {
@@ -21,6 +22,31 @@ describe('AsyncView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Сеть недоступна')
     expect(retry).toHaveBeenCalledOnce()
+  })
+})
+
+describe('AsyncView contextual error', () => {
+  it('changes only the description, retaining the original diagnostic and retry', async () => {
+    const retry = vi.fn()
+    const error = attachRequestDiagnostics(new Error('Пилот временно недоступен'), {
+      requestId: 'live-503-context', occurredAt: '2026-10-22T09:00:00Z',
+      backend: 'yandex', operation: 'training-data', stage: 'api', status: 503,
+    })
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    render(<AsyncView loading={false} error={error} errorDescription="Сервис временно недоступен. Попробуйте ещё раз." onRetry={retry}>Контент</AsyncView>)
+    expect(screen.getByRole('alert')).toHaveTextContent('Сервис временно недоступен. Попробуйте ещё раз.')
+    expect(screen.queryByText(error.message)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Скопировать диагностику' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('HTTP: 503')))
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Request ID: live-503-context'))
+    expect(error.message).toBe('Пилот временно недоступен')
+    expect(getRequestDiagnostics(error)?.status).toBe(503)
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
+    expect(retry).toHaveBeenCalledOnce()
+    if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard)
+    else Reflect.deleteProperty(navigator, 'clipboard')
   })
 })
 
