@@ -2170,10 +2170,10 @@ export function WorkoutDetailPage() {
 
       {canManage && !clientCompletionReport && <div className="actions workout-detail-actions">
         {(workout.status === 'planned' || done) && <Link className="button secondary" to={`/workouts/${workoutId}/edit`} state={childNavigationState}>{done ? 'Изменить результат' : 'Изменить'}</Link>}
-        {!manageMenuInHeader && <OverflowMenu label="Другие действия с тренировкой" items={workoutManageItems} />}
+        {!manageMenuInHeader && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={workoutManageItems} />}
       </div>}
       {clientAuthoredReadOnly && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Скопировать и отправить план</Link></div>}
-      {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Создать свою копию</Link>{workout.exercises.length > 0 && (workout.status === 'planned' || done) && <OverflowMenu label="Другие действия с тренировкой" items={[{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }]} />}</div>}
+      {clientMode && !clientOwned && <div className="actions"><Link className="button secondary" to={`/workouts/new?copy=${workoutId}`} state={childNavigationState}>Создать свою копию</Link>{workout.exercises.length > 0 && (workout.status === 'planned' || done) && <OverflowMenu placement="top" label="Другие действия с тренировкой" items={[{ label: 'В избранное', onClick: () => setFavoriteSheetOpen(true) }]} />}</div>}
       {remove.error && <p className="error">{remove.error.message}</p>}
       {cancelPlanned.error && <p className="error" role="alert">{cancelPlanned.error.message}</p>}
       {reschedule.error && <p className="error" role="alert">{reschedule.error.message}</p>}
