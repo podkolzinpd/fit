@@ -699,6 +699,90 @@ test('client reference voice cancel, review edits and failed save retain the dra
   await expect(page).toHaveURL(new RegExp(`/workouts/${newWorkoutId}`))
 })
 
+test('client plan requires the current profile and preserves dictated drafts across profile and save failures', async ({ page }, info) => {
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true,
+    workouts: [], failClients: true, failFirstSave: true })
+  const transcript = 'Приседания один подход десять повторений'
+  await page.addInitScript(({ id, transcript }) => {
+    const draft = { screen: 'save', text: transcript, reviewedText: transcript, lastLlmText: transcript,
+      choices: {}, clientId: '10000000-0000-4000-8000-000000000099', recordMode: 'planned',
+      workoutDate: '2026-10-22', startTime: '', items: [{
+        line: transcript, hasValues: true, exercise: { source: 'system', ref: 'squat',
+          name: 'Приседание', muscleGroup: 'legs', inputKind: 'strength' },
+        sets: [{ position: 0, weightKg: 22.5, reps: 10 }],
+      }] }
+    for (const draftId of ['access-probe', 'independent']) {
+      const key = 'fit.today-draft.' + id + '.plan.client-' + draftId
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(draft))
+    }
+    localStorage.setItem('fit.client-today-drafts.' + id, JSON.stringify(['access-probe', 'independent']))
+  }, { id: pilotId, transcript })
+  await page.goto('/me?view=save&draft=access-probe')
+  const save = page.getByRole('button', { name: 'Запланировать тренировку', exact: true })
+  await expect(page.getByRole('heading', { name: 'Не удалось загрузить данные' })).toBeVisible()
+  await expect(save).toHaveCount(0)
+  expect(backend.getSaveAttempts()).toBe(0)
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(({ id, theme }) => {
+      localStorage.setItem('fit.clientLime.theme.' + id, theme)
+      window.dispatchEvent(new Event('fit-client-lime-theme-change'))
+    }, { id: pilotId, theme })
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: info.outputPath('plan-profile-error-' + theme + '-' + width + '.png'), fullPage: true })
+    }
+  }
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Не удалось загрузить данные' })).toBeVisible()
+  backend.setClientsFailure(false)
+  await page.getByRole('button', { name: 'Повторить', exact: true }).first().click()
+  await expect(save).toBeEnabled()
+  // The form is now mounted. A failed background profile refresh must not
+  // fall back to the obsolete card embedded in this restored draft.
+  await page.getByRole('button', { name: '← К проверке', exact: true }).click()
+  await page.getByRole('button', { name: 'Добавить упражнение', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await picker.getByLabel('Поиск упражнения').fill('Synthetic new movement 643')
+  await picker.getByRole('button', { name: 'Создать упражнение', exact: true }).click()
+  await picker.getByLabel('Название', { exact: true }).fill('Synthetic new movement 643')
+  await picker.locator('.picker-categories').getByRole('button', { name: 'Ноги', exact: true }).click()
+  await picker.getByRole('button', { name: 'Сохранить упражнение', exact: true }).click()
+  await picker.getByRole('button', { name: /^Добавить.*1/ }).click()
+  await expect(picker).toHaveCount(0)
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  backend.setClientsFailure(true)
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await expect(page.getByText('Не удалось открыть профиль спортсмена.', { exact: false })).toBeVisible()
+  await expect(save).toBeDisabled()
+  await page.screenshot({ path: info.outputPath('profile-refresh-error.png'), fullPage: true })
+  backend.setClientsFailure(false)
+  await page.getByRole('button', { name: 'Повторить', exact: true }).first().click()
+  await expect(save).toBeEnabled()
+  await save.click()
+  await expect.poll(() => backend.getSaveAttempts()).toBe(1)
+  await expect(page.locator('.error').filter({ hasText: 'временно недоступен' }).first()).toBeVisible()
+  const draftKey = 'fit.today-draft.' + pilotId + '.plan.client-access-probe'
+  await expect.poll(() => page.evaluate(key => {
+    const draft = JSON.parse(localStorage.getItem(key) ?? '{}') as { text?: string }
+    return draft.text
+  }, draftKey)).toBe(transcript)
+  const retained = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{}') as { lastLlmText?: string; items?: { sets?: { weightKg?: number }[] }[] }, draftKey)
+  expect(retained.lastLlmText).toBe(transcript)
+  expect(retained.items?.[0]?.sets?.[0]?.weightKg).toBe(22.5)
+  await page.reload()
+  await expect(save).toBeEnabled()
+  await page.getByRole('button', { name: '← К проверке', exact: true }).click()
+  await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Далее', exact: true }).click()
+  await save.click()
+  await expect.poll(() => backend.getSaveAttempts()).toBe(2)
+  await expect(page).toHaveURL(new RegExp('/workouts/' + newWorkoutId))
+  expect(backend.getWorkouts()[0]?.clientId).toBe(clientId)
+  expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toBeNull()
+  expect(await page.evaluate(id => localStorage.getItem('fit.today-draft.' + id + '.plan.client-independent'), pilotId)).not.toBeNull()
+})
+
 test('another client and a trainer never receive client editor geometry', async ({ page }) => {
   await mockPilot(page, { role: 'client', profileId: 'c11e0000-6010-4000-8000-000000000002', clientLime: true, workouts: [] })
   await page.goto('/workouts/new')

@@ -4769,6 +4769,19 @@ describe('pilot planned workout commands', () => {
     exercises: [],
   }
 
+  it('returns safe plan-save phase diagnostics without changing forbidden semantics', async () => {
+    const writer = buildWorkoutsWriter(new PilotWorkoutCommandError('forbidden', { step: 'stage', reason: 'forbidden' }))
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false })
+    apps.push(app)
+    const response = await app.inject({ method: 'POST', url: '/v1/workouts',
+      headers: { 'x-fit-pilot-session': sessionToken }, payload: draft })
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toEqual({ error: 'action_not_allowed' })
+    expect(response.headers['x-fit-error-category']).toBe('planned_workout_stage')
+    expect(response.headers['x-fit-error-code']).toBe('forbidden')
+    expect(response.body).not.toContain(draft.notes)
+  })
+
   it('creates, updates and soft-deletes with explicit versions', async () => {
     const writer = buildWorkoutsWriter()
     const app = buildApp({

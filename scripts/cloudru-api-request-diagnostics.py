@@ -8,7 +8,7 @@ import uuid
 def summarize(lines, request_id):
     wanted = str(uuid.UUID(request_id))
     result = {"event": "cloudru_api_request_diagnostics", "journalEntries": 0,
-              "matchedEntries": 0, "statuses": [], "errors": []}
+              "matchedEntries": 0, "statuses": [], "errors": [], "planSaveFailures": []}
     for line in lines:
         try:
             record = json.loads(line)
@@ -21,6 +21,12 @@ def summarize(lines, request_id):
         except (ValueError, TypeError):
             continue
         result["matchedEntries"] += 1
+        step, reason = entry.get("planSaveStep"), entry.get("planSaveReason")
+        if isinstance(step, str) and isinstance(reason, str) and step in {"save", "stage", "format", "notification"} and reason in {
+                "active", "conflict", "forbidden", "invalid", "not_found"}:
+            diagnostic = {"step": step, "reason": reason}
+            if diagnostic not in result["planSaveFailures"]:
+                result["planSaveFailures"].append(diagnostic)
         response = entry.get("res")
         status = response.get("statusCode") if isinstance(response, dict) else None
         if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:

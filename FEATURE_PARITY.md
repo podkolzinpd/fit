@@ -315,6 +315,8 @@ Auth/DataBackend/Assistant используют native composition, development/
 
 ## Client self-service workout acceptance contract
 
+- YAFIT-643: сохранение плана использует активную связь тренера, без обязательной private metadata; спортсмен использует только текущую подтверждённую карточку. Error/retry/reload сохраняют текст и упражнения; успешная отправка не удаляет соседний черновик. Шаг отказа диагностируется без payload/PII. Приёмка: `docs/design/WORKOUT_PLAN_ACCESS_DRAFTS_20261022.md`.
+
 - Empty current-workouts plus opens the same compact creation entry as the
   header Add action; accessible 44×44 link, touch and keyboard. Client Lime
   root tabs and list/calendar labels share the existing 14 px / 500 UI role.
