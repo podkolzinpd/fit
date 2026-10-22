@@ -70,7 +70,13 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set.current .run-distance-unit { color: var(--lime-accent-ink); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .coach-live-field-unit { font-size: var(--type-caption-size); line-height: var(--leading-snug); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .run-distance-unit { font-size: 16px; line-height: var(--leading-snug); }
-.phone-frame.fit-client-lime.client-workout-reference .rest-time-wheel:focus-visible { outline-color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.workout-live-reference .rest-time-wheel:focus-visible { outline-color: var(--lime-accent-ink); }
+
+/* A recorded fact is distinct from the neutral future action. The inset mark
+   does not change the input/check geometry or confirmation hit target. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed :is(.live-set-input, .live-set-rpe, .run-distance-control, .workout-duration-trigger) { background: color-mix(in srgb, var(--success) 12%, var(--workout-live-field)); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done { background: color-mix(in srgb, var(--success) 12%, var(--workout-live-field)); color: var(--success-fg); box-shadow: inset 0 0 0 1px var(--success-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-set.confirmed .live-set-check.done svg[data-original-icon] { filter: none; }
 
 /* Reuse the released workout pause action on the reference clock. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.coach-live-clock { appearance: none; width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: center; }

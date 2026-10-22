@@ -49,8 +49,8 @@
 
 | PR | Находки | Реализация/проверка | Публикация |
 | --- | --- | --- | --- |
-| 1 | L01,L02,L03,L06 | Локально:14 visual,12 contrast/geometry,54 mechanics; полный check exit0 | CI/публикация впереди |
-| 2 | L05 | Ожидает PR1 | Нет |
+| 1 / #1776 | L01,L02,L03,L06 | check +14visual/12assertions/54mechanics/6gates/8phase passed | 0a81a5f7: public212/API, browser26/cohort8, native213 install/launch verified |
+| 2 | L05 (+scope L03) | 8state +34mechanics +26final; fullcheck/offline exit0, finalbuild passed | CI/выпуск впереди; PR1 принят |
 | 3 | L04,L07 | Ожидает PR2 | Нет |
 | 4 | L08 | Ожидает PR3 | Нет |
 
@@ -59,3 +59,21 @@
 ### PR1 preflight и приёмка
 
 Уже работает: prep/work/rest, ввод дистанции, выбор времени. Переиспользуем: RunMetricsFields, TimeWheel, текущие callback и --lime-accent-ink/--type-caption-size, editable16px. Меняем только scoped CSS. Свежий baseline: main5baf0a77 и опубликованный клиент, 3WebKit воспроизведения; исправленная матрица14 и12assertions прошла в двух движках;54 связанных mechanics passed; npm run check exit0. Локальные квитанции в outputs/client-live-fixes-20261022/pr1-*.log. Первоначальные пробы с неверными env/fixture endpoints не были проверкой Lime; исправлены только harness, исходные логи сохранены. Physical iPhone НЕ ПРОВЕРЕНО.
+
+### PR2 preflight
+
+Свежая main0a81a5f7 (#1776), активных Live PR нет; локальная сборка того же commit с client reference.4browser baseline(light/dark, два движка) воспроизводят L05. Уже работает: confirmedAt/fact/edit, смена current. Переиспользуем CheckIcon и success/neutral/primary. Меняем только вид confirmed; координатор/обработчики/ключи форм прежние. Для сокращения ожидания подготовка PR2 идёт во время официального выпуска PR1; merge/publication PR2 запрещены до подтверждённого выпуска PR1. Физический iPhone НЕ ПРОВЕРЕНО.
+
+### PR1 выпуск принят
+
+#1776 слит0a81a5f7; mainCI39736998850/API39738911173/frontend39738911170 success. Public212/212 и API exact release;26 опубликованных browser cases и8cohort/YSGeo passed. Native sync/build/install/launch того же commit,213/213 bytes verified, startup просмотрен; physical/authenticated-native Live не принят. Квитанции: outputs/client-live-fixes-20261022/pr1-*.json/log локального проекта.
+
+PR2 также сужает focus selector L03 дополнительным существующим workout-live-reference: AppLayout использует client-workout-reference и у редактора избранного вне пилота. Явный второй gate исключает распространение изменения на эти экраны; TimeWheel/логика не меняются. Это сохранение исходного ограничения четырьмя профилями, не новая задача.
+
+PR2 приёмка:8 state cases/390430 и34mechanics passed,26финальных(regression PR1/roles)passed; light/dark снимки просмотрены. Полный повторный check exit0(2814frontend/1445API+188standardDBskip); исходный прогон прерван после задержки npm install и отменённой infra-проверки, не выдан за зелёный. После CSS scope уточнения итоговый build/diffcheck passed. Логи pr2-check.log/pr2-check-offline.log/pr2-final.log/pr2-final-build.log сохранены.
+
+### PR2 обновление базы
+
+Более ранний #1777 слит1086a036; rebase выполнен без конфликтов. Diff базы затрагивает только FavoriteWorkoutEditor, его тесты/документы/auth-e2e; Live/таймеры/стили не менялись. Старый CI наблюдатель остановлен, его проверки не используются для merge новой базы. Обязательны новый полный check и26целевых browser cases, затем свежий CI. Выпуск предшествующей базы проверяется отдельно.
+
+PR2 на1086a036: новый полный check exit0 и26browser passed; приёмка предыдущих34механик остаётся применимой, поскольку Live-файлы базы не менялись. Новый CI после push обязателен.
