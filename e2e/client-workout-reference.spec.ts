@@ -1591,3 +1591,43 @@ for (const theme of ['light', 'dark']) test(`client Live phase text contrast ${t
     if (label === 'Подготовка') await page.clock.fastForward(5000)
   }
 })
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client Live three visible set states ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+  }, { id: pilotId, theme, density })
+  const source = coachGestureWorkout(false, 1), exercise = source.exercises[0]!
+  exercise.sets.push({ ...exercise.sets[1]!, id: '10000000-0000-4000-8000-000000000099', position: 2, fact: {} })
+  const confirmedAt = new Date(Date.now() - 60000).toISOString()
+  exercise.sets[0]!.confirmedAt = confirmedAt
+  exercise.sets[0]!.fact = { weightKg: 20, reps: 10 }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const rows = page.locator('form[data-live-set-id]')
+  await expect(rows).toHaveCount(3)
+  await expect(rows.first().getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(rows.nth(1)).toHaveClass(/current/)
+  await expect(rows.nth(2).getByRole('button', { name: 'Готово, отдых', exact: true })).toBeVisible()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const states = await rows.locator('.live-set-check').evaluateAll(elements => elements.map(element => {
+      const style = getComputedStyle(element)
+      return { background: style.backgroundColor, color: style.color, mark: style.boxShadow, height: element.getBoundingClientRect().height }
+    }))
+    expect(states[0]!.color).not.toBe(states[2]!.color)
+    expect(states[0]!.background).not.toBe(states[2]!.background)
+    expect(states[1]!.background).not.toBe(states[2]!.background)
+    expect(states[0]!.mark).not.toBe('none')
+    expect(liveContrast(states[0]!.color, states[0]!.background)).toBeGreaterThanOrEqual(3)
+    for (const state of states) expect(state.height).toBe(density === 'original' ? 54 : 48)
+    await page.screenshot({ path: info.outputPath(`three-states-${width}.png`) })
+  }
+  await rows.first().getByLabel('Фактический вес', { exact: true }).fill('27.5')
+  await rows.first().getByLabel('Фактический вес', { exact: true }).blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
+  await expect(rows.first().getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect(page.locator('.live-rest-trigger')).not.toHaveAttribute('aria-label', /Отдых идёт/)
+})
