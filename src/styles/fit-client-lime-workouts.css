@@ -337,7 +337,7 @@
   -webkit-line-clamp: unset;
 }
 .phone-frame.fit-client-lime.workout-detail-history-identity .workout-detail-page > :is(.planned-exercise-list, .completed-exercise-list) > .exercise-block.view {
-  margin: 0;
+  margin: var(--space-2) 0;
   padding: 12px 0 12px 12px;
   border-top: 0;
   border-right: 0;

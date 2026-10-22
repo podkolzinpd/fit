@@ -1305,3 +1305,66 @@ for (const theme of ['dark', 'light']) {
     })
   }
 }
+
+for (const theme of ['light', 'dark']) for (const status of ['planned', 'done'] as const) test(`Yandex detail separates adjacent supersets and anchors footer menu ${theme} ${status}`, async ({ page }, info) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const actorId = 'c11e0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ actorId, theme }) => localStorage.setItem(`fit.clientLime.theme.${actorId}`, theme), { actorId, theme })
+  const source = { ...coachGestureWorkout(false, 7), status }
+  source.exercises.forEach((exercise, index) => {
+    if (index !== 4) {
+      exercise.blockId = source.exercises[index < 2 ? 0 : index < 4 ? 2 : 5]!.id
+      exercise.blockType = 'group'
+      exercise.blockPreset = 'set'
+      exercise.blockRounds = 3
+    }
+    exercise.name = `Длинное название упражнения для проверки суперсета и переноса строк ${index + 1}`
+  })
+  await mockPilot(page, { role: 'client', profileId: actorId, clientLime: true, fitLime: false, workouts: [source] })
+  await page.goto(`/workouts/${source.id}`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+  const blocks = page.locator('.exercise-block.view')
+  await expect(blocks).toHaveCount(3)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 932 })
+    const boxes = await blocks.evaluateAll(elements => elements.map(el => { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom } }))
+    await page.screenshot({ path: info.outputPath(`blocks-${width}.png`), fullPage: true })
+    expect(boxes[1]!.top - boxes[0]!.bottom).toBeGreaterThanOrEqual(8)
+    expect(boxes[2]!.top - boxes[1]!.bottom).toBeGreaterThan(8)
+    const trigger = page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true })
+    await trigger.scrollIntoViewIfNeeded()
+    await trigger.click()
+    const menu = page.getByRole('menu')
+    await expect(menu).toBeVisible()
+    const m = (await menu.boundingBox())!, t = (await trigger.boundingBox())!, nav = (await page.locator('.tab-bar').boundingBox())!
+    await page.screenshot({ path: info.outputPath(`menu-${width}.png`) })
+    expect(m.y + m.height).toBeLessThanOrEqual(t.y - 4)
+    expect(Math.abs(m.x + m.width - t.x - t.width)).toBeLessThanOrEqual(1)
+    expect(m.x).toBeGreaterThanOrEqual(8)
+    expect(m.y).toBeGreaterThanOrEqual(0)
+    expect(m.y + m.height).toBeLessThan(nav.y)
+    await page.locator('.content').evaluate(el => { el.scrollTop -= 24 })
+    await expect.poll(async () => { const moved = (await menu.boundingBox())!, anchor = (await trigger.boundingBox())!; return Math.abs(moved.y + moved.height - anchor.y + 6) }).toBeLessThanOrEqual(1)
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
+
+
+test('Yandex trainer detail keeps automatic exercise menu placement', async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const source = { ...coachGestureWorkout(), status: 'done' as const }
+  await mockPilot(page, { role: 'trainer', profileId: source.trainerId, fitLime: false, workouts: [source] })
+  await page.goto(`/workouts/${source.id}`)
+  const trigger = page.getByRole('button', { name: `Действия с упражнением «${source.exercises[0]!.name}»`, exact: true })
+  await trigger.click()
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  const m = (await menu.boundingBox())!, t = (await trigger.boundingBox())!
+  expect(m.y).toBeGreaterThanOrEqual(t.y + t.height + 4)
+  expect(Math.abs(m.x + m.width - t.x - t.width)).toBeLessThanOrEqual(1)
+  await page.keyboard.press('Escape')
+  await expect(menu).toHaveCount(0)
+})
