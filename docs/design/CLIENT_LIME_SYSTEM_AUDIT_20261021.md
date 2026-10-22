@@ -423,26 +423,39 @@ R06 — отдельное решение о поисковой роли, D01 �
 После каждого выпуска перепроверять оставшийся реестр на новой сборке.
 P0 по доступным доказательствам отдельно не установлен.
 
-## Продолжение исправлений, 22.10.2026 — локальная приёмка
+## Исполнение плана, 22.10.2026
 
-Это дополнение не меняет дату/версию исходного аудита. Все7продуктовых частей
-подготовлены по CLIENT_LIME_REMEDIATION_PLAN_20261021.md; окончательный
-локальный набор260/260WebKit+Chromium прошёл. После интеграции main5e6acc4b
-повторный расширенный набор268/268 прошёл, включая оба входа Assistant.
-Полный npm run check интеграции завершился exit0:2810frontend/1440API,
-186 штатных условных DB skips, политики и build. Это **не доказательство
-публикации всей цепочки**: PR1#1765 полностью опубликован и проверен,
-PR2#1767 и последующие выпускаются по очереди со свежим CI каждого head.
+Снимок перед финальным PR7: первые5 продуктовых выпусков опубликованы
+и проверены; PR6 слит, его штатная публикация ещё проверяется. Это состояние
+на момент коммита, а не прогноз успеха. После каждой публикации её точные
+CI/API/frontend runs, публичная SHA-сверка, browser и native/simulator
+квитанции добавляются в описание соответствующего PR по ссылкам ниже.
+Финальный результат всей цепочки подтверждается приёмкой финального PR7.
 
-| Находки | Реализация/приёмка | Статус на момент дополнения |
+PR0/#1763 с правилами уже в main (beb1a3bb). Все7 продуктовых частей
+реализованы по [плану](CLIENT_LIME_REMEDIATION_PLAN_20261021.md).
+Расширенный локальный270/270 набор прошёл с iPhone13WebKit иPixel7Chromium,
+включая обе темы/плотности, ON/OFF и оба Assistant-входа. Полный check
+окончательной интеграции:2810frontend/1440API+186 штатных условных DB skips,
+lint/types/политики/build exit0. После переноса на слитый5fe43374 всё
+проверенное дерево совпало; дальнейшие изменения этого дополнения — документы.
+Это **не подмена проверки публикации PR6/7 локальным результатом**.
+
+| Находки | Реализация/приёмка | Состояние и фактическая квитанция |
 | --- | --- | --- |
-| R07 | CLIENT_LIME_R07_20261021.md | PR#1765/a5c3d649 опубликован;212 файлов/API совпали,38 browser cases прошли на4 профилях |
-| R08/R09 | CLIENT_LIME_COMPLETED_CARDS_20261021.md | Локально пройдено, PR#1767 |
-| Новый свайп клиента | CLIENT_LIME_LIVE_SWIPES_20261021.md | Локально пройдено |
-| R01 | CLIENT_LIME_LIVE_HEADER_20261021.md | Локально пройдено |
-| R04/R05 | CLIENT_LIME_CATALOG_ACTIONS_20261021.md | Локально пройдено |
-| R10 | CLIENT_LIME_TIME_SHEETS_20261021.md | Локально пройдено |
-| R11/R12 и R12.1 ниже | CLIENT_LIME_LIVE_FEEDBACK_20261021.md | Локально пройдено |
+| R07 | [CLIENT_LIME_R07_20261021.md](CLIENT_LIME_R07_20261021.md) | Опубликован [#1765](https://github.com/podkolzinpd/fit/pull/1765)/a5c3d649: 212 файлов/API exact, 38/38 browser, native/simulator startup passed |
+| R08/R09 | [CLIENT_LIME_COMPLETED_CARDS_20261021.md](CLIENT_LIME_COMPLETED_CARDS_20261021.md) | Опубликован [#1767](https://github.com/podkolzinpd/fit/pull/1767)/552e05f2: 212 файлов/API exact, 28/28 browser, native/simulator startup passed; дополнительно12 мобильных passed |
+| Клиентский свайп и R07.1 | [CLIENT_LIME_LIVE_SWIPES_20261021.md](CLIENT_LIME_LIVE_SWIPES_20261021.md) | Опубликован [#1768](https://github.com/podkolzinpd/fit/pull/1768)/d696aaf5: 212 файлов/API exact, 36/36 browser, native/simulator startup passed; дополнительно10 сенсорных проверок удаления passed |
+| R01 | [CLIENT_LIME_LIVE_HEADER_20261021.md](CLIENT_LIME_LIVE_HEADER_20261021.md) | Опубликован [#1770](https://github.com/podkolzinpd/fit/pull/1770)/b6b0603c: 212 файлов/API exact, 24/24 browser, native/simulator startup passed |
+| R04/R05 | [CLIENT_LIME_CATALOG_ACTIONS_20261021.md](CLIENT_LIME_CATALOG_ACTIONS_20261021.md) | Опубликован [#1771](https://github.com/podkolzinpd/fit/pull/1771)/5c9a89cc: 212 файлов/API exact, 46/46 browser, native/simulator startup passed; дополнительно2 подтверждения/темы passed |
+| R10 | [CLIENT_LIME_TIME_SHEETS_20261021.md](CLIENT_LIME_TIME_SHEETS_20261021.md) | Слит [#1772](https://github.com/podkolzinpd/fit/pull/1772)/5fe43374; локально26/26 и полный check passed; фактическая публикация проверяется, итог в описании PR |
+| R11/R12/R12.1 | [CLIENT_LIME_LIVE_FEEDBACK_20261021.md](CLIENT_LIME_LIVE_FEEDBACK_20261021.md) | Код готов;270/270 mobile и полный check passed. Свежий CI и фактическая публикация фиксируются в финальном PR7 |
+
+Все browser readbacks используют реально опубликованные JS/CSS и изолированные
+API/WS fixtures. Production-тренировки/настройки не изменялись. Native-квитанция
+здесь означает сборку, установку и устойчивый auth-startup в iOS Simulator,
+а не аутентифицированную Live-проверку физического iPhone.
+R07.1 включён в PR3, R12.1 — в PR7; число PR не увеличивалось.
 
 R02 остаётся согласованным поведением. R03 не исправлялся без нового
 воспроизведения, R06 требует целевого решения, D01 не заменён выдуманным
