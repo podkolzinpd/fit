@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { z } from 'zod'
-import { clientId } from './fit-lime-fixtures'
+import { clientId, coachGestureWorkout, mockPilot } from './fit-lime-fixtures'
 
 if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
   for (const name of [
@@ -16,6 +16,59 @@ if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
 }
 
 const legacyRequestCounts = new WeakMap<object, number>()
+
+for (const input of ['favorite', 'preset'] as const) test(`Yandex ready ${input} creates an independent plan through the shared form`, async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const actorId = 'c11e0000-6010-4000-8000-000000000001'
+  const source = coachGestureWorkout()
+  const original = JSON.stringify(source)
+  const backend = await mockPilot(page, { role: 'client', profileId: actorId, clientLime: true, fitLime: false, workouts: [source] })
+  const favorite = { id: source.id, title: 'Мой шаблон', version: 1, createdAt: '2026-10-22T00:00:00Z', exercises: [{ ...source.exercises[0]!, sets: [{ position: 0, weightKg: 40, reps: 12 }] }] }
+  const favoriteBefore = JSON.stringify(favorite)
+  await page.route('https://stage.example.test/v1/favorite-workouts', route => route.fulfill({ json: { favorites: [favorite] } }))
+  await page.goto(`/workouts/new?${input}=${input === 'favorite' ? source.id : 'full-body-no-equipment'}`)
+  await expect(page.locator('.planned-exercise')).toHaveCount(input === 'favorite' ? 1 : 5)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page).toHaveURL(/\/workouts\/[a-f0-9-]{36}$/)
+  await expect.poll(() => backend.getWorkouts().length).toBe(2)
+  const saved = backend.getWorkouts().find(workout => workout.id !== source.id)!
+  expect(saved.status).toBe('planned')
+  expect(saved.exercises).toHaveLength(input === 'favorite' ? 1 : 5)
+  if (input === 'favorite') expect(saved.exercises[0]!.sets[0]).toMatchObject({ weightKg: 40, reps: 12 })
+  expect(saved.exercises[0]!.blockId).not.toBe(source.exercises[0]!.blockId)
+  expect(JSON.stringify(backend.getWorkouts().find(workout => workout.id === source.id))).toBe(original)
+  expect(JSON.stringify(favorite)).toBe(favoriteBefore)
+})
+
+for (const status of ['planned', 'done'] as const) test(`Yandex assigned ${status} workout saves an independent favorite without original manage rights`, async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const actorId = 'c11e0000-6010-4000-8000-000000000001'
+  const source = { ...coachGestureWorkout(), status }
+  const first = source.exercises[0]!.sets[0]!
+  first.weightKg = 20
+  first.reps = 5
+  first.fact = status === 'done' ? { weightKg: 30, reps: 8 } : {}
+  first.confirmedAt = status === 'done' ? '2026-10-21T09:00:00Z' : null
+  const original = JSON.stringify(source)
+  const backend = await mockPilot(page, { role: 'client', profileId: actorId, clientLime: true, fitLime: false, workouts: [source] })
+  let snapshot: { exercises: Record<string, unknown>[] } | undefined
+  await page.route('https://stage.example.test/v1/favorite-workouts', async route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { favorites: [] } })
+    const draft = z.object({ title: z.string(), exercises: z.array(z.record(z.string(), z.unknown())) }).parse(route.request().postDataJSON())
+    snapshot = draft
+    return route.fulfill({ status: 201, json: { ...draft, id: source.id, version: 1, createdAt: '2026-10-22T00:00:00Z' } })
+  })
+  await page.goto(`/workouts/${source.id}`)
+  const menu = page.getByRole('button', { name: 'Другие действия с тренировкой', exact: true })
+  await menu.click()
+  await expect(page.getByRole('menuitem', { name: 'Удалить тренировку', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /^(Изменить|Изменить результат)$/ })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'В избранное', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Сохранить в избранное' }).getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect.poll(() => snapshot).toBeTruthy()
+  expect(z.array(z.unknown()).parse(snapshot!.exercises[0]?.sets)[0]).toMatchObject({ weightKg: status === 'done' ? 30 : 20, reps: status === 'done' ? 8 : 5 })
+  expect(JSON.stringify(backend.getWorkouts()[0])).toBe(original)
+})
 
 test('Yandex ready workouts edits, renames, plans and deletes an independent favorite with explicit retries', async ({ page }, testInfo) => {
   test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
@@ -185,6 +238,8 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await card.getByRole('button', { name: 'Запланировать', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/workouts/new\\?favorite=${id}$`))
   await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
+  const storedDraftKey = `fit.workout-form-draft.${actorId}.favorite-${id}`
+  await expect.poll(() => page.evaluate(key => localStorage.getItem(key), storedDraftKey)).not.toBeNull()
   // A refreshed source must not silently overwrite or resume an older plan.
   await page.goto('/me/workouts?tab=presets')
   favorite!.version++
@@ -194,7 +249,6 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await expect(page.locator('form.workout-form')).toHaveCount(0)
   await page.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
   await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
-  const storedDraftKey = `fit.workout-form-draft.${actorId}.favorite-${id}`
   const retained = await page.evaluate(key => localStorage.getItem(key), storedDraftKey)
   await page.reload()
   await page.getByRole('button', { name: 'Начать из обновлённого шаблона', exact: true }).click()

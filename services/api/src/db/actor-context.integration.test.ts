@@ -671,6 +671,14 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         expect((await ownerPool.query('select to_jsonb(workout_set) as snapshot from public.workout_sets workout_set order by id')).rows).toEqual(setsBefore.rows)
         expect((await request('POST', 0, { title: 'Space available again', exercises })).statusCode).toBe(201)
         expect((await request('GET', 0)).json<{ favorites: unknown[] }>().favorites).toHaveLength(10)
+        // Accounts affected by the former race retain every existing snapshot.
+        const extra = randomUUID()
+        await ownerPool.query('insert into public.favorite_workouts(id,client_id,title,exercises) values($1,$2,$3,$4)', [extra, actors[0], 'Historical extra', JSON.stringify(exercises)])
+        expect((await request('GET', 0)).json<{ favorites: unknown[] }>().favorites).toHaveLength(11)
+        expect((await request('PUT', 0, { title: 'Extra remains editable', expectedVersion: 1 }, `/${extra}`)).statusCode).toBe(200)
+        expect((await request('POST', 0, { title: 'Still full', exercises })).statusCode).toBe(422)
+        expect((await request('GET', 0)).json<{ favorites: unknown[] }>().favorites).toHaveLength(11)
+        expect((await request('DELETE', 0, undefined, `/${extra}`)).statusCode).toBe(204)
       } finally {
         await app.close()
         await ownerPool.query('delete from public.profiles where id = any($1::uuid[])', [actors])

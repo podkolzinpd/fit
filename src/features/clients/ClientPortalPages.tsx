@@ -20,6 +20,7 @@ import { AthleteAchievementPreview } from '../achievements/AthleteAchievements'
 import { useWorkoutHistoryCalendar, useWorkoutPlannedCalendar } from './use-workout-history-calendar'
 import { FavoriteWorkoutNameSheet } from '../workouts'
 import { getRequestDiagnostics } from '../../shared/request-diagnostics'
+import { RepositoryError } from '../../data/repositories/error'
 
 function favoriteExerciseCountLabel(count: number): string {
   const lastTwo = count % 100
@@ -71,7 +72,7 @@ export function MyWorkoutsPage() {
       try { await favoriteWorkoutsRepository.remove(id) }
       catch (error) {
         const status = getRequestDiagnostics(error)?.status
-        if (status === 401 || status === 403) throw error
+        if (status === 401 || status === 403 || error instanceof RepositoryError && ['PT403', '42501', '28000'].includes(error.code)) throw error
         const current = await favoriteWorkoutsRepository.list()
         queryClient.setQueryData(['favorite-workouts'], current)
         if (current.some((item) => item.id === id)) throw error

@@ -124,6 +124,10 @@
 
 ## Проверка существующего и границы
 
+Задача: https://st.yandex-team.ru/YAFIT-644. План целиком записан в описание.
+Перед проверками ветка обновлена от main53cc1e22 (#1769); защита плана и
+голосовых черновиков сохранена, новая миграция перенумерована в155.
+
 - Работает: факт 55×6 вместо плана 50×5, независимый snapshot, true edit с version,
   отмена удаления и неизменность истории (аудит a5c3d649, 176 unit + real API/PG).
 - Переиспользуем: FitLimeSheetHeader, Field, WorkoutCta, WorkoutHeader,
@@ -143,12 +147,37 @@
 
 | Пункт | Видимый результат | Проверка / доказательство | Статус |
 | --- | --- | --- | --- |
-| 1 | Явный выбор старого черновика | stale version, legacy draft, cancel/reload | Ожидает |
-| 2 | Восстановление rename/delete | 409, lost response, 403/404/503, retained title | Ожидает |
-| 3 | Избранное без правки оригинала | assigned planned/done, forbidden foreign | Ожидает |
-| 4 | Лимит атомарен | 2 sessions at9→10; edit at10; no cleanup | Ожидает |
-| 5 | Одна форма обоих источников | own/preset, route, snapshot/draft | Ожидает |
-| 6 | Компактные экраны | actual390/430light/dark, advanced retention | Ожидает |
-| 7 | Одинаковые доступные окна | focus/Escape/keyboard/pending/error | Ожидает |
-| 8 | Одна видимая подсказка | viewport/scroll/keyboard/trainer | Ожидает |
+| 1 | Явный выбор старого черновика | native browser: stale version, cancel/reload, sourceVersion; storage unit legacy | Локально проверено |
+| 2 | Восстановление rename/delete | native browser:409/read/reconfirm,503/lost DELETE; API403/404, title retained | Локально проверено |
+| 3 | Избранное без правки оригинала | native browser assigned planned/done, unchanged original, no manage action | Локально проверено |
+| 4 | Лимит атомарен | real HTTP/PG two sessions at9→10; edit at10/11; no cleanup | Локально проверено |
+| 5 | Одна форма обоих источников | native browser favorite/preset POST→detail, independent blocks/source | Локально проверено |
+| 6 | Компактные экраны | real390/430light/dark, advanced end/note reload, trainer1440 | Локально проверено |
+| 7 | Одинаковые доступные окна | WebKit focus wrap/Escape/restore, pending/error; unit2 | Локально проверено |
+| 8 | Одна видимая подсказка | queue/viewport unit; real route, shared trainer regression | Локально проверено |
 | 9 | Полный выпуск | check/PG/WebKit/CI/production/native | Ожидает |
+
+## Локальная приёмка
+
+- Полный npm run check exit0: frontend2814/API1445 (+188 conditional DB skip),
+  lint/typecheck, policies, build и startup. После тестовых уточнений — delta
+  ESLint/typecheck. Сокращения обязательных CI-гейтов нет: shared/full scope.
+- Новый пустой Podman PostgreSQL17, chain155:178passed/1conditionalSkip.
+  Один прежний conditional release-toolchain test отмечен явно; это не178+1passed.
+- WebKit6 и Chromium6: два источника создают независимые планы; assigned
+  planned/done snapshots; весь CRUD/recovery и favorite-save pending/diagnostics.
+- Отдельная shared WebKit3: light/dark nested controls390/430 и trainer1440;
+  YS Geo loaded/16px/500, sheet radius40 и реальные role/gate/class assertions.
+- Unit30 для Coachmark/name sheet/draft; прежние editor/preset targeted67.
+- Изменены только native browser cases,2shared unit cases,2name-sheet cases
+  и существующий real HTTP/PG favorite test. Они покрывают разные риски;
+  protected Lime inventory и SHA256 не менялись. Повтор длинного сценария в
+  двух движках обоснован focus/keyboard/navigation; темы/размеры не размножают
+  весь CRUD. Chromium исходно прервал тест до draft effect: ожидание записи
+  fixture исправлено; assertions/таймауты/продуктовый код не ослаблены.
+- local:verify запущен: существующий legacy Supabase backup не стартует до
+  тестов. Общие базы/volumes не сбрасывались. Это не зелёный local:verify;
+  новая PostgreSQL-цепочка и actor/RLS проверены отдельно.
+- Диагностические screenshots сохранены в Playwright output; это не golden
+  comparison. Физический iPhone, реальная клавиатура ОС и mutations настоящих
+  пользователей production не выполнялись.
