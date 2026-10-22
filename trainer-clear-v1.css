@@ -1,4 +1,13 @@
 @font-face{font-family:FitUI;src:url('assets/trainer-clear/ys-geo-regular-916b7f4a.woff2')}@font-face{font-family:FitUI;src:url('assets/trainer-clear/ys-geo-medium-5d6c61ef.woff2');font-weight:500}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-about{display:flex;align-items:center;justify-content:space-between;padding:6px 15px;margin-bottom:7px;height:65px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-about small{font-size:14px;line-height:1.2}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-about .tc-about-consent{font-size:11px;margin-top:3px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-goal{height:43px;margin-bottom:7px;padding:7px 15px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-today{height:78px;padding:7px 15px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-history{height:135px;margin-top:7px;padding-top:9px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-note{margin-top:8px;padding-top:7px;padding-bottom:7px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-messages{margin-top:7px;padding:5px 10px}
+#deck .m-trainer-approved .fit-trainer-iphone .tc-client .tc-messages p{padding:5px 10px}
 #deck .tc-screen .tc-workout .tc-between h3{margin:0!important;font-size:21px!important}
 #deck .tc-screen .tc-profile h3{margin:9px 0 6px!important;font-size:22px!important}
 #deck .tc-finance h3{margin:13px 0 10px!important;font-size:22px!important}

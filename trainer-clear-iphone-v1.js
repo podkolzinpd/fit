@@ -9,6 +9,7 @@
     client:`${header('Клиент')}<div class="tc-person">${avatar()}<div><b>Алексей Смирнов</b><small>Силовые · 3 раза в неделю</small></div><div class="tc-chat">${icon('chat')}<em>2</em></div></div>
       <div class="tc-tabs"><span class="on">Обзор</span><span>Программа</span><span>История</span></div>
       <div class="tc-card tc-goal">${icon('target')}<span>Цель: увеличить силу</span><b>›</b></div>
+      <div class="tc-card tc-about"><div><b>О себе</b><small>Походы · Собака · Настольные игры</small><small class="tc-about-consent">Поделился спортсмен</small></div><span>›</span></div>
       <div class="tc-card tc-today">${icon('calendar')}<div><b>Сегодня, 18:00</b><small>Силовая · всё тело<br>60 минут</small></div><span>›</span></div>
       <div class="tc-card tc-history"><div class="tc-between"><b>Последняя тренировка</b><small>2 октября</small></div><small>6 упражнений · 55 минут</small><div class="tc-bars"><i></i><i></i><i></i></div><div class="tc-note">${icon('note')}<div><b>Заметка тренера</b><small>На следующей тренировке проверить технику тяги.</small></div></div></div>
       <div class="tc-card tc-messages"><div>${avatar()}<p>Можно перенести тренировку на 19:00?</p><small>14:26</small></div><div>${avatar('anna')}<p>Да, перенесу. Программа остаётся прежней.</p><small>14:28</small></div></div>

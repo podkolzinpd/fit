@@ -3,6 +3,7 @@
 #deck .ce-slide > h2 {position:absolute;left:76px;top:122px;right:76px;margin:0!important;font-size:56px!important;line-height:1.12;letter-spacing:-1.5px;max-width:none;}
 #deck .ce-slide > h2::after {display:none!important;}
 #deck .ce-list {position:absolute;left:76px;top:255px;width:650px;display:grid;gap:27px;}
+#deck .ce-value .ce-list {gap:20px;}
 #deck .ce-list h3 {font-size:29px!important;line-height:1.2;margin:0 0 9px!important;font-weight:700;color:#f5f4ef!important;}
 #deck .ce-list p {font-size:23px;line-height:1.35;margin:0;color:#adb4b6;}
 #deck .ce-visual {position:absolute;left:790px;right:76px;top:240px;}
