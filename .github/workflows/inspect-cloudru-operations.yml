@@ -5,6 +5,10 @@ on:
     - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
+      account_history:
+        description: Read only the four owner-approved account history matches and visibility counts
+        type: boolean
+        default: false
       api_errors:
         description: Read only sanitized API command error-code counts for the last 24 hours
         type: boolean
@@ -173,6 +177,48 @@ jobs:
           sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=20 --cap-drop=ALL \
             --security-opt=no-new-privileges --env-file "$owner" \
             "localhost/fit-api:$revision" node dist/cloudru-operations-health.js | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Inspect only the owner-approved account history without changing records
+        if: github.event_name == 'workflow_dispatch' && inputs.account_history
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          FIT_ACCOUNT_HISTORY_TARGETS: ${{ secrets.FIT_ACCOUNT_HISTORY_TARGETS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          umask 077
+          sudo test ! -L /opt/fit/secrets
+          test "$(sudo stat -c '%u:%a' /opt/fit/secrets)" = 0:700
+          owner="/opt/fit/secrets/account-history-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo test ! -L "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .MIGRATION_DATABASE_URL == null and all(.[]; type == "string" and length > 0 and
+            (test("[\u0000-\u001f\u007f]") | not))' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_ID FIT_ACCOUNT_HISTORY_TARGETS; do
+            value=${!name}
+            test -n "$value"
+            echo "::add-mask::$value"
+            test "$value" = "${value//$'\n'/}"
+            test "$value" = "${value//$'\r'/}"
+            printf '%s=%s\n' "$name" "$value" | sudo tee -a "$owner" >/dev/null
+          done
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
+          revision=$(cat /opt/fit/RUNNING_SHA)
+          [[ "$revision" =~ ^[a-f0-9]{40}$ ]]
+          sudo podman run --rm --read-only --memory=256m --cpus=0.5 --timeout=120 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" \
+            -v "$PWD/scripts/cloudru-account-history-audit.mjs:/inspection.mjs:ro" \
+            "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Verify certificate renewal against the staging CA
         if: always() && inputs.renewal_check
         run: |
