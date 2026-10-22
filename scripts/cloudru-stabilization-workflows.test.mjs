@@ -5,9 +5,95 @@ import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
+import { createHash } from 'node:crypto'
+import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory } from './cloudru-account-history-audit.mjs'
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
+
+const historyFixtureIds = [1, 2, 3, 4, 5].map(n => `a0000000-0000-4000-8000-${String(n).padStart(12, '0')}`)
+test('account history target hashes are secret-only and require the four distinct reviewed role slots', () => {
+  const targets = ['trainerLegacy', 'trainerYandex', 'athleteLegacy', 'athleteYandex'].map(label => ({ label,
+    role: label.startsWith('trainer') ? 'trainer' : 'client', emailHash: createHash('sha256').update(`fixture-${label}`).digest('hex') }))
+  assert.deepEqual(readHistoryTargets(JSON.stringify(targets)), targets)
+  for (const value of [targets.slice(1), [...targets.slice(0, 3), targets[0]], targets.map(target => ({ ...target, role: 'trainer' })),
+    targets.map(target => ({ ...target, emailHash: 'not-a-hash' }))]) assert.throws(() => readHistoryTargets(JSON.stringify(value)), /targets_invalid/)
+  assert.doesNotMatch(read('scripts/cloudru-account-history-audit.mjs'), /[a-f0-9]{64}/)
+})
+test('account history registry requires an empty terminal page and keeps only reviewed matches', async () => {
+  const target = { label: 'athleteLegacy', role: 'client', emailHash: createHash('sha256').update('reviewed@example.test').digest('hex') }
+  const pages = [[{ id: historyFixtureIds[0], email: ' Reviewed@Example.Test ', privateData: 'private-contact' }],
+    [{ id: historyFixtureIds[1], email: 'unrelated@example.test' }], []]
+  let calls = 0
+  const result = await readHistoryRegistry(page => { calls++; return Promise.resolve({ users: pages[page - 1] }) }, [target])
+  assert.equal(calls, 3)
+  assert.deepEqual(result, [{ label: target.label, role: target.role, id: historyFixtureIds[0] }])
+  assert.doesNotMatch(JSON.stringify(result), /@|private-contact|unrelated/)
+  await assert.rejects(readHistoryRegistry(() => Promise.resolve({ users: pages[0] }), [target]), /registry_invalid/)
+})
+
+test('account history source pagination handles provider caps and rejects duplicates and overflow', async () => {
+  const offsets = []
+  const rows = historyFixtureIds.slice(0, 2).map(id => ({ id }))
+  assert.deepEqual(await readHistoryPages(offset => { offsets.push(offset); return Promise.resolve(rows.slice(offset, offset + 1)) }, 2), rows)
+  assert.deepEqual(offsets, [0, 1, 2])
+  await assert.rejects(readHistoryPages(() => Promise.resolve(rows), 1), /scope_exceeded/)
+  await assert.rejects(readHistoryPages(() => Promise.resolve([rows[0]]), 2), /source_scope_invalid/)
+})
+
+test('account history summary distinguishes missing, soft deleted, inaccessible and unresolved native profiles without exporting IDs', () => {
+  const [actor, card, first, second, third] = historyFixtureIds
+  const workout = id => ({ id, client_id: card, created_by: actor, status: 'done', deleted_at: null, privateNotes: 'private-training' })
+  const legacy = { profiles: [{ id: actor, label: 'athleteLegacy', role: 'client' }], cards: [], workouts: [workout(first), workout(second)] }
+  const current = { profiles: [{ id: actor, account_role: 'client', identity_linked: true, identity_origin: 'linked' }],
+    cards: [{ id: card, auth_user_id: actor, trainer_id: actor }],
+    workouts: [{ ...workout(first), deleted_at: '2026-10-22' }, workout(third)], relationships: [], merges: [] }
+  const report = summarizeHistory(legacy, current, [{ account: 'athleteLegacy', readableWorkouts: 1 }])
+  assert.equal(report.legacyWorkoutIdsMissingNow, 1)
+  assert.equal(report.legacyWorkoutsSoftDeletedNow, 1)
+  assert.equal(report.profiles.find(profile => profile.account === 'athleteYandex').currentProfileFound, null)
+  assert.equal(report.visibility[0].readableWorkouts, 1)
+  assert.doesNotMatch(JSON.stringify(report), /private-training|a0000000-|@/)
+})
+
+test('account history current inspection fails before data reads unless transaction is read only', async () => {
+  const sql = []
+  const client = { query: text => { sql.push(text); return Promise.resolve({ rows: text.includes('current_setting') ? [{ readonly: 'off' }] : [] }) } }
+  await assert.rejects(inspectCurrentHistory(client, { profiles: [], cards: [], workouts: [] }), /readonly_required/)
+  assert.equal(sql[0], 'begin transaction isolation level repeatable read read only')
+  assert.equal(sql.at(-1), 'rollback')
+  assert.ok(sql.every(text => !text.includes('from public.')))
+})
+
+test('account history inspection uses scoped read-only SQL and restores the actor probe after denied role switch', async () => {
+  const sql = []
+  const actor = historyFixtureIds[0]
+  const client = { query: (text, values) => {
+    sql.push({ text, values })
+    if (text === 'set local role fit_api') return Promise.reject(Object.assign(new Error('private-role-detail'), { code: '42501' }))
+    return Promise.resolve({ rows: text.includes('current_setting') ? [{ readonly: 'on' }]
+      : text.includes('from public.profiles p') ? [{ id: actor, account_role: 'client' }] : [] })
+  } }
+  const report = await inspectCurrentHistory(client, { profiles: [{ id: actor, label: 'athleteLegacy', role: 'client' }], cards: [], workouts: [] })
+  assert.deepEqual(report.visibility, [{ account: 'athleteLegacy', probeUnavailable: 'role_permission_denied' }])
+  assert.ok(sql.some(query => query.text === 'rollback to savepoint visibility_probe'))
+  assert.equal(sql.at(-1).text, 'commit')
+  assert.ok(sql.every(query => !/\b(?:insert|update|delete|alter|grant|truncate)\b/i.test(query.text)))
+  assert.doesNotMatch(JSON.stringify(report), /private-role-detail|a0000000-/)
+})
+
+test('account history operation is manual, main-only, fixed-scope and does not enable repairs or expose contacts', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const step = workflow.slice(workflow.indexOf('      - name: Inspect only the owner-approved account history'), workflow.indexOf('      - name: Verify certificate renewal'))
+  assert.match(step, /github.event_name == 'workflow_dispatch' && inputs.account_history/)
+  assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(step, /test "\$\(hostname\)" = fit-stage-app/)
+  assert.match(step, /--read-only.*--timeout=120/)
+  assert.match(step, /cloudru-account-history-audit\.mjs:\/inspection\.mjs:ro/)
+  assert.doesNotMatch(step, /ssh |psql|pg_restore|--privileged|workflow_dispatch.*email/)
+  const script = read('scripts/cloudru-account-history-audit.mjs')
+  assert.doesNotMatch(script, /@gmail|@yandex|@glitchy|method: '(?:POST|PUT|DELETE|PATCH)'/)
+})
 
 for (const name of configurations) {
   test(`${name} requires green exact-main, a trusted host and the shared VM lock`, () => {
