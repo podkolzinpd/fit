@@ -1,3 +1,4 @@
+import { ClientWorkoutReferenceContext } from './client-workout-reference-context'
 import { isClientWorkoutRedesignEnabled } from './client-workout-redesign'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -172,7 +173,7 @@ export function AppLayout() {
   >
     <NavLink to="/assistant"><AssistantIcon />Ассистент</NavLink>
   </Coachmark>
-  if (actor?.role === 'client') return <FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
+  if (actor?.role === 'client') return <ClientWorkoutReferenceContext value={clientLimeShell && isClientWorkoutRedesignEnabled(actor)}><FitLimeIconsContext value={clientLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar client-tab-bar" aria-label="Основная навигация">
     {monochromeClientFinance || pathname === '/me/nutrition'
       ? <Link to="/me" className="active" aria-current="page"><HomeIcon />Кабинет</Link>
       : <NavLink to="/me" end><HomeIcon />Кабинет</NavLink>}
@@ -187,7 +188,7 @@ export function AppLayout() {
     </Coachmark>}
     <NavLink to="/me/progress"><AnalyticsIcon />Прогресс</NavLink>
     <NavLink to="/me/profile"><ProfileIcon />Профиль</NavLink>
-  </nav>}</div></FitLimeIconsContext>
+  </nav>}</div></FitLimeIconsContext></ClientWorkoutReferenceContext>
   return <FitLimeIconsContext value={fitLimeShell}><div className={frameClass}><div className={contentClass} ref={contentRef}>{serviceNotice}<Outlet /></div>{contestWinnerDialog}{!immersive && <nav className="tab-bar trainer-tab-bar" aria-label="Основная навигация">
     <NavLink to="/today"><TodayIcon />{trainerScheduleV2 && isFitLimeEnabled(actor) ? 'День' : 'Сегодня'}</NavLink>
     {trainerScheduleV2 && <NavLink to="/schedule"><ScheduleIcon />Расписание</NavLink>}

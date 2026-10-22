@@ -1,3 +1,4 @@
+import { FitLimeSheetHeader } from '../../shared/FitLimeSheetHeader'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -302,8 +303,8 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       </button>{restTrigger}
     </div> : restTrigger}
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
-      <section ref={dialog} className="workout-decision-sheet live-rest-sheet" role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
-        <header className="picker-header"><h2>{sheetTitle}</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>
+      <section ref={dialog} className={`workout-decision-sheet live-rest-sheet${referenceActions ? ' client-reference-time-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
+        {referenceActions ? <FitLimeSheetHeader title={sheetTitle} backLabel="Закрыть таймер" onBack={() => setOpen(false)} /> : <header className="picker-header"><h2>{sheetTitle}</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>}
         {settings}
         {copy && phase && phaseRemaining !== null ? <>
           <p className="live-rest-countdown">{phaseClock}</p>

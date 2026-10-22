@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId } from './fit-lime-fixtures'
+import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
 test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native client-workout harness')
 
@@ -1220,4 +1220,138 @@ for (const entry of ['live', 'new', 'today']) for (const theme of ['light', 'dar
   await expect(picker).toHaveCount(0)
   if (entry === 'live') await expect.poll(() => backend.getWorkouts()[0]!.exercises.length).toBe(source.exercises.length + 2)
   else await expect(page.locator('.planned-exercise')).toHaveCount(2)
+})
+
+for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`client time sheets keep draft seconds cancel and rest ${theme} ${width}`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 })
+  await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = restTimerWorkout(0, true, 'manual'); source.startedAt = '2026-10-21T08:58:00Z'
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const trigger = page.getByRole('button', { name: /Фактическое время:/ }).first()
+  await trigger.click()
+  const duration = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+  await expect(duration).toHaveClass(/client-reference-time-sheet/)
+  await expect(duration).toHaveCSS('border-top-left-radius', '40px')
+  await expect(duration.locator('.client-lime-sheet-header h1')).toHaveCSS('font-family', /YS Geo/)
+  await duration.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '10 секунды', exact: true }).click()
+  await duration.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+  await expect(trigger).toHaveAttribute('aria-label', 'Фактическое время: 0:03')
+  await trigger.click()
+  await expect(duration.getByRole('option', { name: '03 секунды', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await duration.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '10 секунды', exact: true }).click()
+  await page.screenshot({ path: info.outputPath('duration-sheet.png') })
+  await duration.getByRole('button', { name: 'Применить · 0:10', exact: true }).click()
+  await page.clock.runFor(800)
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(10)
+  await trigger.click()
+  await duration.getByRole('button', { name: 'Убрать время', exact: true }).click()
+  await expect(duration).toHaveCount(0)
+  const restTrigger = page.locator('.live-rest-trigger')
+  await restTrigger.click()
+  const rest = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })
+  await expect(rest).toHaveClass(/client-reference-time-sheet/)
+  await expect(rest.locator('.client-lime-sheet-header')).toBeVisible()
+  const mode = rest.getByRole('group', { name: 'Кто ведёт тренировку', exact: true })
+  await expect(mode).toHaveCSS('border-radius', '20px')
+  for (const button of await mode.getByRole('button').all()) {
+    await expect(button).toHaveCSS('border-radius', '16px')
+    await expect(button).toHaveCSS('min-height', '48px')
+    await expect(button).toHaveCSS('font-weight', '500')
+  }
+  await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await rest.getByRole('listbox', { name: 'минуты', exact: true }).getByRole('option', { name: '00 минуты', exact: true }).click()
+  await rest.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '00 секунды', exact: true }).click()
+  await expect(rest.getByRole('button', { name: 'Начать отдых · 0:00', exact: true })).toBeDisabled()
+  await rest.getByRole('button', { name: '1:00', exact: true }).click()
+  await page.screenshot({ path: info.outputPath('rest-sheet.png') })
+  await rest.getByRole('button', { name: 'Начать отдых · 1:00', exact: true }).click()
+  await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
+  await restTrigger.click()
+  await rest.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
+  await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+for (const role of ['trainer', 'client']) test(`time sheet client adaptation stays gated ${role}`, async ({ page }) => {
+  const source = restTimerWorkout(0, true, 'manual'); source.startedAt = new Date(Date.now() - 120000).toISOString()
+  await mockPilot(page, { role: role as 'trainer' | 'client', profileId: role === 'client' ? 'c11e0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', clientLime: true, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.getByRole('button', { name: /Фактическое время:/ }).first().click()
+  await expect(page.locator('.workout-duration-sheet')).toBeVisible()
+  await expect(page.locator('.client-reference-time-sheet')).toHaveCount(0)
+})
+
+test('client rest mode selection survives close and reload without recording strength facts', async ({ page }) => {
+  const source = coachGestureWorkout(); source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const initial = JSON.stringify(backend.getWorkouts()[0]!.exercises)
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-rest-trigger').click()
+  const mode = page.getByRole('group', { name: 'Кто ведёт тренировку', exact: true })
+  await mode.getByRole('button', { name: 'Ведёт таймер', exact: true }).click()
+  await expect(mode.getByRole('button', { name: 'Ведёт таймер', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await mode.getByRole('button', { name: 'Веду сам', exact: true }).click()
+  await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
+  await page.reload()
+  await page.locator('.live-rest-trigger').click()
+  await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(initial)
+})
+
+test.describe('assistant duration consumers', () => {
+  test.skip(process.env.FIT_ASSISTANT_TIME_ACCEPTANCE !== '1', 'Requires isolated Assistant program fixture, never a live generation')
+  for (const entry of ['history', 'pilot']) for (const theme of ['light', 'dark']) test(`client assistant time sheet ${entry} ${theme}`, async ({ page }, info) => {
+    await page.addInitScript(({ id, theme }) => {
+      localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+      localStorage.setItem('fit.workoutTimeWheel', 'true')
+    }, { id: pilotId, theme })
+    await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [] })
+    const createdAt = new Date().toISOString()
+    const payload = entry === 'pilot'
+      ? { programPilot: true, step: 'confirm', briefState: { scope: 'single_workout' }, editableCatalog: [{ ref: 'plank', name: 'Планка', inputKind: 'duration' }],
+          canonicalWorkouts: [{ requestId: newWorkoutId, clientId, workoutDate: createdAt.slice(0, 10), exercises: [{ name: 'Планка', restBetweenSetsSec: 60, sets: [{ durationSec: 45, rpe: 6 }] }] }] }
+      : { step: 'confirm', clientId, clientName: 'Тестовый спортсмен', sessions: [{ day: 'Пн', title: 'Тестовая тренировка', exercises: [{ name: 'Планка', exerciseRef: 'plank', sets: 3, durationSec: 45 }] }] }
+    const action = { tool: 'create_program_draft', status: 'proposed', title: 'Тестовая тренировка', description: 'Черновик из тестовой фикстуры', payload }
+    const writes: string[] = []
+    await page.route('**/v1/assistant/**', route => {
+      const path = new URL(route.request().url()).pathname
+      if (route.request().method() !== 'GET') { writes.push(path); return route.abort() }
+      if (path.endsWith('/messages')) return route.fulfill({ json: { messages: [{ id: messageId, conversationId, turnId: null, author: 'assistant', content: 'Тестовый черновик', action, createdAt }] } })
+      if (path.endsWith('/conversations')) return route.fulfill({ json: { conversations: [{ id: conversationId, title: 'Тестовая беседа', createdAt }] } })
+      return route.fulfill({ json: { actions: [] } })
+    })
+    await page.goto('/assistant')
+    const session = page.locator('.assistant-program-sessions details').first()
+    await session.locator('summary').click()
+    if (entry === 'pilot') await session.getByRole('button', { name: 'Изменить', exact: true }).click()
+    const label = entry === 'pilot' ? 'Время упражнения' : 'Планка: время'
+    const trigger = page.getByRole('button', { name: `${label}: 0:45`, exact: true })
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      await trigger.click()
+      const dialog = page.getByRole('dialog', { name: label, exact: true })
+      await expect(dialog).toHaveClass(/client-reference-time-sheet/)
+      await expect(dialog).toHaveCSS('border-top-left-radius', '40px')
+      await expect(dialog.locator('.client-lime-sheet-header h1')).toHaveCSS('font-family', /YS Geo/)
+      await dialog.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '50 секунды', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+      await expect(trigger).toHaveAttribute('aria-label', `${label}: 0:45`)
+      await trigger.click()
+      await expect(dialog.getByRole('option', { name: '45 секунды', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await page.screenshot({ path: info.outputPath(`assistant-${entry}-${theme}-${width}.png`) })
+      await dialog.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '50 секунды', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Применить · 0:50', exact: true }).click()
+      await expect(page.getByRole('button', { name: `${label}: 0:50`, exact: true })).toBeVisible()
+      await page.getByRole('button', { name: `${label}: 0:50`, exact: true }).click()
+      await expect(dialog.getByRole('option', { name: '50 секунды', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await dialog.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '45 секунды', exact: true }).click()
+      await dialog.getByRole('button', { name: 'Применить · 0:45', exact: true }).click()
+      await expect(trigger).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    }
+    expect(writes).toEqual([])
+  })
 })
