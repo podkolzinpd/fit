@@ -242,10 +242,12 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await expect.poll(() => page.evaluate(key => localStorage.getItem(key), storedDraftKey)).not.toBeNull()
   // A refreshed source must not silently overwrite or resume an older plan.
   await page.goto('/me/workouts?tab=presets')
+  await expect(card).toBeVisible()
   favorite!.version++
-  await page.reload()
+  // Do not reload: retain the application's fresh 20-second query cache.
   await card.getByRole('button', { name: 'Запланировать', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Есть несохранённый черновик' })).toBeVisible()
+  await expect(page.getByText('Шаблон обновлён или версия старого черновика неизвестна. Выберите, с чем продолжить.', { exact: true })).toBeVisible()
   await expect(page.locator('form.workout-form')).toHaveCount(0)
   await page.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
   await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
@@ -254,10 +256,23 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await page.getByRole('button', { name: 'Начать из обновлённого шаблона', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
   expect(await page.evaluate(key => localStorage.getItem(key), storedDraftKey)).toBe(retained)
+  loadError = true
+  await page.getByRole('button', { name: 'Начать из обновлённого шаблона', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Начать заново', exact: true }).click()
+  await expect(page.locator('.state-panel-error')).toBeVisible()
+  expect(await page.evaluate(key => localStorage.getItem(key), storedDraftKey)).toBe(retained)
+  loadError = false
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Есть несохранённый черновик' })).toBeVisible()
+  // The server can change again while the user reads the restore choice.
+  favorite!.version++
+  favorite!.exercises = [{ ...exercise, sets: [{ ...exercise.sets[0]!, weightKg: 70, reps: 10 }] }]
   await page.getByRole('button', { name: 'Начать из обновлённого шаблона', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Начать заново', exact: true }).click()
   await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
   await expect.poll(async () => z.object({ sourceVersion: z.number() }).parse(JSON.parse((await page.evaluate(key => localStorage.getItem(key), storedDraftKey))!)).sourceVersion).toBe(favorite!.version)
+  await page.locator('.compact-editor-exercise-toggle').first().click()
+  await expect(page.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('70')
   await page.goto('/me/workouts?tab=presets')
   await page.locator('.preset-workout-card').first().getByRole('button', { name: 'Запланировать', exact: true }).click()
   await expect(page).toHaveURL(/\/workouts\/new\?preset=full-body-no-equipment$/)

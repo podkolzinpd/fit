@@ -92,7 +92,9 @@ test('client always has a preset workout tab on My Workouts, before and after th
 
   await page.getByRole('button', { name: 'Завершённая', exact: true }).click()
   await page.getByRole('button', { name: 'Записать тренировку' }).click()
-  await expect(page.getByText('Завершена', { exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/workouts\/[a-f0-9-]+$/)
+  await expect(page.getByText('ТРЕНИРОВКА ЗАВЕРШЕНА', { exact: true })).toBeVisible()
+  await expect(page.locator('.completed-exercise')).toHaveCount(5)
 
   await page.goto('/me/workouts')
   await page.getByRole('tab', { name: 'История' }).click()

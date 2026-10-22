@@ -1261,7 +1261,7 @@ export function WorkoutFormPage() {
   const recordPlannedResult = Boolean(workoutId && params.get('result') === '1')
   const routeClientId = params.get('client') ?? ''
   const source = useQuery({ queryKey: ['workout', sourceId], queryFn: () => workoutsRepository.get(sourceId ?? ''), enabled: Boolean(sourceId) })
-  const favorites = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkoutsRepository.list(), enabled: Boolean(favoriteId) })
+  const favorites = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkoutsRepository.list(), enabled: Boolean(favoriteId), staleTime: 0, refetchOnMount: 'always' })
   const favorite = favorites.data?.find((item) => item.id === favoriteId)
   const plannedFromFavorite = Boolean(favoriteId)
   const templateSource = useQuery({ queryKey: ['workout-template', templateId], queryFn: () => workoutTemplates.get(templateId ?? ''), enabled: Boolean(templateId) })
@@ -1365,7 +1365,7 @@ export function WorkoutFormPage() {
     closeTemplatePicker()
   }
   useEffect(() => {
-    if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && (favorites.isLoading || favorites.error || !favorite)) || (presetId && (catalog.loading || catalog.error || !preset)) || formDraftReady) return
+    if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && (favorites.isFetching || favorites.error || !favorite)) || (presetId && (catalog.loading || catalog.error || !preset)) || formDraftReady) return
     // The closed pilot's edit uses a separate key and the exact source version.
     const saved = workoutId ? safePlanInput ? readWorkoutEditDraft(planDraftKey, source.data?.version) : null : templateDraftChoice === 'fresh' ? null : readWorkoutFormDraft(draftKey)
     if ((plannedFromFavorite || presetId) && saved && templateDraftChoice === null) { setTemplateDraftWaiting(true); return }
@@ -1416,7 +1416,7 @@ export function WorkoutFormPage() {
       trainingFormatTouched.current = Boolean(workoutId)
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, coachReference, clientReference, draftKey, planDraftKey, safePlanInput, favorites.isLoading, favorites.error, favorite, formDraftReady, initial, mine.isLoading, plannedFromFavorite, presetId, preset, catalog.loading, catalog.error, templateDraftChoice, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
+  }, [actor, clientMode, coachReference, clientReference, draftKey, planDraftKey, safePlanInput, favorites.isFetching, favorites.error, favorite, formDraftReady, initial, mine.isLoading, plannedFromFavorite, presetId, preset, catalog.loading, catalog.error, templateDraftChoice, routeClientId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading])
 
   useEffect(() => {
     if (clientMode) { setTrainingFormat('self'); return }
@@ -1627,8 +1627,8 @@ export function WorkoutFormPage() {
   const selectedClientName = availableClients?.find((client) => client.id === clientId)?.fullName
   const clientContextLocked = !clientMode && !workoutId && Boolean(routeClientId || (copiedWorkout && source.data?.clientId))
   const editingDenied = Boolean(clientMode && workoutId && source.data && source.data.createdBy !== actor?.userId)
-  const loading = source.isLoading || templateSource.isLoading || mine.isLoading || (plannedFromFavorite && favorites.isLoading) || Boolean(presetId && catalog.loading)
   const error = source.error ?? templateSource.error ?? mine.error ?? (plannedFromFavorite ? favorites.error : null) ?? (presetId ? catalog.error : null)
+  const loading = source.isLoading || templateSource.isLoading || mine.isLoading || (plannedFromFavorite && (favorites.isLoading || !formDraftReady && favorites.isFetching)) || Boolean(presetId && catalog.loading) || Boolean(!error && (favorite || preset) && !formDraftReady && !templateDraftWaiting)
   const pageTitle = recordPlannedResult ? 'Записать результат' : workoutId ? 'Редактировать тренировку' : 'Новая тренировка'
   const documentTitle = recordPlannedResult ? 'Запись результата' : workoutId ? 'Редактирование тренировки' : params.has('copy') ? 'Копирование тренировки' : templateId ? 'Тренировка из шаблона' : 'Создание тренировки'
   const exerciseMeta = exercises.length > 0 ? `${exercises.length} ${exerciseCountLabel(exercises.length)}` : limePlan ? 'Упражнения можно добавить позже' : 'Сначала добавьте упражнения'
@@ -1653,10 +1653,20 @@ export function WorkoutFormPage() {
   const saveErrorMessage = (getRequestDiagnostics(mutation.error)?.status ?? 0) >= 500
     ? 'Не удалось сохранить тренировку. Введённые данные остались в форме. Попробуйте сохранить ещё раз.'
     : undefined
+  async function startFreshTemplate() {
+    if (plannedFromFavorite) {
+      const latest = await favorites.refetch()
+      // A failed read or removed source is never permission to discard input.
+      if (latest.isError || !latest.data?.some((item) => item.id === favoriteId)) return
+    }
+    removeWorkoutFormDraft(draftKey)
+    createRequestId.current = crypto.randomUUID()
+    setTemplateDraftChoice('fresh')
+  }
   return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${coachReference || clientReference ? ' workout-editor-reference' : ''}${clientReference ? ' client-reference-form client-editor-refined client-editor-polish' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
-    <AsyncView loading={loading} error={error} onRetry={() => { void source.refetch(); void templateSource.refetch(); void mine.refetch(); if (plannedFromFavorite) void favorites.refetch(); if (presetId) catalog.retry() }}>{(plannedFromFavorite && !favorite || presetId && !preset) ? <StatePanel tone="info" title="Тренировка больше недоступна" description="Возможно, она была удалена из избранного." action={<Link className="button secondary" to="/me/workouts?tab=presets">К готовым тренировкам</Link>} /> : templateDraftWaiting && templateDraftChoice === null ? <StatePanel tone="info" title="Есть несохранённый черновик" description={plannedFromFavorite && readWorkoutFormDraft(draftKey)?.sourceVersion !== favorite?.version ? 'Шаблон обновлён или версия старого черновика неизвестна. Выберите, с чем продолжить.' : 'Продолжите введённую тренировку или начните заново из шаблона.'} action={<div className="stack compact"><WorkoutCta type="button" onClick={() => setTemplateDraftChoice('resume')}>Продолжить черновик</WorkoutCta><WorkoutCta type="button" variant="secondary" onClick={() => { void confirmLeave({ message: 'Начать из актуального шаблона? Несохранённые изменения этого черновика будут удалены.', confirmLabel: 'Начать заново', danger: true }).then((accepted) => { if (accepted) { removeWorkoutFormDraft(draftKey); createRequestId.current = crypto.randomUUID(); setTemplateDraftChoice('fresh') } }) }}>Начать из обновлённого шаблона</WorkoutCta></div>} /> : editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
+    <AsyncView loading={loading} error={error} onRetry={() => { if (sourceId) void source.refetch(); if (templateId) void templateSource.refetch(); if (clientMode) void mine.refetch(); if (plannedFromFavorite) void favorites.refetch(); if (presetId) catalog.retry() }}>{(plannedFromFavorite && !favorite || presetId && !preset) ? <StatePanel tone="info" title="Тренировка больше недоступна" description="Возможно, она была удалена из избранного." action={<Link className="button secondary" to="/me/workouts?tab=presets">К готовым тренировкам</Link>} /> : templateDraftWaiting && templateDraftChoice === null ? <StatePanel tone="info" title="Есть несохранённый черновик" description={plannedFromFavorite && readWorkoutFormDraft(draftKey)?.sourceVersion !== favorite?.version ? 'Шаблон обновлён или версия старого черновика неизвестна. Выберите, с чем продолжить.' : 'Продолжите введённую тренировку или начните заново из шаблона.'} action={<div className="stack compact"><WorkoutCta type="button" onClick={() => setTemplateDraftChoice('resume')}>Продолжить черновик</WorkoutCta><WorkoutCta type="button" variant="secondary" onClick={() => { void confirmLeave({ message: 'Начать из актуального шаблона? Несохранённые изменения этого черновика будут удалены.', confirmLabel: 'Начать заново', danger: true }).then((accepted) => { if (accepted) void startFreshTemplate() }) }}>Начать из обновлённого шаблона</WorkoutCta></div>} /> : editingDenied ? <StatePanel tone="info" title="Редактирование недоступно" description="Назначенную тренером тренировку может менять только тренер." action={<button type="button" className="secondary" onClick={goBack}>Вернуться</button>} /> : clientMode && !mine.data ? <StatePanel tone="info" title="Заполните профиль спортсмена" description="После этого можно будет добавлять самостоятельные тренировки и отслеживать результаты." action={<Link className="button" to="/me/edit">Заполнить профиль</Link>} /> : <form id={coachReference ? 'coach-workout-plan-form' : undefined} className="stack workout-form" onSubmit={(event) => void submit(event)} onKeyDownCapture={(event) => {
       if (!safePlanInput || event.key !== 'Enter' || event.nativeEvent.isComposing || !(event.target instanceof HTMLInputElement)) return
       event.preventDefault()
       advancePlanField(event.target, event.currentTarget)
