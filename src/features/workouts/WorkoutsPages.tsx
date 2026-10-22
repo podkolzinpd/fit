@@ -4243,7 +4243,9 @@ export function LiveWorkoutPage() {
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
         <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
     </> : undefined}>
-    <AsyncView loading={query.isLoading} error={query.error} onRetry={() => void query.refetch()}>{query.data && <>
+    <AsyncView loading={query.isLoading} error={query.error}
+      errorDescription={clientReference && getRequestDiagnostics(query.error)?.status === 503 ? 'Сервис временно недоступен. Попробуйте ещё раз.' : undefined}
+      onRetry={() => void query.refetch()}>{query.data && <>
       {!visualReference && liveHeader}
       {inactivityReminder.visible && <section className="live-inactivity-reminder" role="alert" aria-labelledby="live-inactivity-reminder-title">
         <div><strong id="live-inactivity-reminder-title">Тренировка ещё идёт</strong><span>Продолжить или завершить её?</span></div>

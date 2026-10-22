@@ -117,12 +117,12 @@ export function SaveStatus({ status, error }: {
   </p>
 }
 
-export function AsyncView({ loading, error, empty, onRetry, emptyTitle, emptyDescription, emptyAction, children }: PropsWithChildren<{
-  loading: boolean; error?: Error | null; empty?: boolean; onRetry?: () => void
+export function AsyncView({ loading, error, errorDescription, empty, onRetry, emptyTitle, emptyDescription, emptyAction, children }: PropsWithChildren<{
+  loading: boolean; error?: Error | null; errorDescription?: string; empty?: boolean; onRetry?: () => void
   emptyTitle?: string; emptyDescription?: string; emptyAction?: ReactNode
 }>) {
   if (loading) return <Skeleton />
-  if (error) return <StatePanel tone="error" title="Не удалось загрузить данные" description={error.message}
+  if (error) return <StatePanel tone="error" title="Не удалось загрузить данные" description={errorDescription ?? error.message}
     details={<RequestDiagnosticDetails error={error} />}
     action={onRetry && <button type="button" onClick={onRetry}>Повторить</button>} />
   if (empty) return <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} />
