@@ -16,7 +16,7 @@ function presetCountLabel(count: number): string {
   return `${count} ${noun}`
 }
 
-export function PresetWorkoutList({ onSelect, pending = false }: { onSelect: (presetId: string) => void; pending?: boolean }) {
+export function PresetWorkoutList({ onSelect, pending = false, actionLabel = 'Выбрать' }: { onSelect: (presetId: string) => void; pending?: boolean; actionLabel?: string }) {
   return <section className="preset-workout-picker" aria-label="Готовые тренировки">
     <div className="preset-workout-picker-list">
       {PRESET_WORKOUTS.map((preset) => <article className="preset-workout-card card" key={preset.id}>
@@ -25,7 +25,7 @@ export function PresetWorkoutList({ onSelect, pending = false }: { onSelect: (pr
           <p>{preset.description}</p>
           <small>{exerciseCountText(preset.exercises.length)} · ~{preset.estimatedDurationMin} мин</small>
         </div>
-        <button type="button" className="secondary" disabled={pending} onClick={() => onSelect(preset.id)}>Выбрать</button>
+        <button type="button" className="secondary" disabled={pending} onClick={() => onSelect(preset.id)}>{actionLabel}</button>
       </article>)}
     </div>
   </section>

@@ -1,4 +1,16 @@
 /* Existing client content and workout actions, expressed through Lime tokens. */
+.phone-frame.fit-client-lime .workout-form-page .coach-plan-options > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--lime-text-secondary);
+}
+.phone-frame.fit-client-lime .workout-form-page .coach-plan-options[open] > summary { margin-bottom: 12px; }
+.phone-frame.fit-client-lime .workout-form-page .coach-plan-options > summary:focus-visible {
+  outline: 2px solid var(--lime-accent);
+  outline-offset: 2px;
+}
 .phone-frame.fit-client-lime.client-workouts-identity .favorite-workout-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

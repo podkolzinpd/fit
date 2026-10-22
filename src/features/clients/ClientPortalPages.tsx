@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isClientLimeEnabled } from '../../app/client-lime'
@@ -7,18 +7,20 @@ import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { splitClientWorkouts } from '../../data/repositories/workout-rules'
 import type { CustomMetric, FavoriteWorkoutTemplate, InBodyRecognitionResult, ProgressEntry, Workout } from '../../shared/domain'
-import { AddIcon, CloseIcon, ScheduleIcon } from '../../shared/icons'
+import { AddIcon, ScheduleIcon } from '../../shared/icons'
 import { formatLocalDate, localDate, todayInTimeZone, type LocalDate } from '../../shared/local-date'
 import { AsyncView, Coachmark, EmptyState, Field, InlineRequestError, OverflowMenu, Page, useConfirm } from '../../shared/ui'
 import { ClientTrainingSummaryCard, groupMetricRows, InBodyDetails, InBodyImport, InBodyProgressCard } from '../progress'
 import { MetricsManager } from '../progress/MetricsManager'
 import { measurementSummaryText } from '../progress/measurement-summary'
-import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicleCard, WorkoutCta, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE, storeFirstWorkoutIntent } from '../workouts'
+import { LoadMoreButton, PastWorkoutPlanCard, PresetWorkoutList, WorkoutChronicleCard, WorkoutExercisesSummary, WorkoutStatusBadge, WORKOUT_HISTORY_PAGE_SIZE } from '../workouts'
 import { clientWorkoutCardLabel } from './workout-author'
 import { ClientWorkoutHistoryCalendar } from './ClientWorkoutHistoryCalendar'
 import { AthleteAchievementPreview } from '../achievements/AthleteAchievements'
 import { useWorkoutHistoryCalendar, useWorkoutPlannedCalendar } from './use-workout-history-calendar'
-import { FitLimeSheetHeader } from '../../shared/FitLimeSheetHeader'
+import { FavoriteWorkoutNameSheet } from '../workouts'
+import { getRequestDiagnostics } from '../../shared/request-diagnostics'
+import { RepositoryError } from '../../data/repositories/error'
 
 function favoriteExerciseCountLabel(count: number): string {
   const lastTwo = count % 100
@@ -43,6 +45,9 @@ export function MyWorkoutsPage() {
   const queryClient = useQueryClient()
   const [confirmRemoveFavorite, confirmRemoveFavoriteDialog] = useConfirm()
   const [renaming, setRenaming] = useState<FavoriteWorkoutTemplate | null>(null)
+  const [renameRecoveryError, setRenameRecoveryError] = useState<Error | null>(null)
+  const [renameRecovering, setRenameRecovering] = useState(false)
+  const [renameMissing, setRenameMissing] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get('tab')
   const workoutsView: 'current' | 'history' | 'presets' = requestedTab === 'presets' ? 'presets'
@@ -62,7 +67,17 @@ export function MyWorkoutsPage() {
   const trainers = useQuery({ queryKey: ['client-trainers', mine.data?.id], queryFn: () => invitationsRepository.listTrainers(mine.data!.id), enabled: Boolean(mine.data) })
   const favorites = useQuery({ queryKey: ['favorite-workouts'], queryFn: () => favoriteWorkoutsRepository.list(), enabled: Boolean(mine.data) })
   const removeFavorite = useMutation({
-    mutationFn: (id: string) => favoriteWorkoutsRepository.remove(id),
+    mutationFn: async (id: string) => {
+      // A failed response is not proof that DELETE failed. Read before retrying.
+      try { await favoriteWorkoutsRepository.remove(id) }
+      catch (error) {
+        const status = getRequestDiagnostics(error)?.status
+        if (status === 401 || status === 403 || error instanceof RepositoryError && ['PT403', '42501', '28000'].includes(error.code)) throw error
+        const current = await favoriteWorkoutsRepository.list()
+        queryClient.setQueryData(['favorite-workouts'], current)
+        if (current.some((item) => item.id === id)) throw error
+      }
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['favorite-workouts'] }),
   })
   const renameFavorite = useMutation({
@@ -72,6 +87,19 @@ export function MyWorkoutsPage() {
   const requestFavoriteRemoval = async (id: string, title: string) => {
     if (removeFavorite.isPending) return
     if (await confirmRemoveFavorite({ message: `Удалить тренировку «${title}» из избранного? Запланированные тренировки и история сохранятся.`, confirmLabel: 'Удалить', danger: true })) removeFavorite.mutate(id)
+  }
+  async function reloadRenaming() {
+    if (!renaming || renameRecovering) return
+    setRenameRecovering(true)
+    setRenameRecoveryError(null)
+    try {
+      const current = await favoriteWorkoutsRepository.list()
+      queryClient.setQueryData(['favorite-workouts'], current)
+      const updated = current.find((item) => item.id === renaming.id)
+      if (updated) { setRenaming(updated); renameFavorite.reset() }
+      else setRenameMissing(true)
+    } catch (error) { setRenameRecoveryError(error instanceof Error ? error : new Error('Не удалось загрузить тренировку')) }
+    finally { setRenameRecovering(false) }
   }
   const upcoming = useQuery({
     queryKey: ['workouts', mine.data?.id, 'upcoming', today],
@@ -173,8 +201,8 @@ export function MyWorkoutsPage() {
       <div id="workouts-presets-panel" className="progress-view-panel" role="tabpanel" aria-labelledby="workouts-presets-tab" hidden={workoutsView !== 'presets'}>
         {workoutsView === 'presets' && <>
         <section className="client-workout-section favorite-workouts-section">
-          {workoutsView === 'presets' && Boolean(favorites.data?.length) ? <Coachmark id="favorite-workout-management-2026-10" userId={actor?.userId} title="Управление избранным" description="Редактирование, переименование и удаление — в меню «Ещё» у тренировки."><div className="client-workout-section-head"><p className="eyebrow">МОЁ</p><h2>Избранное</h2></div></Coachmark>
-            : <div className="client-workout-section-head"><p className="eyebrow">МОЁ</p><h2>Избранное</h2></div>}
+          {workoutsView === 'presets' && Boolean(favorites.data?.length) ? <Coachmark id="favorite-workout-management-2026-10" userId={actor?.userId} title="Управление избранным" description="Редактирование, переименование и удаление — в меню «Ещё» у тренировки."><div className="client-workout-section-head"><h2>Избранное</h2></div></Coachmark>
+            : <div className="client-workout-section-head"><h2>Избранное</h2></div>}
           <AsyncView loading={favorites.isLoading} error={favorites.error} onRetry={() => void favorites.refetch()}>
           {favorites.data && favorites.data.length > 0 ? <>
             <div className="cards favorite-workout-cards">
@@ -182,62 +210,31 @@ export function MyWorkoutsPage() {
                 <div className="favorite-workout-card-head"><div><strong>{favorite.title}</strong><small>{favorite.exercises.length} {favoriteExerciseCountLabel(favorite.exercises.length)}</small></div>
                   <OverflowMenu label={`Действия с тренировкой ${favorite.title}`} items={[
                     { label: 'Редактировать', disabled: removeFavorite.isPending, onClick: () => navigate(`/me/workouts/favorites/${favorite.id}/edit`) },
-                    { label: 'Переименовать', disabled: removeFavorite.isPending, onClick: () => { renameFavorite.reset(); setRenaming(favorite) } },
+                    { label: 'Переименовать', disabled: removeFavorite.isPending, onClick: () => { renameFavorite.reset(); setRenameRecoveryError(null); setRenameMissing(false); setRenaming(favorite) } },
                     { label: 'Удалить', danger: true, disabled: removeFavorite.isPending, onClick: () => void requestFavoriteRemoval(favorite.id, favorite.title) },
                   ]} /></div>
                 <p className="favorite-workout-preview">{favorite.exercises.slice(0, 3).map((exercise) => exercise.name).join(' · ')}{favorite.exercises.length > 3 ? ` · ещё ${favorite.exercises.length - 3}` : ''}</p>
                 <div className="favorite-workout-card-actions"><button type="button" className="secondary" disabled={removeFavorite.isPending} onClick={() => navigate(`/workouts/new?favorite=${favorite.id}`)}>Запланировать</button></div>
               </article>)}
             </div>
-            {favorites.data.length >= 10 && <p className="muted favorite-workouts-limit-note">Сохранено 10 из 10 — чтобы добавить новую, удалите одну.</p>}
+            {favorites.data.length >= 10 && <p className="muted favorite-workouts-limit-note">Сохранено {favorites.data.length} при лимите 10 — чтобы добавить новую, освободите место.</p>}
           </> : <div className="favorite-workouts-empty"><p className="muted">Пока нет сохранённых тренировок.</p><button type="button" className="link" onClick={() => setWorkoutsView('history')}>Открыть историю</button></div>}
           </AsyncView>
           {removeFavorite.error && <div className="favorite-workouts-error"><InlineRequestError error={removeFavorite.error} /><button type="button" className="secondary" disabled={removeFavorite.isPending} onClick={() => { if (removeFavorite.variables) removeFavorite.mutate(removeFavorite.variables) }}>Повторить удаление</button></div>}
         </section>
         <div className="client-workout-section-head"><h2>Тренировки Fit</h2></div>
-        <PresetWorkoutList onSelect={(presetId) => {
-          if (!actor) return
-          storeFirstWorkoutIntent(actor.userId, { mode: 'preset', presetId })
-          navigate('/me')
+        <PresetWorkoutList actionLabel="Запланировать" onSelect={(presetId) => {
+          navigate(`/workouts/new?preset=${encodeURIComponent(presetId)}`)
         }} />
         </>}
       </div>
     </>}
   </AsyncView></Page>
   {confirmRemoveFavoriteDialog}
-  {renaming && <FavoriteRenameSheet key={renaming.id} lime={isClientLimeEnabled(actor)} favorite={renaming} pending={renameFavorite.isPending} error={renameFavorite.error}
+  {renaming && <FavoriteWorkoutNameSheet key={renaming.id} heading="Переименовать тренировку" lime={isClientLimeEnabled(actor)} initialTitle={renaming.title} pending={renameFavorite.isPending || renameRecovering} error={renameRecoveryError ?? renameFavorite.error}
+    recovery={renameMissing ? <p role="status">Тренировка больше недоступна. Введённое название осталось в поле.</p> : getRequestDiagnostics(renameFavorite.error)?.status === 409 ? <div><p>Тренировка изменена на другом устройстве. Загрузите актуальную версию и подтвердите сохранение названия ещё раз.</p><button type="button" className="secondary" disabled={renameRecovering} onClick={() => void reloadRenaming()}>Загрузить текущую версию</button></div> : undefined}
     onSave={(title) => renameFavorite.mutate({ favorite: renaming, title })} onClose={() => { if (!renameFavorite.isPending) setRenaming(null) }} />}
   </>
-}
-
-function FavoriteRenameSheet({ lime, favorite, pending, error, onSave, onClose }: {
-  lime: boolean; favorite: FavoriteWorkoutTemplate; pending: boolean; error: Error | null; onSave: (title: string) => void; onClose: () => void
-}) {
-  const [title, setTitle] = useState(favorite.title)
-  const ref = useRef<HTMLElement>(null)
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
-    ref.current?.querySelector('input')?.focus()
-    return () => previous?.focus()
-  }, [])
-  return <div className="sheet-overlay favorite-workout-rename-overlay" onClick={() => !pending && onClose()}>
-    <section ref={ref} className="workout-decision-sheet workout-favorite-save-sheet favorite-workout-rename-sheet" role="dialog" aria-modal="true" aria-label="Переименовать тренировку" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => {
-      if (event.key === 'Escape' && !pending) { event.preventDefault(); onClose() }
-      if (event.key !== 'Tab') return
-      const controls = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)') ?? [])
-      const first = controls[0], last = controls.at(-1)
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
-    }}>
-      {lime ? <FitLimeSheetHeader title="Переименовать тренировку" backLabel="Закрыть" onBack={onClose} disabled={pending} />
-        : <header className="picker-header"><h2>Переименовать тренировку</h2><button type="button" className="picker-close" aria-label="Закрыть" disabled={pending} onClick={onClose}><CloseIcon /></button></header>}
-      <form className="stack compact" onSubmit={(event) => { event.preventDefault(); if (!pending && title.trim()) onSave(title.trim()) }}>
-        <Field label="Название"><input value={title} maxLength={120} required disabled={pending} onChange={(event) => setTitle(event.target.value)} /></Field>
-        {error && <InlineRequestError error={error} />}
-        <div className="actions workout-action-row"><WorkoutCta type="button" variant="tertiary" disabled={pending} onClick={onClose}>Отмена</WorkoutCta><WorkoutCta type="submit" pending={pending} pendingLabel="Сохраняем…" disabled={!title.trim()}>Сохранить</WorkoutCta></div>
-      </form>
-    </section>
-  </div>
 }
 
 export function MyProgressPage() {

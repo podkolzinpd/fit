@@ -100,6 +100,28 @@ describe('system actions', () => {
 })
 
 describe('Coachmark', () => {
+  it('queues hints and advances without marking unseen hints as read', async () => {
+    render(<><Coachmark id="queue-one" userId="queue-user" title="Первое" description="Один"><button>Первый</button></Coachmark><Coachmark id="queue-two" userId="queue-user" title="Второе" description="Два"><button>Второй</button></Coachmark></>)
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('Первое')
+    expect(isCoachmarkSeen('queue-user', 'queue-two')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Понятно' }))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Второе'))
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+
+  it('clamps a hint to visual viewport even when the phone frame is taller', async () => {
+    const geometry = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const top = this.classList.contains('coachmark-anchor') ? 1400 : 0
+      const height = this.classList.contains('phone-frame') ? 1800 : this.classList.contains('coachmark-bubble') ? 120 : 60
+      return { x: 0, y: top, left: 0, right: 390, top, bottom: top + height, width: 390, height, toJSON: () => ({}) } as DOMRect
+    })
+    try {
+      render(<div className="phone-frame"><Coachmark id="tall-frame" userId="viewport-user" title="Видно" description="Подсказка"><button>Действие</button></Coachmark></div>)
+      await waitFor(() => expect(parseFloat(screen.getByRole('status').style.top)).toBeLessThanOrEqual(window.innerHeight - 128))
+    } finally { geometry.mockRestore() }
+  })
+
   it('keeps a sheet coachmark inside its dialog stacking context', () => {
     render(<div className="phone-frame"><section role="dialog" aria-label="Каталог"><Coachmark id="catalog-dialog" userId="catalog-user" title="Разделы" description="Поиск во всех разделах"><button>Каталог</button></Coachmark></section></div>)
     expect(screen.getByRole('dialog', { name: 'Каталог' })).toContainElement(screen.getByRole('status'))
