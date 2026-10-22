@@ -270,7 +270,11 @@ test('Yandex ready workouts edits, renames, plans and deletes an independent fav
   await page.getByRole('button', { name: 'Начать из обновлённого шаблона', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Начать заново', exact: true }).click()
   await expect(page.getByText('Приседание', { exact: true }).first()).toBeVisible()
-  await expect.poll(async () => z.object({ sourceVersion: z.number() }).parse(JSON.parse((await page.evaluate(key => localStorage.getItem(key), storedDraftKey))!)).sourceVersion).toBe(favorite!.version)
+  await expect.poll(async () => {
+    const stored = await page.evaluate(key => localStorage.getItem(key), storedDraftKey)
+    // Replacing a draft removes the old value before React persists the new one.
+    return stored === null ? null : z.object({ sourceVersion: z.number() }).parse(JSON.parse(stored)).sourceVersion
+  }).toBe(favorite!.version)
   await page.locator('.compact-editor-exercise-toggle').first().click()
   await expect(page.getByLabel('Вес, подход 1', { exact: true })).toHaveValue('70')
   await page.goto('/me/workouts?tab=presets')
