@@ -4010,7 +4010,7 @@ export function LiveWorkoutPage() {
                 }}>{visualReference && !confirmationPending && !confirmationFailed ? <CheckIcon /> : <span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span>}</button>}
         </div>
       </WorkoutSetRow>)}
-      {(!coachReference || saveStatus === 'error') && <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>}
+      {(clientReference ? saveStatus === 'saving' || saveStatus === 'error' : !coachReference || saveStatus === 'error') && <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>}
       {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
       {showPlan && <small className="live-set-plan-caption">{planLine(exercise.inputKind, set, exercise.ref) ? `План · ${planLine(exercise.inputKind, set, exercise.ref)}` : 'Без плановых значений'}</small>}
     </form>
