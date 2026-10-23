@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, lstat, rename, unlink, statfs } from 'node:
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
+import { request as httpsRequest } from 'node:https'
 import { androidOtaPolicy } from './android-ota-contract.mjs'
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex')
@@ -106,22 +107,55 @@ export function withOtaLocation(configuration, fragment) {
   return configuration.replace(anchor, `    # Fit Android OTA begin\n${fragment}\n    # Fit Android OTA end\n\n${anchor}`)
 }
 
-async function verifyPublicArchive(verified) {
+// The publisher runs on the public Nginx host. Its public IP does not support
+// hairpin connections; preserve canonical Host/SNI and certificate validation.
+export function fetchLocalPublicHttps(input, options = {}, request = httpsRequest) {
+  const url = new URL(input)
+  if (url.username || url.password || url.search || url.hash
+      || !((url.origin === 'https://api.fit-training.ru' && url.pathname === '/health')
+        || (url.origin === 'https://fit-training.ru' && url.pathname.startsWith('/mobile-updates/android/')))) {
+    throw new Error('OTA_LOCAL_HTTPS_TARGET_INVALID')
+  }
+  return new Promise((resolveResponse, reject) => {
+    const req = request(url, { hostname: '127.0.0.1', servername: url.hostname,
+      headers: { host: url.host }, rejectUnauthorized: true, agent: false, signal: options.signal }, response => {
+      const chunks = []
+      let size = 0
+      response.on('data', chunk => {
+        size += chunk.length
+        if (size > 100 * 1024 * 1024) response.destroy(new Error('OTA_HTTP_BODY_TOO_LARGE'))
+        else chunks.push(chunk)
+      })
+      response.on('error', reject)
+      response.on('end', () => {
+        if (response.statusCode >= 300 && response.statusCode < 400) {
+          reject(new Error('OTA_HTTP_REDIRECT_REFUSED'))
+          return
+        }
+        resolveResponse(new Response(Buffer.concat(chunks), { status: response.statusCode, headers: response.headers }))
+      })
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+async function verifyPublicArchive(verified, fetcher = fetch) {
   if (!verified.archive) return
-  const response = await fetch(verified.payload.release.url, { redirect: 'error', signal: AbortSignal.timeout(60000) })
+  const response = await fetcher(verified.payload.release.url, { redirect: 'error', signal: AbortSignal.timeout(60000) })
   if (!response.ok || digest(Buffer.from(await response.arrayBuffer())) !== verified.payload.release.checksum) {
     throw new Error('OTA_PUBLIC_ARCHIVE_MISMATCH')
   }
 }
 
-export async function readbackOta(verified) {
+export async function readbackOta(verified, fetcher = fetch) {
   const url = `${verified.policy.origin}/mobile-updates/${verified.manifestPath}`
-  const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(15000) })
+  const response = await fetcher(url, { redirect: 'error', signal: AbortSignal.timeout(15000) })
   if (!response.ok || response.headers.get('access-control-allow-origin') !== 'https://localhost'
       || response.headers.get('cache-control') !== 'no-store'
       || !Buffer.from(await response.arrayBuffer()).equals(verified.manifest)) throw new Error('OTA_PUBLIC_MANIFEST_MISMATCH')
-  await verifyPublicArchive(verified)
-  const unknown = await fetch(`${verified.policy.origin}/mobile-updates/android/not-a-release`, { signal: AbortSignal.timeout(15000) })
+  await verifyPublicArchive(verified, fetcher)
+  const unknown = await fetcher(`${verified.policy.origin}/mobile-updates/android/not-a-release`, { signal: AbortSignal.timeout(15000) })
   if (unknown.status !== 404) throw new Error('OTA_PUBLIC_UNKNOWN_PATH')
 }
 
@@ -149,7 +183,8 @@ export async function requirePublishedApi(commit, fetcher = fetch) {
 
 async function publish(verified, newNativeApk) {
   const root = '/var/lib/fit-mobile-updates'
-  await requirePublishedApi(verified.payload.sourceCommit)
+  const fetcher = fetchLocalPublicHttps
+  await requirePublishedApi(verified.payload.sourceCommit, fetcher)
   await requireKnownNativeShell(verified, root, newNativeApk)
   const disk = await statfs('/var/lib')
   if (disk.bavail * disk.bsize < 2 * 1024 ** 3 + (verified.archive?.length ?? 0) * 2) {
@@ -169,7 +204,7 @@ async function publish(verified, newNativeApk) {
     execFileSync('nginx', ['-t'], { stdio: 'inherit' })
     execFileSync('systemctl', ['reload', 'nginx'])
     // No metadata changes until the public immutable object can be downloaded.
-    await verifyPublicArchive(verified)
+    await verifyPublicArchive(verified, fetcher)
   } catch (error) {
     await writeFile(site, previous)
     execFileSync('nginx', ['-t'], { stdio: 'inherit' })
@@ -177,7 +212,7 @@ async function publish(verified, newNativeApk) {
     throw error
   }
   await activateOtaManifest(verified, root)
-  await readbackOta(verified)
+  await readbackOta(verified, fetcher)
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -185,6 +220,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   if (!['verify', 'publish', 'readback'].includes(mode) || !directory || !commit) throw new Error('Invalid OTA publisher invocation')
   const verified = await verifyOtaDirectory(directory, commit)
   if (mode === 'publish') await publish(verified, process.argv.includes('--new-native-apk'))
-  if (mode === 'readback') await readbackOta(verified)
+  if (mode === 'readback') await readbackOta(verified, fetchLocalPublicHttps)
   console.log(`OTA ${mode} passed: source ${commit}; ABI ${verified.payload.abi}; sequence ${verified.payload.sequence}`)
 }

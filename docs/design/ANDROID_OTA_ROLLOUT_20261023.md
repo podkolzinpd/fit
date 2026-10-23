@@ -73,3 +73,27 @@ frontend2821/API1445+188штатныхDBskip/infra341/hosting191/build/startup p
 Native/source gate и real Nginx дополнительно прошли Android run39935663494
 (предыдущий head e3350cba); новые upstream изменения относятся к browser Wake Lock.
 Для итогового PR head остаётся обязательным его собственный green CI.
+
+
+## Фактический выпуск и исправление loopback — 23.10
+
+PR1789 merged main296422e3; полный CI39941826272 attempt2 success,
+Android39941826284 success. Штатные API39947781580/frontend39947781521
+success. Release39949288482 собрал и подписал APK1.1.1/code5 исходным
+сертификатом; artifact12500296137. OTA artifact12499872235 подписан.
+Публикация остановилась до установки ZIP/Nginx/manifest: Node fetch canonical
+API из самой VM получил connect timeout (hairpin public IP). Это не активация OTA.
+
+Узкое продолжение использует loopback HTTPS для API/OTA readback на той же VM:
+canonical Host/SNI, rejectUnauthorized=true, только два разрешённых origin/path,
+без redirects и с bounded body. Это тот же маршрут Nginx с действительным TLS,
+как существующий curl --resolve в штатном frontend release. Внешняя проверка
+feed и ZIP дополнительно выполняется с клиентского origin после публикации.
+Native ABI/ключи/флаги/продуктовый интерфейс не меняются. Реальный локальный TLS
+тест проверяет доступ с правильным hostname и отказ неправильному сертификату.
+
+Loopback follow-up: targeted9/9 и полный npm run check exit0: frontend2821,
+API1445+188штатныхDBskip, hosting193, infra341, lint/typecheck/build passed.
+Native ABI сохранилась a544771e; новая физическая установка не проверена.
+
+Интеграция mainb4f2d757 (#1788) без конфликтов; повторный полный npm run check exit0: frontend2821/API1445+188штатныхDBskip/hosting193/infra341/build. Native ABI и ключи прежние; свежий CI интегрированного head обязателен.
