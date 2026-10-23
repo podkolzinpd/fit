@@ -1,8 +1,8 @@
-# Android OTA feed (not activated)
+# Android OTA feed
 
-`location.conf` is an offline fragment for the existing HTTPS frontend server.
-Do not copy it to production or publish bundles until the owner approves the
-closed rollout and the new APK has passed native acceptance. Before store
+`location.conf` is installed by the main-only `release-android-ota.yml` publisher.
+The owner authorized the alpha rollout and fresh signed APK on23.10.2026.
+The publisher verifies signatures and immutable archive readback before metadata. Before store
 distribution, review current RuStore requirements for this release; this task
 does not claim store approval for OTA.
 No new cloud resources, account or Capawesome Cloud service are needed.
@@ -51,3 +51,19 @@ It does not promise the last downloaded release as the fallback. Do not call
 `reload()` during a workout/voice entry/form: only a later native Activity/WebView bootstrap
 activates a staged update. Feed publication is a separate explicit step; it is
 not coupled to deploying the public website or its release cleanup.
+
+## Automatic releases
+
+`FIT_ANDROID_OTA_AUTODEPLOY_ENABLED=true` enables publication after successful
+Cloud.ru frontend preparation on green current main. The Android build copies
+all web feature flags, with its canonical native API origin. Protected environment
+secret `FIT_ANDROID_OTA_PRIVATE_KEY` is used only on the hosted build runner.
+Manual inputs `ci_run_id`, `make_apk`, `reset` build APK1.1.1/code5 or publish a
+new signed builtin reset. No signing key is uploaded in artifacts or to Nginx.
+`node scripts/publish-android-ota.mjs verify|publish|readback DIRECTORY SHA` verifies
+source/ABI/nativeBuild, RSA, expiry, sequence and public bytes. The publish command
+requires the trusted Cloud.ru runner and preserves existing API/TLS routing.
+
+При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
+требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
+Это не выдаётся за доставленное обновление старым оболочкам.
