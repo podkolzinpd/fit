@@ -3,7 +3,11 @@ import assert from 'node:assert/strict'
 import { generateKeyPairSync, sign, createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { decodeSignedManifest, verifyOtaDirectory, installOtaArchive, activateOtaManifest, withOtaLocation, requireKnownNativeShell, requirePublishedApi } from './publish-android-ota.mjs'
+import { PassThrough } from 'node:stream'
+import { EventEmitter } from 'node:events'
+import { createServer, request as httpsRequest } from 'node:https'
+import { execFileSync } from 'node:child_process'
+import { decodeSignedManifest, verifyOtaDirectory, installOtaArchive, activateOtaManifest, withOtaLocation, requireKnownNativeShell, requirePublishedApi, fetchLocalPublicHttps } from './publish-android-ota.mjs'
 import { signAndroidOtaManifest } from './package-android-ota.mjs'
 
 async function fixture(t) {
@@ -124,4 +128,67 @@ test('publication waits for the matching deployed API instead of releasing UI ah
   })
   await assert.rejects(requirePublishedApi(commit, async () => Response.json({ status: 'ok', releaseId: 'b'.repeat(40) })), /REVISION_MISMATCH/)
   await assert.rejects(requirePublishedApi(commit, async () => new Response('', { status: 503 })), /NOT_READY/)
+})
+
+
+test('publisher probes its own Nginx through loopback with canonical TLS identity and fails closed', async () => {
+  const signal = AbortSignal.timeout(1000)
+  const request = status => (url, options, ready) => {
+    assert.equal(url.origin, 'https://api.fit-training.ru')
+    assert.equal(options.hostname, '127.0.0.1')
+    assert.equal(options.servername, 'api.fit-training.ru')
+    assert.equal(options.headers.host, 'api.fit-training.ru')
+    assert.equal(options.rejectUnauthorized, true)
+    assert.equal(options.signal, signal)
+    const req = new EventEmitter()
+    req.end = () => {
+      const response = new PassThrough()
+      response.statusCode = status
+      response.headers = { 'content-type': 'application/json' }
+      ready(response)
+      response.end(JSON.stringify({ status: 'ok', releaseId: 'a'.repeat(40) }))
+    }
+    return req
+  }
+  const response = await fetchLocalPublicHttps('https://api.fit-training.ru/health', { signal }, request(200))
+  assert.equal((await response.json()).releaseId, 'a'.repeat(40))
+  await assert.rejects(fetchLocalPublicHttps('https://api.fit-training.ru/health', { signal }, request(302)), /REDIRECT_REFUSED/)
+  const tlsFailure = () => {
+    const req = new EventEmitter()
+    req.end = () => req.emit('error', new Error('CERT_HAS_EXPIRED'))
+    return req
+  }
+  await assert.rejects(fetchLocalPublicHttps('https://api.fit-training.ru/health', { signal }, tlsFailure), /CERT_HAS_EXPIRED/)
+  for (const url of ['http://api.fit-training.ru/health', 'https://other.example/health',
+    'https://api.fit-training.ru/v1/clients', 'https://fit-training.ru/api/health',
+    'https://api.fit-training.ru/health?token=fixture']) {
+    assert.throws(() => fetchLocalPublicHttps(url), /TARGET_INVALID/)
+  }
+})
+
+
+test('loopback readback reaches real HTTPS Nginx identity without trusting a wrong hostname', async t => {
+  const root = await mkdtemp(join(process.env.TMPDIR || '/tmp', 'fit-ota-tls-'))
+  t.after(() => rm(root, { recursive: true, force: true }))
+  const key = join(root, 'key.pem')
+  const cert = join(root, 'cert.pem')
+  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key,
+    '-out', cert, '-days', '1', '-subj', '/CN=api.fit-training.ru',
+    '-addext', 'subjectAltName=DNS:api.fit-training.ru'], { stdio: 'ignore' })
+  const certificate = await readFile(cert)
+  const server = createServer({ key: await readFile(key), cert: certificate }, (req, res) => {
+    assert.equal(req.headers.host, 'api.fit-training.ru')
+    res.setHeader('content-type', 'application/json')
+    res.end(JSON.stringify({ status: 'ok', releaseId: 'a'.repeat(40) }))
+  })
+  await new Promise(done => server.listen(0, '127.0.0.1', done))
+  t.after(() => new Promise(done => server.close(done)))
+  const request = (url, options, ready) => httpsRequest(url, {
+    ...options, port: server.address().port, ca: certificate,
+  }, ready)
+  const fetcher = (url, options) => fetchLocalPublicHttps(url, options, request)
+  await requirePublishedApi('a'.repeat(40), fetcher)
+  await assert.rejects(fetcher('https://fit-training.ru/mobile-updates/android/not-a-release', {
+    signal: AbortSignal.timeout(2000),
+  }), { code: 'ERR_TLS_CERT_ALTNAME_INVALID' })
 })
