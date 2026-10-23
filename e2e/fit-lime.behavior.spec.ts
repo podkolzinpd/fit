@@ -461,8 +461,10 @@ test('Live pause freezes the running set until the workout clock is tapped again
   await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
   await page.locator('.live-timer-toggle').click()
   await expect(page.locator('.live-timer-toggle')).toHaveText('Пауза')
+  // Медленный браузер может нажать на секунду позже — проверяем, что остаток замер, каким бы он ни был.
+  const frozen = await page.locator('.live-rest-trigger').innerText()
   await page.clock.fastForward(10_000)
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect(page.locator('.live-rest-trigger')).toHaveText(frozen)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
   await page.locator('.live-timer-toggle').click()
   await expect(page.locator('.live-timer-toggle')).not.toHaveText('Пауза')
