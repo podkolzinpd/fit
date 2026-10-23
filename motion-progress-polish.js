@@ -384,6 +384,15 @@
   document.querySelector('#deck').append(growth);
   growth.dataset.section='МАТЕРИАЛЫ · РОСТ ПЛАТФОРМЫ';
   q('.eyebrow',growth).textContent='МАТЕРИАЛЫ · РОСТ ПЛАТФОРМЫ';
+  // Keep the ambition scenario directly after financial results, before the team.
+  const ambition=all.find(s=>q('h2',s)?.textContent.trim()==='Наша амбиция');
+  const team=all.find(s=>s.dataset.section==='13 · КОМАНДА');
+  if(ambition&&team){
+    const from=all.indexOf(ambition),to=all.indexOf(team);
+    const destination=from<to?to-1:to;
+    [all,slides,timeline,max,labels].forEach(list=>list.splice(destination,0,list.splice(from,1)[0]));
+    team.before(ambition);
+  }
   q('select',toolbar).innerHTML=all.map((s,i)=>`<option value="${i}">${s===growth?'Материалы · ':i?s.dataset.version+' · ':''}${q('h2',s).textContent}</option>`).join('');
   motionCount=all.length;
   index=Math.max(0,Math.min(all.length-1,Number(location.hash.slice(1))-1||0));
