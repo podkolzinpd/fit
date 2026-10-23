@@ -295,7 +295,7 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) for (cons
     await expect(page.locator('.coach-live-clock')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Завершить тренировку', exact: true })).toHaveCount(1)
     await expect(page.locator('.coach-live-metric').first()).toBeVisible()
-    await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /REM/)
+    await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /Doto/)
     await expect(page.locator('.live-exercise-head .exercise-thumbnail')).toHaveCount(animation ? source.exercises.length : 0)
     await expect(page.locator('.live-header-animation')).toHaveCount(animation ? 1 : 0)
     const title = page.locator('.live-exercise-head h2').first()
@@ -1322,7 +1322,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(rest).toHaveAttribute('aria-label', /Отдых превышен/)
   await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', /Тренировка:/)
   await expect(page.locator('.coach-live-status')).toContainText('Live')
-  await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /REM/)
+  await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /Doto/)
 })
 
 for (const entry of ['live', 'new', 'today']) for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`client catalog actions SVG state and header ${entry} ${theme} ${width}`, async ({ page }, info) => {
@@ -1836,5 +1836,54 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     await expect(rows.first().locator('.live-set-save-feedback')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`dense-cardio-${width}.png`) })
+  }
+})
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client matrix clock and rest sheet flow ${theme} ${density}`, async ({ page }, info) => {
+  await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(); source.startedAt = '2026-10-19T09:00:00Z'
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const digits = page.locator('.coach-live-digits')
+  await expect(digits).toHaveClass(/coach-live-digits-long/)
+  await expect(digits).toHaveCSS('font-family', /Doto/)
+  expect(await page.evaluate(async () => {
+    const loaded = await document.fonts.load('700 64px Doto', '0123456789−+:')
+    return loaded.some(font => font.family.replace(/['"]/g, '') === 'Doto' && font.status === 'loaded')
+  })).toBe(true)
+  const restTrigger = page.locator('.live-rest-trigger')
+  for (const height of [844, 568]) for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height })
+    expect(await digits.evaluate(node => node.getBoundingClientRect().width <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`matrix-clock-${width}-${height}.png`) })
+    await restTrigger.click()
+    const sheet = page.locator('.live-rest-sheet'), apply = sheet.locator('.live-rest-apply')
+    await expect(apply).toHaveCSS('position', 'static')
+    await expect(apply).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect(apply).toHaveCSS('padding-top', '0px')
+    const boxes = await sheet.evaluate(node => {
+      const wheels=node.querySelector('.rest-time-picker')!.getBoundingClientRect(), presets=node.querySelector('.rest-presets')!.getBoundingClientRect(), apply=node.querySelector('.live-rest-apply')!.getBoundingClientRect()
+      return { wheelBottom:wheels.bottom, presetTop:presets.top, presetBottom:presets.bottom, applyTop:apply.top }
+    })
+    expect(boxes.presetTop).toBeGreaterThanOrEqual(boxes.wheelBottom)
+    expect(boxes.applyTop).toBeGreaterThanOrEqual(boxes.presetBottom)
+    await sheet.getByRole('button', { name: '1:00', exact: true }).click()
+    await apply.getByRole('button').scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath(`rest-flow-${width}-${height}.png`) })
+    await apply.getByRole('button').click()
+    await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
+    await restTrigger.click()
+    const activeFlow = await sheet.evaluate(node => {
+      const wheels = node.querySelector('.rest-time-picker')!.getBoundingClientRect(), apply = node.querySelector('.live-rest-apply')!.getBoundingClientRect()
+      return { wheelBottom: wheels.bottom, applyTop: apply.top }
+    })
+    expect(activeFlow.applyTop).toBeGreaterThanOrEqual(activeFlow.wheelBottom)
+    await sheet.getByRole('button', { name: '3:00', exact: true }).scrollIntoViewIfNeeded()
+    await expect(sheet.getByRole('button', { name: '3:00', exact: true })).toBeVisible()
+    await page.screenshot({ path: info.outputPath(`rest-active-flow-${width}-${height}.png`) })
+    await sheet.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
+    await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:15')
+    await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
   }
 })
