@@ -33,9 +33,9 @@ Baseline: main3f4c4047; OTA-адрес старой ABI отвечает404. В�
 
 | Пункт | Результат | Проверка | Статус |
 | --- | --- | --- | --- |
-|1|Свежий подписанный APK1.1.1/code5|Native/sign/cert/alignment и установка|Подготовка|
-|2|Доступный alpha-feed, автоматический compatible web release|HTTPS readback/CI/native runner и cold-start на телефоне|Подготовка|
-|3|RSA/ABI/expiry/sequence и builtin fallback|Targeted/publisher/native regression, reset support|Подготовка|
+|1|Свежий подписанный APK1.1.1/code5|Native/sign/cert/alignment и установка|Сборка проверена; физический телефон НЕ ПРОВЕРЕНО|
+|2|Доступный alpha-feed, автоматический compatible web release|HTTPS readback/CI/native runner и cold-start на телефоне|Feed опубликован; автоматический путь проверяется; физический cold-start НЕ ПРОВЕРЕНО|
+|3|RSA/ABI/expiry/sequence и builtin fallback|Targeted/publisher/native regression, reset support|Автопроверки passed; физический fallback НЕ ПРОВЕРЕНО|
 
 При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
 требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
@@ -119,3 +119,30 @@ HTTP status сохраняется в технической ошибке без
 reload из старого frontend в OTA location. APK/native ABI не меняются.
 
 Readiness follow-up: полный npm run check exit0 (2821frontend/1445API+188штатныхDBskip/hosting195/infra341/build), targeted11/11; ABIa544771e прежняя. Podman machine start сообщает success, но inspect сразу stopped и socket refused, поэтому local real Nginx НЕ ПРОВЕРЕНО. Реальный reload является обязательным Android/release CI gate.
+
+
+## Первая успешная публикация — 23.10.2026
+
+- PR1791/main93427f904f0cec6f161e99e6ad3fcdc4d639fc16: CI39977471077,
+  Android39977471291 success. API39980518144/frontend39980518166 success.
+- Release39982202146 success, все source/build/publish gates зелёные. Реальный
+  Nginx reload прошёл в PR Android39970296581 и release. Локальная Podman-проверка
+  по-прежнему не заявляется выполненной.
+- [Подписанный APK1.1.1/code5](https://github.com/podkolzinpd/fit/actions/runs/39982202146/artifacts/12514825178),
+  SHA256 `ea4a2a6818f3e534da5c8451884aa0bcdc3f582d7d824025e3ff1231dd6ea720`.
+  Исходный certificate, non-debuggable,16KB alignment, embedded marker и trust root
+  независимо сверены. APK source93427f90, ABI не менялась.
+- Публичный [alpha manifest](https://fit-training.ru/mobile-updates/android/alpha/a544771ede963038579c11c26b46b4e5392b172cc7430896d7c9ea36503dcfb0/latest.json)
+  и ZIP вернули200 в настоящем Chromium с origin `https://localhost`.
+  Manifest RSA, ZIP RSA/checksum, source/ABI, no-store и неизвестный404 путь passed.
+  Bundle `8f7ec9589da7f3120ec81c8d10ac6aa4511712722c80ecbd5d811de9aac2bbe0`,
+  sequence1792771105508, archive15022521bytes.
+- После этого установлен и прочитан `FIT_ANDROID_OTA_AUTODEPLOY_ENABLED=true`.
+  Следующие совместимые main/frontend выпуски используют этот же native ABI;
+  изменившиеся native/lock dependencies по-прежнему требуют нового APK.
+- Эта отдельная docs-квитанция фиксирует новую существенную post-merge фактуру
+  первой активации и служит проверкой реального автоматического OTA-пути без
+  нового APK. До её выпуска автоматический workflow end-to-end НЕ ПРОВЕРЕНО;
+  результат сохраняется в описании PR-квитанции после его завершения.
+- Владелец отложил проверку телефона. Установка, настоящий cold-start и fallback
+  на физическом Android НЕ ПРОВЕРЕНО. Автоматические проверки это не заменяют.
