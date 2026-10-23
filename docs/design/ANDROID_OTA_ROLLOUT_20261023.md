@@ -95,3 +95,5 @@ Native ABI/ключи/флаги/продуктовый интерфейс не 
 Loopback follow-up: targeted9/9 и полный npm run check exit0: frontend2821,
 API1445+188штатныхDBskip, hosting193, infra341, lint/typecheck/build passed.
 Native ABI сохранилась a544771e; новая физическая установка не проверена.
+
+Интеграция mainb4f2d757 (#1788) без конфликтов; повторный полный npm run check exit0: frontend2821/API1445+188штатныхDBskip/hosting193/infra341/build. Native ABI и ключи прежние; свежий CI интегрированного head обязателен.
