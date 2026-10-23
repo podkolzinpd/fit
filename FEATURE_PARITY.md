@@ -746,3 +746,8 @@ builtin rollback. По умолчанию выключено; локальная
 native/CI и signed candidate passed; physical-device/pilot и store distribution
 ещё впереди. Не Implemented
 как опубликованный пользовательский сценарий; 1.0.2 остаётся bundled-only.
+
+Продолжение23.10: владелец разрешил свежий APK и включение OTA; реализация main-only
+release/publisher APK1.1.1/code5 и автоматического compatible feed описана в
+`docs/design/ANDROID_OTA_ROLLOUT_20261023.md`. Фактическая публикация и телефонная
+приёмка отмечаются отдельно; исходные3пункта acceptance не меняются.

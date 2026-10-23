@@ -2067,12 +2067,12 @@ Retention preserves an API image if Podman reports it is still used by a
 container and continues other bounded cleanup; any other removal error fails.
 It never force-removes that container or performs system/volume pruning.
 
-## Android OTA — подготовка, без production-публикации
+## Android OTA — подписанный APK и alpha-feed
 
 План: `docs/design/ANDROID_OTA_20261019.md`, протокол публикации/отката и Nginx:
 `infra/cloudru/mobile-updates/README.md`. `FIT_ANDROID_OTA_ENABLED` имеет default-off
 семантику (включено только при точном `true`); штатная web-сборка OTA не проверяет.
-Тестовый Android APK1.1.0/code4 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
+Android APK1.1.1/code5 должен собираться с этим флагом, `FIT_SOURCE_COMMIT`
 и canonical API origin `https://api.fit-training.ru`; production env-файлы локально
 не создаются. Native-состав и **все lock-зависимости** входят в консервативный ABI:
 их изменение требует нового APK. Публичный OTA RSA-ключ закреплён в
@@ -2090,11 +2090,26 @@ content-addressed ZIP, signed manifest и provenance; key задаётся че�
 `autoUpdateStrategy=none`; JS никогда не вызывает `reload()`. Ошибка проверки
 выдаёт только стабильный код `FIT_ANDROID_OTA_CHECK_FAILED`, без error payload/PII.
 
-Новый feed хранится независимо от frontend/API retention. Публикация feed,
-добавление Nginx location и отправка нового APK в RuStore не выполнены. До них
-нужны полный native/CI/device цикл и подтверждение правил RuStore. Согласие на
-обычную web-выкладку само по себе не включает OTA. Никакие production build flags,
-allowlists, CORS/API/БД/старый Yandex-контур из этой подготовки не меняются.
+Feed хранится независимо от frontend/API retention в `/var/lib/fit-mobile-updates`.
+Workflow `release-android-ota.yml` использует полный зелёный current-main CI и те же
+feature flags, что web. Ручной запуск с `ci_run_id` и `make_apk=true` выпускает
+подписанный APK; `reset=true` публикует новый signed sequence с release:null.
+Secret `FIT_ANDROID_OTA_PRIVATE_KEY` хранится в environment fit-frontend-candidate,
+временный0600 keyfile удаляется. Ключ не передаётся self-hosted publisher.
+После owner-authorized включения repository variable
+`FIT_ANDROID_OTA_AUTODEPLOY_ENABLED=true` успешный workflow
+`Prepare Cloud.ru frontend without public routing` запускает compatible OTA.
+Publisher перепроверяет подписи/source/ABI/nativeBuild, отказывается снижать sequence,
+публикует ZIP первым, проверяет публичное скачивание и атомарно переключает manifest.
+Nginx location устанавливается узкой вставкой с backup/nginx-test/reload/rollback;
+GET/HEAD only, CORS https://localhost, no-store, неизвестный path404.
+Прямое скачивание: `/mobile-updates/android/alpha/<abi>/latest.json`,
+`/mobile-updates/android/bundles/<sha256>.zip`. Readback сверяет точные signed bytes.
+Релиз автоматически обновляет30-дневный срок metadata при очередном веб-выпуске;
+если релизов нет30дней, нужно вручную перевыпустить metadata, существующий интерфейс
+не удаляется. Изменение native/lock ABI требует нового APK, старые клиенты остаются
+на своём последнем совместимом интерфейсе. RuStore submission — отдельное действие.
+План и фактическая приёмка: `docs/design/ANDROID_OTA_ROLLOUT_20261023.md`.
 
 ## Client workout reference test pilot (YAFIT-641)
 
@@ -2112,3 +2127,7 @@ Rollback: set the independent enabled variable to `false` and publish a verified
 Changing density does not reset animation preference or data. Client animation defaults
 to on, original density defaults to original; density is stored per client account
 on the device under its own preference key. The common design-code files are unchanged.
+
+При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
+требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
+Это не выдаётся за доставленное обновление старым оболочкам.
