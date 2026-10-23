@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { createServer } from 'node:net'
+import { createHash } from 'node:crypto'
+import { verifyPublicArchive } from './publish-android-ota.mjs'
 
 const available = spawnSync('nginx', ['-v']).status === 0
 test('real Nginx serves immutable OTA ZIP/manifest, HEAD, CORS and no-store while denying writes and unknown paths',
@@ -28,8 +30,10 @@ test('real Nginx serves immutable OTA ZIP/manifest, HEAD, CORS and no-store whil
     const location = (await readFile(new URL('../infra/cloudru/mobile-updates/location.conf', import.meta.url), 'utf8'))
       .replace('/var/lib/fit-mobile-updates/android/', `${root}/android/`)
     const config = join(root, 'nginx.conf')
+    const configuration = `pid ${root}/nginx.pid; error_log stderr crit; events {} http { access_log off;
+      server { listen 127.0.0.1:${port}; ${location} location / { return 404; } } }`
     await writeFile(config, `pid ${root}/nginx.pid; error_log stderr crit; events {} http { access_log off;
-      server { listen 127.0.0.1:${port}; ${location} location / { return 404; } } }`)
+      server { listen 127.0.0.1:${port}; location / { return 200 'old frontend'; } } }`)
     const checked = spawnSync('nginx', ['-t', '-c', config], { encoding: 'utf8' })
     assert.equal(checked.status, 0, checked.stderr)
     // A daemon keeps stderr open: do not wait for EOF on a captured pipe.
@@ -37,6 +41,14 @@ test('real Nginx serves immutable OTA ZIP/manifest, HEAD, CORS and no-store whil
     assert.equal(result.status, 0, result.error?.message ?? 'Nginx start failed')
     started = true
     const base = `http://127.0.0.1:${port}/mobile-updates/android`
+    assert.equal(await (await fetch(`${base}/bundles/${hash}.zip`)).text(), 'old frontend')
+    await writeFile(config, configuration)
+    const reloaded = spawnSync('nginx', ['-c', config, '-s', 'reload'], { encoding: 'utf8' })
+    assert.equal(reloaded.status, 0, reloaded.stderr)
+    const archiveBytes = Buffer.from('ZIP fixture')
+    await verifyPublicArchive({ archive: archiveBytes, payload: { release: {
+      url: `${base}/bundles/${hash}.zip`, checksum: createHash('sha256').update(archiveBytes).digest('hex'),
+    } } }, fetch, { waitForReady: true })
     const response = await fetch(`${base}/alpha/${hash}/latest.json`, { signal: AbortSignal.timeout(5000) })
     assert.equal(response.status, 200)
     assert.equal(await response.text(), '{"fixture":true}')
