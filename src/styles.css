@@ -1406,6 +1406,7 @@ a.goal-stages-hint:hover { border-color: var(--accent-surface-border) }
 .exercise-comment-note { margin:var(--space-1) 44px 0 0; color:var(--secondary-label-fg); font-size:var(--text-sm); line-height:var(--leading-snug) }
 .planned-round { border: 0; border-top: 1px solid var(--hairline); border-radius: 0; padding: 6px 0 0; background: transparent }
 .planned-round-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px }
+.workout-form-controls, .workout-editor-controls { display: contents; min-width: 0; margin: 0; padding: 0; border: 0 }
 .planned-round-exercise { margin-bottom: 6px }
 .planned-round-exercise:last-child { margin-bottom: 0 }
 .planned-round-exercise-name { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px }

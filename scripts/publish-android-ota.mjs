@@ -1,5 +1,5 @@
 import { createHash, verify } from 'node:crypto'
-import { readFile, writeFile, mkdir, lstat, rename, unlink, statfs } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, lstat, rename, unlink, statfs, chmod } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -54,20 +54,22 @@ export async function verifyOtaDirectory(directory, commit, policy = androidOtaP
   return { manifest, manifestPath, payload, archive, archivePath, policy }
 }
 
-async function safeDirectory(path) {
+async function safeDirectory(path, publicRoot) {
   // Check each existing ancestor, including /var/lib. Never follow a symlink.
   const absolute = resolve(path)
-  if (absolute !== '/') await safeDirectory(dirname(absolute))
+  if (absolute !== '/') await safeDirectory(dirname(absolute), publicRoot)
   await mkdir(absolute).catch(error => { if (error.code !== 'EEXIST') throw error })
   const info = await lstat(absolute)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('OTA_UNSAFE_DIRECTORY')
+  // Only this public artifact tree is readable by Nginx; never chmod ancestors.
+  if (absolute === publicRoot || absolute.startsWith(`${publicRoot}/`)) await chmod(absolute, 0o755)
 }
 
 export async function installOtaArchive(verified, root) {
-  await safeDirectory(root)
+  await safeDirectory(root, resolve(root))
   if (!verified.archive) return
   const path = resolve(root, verified.archivePath)
-  await safeDirectory(dirname(path))
+  await safeDirectory(dirname(path), resolve(root))
   try { await writeFile(path, verified.archive, { flag: 'wx', mode: 0o644 }) }
   catch (error) {
     if (error.code !== 'EEXIST') throw error
@@ -76,11 +78,12 @@ export async function installOtaArchive(verified, root) {
       throw new Error('OTA_IMMUTABLE_ARCHIVE_MISMATCH')
     }
   }
+  await chmod(path, 0o644)
 }
 
 export async function activateOtaManifest(verified, root) {
   const path = resolve(root, verified.manifestPath)
-  await safeDirectory(dirname(path))
+  await safeDirectory(dirname(path), resolve(root))
   try {
     const info = await lstat(path)
     if (!info.isFile() || info.isSymbolicLink()) throw new Error('OTA_UNSAFE_MANIFEST')
@@ -94,6 +97,7 @@ export async function activateOtaManifest(verified, root) {
   const temporary = `${path}.${process.pid}.next`
   try {
     await writeFile(temporary, verified.manifest, { flag: 'wx', mode: 0o644 })
+    await chmod(temporary, 0o644)
     await rename(temporary, path)
   } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error }) }
 }
@@ -140,12 +144,24 @@ export function fetchLocalPublicHttps(input, options = {}, request = httpsReques
   })
 }
 
-async function verifyPublicArchive(verified, fetcher = fetch) {
+export async function verifyPublicArchive(verified, fetcher = fetch, {
+  waitForReady = false, now = Date.now, pause = ms => new Promise(done => setTimeout(done, ms)),
+} = {}) {
   if (!verified.archive) return
-  const response = await fetcher(verified.payload.release.url, { redirect: 'error', signal: AbortSignal.timeout(60000) })
-  if (!response.ok || digest(Buffer.from(await response.arrayBuffer())) !== verified.payload.release.checksum) {
-    throw new Error('OTA_PUBLIC_ARCHIVE_MISMATCH')
-  }
+  // systemctl reload acknowledges HUP before the new Nginx workers serve traffic.
+  // Keep metadata untouched until the exact immutable archive is really served.
+  const deadline = now() + (waitForReady ? 10000 : 60000)
+  let status
+  do {
+    const response = await fetcher(verified.payload.release.url, {
+      redirect: 'error', signal: AbortSignal.timeout(Math.max(1, deadline - now())),
+    })
+    status = response.status
+    if (response.ok && digest(Buffer.from(await response.arrayBuffer())) === verified.payload.release.checksum) return
+    if (!waitForReady || now() >= deadline) break
+    await pause(Math.min(250, deadline - now()))
+  } while (now() < deadline)
+  throw new Error(`OTA_PUBLIC_ARCHIVE_MISMATCH: HTTP ${status}; archive not ready or checksum differs`)
 }
 
 export async function readbackOta(verified, fetcher = fetch) {
@@ -204,7 +220,7 @@ async function publish(verified, newNativeApk) {
     execFileSync('nginx', ['-t'], { stdio: 'inherit' })
     execFileSync('systemctl', ['reload', 'nginx'])
     // No metadata changes until the public immutable object can be downloaded.
-    await verifyPublicArchive(verified, fetcher)
+    await verifyPublicArchive(verified, fetcher, { waitForReady: true })
   } catch (error) {
     await writeFile(site, previous)
     execFileSync('nginx', ['-t'], { stdio: 'inherit' })

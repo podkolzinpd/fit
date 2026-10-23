@@ -1,6 +1,179 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { z } from 'zod'
 import { clientId, coachGestureWorkout, mockPilot } from './fit-lime-fixtures'
+import type { WorkoutExerciseDraft } from '../src/shared/domain'
+
+async function readyPlanEditorFixture(page: Page, theme = 'dark') {
+  const actorId = 'c11e0000-6010-4000-8000-000000000001'
+  await page.addInitScript(({ actorId, theme }) => localStorage.setItem(`fit.clientLime.theme.${actorId}`, theme), { actorId, theme })
+  const source = coachGestureWorkout()
+  const backend = await mockPilot(page, { role: 'client', profileId: actorId, clientLime: true, fitLime: false, workouts: [source] })
+  const blockId = source.exercises[0]!.blockId
+  const exercises: WorkoutExerciseDraft[] = [
+    ...source.exercises.slice(0, 2).map((exercise, position) => ({ ...exercise, position, blockId, blockType: 'group' as const, blockRounds: 2,
+      restBetweenExercisesSec: 15, restBetweenRoundsSec: 90, restBetweenSetsSec: 75,
+      sets: [{ position: 0, weightKg: 7 + position, reps: 12 }, { position: 1, weightKg: 9 + position, reps: 10 }] })),
+    { ...source.exercises[2]!, position: 2, name: 'Планка', ref: 'plank', inputKind: 'duration', blockType: 'single', blockRounds: 1, sets: [{ position: 0, durationSec: 90 }] },
+  ]
+  const favorite = { id: source.id, title: 'Плечи и корпус', version: 1, createdAt: '2026-10-23T00:00:00Z', exercises }
+  await page.route('https://stage.example.test/v1/favorite-workouts', route => route.fulfill({ json: { favorites: [favorite] } }))
+  return { actorId, favorite, source, backend }
+}
+
+test('Yandex ready plan protects the last input, pending request, retry and source history', async ({ page }) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const { actorId, favorite, source, backend } = await readyPlanEditorFixture(page)
+  const originalFavorite = JSON.stringify(favorite), originalHistory = JSON.stringify(backend.getWorkouts())
+  let release: (() => void) | undefined, attempts = 0
+  const requestSchema = z.object({ requestId: z.string(), exercises: z.array(z.object({
+    blockId: z.string(), blockRounds: z.number(),
+    restBetweenExercisesSec: z.number().optional(), restBetweenRoundsSec: z.number().optional(), restBetweenSetsSec: z.number().optional(),
+    sets: z.array(z.object({ position: z.number(), weightKg: z.number().nullish(), reps: z.number().nullish(), durationSec: z.number().nullish() }).passthrough()),
+  }).passthrough()) })
+  const requests: z.infer<typeof requestSchema>[] = []
+  await page.route('https://stage.example.test/v1/workouts', async route => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    attempts++
+    requests.push(requestSchema.parse(route.request().postDataJSON()))
+    if (attempts === 1) {
+      await new Promise<void>(resolve => { release = resolve })
+      return route.fulfill({ status: 503, json: { error: 'database_unavailable' } })
+    }
+    return route.fallback()
+  })
+  await page.goto(`/workouts/new?favorite=${favorite.id}`)
+  const memberMenu = page.locator('.block-exercise-head').first().getByRole('button', { name: 'Ещё действия', exact: true })
+  await memberMenu.click()
+  await page.getByRole('menuitem', { name: 'Удалить', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(page.locator('.planned-round-exercise')).toHaveCount(4)
+  const weight = page.locator('.planned-round-exercise').first().getByLabel('Вес, подход 1', { exact: true })
+  await weight.fill('22.5')
+  await page.locator('.compact-editor-exercise-toggle').last().click()
+  const seconds = page.getByLabel('Время, подход 1: секунды', { exact: true })
+  await seconds.fill('45')
+  // Native submit while focus stays in the last field catches stale blur-only drafts.
+  await page.locator('form.workout-form').evaluate(form => (form as HTMLFormElement).requestSubmit())
+  await expect.poll(() => attempts).toBe(1)
+  await expect(weight).toBeDisabled()
+  await expect(seconds).toBeDisabled()
+  await expect(memberMenu).toBeDisabled()
+  await expect(page.getByRole('button', { name: /Упражнение$/ })).toBeDisabled()
+  expect(requests[0]!.exercises[0]!.sets[0]!.weightKg).toBe(22.5)
+  expect(requests[0]!.exercises[2]!.sets[0]!.durationSec).toBe(105)
+  release!()
+  await expect(page.getByText('Не удалось сохранить тренировку. Введённые данные остались в форме. Попробуйте сохранить ещё раз.', { exact: true })).toBeVisible()
+  await expect(weight).toBeEnabled()
+  await expect(weight).toHaveValue('22.5')
+  await expect(seconds).toHaveValue('45')
+  const draftKey = `fit.workout-form-draft.${actorId}.favorite-${favorite.id}`
+  expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toContain('22.5')
+  expect(JSON.stringify(favorite)).toBe(originalFavorite)
+  expect(JSON.stringify(backend.getWorkouts())).toBe(originalHistory)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page).toHaveURL(/\/workouts\/[a-f0-9-]{36}$/)
+  expect(requests).toHaveLength(2)
+  expect(requests[1]).toEqual(requests[0])
+  expect(requests[1]!.exercises[0]!).toMatchObject({ blockRounds: 2, restBetweenExercisesSec: 15, restBetweenRoundsSec: 90, restBetweenSetsSec: 75 })
+  expect(requests[1]!.exercises[0]!.blockId).toBe(requests[1]!.exercises[1]!.blockId)
+  expect(requests[1]!.exercises[0]!.blockId).not.toBe(favorite.exercises[0]!.blockId)
+  expect(JSON.stringify(backend.getWorkouts().find(workout => workout.id === source.id))).toBe(JSON.stringify(source))
+  expect(JSON.stringify(favorite)).toBe(originalFavorite)
+  expect(await page.evaluate(key => localStorage.getItem(key), draftKey)).toBeNull()
+})
+
+// Themes exercise token pairs; both real routes exercise different editor flags.
+// Width changes check only geometry, not a duplicate CRUD lifecycle.
+for (const theme of ['light', 'dark']) for (const mode of ['plan', 'favorite']) test(`Yandex ready editor Lime geometry ${mode} ${theme}`, async ({ page }, info) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const { favorite } = await readyPlanEditorFixture(page, theme)
+  await page.goto(mode === 'plan' ? `/workouts/new?favorite=${favorite.id}` : `/me/workouts/favorites/${favorite.id}/edit`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+  await expect(page.locator('.phone-frame')).toHaveClass(/client-workout-reference/)
+  const row = page.locator('.planned-round-exercise').first()
+  await expect(row).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Создать суперсет со следующим', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Действия с планом', exact: true })).toHaveText('Действия с планом')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.evaluate(() => document.fonts.ready)
+    const geometry = await row.evaluate(node => {
+      const fields = [...node.querySelectorAll<HTMLElement>('.coach-plan-metric')].map(field => field.getBoundingClientRect())
+      return { display: getComputedStyle(node).display, fields: fields.map(r => ({ x: r.x, y: r.y, width: r.width, height: r.height, right: r.right })) }
+    })
+    expect(geometry.display).toBe('grid')
+    expect(Math.abs(geometry.fields[0]!.y - geometry.fields[1]!.y)).toBeLessThanOrEqual(1)
+    expect(geometry.fields[0]!.right).toBeLessThan(geometry.fields[1]!.x)
+    expect(geometry.fields[0]!.height).toBe(48)
+    const toggle = page.locator('.compact-editor-exercise-toggle').last()
+    await expect(toggle.locator('.compact-editor-chevron')).toBeVisible()
+    const blockHead = await page.locator('.exercise-block-head').first().boundingBox()
+    expect(blockHead!.height).toBeLessThanOrEqual(60)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`ready-editor-${mode}-${theme}-${width}.png`), fullPage: true })
+    await row.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath(`ready-editor-fields-${mode}-${theme}-${width}.png`) })
+  }
+})
+
+test('Yandex ready editor keeps the last input clear of keyboard and restores save after dismissal', async ({ page }, info) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  // A modeled visualViewport checks our layout only, not a physical iPhone keyboard.
+  await page.addInitScript(() => {
+    if (visualViewport) Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => 420 })
+  })
+  const { favorite } = await readyPlanEditorFixture(page)
+  for (const mode of ['plan', 'favorite']) {
+    await page.goto(mode === 'plan' ? `/workouts/new?favorite=${favorite.id}` : `/me/workouts/favorites/${favorite.id}/edit`)
+    const toggle = page.locator('.compact-editor-exercise-toggle').last()
+    await toggle.click()
+    const seconds = page.getByLabel('Время, подход 1: секунды', { exact: true })
+    await seconds.fill('45')
+    await seconds.focus()
+    await page.evaluate(() => visualViewport?.dispatchEvent(new Event('resize')))
+    await expect(page.locator('html')).toHaveClass(/app-keyboard-open/)
+    await seconds.scrollIntoViewIfNeeded()
+    const field = (await seconds.boundingBox())!
+    expect(field.y).toBeGreaterThanOrEqual(0)
+    expect(field.y + field.height).toBeLessThanOrEqual(420)
+    // Existing policy hides the fixed footer during typing; do not overlay the keyboard.
+    await expect(page.locator('.workout-action-row')).toBeHidden()
+    await page.screenshot({ path: info.outputPath(`ready-editor-keyboard-${mode}.png`) })
+    await seconds.blur()
+    await page.evaluate(() => {
+      if (visualViewport) Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => innerHeight })
+      visualViewport?.dispatchEvent(new Event('resize'))
+    })
+    await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
+    const save = page.getByRole('button', { name: mode === 'plan' ? 'Сохранить план' : 'Сохранить изменения', exact: true })
+    await expect(save).toBeVisible()
+    await expect(seconds).toHaveValue('45')
+    const saveBox = (await save.boundingBox())!
+    expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(844)
+  }
+})
+
+test('Yandex shared plan fields keep the trainer reference layout at mobile and desktop widths', async ({ page }, info) => {
+  test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires production Yandex composition.')
+  const source = coachGestureWorkout()
+  const members = source.exercises.slice(0, 2)
+  for (const exercise of members) { exercise.blockId = members[0]!.blockId; exercise.blockType = 'group'; exercise.blockRounds = 2 }
+  source.exercises = members
+  await mockPilot(page, { profileId: 'c0ac0000-6010-4000-8000-000000000001', fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/new?copy=${source.id}`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/coach-workout-reference/)
+  const row = page.locator('.planned-round-exercise').first()
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await expect(row).toBeVisible()
+    const values = await row.locator('.coach-plan-metric').evaluateAll(fields => fields.map(field => { const r = field.getBoundingClientRect(); return { y: r.y, width: r.width } }))
+    expect(Math.abs(values[0]!.y - values[1]!.y)).toBeLessThanOrEqual(1)
+    expect(values[0]!.width).toBeGreaterThan(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await row.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath(`shared-trainer-fields-${width}.png`) })
+  }
+})
 
 if (process.env.FIT_YANDEX_E2E_REQUIRED === 'true') {
   for (const name of [
