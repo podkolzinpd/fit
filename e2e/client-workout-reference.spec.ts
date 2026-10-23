@@ -38,9 +38,9 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   }
 })
 
-for (const density of ['original', 'compact']) test(`client folds completed exercise without stopping overdue rest ${density}`, async ({ page }) => {
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client folds completed exercise without stopping overdue rest ${theme} ${density}`, async ({ page }, info) => {
   await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
-  await page.addInitScript(({ id, density }) => localStorage.setItem(`fit.clientLiveDensity.${id}`, density), { id: pilotId, density })
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLiveDensity.${id}`, density); localStorage.setItem(`fit.clientLime.theme.${id}`, theme) }, { id: pilotId, theme, density })
   const source = coachGestureWorkout()
   source.startedAt = '2026-10-21T08:58:00Z'
   const exercise = source.exercises[0]!
@@ -63,6 +63,63 @@ for (const density of ['original', 'compact']) test(`client folds completed exer
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
   await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
   await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const card = page.locator('.live-exercise').filter({ has: row })
+    await card.locator('.overflow-trigger').click()
+    await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
+    await expect(row).toHaveCount(0)
+    await expect(compact).toBeVisible()
+    await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+    await page.screenshot({ path: info.outputPath(`folded-again-${width}.png`) })
+    await compact.click()
+    await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('35')
+    await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
+  }
+})
+
+for (const theme of ['light', 'dark']) test(`client completed collapse waits for pending and failed edits ${theme}`, async ({ page }) => {
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
+  const source = coachGestureWorkout(), exercise = source.exercises[0]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  exercise.sets.forEach(set => { set.confirmedAt = '2026-10-21T08:59:00Z'; set.fact = { weightKg: 30, reps: 10 } })
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let release!: () => void, mode: 'pending' | 'error' | 'success' = 'pending', attempts = 0
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/workout-sets/*/draft', async route => {
+    attempts += 1
+    if (mode === 'pending') await gate
+    if (mode === 'error') return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+    return route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.workout-exercise-compact').first().click()
+  const row = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
+  const field = row.getByLabel('Фактический вес', { exact: true })
+  const card = page.locator('.live-exercise').filter({ has: row })
+  await field.fill('35'); await field.blur()
+  await expect.poll(() => attempts).toBeGreaterThan(0)
+  await card.locator('.overflow-trigger').click()
+  await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeDisabled()
+  mode = 'success'; release()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
+  await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeEnabled()
+  await page.keyboard.press('Escape')
+  mode = 'error'
+  await field.fill('37.5'); await field.blur()
+  await expect(row.locator('.save-status-error')).toBeVisible()
+  await card.locator('.overflow-trigger').click()
+  await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeDisabled()
+  await page.keyboard.press('Escape')
+  mode = 'success'
+  await field.focus(); await field.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(37.5)
+  await card.locator('.overflow-trigger').click()
+  await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeEnabled()
+  await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
+  await expect(row).toHaveCount(0)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
 })
 
@@ -585,7 +642,7 @@ for (const mode of ['planned', 'done'] as const) for (const wheel of [false, tru
 
 for (const [theme, width] of [['dark', 390], ['light', 430]] as const) test(`client editor reference copy edits and saves a new plan ${theme}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   const source = coachGestureWorkout(false, 1)
   source.createdBy = pilotId; source.status = 'done'; source.workoutDate = '2026-10-20'; source.completedAt = '2026-10-20T09:10:00Z'
   source.exercises[0]!.sets[0]!.confirmedAt = source.completedAt
@@ -642,7 +699,7 @@ async function expectClientEditorFits(page: Page) {
 
 for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`client editor reference geometry ${theme} ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   const plan = coachGestureWorkout()
   plan.status = 'planned'; plan.startedAt = null; plan.createdBy = pilotId
   plan.exercises[0] = { ...plan.exercises[0]!, ref: 'barbell-squat', name: 'Присед со штангой на плечах' }
@@ -812,7 +869,7 @@ async function openClientReferenceCatalog(page: Page) {
 }
 for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`client catalog reference geometry and retained filter search ${theme} ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [], withCustomExercise: true })
   const picker = await openClientReferenceCatalog(page)
   await expect(picker).toHaveClass(/client-reference-catalog/)
@@ -902,7 +959,7 @@ test('client catalog reference also applies in Today and does not reach another 
 
 
 for (const theme of ['dark', 'light']) test(`client catalog reference empty search and own exercise retry ${theme}`, async ({ page }, info) => {
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [], failFirstCustomExerciseSave: true })
   const picker = await openClientReferenceCatalog(page)
   await picker.getByLabel('Поиск упражнения').fill('Тестовое новое движение 641')
@@ -933,7 +990,7 @@ for (const theme of ['dark', 'light']) test(`client catalog reference empty sear
 for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`client date reference retains cancel apply clear Enter and year rollover ${theme} ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
   await page.clock.setFixedTime(new Date('2026-12-20T09:00:00Z'))
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   const plan = coachGestureWorkout()
   plan.status = 'planned'; plan.startedAt = null; plan.createdBy = pilotId; plan.workoutDate = '2026-12-20'; plan.startTime = '10:00'; plan.endTime = '11:00'
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [plan] })
@@ -1270,7 +1327,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
 
 for (const entry of ['live', 'new', 'today']) for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`client catalog actions SVG state and header ${entry} ${theme} ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   const source = coachGestureWorkout(); source.startedAt = new Date(Date.now() - 120000).toISOString()
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(entry === 'live' ? `/workouts/${workoutId}/live` : entry === 'new' ? '/workouts/new' : '/me?entry=workout')
@@ -1309,7 +1366,7 @@ for (const entry of ['live', 'new', 'today']) for (const theme of ['light', 'dar
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`client time sheets keep draft seconds cancel and rest ${theme} ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
   await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   const source = restTimerWorkout(0, true, 'manual'); source.startedAt = '2026-10-21T08:58:00Z'
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
@@ -1581,7 +1638,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
 
 for (const theme of ['light', 'dark']) test(`client Live phase text contrast ${theme}`, async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-22T09:00:00Z') })
-  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(5, true, 'timer')] })
   await page.goto(`/workouts/${workoutId}/live`)
   const phase = page.locator('.live-rest-trigger')
@@ -1754,6 +1811,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await page.goto(`/workouts/${workoutId}/live`)
   const rows = page.locator('form[data-live-set-id]')
   await expect(rows).toHaveCount(2)
+  await page.evaluate(() => document.fonts.ready)
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const geometry = await page.locator('.live-exercise').evaluate(card => {
@@ -1761,9 +1819,15 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
       const header = rect('.live-exercise-head'), title = rect('.exercise-technique-trigger h2'), trigger = rect('.exercise-technique-trigger')
       const time = rect('.workout-duration-trigger'), check = rect('.live-set-check')
       const grids = card.querySelectorAll('.live-set-grid'), first = grids[0]!.getBoundingClientRect(), second = grids[1]!.getBoundingClientRect()
-      return { headerHeight: header.height, titleInset: title.x - trigger.x, confirmOffset: check.y - time.y, checkHeight: check.height, timeHeight: time.height, rowGap: second.y - first.bottom }
+      const style = getComputedStyle(card.querySelector('.live-exercise-head')!)
+      const contentHeight = Math.max(trigger.height, card.querySelector('.exercise-thumbnail')?.getBoundingClientRect().height ?? 0, rect('.exercise-head-actions').height)
+      return { headerHeight: header.height, contentHeight, paddingTop: parseFloat(style.paddingTop), paddingBottom: parseFloat(style.paddingBottom), border: parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth), minHeight: style.minHeight, titleInset: title.x - trigger.x, confirmOffset: check.y - time.y, checkHeight: check.height, timeHeight: time.height, rowGap: second.y - first.bottom }
     })
-    expect(geometry.headerHeight).toBeLessThan(133)
+    await info.attach(`layout-${width}`, { body: JSON.stringify(geometry), contentType: 'application/json' })
+    expect(geometry.minHeight).toBe('0px')
+    expect(geometry.paddingTop).toBe(density === 'original' ? 16 : 12)
+    expect(geometry.paddingBottom).toBe(8)
+    expect(Math.abs(geometry.headerHeight - geometry.contentHeight - geometry.paddingTop - geometry.paddingBottom - geometry.border)).toBeLessThan(1)
     expect(Math.abs(geometry.titleInset)).toBeLessThan(1)
     expect(Math.abs(geometry.confirmOffset)).toBeLessThan(1)
     expect(geometry.checkHeight).toBe(density === 'original' ? 54 : 48)
