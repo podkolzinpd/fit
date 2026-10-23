@@ -97,3 +97,25 @@ API1445+188штатныхDBskip, hosting193, infra341, lint/typecheck/build pass
 Native ABI сохранилась a544771e; новая физическая установка не проверена.
 
 Интеграция mainb4f2d757 (#1788) без конфликтов; повторный полный npm run check exit0: frontend2821/API1445+188штатныхDBskip/hosting193/infra341/build. Native ABI и ключи прежние; свежий CI интегрированного head обязателен.
+
+
+## Публикация после loopback исправления
+
+PR1790/main3b31960a: full CI39963404387 attempt2 success,
+Android39963404380 success; API39967296832 и frontend39967296936 success.
+Release39967422365 собрал APK1.1.1/code5 и signed OTA из того же main.
+Независимо проверены APK certificate/16KB/non-debuggable/SHA256/marker/trust root.
+APK SHA256 b40bcb82d909d501109934abe4dce760c026840416a8a2e4546f1f075690bb15.
+Оба publish attempt остановились на archive readback непосредственно после
+reload, Nginx восстановлен, metadata не активирована. Точный HTTP status старый
+publisher не сохранил; нельзя считать reload race единственной доказанной причиной.
+
+Следующее узкое исправление закрывает два проверяемых механизма: явные755/644
+только внутри public OTA tree независимо от runner umask (родители/секреты не
+меняются), и bounded10s ожидание exact ZIP после async reload перед metadata.
+HTTP status сохраняется в технической ошибке без тела ответа. Постоянный mismatch
+заканчивается rollback; подпись/sequence/source/ABI gates остаются. Добавлены
+регрессии strict umask, stale200→exact ZIP, bounded403/mismatch, настоящий Nginx
+reload из старого frontend в OTA location. APK/native ABI не меняются.
+
+Readiness follow-up: полный npm run check exit0 (2821frontend/1445API+188штатныхDBskip/hosting195/infra341/build), targeted11/11; ABIa544771e прежняя. Podman machine start сообщает success, но inspect сразу stopped и socket refused, поэтому local real Nginx НЕ ПРОВЕРЕНО. Реальный reload является обязательным Android/release CI gate.

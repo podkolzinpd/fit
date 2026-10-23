@@ -1,13 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { generateKeyPairSync, sign, createHash } from 'node:crypto'
-import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile, rm, symlink, stat, chmod } from 'node:fs/promises'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { EventEmitter } from 'node:events'
 import { createServer, request as httpsRequest } from 'node:https'
 import { execFileSync } from 'node:child_process'
-import { decodeSignedManifest, verifyOtaDirectory, installOtaArchive, activateOtaManifest, withOtaLocation, requireKnownNativeShell, requirePublishedApi, fetchLocalPublicHttps } from './publish-android-ota.mjs'
+import { decodeSignedManifest, verifyOtaDirectory, installOtaArchive, activateOtaManifest, withOtaLocation, requireKnownNativeShell, requirePublishedApi, fetchLocalPublicHttps, verifyPublicArchive } from './publish-android-ota.mjs'
 import { signAndroidOtaManifest } from './package-android-ota.mjs'
 
 async function fixture(t) {
@@ -191,4 +191,49 @@ test('loopback readback reaches real HTTPS Nginx identity without trusting a wro
   await assert.rejects(fetcher('https://fit-training.ru/mobile-updates/android/not-a-release', {
     signal: AbortSignal.timeout(2000),
   }), { code: 'ERR_TLS_CERT_ALTNAME_INVALID' })
+})
+
+
+test('public OTA files stay readable under a restrictive runner umask without changing ancestors', async t => {
+  const f = await fixture(t)
+  const target = join(f.root, 'public')
+  await mkdir(target, { mode: 0o700 })
+  const before = (await stat(f.root)).mode & 0o777
+  const mask = process.umask(0o077)
+  try {
+    const verified = await f.verified()
+    await installOtaArchive(verified, target)
+    await chmod(join(target, verified.archivePath), 0o600)
+    await installOtaArchive(verified, target) // repair a prior otherwise valid copy
+    await activateOtaManifest(verified, target)
+    for (const path of [target, join(target, 'android'), join(target, 'android/bundles'),
+      join(target, 'android/alpha'), join(target, `android/alpha/${f.policy.abi}`)]) {
+      assert.equal((await stat(path)).mode & 0o777, 0o755, path)
+    }
+    for (const path of [verified.archivePath, verified.manifestPath]) {
+      assert.equal((await stat(join(target, path))).mode & 0o777, 0o644, path)
+    }
+    assert.equal((await stat(f.root)).mode & 0o777, before)
+  } finally { process.umask(mask) }
+})
+
+test('first Nginx activation waits for exact ZIP after stale workers and remains bounded on mismatch', async t => {
+  const f = await fixture(t)
+  const verified = await f.verified()
+  let calls = 0
+  let time = 0
+  const readiness = { waitForReady: true, now: () => time, pause: async ms => { time += ms } }
+  await verifyPublicArchive(verified, async () => {
+    calls++
+    return calls < 3 ? new Response('old frontend', { status: 200 }) : new Response(await readFile(f.archivePath))
+  }, readiness)
+  assert.equal(calls, 3)
+  assert.equal(time, 500)
+  time = 0; calls = 0
+  await assert.rejects(verifyPublicArchive(verified, async () => {
+    calls++; return new Response('', { status: 403 })
+  }, readiness), /MISMATCH: HTTP 403/)
+  assert.equal(time, 10000)
+  assert.equal(calls, 40)
+  await assert.rejects(verifyPublicArchive(verified, async () => new Response('wrong bytes')), /MISMATCH/)
 })
