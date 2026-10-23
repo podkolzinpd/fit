@@ -57,7 +57,6 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-utilities :is(.live-add-set, .live-exercise-note summary) { height: 44px; min-height: 44px; padding: 0 8px; margin: 0; border: 0; border-radius: 16px; background: transparent; font-size: 14px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set.current :is(.live-set-input, .live-set-rpe) { color: var(--lime-accent-ink); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-confirm .live-set-check { padding: 12px; font-size: 12px; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback:has(.save-status:empty) { display: none; }
 /* The released manual work timer stays inside its original time field. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-time-cell { height: var(--client-live-field-height); border-radius: 16px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-work-timer { height: var(--client-live-field-height); min-height: var(--client-live-field-height); border-radius: 16px; font-size: 16px; font-weight: 400; }
@@ -212,9 +211,9 @@
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet .rest-controls button { min-height: 48px; border: 0; border-radius: 16px; background: var(--lime-surface-raised); color: var(--lime-text); font-family: var(--lime-font); font-size: 16px; font-weight: 400; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet :is(.workout-duration-apply, .live-rest-apply > button) { width: 100%; min-height: 60px; border: 0; border-radius: 20px; background: var(--lime-accent); color: var(--lime-text-on-accent); font-family: var(--lime-font); font-size: 16px; font-weight: 500; }
 /* Inline status rail: never paint saving/saved over a metric or confirmation.
-   Reserve one caption line even at idle so routine autosave does not shift rows.
+   Routine autosave announces progress without inserting a row or shifting input.
    A detailed error may wrap naturally instead of covering another control. */
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback { display: flex; justify-content: flex-end; align-items: flex-start; min-height: 16px; padding-left: 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback { display: flex; justify-content: flex-end; align-items: flex-start; min-height: 0; padding-left: 44px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback .save-status { position: static; z-index: auto; min-height: 16px; max-width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; white-space: normal; overflow-wrap: anywhere; font-size: 12px; line-height: 16px; text-align: right; pointer-events: none; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback .save-status-mark { flex-shrink: 0; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback .save-status-mark svg { width: 12px; height: 12px; }
@@ -227,3 +226,18 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state strong { font-weight: 500; line-height: 20px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state span { line-height: 16px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-sync-state button { min-height: 44px; border: 0; border-radius: 16px; background: var(--lime-surface-high); color: var(--lime-text); font-size: 14px; line-height: 20px; font-weight: 400; }
+
+/* Client pilot only: headings inside the technique button are not children of
+   the outer header grid. A second grid-column:2 created a phantom text inset. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .exercise-technique-trigger { grid-template-columns: minmax(0, 1fr); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-exercise-head .exercise-technique-trigger > :is(h2, h3) { grid-column: 1; grid-row: auto; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .live-exercise > .live-exercise-head,
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density .circuit-round .live-exercise-head { min-height: 0; padding-block: 16px 8px; margin-bottom: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .live-exercise > .live-exercise-head,
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .circuit-round .live-exercise-head { padding-block: 12px 8px; }
+/* Pace is a caption of distance, not part of the confirmation's vertical axis. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-grid:has(.run-distance-field) { align-items: start; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-grid:has(.run-distance-field) > .live-set-number { height: var(--client-live-field-height); }
+/* Pending remains announced; errors retain their visible retry path. Neither
+   idle nor successful saves reserve a caption row between recorded sets. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback:has(.save-status-saving) { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }

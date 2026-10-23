@@ -1455,7 +1455,8 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(row.locator('.save-status-saving')).toBeVisible()
   expect((await row.boundingBox())!.height).toBe(before)
   release()
-  await expect(row.locator('.save-status-saved')).toBeVisible()
+  await expect(row.locator('.save-status-saved')).toHaveCount(0)
+  await expect(row.locator('.save-status-saving')).toHaveCount(0)
   expect((await row.boundingBox())!.height).toBe(before)
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(25)
   for (const width of [390, 430]) {
@@ -1736,4 +1737,40 @@ for (const role of ['trainer', 'client'] as const) test(`Live outside client pil
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.getByRole('alert')).toContainText('Пилот временно недоступен', { timeout: 25000 })
   await expect(page.getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
+})
+
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client pilot dense cardio grid and title ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+  }, { id: pilotId, theme, density })
+  const source = restTimerWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const exercise = source.exercises[0]!
+  exercise.ref = 'walking'; exercise.name = 'Ходьба с достаточно длинным названием упражнения'; exercise.inputKind = 'distance'
+  exercise.sets = exercise.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 300, distanceKm: 1 }))
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const rows = page.locator('form[data-live-set-id]')
+  await expect(rows).toHaveCount(2)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const geometry = await page.locator('.live-exercise').evaluate(card => {
+      const rect = (selector: string) => card.querySelector(selector)!.getBoundingClientRect()
+      const header = rect('.live-exercise-head'), title = rect('.exercise-technique-trigger h2'), trigger = rect('.exercise-technique-trigger')
+      const time = rect('.workout-duration-trigger'), check = rect('.live-set-check')
+      const grids = card.querySelectorAll('.live-set-grid'), first = grids[0]!.getBoundingClientRect(), second = grids[1]!.getBoundingClientRect()
+      return { headerHeight: header.height, titleInset: title.x - trigger.x, confirmOffset: check.y - time.y, checkHeight: check.height, timeHeight: time.height, rowGap: second.y - first.bottom }
+    })
+    expect(geometry.headerHeight).toBeLessThan(133)
+    expect(Math.abs(geometry.titleInset)).toBeLessThan(1)
+    expect(Math.abs(geometry.confirmOffset)).toBeLessThan(1)
+    expect(geometry.checkHeight).toBe(density === 'original' ? 54 : 48)
+    expect(geometry.timeHeight).toBe(geometry.checkHeight)
+    expect(geometry.rowGap).toBe(2)
+    await expect(rows.first().locator('.live-set-save-feedback')).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`dense-cardio-${width}.png`) })
+  }
 })

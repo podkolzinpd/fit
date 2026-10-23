@@ -6,7 +6,8 @@ import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
 import { createHash } from 'node:crypto'
-import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory } from './cloudru-account-history-audit.mjs'
+import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory,
+  readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility } from './cloudru-account-history-audit.mjs'
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
@@ -30,6 +31,94 @@ test('account history registry requires an empty terminal page and keeps only re
   assert.deepEqual(result, [{ label: target.label, role: target.role, id: historyFixtureIds[0] }])
   assert.doesNotMatch(JSON.stringify(result), /@|private-contact|unrelated/)
   await assert.rejects(readHistoryRegistry(() => Promise.resolve({ users: pages[0] }), [target]), /registry_invalid/)
+})
+
+test('current history evidence accepts only two private hashes, never a raw ID or SQL', async () => {
+  const hash = value => createHash('sha256').update(value).digest('hex')
+  const secret = { idSha256: hash(historyFixtureIds[0]), messageSha256: hash('synthetic-support-marker') }
+  assert.equal(readHistoryEvidenceSecret(undefined), null)
+  assert.deepEqual(readHistoryEvidenceSecret(JSON.stringify(secret)), secret)
+  for (const value of ['invalid', JSON.stringify({ ...secret, id: historyFixtureIds[0] }),
+    JSON.stringify({ ...secret, idSha256: historyFixtureIds[0] }), 'null', '[]']) {
+    assert.throws(() => readHistoryEvidenceSecret(value), /evidence_invalid/)
+  }
+  const queries = []
+  const client = { query: async (text, values) => { queries.push({ text, values }); return { rows: [
+    { kind: 'feedback', profile_id: historyFixtureIds[1], account_role: 'client', marker_matches: true },
+  ] } } }
+  assert.equal(await resolveHistoryEvidence(client, null), null)
+  assert.equal(queries.length, 0)
+  assert.deepEqual(await resolveHistoryEvidence(client, secret), { profileId: historyFixtureIds[1], kinds: ['feedback'] })
+  assert.deepEqual(queries[0].values, [secret.idSha256, secret.messageSha256])
+  assert.doesNotMatch(queries[0].text, /a0000000-|synthetic-support-marker|\b(?:insert|update|delete|grant|alter)\b/i)
+  assert.match(queries[0].text, /limit 4/)
+})
+
+test('current evidence fails closed on an unrelated message, role, absent or ambiguous profile', async () => {
+  const row = { kind: 'feedback', profile_id: historyFixtureIds[0], account_role: 'client', marker_matches: true }
+  for (const [rows, error] of [[[], 'not_found'], [[{ ...row, marker_matches: false }], 'feedback_mismatch'],
+    [[{ ...row, account_role: 'trainer' }], 'role_mismatch'], [[{ ...row, profile_id: null }], 'role_mismatch'],
+    [[row, { ...row, profile_id: historyFixtureIds[1] }], 'ambiguous']]) {
+    await assert.rejects(resolveHistoryEvidence({ query: async () => ({ rows }) }, {}), new RegExp(`evidence_${error}`))
+  }
+  assert.deepEqual(await resolveHistoryEvidence({ query: async () => ({ rows: [row, { ...row, kind: 'profile' }] }) }, {}),
+    { profileId: row.profile_id, kinds: ['feedback', 'profile'] })
+})
+
+test('native athlete evidence extends only its verified profile and cards after the read-only gate', async () => {
+  const [old, current, card, workout] = historyFixtureIds
+  const sql = []
+  const client = { query: async (text, values) => {
+    sql.push({ text, values })
+    return { rows: text.includes('current_setting') ? [{ readonly: 'on' }]
+      : text.includes("select 'feedback'") ? [{ kind: 'profile', profile_id: current, account_role: 'client', marker_matches: true }]
+      : text.includes('from public.profiles p') ? [{ id: old, account_role: 'client' }, { id: current, account_role: 'client', identity_linked: true, identity_origin: 'native' }]
+      : text.includes('with recursive scope') ? [{ id: card, auth_user_id: current, trainer_id: current }]
+      : text.includes('from public.workouts where') ? [{ id: workout, client_id: card, created_by: current, status: 'done', deleted_at: null }]
+      : text.includes('from public.client_trainer_relationships') ? [{ client_id: card, trainer_id: old, status: 'disconnected', disconnected_at: 'private-date', disconnected_by: current }]
+      : text.startsWith('select count') ? [{ count: 1 }] : [] }
+  } }
+  const runtime = { query: async text => ({ rows: text.includes('from pg_roles')
+    ? [{ readonly: 'on', name: 'fit_api', rolsuper: false, rolbypassrls: false }]
+    : text.startsWith('select count') ? [{ count: 1 }] : [] }) }
+  const report = await inspectCurrentHistory(client, { profiles: [{ id: old, label: 'athleteLegacy', role: 'client' }], cards: [], workouts: [] }, { evidence: {}, runtimeClient: runtime })
+  assert.equal(sql[0].text, 'begin transaction isolation level repeatable read read only')
+  assert.deepEqual(sql.find(q => q.text.includes('with recursive scope')).values[0], [old, current])
+  assert.deepEqual(report.currentEvidence, { sources: ['profile'], sameAsLegacyAthlete: false, currentProfileFound: true, identityLinked: true, identityOrigin: 'native' })
+  assert.equal(report.currentWorkouts[0].author, 'athleteCurrent')
+  assert.equal(report.relationships[0].disconnectedBy, 'athleteCurrent')
+  assert.equal(report.visibility.find(row => row.account === 'athleteCurrent').readableWorkouts, 1)
+  assert.ok(sql.every(query => !query.text.includes('set local role')))
+  assert.doesNotMatch(JSON.stringify(report), /a0000000-|private-date/)
+})
+
+test('visibility uses a separate read-only non-privileged application connection and rolls back failed probes', async () => {
+  for (const role of [
+    { readonly: 'off', name: 'fit_api', rolsuper: false, rolbypassrls: false },
+    { readonly: 'on', name: 'fit_owner', rolsuper: false, rolbypassrls: false },
+    { readonly: 'on', name: 'fit_api', rolsuper: true, rolbypassrls: false },
+    { readonly: 'on', name: 'fit_api', rolsuper: false, rolbypassrls: true },
+  ]) {
+    const sql = []
+    await assert.rejects(readHistoryVisibility({ query: async text => { sql.push(text); return { rows: [role] } } }, historyFixtureIds[0], []), /runtime_role_invalid/)
+    assert.equal(sql.at(-1), 'rollback')
+    assert.ok(sql.every(text => !text.includes('from public.workouts')))
+  }
+  const sql = []
+  const runtime = { query: async (text, values) => {
+    sql.push({ text, values })
+    return { rows: text.includes('from pg_roles') ? [{ readonly: 'on', name: 'fit_api', rolsuper: false, rolbypassrls: false }]
+      : text.startsWith('select count') ? [{ count: 2 }] : [] }
+  } }
+  assert.equal(await readHistoryVisibility(runtime, historyFixtureIds[0], [historyFixtureIds[1]]), 2)
+  assert.equal(sql.at(-1).text, 'commit')
+  assert.ok(sql.every(q => !/set local role|\b(?:grant|insert|update|delete|alter)\b/i.test(q.text)))
+  const failing = { query: async text => {
+    if (text.startsWith('select count')) throw Object.assign(new Error('private-error'), { code: '42501' })
+    return runtime.query(text)
+  } }
+  await assert.rejects(readHistoryVisibility(failing, historyFixtureIds[0], []), /private-error/)
+  assert.equal(sql.at(-1).text, 'rollback')
 })
 
 test('account history source pagination handles provider caps and rejects duplicates and overflow', async () => {
@@ -59,7 +148,7 @@ test('account history summary distinguishes missing, soft deleted, inaccessible 
 test('account history current inspection fails before data reads unless transaction is read only', async () => {
   const sql = []
   const client = { query: text => { sql.push(text); return Promise.resolve({ rows: text.includes('current_setting') ? [{ readonly: 'off' }] : [] }) } }
-  await assert.rejects(inspectCurrentHistory(client, { profiles: [], cards: [], workouts: [] }), /readonly_required/)
+  await assert.rejects(inspectCurrentHistory(client, { profiles: [], cards: [], workouts: [] }, { evidence: {} }), /readonly_required/)
   assert.equal(sql[0], 'begin transaction isolation level repeatable read read only')
   assert.equal(sql.at(-1), 'rollback')
   assert.ok(sql.every(text => !text.includes('from public.')))
@@ -90,6 +179,10 @@ test('account history operation is manual, main-only, fixed-scope and does not e
   assert.match(step, /test "\$\(hostname\)" = fit-stage-app/)
   assert.match(step, /--read-only.*--timeout=120/)
   assert.match(step, /cloudru-account-history-audit\.mjs:\/inspection\.mjs:ro/)
+  assert.match(step, /FIT_ACCOUNT_HISTORY_EVIDENCE: \$\{\{ secrets\.FIT_ACCOUNT_HISTORY_EVIDENCE \}\}/)
+  assert.match(step, /\.DATABASE_USER == "fit_api"/)
+  assert.match(step, /DATABASE_SSL_MODE=require/)
+  assert.doesNotMatch(step, /api\.env|Config\.Env|--privileged/)
   assert.doesNotMatch(step, /ssh |psql|pg_restore|--privileged|workflow_dispatch.*email/)
   const script = read('scripts/cloudru-account-history-audit.mjs')
   assert.doesNotMatch(script, /@gmail|@yandex|@glitchy|method: '(?:POST|PUT|DELETE|PATCH)'/)
