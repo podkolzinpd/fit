@@ -122,8 +122,6 @@
 .coach-workout-reference .block-rounds { font-size: 13px; line-height: 18px; font-weight: 400 }
 .coach-workout-reference .block-rounds input { height: 48px; min-height: 48px; border: 0; border-radius: 16px; font-size: 16px; font-weight: 400; background: var(--lime-surface-raised); color: var(--lime-text) }
 .coach-workout-reference :is(.planned-round-label, .planned-round-exercise-name, .circuit-round-label, .circuit-counter) { font-weight: 400; font-size: 13px; line-height: 18px }
-.coach-workout-reference .planned-round-exercise { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px }
-.coach-workout-reference .planned-round-exercise-name { grid-column: 1 / -1; margin-block: 8px 4px }
 .coach-workout-reference .coach-schedule-filter-options { margin: 4px 0 8px; padding: 0; border: 0; background: transparent }
 .coach-workout-reference .coach-schedule-filter-options > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 8px 18px; list-style: none; color: var(--lime-text-secondary); font-size: 14px; font-weight: 500; cursor: pointer }
 .coach-workout-reference .coach-schedule-filter-options > summary::-webkit-details-marker { display: none }
