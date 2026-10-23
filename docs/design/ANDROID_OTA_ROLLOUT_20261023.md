@@ -67,3 +67,9 @@ source revision. Новый интерфейс не выпускается вп�
 гейты сохранены. Финальная интеграция обновлена от main70b86892 (#1784).
 Не включённые сейчас compatible UI-изменения придут штатным OTA после их
 собственного одобренного main/frontend выпуска.
+
+Финальная интеграция f58a4446 от main70b86892: полный npm run check exit0,
+frontend2821/API1445+188штатныхDBskip/infra341/hosting191/build/startup passed.
+Native/source gate и real Nginx дополнительно прошли Android run39935663494
+(предыдущий head e3350cba); новые upstream изменения относятся к browser Wake Lock.
+Для итогового PR head остаётся обязательным его собственный green CI.
