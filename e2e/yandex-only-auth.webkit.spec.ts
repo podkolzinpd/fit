@@ -109,6 +109,19 @@ for (const theme of ['light', 'dark']) for (const mode of ['plan', 'favorite']) 
     await expect(toggle.locator('.compact-editor-chevron')).toBeVisible()
     const blockHead = await page.locator('.exercise-block-head').first().boundingBox()
     expect(blockHead!.height).toBeLessThanOrEqual(60)
+    const settingsContrast = await page.locator('.block-options > summary').first().evaluate(summary => {
+      const block = summary.closest('.exercise-block')
+      if (!block) throw new Error('Expected the shared block settings card')
+      const luminance = (color: string) => {
+        const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number)
+        if (!channels || channels.length !== 3) throw new Error('Expected an opaque RGB color')
+        const linear = channels.map(channel => { const value = channel / 255; return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4 })
+        return linear[0]! * 0.2126 + linear[1]! * 0.7152 + linear[2]! * 0.0722
+      }
+      const values = [luminance(getComputedStyle(summary).color), luminance(getComputedStyle(block).backgroundColor)].sort((a, b) => b - a)
+      return (values[0]! + 0.05) / (values[1]! + 0.05)
+    })
+    expect(settingsContrast).toBeGreaterThanOrEqual(4.5)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`ready-editor-${mode}-${theme}-${width}.png`), fullPage: true })
     await row.scrollIntoViewIfNeeded()
