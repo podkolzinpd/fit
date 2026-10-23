@@ -585,6 +585,12 @@ rollback plan. Полный snapshot не копирует transient source push
 
 ### Перенос приватных media в Yandex
 
+Старые `deploy-vital-media.yml` и `deploy-vital-media.mjs`, публиковавшие Vital
+media в Supabase, удалены. Отдельный Yandex uploader
+(`deploy-vital-media-yandex.yml` / `deploy-vital-media-yandex.mjs`), подготовка
+assets и выдача изображений/видео сохранены. Уже опубликованные объекты и
+remote secrets этим удалением не изменяются.
+
 До первого `full-cohort` dry-run с фото один раз создайте private media contour
 ручным запуском `Deploy Yandex stage`: `plan_only=false`,
 `approve_media_storage=true`. Terraform создаёт versioned Standard Object
