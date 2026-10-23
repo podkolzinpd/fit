@@ -72,6 +72,57 @@ function GroupEditorHarness({ completed = false }: { completed?: boolean }) {
 }
 
 describe('workout exercise editor rules', () => {
+  it('blocks fields and structural actions while saving without requiring the trainer reference', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn(), onOpenPicker = vi.fn()
+    render(<WorkoutExerciseEditor referenceAppearance disabled exercises={exercises} onChange={onChange} onOpenPicker={onOpenPicker} onReplaceExercise={vi.fn()} />)
+    expect(screen.getByLabelText('Вес, подход 1')).toBeDisabled()
+    expect(screen.getByLabelText('Повторы, подход 1')).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Упражнение$/ })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: /Упражнение$/ }))
+    fireEvent.change(screen.getByLabelText('Вес, подход 1'), { target: { value: '99' } })
+    expect(onOpenPicker).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('reuses delete confirmation for the client plan and preserves every value when cancelled', async () => {
+    const user = userEvent.setup(), onChange = vi.fn()
+    render(<WorkoutExerciseEditor referenceAppearance exercises={exercises} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Удалить' }))
+    expect(screen.getByRole('alertdialog')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('Вес, подход 1')).toHaveValue(52.5)
+    await user.click(screen.getByRole('button', { name: 'Ещё действия' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Удалить' }))
+    await user.click(screen.getByRole('button', { name: 'Удалить упражнение' }))
+    await waitFor(() => expect(onChange).toHaveBeenCalledExactlyOnceWith([]))
+  })
+
+  it('keeps the client superset action only in the menu and retains its existing result', async () => {
+    const user = userEvent.setup(), onChange = vi.fn<(next: WorkoutExerciseDraft[]) => void>()
+    render(<WorkoutExerciseEditor referenceAppearance exercises={[exercises[0]!, { ...exercises[0]!, position: 1, ref: 'bench', name: 'Жим' }]} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} collapseInitialExercises />)
+    expect(screen.queryByRole('button', { name: 'Создать суперсет со следующим' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Действия с планом' })).toHaveTextContent('Действия с планом')
+    await user.click(screen.getAllByRole('button', { name: 'Ещё действия' })[0]!)
+    await user.click(screen.getByRole('menuitem', { name: 'Создать суперсет со следующим' }))
+    expect(onChange).toHaveBeenCalledOnce()
+    expect(onChange.mock.calls[0]![0]).toHaveLength(2)
+    expect(onChange.mock.calls[0]![0][0]!.sets).toEqual(exercises[0]!.sets)
+  })
+
+  it('commits the last planned duration field before blur using the existing safe input', () => {
+    setWorkoutTimeWheel(false)
+    const onChange = vi.fn<(next: WorkoutExerciseDraft[]) => void>()
+    render(<WorkoutExerciseEditor referenceAppearance safePlanInput exercises={[{ ...exercises[0]!, ref: 'plank', inputKind: 'duration', sets: [{ position: 0, durationSec: 90 }] }]} onChange={onChange} onOpenPicker={vi.fn()} onReplaceExercise={vi.fn()} />)
+    const seconds = screen.getByLabelText('Время, подход 1: секунды')
+    seconds.focus()
+    fireEvent.change(seconds, { target: { value: '45' } })
+    expect(seconds).toHaveFocus()
+    expect(onChange.mock.calls.at(-1)?.[0][0]?.sets[0]?.durationSec).toBe(105)
+  })
+
   it.each([false, true])('client appearance preserves the explicit time-wheel preference %s', (wheel) => {
     setWorkoutTimeWheel(wheel)
     const onChange = vi.fn()
