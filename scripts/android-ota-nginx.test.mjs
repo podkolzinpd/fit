@@ -32,8 +32,9 @@ test('real Nginx serves immutable OTA ZIP/manifest, HEAD, CORS and no-store whil
       server { listen 127.0.0.1:${port}; ${location} location / { return 404; } } }`)
     const checked = spawnSync('nginx', ['-t', '-c', config], { encoding: 'utf8' })
     assert.equal(checked.status, 0, checked.stderr)
-    const result = spawnSync('nginx', ['-c', config], { encoding: 'utf8' })
-    assert.equal(result.status, 0, result.stderr)
+    // A daemon keeps stderr open: do not wait for EOF on a captured pipe.
+    const result = spawnSync('nginx', ['-c', config], { stdio: ['ignore', 'ignore', 'inherit'], timeout: 10000 })
+    assert.equal(result.status, 0, result.error?.message ?? 'Nginx start failed')
     started = true
     const base = `http://127.0.0.1:${port}/mobile-updates/android`
     const response = await fetch(`${base}/alpha/${hash}/latest.json`, { signal: AbortSignal.timeout(5000) })

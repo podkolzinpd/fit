@@ -49,3 +49,9 @@ Baseline: main3f4c4047; OTA-адрес старой ABI отвечает404. В�
 - YAML и actionlint passed; real Nginx routing gate добавлен в Android PR job и release job. Локально Nginx отсутствует, Podman socket connection refused; это не выдано за выполненную Nginx-проверку.
 - Перед новой ABI автоматический выпуск явно падает OTA_NATIVE_APK_REQUIRED; существующая ABI допускает compatible interface release. Дисковый резерв2GiB сохраняется.
 - Автоматический review отдельно заблокировал передачу OTA private key в конкретный GitHub environment secret; подтверждение запрошено у владельца. Сам ключ не передан, защита не обходилась. APK использует уже разрешённый исходный signing key и загружается отдельно до OTA-подписи.
+
+Владелец отдельно подтвердил сохранение OTA private key в FIT_ANDROID_OTA_PRIVATE_KEY
+окружения fit-frontend-candidate репозитория podkolzinpd/fit. Secret сохранён; проверено
+только наличие имени, значение не читалось и не выводилось.
+Nginx integration запускает daemon с inherited stderr и bounded start timeout:
+перехваченный pipe нельзя удерживать открытым дочерним daemon-процессом.
