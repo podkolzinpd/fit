@@ -1455,7 +1455,8 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(row.locator('.save-status-saving')).toBeVisible()
   expect((await row.boundingBox())!.height).toBe(before)
   release()
-  await expect(row.locator('.save-status-saved')).toBeVisible()
+  await expect(row.locator('.save-status-saved')).toHaveCount(0)
+  await expect(row.locator('.save-status-saving')).toHaveCount(0)
   expect((await row.boundingBox())!.height).toBe(before)
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(25)
   for (const width of [390, 430]) {
@@ -1685,4 +1686,91 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(page.getByRole('menu')).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('menu')).toHaveCount(0)
+})
+
+for (const theme of ['light', 'dark']) test(`client Live contextual 503 retains diagnostics and recovers ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: (text: string) => { sessionStorage.setItem('test.live.diagnostic', text); return Promise.resolve() } } })
+  }, { id: pilotId, theme })
+  const source = restTimerWorkout()
+  const set = source.exercises[0]!.sets[0]!
+  set.confirmedAt = new Date().toISOString(); set.fact = { weightKg: 27.5, reps: 9 }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let fail = true, release!: () => void
+  const held = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/**', async route => {
+    if (route.request().method() !== 'GET' || !new URL(route.request().url()).pathname.includes('/training-data')) return route.fallback()
+    await held
+    if (fail) return route.fulfill({ status: 503, json: { error: 'service_unavailable' } })
+    return route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.getByRole('status', { name: 'Загрузка', exact: true })).toBeVisible()
+  release()
+  await expect(page.getByRole('alert')).toContainText('Сервис временно недоступен. Попробуйте ещё раз.', { timeout: 25000 })
+  await expect(page.getByRole('alert')).not.toContainText('Пилот')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Скопировать диагностику', exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: info.outputPath(`error-503-${width}.png`), fullPage: true })
+  }
+  await page.getByRole('button', { name: 'Скопировать диагностику', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('test.live.diagnostic'))).toContain('HTTP: 503')
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('test.live.diagnostic'))).toContain('Request ID:')
+  fail = false
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  const row = page.locator(`form[data-live-set-id="${set.id}"]`)
+  await expect(row).toHaveClass(/confirmed/)
+  await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('27.5')
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(set.confirmedAt)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toEqual(set.fact)
+  await page.screenshot({ path: info.outputPath('retry-restored.png'), fullPage: true })
+})
+
+for (const role of ['trainer', 'client'] as const) test(`Live outside client pilot retains 503 fallback ${role}`, async ({ page }) => {
+  await mockPilot(page, { role, profileId: role === 'client' ? 'c11e0000-6010-4000-8000-000000000002' : 'c0ac0000-6010-4000-8000-000000000001', clientLime: true, fitLime: true, workouts: [restTimerWorkout()] })
+  await page.route('**/v1/**', route => route.request().method() === 'GET' && new URL(route.request().url()).pathname.includes('/training-data') ? route.fulfill({ status: 503, json: { error: 'service_unavailable' } }) : route.fallback())
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.getByRole('alert')).toContainText('Пилот временно недоступен', { timeout: 25000 })
+  await expect(page.getByRole('button', { name: 'Повторить', exact: true })).toBeVisible()
+})
+
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client pilot dense cardio grid and title ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+  }, { id: pilotId, theme, density })
+  const source = restTimerWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const exercise = source.exercises[0]!
+  exercise.ref = 'walking'; exercise.name = 'Ходьба с достаточно длинным названием упражнения'; exercise.inputKind = 'distance'
+  exercise.sets = exercise.sets.map(set => ({ ...set, weightKg: undefined, reps: undefined, durationSec: 300, distanceKm: 1 }))
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const rows = page.locator('form[data-live-set-id]')
+  await expect(rows).toHaveCount(2)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const geometry = await page.locator('.live-exercise').evaluate(card => {
+      const rect = (selector: string) => card.querySelector(selector)!.getBoundingClientRect()
+      const header = rect('.live-exercise-head'), title = rect('.exercise-technique-trigger h2'), trigger = rect('.exercise-technique-trigger')
+      const time = rect('.workout-duration-trigger'), check = rect('.live-set-check')
+      const grids = card.querySelectorAll('.live-set-grid'), first = grids[0]!.getBoundingClientRect(), second = grids[1]!.getBoundingClientRect()
+      return { headerHeight: header.height, titleInset: title.x - trigger.x, confirmOffset: check.y - time.y, checkHeight: check.height, timeHeight: time.height, rowGap: second.y - first.bottom }
+    })
+    expect(geometry.headerHeight).toBeLessThan(133)
+    expect(Math.abs(geometry.titleInset)).toBeLessThan(1)
+    expect(Math.abs(geometry.confirmOffset)).toBeLessThan(1)
+    expect(geometry.checkHeight).toBe(density === 'original' ? 54 : 48)
+    expect(geometry.timeHeight).toBe(geometry.checkHeight)
+    expect(geometry.rowGap).toBe(2)
+    await expect(rows.first().locator('.live-set-save-feedback')).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`dense-cardio-${width}.png`) })
+  }
 })
