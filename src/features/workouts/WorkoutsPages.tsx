@@ -3878,7 +3878,19 @@ export function LiveWorkoutPage() {
     if (!canManageLiveStructure) return null
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
+    const canCollapse = clientReference && exercise.sets.every((set) => set.confirmedAt)
+      && (expandedExercises.has(exercise.id) || exercise.sets.some((set) => editingSets.has(set.id)))
+    const collapseBlocked = rootMutationPending || save.isPending || confirm.isPending
+      || exercise.sets.some((set) => pendingSetDrafts.current.has(set.id) || set.id === saveErrorSetId)
     return <OverflowMenu items={[
+      ...(canCollapse ? [{ label: 'Свернуть', disabled: collapseBlocked, onClick: () => {
+        // Never unmount an unsent fact. This is presentation only: confirmation,
+        // rest and the active exercise keep their existing state.
+        if (collapseBlocked) return
+        setExpandedExercises((current) => { const next = new Set(current); next.delete(exercise.id); return next })
+        setEditingSets((current) => new Set([...current].filter((id) => !exercise.sets.some((set) => set.id === id))))
+        setExpandedSetId((current) => exercise.sets.some((set) => set.id === current) ? null : current)
+      } }] : []),
       ...(canReorder && (clientLime || !liveDrag) && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
