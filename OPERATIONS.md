@@ -2105,7 +2105,7 @@ Secret `FIT_ANDROID_OTA_PRIVATE_KEY` хранится в environment fit-fronten
 После owner-authorized включения repository variable
 `FIT_ANDROID_OTA_AUTODEPLOY_ENABLED=true` успешный workflow
 `Prepare Cloud.ru frontend without public routing` запускает compatible OTA.
-Publisher перепроверяет подписи/source/ABI/nativeBuild, отказывается снижать sequence,
+Publisher ждёт exact source revision в canonical API health, перепроверяет подписи/source/ABI/nativeBuild, отказывается снижать sequence,
 публикует ZIP первым, проверяет публичное скачивание и атомарно переключает manifest.
 Nginx location устанавливается узкой вставкой с backup/nginx-test/reload/rollback;
 GET/HEAD only, CORS https://localhost, no-store, неизвестный path404.

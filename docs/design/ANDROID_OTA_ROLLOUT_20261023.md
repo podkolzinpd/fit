@@ -44,7 +44,7 @@ Baseline: main3f4c4047; OTA-адрес старой ABI отвечает404. В�
 ## Локальная приёмка до PR
 
 - Полный npm run check exit0: frontend2819/API1445+188штатныхDBskip, lint/typecheck/политики/build/startup passed. Существующие API dependencies переиспользованы только при идентичном lock; symlink удалён.
-- OTA/maintenance36/36, publisher/crypto/ABI/certificate9/9, WebKit startup/auth offline-retry2/2 passed.
+- OTA/maintenance36/36, publisher/crypto/ABI/certificate10/10, WebKit startup/auth offline-retry2/2 passed.
 - Native SDK35 Robolectric: OTA3+existing1; Gradle testDebugUnitTest BUILD SUCCESSFUL, новый code5. Никаких production API/DB данных в локальной проверке нет.
 - YAML и actionlint passed; real Nginx routing gate добавлен в Android PR job и release job. Локально Nginx отсутствует, Podman socket connection refused; это не выдано за выполненную Nginx-проверку.
 - Перед новой ABI автоматический выпуск явно падает OTA_NATIVE_APK_REQUIRED; существующая ABI допускает compatible interface release. Дисковый резерв2GiB сохраняется.
@@ -55,3 +55,7 @@ Baseline: main3f4c4047; OTA-адрес старой ABI отвечает404. В�
 только наличие имени, значение не читалось и не выводилось.
 Nginx integration запускает daemon с inherited stderr и bounded start timeout:
 перехваченный pipe нельзя удерживать открытым дочерним daemon-процессом.
+
+Перед публикацией publisher проверяет `/health` canonical API: status ok и exact
+source revision. Новый интерфейс не выпускается вперёд своего backend. После merge
+нужно дождаться штатного API/frontend выпуска этого main; новая API-схема не добавляется.

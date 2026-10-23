@@ -138,8 +138,18 @@ export async function requireKnownNativeShell(verified, root, newNativeApk = fal
   }
 }
 
+export async function requirePublishedApi(commit, fetcher = fetch) {
+  const response = await fetcher('https://api.fit-training.ru/health', {
+    redirect: 'error', signal: AbortSignal.timeout(15000),
+  })
+  if (!response.ok) throw new Error('OTA_PRODUCTION_API_NOT_READY')
+  const health = await response.json()
+  if (health.status !== 'ok' || health.releaseId !== commit) throw new Error('OTA_PRODUCTION_API_REVISION_MISMATCH')
+}
+
 async function publish(verified, newNativeApk) {
   const root = '/var/lib/fit-mobile-updates'
+  await requirePublishedApi(verified.payload.sourceCommit)
   await requireKnownNativeShell(verified, root, newNativeApk)
   const disk = await statfs('/var/lib')
   if (disk.bavail * disk.bsize < 2 * 1024 ** 3 + (verified.archive?.length ?? 0) * 2) {

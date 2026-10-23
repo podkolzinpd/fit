@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { generateKeyPairSync, sign, createHash } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, writeFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { decodeSignedManifest, verifyOtaDirectory, installOtaArchive, activateOtaManifest, withOtaLocation, requireKnownNativeShell } from './publish-android-ota.mjs'
+import { decodeSignedManifest, verifyOtaDirectory, installOtaArchive, activateOtaManifest, withOtaLocation, requireKnownNativeShell, requirePublishedApi } from './publish-android-ota.mjs'
 import { signAndroidOtaManifest } from './package-android-ota.mjs'
 
 async function fixture(t) {
@@ -114,4 +114,14 @@ test('automatic publication refuses a new ABI until an actual signed APK job adm
   await requireKnownNativeShell(verified, target, true)
   await activateOtaManifest(verified, target)
   await requireKnownNativeShell(verified, target)
+})
+
+test('publication waits for the matching deployed API instead of releasing UI ahead of its backend', async () => {
+  const commit = 'a'.repeat(40)
+  await requirePublishedApi(commit, async url => {
+    assert.equal(url, 'https://api.fit-training.ru/health')
+    return Response.json({ status: 'ok', releaseId: commit })
+  })
+  await assert.rejects(requirePublishedApi(commit, async () => Response.json({ status: 'ok', releaseId: 'b'.repeat(40) })), /REVISION_MISMATCH/)
+  await assert.rejects(requirePublishedApi(commit, async () => new Response('', { status: 503 })), /NOT_READY/)
 })
