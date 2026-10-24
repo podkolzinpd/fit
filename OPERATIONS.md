@@ -355,7 +355,26 @@ token, Authorization, email, имя, UUID профиля, URL/query с иден�
 request/response body или пользовательский текст. Диагностика копируется только
 по явному действию пользователя и не сохраняется в отдельной таблице.
 
-Для server-side расследования запустите ручной workflow `Diagnose Yandex stage`
+Для текущего Cloud.ru production используйте `Inspect Cloud.ru production
+operations`: `api_request_id` и UTC `api_request_time` ограничивают чтение
+четырьмя минутами и одним request ID. `authFailures` содержит только этап
+(`oauth_code`, `identity`, activation, `session_issue`, `handoff_issue`),
+фиксированную причину, SQLSTATE/сетевой код и, если доступен, HTTP-статус
+внешнего провайдера. Raw exceptions, OAuth-коды, токены, verifier и identity
+не выводятся. Readiness200 означает `select 1`, не успешный реальный вход.
+
+Фоновый отчёт дополняет код ошибки фиксированными `dispatchFailures`
+(операция/этап) и `transactionFailures` (connect/begin/timeout/work/commit).
+Ручной default-off `runtime_database_probe` отдельно проверяет fit_api connection,
+READ ONLY transaction, тот же SET LOCAL timeout и `select 1`, затем rollback.
+Он не вызывает application functions, не читает пользовательские таблицы,
+не отправляет push и не перезапускает процессы. Временный root0600 env удаляется
+EXIT; owner/VAPID credentials в probe-контейнер не передаются.
+До получения этих доказательств код22023 не считается установленной причиной
+ошибки авторизации, а перепубликация не считается исправлением.
+
+Только при отдельном согласованном расследовании старого rollback-контура
+используется ручной workflow `Diagnose Yandex stage`
 с `Request ID`, окном не более 30 минут и, если она известна вызывающей стороне,
 операцией вида `GET /health` без query. Отчёт явно показывает
 `serviceName=fit-stage-api`, `resourceType=serverless_container`, активные на

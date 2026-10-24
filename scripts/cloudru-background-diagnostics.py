@@ -7,7 +7,8 @@ import sys
 def summarize(lines):
     result = {"event": "cloudru_background_diagnostics", "messages": 0, "workerFailed": False,
               "workerCompleted": False, "moduleMissing": False, "containerError": False,
-              "databaseCodes": [], "sessionCleanupFailed": False, "launcherFailures": []}
+              "databaseCodes": [], "sessionCleanupFailed": False, "launcherFailures": [],
+              "dispatchFailures": [], "transactionFailures": []}
     codes = set()
     launcher_failures = set()
     for line in lines:
@@ -38,9 +39,19 @@ def summarize(lines):
         result["workerCompleted"] |= event == "cloudru_background_completed"
         result["sessionCleanupFailed"] |= event == "yandex_session_cleanup_failed"
         code = entry.get("databaseErrorCode", entry.get("errorCode"))
-        if event in ("database_pool_window", "database_pool_idle_error", "yandex_session_cleanup_failed", "cloudru_background_failed") \
+        if event in ("database_pool_window", "database_pool_idle_error", "yandex_session_cleanup_failed", "cloudru_background_failed", "background_transaction_failed") \
                 and isinstance(code, str) and re.fullmatch(r"(?:[0-9][0-9A-Z]{4}|ECONNREFUSED|ECONNRESET|ENETUNREACH|ENOTFOUND|EPIPE|ETIMEDOUT)", code):
             codes.add(code)
+            if event == "background_transaction_failed" and entry.get("transactionPhase") in {"connect", "begin", "timeout", "work", "commit"}:
+                failure = {"phase": entry["transactionPhase"], "code": code}
+                if failure not in result["transactionFailures"]:
+                    result["transactionFailures"].append(failure)
+            if event in {"yandex_session_cleanup_failed", "cloudru_background_failed"} \
+                    and entry.get("dispatchOperation") in {"push", "app_feedback", "auth_sessions"} \
+                    and entry.get("dispatchPhase") in {"prepare", "finalize", "cleanup"}:
+                failure = {"operation": entry["dispatchOperation"], "phase": entry["dispatchPhase"], "code": code}
+                if failure not in result["dispatchFailures"]:
+                    result["dispatchFailures"].append(failure)
     result["databaseCodes"] = sorted(codes)
     result["launcherFailures"] = [{"stage": stage, "exitCode": code} for stage, code in sorted(launcher_failures)]
     return result
