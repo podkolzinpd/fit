@@ -84,6 +84,7 @@
 .workout-editor-reference .set-add-row .add-action-label svg { color: var(--lime-accent) }
 .workout-editor-reference .exercise-comment-options { margin-top: 8px }
 .phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .exercise-comment-options > summary { font-size: 14px; font-weight: 400; color: var(--lime-text-secondary) }
+.phone-frame.fit-lime-shell:is(.coach-workout-reference, .client-workout-reference) .workout-editor-reference .block-options > summary { color: var(--lime-accent-ink) }
 .workout-editor-reference .workout-editor-footer { display: flex; justify-content: flex-end; padding-inline: 16px; margin: 8px 0 }
 /* Keep refinements after their base rules, as in the approved source. */
 .workout-editor-reference .planned-round-exercise { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px }
