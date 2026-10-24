@@ -33,5 +33,16 @@ describe('YandexOAuthCodeClient', () => {
       fetch: vi.fn().mockRejectedValue(new Error('network error')),
     })
     await expect(unavailable.exchangeCode('code', 'verifier')).rejects.toBeInstanceOf(YandexOAuthCodeUnavailableError)
+    await expect(unavailable.exchangeCode('code', 'verifier')).rejects.toMatchObject({ failure: 'network' })
+  })
+
+  it.each([
+    { response: () => new Response('private-upstream-body', { status: 502 }), failure: 'http', httpStatus: 502 },
+    { response: () => new Response('private-invalid-json'), failure: 'invalid_response' },
+    { response: () => new Response('{}'), failure: 'invalid_response' },
+  ])('preserves only safe $failure metadata for diagnostics', async ({ response, failure, httpStatus }) => {
+    const client = new YandexOAuthCodeClient({ clientId: 'public-client-id', fetch: vi.fn().mockResolvedValue(response()) })
+    await expect(client.exchangeCode('private-code', 'private-verifier')).rejects.toMatchObject({ failure, httpStatus })
+    await expect(client.exchangeCode('private-code', 'private-verifier')).rejects.not.toThrow(/private-/)
   })
 })

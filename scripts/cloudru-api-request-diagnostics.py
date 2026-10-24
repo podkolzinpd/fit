@@ -8,7 +8,7 @@ import uuid
 def summarize(lines, request_id):
     wanted = str(uuid.UUID(request_id))
     result = {"event": "cloudru_api_request_diagnostics", "journalEntries": 0,
-              "matchedEntries": 0, "statuses": [], "errors": [], "planSaveFailures": []}
+              "matchedEntries": 0, "statuses": [], "errors": [], "planSaveFailures": [], "authFailures": []}
     for line in lines:
         try:
             record = json.loads(line)
@@ -21,6 +21,22 @@ def summarize(lines, request_id):
         except (ValueError, TypeError):
             continue
         result["matchedEntries"] += 1
+        if entry.get("event") == "yandex_auth_failed" and entry.get("authStage") in {
+                "configuration", "oauth_code", "identity", "trainer_activation", "lime_activation",
+                "assistant_activation", "nutrition_activation", "session_issue", "handoff_issue"} \
+                and entry.get("authFailure") in {"not_configured", "provider_unavailable", "provider_rejected", "unexpected"}:
+            code = entry.get("errorCode")
+            auth = {"stage": entry["authStage"], "reason": entry["authFailure"],
+                    "code": code if isinstance(code, str) and re.fullmatch(
+                        r"(?:[0-9][0-9A-Z]{4}|PT(?:403|404|409|422)|ECONNREFUSED|ECONNRESET|ENETUNREACH|ENOTFOUND|EPIPE|ETIMEDOUT)", code)
+                    else "unknown"}
+            if entry.get("providerFailure") in {"network", "http", "invalid_response", "unknown"}:
+                auth["providerFailure"] = entry["providerFailure"]
+            status = entry.get("providerStatus")
+            if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:
+                auth["providerStatus"] = status
+            if auth not in result["authFailures"] and len(result["authFailures"]) < 10:
+                result["authFailures"].append(auth)
         step, reason = entry.get("planSaveStep"), entry.get("planSaveReason")
         if isinstance(step, str) and isinstance(reason, str) and step in {"save", "stage", "format", "notification"} and reason in {
                 "active", "conflict", "forbidden", "invalid", "not_found"}:
