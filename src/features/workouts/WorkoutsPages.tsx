@@ -101,7 +101,7 @@ import { WorkoutFinanceConfirmation } from './WorkoutFinanceConfirmation'
 import { WorkoutCompletionReport } from './WorkoutCompletionReport'
 import { computeAthleteAchievements, newlyEarnedAchievements, type AthleteAchievement } from '../../shared/athlete-achievements'
 import { markAchievementCompletion, takeAchievementCompletion } from '../achievements/completion-marker'
-import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, CheckSmallIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, PlayIcon, SettingsIcon, TimerIcon, TrashIcon } from '../../shared/icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, BackIcon, BellIcon, CheckIcon, CheckSmallIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, CopyIcon, HistoryIcon, KeyboardIcon, MessageIcon, MicIcon, RecordIcon, ScheduleIcon, PlayIcon, SettingsIcon, TimerIcon, TrashIcon } from '../../shared/icons'
 import { workoutVolumeComparison } from './workout-completion-insights'
 import { WorkoutChoice, WorkoutCta, WorkoutExercise, WorkoutExerciseCompact, WorkoutHeader, WorkoutRpeScale, WorkoutSetRow, WorkoutStatus, type WorkoutUiState } from './WorkoutSurface'
 import { liveSessionProgress } from './live-session-progress'
@@ -1741,7 +1741,7 @@ export function WorkoutFormPage() {
           exerciseCatalog={catalog.exercises}
           canOpenTechnique={(exercise) => hasExerciseTechnique(findCatalogExercise(catalog.exercises, exercise))}
           onOpenTechnique={(exercise) => { const meta = findCatalogExercise(catalog.exercises, exercise); if (hasExerciseTechnique(meta)) setTechniqueExercise(meta) }}
-          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId || presetId)} initialExercisesReady={formDraftReady} reference={coachReference} referenceAppearance={coachReference || clientReference} safePlanInput={safePlanInput} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
+          showTrainerComments={!clientMode} entryMode={completedMode ? 'fact' : 'plan'} hideEmptyAddAction previousResults={previousResultReferences} showRpeByDefault={showRpeByDefault} showRestByDefault={showRestByDefault} collapseInitialExercises={copiedWorkout || plannedFromFavorite || Boolean(templateId || presetId)} initialExercisesReady={formDraftReady} reference={coachReference} referenceAppearance={coachReference || clientReference} safePlanInput={safePlanInput || readyPlan} refinedPlan={refinedPlan} disabled={mutation.isPending || pickerOpen || templatePickerOpen} />
       </section>
       {prefillError && <p className="error">{prefillError}</p>}
       {!refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
@@ -1759,11 +1759,11 @@ export function WorkoutFormPage() {
 }
 
 function CoachPlanOptions({ reference, children }: { reference: boolean; children: ReactNode }) {
-  return reference ? <details className="coach-plan-options"><summary>Настройки плана</summary>{children}</details> : <>{children}</>
+  return reference ? <details className="coach-plan-options"><summary>Настройки плана<ChevronDownIcon /></summary>{children}</details> : <>{children}</>
 }
 
 function CoachFormControls({ reference, disabled, children }: { reference: boolean; disabled: boolean; children: ReactNode }) {
-  return reference ? <fieldset className="coach-plan-form-controls" disabled={disabled}>{children}</fieldset> : <>{children}</>
+  return <fieldset className={reference ? 'coach-plan-form-controls' : 'workout-form-controls'} disabled={disabled}>{children}</fieldset>
 }
 
 function CoachPlanEntryControls({ reference, disabled, onOpenPicker, children }: { reference: boolean; disabled: boolean; onOpenPicker: () => void; children: ReactNode }) {

@@ -10,6 +10,13 @@ history remain independent snapshots. Load failures do not become empty forms,
 failed writes retain input, and Ready stays available when history fails.
 Acceptance and release evidence: `docs/design/CLIENT_READY_WORKOUTS_20261021.md`.
 
+YAFIT-650: shared plan/favorite editor freezes mutations during save, commits
+the final ready-plan metric before blur, and reuses exercise delete confirmation.
+Lime round metrics share their existing two-column layout; disclosure arrows,
+block spacing and the plan-actions label are corrected without new input modes,
+superset folding or changes to stored snapshots/history.
+Acceptance: `docs/design/READY_WORKOUT_EDITOR_SAFETY_LIME_20261023.md`.
+
 20.10 — три legacy AI HTTP API закрыты по решению владельца; native AI и
 Cloud Functions сохранены. Приёмка: `docs/design/REMOVE_LEGACY_AI_API_20261020.md`.
 

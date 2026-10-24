@@ -139,13 +139,14 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
   const [settingsExerciseIndex, setSettingsExerciseIndex] = useState<number | null>(null)
   const [confirmingStructure, setConfirmingStructure] = useState(false)
   const structurePending = useRef(false)
-  const referenceControlsDisabled = reference && (disabled || confirmingStructure)
+  const referenceControlsDisabled = disabled || confirmingStructure
   // Два поля одного подхода могут отправить change до перерисовки родителя (особенно
   // в WebKit и автотестах). Последний commit держим синхронно, чтобы следующее поле не
   // перезатёрло предыдущее устаревшим props-снимком.
   const latestExercises = useRef<readonly WorkoutExerciseDraft[]>(exercises)
   useEffect(() => { latestExercises.current = exercises }, [exercises])
   function commitExercises(next: WorkoutExerciseDraft[]) {
+    if (disabled) return
     latestExercises.current = next
     onChange(next)
   }
@@ -279,11 +280,11 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     } finally { structurePending.current = false; setConfirmingStructure(false) }
   }
   async function removeExercise(exerciseIndex: number) {
-    if (reference) {
-      if (disabled || structurePending.current) return
+    if (disabled || structurePending.current) return
+    if (reference || referenceAppearance) {
       const exercise = latestExercises.current[exerciseIndex]
       if (!exercise) return
-      if (exercise.sets.some((set) => set.sourceSetId)) {
+      if (reference && exercise.sets.some((set) => set.sourceSetId)) {
         setRoundError('Упражнение с выполненными подходами нельзя удалить из плана.')
         return
       }
@@ -434,12 +435,12 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
       <div className="set-add-row">
         <button type="button" className="secondary" onClick={() => addSet(exerciseIndex)}><AddActionLabel>Подход</AddActionLabel></button>
       </div>
-      {!reference && canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
+      {!reference && !referenceAppearance && canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
       {showTrainerComments && <OptionalDetails className="exercise-comment-options" summary={commentLabel} initialOpen={Boolean(exercise.trainerComment)}>
         {commentField(exercise, exerciseIndex)}
       </OptionalDetails>}
       </div>}
-      {!reference && !expanded && canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
+      {!reference && !referenceAppearance && !expanded && canMergeNext && !reordering && <button type="button" className="link block-merge" onClick={() => commitExercises(mergeBlockWithNext([...latestExercises.current], exerciseIndex))}>Создать суперсет со следующим</button>}
     </WorkoutExercise>
   }
 
@@ -534,7 +535,7 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
     {reference && roundError && <p className="error" role="alert">{roundError}</p>}
     {!reference && reordering && <div className="workout-editor-toolbar"><div className="reorder-mode"><span>Изменение порядка</span><button type="button" className="link" onClick={() => setReordering(false)}>Готово</button></div></div>}
     {reference ? <WorkoutGestureList nativeSwipe blocks={blocks.map((block) => block.blockId)} disabled={disabled || confirmingStructure || settingsExerciseIndex !== null} onMove={moveReferenceBlock}>{exerciseBlocks}</WorkoutGestureList> : exerciseBlocks}
-    {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer">{!reference && <button type="button" className="secondary" onClick={onOpenPicker}><AddActionLabel>Упражнение</AddActionLabel></button>}{hasExercises && <OverflowMenu label="Действия с планом" trigger="Изменить все" items={planActions} />}</div>}
+    {(hasExercises || showEmptyAddAction) && <div className="workout-editor-footer">{!reference && <button type="button" className="secondary" onClick={onOpenPicker}><AddActionLabel>Упражнение</AddActionLabel></button>}{hasExercises && <OverflowMenu label="Действия с планом" trigger={referenceAppearance ? 'Действия с планом' : 'Изменить все'} items={planActions} />}</div>}
     {settingsExerciseIndex !== null && exercises[settingsExerciseIndex] && (() => {
       const exercise = exercises[settingsExerciseIndex]!
       const showRunningPresets = entryMode === 'plan' && exercise.ref === 'running' && exercise.inputKind === 'distance' && exercise.blockType !== 'group'
@@ -563,5 +564,5 @@ export function WorkoutExerciseEditor({ exercises, onChange, onOpenPicker, onRep
 }
 
 function ReferenceEditorControls({ reference, disabled, children }: { reference: boolean; disabled: boolean; children: ReactNode }) {
-  return reference ? <fieldset className="coach-plan-editor-controls" disabled={disabled}>{children}</fieldset> : <>{children}</>
+  return <fieldset className={reference ? 'coach-plan-editor-controls' : 'workout-editor-controls'} disabled={disabled}>{children}</fieldset>
 }
