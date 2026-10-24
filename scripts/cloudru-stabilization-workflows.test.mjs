@@ -8,11 +8,46 @@ import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
 import { createHash } from 'node:crypto'
 import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory,
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility } from './cloudru-account-history-audit.mjs'
+import { probeRuntimeDatabase } from './cloudru-runtime-db-probe.mjs'
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
 
 const historyFixtureIds = [1, 2, 3, 4, 5].map(n => `a0000000-0000-4000-8000-${String(n).padStart(12, '0')}`)
+test('runtime connection probe only reads settings, rolls back and never calls an application function', async () => {
+  const statements = []
+  let ended = false
+  const client = { connect: async () => {}, query: async sql => { statements.push(sql); return { rows: [{ valid: true }] } }, end: async () => { ended = true } }
+  assert.deepEqual(await probeRuntimeDatabase(client), { event: 'cloudru_runtime_database_probe', ready: true })
+  assert.equal(statements[0], 'begin read only')
+  assert.equal(statements.at(-1), 'rollback')
+  assert.ok(statements.includes("set local statement_timeout = '10s'"))
+  assert.doesNotMatch(statements.join('\n'), /app_private|public\.|\b(?:insert|update|delete|commit|grant|alter)\b/i)
+  assert.equal(ended, true)
+})
+test('runtime connection probe isolates invalid timeout settings without exposing server error text', async () => {
+  const statements = []
+  let ended = false
+  const report = await probeRuntimeDatabase({ connect: async () => {}, query: async sql => {
+    statements.push(sql)
+    if (sql.startsWith('set local')) throw Object.assign(new Error('private-database-message'), { code: '22023', detail: 'private-detail' })
+    return { rows: [] }
+  }, end: async () => { ended = true } })
+  assert.deepEqual(report, { event: 'cloudru_runtime_database_probe', ready: false, phase: 'timeout', code: '22023' })
+  assert.equal(statements.at(-1), 'rollback')
+  assert.equal(ended, true)
+  assert.doesNotMatch(JSON.stringify(report), /private-/)
+})
+test('runtime probe is opt-in, main-only and never receives owner credentials or changes runtime', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const step = workflow.split('      - name: Probe only runtime database')[1].split('      - name:')[0]
+  assert.match(step, /always\(\).*workflow_dispatch.*inputs\.runtime_database_probe/)
+  assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(step, /DATABASE_USER == "fit_api"/)
+  assert.match(step, /--read-only --memory=128m --cpus=0.5 --timeout=20/)
+  assert.match(step, /DATABASE_\(HOST\|PORT\|NAME\|USER\|PASSWORD\)/)
+  assert.doesNotMatch(step, /MIGRATION_DATABASE|systemctl (?:start|restart|stop)|node dist\/cloudru-background-worker|tee.*api\.env/)
+})
 test('account history target hashes are secret-only and require the four distinct reviewed role slots', () => {
   const targets = ['trainerLegacy', 'trainerYandex', 'athleteLegacy', 'athleteYandex'].map(label => ({ label,
     role: label.startsWith('trainer') ? 'trainer' : 'client', emailHash: createHash('sha256').update(`fixture-${label}`).digest('hex') }))
@@ -483,6 +518,40 @@ test('background journal report keeps only fixed flags and allowlisted database 
   assert.deepEqual(report.databaseCodes, ['42501', 'ETIMEDOUT'])
   assert.deepEqual(report.launcherFailures, [{ stage: 'container', exitCode: 125 }])
   assert.doesNotMatch(result.stdout, /private-/)
+})
+
+test('background journal distinguishes transaction limits from work and keeps only bounded dispatch stages', () => {
+  const messages = [
+    { event: 'background_transaction_failed', transactionPhase: 'timeout', errorCode: '22023', message: 'private-sql' },
+    { event: 'background_transaction_failed', transactionPhase: 'private-phase', errorCode: '22023' },
+    { event: 'cloudru_background_failed', dispatchOperation: 'push', dispatchPhase: 'prepare', errorCode: '22023' },
+    { event: 'yandex_session_cleanup_failed', dispatchOperation: 'auth_sessions', dispatchPhase: 'cleanup', errorCode: '22023' },
+    { event: 'cloudru_background_failed', dispatchOperation: 'private-op', dispatchPhase: 'prepare', errorCode: 'private-code' },
+  ].map(entry => JSON.stringify({ MESSAGE: JSON.stringify(entry) }))
+  const result = spawnSync('python3', ['scripts/cloudru-background-diagnostics.py'], { input: messages.join('\n'), encoding: 'utf8' })
+  assert.equal(result.status, 0)
+  const report = JSON.parse(result.stdout)
+  assert.deepEqual(report.transactionFailures, [{ phase: 'timeout', code: '22023' }])
+  assert.deepEqual(report.dispatchFailures, [
+    { operation: 'push', phase: 'prepare', code: '22023' }, { operation: 'auth_sessions', phase: 'cleanup', code: '22023' },
+  ])
+  assert.doesNotMatch(result.stdout, /private-/)
+})
+
+test('request diagnostics expose allowlisted auth stage and provider status only for the selected request', () => {
+  const id = '00000000-0000-4000-8000-000000000001'
+  const entry = { reqId: id, event: 'yandex_auth_failed', authStage: 'oauth_code', authFailure: 'provider_unavailable',
+    errorCode: 'unknown', providerFailure: 'http', providerStatus: 502, token: 'private-token', err: { message: 'private-error' } }
+  const lines = [entry, { ...entry, reqId: 'another-request' }, { ...entry, authStage: 'private-stage' },
+    { ...entry, authFailure: 'private-failure' }, { ...entry, authStage: 'session_issue', errorCode: '22023', providerFailure: 'private-reason', providerStatus: 'private-status' }]
+    .map(row => JSON.stringify({ CONTAINER_NAME: 'fit-api-stage', MESSAGE: JSON.stringify(row) }))
+  const result = spawnSync('python3', ['scripts/cloudru-api-request-diagnostics.py', id], { input: lines.join('\n'), encoding: 'utf8' })
+  assert.equal(result.status, 0)
+  assert.deepEqual(JSON.parse(result.stdout).authFailures, [
+    { stage: 'oauth_code', reason: 'provider_unavailable', code: 'unknown', providerFailure: 'http', providerStatus: 502 },
+    { stage: 'session_issue', reason: 'provider_unavailable', code: '22023' },
+  ])
+  assert.doesNotMatch(result.stdout, /private-|another-request/)
 })
 
 test('manual API journal inspection exposes counts only, never user payloads or arbitrary codes', () => {
