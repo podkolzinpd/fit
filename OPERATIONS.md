@@ -1249,12 +1249,13 @@ origin по-прежнему должны быть настроены по nativ
 `SUPABASE_DB_PASSWORD`, `SUPABASE_ACCESS_TOKEN`, service-role key и OAuth Client
 Secret во frontend build не добавляются.
 
-Лицензированные Vital Gym Pro media также не требуют закрытых переменных в
-Vercel. Зашифрованный bundle публикуется только workflow `Deploy Vital exercise
-media`, использующим GitHub secrets `VITAL_MEDIA_KEY`, `SUPABASE_ACCESS_TOKEN`
-и `SUPABASE_PROJECT_ID`. Файлы находятся в private bucket
-`fit-exercise-media`; policy разрешает чтение только роли `authenticated`, а
-frontend создаёт короткоживущие signed URL.
+Лицензированные Vital Gym Pro media в production выдаются из private Cloud.ru
+S3 через native API `/v1/exercise-media/sign` и `/v1/exercise-media/sign-batch`
+с проверкой app-session. Сервер подписывает пути `fit-exercise-media/vital-pro/`
+через настроенное native object storage. Supabase signer/fallback удалён:
+без native storage API возвращает `503 service_unavailable`. Картинки, видео,
+сроки signed URL и существующий Yandex uploader сохранены; Supabase credentials
+для серверной выдачи Vital не используются.
 
 ### Build-time флаги production frontend
 

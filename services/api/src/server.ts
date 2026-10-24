@@ -47,7 +47,6 @@ import {
   DatabaseYandexAppSessionRevoker,
 } from './yandex-app-session.js'
 import { buildYandexAiAuthorization } from './yandex-ai-authorization.js'
-import { SupabaseVitalMediaSigner } from './supabase-vital-media.js'
 import { DatabasePilotTrainerProfiles } from './trainer-profile.js'
 import { DatabasePilotTrainerDiscovery } from './trainer-discovery.js'
 import { DatabasePilotFavoriteWorkouts } from './favorite-workouts.js'
@@ -253,11 +252,9 @@ const legacyChatMediaBridge = yandexMediaStorage === undefined || supabaseBridge
     new SupabaseChatMediaStore(supabaseBridgeConfig),
   )
 const pilotChat = databasePool === undefined ? undefined : new DatabasePilotChat(databasePool)
-const vitalMediaSigner = yandexMediaStorage !== undefined
-  ? new YandexVitalMediaSigner(yandexMediaStorage)
-  : supabaseBridgeConfig === undefined
-    ? undefined
-    : new SupabaseVitalMediaSigner(supabaseBridgeConfig)
+const vitalMediaSigner = yandexMediaStorage === undefined
+  ? undefined
+  : new YandexVitalMediaSigner(yandexMediaStorage)
 const app = buildApp(
   {
     allowedOrigins: parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS),
