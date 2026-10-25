@@ -1,4 +1,5 @@
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
+import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
 import { useClientLiveDensity } from '../../app/client-live-density'
 import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
@@ -2746,7 +2747,9 @@ export function LiveWorkoutPage() {
   const liveSwipeEnabled = coachReference || clientReference
   const liveDrag = coachReference || clientLime
   const densityEnabled = isCoachLiveDensityEnabled(actor)
-  const haloRef = useCoachLiveHalo(densityEnabled || clientReference)
+  const coachV79 = isCoachLiveV79Enabled(actor)
+  const [coachClockSlot, setCoachClockSlot] = useState<HTMLSpanElement | null>(null)
+  const haloRef = useCoachLiveHalo(!coachV79 && (densityEnabled || clientReference))
   const liveDensity = useCoachLiveDensity(actor?.userId)
   const noteOwner = coachReference ? actor?.userId : undefined
   const noteScope = `${noteOwner ?? ''}:${workoutId}`
@@ -4297,9 +4300,10 @@ export function LiveWorkoutPage() {
   </div> : null}</>} />
   // Back returns to the entry screen without finishing. A direct Live link
   // falls back to its workout detail because the tab bar is hidden here.
-  return <Page title="Live-тренировка" hideTitle className={`live-workout-page workout-focused-page${clientReference ? ` client-live-density client-live-density-${clientLiveDensity} coach-live-density coach-live-density-${clientLiveDensity}` : ''}${densityEnabled ? ` coach-live-density coach-live-density-${liveDensity}` : ''}`} back={`/workouts/${workoutId}`} onBack={goBack}
+  return <Page title="Live-тренировка" hideTitle className={`live-workout-page workout-focused-page${coachV79 ? ' coach-live-v79' : ''}${clientReference ? ` client-live-density client-live-density-${clientLiveDensity} coach-live-density coach-live-density-${clientLiveDensity}` : ''}${densityEnabled ? ` coach-live-density coach-live-density-${liveDensity}` : ''}`} back={`/workouts/${workoutId}`} onBack={goBack}
     action={visualReference && query.data ? <>
       <span className={`coach-live-status${referenceRestActive && !livePhase ? ' resting' : ''}`}><span aria-hidden="true" />{livePhase?.kind === 'prep' ? 'Подготовка' : livePhase?.kind === 'work' ? 'Подход' : referenceRestActive ? 'Отдых' : 'Live'}</span>
+      {coachV79 && <span className="coach-v79-header-slot" ref={setCoachClockSlot} />}
         <button type="button" className="coach-live-finish" aria-label={finish.isPending ? 'Завершаем тренировку' : 'Завершить тренировку'} title={finish.isPending ? 'Завершаем…' : 'Завершить тренировку'} aria-busy={finish.isPending} disabled={!query.data.exercises.length || rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); if (hasIncompleteLiveSets || cardioSetMissingTime || clientReference && timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}><CheckSmallIcon /></button>
     </> : undefined}>
     <AsyncView loading={query.isLoading} error={query.error}
@@ -4329,6 +4333,7 @@ export function LiveWorkoutPage() {
               onToggle={canPauseWorkout ? () => setWorkoutPaused(livePausedAt === null) : undefined} />}
             <Coachmark id={clientReference ? 'client-live-reference-timer-2026-10' : coachReference ? 'live-timer-2026-09' : timerLeads ? 'live-timer-mode-pause-2026-10' : 'live-timer-pause-2026-10'} userId={actor?.userId} title={visualReference ? 'Управление тренировкой' : timerLeads ? 'Таймер ведёт тренировку' : 'Таймер отдыха'} description={clientReference ? `${timerLeads ? 'Подходы со временем идут по таймеру. Удержание открывает настройки.' : 'Галочка подхода включает отдых.'} Удерживайте карточку для переноса. Галочка вверху завершает тренировку. Кнопка «Пауза» приостанавливает тренировку.` : coachReference ? 'Галочка подхода включает отдых. Свайп по номеру подхода открывает удаление; номер упражнения — для переноса. Галочка вверху завершает тренировку.' : timerLeads ? 'Подходы со временем идут и засчитываются сами, после отдыха начинается следующий. Нажатие — следующий шаг. Удержание — настройки таймера, там же можно вести подходы самому. Нажатие на часы тренировки ставит её на паузу.' : 'Отдых начинается после подхода. Нажмите на таймер, чтобы изменить время, остановить его или передать подходы таймеру. Нажатие на часы тренировки ставит её на паузу.'}>
               <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
+                coachV79={coachV79 ? { density: liveDensity, headerSlot: coachClockSlot } : undefined}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
                 referenceActions={clientReference} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
                 referencePausedSeconds={clientReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={clientReference && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
