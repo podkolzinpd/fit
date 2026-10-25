@@ -2133,3 +2133,113 @@ for (const theme of ['light', 'dark']) test(`client priority controls retain sta
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
 })
+
+for (const theme of ['light', 'dark']) test(`client goal stage clear persists through save failure and reload ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const stageA = '10000000-0000-4000-8000-000000000041', stageB = '10000000-0000-4000-8000-000000000042'
+  const source = { ...coachGestureWorkout(), createdBy: pilotId, status: 'planned', startedAt: null, stageId: stageA as string | null }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, workouts: [source] })
+  await page.route(`**/v1/clients/${clientId}/progress`, route => route.fulfill({ json: { entries: [], customMetrics: [], goal: {
+    id: '10000000-0000-4000-8000-000000000040', clientId, title: 'Цель', targetDate: '2026-12-31', status: 'active', version: 1, criteria: [],
+    stages: [{ id: stageA, goalId: '10000000-0000-4000-8000-000000000040', title: 'База', startsOn: '2026-09-01', endsOn: '2026-11-01', position: 0, version: 1 },
+      { id: stageB, goalId: '10000000-0000-4000-8000-000000000040', title: 'Развитие', startsOn: '2026-11-02', endsOn: '2026-12-31', position: 1, version: 1 }],
+  } } }))
+  const writes: Array<string | null> = []
+  let failSave = true
+  await page.route(`**/v1/workouts/${workoutId}`, route => {
+    if (route.request().method() !== 'PUT') return route.fallback()
+    const draft = route.request().postDataJSON() as { stageId: string | null }
+    writes.push(draft.stageId)
+    if (failSave) return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+    const stored = backend.getWorkouts()[0]! as typeof source
+    stored.stageId = draft.stageId; stored.version += 1
+    return route.fulfill({ json: { workout: { id: workoutId } } })
+  })
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto(`/workouts/${workoutId}/edit`)
+    const stage = page.locator('select[name="stageId"]'), save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+    await expect(stage).toHaveValue(width === 390 ? stageA : stageB)
+    await stage.selectOption('')
+    await expect(stage).toHaveValue('')
+    failSave = true; await save.click()
+    await expect(page.locator('.request-error-inline')).toContainText('Введённые данные остались в форме')
+    await expect(stage).toHaveValue('')
+    expect(writes.at(-1)).toBeNull()
+    await stage.evaluate(el => el.scrollIntoView({ block: 'center' })); await page.screenshot({ path: info.outputPath(`stage-clear-failure-${width}.png`) })
+    failSave = false; await save.click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+    expect((backend.getWorkouts()[0]! as typeof source).stageId).toBeNull()
+    await page.goto(`/workouts/${workoutId}/edit`); await page.reload()
+    await expect(stage).toHaveValue('')
+    await stage.selectOption(stageB); await save.click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}$`))
+    await page.goto(`/workouts/${workoutId}/edit`); await page.reload()
+    await expect(stage).toHaveValue(stageB)
+  }
+})
+
+for (const theme of ['light', 'dark']) test(`client goal stage intentional empty survives draft restore ${theme}`, async ({ page }) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = { ...coachGestureWorkout(), createdBy: pilotId, status: 'planned', startedAt: null, stageId: '10000000-0000-4000-8000-000000000041' }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, workouts: [source] })
+  await page.goto(`/workouts/new?copy=${workoutId}`)
+  const stage = page.locator('select[name="stageId"]')
+  await expect(stage).toHaveValue(source.stageId)
+  await stage.selectOption(''); await expect(stage).toHaveValue('')
+  const savedStage = () => page.evaluate(({ id, sourceId }) => {
+    const draft: unknown = JSON.parse(localStorage.getItem(`fit.workout-form-draft.${id}.${sourceId}`) ?? '{}')
+    return draft && typeof draft === 'object' && 'stageId' in draft ? draft.stageId : undefined
+  }, { id: pilotId, sourceId: workoutId })
+  await expect.poll(savedStage).toBe('')
+  await page.reload(); await expect(stage).toHaveValue('')
+  await stage.selectOption(source.stageId); await expect.poll(savedStage).toBe(source.stageId)
+  await page.reload(); await expect(stage).toHaveValue(source.stageId)
+})
+
+for (const theme of ['light', 'dark']) test(`client goal stage awaits initial goal before writing a fresh draft ${theme}`, async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-09-24T09:00:00Z') })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route(`**/v1/clients/${clientId}/progress`, async route => { await gate; return route.fallback() })
+  await page.goto('/workouts/new')
+  const save = page.getByRole('button', { name: 'Сохранить план', exact: true })
+  await expect(save).toBeDisabled()
+  const savedStage = () => page.evaluate(id => {
+    const draft: unknown = JSON.parse(localStorage.getItem(`fit.workout-form-draft.${id}.new--`) ?? '{}')
+    return draft && typeof draft === 'object' && 'stageId' in draft ? draft.stageId : undefined
+  }, pilotId)
+  expect(await savedStage()).toBeUndefined()
+  release()
+  const stage = page.locator('select[name="stageId"]')
+  await expect(stage).toHaveValue('10000000-0000-4000-8000-000000000041')
+  await expect(stage).toBeEnabled()
+  await expect.poll(savedStage).toBe('10000000-0000-4000-8000-000000000041')
+  await stage.selectOption(''); await expect(stage).toHaveValue('')
+  await expect.poll(savedStage).toBe('')
+  await page.reload(); await expect(stage).toHaveValue('')
+})
+
+for (const theme of ['light', 'dark']) test(`client goal delay never clears existing time and plan fields ${theme}`, async ({ page }) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = { ...coachGestureWorkout(), createdBy: pilotId, status: 'planned', startedAt: null, stageId: '10000000-0000-4000-8000-000000000041', notes: 'План сохранить', prepSeconds: 15 }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route(`**/v1/clients/${clientId}/progress`, async route => { await gate; return route.fallback() })
+  const writes: Array<{ startTime: string; endTime: string; stageId: string; notes: string; prepSeconds: number; exercises: unknown[] }> = []
+  await page.route(`**/v1/workouts/${workoutId}`, route => {
+    if (route.request().method() !== 'PUT') return route.fallback()
+    writes.push(route.request().postDataJSON() as typeof writes[number])
+    return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+  })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]).toMatchObject({ startTime: '10:00', endTime: '11:00', notes: 'План сохранить', prepSeconds: 15, stageId: source.stageId })
+  expect(writes[0]!.exercises).toHaveLength(source.exercises.length)
+  release()
+  await expect(page.locator('select[name="stageId"]')).toHaveValue(source.stageId)
+})
