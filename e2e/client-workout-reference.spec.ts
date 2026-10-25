@@ -2243,3 +2243,142 @@ for (const theme of ['light', 'dark']) test(`client goal delay never clears exis
   release()
   await expect(page.locator('select[name="stageId"]')).toHaveValue(source.stageId)
 })
+
+for (const theme of ['light', 'dark']) for (const outcome of ['failed', 'lost', 'unreadable', 'changed']) test(`client measurement delete recovery ${theme} ${outcome}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withMeasurements: true })
+  let rows = [{ id: '10000000-0000-4000-8000-000000000050', clientId, createdBy: pilotId, recordedOn: '2026-09-24', weightKg: 70,
+    chestCm: null, waistCm: null, hipCm: null, notes: null, customMetrics: [], version: 1 }]
+  const traffic: string[] = []; let deletes = 0, failRead = false
+  await page.route(`**/v1/clients/${clientId}/progress`, route => {
+    traffic.push('GET')
+    return failRead ? route.fulfill({ status: 503, json: { error: 'unavailable' } }) : route.fulfill({ json: { entries: rows, customMetrics: [], goal: null } })
+  })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/progress/10000000-0000-4000-8000-000000000050', async route => {
+    if (route.request().method() !== 'DELETE') return route.fallback()
+    deletes++; traffic.push('DELETE')
+    const request = route.request().postDataJSON() as { expectedVersion: number }
+    if (deletes === 1) {
+      await gate
+      if (outcome === 'lost') { rows = []; return route.abort('connectionreset') }
+      if (outcome === 'unreadable') failRead = true
+      if (outcome === 'changed') rows = rows.map(row => ({ ...row, weightKg: 75, version: 2 }))
+      return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+    }
+    expect(request.expectedVersion).toBe(outcome === 'changed' ? 2 : 1)
+    rows = []; return route.fulfill({ json: { progress: { version: request.expectedVersion + 1 } } })
+  })
+  await page.goto('/me/progress')
+  await page.getByRole('button', { name: /^История замеров/ }).click()
+  const history = page.locator('.client-progress-history'), error = history.locator('.client-measurement-delete-error')
+  await history.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  await expect.poll(() => deletes).toBe(1)
+  await expect(history.getByRole('button', { name: 'Удалить', exact: true })).toBeDisabled()
+  release()
+  if (outcome === 'lost') {
+    await expect(history.locator('article.card')).toHaveCount(0)
+    await expect(error).toHaveCount(0); expect(deletes).toBe(1)
+    expect(traffic.slice(traffic.lastIndexOf('DELETE') + 1)).toContain('GET')
+    return
+  }
+  await expect(error.getByRole('alert')).toBeVisible()
+  const retry = error.getByRole('button', { name: 'Повторить', exact: true })
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 }); await error.evaluate(el => el.scrollIntoView({ block: 'center' }))
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`delete-error-${width}.png`) })
+  }
+  if (outcome === 'unreadable') {
+    const gets = traffic.filter(item => item === 'GET').length
+    await retry.click(); await expect.poll(() => traffic.filter(item => item === 'GET').length).toBeGreaterThan(gets)
+    await expect(retry).toBeEnabled(); expect(deletes).toBe(1); failRead = false
+  }
+  if (outcome === 'changed') {
+    await retry.click(); await expect(error).toContainText('Замер изменился')
+    expect(deletes).toBe(1)
+    await retry.click(); await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+    expect(deletes).toBe(1)
+    await retry.click(); await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click()
+  } else await retry.click()
+  await expect(history.locator('article.card')).toHaveCount(0)
+  await expect(error).toHaveCount(0); expect(deletes).toBe(2)
+  expect(traffic[traffic.lastIndexOf('DELETE') - 1]).toBe('GET')
+  await page.reload(); await expect(page.getByRole('button', { name: /^История замеров/ })).toHaveCount(0)
+})
+
+for (const theme of ['light', 'dark']) test(`client body map load retry retains all display preferences ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, clientId }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'compact')
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+    localStorage.setItem(`fit.bodyMapDisplay.v2.client.${id}.${clientId}`, 'list')
+  }, { id: pilotId, theme, clientId })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, clientGender: 'male' })
+  let fail = true
+  await page.route('**/v1/clients', route => fail ? route.fulfill({ status: 503, json: { error: 'unavailable' } }) : route.fallback())
+  await page.goto('/me/settings')
+  const section = page.locator('.settings-section').filter({ has: page.getByRole('heading', { name: 'Оформление', exact: true }) })
+  const error = section.getByRole('alert'), retry = error.getByRole('button', { name: 'Повторить', exact: true })
+  await expect(error).toContainText('Вид карты тела')
+  await expect(page.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('switch', { name: 'Анимация в Live', exact: true })).not.toBeChecked()
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 }); await error.evaluate(el => el.scrollIntoView({ block: 'center' }))
+    expect((await retry.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`body-map-error-${width}.png`) })
+  }
+  fail = false; await retry.click()
+  await expect(section.getByRole('radio', { name: 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await page.reload(); await expect(section.getByRole('radio', { name: 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('radio', { name: 'Компактный', exact: true })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('switch', { name: 'Анимация в Live', exact: true })).not.toBeChecked()
+  expect(await page.getByLabel('Тема оформления').inputValue()).toBe(theme)
+})
+
+for (const theme of ['light', 'dark']) test(`client body map loading and missing gender keep settings usable ${theme}`, async ({ page }) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/v1/clients', async route => { await gate; return route.fallback() })
+  await page.goto('/me/settings')
+  const section = page.locator('.settings-section').filter({ has: page.getByRole('heading', { name: 'Оформление', exact: true }) })
+  await expect(section.getByRole('status', { name: 'Загрузка', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Тема оформления')).toBeEnabled()
+  release()
+  const modes = section.getByRole('radiogroup', { name: 'Вид фигуры' })
+  await expect(modes.getByRole('radio')).toHaveCount(1)
+  await expect(modes.getByRole('radio', { name: 'Список', exact: true })).toHaveAttribute('aria-checked', 'true')
+})
+
+for (const theme of ['light', 'dark']) test(`client body map missing profile has existing profile recovery ${theme}`, async ({ page }) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, hasClients: false })
+  await page.goto('/me/settings')
+  const section = page.locator('.settings-section').filter({ has: page.getByRole('heading', { name: 'Оформление', exact: true }) })
+  await expect(section.getByRole('link', { name: 'Заполнить профиль', exact: true })).toHaveAttribute('href', '/me/edit')
+  await expect(page.getByLabel('Тема оформления')).toBeEnabled()
+  await expect(section.getByRole('radiogroup')).toHaveCount(0)
+})
+
+test('client priority error handling stays outside other client accounts', async ({ page }) => {
+  await mockPilot(page, { role: 'client', profileId: 'c11e0000-6010-4000-8000-000000000002', clientLime: true, withMeasurements: true })
+  await page.route('**/v1/progress/*', route => route.request().method() === 'DELETE' ? route.fulfill({ status: 503, json: { error: 'unavailable' } }) : route.fallback())
+  await page.goto('/me/progress')
+  await page.getByRole('button', { name: /^История замеров/ }).click()
+  const history = page.locator('.client-progress-history')
+  await history.getByRole('button', { name: 'Удалить', exact: true }).click()
+  const failed = page.waitForResponse(response => response.request().method() === 'DELETE' && response.status() === 503)
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Удалить', exact: true }).click(); await failed
+  await expect(history.locator('.client-measurement-delete-error')).toHaveCount(0)
+  await page.route('**/v1/clients', route => route.fulfill({ status: 503, json: { error: 'unavailable' } }))
+  await page.goto('/me/settings'); await page.reload()
+  const section = page.locator('.settings-section').filter({ has: page.getByRole('heading', { name: 'Оформление', exact: true }) })
+  await expect(section.getByText('Вид карты тела недоступен', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.client-workout-reference')).toHaveCount(0)
+})

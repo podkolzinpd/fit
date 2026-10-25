@@ -1,5 +1,6 @@
 import { ClientLiveDensitySetting } from './ClientLiveDensitySetting'
 import { isClientLimeEnabled } from '../../app/client-lime'
+import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { setClientLimeThemePreference, useClientLimeTheme } from '../../app/client-lime-theme'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -12,7 +13,7 @@ import { setWorkoutTimeWheel, useWorkoutTimeWheel } from '../../app/workout-time
 import { ChevronRightIcon, SettingsIcon } from '../../shared/icons'
 import { LEGAL_PATHS } from '../../shared/legal'
 import { SUPPORT_TELEGRAM_URL } from '../../shared/support'
-import { AsyncView, Page, Switch } from '../../shared/ui'
+import { AsyncView, EmptyState, Page, RequestDiagnosticDetails, Skeleton, StatePanel, Switch } from '../../shared/ui'
 import { LogoutButton } from '../auth'
 import { AppInstallPanel } from '../install'
 import { NotificationsSetting } from '../notifications'
@@ -104,7 +105,11 @@ export function ClientProfileSettingsPage() {
           if (value === 'light' || value === 'dark' || value === 'system') setClientLimeThemePreference(actor.userId, value)
         }}><option value="light">Светлая</option><option value="dark">Тёмная</option><option value="system">Как на устройстве</option></select></label>
         : <Switch label="Тёмная тема" checked={theme === 'dark'} onChange={(checked) => setAppTheme(checked ? 'dark' : 'light')} />}</div>
-      {client.data && <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} clientId={client.data.id} gender={client.data.gender} />}
+      {client.data ? <BodyMapAppearanceSetting viewerUserId={actor.userId} role={actor.role} clientId={client.data.id} gender={client.data.gender} />
+        : isClientWorkoutRedesignEnabled(actor) && (client.isLoading ? <Skeleton rows={1} />
+          : client.error ? <StatePanel tone="error" compact title="Вид карты тела недоступен" description="Проверьте подключение и повторите загрузку настройки."
+            details={<RequestDiagnosticDetails error={client.error} />} action={<button type="button" className="secondary" onClick={() => void client.refetch()}>Повторить</button>} />
+            : <EmptyState compact title="Заполните профиль спортсмена" description="После этого здесь появится настройка карты тела." action={<Link className="button secondary" to="/me/edit">Заполнить профиль</Link>} />)}
     </SettingsSection>
 
     <SettingsSection title="Аккаунт и помощь">
