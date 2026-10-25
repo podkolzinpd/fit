@@ -153,6 +153,11 @@ loaded-duration4refs из exercise-measurements; optional-distance5refs из т�
   `/private/tmp/fit-live-656-trainer-20261025.log`.
 - Никаких migrations, API/repository/calculation/catalog/flags/native-config
   изменений в продуктовом diff. История и ID не преобразуются.
+- После интеграции main `e60e4f74` (#1797) полный `npm run check` повторно
+  завершился exit 0: frontend 2837/317 files, API 1488 passed / 196 штатных
+  conditional skips. Лог: `/private/tmp/fit-live-656-integrated-check-20261025.log`.
+  Конфликт был только в CURRENT_STATE; чужие записи сохранены. Продуктовый
+  diff этой задачи при интеграции не изменился.
 
 ### Прежнее расхождение настройки времени (не исправлялось этой раскладкой)
 
