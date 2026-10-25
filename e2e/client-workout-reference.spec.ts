@@ -305,6 +305,46 @@ async function tapVisible(page: Page, target: ReturnType<Page['locator']>) {
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
 }
 
+for (const rpe of [false, true]) test(`client Live metric keyboard preserves final field rpe-${rpe}`, async ({ page }) => {
+  await modelKeyboard(page)
+  await page.addInitScript(({ id, rpe }) => {
+    localStorage.setItem(`fit.rpeDisplay.${id}`, String(rpe))
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+  }, { id: pilotId, rpe })
+  const source = coachGestureWorkout(true, 2)
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  Object.assign(source.exercises[0]!, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
+  source.exercises[0]!.sets.forEach(set => Object.assign(set, { weightKg: undefined, durationSec: 300, distanceKm: 1.02, reps: 24, rpe: 8 }))
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator('form[data-live-set-id]').first()
+  await expect(row.locator('.live-metric-field')).toHaveCount(rpe ? 4 : 3)
+  const field = row.getByLabel('Гребков в минуту')
+  await field.fill('27')
+  const element = await field.elementHandle()
+  await showModeledKeyboard(page)
+  for (const density of ['compact', 'original']) {
+    await page.evaluate(({ id, density }) => {
+      const key = `fit.clientLiveDensity.${id}`
+      localStorage.setItem(key, density)
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: density }))
+    }, { id: pilotId, density })
+    await expect(field).toBeFocused()
+    await expect(field).toHaveValue('27')
+    expect(await element!.evaluate(e => e.isConnected && e === document.activeElement)).toBe(true)
+    await expect.poll(() => field.evaluate(e => {
+      const bounds = e.getBoundingClientRect()
+      const pinned = document.querySelector('.live-pinned')!.getBoundingClientRect()
+      return bounds.top >= pinned.bottom && bounds.bottom <= 420
+    })).toBe(true)
+    await expect(field).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+  }
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
+  await tapVisible(page, row.getByRole('button', { name: 'Готово, отдых', exact: true }))
+  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
+})
+
 for (const entry of ['live', 'new', 'today']) for (const action of ['create', 'add']) test(`client keyboard picker first tap ${entry} ${action}`, async ({ page }) => {
   await modelKeyboard(page)
   const source = coachGestureWorkout()
