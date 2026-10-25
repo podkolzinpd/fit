@@ -298,11 +298,12 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       onClick={onPrimary ? tap : openPicker}>
       {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
-  const compactRestTrigger = coachV79 && <button type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
+  const compactClock = phaseRemaining !== null ? phaseClock : signedRemaining !== null ? formatRest(signedRemaining) : null
+  const compactRestTrigger = coachV79 && <button type="button" className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel}
     aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
     onPointerDown={event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
     onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }} onClick={onPrimary ? tap : openPicker}>
-    <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /><span>{triggerText}</span>
+    <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" />{compactClock !== null && <span>{compactClock}</span>}
   </button>
   return <>
     {coachV79 ? <CoachLiveV79Timer time={bigTime} elapsed={formatReferenceClock(elapsed)} resting={active && !phase} paused={pausedAt !== null} phaseLabel={copy?.label}

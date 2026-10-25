@@ -24,10 +24,11 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-clock .coach-live-digits { font-size: 28px; line-height: 32px; letter-spacing: -1px; }
 .coach-live-v79 .coach-v79-dock[data-state='rest'] .coach-v79-small-clock { color: var(--lime-yellow); }
 .coach-live-v79 .coach-v79-dock[data-state='paused'] .coach-v79-small-clock { color: var(--lime-text-secondary); }
-.coach-live-v79 .coach-v79-small-action { position: absolute; right: 44px; top: 0; width: 44px; height: 44px; pointer-events: auto; }
+.coach-live-v79 .coach-v79-small-action { position: absolute; right: 68px; top: 4px; width: 44px; height: 44px; pointer-events: auto; }
 .coach-live-v79 .coach-v79-small-action[inert] { pointer-events: none; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-action .live-rest-trigger { width: 44px; min-width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 14px; border: 0; border-radius: 50%; background: var(--lime-surface-raised); }
-.coach-live-v79 .coach-v79-small-action .live-rest-trigger > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-action .live-rest-trigger.has-countdown { display: grid; justify-items: center; align-content: center; grid-template-rows: 24px 12px; gap: 0; padding: 4px 0; border-radius: 12px; }
+.coach-live-v79 .coach-v79-small-action .live-rest-trigger > span { font-size: 12px; line-height: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .coach-live-v79 .coach-v79-timer[data-state='rest'], .coach-live-v79 .coach-v79-dock[data-state='rest'] { --v79-clock-color: var(--lime-yellow); }
 .coach-live-v79 .coach-v79-elapsed { --v79-clock-color: var(--lime-text-secondary); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-live-colon::before { background: var(--v79-clock-color, var(--lime-accent)); box-shadow: 0 .28em 0 var(--v79-clock-color, var(--lime-accent)); }
