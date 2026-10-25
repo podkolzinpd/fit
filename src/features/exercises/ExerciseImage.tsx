@@ -131,15 +131,15 @@ export function ExerciseImage({ src, fallbackSrc, motionSrc, videoSrc, customPho
   const [loadedVideoSrc, setLoadedVideoSrc] = useState<string>()
   const videoRef = useRef<HTMLVideoElement>(null)
   const reducedMotion = usePrefersReducedMotion()
-  const { source: backendSource } = useDataBackend()
+  const { exercises } = useDataBackend()
   const wantsVideo = variant === 'technique' || (variant === 'picker' && playVideo)
   const resolvedCustomPhoto = useCustomExercisePhotoUrl(customPhotoPath)
   const customPhotoLoading = Boolean(customPhotoPath) && !resolvedCustomPhoto
   const safeSrc = resolvedCustomPhoto ?? reviewedExerciseImageSource(src)
   const compactPrefersMotionPoster = variant !== 'technique' && !resolvedCustomPhoto && Boolean(safeMotionSrc)
-  const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc, backendSource)
-    || shouldUsePrivateVitalStorage(safeMotionSrc, backendSource)
-    || shouldUsePrivateVitalStorage(videoSrc, backendSource)
+  const privateVitalMedia = shouldUsePrivateVitalStorage(safeSrc, exercises.vitalMediaMode)
+    || shouldUsePrivateVitalStorage(safeMotionSrc, exercises.vitalMediaMode)
+    || shouldUsePrivateVitalStorage(videoSrc, exercises.vitalMediaMode)
   const deferredMedia = variant !== 'technique'
   const { nearViewport, ref: containerRef } = useNearViewport(deferredMedia)
   const requestPrivateMedia = !deferredMedia || nearViewport || playVideo
