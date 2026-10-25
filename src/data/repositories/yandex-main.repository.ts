@@ -1625,8 +1625,8 @@ export function createYandexMainRepository(
       async appendLiveRound(item: Workout, blockId: string, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds`, 'POST', item.version, {}, operationId) },
       async removeLastLiveRound(item: Workout, blockId: string, position: number, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/rounds/${position}`, 'DELETE', item.version, {}, operationId) },
       async splitLiveSuperset(item: Workout, blockId: string, operationId: string) { return liveCommand(`/v1/workouts/${item.id}/blocks/${blockId}/split`, 'POST', item.version, {}, operationId) },
-      async removeLiveSet(item, setId) {
-        const payload = await writeJson(queries, `/v1/workout-sets/${setId}`, 'DELETE', { expectedVersion: item.version, operationId: crypto.randomUUID() }, z.object({ set: z.object({ version: z.number().int().positive() }) }))
+      async removeLiveSet(item, setId, guard) {
+        const payload = await writeJson(queries, `/v1/workout-sets/${setId}`, 'DELETE', { expectedVersion: item.version, operationId: guard?.operationId ?? crypto.randomUUID(), ...(guard ? { expectedSetVersion: guard.expectedSetVersion } : {}) }, z.object({ set: z.object({ version: z.number().int().positive() }) }))
         invalidate(); return payload.set.version
       },
       async removeLiveExercise(item, exerciseId) { return liveCommand(`/v1/workouts/${item.id}/exercises/${exerciseId}`, 'DELETE', item.version) },
