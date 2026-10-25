@@ -1887,3 +1887,45 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
   }
 })
+
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const length of ['empty', 'short', 'long']) test(`client workout note disclosure ${theme} ${density} ${length}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = coachGestureWorkout(); source.startedAt = new Date(Date.now() - 120000).toISOString()
+  source.notes = length === 'empty' ? '  ' : length === 'short' ? 'Спокойный темп.' : ('Полный текст из Ассистента, без сокращения содержимого.\n').repeat(30)
+  source.exercises[0]!.trainerComment = 'Сохраняй технику'
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  const initial = JSON.stringify(backend.getWorkouts()[0])
+  await page.goto(`/workouts/${workoutId}/live`)
+  // The empty-note branch must prove the real pilot Live mounted before
+  // asserting absence; an unmounted/welcome page is not empty-state proof.
+  await expect(page.locator('.client-workout-reference')).toBeVisible()
+  await expect(page.locator('form[data-live-set-id]').first()).toBeVisible()
+  const note = page.locator('.client-live-workout-note')
+  if (length === 'empty') { await expect(note).toHaveCount(0); return }
+  await expect(note.locator('summary')).toHaveCSS('font-family', /YS Geo/)
+  expect(await page.evaluate(async () => {
+    const faces = await Promise.all([400, 500].map((weight) => document.fonts.load(weight + ' 16px "YS Geo"', 'Заметка 12')))
+    return faces.every((group) => group.length > 0 && group.every((face) => face.status === 'loaded'))
+  })).toBe(true)
+  await expect(note).not.toHaveAttribute('open', '')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect((await note.boundingBox())!.height).toBeLessThanOrEqual(60)
+    await note.locator('summary').click()
+    await expect(note.locator('p')).toBeVisible()
+    expect(await note.locator('p').textContent()).toBe(source.notes)
+    await expect(note.locator('p')).toHaveCSS('white-space', 'pre-wrap')
+    await expect(note.locator('.live-workout-note-hide')).toBeVisible()
+    await note.locator('summary').click()
+    await expect(note.locator('p')).toBeHidden()
+    await page.screenshot({ path: info.outputPath(`workout-note-${width}.png`) })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await expect(page.locator('.live-trainer-note')).toContainText('От тренера')
+  await expect(page.locator('.live-exercise-note').first()).toContainText('Моя заметка')
+  expect(JSON.stringify(backend.getWorkouts()[0])).toBe(initial)
+  await page.reload()
+  await expect(note.locator('p')).toBeHidden()
+  await note.locator('summary').click()
+  expect(await note.locator('p').textContent()).toBe(source.notes)
+})

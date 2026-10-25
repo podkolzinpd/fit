@@ -246,3 +246,15 @@
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet.live-rest-sheet { display: flex; flex-direction: column; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet.live-rest-sheet > * { flex-shrink: 0; }
 .phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet.live-rest-sheet .live-rest-apply { position: static; padding: 0; background: transparent; }
+
+/* Same native disclosure interaction as exercise notes; the stored workout
+   text remains complete and separate from personal/trainer exercise notes. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-workout-note { min-height: 0; padding: 0 16px 8px; white-space: normal; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; list-style: none; cursor: pointer; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note summary::-webkit-details-marker { display: none; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note summary::after { content: none; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note :is(.live-workout-note-read, .live-workout-note-hide) { color: var(--lime-text-secondary); font-size: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note .live-workout-note-hide,
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note[open] .live-workout-note-read { display: none; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note[open] .live-workout-note-hide { display: inline; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note p { margin: 0; padding: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--lime-text); }
