@@ -1,0 +1,383 @@
+// Gate-on coverage is isolated from the existing trainer/client suites.
+// The existing workflow lane runs this on the actual production build in both engines.
+import { expect, test } from '@playwright/test'
+import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
+import { coachGestureWorkout, beginClientGesture } from './fit-lime-fixtures'
+
+test.skip(process.env.FIT_COACH_LIVE_V79_ACCEPTANCE !== '1', 'Dedicated coach-v79 production-build harness')
+
+for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
+  test(`v79 adjacent superset ${profileId}`, async ({ page, browserName }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+    const source = coachGestureWorkout(), first = source.exercises[0]!, second = source.exercises[1]!
+    const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+    const commands: string[] = []
+    await page.route('**/blocks/*/merge-next', async route => {
+      const command = route.request().postDataJSON() as { preset: string; expectedVersion: number }
+      const current = backend.getWorkouts()[0]!
+      expect(command).toMatchObject({ preset: 'set', expectedVersion: current.version })
+      expect(route.request().url()).toContain(`/blocks/${first.blockId}/merge-next`)
+      commands.push('merge')
+      for (const exercise of current.exercises.slice(0, 2)) {
+        exercise.blockId = first.blockId; exercise.blockType = 'group'; exercise.blockPreset = 'set'; exercise.blockRounds = 2
+        exercise.restBetweenExercisesSec = 0; exercise.restBetweenRoundsSec = 90
+      }
+      current.version++
+      await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+    })
+    await page.route('**/blocks/*/split', async route => {
+      commands.push('split')
+      const current = backend.getWorkouts()[0]!
+      current.exercises.slice(0, 2).forEach((exercise, index) => {
+        exercise.blockType = 'single'; exercise.blockId = source.exercises[index]!.id; exercise.blockRounds = 1
+      })
+      current.version++
+      await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+    })
+    const roundCommands: string[] = []
+    if (profileId.endsWith('1')) {
+      await page.route('**/blocks/*/rounds', async route => {
+        const current = backend.getWorkouts()[0]!
+        expect(route.request().method()).toBe('POST')
+        expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+        const members = current.exercises.filter(exercise => exercise.blockId === first.blockId)
+        members.forEach((exercise, index) => { exercise.sets.push({ ...exercise.sets.at(-1)!, id: `c0ac0000-6010-4000-8000-0000000008${index}2`, position: 2, fact: {}, confirmedAt: null }); exercise.blockRounds = 3 })
+        current.version++; roundCommands.push('append')
+        await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+      })
+      await page.route('**/blocks/*/rounds/2', async route => {
+        const current = backend.getWorkouts()[0]!
+        expect(route.request().method()).toBe('DELETE')
+        expect(route.request().postDataJSON()).toMatchObject({ expectedVersion: current.version })
+        const members = current.exercises.filter(exercise => exercise.blockId === first.blockId)
+        expect(members.every(exercise => exercise.sets.at(-1)?.position === 2 && !exercise.sets.at(-1)?.confirmedAt && Object.keys(exercise.sets.at(-1)!.fact).length === 0)).toBe(true)
+        members.forEach(exercise => { exercise.sets = exercise.sets.filter(set => set.position !== 2); exercise.blockRounds = 2 })
+        current.version++; roundCommands.push('remove')
+        await route.fulfill({ status: 200, json: { block: { id: first.blockId, version: current.version, replayed: false } } })
+      })
+    }
+    await page.goto(`/workouts/${workoutId}/live`)
+    await page.locator(`[data-workout-block="${first.blockId}"]`).getByRole('button', { name: 'Ещё действия', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Объединить со следующим в суперсет', exact: true }).click()
+    await expect(page.locator('.exercise-block.live')).toHaveCount(1)
+    await expect(page.locator('.circuit-round')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Круг', exact: true })).toBeVisible()
+    const group = page.locator('.exercise-block.live')
+    if (profileId.endsWith('1')) {
+      await group.getByRole('button', { name: 'Круг', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(3)
+      const lastRound = group.locator('.circuit-round').last()
+      await lastRound.getByRole('button', { name: /Круг 3/ }).click()
+      const row = lastRound.locator('[data-live-set-id]').first()
+      const swipeRound = async () => { const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true })); await gesture.move(60); await gesture.end() }
+      await swipeRound()
+      await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(3)
+      expect(backend.getWorkouts()[0]!.exercises.filter(exercise => exercise.blockId === first.blockId).map(exercise => exercise.sets.at(-1)!.fact)).toEqual([{}, {}])
+      await swipeRound()
+      await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Убрать', exact: true }).click()
+      await expect(group.locator('.circuit-round')).toHaveCount(2)
+      expect(roundCommands).toEqual(['append', 'remove'])
+    }
+    await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    await expect(page.locator(`[data-live-set-id="${first.sets[0]!.id}"]`)).toHaveClass(/confirmed/)
+    await group.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+    // The completed round intentionally collapses after its final member.
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises.find(exercise => exercise.id === second.id)!.sets[0]!.confirmedAt).not.toBeNull()
+    await expect(group.locator('.circuit-round-toggle').first()).toContainText('2 из 2 выполнено')
+    await expect(page.locator('.coach-v79-actions .live-rest-trigger')).toContainText('1:30')
+    await group.locator('.circuit-head').getByRole('button', { name: 'Ещё действия', exact: true }).click()
+    const unavailableMerge = page.getByRole('menuitem', { name: 'Добавить следующее в суперсет', exact: true })
+    await expect(unavailableMerge).toBeDisabled()
+    await expect(unavailableMerge).toContainText('Есть выполненные подходы')
+    await page.screenshot({ path: info.outputPath('coach-live-superset-unavailable.png') })
+    await page.getByRole('menuitem', { name: 'Разделить суперсет', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Разделить', exact: true }).click()
+    await expect(page.locator('.exercise-block.live')).toHaveCount(0)
+    // Only the active single exercise is expanded after splitting.
+    await expect.poll(() => backend.getWorkouts()[0]!.exercises.flatMap(exercise => exercise.sets).filter(set => set.confirmedAt).length).toBe(2)
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 6')
+    await expect(page.locator('.coach-v79-actions .live-rest-trigger')).toContainText('1:30')
+    expect(commands).toEqual(['merge', 'split'])
+    await page.reload()
+    await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 6')
+    await expect(page.locator('.coach-v79-actions .live-rest-trigger')).toContainText('1:30')
+    await page.screenshot({ path: info.outputPath('coach-live-superset-split.png') })
+  })
+}
+const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+for (const density of ['original', 'compact']) test(`v79 clock handoff preserves fields and deadline ${density}`, async ({ page }, info) => {
+  await page.clock.install({ time: new Date('2026-10-25T08:59:00Z') })
+  await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
+  const source = restTimerWorkout(); source.startedAt = '2026-10-25T08:59:00Z'
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const root = page.locator('.coach-live-v79')
+  await expect(root).toBeVisible()
+  await page.clock.pauseAt(new Date('2026-10-25T09:00:00Z'))
+  const big = root.locator('.coach-v79-large-clock'), small = root.locator('.coach-v79-small-clock')
+  await expect(big).toHaveAttribute('aria-label', 'Тренировка: 01:00')
+  await expect(small).toHaveText('01:00')
+  const field = page.getByLabel('Фактический вес', { exact: true }).last()
+  const input = await field.elementHandle()
+  await field.fill('29.5'); await field.blur()
+  await page.locator('.content').evaluate(e => e.scrollTop = 180)
+  await expect.poll(() => root.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-small-opacity')))).toBeGreaterThan(.98)
+  await expect.poll(() => root.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-status-opacity')))).toBe(0)
+  await page.locator('.content').evaluate(e => e.scrollTop = 0)
+  await expect.poll(() => root.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-large-opacity')))).toBe(1)
+  expect(await input!.evaluate(e => e.isConnected)).toBe(true)
+  await expect(field).toHaveValue('29.5')
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+  await expect(big).toHaveAttribute('aria-label', 'Отдых: 00:02')
+  await expect(big.locator(':scope > .coach-live-digits')).toHaveCSS('font-size', density === 'original' ? '96px' : '48px')
+  await expect(big.locator('.coach-v79-elapsed .coach-live-digits')).toHaveCSS('font-size', density === 'original' ? '30px' : '20px')
+  const until = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  await page.clock.runFor(4000)
+  await expect(big).toHaveAttribute('aria-label', 'Тренировка: 01:04')
+  await expect(root.locator('.coach-v79-actions .live-rest-trigger')).toContainText('Отдых −0:02')
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(until)
+  await expect(field).toHaveValue('29.5')
+  await page.screenshot({ path: info.outputPath(`${density}-clock.png`), fullPage: true })
+})
+for (const role of ['client', 'trainer'] as const) test(`v79 never reaches outside ${role}`, async ({ page }) => {
+  await mockPilot(page, { role, profileId: role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000003' : pilot, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+  await expect(page.locator('.coach-live-v79')).toHaveCount(0)
+})
+for (const density of ['original', 'compact']) test(`v79 cards keep notes full inputs and menus ${density}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
+  const source = coachGestureWorkout(), first = source.exercises[0]!
+  first.trainerComment = 'Полная заметка тренера без потери текста'
+  first.sets = Array.from({ length: 6 }, (_, index) => ({ ...first.sets[0]!, id: `c0ac0000-6010-4000-8000-${String(900 + index).padStart(12, '0')}`, position: index }))
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const card = page.locator('.live-exercise').first(), rows = card.locator('form[data-live-set-id]')
+  await expect(rows).toHaveCount(6)
+  if (density === 'original') {
+    await expect(card.locator('.live-exercise-head')).toHaveCSS('min-height', '0px')
+    await expect(card.locator('.live-exercise-head')).toHaveCSS('padding-top', '16px')
+  }
+  await expect(card.locator('.coach-v79-exercise-tools .live-add-set')).toHaveCSS('height', '44px')
+  const field = rows.first().getByLabel('Фактический вес', { exact: true })
+  expect(await field.evaluate(e => e.getBoundingClientRect().height)).toBe(density === 'original' ? 54 : 48)
+  await card.getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Объединить со следующим в суперсет', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await field.fill('29.5'); const element = await field.elementHandle()
+  const toggle = card.locator('.coach-v79-card-toggle')
+  await toggle.click(); await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  expect(await element!.evaluate(e => e.isConnected)).toBe(true)
+  await toggle.click(); await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(field).toBeVisible(); await expect(field).toHaveValue('29.5')
+  await card.locator('.live-exercise-note > summary').click()
+  await expect(card.getByLabel(`Заметка: ${first.name}`, { exact: true })).toHaveValue(first.trainerComment)
+  expect(await card.locator('.coach-v79-card-body > div').evaluate(e => e.scrollTop)).toBe(0)
+  expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+  await page.locator('.content').evaluate(e => e.scrollTop = 0)
+  await page.screenshot({ path: info.outputPath(`${density}-six-sets-notes.png`) })
+})
+
+test('v79 density keeps one focused form and rest while viewport contracts', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T08:59:00Z') })
+  await page.addInitScript(() => {
+    const viewport = new EventTarget()
+    Object.defineProperties(viewport, { height: { get: () => Number(document.documentElement.dataset.testVisibleHeight ?? innerHeight) }, offsetTop: { get: () => 0 } })
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  })
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [restTimerWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-live-v79')).toBeVisible()
+  await page.clock.pauseAt(new Date('2026-10-08T09:00:00Z'))
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  const field = page.getByLabel('Фактический вес', { exact: true }).last()
+  await field.fill('29.5'); const element = await field.elementHandle()
+  for (const density of ['compact', 'original']) {
+    await page.evaluate(({ pilot, density }) => {
+      const key = `fit.coachLiveDensity.${pilot}`
+      localStorage.setItem(key, density); window.dispatchEvent(new StorageEvent('storage', { key, newValue: density }))
+      document.documentElement.dataset.testVisibleHeight = '400'; window.visualViewport?.dispatchEvent(new Event('resize'))
+    }, { pilot, density })
+    await page.clock.runFor(250)
+    await expect(field).toBeFocused(); await expect(field).toHaveValue('29.5')
+    expect(await element!.evaluate(e => e.isConnected && e === document.activeElement)).toBe(true)
+    await expect.poll(() => field.evaluate(e => { const r = e.getBoundingClientRect(); return r.top >= 52 && r.bottom <= 400 })).toBe(true)
+    expect(await field.evaluate(e => e.getBoundingClientRect().height)).toBe(density === 'original' ? 54 : 48)
+  }
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+})
+
+test('v79 sheets keep real catalogue filters creation and single add', async ({ page }, info) => {
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [coachGestureWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-add-exercise').click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  await expect(picker).toBeVisible()
+  await expect(page.locator('.coach-live-v79-shell')).toBeVisible()
+  await expect(picker).toHaveCSS('border-radius', '40px')
+  await expect(picker.getByRole('heading', { name: 'Добавить упражнение', exact: true })).toHaveCSS('font-size', '16px')
+  await picker.getByRole('button', { name: 'Фильтровать', exact: true }).click()
+  const filters = picker.getByRole('region', { name: 'Фильтры упражнений' })
+  await filters.getByRole('button', { name: 'Ноги', exact: true }).click()
+  await expect(filters.getByRole('button', { name: 'Ноги', exact: true })).toHaveCSS('background-color', 'rgb(186, 96, 234)')
+  await picker.getByRole('button', { name: 'Применить фильтры', exact: true }).click()
+  await picker.getByRole('button', { name: 'Создать упражнение', exact: true }).click()
+  await expect(picker.getByLabel('Название', { exact: true })).toBeVisible()
+  await picker.getByRole('button', { name: 'Назад к упражнениям', exact: true }).click()
+  await expect(picker.getByLabel('Поиск упражнения')).toBeVisible()
+  await page.screenshot({ path: info.outputPath('v79-catalogue.png') })
+  await picker.getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  await page.locator('.live-add-exercise').click()
+  await picker.getByLabel('Поиск упражнения').fill('планка')
+  await picker.getByRole('button', { name: 'Добавить: Планка', exact: true }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises.length).toBe(4)
+  await expect(picker).toHaveCount(0)
+})
+
+test('v79 row and exercise swipes stay separate from drag and editing', async ({ page, browserName }) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  const source = coachGestureWorkout(), first = source.exercises[0]!
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${first.sets[1]!.id}"]`)
+  const field = row.getByLabel('Фактический вес', { exact: true })
+  await field.fill('31'); await field.blur()
+  const gesture = await beginClientGesture(page, row, browserName, row.locator('.live-set-number'))
+  await gesture.move(60); await gesture.end()
+  await expect(row.getByRole('button', { name: /Удалить подход 2:/ })).toBeVisible()
+  await expect(page.locator('[data-workout-swipe]').getByRole('button', { name: 'Удалить', exact: true })).toHaveCount(0)
+  await row.getByRole('button', { name: /Удалить подход 2:/ }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(field).toHaveValue('31')
+  const handle = page.getByRole('button', { name: 'Переместить: Приседания', exact: true })
+  await handle.focus(); await page.keyboard.press('Space'); await page.keyboard.press('End'); await page.keyboard.press('Enter')
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises.at(-1)!.id).toBe(first.id)
+  const outer = page.locator(`[data-workout-swipe="${first.id}"]`)
+  const exerciseGesture = await beginClientGesture(page, outer, browserName, outer.locator('.live-exercise-head h2').first())
+  await exerciseGesture.move(100); await exerciseGesture.end()
+  await outer.getByRole('button', { name: 'Удалить', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
+  await expect(field).toHaveValue('31')
+})
+
+test('v79 docked rest returns keyboard focus to its visible trigger', async ({ page }) => {
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [coachGestureWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const root = page.locator('.coach-live-v79')
+  await expect(root).toBeVisible()
+  await page.locator('.content').evaluate(e => e.scrollTop = 220)
+  const small = root.locator('.coach-v79-small-action button')
+  await expect.poll(() => root.locator('.coach-v79-small-action').getAttribute('aria-hidden')).toBe('false')
+  await small.click()
+  const sheet = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })
+  await expect(sheet).toBeVisible()
+  await sheet.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
+  await expect(small).toBeFocused()
+})
+
+// Widths cover narrow title wrapping, wider phone fields and the trainer desktop
+// shell. Interaction contracts above are not repeated across this visual matrix.
+for (const width of [375, 430, 1440]) for (const density of ['original', 'compact']) test(`v79 source geometry ${density} ${width}`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
+  const source = coachGestureWorkout()
+  source.exercises[0]!.name = 'Жим гантелей на наклонной скамье с полным длинным названием упражнения'
+  source.notes = 'Полная заметка к тренировке без подмены демонстрационными данными'
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const card = page.locator('.live-exercise').first(), field = card.getByLabel('Фактический вес', { exact: true }).first()
+  await expect(field).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+  const title = card.locator('.live-exercise-head h2')
+  await expect(title).toHaveText(source.exercises[0]!.name)
+  expect(await title.evaluate(e => e.scrollHeight <= e.clientHeight + 1)).toBe(true)
+  await expect(card.locator('.coach-v79-card-toggle')).toHaveCSS('height', '44px')
+  await expect(page.getByLabel('Заметка к тренировке', { exact: true })).toHaveText(source.notes)
+  expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+  await page.locator('.content').evaluate(e => e.scrollTop = 0)
+  await page.screenshot({ path: info.outputPath(`${density}-${width}-source.png`) })
+})
+
+test('v79 retry and partial finish keep actual facts instead of demo reset', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [coachGestureWorkout()], failFirstSetConfirm: true })
+  const setId = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.id
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`[data-live-set-id="${setId}"]`)
+  await row.getByLabel('Фактический вес', { exact: true }).fill('27.5')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  const sync = page.locator('.live-sync-state')
+  await expect(sync).toContainText('Не удалось отправить')
+  await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('27.5')
+  await sync.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await expect(page.locator('.finish-confirm')).toContainText('Есть незавершённые подходы')
+  await page.locator('.finish-confirm').getByRole('button', { name: 'Отмена', exact: true }).click()
+  expect(backend.getWorkouts()[0]!.status).toBe('in_progress')
+  await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
+  await page.locator('.finish-confirm').getByRole('button', { name: 'Завершить', exact: true }).click()
+  await expect(page).not.toHaveURL(/\/live$/)
+  await page.reload()
+  expect(backend.getWorkouts()[0]!.status).toBe('done')
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
+})
+
+for (const density of ['original', 'compact']) test(`v79 empty session preserves add without another Start ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
+  const source = restTimerWorkout(); source.exercises = []; source.startedAt = new Date(Date.now() - 60000).toISOString()
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-pinned-empty')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Начать/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Завершить тренировку', exact: true })).toBeDisabled()
+  await expect.poll(() => page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).evaluate(e => {
+    const button = e.getBoundingClientRect(), bar = document.querySelector('.live-bottom-bar-empty')!.getBoundingClientRect()
+    return button.top >= 0 && button.bottom <= bar.top
+  })).toBe(true)
+  expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath(`empty-${density}.png`) })
+  await page.getByRole('button', { name: 'Выбрать упражнение', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })).toBeVisible()
+})
+
+test('v79 duration distance RPE and reduced-motion sheets use existing controls', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const source = coachGestureWorkout()
+  source.exercises[1] = { ...source.exercises[1]!, ref: 'plank', name: 'Планка', inputKind: 'duration', sets: source.exercises[1]!.sets.map(s => ({ ...s, weightKg: undefined, reps: undefined, durationSec: 60 })) }
+  source.exercises[2] = { ...source.exercises[2]!, ref: 'running', name: 'Бег', inputKind: 'distance', sets: source.exercises[2]!.sets.map(s => ({ ...s, weightKg: undefined, reps: undefined, durationSec: 600, distanceKm: 1.5 })) }
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const cards = page.locator('.live-exercise')
+  const duration = cards.nth(1).getByRole('button', { name: /Фактическое время:/ }).first()
+  await expect(duration).toHaveCSS('height', '54px')
+  await duration.click()
+  const sheet = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+  await expect(sheet).toBeVisible(); await expect(sheet).toHaveCSS('border-radius', '40px')
+  await sheet.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
+  await expect(duration).toBeFocused()
+  await expect(cards.nth(2).locator('.run-distance-control').first()).toHaveCSS('height', '54px')
+  await cards.first().getByRole('button', { name: 'Ещё действия', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
+  await expect(cards.first().locator('.live-set-rpe').first()).toHaveCSS('height', '54px')
+})
+
+test('v79 Live presentation never enters the existing planner', async ({ page }) => {
+  const source = coachGestureWorkout()
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/new?client=${source.clientId}&date=2026-10-25`)
+  await expect(page.getByRole('button', { name: 'Выбрать упражнения', exact: true })).toBeVisible()
+  await expect(page.locator('.coach-live-v79-shell')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })).toBeVisible()
+  await expect(page.locator('.coach-v79-picker-overlay')).toHaveCount(0)
+})

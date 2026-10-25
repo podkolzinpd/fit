@@ -92,6 +92,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const notified = useRef<number | null>(null)
   const backgrounded = useRef(document.visibilityState !== 'visible')
   const trigger = useRef<HTMLButtonElement>(null)
+  const returnTrigger = useRef<HTMLButtonElement | null>(null)
   const dialog = useRef<HTMLElement>(null)
   const selectedDurationRef = useRef(90)
   const longPressTimer = useRef<number | null>(null)
@@ -182,7 +183,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
     }
     document.addEventListener('keydown', keydown)
-    return () => { document.removeEventListener('keydown', keydown); trigger.current?.focus({ preventScroll: true }) }
+    return () => { document.removeEventListener('keydown', keydown); (returnTrigger.current?.isConnected ? returnTrigger.current : trigger.current)?.focus({ preventScroll: true }) }
   }, [open])
 
   const selectedDuration = minutes * 60 + seconds
@@ -231,6 +232,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   }
 
   function openPicker() {
+    if (coachV79 && document.activeElement instanceof HTMLButtonElement && document.activeElement.classList.contains('live-rest-trigger')) returnTrigger.current = document.activeElement
     prepareGong()
     setDuration(defaultDurationSeconds)
     setOpen(true)
@@ -291,19 +293,19 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       onClick={onReferencePauseToggle}>{referenceClockContent}</button> : <div className={referenceClockClass}>{referenceClockContent}</div>)
   const restTrigger = <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
-      onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
+      onPointerDown={coachV79 ? event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() } : onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
       onClick={onPrimary ? tap : openPicker}>
       {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
   const compactRestTrigger = coachV79 && <button type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
     aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
-    onPointerDown={onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
+    onPointerDown={event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
     onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }} onClick={onPrimary ? tap : openPicker}>
     <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /><span>{triggerText}</span>
   </button>
   return <>
-    {coachV79 ? <CoachLiveV79Timer time={bigTime} elapsed={formatReferenceClock(elapsed)} resting={active && !phase} paused={pausedAt !== null}
+    {coachV79 ? <CoachLiveV79Timer time={bigTime} elapsed={formatReferenceClock(elapsed)} resting={active && !phase} paused={pausedAt !== null} phaseLabel={copy?.label}
       density={coachV79.density} headerSlot={coachV79.headerSlot} restAction={restTrigger} compactAction={compactRestTrigger} /> : referenceClock}
     {!coachV79 && (referenceActions ? <div className="client-reference-timer-actions">
       <button type="button" className="secondary client-reference-pause" disabled={!onReferencePauseToggle}
