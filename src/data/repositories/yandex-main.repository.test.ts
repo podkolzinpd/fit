@@ -873,7 +873,7 @@ describe('Yandex main repository', () => {
     }
   })
 
-  it('rejects a custom exercise photo url request instead of hitting the network (YAFIT-521 gap, see FEATURE_PARITY.md)', async () => {
+  it('rejects a custom exercise photo URL outside the client pilot without hitting the network', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor)

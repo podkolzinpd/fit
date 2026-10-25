@@ -106,3 +106,5 @@
 - PR5 локально: targeted77/77 и typecheck passed; постоянная photo-приёмка4/4 (обе темы390/430 WebKit/Chromium). Реальные локальные API/PG/S3 browser8/8: lost reply → signing failure → stable retry → reload; один UUID/одна запись, file fetch из реального S3. Снимки light reload/dark retained просмотрены. Физический iPhone/реальный production upload не проверены. Финальная интеграция и публикация следуют после PR4.
 
 - PR5 финальная локальная приёмка: полный npm run check exit0; регрессия прежнего ввода/клавиатуры/отдыха и исправлений1–3 —96/96; full-card drag и swipe set/exercise —18/18. Без изменения Live, CSS, design-code, routing/rollout. Финальное основание обновляется после опубликованногоPR4, затем CI и самостоятельный штатный выпуск.
+
+- Сверка документации PR5: прежняя строка Exercises в FEATURE_PARITY и название trainer-only unsupported теста уточнены — новый photo contract ограничен клиентским пилотом, исторический общий gap не выдаётся за текущий статус этого пилота. Assertions/код теста не менялись.
