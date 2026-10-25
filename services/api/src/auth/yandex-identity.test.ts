@@ -107,6 +107,17 @@ describe('YandexIdentityClient', () => {
     await expect(client.verifyAccessToken('token')).rejects.toBeInstanceOf(
       YandexIdentityUnavailableError,
     )
+    await expect(client.verifyAccessToken('token')).rejects.toMatchObject({ failure: 'network' })
+  })
+
+  it.each([
+    { response: () => new Response('private-upstream-body', { status: 502 }), failure: 'http', httpStatus: 502 },
+    { response: () => new Response('private-invalid-json'), failure: 'invalid_response' },
+  ])('preserves only safe $failure metadata from unavailable identity responses', async ({ response, failure, httpStatus }) => {
+    const client = new YandexIdentityClient({ expectedClientId: CLIENT_ID,
+      fetchImplementation: vi.fn().mockResolvedValue(response()) })
+    await expect(client.verifyAccessToken('private-token')).rejects.toMatchObject({ failure, httpStatus })
+    await expect(client.verifyAccessToken('private-token')).rejects.not.toThrow(/private-/)
   })
 })
 

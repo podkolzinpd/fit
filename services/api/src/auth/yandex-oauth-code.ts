@@ -10,7 +10,10 @@ export class YandexOAuthCodeRejectedError extends Error {
 }
 
 export class YandexOAuthCodeUnavailableError extends Error {
-  constructor() {
+  constructor(
+    readonly failure: 'network' | 'http' | 'invalid_response' | 'unknown' = 'unknown',
+    readonly httpStatus?: number,
+  ) {
     super('Yandex OAuth token service is unavailable')
     this.name = 'YandexOAuthCodeUnavailableError'
   }
@@ -52,21 +55,21 @@ export class YandexOAuthCodeClient implements YandexOAuthCodeProvider {
         }),
       })
     } catch {
-      throw new YandexOAuthCodeUnavailableError()
+      throw new YandexOAuthCodeUnavailableError('network')
     }
     if (response.status === 400 || response.status === 401) {
       throw new YandexOAuthCodeRejectedError()
     }
-    if (!response.ok) throw new YandexOAuthCodeUnavailableError()
+    if (!response.ok) throw new YandexOAuthCodeUnavailableError('http', response.status)
 
     let payload: unknown
     try {
       payload = await response.json()
     } catch {
-      throw new YandexOAuthCodeUnavailableError()
+      throw new YandexOAuthCodeUnavailableError('invalid_response')
     }
     const token = readAccessToken(payload)
-    if (token === undefined) throw new YandexOAuthCodeUnavailableError()
+    if (token === undefined) throw new YandexOAuthCodeUnavailableError('invalid_response')
     return token
   }
 }
