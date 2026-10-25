@@ -2382,3 +2382,64 @@ test('client priority error handling stays outside other client accounts', async
   await expect(section.getByText('Вид карты тела недоступен', { exact: true })).toHaveCount(0)
   await expect(page.locator('.client-workout-reference')).toHaveCount(0)
 })
+
+for (const theme of ['light', 'dark']) test(`client custom photo survives failures and reload ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [] })
+  let saved: Record<string, unknown> | undefined
+  let imageUrl = '', lostReply = true, signingFailure = true
+  const attempts: string[] = []
+  await page.route('**/v1/**', async route => {
+    const request = route.request(), path = new URL(request.url()).pathname
+    if (path === '/v1/custom-exercises/with-photo') {
+      const body = request.postDataJSON() as { id: string; draft: object; image: { dataUrl: string; width: number; height: number; sizeBytes: number } }
+      attempts.push(body.id); imageUrl = body.image.dataUrl
+      saved = { ...body.draft, id: body.id, createdBy: pilotId, archivedAt: null, version: 1,
+        image: { path: `${pilotId}/${body.id}/${'a'.repeat(64)}.jpg`, mimeType: 'image/jpeg', width: body.image.width, height: body.image.height, sizeBytes: body.image.sizeBytes, sha256: 'a'.repeat(64) } }
+      if (lostReply) { lostReply = false; return route.fulfill({ status: 503, json: { error: 'service_unavailable' } }) }
+      return route.fulfill({ status: 201, json: { exercise: saved } })
+    }
+    if (/^\/v1\/custom-exercises\/[^/]+\/photo$/.test(path)) {
+      if (signingFailure) { signingFailure = false; return route.fulfill({ status: 503, json: { error: 'service_unavailable' } }) }
+      return route.fulfill({ json: { url: imageUrl } })
+    }
+    if (path === '/v1/training-data' && saved) return route.fulfill({ json: { accessMode: 'read_only', customExercises: [saved], workouts: [], attention: [], attentionPreferences: [], hasMoreWorkouts: false, totalWorkouts: 0 } })
+    return route.fallback()
+  })
+  await page.goto('/workouts/new')
+  await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    saved = undefined; lostReply = signingFailure = true; attempts.splice(0)
+    await picker.getByRole('button', { name: 'Создать упражнение', exact: true }).click()
+    const name = `Собственное упражнение с фото ${width}`
+    await picker.getByLabel('Название', { exact: true }).fill(name)
+    await picker.locator('.picker-categories').getByRole('button', { name: 'Грудь', exact: true }).click()
+    const source = await page.evaluate(() => {
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 8
+      const context = canvas.getContext('2d')!; context.fillStyle = '#b8f44a'; context.fillRect(0, 0, 8, 8)
+      return canvas.toDataURL('image/png')
+    })
+    await picker.getByLabel('Выбрать фото', { exact: true }).setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from(source.split(',')[1]!, 'base64') })
+    const submit = picker.getByRole('button', { name: 'Сохранить упражнение', exact: true })
+    await expect(picker.getByRole('img', { name: 'Фото упражнения', exact: true })).toBeVisible()
+    for (let failure = 0; failure < 2; failure++) {
+      await submit.click(); await expect(picker.locator('.error')).toBeVisible(); await expect(submit).toBeEnabled()
+      await expect(picker.getByLabel('Название', { exact: true })).toHaveValue(name)
+      await expect(picker.getByRole('img', { name: 'Фото упражнения', exact: true })).toBeVisible()
+    }
+    await page.screenshot({ path: info.outputPath(`photo-retained-${width}.png`) })
+    await submit.click(); await expect(picker.getByLabel('Название', { exact: true })).toHaveCount(0)
+    expect(attempts).toHaveLength(3); expect(new Set(attempts).size).toBe(1)
+    await page.reload(); await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
+    await picker.getByRole('textbox', { name: 'Поиск упражнения', exact: true }).fill(name)
+    const item = picker.locator('.picker-item').filter({ hasText: name })
+    await expect(item).toHaveCount(1)
+    const image = item.locator('img').first()
+    await expect(image).toBeVisible()
+    await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`photo-reloaded-${width}.png`) })
+  }
+})
