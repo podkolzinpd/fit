@@ -8,8 +8,12 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-pinned { position: relative; top: auto; z-index: 8; background: transparent; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-timer-toolbar { position: relative; }
 .coach-live-v79 .coach-v79-timer { position: relative; isolation: isolate; }
-.coach-live-v79 .coach-v79-glow { position: absolute; z-index: -1; pointer-events: none; inset: -52px -2px auto; height: 587px; opacity: var(--v79-glow-opacity); background-image: url('../assets/coach-live-v79/glow-inner.png'), url('../assets/coach-live-v79/glow-middle.svg'), url('../assets/coach-live-v79/glow-outer.svg'); background-size: 267px 259px, 419px 540px, 543px 587px; background-position: center top, center -159px, center -140px; background-repeat: no-repeat; }
-.coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-glow { background: var(--lime-yellow); mask-image: url('../assets/coach-live-v79/glow-inner.png'), url('../assets/coach-live-v79/glow-middle.svg'), url('../assets/coach-live-v79/glow-outer.svg'); mask-size: 267px 259px, 419px 540px, 543px 587px; mask-position: center top, center -159px, center -140px; mask-repeat: no-repeat; }
+.coach-live-v79 .coach-v79-glow { position: absolute; z-index: -1; pointer-events: none; inset: -52px -2px auto; height: 587px; opacity: var(--v79-glow-opacity); }
+.coach-live-v79 .coach-v79-glow::before, .coach-live-v79 .coach-v79-glow::after { content: ''; position: absolute; inset: 0; transition: opacity .48s cubic-bezier(.22,1,.36,1); }
+.coach-live-v79 .coach-v79-glow::before { background-image: url('../assets/coach-live-v79/glow-inner.png'), url('../assets/coach-live-v79/glow-middle.svg'), url('../assets/coach-live-v79/glow-outer.svg'); background-size: 267px 259px, 419px 540px, 543px 587px; background-position: center top, center -159px, center -140px; background-repeat: no-repeat; opacity: 1; }
+.coach-live-v79 .coach-v79-glow::after { background: var(--lime-yellow); mask-image: url('../assets/coach-live-v79/glow-inner.png'), url('../assets/coach-live-v79/glow-middle.svg'), url('../assets/coach-live-v79/glow-outer.svg'); mask-size: 267px 259px, 419px 540px, 543px 587px; mask-position: center top, center -159px, center -140px; mask-repeat: no-repeat; opacity: 0; }
+.coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-glow::before { opacity: 0; }
+.coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-glow::after { opacity: 1; }
 .coach-live-v79 .coach-v79-timer[data-state='paused'] .coach-v79-glow { filter: grayscale(1); opacity: calc(var(--v79-glow-opacity) * .6); }
 .coach-live-v79 .coach-v79-large-clock { position: relative; height: 156px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--lime-accent); opacity: var(--v79-large-opacity); transition: height .48s cubic-bezier(.22,1,.36,1), color .48s cubic-bezier(.22,1,.36,1); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-large-clock .coach-live-digits { font-size: 60px; line-height: 66px; letter-spacing: -2px; }
@@ -35,4 +39,51 @@
 .coach-live-v79 .coach-v79-paused { color: var(--lime-text-secondary); font-size: 32px; line-height: 40px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .long-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-clock.long-clock .coach-live-digits { font-size: 20px; line-height: 28px; }
-@media (prefers-reduced-motion: reduce) { .coach-live-v79 .coach-v79-large-clock { transition: none; } }
+/* Source WorkoutHeader: restEntryScale .4→1, spring540/damping28.5/mass1.
+   Sample the analytical spring at60Hz; CSS owns only presentation, no clocks. */
+.coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-large-clock > .coach-live-digits { animation: coach-v79-rest-entry .6s linear, coach-v79-face-in .22s cubic-bezier(.22,1,.36,1); }
+.coach-live-v79 .coach-v79-timer[data-state='live'] .coach-v79-large-clock > .coach-live-digits { animation: coach-v79-face-in .12s cubic-bezier(.22,1,.36,1); }
+@keyframes coach-v79-face-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes coach-v79-rest-entry {
+  0.000% { transform: scale(0.400000); }
+  2.778% { transform: scale(0.438182); }
+  5.556% { transform: scale(0.528179); }
+  8.333% { transform: scale(0.639786); }
+  11.111% { transform: scale(0.751672); }
+  13.889% { transform: scale(0.850536); }
+  16.667% { transform: scale(0.929643); }
+  19.444% { transform: scale(0.987136); }
+  22.222% { transform: scale(1.024407); }
+  25.000% { transform: scale(1.044707); }
+  27.778% { transform: scale(1.052059); }
+  30.556% { transform: scale(1.050492); }
+  33.333% { transform: scale(1.043563); }
+  36.111% { transform: scale(1.034117); }
+  38.889% { transform: scale(1.024220); }
+  41.667% { transform: scale(1.015208); }
+  44.444% { transform: scale(1.007811); }
+  47.222% { transform: scale(1.002289); }
+  50.000% { transform: scale(0.998586); }
+  52.778% { transform: scale(0.996449); }
+  55.556% { transform: scale(0.995539); }
+  58.333% { transform: scale(0.995499); }
+  61.111% { transform: scale(0.996005); }
+  63.889% { transform: scale(0.996791); }
+  66.667% { transform: scale(0.997658); }
+  69.444% { transform: scale(0.998473); }
+  72.222% { transform: scale(0.999161); }
+  75.000% { transform: scale(0.999687); }
+  77.778% { transform: scale(1.000051); }
+  80.556% { transform: scale(1.000272); }
+  83.333% { transform: scale(1.000377); }
+  86.111% { transform: scale(1.000398); }
+  88.889% { transform: scale(1.000364); }
+  91.667% { transform: scale(1.000300); }
+  94.444% { transform: scale(1.000225); }
+  97.222% { transform: scale(1.000151); }
+  100.000% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach-live-v79 .coach-v79-large-clock, .coach-live-v79 .coach-v79-glow::before, .coach-live-v79 .coach-v79-glow::after { transition: none; }
+  .coach-live-v79 .coach-v79-timer[data-state] .coach-v79-large-clock > .coach-live-digits { animation: none; }
+}
