@@ -20,6 +20,21 @@ function renderFields(onCommit = vi.fn()) {
 }
 
 describe('RunMetricsFields', () => {
+  it.each([false, true])('keeps distance, pace and rowing input contracts in live layout=%s', async (liveLayout) => {
+    const user = userEvent.setup(), commit = vi.fn()
+    const { container, rerender } = render(<RunMetricsFields liveLayout={liveLayout} reference rowing idPrefix="layout-row" durationSec={300} distanceKm={1.02} strokeRate={24}
+      inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция" distanceUnitLabel="Единица дистанции" onCommit={commit} />)
+    const rate = screen.getByLabelText('Гребков в минуту')
+    const distanceField = container.querySelector('.run-distance-field')!
+    expect(distanceField.contains(rate)).toBe(!liveLayout)
+    expect(distanceField.contains(screen.getByText('Темп 2:27/500 м'))).toBe(!liveLayout)
+    await user.clear(rate); await user.type(rate, '28'); await user.tab()
+    expect(commit).toHaveBeenLastCalledWith({ reps: 28 })
+    rerender(<RunMetricsFields liveLayout={liveLayout} reference rowing idPrefix="layout-row" durationSec={300} distanceKm={1.02} strokeRate={28}
+      inputClassName="test-input" durationLabel="Время" distanceLabel="Дистанция" distanceUnitLabel="Единица дистанции" onCommit={commit} />)
+    expect(screen.getByLabelText('Гребков в минуту')).toBe(rate)
+    expect(rate).toHaveValue(28)
+  })
   it('plan input commits decimal distance and rowing rate while focused without rounding units', async () => {
     const user = userEvent.setup()
     const commit = vi.fn()

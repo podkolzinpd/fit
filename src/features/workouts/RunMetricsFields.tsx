@@ -10,6 +10,7 @@ import {
 import { WorkoutDurationField } from './WorkoutDurationField'
 
 interface RunMetricsFieldsProps {
+  liveLayout?: boolean
   reference?: boolean
   planInput?: boolean
   loadField?: ReactNode
@@ -36,6 +37,7 @@ interface RunMetricsFieldsProps {
 }
 
 export function RunMetricsFields({
+  liveLayout = false,
   reference = false,
   planInput = false,
   loadField,
@@ -123,9 +125,23 @@ export function RunMetricsFields({
       {loadField && <span>Время (необязательно)</span>}
       {reference ? <div className="coach-live-metric">{durationControl}<span className="coach-live-field-unit" aria-hidden="true">мин:с</span></div> : durationControl}
     </div>
+  const strokeRateField = rowing && <label className={`rowing-stroke-rate-field${liveLayout ? ' live-metric-field' : ''}`}>
+    <span className={liveLayout ? 'live-metric-label' : undefined}>{liveLayout ? 'Гребки/мин' : 'Гребков в минуту'}</span>
+    <input className={`${inputClassName}${planStrokeRateHint ? ' plan-hint' : ''}`} name={strokeRateName} aria-label="Гребков в минуту"
+      type="number" inputMode="numeric" autoComplete={reference ? 'off' : undefined} enterKeyHint={planInput ? 'next' : undefined}
+      min="0" step="1" placeholder="—" value={strokeRateText} disabled={disabled}
+      onChange={(event) => {
+        const value = event.target.value
+        setStrokeRateText(value)
+        if (planInput && (value === '' || /^\d+$/.test(value) && Number.isFinite(Number(value)))) onCommit?.({ reps: value === '' ? undefined : Number(value) })
+      }} onBlur={commitStrokeRate} />
+  </label>
+  const paceLine = !loadField && <small className={liveLayout ? 'live-metrics-pace' : undefined}>{optionalDistance ? 'По дисплею тренажёра' : pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>
+  const liveDurationField = <div className="live-metric-field run-duration-field"><span className="live-metric-label">{loadField ? 'Время · необяз.' : 'Время'}</span>{reference ? <div className="coach-live-metric">{durationControl}<span className="coach-live-field-unit" aria-hidden="true">мин:с</span></div> : durationControl}</div>
   return <>
-    {loadField ?? durationField}
-    <div className="run-distance-field">
+    {loadField ?? (liveLayout ? liveDurationField : durationField)}
+    <div className={liveLayout ? 'run-distance-field live-metric-field' : 'run-distance-field'}>
+      {liveLayout && <span className="live-metric-label">Дистанция</span>}
       {!distanceVisible ? <button type="button" className="run-distance-add" disabled={disabled} onClick={() => setDistanceVisible(true)}>+ Добавить дистанцию</button> : <>
       <div className="run-distance-control">
         <label className="sr-only" htmlFor={`${idPrefix}-distance`}>{distanceLabel}</label>
@@ -172,33 +188,13 @@ export function RunMetricsFields({
           </select>
         </span>
       </div>
-      {!loadField && <small>{optionalDistance ? 'По дисплею тренажёра' : pace ? `Темп ${pace}` : `Темп —${rowing ? '/500 м' : ''}`}</small>}
+      {!liveLayout && paceLine}
       {optionalDistance && !disabled && <button type="button" className="run-distance-remove" aria-label="Убрать дистанцию" onClick={hideDistance}>Убрать</button>}
-      {rowing && <label className="rowing-stroke-rate-field">
-        <span>Гребков в минуту</span>
-        <input
-          className={`${inputClassName}${planStrokeRateHint ? ' plan-hint' : ''}`}
-          name={strokeRateName}
-          aria-label="Гребков в минуту"
-          type="number"
-          inputMode="numeric"
-          autoComplete={reference ? 'off' : undefined}
-          enterKeyHint={planInput ? 'next' : undefined}
-          min="0"
-          step="1"
-          placeholder="—"
-          value={strokeRateText}
-          disabled={disabled}
-          onChange={(event) => {
-            const value = event.target.value
-            setStrokeRateText(value)
-            if (planInput && (value === '' || /^\d+$/.test(value) && Number.isFinite(Number(value)))) onCommit?.({ reps: value === '' ? undefined : Number(value) })
-          }}
-          onBlur={commitStrokeRate}
-        />
-      </label>}
+      {!liveLayout && strokeRateField}
       </>}
     </div>
-    {loadField && durationField}
+    {loadField && (liveLayout ? liveDurationField : durationField)}
+    {liveLayout && strokeRateField}
+    {liveLayout && distanceVisible && paceLine}
   </>
 }

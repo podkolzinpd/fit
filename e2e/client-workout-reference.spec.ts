@@ -5,6 +5,166 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+test('client Live metrics and superset preserve final input and notes', async ({ page }, info) => {
+  await page.addInitScript(id => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark')
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+  }, pilotId)
+  const source = coachGestureWorkout(true, 4)
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  Object.assign(source.exercises[0]!, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
+  source.exercises[0]!.sets = source.exercises[0]!.sets.map(set => ({ ...set, weightKg: undefined, reps: 24, durationSec: 300, distanceKm: 1.02 }))
+  source.exercises[1]!.trainerComment = 'Сохраняйте технику'
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.route('**/v1/workout-exercises/*/comment', async route => {
+    const exercise = backend.getWorkouts()[0]!.exercises.find(item => route.request().url().includes(item.id))!
+    exercise.clientNote = (route.request().postDataJSON() as { comment: string }).comment
+    const current = backend.getWorkouts()[0]!
+    current.version += 1
+    await route.fulfill({ json: { workout: { version: current.version } } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.client-workout-reference')).toBeVisible()
+  await expect(page.getByLabel('Гребков в минуту').first()).toBeVisible()
+  const group = page.locator('.client-live-circuit').first()
+  await group.scrollIntoViewIfNeeded()
+  await group.screenshot({ path: info.outputPath('live-superset-metrics-after.png') })
+  await expect(group.locator('.circuit-round-label')).toHaveCount(0)
+  const row = group.locator('form[data-live-set-id]').first()
+  const fields = row.locator('.live-metric-field')
+  await expect(fields).toHaveCount(3)
+  const bounds = await fields.evaluateAll(elements => elements.map(element => { const r = element.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width } }))
+  expect(bounds[0]!.y).toBe(bounds[1]!.y)
+  expect(bounds[2]!.y).toBeGreaterThan(bounds[0]!.y)
+  expect(bounds[2]!.width).toBeGreaterThan(bounds[0]!.width * 1.9)
+  const stroke = row.getByLabel('Гребков в минуту')
+  await stroke.fill('28')
+  const handle = await stroke.elementHandle()
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(28)
+  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  expect(await handle!.evaluate(element => element.isConnected)).toBe(true)
+  const confirmedAt = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
+  await stroke.fill('29'); await stroke.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(29)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
+  await group.getByRole('button', { name: 'Моя заметка: Гребной тренажёр', exact: true }).click()
+  const note = group.getByRole('textbox', { name: 'Заметка: Гребной тренажёр', exact: true })
+  await note.fill('Держать темп'); await note.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.clientNote).toBe('Держать темп')
+  expect(backend.getWorkouts()[0]!.exercises[1]!.trainerComment).toBe('Сохраняйте технику')
+  await page.reload()
+  await expect(page.getByLabel('Гребков в минуту').first()).toHaveValue('29')
+})
+
+const liveMetricCases = [
+  { ref: 'barbell-squat', kind: 'strength', count: 3 },
+  { ref: 'push-up', kind: 'reps', count: 3 },
+  { ref: 'vital-barbell-hold-ex010', kind: 'duration', count: 3 },
+  { ref: 'farmer-carry', kind: 'distance', count: 4 },
+  { ref: 'running', kind: 'distance', count: 3 },
+  { ref: 'vital-stair-climber', kind: 'duration', count: 3 },
+  { ref: 'custom-metrics', kind: 'strength', count: 3 },
+] as const
+
+// Each measurement contract once in a single card and once inside a group.
+// Theme/size/density are covered by the independent non-mutating visual matrix.
+for (const grouped of [false, true]) for (const metric of liveMetricCases) test(`client Live metric contract ${metric.ref} grouped-${grouped}`, async ({ page }) => {
+  await page.addInitScript(id => { localStorage.setItem(`fit.rpeDisplay.${id}`, 'true'); localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false') }, pilotId)
+  const source = coachGestureWorkout(grouped, grouped ? 2 : 1), exercise = source.exercises[0]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  Object.assign(exercise, { source: metric.ref === 'custom-metrics' ? 'custom' : 'system', ref: metric.ref, inputKind: metric.kind })
+  exercise.sets.forEach(set => Object.assign(set, { weightKg: 20, reps: 12, durationSec: 120, distanceKm: metric.kind === 'distance' ? 0.4 : undefined, rpe: 8 }))
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
+  await expect(row.locator('.live-metric-field')).toHaveCount(metric.count)
+  const rpe = row.getByLabel('Фактический RPE')
+  await rpe.selectOption('9')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.rpe).toBe(9)
+  await page.reload()
+  await expect(row.getByLabel('Фактический RPE')).toHaveValue('9')
+})
+
+test('client Live inactive supersets keep manual expansion and ragged rounds', async ({ page }) => {
+  await page.addInitScript(id => localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'), pilotId)
+  const source = coachGestureWorkout(true, 4)
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  // A second independent group, with historical unequal set counts.
+  source.exercises[3]!.blockId = source.exercises[2]!.blockId
+  source.exercises[2]!.blockType = source.exercises[3]!.blockType = 'group'
+  source.exercises[3]!.sets.pop()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const group = page.locator('.client-live-circuit').nth(1)
+  const toggle = group.locator('.client-circuit-toggle')
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(group.locator('.client-circuit-body')).toBeHidden()
+  await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  const field = group.getByLabel('Фактический вес', { exact: true }).first()
+  await field.fill('32.5')
+  const node = await field.elementHandle()
+  await expect(field).toHaveValue('32.5')
+  await expect(field).toBeFocused()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[2]!.sets[0]!.fact.weightKg).toBe(32.5)
+  await expect(field).toBeFocused()
+  await toggle.click()
+  await expect(group.locator('.client-circuit-body')).toBeHidden()
+  await toggle.click()
+  expect(await node!.evaluate(element => element.isConnected)).toBe(true)
+  await expect(field).toHaveValue('32.5')
+  const round = group.locator('.circuit-round').last()
+  await round.getByRole('button', { name: /Круг 2/ }).click()
+  await expect(round.locator('form[data-live-set-id]')).toHaveCount(1)
+  await expect(group.getByRole('button', { name: 'Добавить круг', exact: true })).toBeVisible()
+})
+
+// Visual axes cover responsive wrapping, theme, existing density and media.
+// Mutations are deliberately not repeated across this matrix.
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const animation of [false, true]) test(`client Live metric grid visual ${theme} ${density} media-${animation}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density, animation }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, String(animation))
+    localStorage.setItem(`fit.rpeDisplay.${id}`, 'true')
+  }, { id: pilotId, theme, density, animation })
+  const source = coachGestureWorkout(true, 2)
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  Object.assign(source.exercises[0]!, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
+  Object.assign(source.exercises[1]!, { ref: 'barbell-squat', name: 'Приседания со штангой с длинным названием упражнения' })
+  source.exercises[0]!.sets.forEach(set => Object.assign(set, { weightKg: undefined, durationSec: 300, distanceKm: 1.02, reps: 24, rpe: 8 }))
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const group = page.locator('.client-live-circuit').first()
+  const row = group.locator('form[data-live-set-id]').first()
+  await expect(row.locator('.live-metric-field')).toHaveCount(4)
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await group.screenshot({ path: info.outputPath(`grid-${width}.png`) })
+    const geometry = await row.evaluate(form => {
+      const cells = [...form.querySelectorAll('.live-metric-field')].map(element => element.getBoundingClientRect())
+      const check = form.querySelector('.live-set-check')!.getBoundingClientRect()
+      const pace = form.querySelector('.live-metrics-pace')!.getBoundingClientRect()
+      return { cells: cells.map(r => ({ x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width })), check: { x: check.x, bottom: check.bottom, height: check.height }, paceY: pace.y }
+    })
+    expect(geometry.cells[0]!.y).toBe(geometry.cells[1]!.y)
+    expect(geometry.cells[2]!.y).toBe(geometry.cells[3]!.y)
+    expect(geometry.cells[2]!.y).toBeGreaterThan(geometry.cells[0]!.bottom)
+    expect(geometry.check.bottom).toBe(geometry.cells[3]!.bottom)
+    expect(geometry.check.x).toBeGreaterThanOrEqual(geometry.cells[3]!.right)
+    expect(geometry.paceY).toBeGreaterThanOrEqual(geometry.check.bottom)
+    expect(geometry.check.height).toBe(density === 'original' ? 54 : 48)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await expect(group.locator('.live-header-animation, .exercise-thumbnail').first()).toHaveCount(animation ? 1 : 0)
+    const heights = await group.locator('.client-circuit-note-toggle, .overflow-trigger').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height))
+    for (const height of heights) expect(height).toBeGreaterThanOrEqual(44)
+    await group.screenshot({ path: info.outputPath(`grid-${width}.png`) })
+  }
+})
+
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const animation of [false, true]) test(`client completed cards stay compact ${theme} ${density} animation-${animation}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme, density, animation }) => {
     localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
@@ -1278,7 +1438,7 @@ test('client swipe last added superset round uses existing atomic removal', asyn
   })
   await page.goto(`/workouts/${workoutId}/live`)
   const group = page.locator('.exercise-block.live')
-  await group.getByRole('button', { name: 'Круг', exact: true }).click()
+  await group.getByRole('button', { name: 'Добавить круг', exact: true }).click()
   await expect(group.locator('.circuit-round')).toHaveCount(3)
   const round = group.locator('.circuit-round').last()
   await round.getByRole('button', { name: /Круг 3/ }).click()
