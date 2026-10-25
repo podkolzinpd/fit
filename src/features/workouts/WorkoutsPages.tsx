@@ -2599,7 +2599,17 @@ function planLine(inputKind: ExerciseSnapshot['inputKind'], set: WorkoutSet, exe
   return pace && plan ? `${plan} · темп ${pace}` : plan
 }
 
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, directInput = false, quietUnits = false, workTimer }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode }) {
+function LiveSetLayout({ client, children }: { client: boolean; children: ReactNode }) {
+  // Legacy/trainer retain the exact direct-child DOM and selector contract.
+  return client ? <div className="live-set-fields">{children}</div> : children
+}
+
+function LiveCircuitLayout({ client, expanded, children }: { client: boolean; expanded: boolean; children: ReactNode }) {
+  // Folding is presentation only: keep forms and unsent input mounted.
+  return client ? <div className="client-circuit-body" hidden={!expanded}>{children}</div> : children
+}
+
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, clientLayout = false, directInput = false, quietUnits = false, workTimer }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; clientLayout?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode }) {
   // Lime keeps confirmed facts directly editable; completion is independent of
   // field availability. The old UI retains its explicit editing mode.
   const locked = Boolean(set.confirmedAt) && !editing && !directInput
@@ -2619,7 +2629,11 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
   const factDuration = durationSeconds(set.fact.durationSec, set.fact.durationMin)
   const planDuration = durationSeconds(set.durationSec, set.durationMin)
   const distanceCapable = !allowsDurationWeight({ source, ref: exerciseRef ?? '', inputKind }) && (inputKind === 'distance' || allowsOptionalDistance({ source, ref: exerciseRef ?? '', inputKind }) || (inputKind === 'duration' && (set.distanceKm !== undefined || set.fact.distanceKm !== undefined)))
-  const metric = (control: ReactNode, unit: string) => reference ? <span className={`coach-live-metric${unit === 'RPE' ? ' coach-live-rpe-metric' : ''}`}>{control}<span className="coach-live-field-unit" aria-hidden="true">{unit}</span></span> : control
+  const metric = (control: ReactNode, unit: string) => {
+    const field = reference ? <span className={`coach-live-metric${unit === 'RPE' ? ' coach-live-rpe-metric' : ''}`}>{control}<span className="coach-live-field-unit" aria-hidden="true">{unit}</span></span> : control
+    const caption = unit === 'кг' ? 'Вес' : unit === 'повт.' ? 'Повторы' : unit === 'мин:с' ? 'Время' : unit
+    return clientLayout ? <div className="live-metric-field"><span className="live-metric-label">{caption}</span>{field}</div> : field
+  }
   const rpeField = showRpe ? metric(<select className="live-set-rpe" name="rpe" aria-label="Фактический RPE" defaultValue={set.fact.rpe ?? set.rpe ?? ''} disabled={locked}>
     <option value="">—</option>
     {RPE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -2644,11 +2658,12 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="reps" value={value(set.fact.reps, set.reps) ?? ''} />}
     {allowsDurationWeight(measurements) && weightField}
     {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />), 'мин:с')}
-    {!allowsDurationWeight(measurements) && <span className="live-set-empty" aria-hidden="true" />}
+    {!clientLayout && !allowsDurationWeight(measurements) && <span className="live-set-empty" aria-hidden="true" />}
     {rpeField}
   </>
   return <>
     <RunMetricsFields
+      liveLayout={clientLayout}
       reference={reference}
       loadField={isLoadedDistance(measurements) ? weightField : undefined}
       idPrefix={`live-run-${set.id}-${k}`}
@@ -2777,13 +2792,13 @@ export function LiveWorkoutPage() {
     setNoteState(current => ({ scope: noteScope, drafts: new Map(current.scope === noteScope ? current.drafts : []).set(exerciseId, value) }))
   }
   useEffect(() => {
-    if (!densityEnabled) return
+    if (!densityEnabled && !clientReference) return
     const frame = requestAnimationFrame(() => {
       const target = document.activeElement
       if (target instanceof HTMLElement && target.closest('.live-workout-page') && target.matches('.live-set-input, .live-set-rpe')) keepLiveInputVisible(target)
     })
     return () => cancelAnimationFrame(frame)
-  }, [densityEnabled, liveDensity])
+  }, [densityEnabled, liveDensity, clientReference, clientLiveDensity])
   const { keyboardOpen } = useAppViewport()
   useLiveInputVisibility(directLiveInput)
   const showRpeByDefault = useRpeDisplay(actor?.userId)
@@ -2874,6 +2889,8 @@ export function LiveWorkoutPage() {
   const pendingSplitOperations = useRef<Map<string, { operationId: string; expectedVersion: number }>>(new Map())
   const [lastAddedRound, setLastAddedRound] = useState<{ blockId: string; position: number } | null>(null)
   const [expandedCircuitRounds, setExpandedCircuitRounds] = useState<Set<string>>(() => new Set())
+  const [expandedClientBlocks, setExpandedClientBlocks] = useState<Set<string>>(() => new Set())
+  const [openClientNotes, setOpenClientNotes] = useState<Set<string>>(() => new Set())
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -3874,11 +3891,15 @@ export function LiveWorkoutPage() {
       onReplace={coachReference ? () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } : undefined}>{content}</WorkoutSwipe> : content
   }
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
-  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name) {
+  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name, compactKey?: string) {
     const serverNote = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
     const note = pendingNotes.get(exercise.id) ?? serverNote
     const preview = focusedNote === exercise.id ? serverNote : note
-    return <details className="live-exercise-note" data-has-note={Boolean(note.trim()) || undefined}>
+    return <details className={`live-exercise-note${compactKey ? ' client-circuit-note' : ''}`} id={compactKey ? `live-note-${compactKey}` : undefined} data-has-note={Boolean(note.trim()) || undefined}
+      {...(compactKey ? { open: openClientNotes.has(compactKey), onToggle: (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+        const open = event.currentTarget.open
+        setOpenClientNotes(previous => { if (previous.has(compactKey) === open) return previous; const next = new Set(previous); if (open) next.add(compactKey); else next.delete(compactKey); return next })
+      } } : {})}>
       <summary>{clientLime ? 'Моя заметка' : clientMode ? 'Заметка' : 'Заметка тренера'}{preview ? <span className="live-note-preview">{preview}</span> : null}</summary>
       <textarea className="exercise-comment" aria-label={`Заметка: ${displayName}`} placeholder="Заметка к упражнению…" maxLength={5000} rows={2} disabled={rootMutationPending}
         {...(coachReference ? { value: note, onChange: (event: ChangeEvent<HTMLTextAreaElement>) => captureLiveNote(exercise.id, event.currentTarget.value), onFocus: () => setFocusedNote(exercise.id) } : { defaultValue: note })}
@@ -4067,7 +4088,8 @@ export function LiveWorkoutPage() {
     }}>
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} />
+        <LiveSetLayout client={clientReference}>
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} clientLayout={clientReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}
@@ -4103,6 +4125,7 @@ export function LiveWorkoutPage() {
                   skipBlurForSet.current = null
                 }}>{visualReference && !confirmationPending && !confirmationFailed ? <CheckIcon /> : <span aria-hidden="true">{clientLime ? confirmationPending ? '…' : confirmationFailed ? 'Повтор' : 'Готово' : '✓'}</span>}</button>}
         </div>
+        </LiveSetLayout>
       </WorkoutSetRow>)}
       {(clientReference ? saveStatus === 'saving' || saveStatus === 'error' : !coachReference || saveStatus === 'error') && <div className="live-set-save-feedback"><SaveStatus status={saveStatus} error={confirmationFailed ? 'Не удалось подтвердить подход. Нажмите «Повтор».' : saveStatus === 'error' ? save.error?.message : undefined} /></div>}
       {validationError && <p className="live-set-validation" role="alert">Введите результат подхода</p>}
@@ -4484,11 +4507,24 @@ export function LiveWorkoutPage() {
         const activeCircuitSetId = blockStatus === 'current'
           ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
           : undefined
-        // Активный счётчик закреплён под таймером; в карточке не повторяем его.
-        // Меню блока остаётся доступным и во время выполнения.
-        return <div className="exercise-block live" key={block.blockId}>
-          <div className={`circuit-head${blockStatus === 'current' ? ' circuit-head-actions-only' : ''}`}>
-            {blockStatus === 'current' ? <span className="sr-only">Действия суперсета</span> : <>
+        const blockExpanded = !clientReference || blockStatus === 'current' || expandedClientBlocks.has(block.blockId)
+        const roundActions = canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
+          <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
+            onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : <AddActionLabel>{clientReference ? 'Добавить круг' : 'Круг'}</AddActionLabel>}</button>
+          {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
+            onClick={() => void requestRemoveAddedRound()}>Убрать добавленный круг</button>}
+        </div>
+        return <div className={`exercise-block live${clientReference ? ' client-live-circuit' : ''}`} key={block.blockId} onFocusCapture={clientReference ? event => {
+          if (!(event.target instanceof HTMLElement) || !event.target.matches('input, select, textarea, .workout-duration-trigger')) return
+          setExpandedClientBlocks(previous => previous.has(block.blockId) ? previous : new Set(previous).add(block.blockId))
+        } : undefined}>
+          <div className={`circuit-head${!clientReference && blockStatus === 'current' ? ' circuit-head-actions-only' : ''}`}>
+            {clientReference && blockStatus !== 'current' ? <button type="button" className="client-circuit-toggle" aria-expanded={blockExpanded}
+              onClick={() => setExpandedClientBlocks(previous => { const next = new Set(previous); if (next.has(block.blockId)) next.delete(block.blockId); else next.add(block.blockId); return next })}>
+              <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
+              <span className="circuit-counter">{blockDone ? 'Завершён' : `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'}`} · {blockExpanded ? 'Свернуть' : 'Показать'}</span>
+              {!blockExpanded && <span className="client-circuit-summary">{block.exercises.map(exercise => exercise.name).join(' · ')}</span>}
+            </button> : !clientReference && blockStatus === 'current' ? <span className="sr-only">Действия суперсета</span> : <>
               <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
               <span className="circuit-counter">{blockDone ? `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'} · завершено` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
             </>}
@@ -4507,19 +4543,15 @@ export function LiveWorkoutPage() {
             ]} />}
             {reorder}
           </div>
-          {canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
-            <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
-              onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : <AddActionLabel>Круг</AddActionLabel>}</button>
-            {canUndoAddedRound && <button type="button" className="link" disabled={rootMutationPending}
-              onClick={() => void requestRemoveAddedRound()}>Убрать добавленный круг</button>}
-          </div>}
+          <LiveCircuitLayout client={clientReference} expanded={blockExpanded}>
+          {!clientReference && roundActions}
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt)
             const roundKey = `${block.blockId}:${round.round}`
             const isCurrent = roundIndex === current
             const collapsed = !isCurrent && !expandedCircuitRounds.has(roundKey)
             const doneCount = round.items.filter(({ set }) => set.confirmedAt).length
             return <div className={`circuit-round ${roundDone ? 'done' : isCurrent ? 'current' : ''}${collapsed ? ' collapsed' : ''}`} key={round.round}>
-            {isCurrent ? <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
+            {isCurrent ? !clientReference && <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
               onClick={() => setExpandedCircuitRounds((previous) => { const next = new Set(previous); if (next.has(roundKey)) next.delete(roundKey); else next.add(roundKey); return next })}>
               <span>Круг {round.round}</span><span>{doneCount} из {round.items.length} выполнено</span><span>{collapsed ? 'Показать' : 'Свернуть'}</span>
             </button>}
@@ -4530,18 +4562,22 @@ export function LiveWorkoutPage() {
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
                 leading={coachReference ? referenceNumber(exercise) : roundIndex === 0 || clientLime && set.id === activeCircuitSetId ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
                 summary={coachReference ? referenceLiveSummary({ ...exercise, sets: [set] }) : undefined}
-                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0
-                  ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])
-                  : undefined} />
+                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 || clientReference ? <>
+                  {clientReference && showNote && <button type="button" className="client-circuit-note-toggle" aria-label={`Моя заметка: ${displayName}`} aria-expanded={openClientNotes.has(set.id)} aria-controls={`live-note-${set.id}`}
+                    onClick={() => setOpenClientNotes(previous => { const next = new Set(previous); if (next.has(set.id)) next.delete(set.id); else next.add(set.id); return next })}><MessageIcon /></button>}
+                  {(roundIndex === 0 || clientReference) && exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])}
+                </> : undefined} />
               {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {showNote && liveTrainerNote(exercise)}
               {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt,
                 liveSwipeEnabled && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
                   ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
                   : undefined)}
-              {showNote && liveCommentField(exercise, displayName)}
+              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined)}
             </section>, set.id)})}
           </div> })}
+          {clientReference && roundActions}
+          </LiveCircuitLayout>
         </div>
         }
         const content = renderBlock()
