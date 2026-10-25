@@ -20,6 +20,7 @@ const OBJECT_STORAGE_DELETE_TIMEOUT_MS = 5_000
 const CHAT_MEDIA_PREFIX = 'chat-media'
 const VITAL_MEDIA_PREFIX = 'fit-exercise-media'
 const TRAINER_PROFILE_MEDIA_PREFIX = 'trainer-profile-media'
+const CUSTOM_EXERCISE_MEDIA_PREFIX = 'custom-exercise-media'
 const SAFE_OBJECT_PATH = /^[A-Za-z0-9][A-Za-z0-9/_.-]{0,511}$/
 
 export const VITAL_MEDIA_CACHE_CONTROL = 'private, max-age=3000, immutable'
@@ -59,7 +60,7 @@ export interface MediaObjectStorage {
   ): Promise<void>
 }
 
-export type MediaNamespace = 'chat-media' | 'fit-exercise-media' | 'trainer-profile-media'
+export type MediaNamespace = 'chat-media' | 'fit-exercise-media' | 'trainer-profile-media' | 'custom-exercise-media'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -84,6 +85,7 @@ function isExistingObject(error: unknown): boolean {
 function namespacePrefix(namespace: MediaNamespace): string {
   if (namespace === 'chat-media') return CHAT_MEDIA_PREFIX
   if (namespace === 'trainer-profile-media') return TRAINER_PROFILE_MEDIA_PREFIX
+  if (namespace === 'custom-exercise-media') return CUSTOM_EXERCISE_MEDIA_PREFIX
   return VITAL_MEDIA_PREFIX
 }
 

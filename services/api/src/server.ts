@@ -1,4 +1,5 @@
 import { buildApp } from './app.js'
+import { DatabasePilotCustomExercisePhotos } from './custom-exercise-photo.js'
 import { aiFunctionsEnabled } from './ai-functions-enabled.js'
 import { DatabaseWorkoutHomeReader } from './workout-home-reader.js'
 import { YandexIdentityClient } from './auth/yandex-identity.js'
@@ -239,6 +240,9 @@ const yandexMediaStorage = mediaStorageConfig === undefined
 const pilotTrainerProfiles = databasePool === undefined
   ? undefined
   : new DatabasePilotTrainerProfiles(databasePool, yandexMediaStorage)
+const pilotCustomExercisePhotos = databasePool === undefined || yandexMediaStorage === undefined
+  ? undefined
+  : new DatabasePilotCustomExercisePhotos(databasePool, yandexMediaStorage)
 const chatMediaStore = yandexMediaStorage !== undefined
   ? new YandexChatMediaStore(yandexMediaStorage)
   : supabaseBridgeConfig === undefined
@@ -272,6 +276,7 @@ const app = buildApp(
     ...(pilotPushNotifications === undefined ? {} : { pilotPushNotifications }),
     ...(pilotChat === undefined ? {} : { pilotChat }),
     ...(chatMediaStore === undefined ? {} : { chatMediaStore }),
+    ...(pilotCustomExercisePhotos === undefined ? {} : { pilotCustomExercisePhotos }),
     ...(legacyChatMediaBridge === undefined ? {} : { legacyChatMediaBridge }),
     ...(pilotClientsReader === undefined ? {} : { pilotClientsReader }),
     ...(pilotConnectionsReader === undefined ? {} : { pilotConnectionsReader }),

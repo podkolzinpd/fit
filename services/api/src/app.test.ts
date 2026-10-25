@@ -1,3 +1,4 @@
+import { CustomExercisePhotoError, type PilotCustomExercisePhotos } from './custom-exercise-photo.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { DatabaseConnection, DatabasePool } from './db/types.js'
@@ -6061,5 +6062,56 @@ describe('pilot assistant state', () => {
     })
     expect(turnResponse.statusCode).toBe(401)
     expect(turnRunner.runTurn).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('custom exercise private photo API', () => {
+  const id = '10000000-0000-4000-8000-000000000071', token = 'p'.repeat(43)
+  const image = { dataUrl: 'data:image/jpeg;base64,/9j/2Q==', mimeType: 'image/jpeg', width: 8, height: 8, sizeBytes: 4 }
+  const draft = { name: 'Synthetic photo exercise', muscleGroup: 'chest', inputKind: 'strength' }
+  function fixture() {
+    const create = vi.fn<PilotCustomExercisePhotos['create']>().mockResolvedValue({
+      id, name: draft.name, muscleGroup: 'chest', inputKind: 'strength', primaryMuscleDetail: null, equipment: null,
+      description: null, archivedAt: null, version: 1, createdBy: id,
+      image: { path: `${id}/${id}/${'a'.repeat(64)}.jpg`, mimeType: 'image/jpeg', width: 8, height: 8, sizeBytes: 4, sha256: 'a'.repeat(64) },
+    })
+    const sign = vi.fn<PilotCustomExercisePhotos['sign']>().mockResolvedValue({ url: 'https://storage.example/private.jpg' })
+    const app = buildApp({ pilotCustomExercisePhotos: { create, sign }, logger: false }); apps.push(app)
+    return { app, create, sign }
+  }
+  it('validates auth, mode and file before storage or database calls', async () => {
+    const { app, create } = fixture()
+    for (const [headers, payload, expected] of [
+      [{}, { id, draft, image }, 401],
+      [{ 'x-fit-session': token, 'x-fit-pilot-session': token }, { id, draft, image }, 401],
+      [{ 'x-fit-pilot-session': token }, { id, draft, image }, 403],
+      [{ 'x-fit-session': token }, { id: '../bad', draft, image }, 400],
+      [{ 'x-fit-session': token }, { id, draft, image: { ...image, width: 1601 } }, 400],
+      [{ 'x-fit-session': token }, { id, draft, image: { ...image, sizeBytes: 2097153 } }, 400],
+      [{ 'x-fit-session': token }, { id, draft, image: null }, 400],
+    ] as const) expect((await app.inject({ method: 'POST', url: '/v1/custom-exercises/with-photo', headers, payload })).statusCode).toBe(expected)
+    expect(create).not.toHaveBeenCalled()
+  })
+  it('passes the stable ID and actor and returns only confirmed metadata', async () => {
+    const { app, create, sign } = fixture()
+    const saved = await app.inject({ method: 'POST', url: '/v1/custom-exercises/with-photo', headers: { 'x-fit-session': token }, payload: { id, draft, image } })
+    expect(saved.statusCode).toBe(201); expect(saved.headers['cache-control']).toBe('no-store')
+    expect(create).toHaveBeenCalledWith({ accessMode: 'read_write', token }, id,
+      { ...draft, primaryMuscleDetail: null, equipment: null, description: null }, expect.objectContaining({ bytes: Buffer.from([255, 216, 255, 217]) }))
+    const signed = await app.inject({ method: 'GET', url: `/v1/custom-exercises/${id}/photo`, headers: { 'x-fit-session': token } })
+    expect(signed.statusCode).toBe(200); expect(signed.headers['cache-control']).toBe('no-store')
+    expect(sign).toHaveBeenCalledWith({ accessMode: 'read_write', token }, id)
+  })
+  it.each([['forbidden',403],['not_found',404],['conflict',409],['unavailable',503]] as const)('maps %s without exposing paths or file data', async (failure, expected) => {
+    const { app, create, sign } = fixture()
+    create.mockRejectedValue(new CustomExercisePhotoError(failure)); sign.mockRejectedValue(new CustomExercisePhotoError(failure))
+    for (const request of [
+      { method: 'POST' as const, url: '/v1/custom-exercises/with-photo', payload: { id, draft, image } },
+      { method: 'GET' as const, url: `/v1/custom-exercises/${id}/photo` },
+    ]) {
+      const result = await app.inject({ ...request, headers: { 'x-fit-session': token } })
+      expect(result.statusCode).toBe(expected); expect(result.body).not.toContain('data:image'); expect(result.body).not.toContain('.jpg')
+    }
   })
 })
