@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const queries = vi.hoisted(() => ({
-  createVitalMediaUrl: vi.fn(), createCustomExercisePhotoUrl: vi.fn(), parseWorkout: vi.fn(), suggestGoalCriteria: vi.fn(),
+  createCustomExercisePhotoUrl: vi.fn(), parseWorkout: vi.fn(), suggestGoalCriteria: vi.fn(),
   list: vi.fn(), create: vi.fn(), update: vi.fn(), setArchived: vi.fn(),
 }))
 const media = vi.hoisted(() => ({ upload: vi.fn() }))
@@ -22,6 +22,14 @@ describe('exercisesRepository custom exercises', () => {
   beforeEach(() => {
     for (const mock of Object.values(queries)) mock.mockReset()
     media.upload.mockReset().mockResolvedValue({ data: { path: 'ignored' }, error: null })
+  })
+
+  it('uses public local media and rejects retired private signing without transport calls', async () => {
+    expect(exercisesRepository.vitalMediaMode).toBe('public')
+    await expect(exercisesRepository.createVitalMediaUrl('vital-pro/squat.mp4', 3600))
+      .rejects.toMatchObject({ code: 'native_media_required' })
+    for (const query of Object.values(queries)) expect(query).not.toHaveBeenCalled()
+    expect(media.upload).not.toHaveBeenCalled()
   })
 
   it('maps classification, description and the stored photo path from the row', async () => {

@@ -629,6 +629,11 @@ media в Supabase, удалены. Отдельный Yandex uploader
 assets и выдача изображений/видео сохранены. Уже опубликованные объекты и
 remote secrets этим удалением не изменяются.
 
+Frontend Vital media использует native `/v1/exercise-media/sign-batch` с app-session.
+Supabase storage transport и переключатель `VITE_SUPABASE_URL` для Vital удалены.
+Локальные публичные assets доступны без подписи; приватные URL сохраняют TTL
+один час, кэш 50 минут и повторную подпись после ошибки изображения/видео.
+
 До первого `full-cohort` dry-run с фото один раз создайте private media contour
 ручным запуском `Deploy Yandex stage`: `plan_only=false`,
 `approve_media_storage=true`. Terraform создаёт versioned Standard Object

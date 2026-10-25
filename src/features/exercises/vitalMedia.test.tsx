@@ -4,10 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const { createSignedUrl } = vi.hoisted(() => ({
   createSignedUrl: vi.fn(),
 }))
-const backend = vi.hoisted(() => ({ source: 'supabase' as 'supabase' | 'yandex' }))
+const backend = vi.hoisted(() => ({ mode: 'public' as 'public' | 'signed' }))
 
 vi.mock('../../app/data-backend-context', () => ({
-  useDataBackend: () => ({ source: backend.source, exercises: { createVitalMediaUrl: createSignedUrl } }),
+  useDataBackend: () => ({ exercises: { vitalMediaMode: backend.mode, createVitalMediaUrl: createSignedUrl } }),
 }))
 
 import { useVitalMediaState, useVitalMediaUrl } from './vitalMedia'
@@ -15,7 +15,7 @@ import { useVitalMediaState, useVitalMediaUrl } from './vitalMedia'
 describe('useVitalMediaUrl', () => {
   afterEach(() => {
     cleanup()
-    backend.source = 'supabase'
+    backend.mode = 'public'
     createSignedUrl.mockReset()
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
@@ -74,64 +74,43 @@ describe('useVitalMediaUrl', () => {
 
   it('does not resolve disabled private media', () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    backend.mode = 'signed'
     const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/disabled.mp4', false))
     expect(result.current).toBeUndefined()
     expect(createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it('signs a production Gym Pro path for one hour', async () => {
+  it('signs private Gym Pro media without provider environment variables', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
-    createSignedUrl.mockResolvedValue('https://signed.example/squat')
+    backend.mode = 'signed'
+    createSignedUrl.mockResolvedValue('https://signed.example/native-squat')
 
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/squat.mp4'))
-    await waitFor(() => expect(result.current).toBe('https://signed.example/squat'))
-    expect(createSignedUrl).toHaveBeenCalledWith('vital-pro/squat.mp4', 3600)
+    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/native-squat.mp4'))
+
+    await waitFor(() => expect(result.current).toBe('https://signed.example/native-squat'))
+    expect(createSignedUrl).toHaveBeenCalledWith('vital-pro/native-squat.mp4', 3600)
   })
 
-  it('signs Yandex Gym Pro media without Supabase environment variables', async () => {
+  it('replaces a local file with a native signed URL when the media mode changes', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', '')
-    backend.source = 'yandex'
-    createSignedUrl.mockResolvedValue('https://signed.example/yandex-squat')
+    createSignedUrl.mockResolvedValue('https://signed.example/native')
+    const source = '/exercises/vital-pro/mode-switch.mp4'
+    const { result, rerender } = renderHook(() => useVitalMediaUrl(source))
+    expect(result.current).toBe(source)
+    expect(createSignedUrl).not.toHaveBeenCalled()
 
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/yandex-squat.mp4'))
-
-    await waitFor(() => expect(result.current).toBe('https://signed.example/yandex-squat'))
-    expect(createSignedUrl).toHaveBeenCalledWith('vital-pro/yandex-squat.mp4', 3600)
-  })
-
-  it('does not reuse a Supabase signed URL after the backend changes', async () => {
-    vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
-    createSignedUrl.mockResolvedValueOnce('https://signed.example/legacy')
-      .mockResolvedValueOnce('https://signed.example/yandex')
-
-    const { result, rerender } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/backend-switch.mp4'))
-    await waitFor(() => expect(result.current).toBe('https://signed.example/legacy'))
-
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     rerender()
-
-    await waitFor(() => expect(result.current).toBe('https://signed.example/yandex'))
-    expect(createSignedUrl).toHaveBeenCalledTimes(2)
+    await waitFor(() => expect(result.current).toBe('https://signed.example/native'))
+    backend.mode = 'public'
+    rerender()
+    expect(result.current).toBe(source)
+    expect(createSignedUrl).toHaveBeenCalledOnce()
   })
 
-  it('falls back silently when signing fails', async () => {
+  it('retries transient native signing failures and keeps the recovered URL', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
-    createSignedUrl.mockRejectedValue(new Error('denied'))
-
-    const { result } = renderHook(() => useVitalMediaUrl('/exercises/vital-pro/missing.mp4'))
-    await waitFor(() => expect(createSignedUrl).toHaveBeenCalled())
-    expect(result.current).toBeUndefined()
-  })
-
-  it('retries transient Yandex signing failures and keeps the recovered URL', async () => {
-    vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', '')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockRejectedValueOnce(new Error('temporary'))
       .mockResolvedValueOnce('https://signed.example/recovered')
 
@@ -143,8 +122,7 @@ describe('useVitalMediaUrl', () => {
 
   it('exposes a terminal signing failure so the image can activate its fallback frame', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', '')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockRejectedValue(new Error('temporary'))
 
     const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/missing.jpg'))
@@ -156,7 +134,7 @@ describe('useVitalMediaUrl', () => {
 
   it('re-signs a failed image once, then lets the caller show its fallback', async () => {
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValueOnce('https://signed.example/failed-load-old')
       .mockResolvedValueOnce('https://signed.example/failed-load-new')
     const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/failed-load.jpg'))
@@ -170,7 +148,7 @@ describe('useVitalMediaUrl', () => {
 
   it('deduplicates simultaneous recovery of the same media in two mounted cards', async () => {
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValueOnce('https://signed.example/shared-old')
       .mockResolvedValueOnce('https://signed.example/shared-new')
     const first = renderHook(() => useVitalMediaState('/exercises/vital-pro/shared-recovery.jpg'))
@@ -190,7 +168,7 @@ describe('useVitalMediaUrl', () => {
   it('refreshes mounted media at the shared cache expiry, including an older cached URL', async () => {
     vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValueOnce('https://signed.example/expiry-old')
       .mockResolvedValueOnce('https://signed.example/expiry-new')
     const first = renderHook(() => useVitalMediaState('/exercises/vital-pro/mounted-expiry.jpg'))
@@ -212,7 +190,7 @@ describe('useVitalMediaUrl', () => {
   it('defers hidden media and refreshes expired URLs when the app becomes visible', async () => {
     vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
     createSignedUrl.mockResolvedValueOnce('https://signed.example/resume-old')
       .mockResolvedValueOnce('https://signed.example/resume-new')
@@ -236,7 +214,7 @@ describe('useVitalMediaUrl', () => {
   it('keeps the displayed URL when proactive renewal temporarily fails', async () => {
     vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValueOnce('https://signed.example/renewal-old')
       .mockRejectedValue(new Error('temporary'))
     const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/renewal-failure.jpg'))
@@ -251,7 +229,7 @@ describe('useVitalMediaUrl', () => {
 
   it('does not refresh healthy URLs on online or visibility events', async () => {
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValue('https://signed.example/healthy')
     const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/healthy-events.jpg'))
     await waitFor(() => expect(result.current.status).toBe('ready'))
@@ -265,7 +243,7 @@ describe('useVitalMediaUrl', () => {
 
   it('does not show a previous exercise when the next private source is deferred offline', async () => {
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValueOnce('https://signed.example/offline-first')
       .mockResolvedValueOnce('https://signed.example/offline-second')
     const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
@@ -285,7 +263,7 @@ describe('useVitalMediaUrl', () => {
   it('bounds terminal signing recovery to one resume attempt', async () => {
     vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockRejectedValue(new Error('denied'))
     const { result } = renderHook(() => useVitalMediaState('/exercises/vital-pro/terminal-resume.jpg'))
     await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
@@ -309,7 +287,7 @@ describe('useVitalMediaUrl', () => {
   it('cancels expiry refresh and resume listeners when disabled or unmounted', async () => {
     vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     createSignedUrl.mockResolvedValue('https://signed.example/disabled-expiry')
     const { result, rerender, unmount } = renderHook(
       ({ enabled }) => useVitalMediaState('/exercises/vital-pro/disabled-expiry.jpg', enabled),
@@ -332,7 +310,7 @@ describe('useVitalMediaUrl', () => {
   it('ignores a completed signing request after the card was disabled', async () => {
     vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    backend.source = 'yandex'
+    backend.mode = 'signed'
     let finishSigning: (url: string) => void = () => {}
     createSignedUrl.mockImplementation(() => new Promise<string>((resolve) => { finishSigning = resolve }))
     const { result, rerender } = renderHook(
