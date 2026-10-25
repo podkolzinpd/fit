@@ -66,7 +66,7 @@ main a208339d; публичный интерфейс59d92706, UI-diff между
 | Пункт | PR | Статус | Доказательство |
 | --- | --- | --- | --- |
 | A01 | 1 | Закрыто PR#1786 /3f4c4047 | Исходный дефект воспроизведён в обеих темах/плотностях |
-| A02 | 5 | Запланировано | Три запрета подтверждены кодом/браузером |
+| A02 | 5 | Реализовано, проверяется PR5 | Freshbaseline4/4; точная версия/ID/operation и parent lock |
 | A03 | 2 | Закрыто PR#1788 /b4f2d757 | Финальные54/54 public,8/8 cohort,212 public files |
 | A04 | 3 | Закрыто PR#1794 /c34d69d3 | Finalpublic54/cohort8/native213,48:00:02 Doto просмотрен |
 | A05 | 3 | Закрыто PR#1794 /c34d69d3 | Finalpublic54/cohort8, оба окна/568px просмотрены |
@@ -128,3 +128,13 @@ PR4 окончательная локальная проверка на c34d69d3
 PR4 первая CI40174788622 остановлена: WebKit4 до тестов не поднял legacySupabase (registry Data limit/port busy); WebKit3 выявил независимый320px Progress assert:12.000015px против12px. Progress/егоCSS не менялись. Только измерение разницы DOMRect округлено до0.001CSSpx, предел12px/проверка неперекрытия сохранены; все исходные логи сохранены. Есть отдельные WebKit internal navigation/login flakes в старой lane; их причина не доказана, они не выданы за продуктовый успех. Новая ревизия проходит полныйcheck и весь официальныйCI заново.
 
 PR4 DOMRect follow-up: повторные lint/types/coverage2825/DBtypes/permissions/media прошли; сетевые policy-тесты остановлены sandbox listenEPERM. Та же оставшаяся последовательность infra/calendar/hosting/API1469+188DBskip/build/startup завершена с разрешением локальных соединений. Это одна полная цепочка с возобновлением, не отдельный чистый npmcheck-run. Продуктовые исходники и48browser-case body идентичны bacdcb7a; исходные48/48 остаются доказательством неизменённого UI, исправленный legacyassert принимает12.000015px как12px и отклоняет12.001px/выше; полныйCI проверяется заново.
+
+### PR5: актуальное состояние и границы
+
+До правки: main9fe0c14c, publishedc34d69d3 (212bytes/health), removeSet/requestRemoveLiveSet byte-identical между ними;4/4public baseline подтвердили запрет confirmed swipe в обеих темах/движках, фактический lightWebKit screenshot просмотрен. Чужой PR1797 media-only/stale; перегрузки/intent/версии подхода ещё нет, latestmigration155. Сохраняются существующие WorkoutSwipe, draftqueue, confirm dialog и atomicround path. Primary: удалить выбранный подход после явного подтверждения; нельзя удалить чужую/изменённую запись, последний подход или часть суперсета.
+
+Только clientReference получает confirmed removal с точным ID/set.version/operationId. Новая numbered156 добавляет4arg overload с version recheck под той же parent-lock, старые3args не меняются. Approval другогоsetId отвергается. Сначала waitForIdle, pendingtarget inert, старые/sibling факты и отдых сохраняются; временная ошибка использует прежнийoperationId, authoritative missing-set read восстанавливает потерянный ответ. Изменённый факт требует нового explicit approval; это дополнительно проверяется браузером. WebKit blur оболочки не превращается в ложную запись метрики; обычный input/select/timebutton autosave сохранён. Старый trainer/nonpilot контракт и last-set/superset guards сохранены.
+
+PR5 начинается пока PR4 проходит официальный mainCI: его native worker уже завершил sync/build/install и восстановил исходники. Оставшаяся PR4 проверка использует отдельные неизменяемые hosted copies; до приёмки4 они не обновляются. Пятый PR не сливается раньше полной приёмки4. Чистая собственная PG17.11 port55492 до миграций:0public tables/0application schemas; общие БД не затрагиваются. Fullsource/public298, actor/RLS/реальная гонка/grants/backup-restore/DownUp и safe canonicallocalverify ещё предстоят; подготовки/rehearsal не выдаются за actual acceptance. Physical iPhone/authnativeLive НЕ ПРОВЕРЕНО.
+
+PR5 actual DB-приёмка: новая собственная чистаяPG17.11, все180/180 tests чистые, включая backup/restore; реальная двухсоединительная гонка наблюдает parentlock через pg_blocking_pids и отклоняет stale version без потери15повторов. API actor/RLS, чужойactor, root/set conflict, replay и fingerprint, group/last-set, siblingfact/reindex/grants прошли. Только156 Down/Up прошла: old3arg retained/new4arg restored/PUBLIC denied/fit_api allowed, digest всехsetrows unchanged. Рискованный browser smoke4/4 (fresh approval after conflict + distance WebKit/Chromium) прошёл; полныйactual298 и check выполняются.

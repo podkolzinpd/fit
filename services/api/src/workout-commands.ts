@@ -621,7 +621,11 @@ export function removeLiveSet(
   setId: string,
   expectedVersion: number,
   operationId: string,
+  expectedSetVersion?: number,
 ): Promise<PilotLiveStructureResult> {
+  if (expectedSetVersion !== undefined) return runLiveStructureCommand(client,
+    'select resource_id, version, replayed from public.remove_live_set($1, $2, $3, $4)',
+    [setId, expectedVersion, operationId, expectedSetVersion])
   return runLiveStructureCommand(
     client,
     `

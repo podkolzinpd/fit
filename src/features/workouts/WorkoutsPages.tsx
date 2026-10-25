@@ -8,7 +8,7 @@ import { CoachPlanTimeField } from './CoachPlanTimeField'
 import { FitLogo } from '../../shared/FitLogo'
 import { LiveSetInput, liveNumberValue } from './LiveSetInput'
 import { keepLiveInputVisible, useLiveInputVisibility } from './live-input-visibility'
-import { coachLiveSetRemovalError } from './coach-live-set-removal'
+import { coachLiveSetRemovalError, type LiveSetRemovalIntent } from './coach-live-set-removal'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isCoachLiveDensityEnabled, isCoachPlanInputEnabled, isCoachPlanLayoutEnabled, isCoachWorkoutRedesignEnabled } from '../../app/coach-workout-redesign'
 import { useCoachLiveDensity } from '../../app/coach-live-density'
@@ -2881,6 +2881,7 @@ export function LiveWorkoutPage() {
   const [editingSets, setEditingSets] = useState<Set<string>>(() => new Set())
   // Выбранный подход определяет подсветку и адресные действия меню.
   const [expandedSetId, setExpandedSetId] = useState<string | null>(null)
+  const [removalSelectionSetId, setRemovalSelectionSetId] = useState<string | null>(null)
   // Активное упражнение относится только к текущему выполнению. Оно не меняет
   // position плана: пользователь может временно перейти к любому упражнению и
   // затем вернуться к частично выполненному.
@@ -3489,13 +3490,44 @@ export function LiveWorkoutPage() {
       (workout) => workoutsRepository.removeLastLiveRound(workout, blockId, position, crypto.randomUUID())),
     onSuccess: async () => { setLastAddedRound(null); await query.refetch() },
   })
-  const removeSet = useMutation({ mutationFn: (setId: string) => runLiveWorkoutMutation(`remove-set:${setId}`, (workout) => {
-    if (liveSwipeEnabled) {
-      const reason = coachLiveSetRemovalError(queryClient.getQueryData<Workout>(['workout', workoutId]) ?? workout, setId)
-      if (reason) return Promise.reject(new Error(reason))
-    }
-    return workoutsRepository.removeLiveSet(workout, setId)
-  }), onSuccess: async () => { await query.refetch() } })
+  const removeSet = useMutation({
+    mutationFn: async (intent: LiveSetRemovalIntent) => {
+      if (clientReference) {
+        await liveSets.waitForIdle()
+        if (intent.expectedSetVersion === undefined || !intent.operationId) throw new Error('Выберите подход и подтвердите удаление заново.')
+      }
+      try {
+        return await runLiveWorkoutMutation(`remove-set:${intent.setId}`, (workout) => {
+          if (liveSwipeEnabled) {
+            const reason = coachLiveSetRemovalError(queryClient.getQueryData<Workout>(['workout', workoutId]) ?? workout, intent.setId, clientReference ? intent : undefined)
+            if (reason) return Promise.reject(new Error(reason))
+          }
+          return workoutsRepository.removeLiveSet(workout, intent.setId, clientReference
+            ? { expectedSetVersion: intent.expectedSetVersion!, operationId: intent.operationId! } : undefined)
+        })
+      } catch (error) {
+        if (!clientReference) throw error
+        // A response can disappear after commit. Only an authoritative read of
+        // this exact missing set completes the intent; never delete another row.
+        const refreshed = await liveOperationWithTimeout(query.refetch()).catch(() => null)
+        if (refreshed?.data && !refreshed.error && !refreshed.data.exercises.some((exercise) => exercise.sets.some((set) => set.id === intent.setId))) {
+          liveWorkout.sync(refreshed.data)
+          return refreshed.data.version
+        }
+        throw error
+      }
+    },
+    onSuccess: async (_version, intent) => {
+      if (clientReference) {
+        acknowledgeLiveDraft(intent.setId, undefined, true)
+        setExpandedSetId((current) => current === intent.setId ? null : current)
+        setRemovalSelectionSetId((current) => current === intent.setId ? null : current)
+        setEditingSets((current) => { const next = new Set(current); next.delete(intent.setId); return next })
+        void invalidateWorkoutResults(queryClient)
+      }
+      await query.refetch()
+    },
+  })
   useEffect(() => {
     if (!query.data) return
     for (const [blockId, pending] of pendingRoundOperations.current) {
@@ -3819,7 +3851,7 @@ export function LiveWorkoutPage() {
   }
   const liveSyncError = save.error ?? confirm.error
   const error = appendSet.error ?? appendRound.error ?? removeRound.error ?? removeSet.error ?? removeExercise.error ?? appendExercise.error ?? reorderBlock.error ?? moveLiveBlock.error ?? mergeBlock.error ?? splitSuperset.error ?? replaceLive.error ?? commentLive.error ?? finish.error
-  const removalRetryReason = liveSwipeEnabled && removeSet.isError && removeSet.variables ? coachLiveSetRemovalError(query.data, removeSet.variables) : null
+  const removalRetryReason = liveSwipeEnabled && removeSet.isError && removeSet.variables ? coachLiveSetRemovalError(query.data, removeSet.variables.setId, clientReference ? removeSet.variables : undefined) : null
   const gestureDisabled = rootMutationPending || save.isPending || confirm.isPending || Boolean(pendingMove.current)
   async function deleteLiveExercise(exercise: WorkoutExerciseModel) {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
@@ -3897,17 +3929,26 @@ export function LiveWorkoutPage() {
       ...groupingItems,
       { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
       ...(removableSet ? [{ label: clientLime ? `Удалить подход ${exercise.sets.indexOf(removableSet) + 1}` : 'Удалить подход', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
+        if (clientReference) return requestRemoveLiveSet(exercise, removableSet)
         const setId = removableSet.id
         const message = clientLime ? `Удалить подход ${exercise.sets.indexOf(removableSet) + 1} упражнения «${exercise.name}»?` : 'Удалить этот подход?'
-        if (await askConfirm({ message, confirmLabel: 'Удалить', danger: true })) removeSet.mutate(setId)
+        if (await askConfirm({ message, confirmLabel: 'Удалить', danger: true })) removeSet.mutate({ setId })
       } }] : []),
       { label: 'Удалить упражнение', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => deleteLiveExercise(exercise) },
     ]} />
   }
   async function requestRemoveLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet) {
-    if (set.confirmedAt || exercise.sets.length <= 1 || rootMutationPending || save.isPending || confirm.isPending) return
+    if (set.confirmedAt && !clientReference || exercise.sets.length <= 1 || rootMutationPending || save.isPending || confirm.isPending) return
+    const current = queryClient.getQueryData<Workout>(['workout', workoutId]) ?? query.data
+    const currentSet = current?.exercises.find((item) => item.id === exercise.id)?.sets.find((item) => item.id === set.id)
+    if (!currentSet) return
+    const intent: LiveSetRemovalIntent = clientReference
+      ? { setId: set.id, expectedSetVersion: currentSet.version, ...(currentSet.confirmedAt ? { confirmedVersion: currentSet.version } : {}), operationId: crypto.randomUUID() }
+      : { setId: set.id }
+    if (coachLiveSetRemovalError(current, set.id, clientReference ? intent : undefined)) return
     const number = exercise.sets.findIndex((item) => item.id === set.id) + 1
-    if (await askConfirm({ message: `Удалить подход ${number} упражнения «${exercise.name}»? Введённые значения этого подхода будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeSet.mutate(set.id)
+    const detail = currentSet.confirmedAt ? 'Выполненный результат этого подхода будет удалён.' : 'Введённые значения этого подхода будут удалены.'
+    if (await askConfirm({ message: `Удалить подход ${number} упражнения «${exercise.name}»? ${detail}`, confirmLabel: 'Удалить', danger: true })) removeSet.mutate(intent)
   }
   // Стрелки ↑/↓ видны только во временном режиме перестановки.
   function liveReorder(blockId: string, isFirst: boolean, isLast: boolean) {
@@ -3932,6 +3973,7 @@ export function LiveWorkoutPage() {
     const confirmationPending = (clientLime || coachReference) && confirm.isPending && confirm.variables?.set.id === set.id
     const confirmationFailed = clientLime && confirm.isError && confirm.variables?.set.id === set.id
     const saveStatus = confirmationPending ? 'saving' : confirmationFailed ? 'error' : savingSetId === set.id ? 'saving' : saveErrorSetId === set.id ? 'error' : savedSetId === set.id ? 'saved' : 'idle'
+    const deletingSet = clientReference && removeSet.isPending && removeSet.variables?.setId === set.id
     const setNumber = label?.match(/\d+/)?.[0]
     // Отсчёт идущего подхода виден в его строке в обоих режимах; «Старт» — только
     // в «Веду сам», в «Ведёт таймер» подходы запускаются сами.
@@ -3957,22 +3999,27 @@ export function LiveWorkoutPage() {
     const validationError = validationErrorSetIds.has(set.id)
     const swipeSet = (content: ReactNode) => liveSwipeEnabled && canManageLiveStructure
       ? <WorkoutSwipe id={`set:${set.id}`} variant="set" swipeFromFields
-          disabled={Boolean(set.confirmedAt) || !roundRemoval && (exercise.blockType !== 'single' || exercise.sets.length <= 1) || gestureDisabled}
+          disabled={Boolean(set.confirmedAt && !clientReference) || !roundRemoval && (exercise.blockType !== 'single' || exercise.sets.length <= 1) || gestureDisabled}
           actionLabel={roundRemoval?.label ?? `Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`}
           onDelete={() => roundRemoval ? roundRemoval.remove() : void requestRemoveLiveSet(exercise, set)}>{content}</WorkoutSwipe>
       : content
-    return <form data-live-set-id={set.id} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
+    return <form data-live-set-id={set.id} aria-busy={deletingSet || undefined} inert={deletingSet || undefined} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
       if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
+      if (clientReference && target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe, .workout-duration-trigger, .run-distance-unit')) setRemovalSelectionSetId(set.id)
       if (target instanceof HTMLElement && target.matches('.live-set-input, .live-set-rpe')) {
         if (directLiveInput) keepLiveInputVisible(target)
         else keepLiveSetFieldVisible(target)
       }
     }} onInput={(event) => {
+      if (deletingSet) return
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)
     }} onSubmit={(event) => event.preventDefault()} onBlur={(event) => {
+      if (deletingSet) return
+      // WebKit focuses the swipe group itself. Its blur is not a metric edit.
+      if (clientReference && !(event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger'))) return
       // A utility action is not an edited metric. Closing its confirmation must
       // never turn untouched plan placeholders into a saved Live result.
       if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
@@ -4329,8 +4376,8 @@ export function LiveWorkoutPage() {
             // действия меню. При смене строки её черновик сохранён локально.
             const selectedSet = exercise.sets.find((set) => set.id === expandedSetId)
             const activeSetId = selectedSet?.id ?? exercise.sets[currentSetIndex]?.id
-            const removalTarget = clientLime ? selectedSet ?? exercise.sets[currentSetIndex] : exercise.sets[currentSetIndex]
-            const removableSet = exercise.sets.length > 1 && removalTarget && !removalTarget.confirmedAt ? removalTarget : undefined
+            const removalTarget = clientReference ? exercise.sets.find((set) => set.id === removalSelectionSetId) ?? selectedSet ?? exercise.sets[currentSetIndex] ?? exercise.sets[0] : clientLime ? selectedSet ?? exercise.sets[currentSetIndex] : exercise.sets[currentSetIndex]
+            const removableSet = exercise.sets.length > 1 && removalTarget && (!removalTarget.confirmedAt || clientReference) ? removalTarget : undefined
             const allDone = exercise.sets.every((set) => set.confirmedAt)
             // В live рабочей остаётся только текущая карточка. Завершённые
             // упражнения сжимаются в итог (тап открывает их исключительно для

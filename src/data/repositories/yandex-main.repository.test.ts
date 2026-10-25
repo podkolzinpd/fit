@@ -1101,6 +1101,18 @@ describe('Yandex main repository', () => {
     await repository.workouts.remove(item)
   })
 
+  it('keeps guarded set removal identity and set version stable across explicit retry', async () => {
+    const fetchMock = installContractFetch(); vi.stubGlobal('fetch', fetchMock); installTrainingData()
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, actor), item = await repository.workouts.get(workoutId)
+    const setId = item.exercises[0]!.sets[0]!.id, guard = { expectedSetVersion: 7, operationId: 'c94ec52e-dc52-4c84-a61e-e45f11cb6f49' }
+    await repository.workouts.removeLiveSet(item, setId)
+    await repository.workouts.removeLiveSet(item, setId, guard)
+    await repository.workouts.removeLiveSet(item, setId, guard)
+    const bodies = fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith(`/v1/workout-sets/${setId}`) && init?.method === 'DELETE').map(([, init]) => JSON.parse(String(init?.body)) as Record<string, unknown>)
+    expect(bodies[0]).not.toHaveProperty('expectedSetVersion')
+    expect(bodies.slice(1)).toEqual([{ expectedVersion: item.version, ...guard }, { expectedVersion: item.version, ...guard }])
+  })
+
   it('sends the prep countdown only when the form owns it', async () => {
     const fetchMock = installContractFetch()
     vi.stubGlobal('fetch', fetchMock)

@@ -109,6 +109,7 @@ import {
   readLiveCommentRequest,
   readLiveExerciseRequest,
   readLiveOperationRequest,
+  readLiveSetRemovalRequest,
   readLivePauseRequest,
   readLiveReorderRequest,
   readLiveMoveRequest,
@@ -3746,7 +3747,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.delete('/v1/workout-sets/:setId', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { setId } = request.params as { setId?: unknown }
-    const command = readLiveOperationRequest(request.body)
+    const command = readLiveSetRemovalRequest(request.body)
     if (sessionToken === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
@@ -3768,6 +3769,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         setId,
         command.expectedVersion,
         command.operationId,
+        command.expectedSetVersion,
       ),
       (result) => reply
         .header('cache-control', 'no-store')

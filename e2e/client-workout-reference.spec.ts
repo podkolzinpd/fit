@@ -1111,7 +1111,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   const remove = second.getByRole('button', { name: /Удалить подход 2:/ })
   await expect(remove).toBeVisible()
   await expect(second.getByLabel('Фактический вес', { exact: true })).not.toBeFocused()
-  await expect(first.locator('.workout-swipe-action')).toHaveCount(0)
+  await expect(first.locator('.workout-swipe-action')).toBeHidden()
   await remove.click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
   expect(attempts).toBe(0)
@@ -1928,4 +1928,170 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(note.locator('p')).toBeHidden()
   await note.locator('summary').click()
   expect(await note.locator('p').textContent()).toBe(source.notes)
+})
+
+// These axes affect touch hitboxes, selected-row colors and keyboard/focus
+// geometry. Both engines exercise real swipe events, not a duplicated API test.
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const width of [390, 430]) test(`client confirmed swipe explicit cancel delete and reload ${theme} ${density} ${width}`, async ({ page, browserName }, info) => {
+  await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  await page.setViewportSize({ width, height: 844 })
+  await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
+  const source = restTimerWorkout(); source.startedAt = '2026-10-21T08:58:00Z'
+  const exercise = source.exercises[0]!, target = exercise.sets[0]!, other = exercise.sets[1]!
+  const backend = await mockPilot(page, { role:'client', profileId:pilotId, clientLime:true, workouts:[source] })
+  const commands: { expectedSetVersion: number; operationId: string }[] = []
+  let releaseDelete!: () => void
+  const deleteGate = new Promise<void>(resolve => { releaseDelete = resolve })
+  await page.route('**/v1/workout-sets/*', async route => { if(route.request().method()==='DELETE') { commands.push(route.request().postDataJSON() as { operationId: string; expectedSetVersion: number }); await deleteGate } return route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const first = page.locator(`form[data-live-set-id="${target.id}"]`), second = page.locator(`form[data-live-set-id="${other.id}"]`)
+  await first.getByLabel('Фактический вес', { exact:true }).fill('35')
+  await first.getByRole('button', { name:'Готово, отдых', exact:true }).click()
+  await expect(first).toHaveClass(/confirmed/)
+  const stamp = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
+  await first.getByLabel('Фактический вес', { exact:true }).fill('37.5')
+  await first.getByLabel('Фактический вес', { exact:true }).blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(37.5)
+  // Editing a confirmed row selects a removal target, never the active work set.
+  await expect(second).toHaveClass(/current/)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(stamp)
+  await second.getByLabel('Фактический вес', { exact:true }).fill('40')
+  await second.getByLabel('Фактический вес', { exact:true }).blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact.weightKg).toBe(40)
+  const version = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.version
+  const sibling = JSON.stringify(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact)
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  expect(deadline).not.toBeNull()
+  const swipe = async () => { const gesture=await beginClientGesture(page,first,browserName,first.locator('.live-set-number')); await gesture.move(60); await gesture.end(); await first.getByRole('button',{name:/Удалить подход 1:/}).click() }
+  await swipe()
+  await expect(page.getByRole('alertdialog')).toContainText('Выполненный результат')
+  await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click()
+  expect(commands).toHaveLength(0); await expect(first).toHaveClass(/confirmed/)
+  await swipe()
+  await page.getByRole('alertdialog').getByRole('button',{name:'Удалить',exact:true}).click()
+  await expect(first).toHaveAttribute('aria-busy','true')
+  await expect(first).toHaveAttribute('inert','')
+  releaseDelete()
+  await expect(first).toHaveCount(0)
+  expect(commands).toHaveLength(1); expect(commands[0]!.expectedSetVersion).toBe(version)
+  expect(JSON.stringify(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact)).toBe(sibling)
+  await expect(second.getByLabel('Фактический вес',{exact:true})).toHaveValue('40')
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+  await page.clock.fastForward(3000)
+  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label',/Отдых превышен/)
+  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label',/Тренировка:/)
+  await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 1')
+  await expect(second.locator('.workout-swipe-action')).toHaveCount(0)
+  await page.reload()
+  await expect(first).toHaveCount(0)
+  await expect(second.getByLabel('Фактический вес',{exact:true})).toHaveValue('40')
+  await page.screenshot({path:info.outputPath('confirmed-delete.png')})
+})
+
+for (const theme of ['light','dark']) for (const failure of ['lost','retry','changed']) test(`client confirmed removal response recovery ${theme} ${failure}`, async ({page,browserName}) => {
+  await page.clock.install({ time:new Date('2026-10-21T09:00:00Z') })
+  await page.addInitScript(({id,theme})=>localStorage.setItem(`fit.clientLime.theme.${id}`,theme),{id:pilotId,theme})
+  const source=restTimerWorkout(); source.startedAt='2026-10-21T08:58:00Z'
+  const target=source.exercises[0]!.sets[0]!
+  target.confirmedAt='2026-10-21T08:59:00Z';target.fact={weightKg:30,reps:10}
+  const backend=await mockPilot(page,{role:'client',profileId:pilotId,clientLime:true,workouts:[source]})
+  const commands: {operationId:string;expectedSetVersion:number}[]=[]
+  await page.route('**/v1/workout-sets/*',async route=>{
+    if(route.request().method()!=='DELETE')return route.fallback()
+    commands.push(route.request().postDataJSON() as { operationId: string; expectedSetVersion: number })
+    if(commands.length===1){
+      const current=backend.getWorkouts()[0]!, exercise=current.exercises[0]!
+      if(failure==='lost'){
+        exercise.sets=exercise.sets.filter(set=>set.id!==target.id).map((set,position)=>({...set,position}));current.version+=1
+        return route.abort('connectionreset')
+      }
+      if(failure==='retry')return route.fulfill({status:503,json:{error:'unavailable'}})
+      const changed=exercise.sets.find(set=>set.id===target.id)!;changed.version+=1;changed.fact={weightKg:42.5,reps:8}
+      // root.version deliberately unchanged, just like a real fact save.
+    }
+    return route.fallback()
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row=page.locator(`form[data-live-set-id="${target.id}"]`)
+  const gesture=await beginClientGesture(page,row,browserName,row.locator('.live-set-number'));await gesture.move(60);await gesture.end()
+  await row.getByRole('button',{name:/Удалить подход 1:/}).click()
+  await page.getByRole('alertdialog').getByRole('button',{name:'Удалить',exact:true}).click()
+  const retry=page.getByRole('button',{name:'Повторить удаление подхода',exact:true})
+  if(failure==='changed'){
+    await expect(row.getByLabel('Фактический вес',{exact:true})).toHaveValue('42.5')
+    await expect(retry).toBeDisabled();expect(commands).toHaveLength(1)
+    await expect(row).toHaveClass(/confirmed/)
+    // A stale approval must stop, but a fresh explicit approval can recover.
+    const freshVersion=backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.version
+    const again=await beginClientGesture(page,row,browserName,row.locator('.live-set-number'));await again.move(60);await again.end()
+    await row.getByRole('button',{name:/Удалить подход 1:/}).click()
+    await expect(page.getByRole('alertdialog')).toContainText('Выполненный результат')
+    await page.getByRole('alertdialog').getByRole('button',{name:'Удалить',exact:true}).click()
+    await expect(row).toHaveCount(0)
+    expect(commands).toHaveLength(2)
+    expect(commands[1]!.expectedSetVersion).toBe(freshVersion)
+    expect(commands[1]!.operationId).not.toBe(commands[0]!.operationId)
+  }else{
+    if(failure==='retry'){
+      await expect(retry).toBeEnabled();await retry.click()
+      expect(commands).toHaveLength(2);expect(commands[1]!.operationId).toBe(commands[0]!.operationId)
+      expect(commands[1]!.expectedSetVersion).toBe(commands[0]!.expectedSetVersion)
+    }
+    await expect(row).toHaveCount(0);await expect(retry).toHaveCount(0)
+    expect(backend.getWorkouts()[0]!.exercises[0]!.sets).toHaveLength(1)
+    await page.reload();await expect(row).toHaveCount(0)
+    expect(commands).toHaveLength(failure==='lost'?1:2)
+  }
+})
+
+// Duration uses a focusable time picker; distance adds an editable unit field.
+// Their different widths/focus targets caused the WebKit phantom-save race.
+for (const theme of ['light','dark']) for (const density of ['original','compact']) for (const kind of ['duration','distance'] as const) for (const width of [390,430]) test(`client confirmed cardio swipe preserves sibling facts ${theme} ${density} ${kind} ${width}`, async ({page,browserName}) => {
+  await page.clock.install({time:new Date('2026-10-21T09:00:00Z')})
+  await page.setViewportSize({width,height:844})
+  await page.addInitScript(({id,theme,density})=>{localStorage.setItem(`fit.clientLime.theme.${id}`,theme);localStorage.setItem(`fit.clientLiveDensity.${id}`,density)}, {id:pilotId,theme,density})
+  const source=restTimerWorkout(0,true);source.startedAt='2026-10-21T08:58:00Z'
+  const exercise=source.exercises[0]!
+  exercise.inputKind=kind;exercise.ref=kind==='distance'?'walking':'plank';exercise.name=kind==='distance'?'Ходьба':'Планка'
+  exercise.sets=exercise.sets.map((set,index)=>({...set,durationMin:0,durationSec:30,...(kind==='distance'?{distanceKm:1}:{}),fact:{durationMin:0,durationSec:index===0?45:20,...(kind==='distance'?{distanceKm:index===0?1.2:0.8}:{})},confirmedAt:index===0?'2026-10-21T08:59:00Z':null}))
+  const target=exercise.sets[0]!,other=exercise.sets[1]!,sibling=JSON.stringify(other.fact)
+  const writes:string[]=[]
+  page.on('request',request=>{if(request.url().includes('workout-sets')&&request.method()!=='GET')writes.push(request.method())})
+  const backend=await mockPilot(page,{role:'client',profileId:pilotId,clientLime:true,workouts:[source]})
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row=page.locator(`form[data-live-set-id="${target.id}"]`)
+  await expect(row).toHaveClass(/confirmed/)
+  const gesture=await beginClientGesture(page,row,browserName,row.locator('.live-set-number'));await gesture.move(60);await gesture.end()
+  await row.getByRole('button',{name:/Удалить подход 1:/}).click()
+  await expect(page.getByRole('alertdialog')).toContainText('Выполненный результат')
+  await page.getByRole('alertdialog').getByRole('button',{name:'Удалить',exact:true}).click()
+  await expect(row).toHaveCount(0)
+  expect(writes).toEqual(['DELETE'])
+  const remaining=backend.getWorkouts()[0]!.exercises[0]!.sets
+  expect(remaining).toHaveLength(1);expect(remaining[0]!.id).toBe(other.id);expect(JSON.stringify(remaining[0]!.fact)).toBe(sibling)
+  await expect(page.locator(`form[data-live-set-id="${other.id}"] .workout-swipe-action`)).toHaveCount(0)
+  await page.reload();await expect(row).toHaveCount(0)
+  expect(JSON.stringify(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact)).toBe(sibling)
+})
+
+for(const theme of ['light','dark']) for(const kind of ['duration','distance'] as const) test(`client cardio swipe cancel never records planned facts ${theme} ${kind}`,async({page,browserName})=>{
+  await page.clock.install({time:new Date('2026-10-21T09:00:00Z')})
+  await page.setViewportSize({width:theme==='light'?390:430,height:844})
+  await page.addInitScript(({id,theme})=>{localStorage.setItem(`fit.clientLime.theme.${id}`,theme);localStorage.setItem(`fit.clientLiveDensity.${id}`,'compact')},{id:pilotId,theme})
+  const source=restTimerWorkout(0,true);source.startedAt='2026-10-21T08:58:00Z'
+  const exercise=source.exercises[0]!
+  exercise.inputKind=kind;exercise.ref=kind==='distance'?'walking':'plank';exercise.name=kind==='distance'?'Ходьба':'Планка'
+  exercise.sets=exercise.sets.map(set=>({...set,durationSec:30,...(kind==='distance'?{distanceKm:1}:{}),fact:{},confirmedAt:null}))
+  const target=exercise.sets[0]!,writes:string[]=[]
+  page.on('request',request=>{if(request.url().includes('workout-sets')&&request.method()!=='GET')writes.push(request.method())})
+  const backend=await mockPilot(page,{role:'client',profileId:pilotId,clientLime:true,workouts:[source]})
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row=page.locator(`form[data-live-set-id="${target.id}"]`)
+  const swipe=async()=>{const gesture=await beginClientGesture(page,row,browserName,row.locator('.live-set-number'));await gesture.move(60);await gesture.end();await row.getByRole('button',{name:/Удалить подход 1:/}).click()}
+  await swipe();await page.getByRole('alertdialog').getByRole('button',{name:'Отмена',exact:true}).click()
+  expect(writes).toEqual([]);expect(backend.getWorkouts()[0]!.exercises[0]!.sets.map(set=>set.fact)).toEqual([{},{}])
+  await swipe();await page.getByRole('alertdialog').getByRole('button',{name:'Удалить',exact:true}).click()
+  await expect(row).toHaveCount(0);expect(writes).toEqual(['DELETE'])
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toEqual({})
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
 })
