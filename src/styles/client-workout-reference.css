@@ -258,3 +258,16 @@
 .phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note[open] .live-workout-note-read { display: none; }
 .phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note[open] .live-workout-note-hide { display: inline; }
 .phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note p { margin: 0; padding: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--lime-text); }
+
+/* Standard client controls: native selects need an explicit height in WebKit;
+   the resume link needs a layout box before its existing min-height can apply. */
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form select[name='stageId'] {
+  height: var(--control-height-standard);
+}
+.phone-frame.fit-client-lime.client-workout-reference .workout-detail-page > a.button.primary.wide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+}

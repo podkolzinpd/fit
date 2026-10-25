@@ -2095,3 +2095,41 @@ for(const theme of ['light','dark']) for(const kind of ['duration','distance'] a
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact).toEqual({})
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
 })
+
+for (const theme of ['light', 'dark']) test(`client priority controls retain standard geometry and resume behavior ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const active = coachGestureWorkout()
+  active.startedAt = new Date(Date.now() - 90000).toISOString()
+  const planned = { ...structuredClone(active), id: newWorkoutId, status: 'planned', startedAt: null, createdBy: pilotId,
+    stageId: '10000000-0000-4000-8000-000000000041' }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, workouts: [active, planned] })
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto(`/workouts/${workoutId}`)
+    const resume = page.getByRole('link', { name: 'Продолжить тренировку', exact: true })
+    await expect(resume).toBeVisible()
+    await page.evaluate(async () => { await document.fonts.ready })
+    const geometry = await resume.evaluate(button => {
+      const rect = button.getBoundingClientRect(), page = button.closest('main')!, parent = page.getBoundingClientRect(), styles = getComputedStyle(page)
+      return { height: rect.height, width: rect.width, available: parent.width - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight) }
+    })
+    await page.screenshot({ path: info.outputPath(`resume-${width}.png`) })
+    expect.soft(geometry.height).toBeGreaterThanOrEqual(48)
+    expect.soft(Math.abs(geometry.width - geometry.available)).toBeLessThan(1)
+    await resume.click()
+    await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
+    expect(backend.getWorkouts()[0]!.startedAt).toBe(active.startedAt)
+    expect(backend.getWorkouts()[0]!.status).toBe('in_progress')
+    await page.goto(`/workouts/${newWorkoutId}/edit`)
+    const stage = page.locator('select[name="stageId"]')
+    await expect(stage).toHaveValue(planned.stageId)
+    await expect(stage).toHaveCSS('border-radius', '16px')
+    await expect(stage).toHaveCSS('appearance', 'none')
+    const stageBox = await stage.boundingBox()
+    expect.soft(stageBox!.height).toBeGreaterThanOrEqual(48)
+    expect.soft(stageBox!.height).toBeLessThanOrEqual(49)
+    await stage.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: info.outputPath(`stage-${width}.png`) })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})

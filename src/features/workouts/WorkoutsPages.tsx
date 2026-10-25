@@ -1666,6 +1666,10 @@ export function WorkoutFormPage() {
     createRequestId.current = crypto.randomUUID()
     setTemplateDraftChoice('fresh')
   }
+  const stageControl = <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
+    <option value="">Без этапа</option>
+    {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
+  </select>
   return <Page title={coachReference ? pageTitle : documentTitle} hideTitle={!coachReference} className={`workout-form-page workout-focused-page${coachReference ? ' coach-reference-form' : ''}${coachReference || clientReference ? ' workout-editor-reference' : ''}${clientReference ? ' client-reference-form client-editor-refined client-editor-polish' : ''}${refinedPlan ? ' coach-plan-refined coach-plan-polish' : ''}`} back={-1} onBack={() => void leaveForm()} action={coachReference ? <WorkoutCta form="coach-workout-plan-form" type="submit" className="coach-plan-save" aria-label="Сохранить план" pending={mutation.isPending} pendingLabel={<><CheckSmallIcon /><span className="sr-only">Сохраняем…</span></>} disabled={!formDraftReady || loading || Boolean(error) || referenceClientPickerOpen || pickerOpen || templatePickerOpen}><CheckSmallIcon /></WorkoutCta> : undefined}>
     {!coachReference && <WorkoutHeader eyebrow={completedMode ? 'РЕЗУЛЬТАТ' : 'ПЛАН ТРЕНИРОВКИ'} title={pageTitle} state={completedMode ? 'history' : 'planned'}
       meta={headerMeta} showStatus={Boolean(workoutId)} />}
@@ -1722,10 +1726,7 @@ export function WorkoutFormPage() {
         {!completedMode && <WorkoutExecutionModeField value={executionMode ?? DEFAULT_EXECUTION_MODE} onChange={setExecutionMode} />}
         {stages.length > 0 && <Field label="Этап цели">
           {/* key — чтобы defaultValue пересчитался при смене клиента/загрузке цели */}
-          <select name="stageId" key={`${clientId}-${defaultStageId}`} value={stageId || defaultStageId} onChange={(event) => setStageId(event.target.value)}>
-            <option value="">Без этапа</option>
-            {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.title}</option>)}
-          </select>
+          {clientReference ? <span className="workout-prep-select">{stageControl}</span> : stageControl}
         </Field>}
         </CoachPlanOptions>
         {!readyPlan && (refinedPlan ? <div className="workout-notes coach-plan-note">
