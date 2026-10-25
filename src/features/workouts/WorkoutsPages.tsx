@@ -1,5 +1,7 @@
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
+import v79CollapseIcon from '../../assets/coach-live-v79/card-collapse.svg'
+import v79ExpandIcon from '../../assets/coach-live-v79/card-expand.svg'
 import { useClientLiveDensity } from '../../app/client-live-density'
 import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
@@ -3066,6 +3068,7 @@ export function LiveWorkoutPage() {
   // Завершённые упражнения по умолчанию свёрнуты; id здесь — принудительно раскрытые
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
+  const [v79Folded, setV79Folded] = useState<Set<string>>(() => new Set())
   // Общая настройка не меняет RPE-данные; меню упражнения позволяет временно
   // показать или скрыть поле только для конкретного упражнения.
   const [rpeOverrides, setRpeOverrides] = useState<Map<string, boolean>>(() => new Map())
@@ -3887,8 +3890,31 @@ export function LiveWorkoutPage() {
     const line = result && previousResultLine(result.sets, exercise.ref)
     return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null
   }
-  function liveExerciseFooter(exercise: WorkoutExerciseModel) {
+  const v79CardKey = (exercise: WorkoutExerciseModel) => `${exercise.id}:${exercise.source}:${exercise.ref}`
+  function v79IsFolded(exercise: WorkoutExerciseModel) {
+    return v79Folded.has(v79CardKey(exercise))
+  }
+  function toggleV79Card(exercise: WorkoutExerciseModel) {
+    setV79Folded(current => { const next = new Set(current), key = v79CardKey(exercise); if (next.has(key)) next.delete(key); else next.add(key); return next })
+  }
+  function v79CardToggle(exercise: WorkoutExerciseModel) {
+    const folded = v79IsFolded(exercise)
+    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={() => toggleV79Card(exercise)} disabled={rootMutationPending}>
+      <img src={folded ? v79ExpandIcon : v79CollapseIcon} width="24" height="24" alt="" />
+    </button>
+  }
+  function v79CardBody(exercise: WorkoutExerciseModel, body: ReactNode) {
+    if (!coachV79) return body
+    const folded = v79Folded.has(v79CardKey(exercise))
+    // CSS clips the same forms; never unmount an unsent value to fold a card.
+    return <div className={`coach-v79-card-body${folded ? ' folded' : ''}`} inert={folded} aria-hidden={folded}><div>{body}</div></div>
+  }
+  function liveExerciseFooter(exercise: WorkoutExerciseModel, actions?: ReactNode) {
     const add = canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={coachReference ? structureMutationPending : rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>
+    if (coachV79) {
+      const technique = techniqueActionFor(exercise)
+      return <><div className="coach-v79-exercise-tools">{add}{technique && <button type="button" className="coach-v79-instruction" onClick={technique}>Инструкция</button>}{actions}</div>{liveCommentField(exercise)}</>
+    }
     return clientLime
       ? <div className="live-exercise-utilities">{liveCommentField(exercise)}{add}</div>
       : densityEnabled
@@ -3909,7 +3935,7 @@ export function LiveWorkoutPage() {
             onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
         ]
   }
-  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = []) {
+  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = [], footer = false) {
     if (!canManageLiveStructure) return null
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
@@ -3917,7 +3943,7 @@ export function LiveWorkoutPage() {
       && (expandedExercises.has(exercise.id) || exercise.sets.some((set) => editingSets.has(set.id)))
     const collapseBlocked = rootMutationPending || save.isPending || confirm.isPending
       || exercise.sets.some((set) => pendingSetDrafts.current.has(set.id) || set.id === saveErrorSetId)
-    return <OverflowMenu items={[
+    return <OverflowMenu trigger={coachV79 && footer ? <span>Действия</span> : undefined} items={[
       ...(canCollapse ? [{ label: 'Свернуть', disabled: collapseBlocked, onClick: () => {
         // Never unmount an unsent fact. This is presentation only: confirmation,
         // rest and the active exercise keep their existing state.
@@ -4393,7 +4419,7 @@ export function LiveWorkoutPage() {
             // Explicitly reopened results and ongoing edits stay expanded.
             const justCompleted = !clientReference && exercise.id === recentExerciseId && restEndsAt !== null
             const editing = exercise.sets.some((set) => editingSets.has(set.id))
-            const collapsed = allDone && !expandedExercises.has(exercise.id) && !justCompleted && !editing
+            const collapsed = !coachV79 && allDone && !expandedExercises.has(exercise.id) && !justCompleted && !editing
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null
@@ -4411,30 +4437,30 @@ export function LiveWorkoutPage() {
                   disabled={acceptingTimerSets !== null || save.isPending} onClick={() => void acceptExerciseTimerSets(exercise)}>Подтвердить</button>
               </div> : compactCard
               return swipeLive(exercise, coachReference ? <WorkoutExercise state="completed" className="live-exercise-collapsed">
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={exerciseMenu(exercise, canReorder, removableSet, groupingItems)} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={referenceNumber(exercise)} summary={referenceLiveSummary(exercise)} onTitleClick={coachV79 ? () => toggleV79Card(exercise) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `Развернуть: ${exercise.name}` : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise) : exerciseMenu(exercise, canReorder, removableSet, groupingItems)} />
                 <button type="button" className="secondary live-exercise-start" aria-label={`Исправить: ${exercise.name}`} onClick={() => setExpandedExercises((prev) => new Set(prev).add(exercise.id))}>Изменить</button></WorkoutExercise> : clientLime ? <div className="live-completed-gesture-head">{completedCard}<span className="exercise-head-actions">{exerciseMenu(exercise, canReorder)}{reorder}</span></div> : completedCard)
             }
-            if (blockStatus === 'upcoming') {
+            if (blockStatus === 'upcoming' && !coachV79) {
               const firstPlan = exercise.sets.map((set) => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)
               const completedSets = exercise.sets.filter((set) => set.confirmedAt).length
               const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
               const progressLabel = completedSets > 0 ? `Выполнено ${completedSets} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`
               return swipeLive(exercise, <WorkoutExercise key={exercise.id} state="upcoming" className={`live-exercise-upcoming ${completedSets > 0 ? 'started' : ''}`}>
-                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise)} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
+                <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise)} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={coachV79 ? () => toggleV79Card(exercise) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `Развернуть: ${exercise.name}` : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise) : <>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
                 <div className="live-upcoming-row">{!coachReference && <p className="live-upcoming-summary"><span>{progressLabel}</span>{firstPlan && <span>{!clientLime || completedSets > 0 ? 'План: ' : ''}{firstPlan}</span>}</p>}
                   <button type="button" className="secondary live-exercise-start" disabled={rootMutationPending} aria-label={coachReference ? `Показать подходы: ${exercise.name}` : `${completedSets > 0 ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`} onClick={() => activateLiveExercise(exercise)}>{coachReference ? 'Показать подходы' : completedSets > 0 ? 'Продолжить' : 'Начать'}</button>
                 </div>
               </WorkoutExercise>)
             }
             return swipeLive(exercise, <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise, blockStatus === 'current')} description={clientLime ? livePreviousResult(exercise) : undefined} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={<>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
-              {liveTechniqueFor(exercise, blockStatus === 'current')}
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise, blockStatus === 'current')} description={clientLime ? livePreviousResult(exercise) : undefined} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={coachV79 ? () => toggleV79Card(exercise) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise) ? 'Развернуть' : 'Свернуть'}: ${exercise.name}` : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise) : <>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
+              {v79CardBody(exercise, <>{liveTechniqueFor(exercise, blockStatus === 'current')}
               {liveTrainerNote(exercise)}
               {!clientLime && livePreviousResult(exercise)}
               <WorkoutSetTable variant="live" inputKind={exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
                 {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
               </WorkoutSetTable>
-              {liveExerciseFooter(exercise)}
+              {liveExerciseFooter(exercise, coachV79 ? exerciseMenu(exercise, canReorder, removableSet, groupingItems, true) : undefined)}</>)}
             </WorkoutExercise>)
           })
         }
