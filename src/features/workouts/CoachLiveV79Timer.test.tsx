@@ -9,7 +9,7 @@ function Surface({ time = '01:00', resting = false, phaseLabel }: { time?: strin
   return <div className="content"><main className="live-workout-page coach-live-v79">
     <header className="page-header"><span ref={setSlot} /></header>
     <CoachLiveV79Timer time={time} elapsed="01:00" resting={resting} paused={false} phaseLabel={phaseLabel} density="original" headerSlot={slot} restAction={<button>Отдых</button>} compactAction={<button>Открыть отдых</button>} />
-    <input defaultValue="29.5" />
+    <div className="live-set-grid"><input className="live-set-input" defaultValue="29.5" /></div>
   </main></div>
 }
 it('hands one supplied clock to both displays without touching focused forms', () => {
@@ -44,4 +44,24 @@ it('hands one supplied clock to both displays without touching focused forms', (
   expect(document.activeElement).toBe(input)
   view.unmount()
   expect(root.style.getPropertyValue('--v79-small-opacity')).toBe('')
+})
+
+it('keeps a focused row visible when animated header geometry settles after viewport resize', () => {
+  let resized = () => {}, rowTop = 360
+  vi.stubGlobal('ResizeObserver', class { constructor(callback: () => void) { resized = callback } observe() {} disconnect() {} })
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(400)
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const top = this.classList.contains('live-set-grid') ? rowTop - (this.closest('.content')?.scrollTop ?? 0) : 0
+    const height = this.classList.contains('content') ? 400 : this.classList.contains('live-set-grid') ? 48 : 52
+    return { top, bottom: top + height, height } as DOMRect
+  })
+  const view = render(<Surface />), input = view.container.querySelector('input')!, content = view.container.querySelector('.content')!
+  input.focus()
+  act(resized)
+  expect(content.scrollTop).toBe(24)
+  rowTop += 128
+  act(resized)
+  expect(content.scrollTop).toBe(152)
+  expect(input).toHaveValue('29.5')
+  expect(input).toHaveFocus()
 })

@@ -1,7 +1,6 @@
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
-import v79CollapseIcon from '../../assets/coach-live-v79/card-collapse.svg'
-import v79ExpandIcon from '../../assets/coach-live-v79/card-expand.svg'
+import { CoachLiveV79CardToggleIcon } from './CoachLiveV79CardToggleIcon'
 import { useClientLiveDensity } from '../../app/client-live-density'
 import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
 import type { PreviousExerciseResult } from '../../data/repositories/workouts.repository'
@@ -3926,8 +3925,8 @@ export function LiveWorkoutPage() {
   }
   function v79CardToggle(exercise: WorkoutExerciseModel) {
     const folded = v79IsFolded(exercise)
-    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={() => toggleV79Card(exercise)} disabled={rootMutationPending}>
-      <img src={folded ? v79ExpandIcon : v79CollapseIcon} width="24" height="24" alt="" />
+    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={event => { event.currentTarget.focus({ preventScroll: true }); toggleV79Card(exercise) }} disabled={rootMutationPending}>
+      <CoachLiveV79CardToggleIcon folded={folded} />
     </button>
   }
   function v79CardBody(exercise: WorkoutExerciseModel, body: ReactNode) {
@@ -4482,7 +4481,7 @@ export function LiveWorkoutPage() {
               </WorkoutExercise>)
             }
             return swipeLive(exercise, <WorkoutExercise key={exercise.id} state={blockStatus === 'done' ? 'completed' : blockStatus} className={`live-exercise ${blockStatus}`}>
-              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise, blockStatus === 'current')} description={clientLime ? livePreviousResult(exercise) : undefined} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={coachV79 ? () => toggleV79Card(exercise) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise) ? 'Развернуть' : 'Свернуть'}: ${exercise.name}` : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise) : <>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
+              <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name} leading={coachReference ? referenceNumber(exercise) : liveHeaderThumbnail(exercise, blockStatus === 'current')} description={clientLime ? livePreviousResult(exercise) : undefined} summary={coachReference ? referenceLiveSummary(exercise) : undefined} onTitleClick={coachV79 ? () => toggleV79Card(exercise) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise) ? 'Развернуть' : 'Свернуть'}: ${exercise.name}` : undefined} titleExpanded={coachV79 ? !v79IsFolded(exercise) : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise) : <>{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{!coachReference && reorder}</>} />
               {v79CardBody(exercise, <>{liveTechniqueFor(exercise, blockStatus === 'current')}
               {liveTrainerNote(exercise)}
               {!clientLime && livePreviousResult(exercise)}

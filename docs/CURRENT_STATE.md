@@ -111,4 +111,6 @@ YAFIT-645; план design/FAVORITE_EDITOR_DRAFT_RECOVERY_20261022.md. На св
   База b901fb19 включает клиентские PR1807–1810; параллельные PR сохраняем.
   Production-build browser46/46 WebKit/Chromium и fullcheck exit0 passed;
   PR2: source spring/crossfade/reduced-motion на прежнем owner; browser50/50,
-  fullcheck exit0. CI/release остаются гейтами; физический iPhone/OAuth не проверены.
+  fullcheck exit0. PR3: исходные SVG/движение стрелок и фон, focus/fields,
+  scoped correction реального clipping при смене плотности;50/50 + real-clock2/2,
+  fullcheck exit0 (2836frontend/1487API). CI/release гейты; physical/OAuth не проверены.
