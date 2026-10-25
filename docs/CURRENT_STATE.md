@@ -102,19 +102,12 @@ YAFIT-645; план design/FAVORITE_EDITOR_DRAFT_RECOVERY_20261022.md. На св
 ## Отложено
 - DataLens/Telegram/Tracker отложены; HA replica нужна только по SLA; APNs и Android/FCM не входят в Web Push cutover. Android: добавлены Capacitor-проект и локальная debug-сборка для будущего RuStore; origin `https://localhost`, возврат Yandex ID — deep link `com.coachspace.fit://auth/yandex/callback` с PKCE. Redirect URI зарегистрирован 2 октября; реальный вход на устройстве, release-подпись и публикация ещё не подтверждены.
 22.10 — YAFIT-644: надёжность готовых тренировок спортсмена, план design/CLIENT_READY_WORKOUTS_RELIABILITY_20261022.md. На main53cc1e22: явное восстановление versioned/legacy черновика, rename409/reload без потери названия, DELETE lost-response readback, доступный trainer snapshot без manage rights, единая форма favorite/Fit, компактные параметры и общий Lime name sheet/focus, одиночные viewport coachmarks. Migration155 атомарно ограничивает10 для разных сессий; прежние>10 не удаляет. Fullcheck exit0 frontend2814/API1445+188conditionalDBskip/build; чистая PostgreSQL17 chain155/actor178passed+1conditionalSkip; WebKit6/Chromium6 и shared nested3 включая trainer1440 passed. local:verify блокируется запуском прежнего Supabase backup; базы не сбрасывались. CI/merge/production/fresh native ещё гейты; физический iPhone не проверен. 22.10 — YAFIT-646: у обеих ролей исчезла история одной пары; удаления/причина пока не установлены. Подготовлен только manual main-only read-only account_history audit:4email hashes исключительно в закрытом Actions secret по отдельному согласию (репозиторий public), legacy/current card/merge/author counts и RLS visibility без контактов/UUID/payload/дат.30unit/workflow и localPG4stored/1softdelete/trainer2/client3/rows-unchanged passed; новый secret-only wholecheck2818frontend/1445API+188conditional skip/build exit0. SSH запрещён auto-review и не повторялся. Реальный отчёт, восстановление и причина впереди. План design/ACCOUNT_HISTORY_RECOVERY_20261022.md.
-- 25.10 — YAFIT-653: неизменяемый план Coach Live v79,6PR, только исходные
-  knyaz187/mail и mr.vidishev/Yandex; baseline de41a906 включает клиентские
-  PR1799/1800, их координаторы/защита удаления не переписаны.
-  PR1801/f6c8066a и1802/3e08c3dc слиты и официально проверены по212/213
-  публичным файлам и health. PR1803/6eea63b3 слит, main-приёмка впереди.
-  PR4/5 отдельно подготовлены и полностью локально проверены.
-  PR6: стыки свайпа title-button, видимый возврат фокуса, source cadence,
-  measured empty CTA и CSS-каскад; один owner времени, формы те же54/48.
-  Fullcheck exit0 frontend2834/API1471+189conditionalDBskip; final production
-  browser46/46 WebKit/Chromium, включая375/430/1440, оба режима, метрики,
-  заметки, жесты/суперсеты/ошибки/finish и закрытость вне Live/пары.
-  Source assets5/5 hash/unit, нативный prepare build exit0 без установки.
-  CI/последовательные merge/официальный readback всех этапов, включение только
-  точной пары и final current-main native ещё release-гейты; физический
-  iPhone/реальный OAuth не заявлены. План design/COACH_LIVE_V79_INTEGRATION_20261025.md,
-  фактура design/COACH_LIVE_V79_STATUS_20261025.md; итоговые receipts в YAFIT-653.
+- YAFIT-653 закрыта: PR1801–1806 слиты/выпущены, final f45aedae,
+  public213/health, OTA/signature/readback, native214/simulator проверены;
+  точная исходная пара, один owner, поля54/48; receipts в YAFIT-653.
+- 25.10 YAFIT-655: план design/COACH_LIVE_V79_POLISH_20261025.md,4PR,
+  только исходные2 тренера. PR1: малая шапка без пересечения кнопок44,
+  видимый отрицательный отдых; clocks/дедлайн/формы/клиент не переписаны.
+  База b901fb19 включает клиентские PR1807–1810; параллельные PR сохраняем.
+  Production-build browser46/46 WebKit/Chromium и fullcheck exit0 passed;
+  CI/release остаются гейтами. Physical iPhone и реальный OAuth не проверены.
