@@ -42,4 +42,14 @@ describe('WorkoutExerciseHeader', () => {
     expect(onTitleClick).toHaveBeenCalledOnce()
     expect(screen.getByRole('button', { name: 'Меню' })).toBeInTheDocument()
   })
+
+  it('reports fold state and keeps focus on a fold title without scrolling', async () => {
+    const user = userEvent.setup(), toggle = vi.fn()
+    render(<WorkoutExerciseHeader className="live-exercise-head" name="Присед" titleExpanded={false} onTitleClick={toggle} showTechniqueLabel={false} />)
+    const button = screen.getByRole('button', { name: 'Посмотреть технику: Присед' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    await user.click(button)
+    expect(button).toHaveFocus()
+    expect(toggle).toHaveBeenCalledOnce()
+  })
 })

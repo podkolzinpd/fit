@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { CoachLiveDensity } from '../../app/coach-live-density'
+import { keepLiveInputVisible } from './live-input-visibility'
 
 type Props = {
   time: string
@@ -60,7 +61,14 @@ export function CoachLiveV79Timer({ time, elapsed, resting, paused, phaseLabel, 
     paint()
     scroll.addEventListener('scroll', paint, { passive: true })
     window.addEventListener('resize', paint)
-    const observer = new ResizeObserver(paint)
+    // The header keeps changing height after a density/keyboard resize event.
+    // Follow measured layout (not every scroll) and move only a clipped field.
+    // This renderer is fixed2-only; client visibility rules stay untouched.
+    const observer = new ResizeObserver(() => {
+      paint()
+      const target = document.activeElement
+      if (target instanceof HTMLElement && page.contains(target) && target.matches('.live-set-input, .live-set-rpe')) keepLiveInputVisible(target)
+    })
     observer.observe(container); observer.observe(clock); observer.observe(header)
     observer.observe(page); observer.observe(scroll)
     const empty = page.querySelector<HTMLElement>('.live-empty-start')
