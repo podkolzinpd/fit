@@ -1,5 +1,16 @@
 # Эксплуатация Fit V2
 
+## Coach Live v79 — YAFIT-653
+
+Согласованный план: `docs/design/COACH_LIVE_V79_INTEGRATION_20261025.md`.
+Независимый `VITE_COACH_LIVE_V79_ENABLED=true` и
+`VITE_COACH_LIVE_V79_PILOT_USER_IDS=<original-id-1>,<original-id-2>`.
+По умолчанию выключен. Gate требует тренерскую роль, существующие workout/density
+gates и точное совпадение новой пары с исходным workout allowlist; другая пара,
+пустой список, дубли и расширение закрывают новый UI. Это presentation-only:
+API ownership, данные и клиентский пилот не меняются. До готовности обоих
+режимов flag не включать. PR1 только создаёт основу; публикация не включает UI.
+
 ## Автоматический выбор проверок PR
 
 `scripts/e2e-scope.mjs` определяет frontend/browser scope по полному diff PR.
