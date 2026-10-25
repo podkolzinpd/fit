@@ -760,3 +760,5 @@ release/publisher APK1.1.1/code5 и автоматического compatible fe
 приёмка отмечаются отдельно; исходные3пункта acceptance не меняются.
 
 YAFIT-654, photo backend: additive migration157, idempotent owner-bound create/read; API1487 и локальная DB/S3185passed. Клиентский upload доPR5 не заявлен как Implemented.
+
+YAFIT-654 PR5: client pilot подключает native custom-exercise photo API; локально UI→API→PostgreSQL→S3→reload8/8, errors/retry/idempotency проверены. Старый Supabase не используется для нового фото. Rollout только прежние четыре тестовых профиля; публикация проверяется отдельно.

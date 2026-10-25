@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
+import type { PreparedImage } from '../../shared/image-prep'
 import { nutritionConnectionSchema, nutritionDaySchema, nutritionEntrySchema, nutritionFoodSchema } from '../../shared/nutrition'
 import type { DataBackend } from '../../app/data-backend-context'
 import type { AthleteSportProfile } from '../../shared/sport-interests'
@@ -66,7 +68,7 @@ import {
   trainingSummaryFromRow,
 } from './training-summary-mappers'
 import { trainingSummaryGenerationError } from './training-summary-errors'
-import { yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
+import { customExerciseImageSchema, yandexPilotRepository, type YandexPilotTrainingData } from './yandex-pilot.repository'
 import { expandSpecialtiesForCatalogSearch, trainerCatalogPageSchema, trainerProfessionalProfileSchema } from '../../shared/trainer-profile'
 import {
   PRIVACY_VERSION,
@@ -251,6 +253,7 @@ const accountDeletionStatusSchema = z.object({
 })
 const customExerciseMutationSchema = z.object({
   exercise: z.object({
+    image: customExerciseImageSchema.optional(),
     id: uuid,
     name: z.string(),
     muscleGroup: z.enum([
@@ -591,7 +594,7 @@ function client(value: z.infer<typeof clientSchema>): Client {
   }
 }
 
-function customExercise(value: YandexPilotTrainingData['customExercises'][number]): CustomExercise {
+function customExercise(value: YandexPilotTrainingData['customExercises'][number], photosEnabled = false): CustomExercise {
   return {
     id: value.id,
     source: 'custom',
@@ -606,8 +609,7 @@ function customExercise(value: YandexPilotTrainingData['customExercises'][number
     createdBy: value.createdBy ?? '',
     archivedAt: value.archivedAt,
     version: value.version,
-    // Фото (YAFIT-521) пока поддерживается только Supabase-бэкендом.
-    imagePath: null,
+    imagePath: photosEnabled ? value.image?.path ?? null : null,
   }
 }
 
@@ -944,12 +946,17 @@ function feedbackPayload(summary: ClientTrainingSummary): Record<string, unknown
   }
 }
 
+// The prepared image survives mutation failure in the existing picker form.
+// Keep its request identity across repository refreshes, bound to the actual actor.
+const customPhotoRequests = new WeakMap<PreparedImage, { actorId: string; id: string }>()
+
 export function createYandexMainRepository(
   apiBaseUrl: string,
   sessionToken: string,
   actor: SessionActor,
 ): DataBackend {
   const queries = createYandexMainQueries(apiBaseUrl, sessionToken)
+  const customPhotosEnabled = isClientWorkoutRedesignEnabled(actor)
   let trainingDataPromise: Promise<YandexPilotTrainingData> | null = null
   let activeClientsPromise: Promise<Client[]> | null = null
   let archivedClientsPromise: Promise<Client[]> | null = null
@@ -1374,13 +1381,12 @@ export function createYandexMainRepository(
         }
         return createVitalMediaUrl(path)
       },
-      createCustomExercisePhotoUrl() {
-        // customExercise() всегда отдаёт imagePath: null на этом бэкенде
-        // (YAFIT-521, см. FEATURE_PARITY.md), так что этот путь не должен
-        // достигаться из реального UI — но интерфейс DataBackend требует
-        // метод структурно. Rejected promise (не синхронный throw), чтобы
-        // поведение совпадало с остальными async-методами интерфейса.
-        return Promise.reject(new RepositoryError('custom_exercise_photo_unsupported', 'Фото упражнений пока не поддерживается на Yandex-бэкенде'))
+      async createCustomExercisePhotoUrl(path, expiresIn) {
+        if (!customPhotosEnabled) throw new RepositoryError('custom_exercise_photo_unsupported', 'Фото упражнений пока недоступно')
+        if (expiresIn !== 60 * 60) throw new RepositoryError('invalid_media_expiry', 'Некорректный срок ссылки на медиа')
+        const match = /^([a-f0-9-]{36})\/([a-f0-9-]{36})\/([a-f0-9]{64})\.jpg$/.exec(path)
+        if (!match || !uuid.safeParse(match[1]).success || !uuid.safeParse(match[2]).success) throw new RepositoryError('invalid_media_path', 'Некорректный путь фото')
+        return (await readJson(queries, `/v1/custom-exercises/${match[2]}/photo`, z.object({ url: z.url() }))).url
       },
       parseWorkout: (text, systemCatalog) => yandexPilotRepository.parseWorkout(
         apiBaseUrl, sessionToken, text, systemCatalog, 'read_write',
@@ -1393,26 +1399,38 @@ export function createYandexMainRepository(
         }))
         return validateGoalCriteriaSuggestion(await result.json(), catalog, metrics)
       },
-      async list() { return (await trainingData()).customExercises.map(customExercise) },
-      async create(_partitionOwnerId, _actorId, value) {
-        const payload = await writeJson(queries, '/v1/custom-exercises', 'POST', value,
-          customExerciseMutationSchema)
+      async list() { return (await trainingData()).customExercises.map(item => customExercise(item, customPhotosEnabled)) },
+      async create(_partitionOwnerId, _actorId, value, photo) {
+        if (photo && customPhotosEnabled) {
+          let request = customPhotoRequests.get(photo)
+          if (!request || request.actorId !== actor.userId) {
+            request = { actorId: actor.userId, id: crypto.randomUUID() }
+            customPhotoRequests.set(photo, request)
+          }
+          const payload = await writeJson(queries, '/v1/custom-exercises/with-photo', 'POST', { id: request.id, draft: value, image: photo }, customExerciseMutationSchema)
+          if (payload.exercise.id !== request.id || !payload.exercise.image) throw new RepositoryError('custom_exercise_photo_unconfirmed', 'Не удалось подтвердить сохранение фото. Повторите попытку')
+          // Confirm the persisted object is readable before the existing picker closes.
+          await readJson(queries, `/v1/custom-exercises/${request.id}/photo`, z.object({ url: z.url() }))
+          invalidate()
+          return customExercise({ ...payload.exercise, createdBy: actor.userId }, true)
+        }
+        const payload = await writeJson(queries, '/v1/custom-exercises', 'POST', value, customExerciseMutationSchema)
         invalidate()
-        return customExercise({ ...payload.exercise, createdBy: actor.userId })
+        return customExercise({ ...payload.exercise, createdBy: actor.userId }, customPhotosEnabled)
       },
       async update(item, value) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}`, 'PUT', {
           draft: value, expectedVersion: item.version,
         }, customExerciseMutationSchema)
         invalidate()
-        return customExercise({ ...payload.exercise, createdBy: item.createdBy })
+        return { ...customExercise({ ...payload.exercise, createdBy: item.createdBy }, customPhotosEnabled), imagePath: customPhotosEnabled ? payload.exercise.image?.path ?? item.imagePath : null }
       },
       async setArchived(item, archived) {
         const payload = await writeJson(queries, `/v1/custom-exercises/${item.id}/archive`, 'PUT', {
           archived, expectedVersion: item.version,
         }, customExerciseMutationSchema)
         invalidate()
-        return customExercise({ ...payload.exercise, createdBy: item.createdBy })
+        return { ...customExercise({ ...payload.exercise, createdBy: item.createdBy }, customPhotosEnabled), imagePath: customPhotosEnabled ? payload.exercise.image?.path ?? item.imagePath : null }
       },
     },
     progress: {

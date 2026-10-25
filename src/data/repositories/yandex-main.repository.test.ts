@@ -813,6 +813,66 @@ describe('Yandex main repository', () => {
     expect(second.paths).toHaveLength(1)
   })
 
+  it('reuses one photo request across a lost reply and repository refresh, and confirms storage before success', async () => {
+    const clientActor: SessionActor = { ...actor, kind: 'client', role: 'client', clientId, trainerId: actor.userId, fullName: 'Фото клиент', experiments: { trainerScheduleV2: false, clientLime: true } }
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', actor.userId)
+    const photo = { dataUrl: 'data:image/jpeg;base64,/9j/2Q==', mimeType: 'image/jpeg' as const, width: 8, height: 8, sizeBytes: 4 }
+    const attempts: string[] = []
+    let loseReply = true, failSign = true, saved: Record<string, unknown> | undefined
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => Promise.resolve().then(() => {
+      const path = new URL(String(input)).pathname
+      if (path.endsWith('/with-photo')) {
+        const body = JSON.parse(String(init?.body)) as { id: string; image: unknown; draft: object }
+        attempts.push(body.id); expect(body.image).toEqual(photo)
+        saved = { id: body.id, ...body.draft, archivedAt: null, version: 1, image: { path: `${actor.userId}/${body.id}/${'a'.repeat(64)}.jpg`, mimeType: 'image/jpeg', width: 8, height: 8, sizeBytes: 4, sha256: 'a'.repeat(64) } }
+        if (loseReply) { loseReply = false; return jsonResponse({ error: 'service_unavailable' }, 503) }
+        return jsonResponse({ exercise: saved }, 201)
+      }
+      if (path.endsWith('/photo')) {
+        if (failSign) { failSign = false; return jsonResponse({ error: 'service_unavailable' }, 503) }
+        return jsonResponse({ url: 'https://media.example/custom.jpg' })
+      }
+      return jsonResponse({ exercise: { ...saved, image: undefined, version: 2 } })
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const create = () => createYandexMainRepository(apiBaseUrl, sessionToken, clientActor).exercises.create(actor.userId, actor.userId, customExerciseDraft(), photo)
+    await expect(create()).rejects.toThrow()
+    await expect(create()).rejects.toThrow()
+    const created = await create()
+    expect(new Set(attempts).size).toBe(1)
+    expect(created.imagePath).toContain(`/${attempts[0]}/`)
+    const repository = createYandexMainRepository(apiBaseUrl, sessionToken, clientActor)
+    await expect(repository.exercises.createCustomExercisePhotoUrl(created.imagePath!, 3600)).resolves.toBe('https://media.example/custom.jpg')
+    await expect(repository.exercises.update(created, customExerciseDraft())).resolves.toMatchObject({ imagePath: created.imagePath, version: 2 })
+    pilot.listTrainingData.mockResolvedValue({ accessMode: 'read_only', workouts: [], attention: [], attentionPreferences: [], hasMoreWorkouts: false, totalWorkouts: 0, customExercises: [{ ...saved, createdBy: actor.userId }] })
+    expect((await repository.exercises.list())[0]?.imagePath).toBe(created.imagePath)
+    fetchMock.mockClear()
+    await expect(repository.exercises.createCustomExercisePhotoUrl('../other.jpg', 3600)).rejects.toThrow()
+    await expect(repository.exercises.createCustomExercisePhotoUrl(created.imagePath!, 60)).rejects.toThrow()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps photo transport disabled outside the approved client pilot and leaves no-photo creation unchanged', async () => {
+    vi.stubEnv('VITE_CLIENT_LIME_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS', actor.userId)
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse({ exercise: { id: customExerciseId, ...customExerciseDraft(), archivedAt: null, version: 1 } }, 201)))
+    vi.stubGlobal('fetch', fetchMock)
+    const photo = { dataUrl: 'data:image/jpeg;base64,/9j/2Q==', mimeType: 'image/jpeg' as const, width: 8, height: 8, sizeBytes: 4 }
+    for (const current of [actor, { ...actor, kind: 'client' as const, role: 'client' as const, userId: clientId, clientId, trainerId: actor.userId, fullName: 'Другой клиент', experiments: { trainerScheduleV2: false, clientLime: true } }]) {
+      await createYandexMainRepository(apiBaseUrl, sessionToken, current).exercises.create(actor.userId, current.userId, customExerciseDraft(), photo)
+    }
+    const clientActor: SessionActor = { ...actor, kind: 'client', role: 'client', clientId, trainerId: actor.userId, fullName: 'Фото клиент', experiments: { trainerScheduleV2: false, clientLime: true } }
+    await createYandexMainRepository(apiBaseUrl, sessionToken, clientActor).exercises.create(actor.userId, actor.userId, customExerciseDraft())
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(url).toBe(`${apiBaseUrl}/v1/custom-exercises`)
+      expect(JSON.parse(String(init?.body))).toEqual(customExerciseDraft())
+    }
+  })
+
   it('rejects a custom exercise photo url request instead of hitting the network (YAFIT-521 gap, see FEATURE_PARITY.md)', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
