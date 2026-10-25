@@ -1,6 +1,7 @@
 import type { QueryResultRow } from 'pg'
 
 import type { DatabaseClient } from './db/types.js'
+import { storedCustomExercisePhoto, type CustomExercisePhoto, type CustomExercisePhotoColumns } from './custom-exercise-media.js'
 import { calorieRolloutPercent, publishedWorkoutCalories } from './workout-calorie-rollout.js'
 
 const DEFAULT_WORKOUT_PAGE_SIZE = 100
@@ -23,7 +24,7 @@ type BlockPreset = 'set' | 'circuit' | 'interval'
 type Wellbeing = 'good' | 'normal' | 'hard'
 type TrainerReaction = 'thumbs_up' | 'fire' | 'strong'
 
-interface CustomExerciseRow extends QueryResultRow {
+interface CustomExerciseRow extends QueryResultRow, CustomExercisePhotoColumns {
   id: string
   created_by: string
   name: string
@@ -152,6 +153,7 @@ interface WorkoutSetRow extends QueryResultRow {
 }
 
 export interface PilotCustomExercise {
+  image?: CustomExercisePhoto
   id: string
   name: string
   muscleGroup: MuscleGroup
@@ -323,7 +325,8 @@ export async function readAccessibleTrainingData(
   const [customExerciseRows, workoutLookahead, attentionRows, preferenceRows] = await Promise.all([
     page.scope === 'workouts' ? [] : client.query<CustomExerciseRow>(`
       select id, created_by, name, muscle_group, input_kind,
-        primary_muscle_detail, equipment, description, archived_at, version
+        primary_muscle_detail, equipment, description, archived_at, version,
+        image_path, image_mime_type, image_width, image_height, image_size_bytes, image_sha256
       from public.custom_exercises
       order by archived_at nulls first, lower(name), id
     `),
@@ -505,7 +508,10 @@ export async function readAccessibleTrainingData(
   const rolloutPercent = calorieRolloutPercent()
   return {
     accessMode: 'read_only',
-    customExercises: customExerciseRows.map((row) => ({
+    customExercises: customExerciseRows.map((row) => {
+      const image = storedCustomExercisePhoto(row)
+      return {
+      ...(image ? { image } : {}),
       id: row.id,
       name: row.name,
       muscleGroup: row.muscle_group,
@@ -516,7 +522,8 @@ export async function readAccessibleTrainingData(
       archivedAt: row.archived_at?.toISOString() ?? null,
       version: safeInteger(row.version, 'custom exercise version'),
       createdBy: row.created_by,
-    })),
+      }
+    }),
     workouts: workoutRows.map((row) => {
       const calories = publishedWorkoutCalories(row, rolloutPercent)
       return {
