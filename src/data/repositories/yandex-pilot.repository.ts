@@ -213,6 +213,11 @@ const workoutSchema = z.object({
   version: z.number().int().positive(),
   exercises: z.array(workoutExerciseSchema),
 })
+export const customExerciseImageSchema = z.object({
+  path: z.string().min(1), mimeType: z.literal('image/jpeg'),
+  width: z.number().int().min(1).max(1600), height: z.number().int().min(1).max(1600),
+  sizeBytes: z.number().int().min(1).max(2 * 1024 * 1024), sha256: z.string().regex(/^[a-f0-9]{64}$/),
+})
 const customExerciseSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
@@ -224,6 +229,7 @@ const customExerciseSchema = z.object({
   archivedAt: yandexDateTimeSchema.nullable(),
   version: z.number().int().positive(),
   createdBy: z.uuid().optional(),
+  image: customExerciseImageSchema.optional(),
 })
 const trainingDataSchema = z.object({
   accessMode: z.literal('read_only'),
