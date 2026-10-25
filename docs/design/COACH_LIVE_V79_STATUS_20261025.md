@@ -72,3 +72,24 @@ Browser10/10: WebKit/Chromium, обе плотности,6 подходов и �
 deadline,54/48, внутренний scrollTop0. Визуально проверена первая строка после
 раскрытия заметки. Полный npm run check завершился exit0, включая
 frontend2831/API1471, policy и production build.
+
+## PR5
+
+Подготовка от проверенного PR4 (6c68ebf4), перед публикацией — актуальный main.
+Существовали реальный ExercisePicker, поиск, фильтры, два раздела недавних,
+создание/предпросмотр/замена и одиночное добавление у тренера — не заменены demo.
+Переиспользован FitLimeSheetHeader, добавлен только optional coachLiveV79 variant.
+Route-scoped parent ограничен trainer Live gate, включая portal окон отдыха,
+времени и подтверждений; клиент и планирование нового класса не получают.
+
+Source shell: radius40, max430, viewport/safe-area, header88, карточки112/r32,
+preview65×80; cancel-вход/выход .42s (.22,1,.36,1), reduced-motion без задержки.
+Успешное добавление закрывает окно прежним mutation-owner без задержки записи.
+Одиночный выбор не превращён в demo-мультивыбор. Сиреневые фильтры сохранены.
+
+Unit68/68: два новых случая защищают однократное завершение анимации и отмену
+pending callback при unmount. Реальный browser6/6 WebKit/Chromium проверил
+поиск/фильтр/создание/back/cancel/одиночное добавление, роль вне пилота.
+Полный check exit0: frontend2833/API1471, lint/types/policy/build.
+Весь diff WorkoutsPages — один optional prop только в Live caller; прежнее
+меню суперсетов/действий и клиентские изменения не заменены старой копией.

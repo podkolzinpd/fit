@@ -16,6 +16,7 @@ import { useClientLimeTheme } from './client-lime-theme'
 import { ContestWinnerDialog } from '../features/contest'
 import { FitLimeIconsContext } from '../shared/fit-lime-icons'
 import { isCoachWorkoutRedesignEnabled } from './coach-workout-redesign'
+import { isCoachLiveV79Enabled } from './coach-live-v79'
 
 export { appViewportMetrics } from './app-viewport'
 
@@ -126,6 +127,7 @@ export function AppLayout() {
     fitLimeShell && !clientLimeShell ? '' : themeVariantClass(themeVariant),
     redesignedStart && pathname === '/today' ? 'today-start-shell' : '',
     liveSession ? 'live-session-shell' : '',
+    liveSession && isCoachLiveV79Enabled(actor) ? 'coach-live-v79-shell' : '',
     workoutForm || templateEditor ? 'workout-form-shell' : '',
     assistant ? 'assistant-shell' : '',
     'ui-identity',

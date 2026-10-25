@@ -120,6 +120,7 @@ interface ExercisePickerProps {
   reference?: boolean
   referenceAppearance?: boolean
   clientLime?: boolean
+  coachLiveV79?: boolean
   onClose: () => void
 }
 
@@ -151,7 +152,16 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, onClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, coachLiveV79 = false, onClose: commitClose }: ExercisePickerProps) {
+  const [closing, setClosing] = useState(false)
+  const closeTimer = useRef<number | null>(null)
+  useEffect(() => () => { if (closeTimer.current !== null) window.clearTimeout(closeTimer.current) }, [])
+  function onClose() {
+    if (!coachLiveV79 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { commitClose(); return }
+    if (closeTimer.current !== null) return
+    setClosing(true)
+    closeTimer.current = window.setTimeout(commitClose, 420)
+  }
   const [mode, setMode] = useState<Exclude<ExercisePickerMode, 'choose' | 'strength'>>(
     !initialSearch.trim() && initialMode === 'running' ? 'running' : 'all',
   )
@@ -527,7 +537,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
 
   const backdropStart = useRef<boolean | null>(null)
   const referenceList = referenceAppearance && !previewExercise && !creating
-  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}`}
+  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}${coachLiveV79 ? ' coach-v79-picker-overlay' : ''}${closing ? ' closing' : ''}`} inert={closing}
     onPointerDownCapture={(event) => { backdropStart.current = event.target === event.currentTarget }}
     onPointerCancel={() => { backdropStart.current = null }}
     onClick={(event) => {
@@ -536,8 +546,8 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       if (intended && event.target === event.currentTarget && !addingSelected) onClose()
     }}>
     <section ref={dialogRef} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
-      {clientLime ? <FitLimeSheetHeader
-        title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? <>Фильтры{referenceAppearance && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</> : 'Выберите упражнения'}
+      {clientLime || coachLiveV79 ? <FitLimeSheetHeader
+        title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? <>Фильтры{referenceAppearance && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</> : coachLiveV79 ? 'Добавить упражнение' : 'Выберите упражнения'}
         backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}
         onBack={previewExercise ? closeTechnique : creating ? closeCreate : filtersOpen ? () => closeFilters(true) : onClose}
         disabled={addingSelected}
