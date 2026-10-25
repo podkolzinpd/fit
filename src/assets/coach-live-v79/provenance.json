@@ -4,6 +4,8 @@
   "files": [
     { "file": "glow-inner.png", "sourceFile": "public/assets/glow-progressive.png", "sha256": "4747cfff7ce4f881b3fb15a6e185e223e1916805b936f664344db199e19f57e2" },
     { "file": "glow-middle.svg", "sourceFile": "public/assets/4ff19.svg", "sha256": "4a703d24d3d068ab9edbd7f5343da7c78146a64770cf4c2784c5b58ce4490f79" },
-    { "file": "glow-outer.svg", "sourceFile": "public/assets/321f3.svg", "sha256": "5737702d32221280f239f6a2fd67fc6c5cb977a64452e44d79d1c30eb710c67c" }
+    { "file": "glow-outer.svg", "sourceFile": "public/assets/321f3.svg", "sha256": "5737702d32221280f239f6a2fd67fc6c5cb977a64452e44d79d1c30eb710c67c" },
+    { "file": "card-collapse.svg", "sourceFile": "public/assets/icons/card-collapse-v75.svg", "sha256": "d5c0eaadd7173f51b66ce4730211d851e15f8fe9569a4e513937f5bca50b5544" },
+    { "file": "card-expand.svg", "sourceFile": "public/assets/icons/card-expand-v75.svg", "sha256": "4e5760e0efc84d57f903e02ef16277619bcb2f5f9c1920b4b6f77483fafed4d1" }
   ]
 }
