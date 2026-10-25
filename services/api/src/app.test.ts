@@ -1300,6 +1300,26 @@ describe('trainer finance', () => {
 })
 
 describe('Vital exercise media', () => {
+  it('returns service unavailable for single and batch signing without native storage', async () => {
+    const read = vi.fn()
+    const app = buildApp({ yandexAppSessionReader: { read }, logger: false })
+    apps.push(app)
+
+    for (const [url, payload] of [
+      ['/v1/exercise-media/sign', { path: 'vital-pro/squat.jpg' }],
+      ['/v1/exercise-media/sign-batch', { paths: ['vital-pro/squat.jpg', 'vital-pro/squat.mp4'] }],
+    ] as const) {
+      const response = await app.inject({
+        method: 'POST', url,
+        headers: { 'x-fit-session': 'a'.repeat(43) },
+        payload,
+      })
+      expect(response.statusCode).toBe(503)
+      expect(response.json()).toEqual({ error: 'service_unavailable' })
+    }
+    expect(read).not.toHaveBeenCalled()
+  })
+
   it('signs only reviewed paths for a valid read-write session', async () => {
     const read = vi.fn().mockResolvedValue({})
     const sign = vi.fn().mockResolvedValue('https://signed.example/vital')
