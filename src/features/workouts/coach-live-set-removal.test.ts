@@ -28,3 +28,18 @@ describe('Coach Live safe set removal', () => {
     expect(coachLiveSetRemovalError(undefined, pending.id)).toContain('не загружена')
   })
 })
+
+describe('client explicit confirmed-result removal', () => {
+  const set = { id: 'done', confirmedAt: '2026-10-23T09:00:00Z', version: 7 }
+  const state = { exercises: [{ sets: [set, { id: 'other', confirmedAt: null, version: 1 }] }] }
+  it('requires explicit approval of the exact confirmed version', () => {
+    expect(coachLiveSetRemovalError(state, set.id)).toContain('сохранить результат')
+    expect(coachLiveSetRemovalError(state, set.id, { setId: set.id, expectedSetVersion: 7 })).toContain('сохранить результат')
+    expect(coachLiveSetRemovalError(state, set.id, { setId: set.id, expectedSetVersion: 7, confirmedVersion: 7 })).toBeNull()
+    expect(coachLiveSetRemovalError(state, set.id, { setId: 'other', expectedSetVersion: 7, confirmedVersion: 7 })).toContain('Выберите подход')
+  })
+  it('blocks a changed fact and preserves the last-set guard', () => {
+    expect(coachLiveSetRemovalError(state, set.id, { setId: set.id, expectedSetVersion: 6, confirmedVersion: 6 })).toContain('изменился')
+    expect(coachLiveSetRemovalError({ exercises: [{ sets: [set] }] }, set.id, { setId: set.id, expectedSetVersion: 7, confirmedVersion: 7 })).toContain('Последний')
+  })
+})

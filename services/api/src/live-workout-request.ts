@@ -133,6 +133,14 @@ export function readLiveOperationRequest(
     : { expectedVersion, operationId }
 }
 
+export function readLiveSetRemovalRequest(body: unknown): (LiveOperationRequest & { expectedSetVersion?: number }) | undefined {
+  const input = record(body), operation = readLiveOperationRequest(body)
+  if (!input || !operation) return undefined
+  if (input.expectedSetVersion === undefined) return operation
+  const expectedSetVersion = integer(input.expectedSetVersion, 1, Number.MAX_SAFE_INTEGER)
+  return expectedSetVersion === undefined ? undefined : { ...operation, expectedSetVersion }
+}
+
 // Пауза Live (YAFIT-627): только явный признак и идентификатор операции.
 export function readLivePauseRequest(
   body: unknown,

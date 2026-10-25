@@ -1,0 +1,16 @@
+/* Approved compact FIT adaptation of v79. Only spacing changes; the same
+   form elements, timer owner, 48px controls and 44px actions remain mounted. */
+/* Hidden overflow is a scroll container: Safari can scroll it while focusing
+   a note during expansion. Clip keeps one scroll owner (.content) in BOTH views. */
+.coach-live-v79 .coach-v79-card-body > div { overflow: clip; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-large-clock { height: 84px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-large-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-timer[data-state='rest'] .coach-v79-large-clock { height: 132px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-elapsed { margin-top: 8px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-elapsed .coach-live-digits { font-size: 20px; line-height: 24px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-actions .live-rest-trigger { height: 48px; min-height: 48px; border-radius: 16px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .live-session-header { padding: 8px 16px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .live-exercise-head { min-height: 0; padding: 8px 16px; margin: 0 -16px 4px; gap: 4px 8px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .live-exercise-head :is(h2,h3) { font-size: 20px; line-height: 24px; font-weight: 500; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-exercise-tools { gap: 8px; padding: 4px 0; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-live-field-unit { font-size: 9px; line-height: 10px; }

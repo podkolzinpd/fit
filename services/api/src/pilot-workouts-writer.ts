@@ -165,6 +165,7 @@ export interface PilotWorkoutsWriter {
     setId: string,
     expectedVersion: number,
     operationId: string,
+    expectedSetVersion?: number,
   ): Promise<PilotLiveStructureResult>
   removeLiveExercise(
     sessionToken: YandexActorSessionInput,
@@ -442,12 +443,14 @@ export class DatabasePilotWorkoutsWriter implements PilotWorkoutsWriter {
     setId: string,
     expectedVersion: number,
     operationId: string,
+    expectedSetVersion?: number,
   ): Promise<PilotLiveStructureResult> {
     return this.withSession(sessionToken, (client) => removeLiveSet(
       client,
       setId,
       expectedVersion,
       operationId,
+      expectedSetVersion,
     ))
   }
 

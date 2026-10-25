@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
+import { yandexAuthFailureDiagnostics, type YandexAuthStage } from './auth/yandex-auth-diagnostics.js'
 
 import {
   readBearerToken,
@@ -108,6 +109,7 @@ import {
   readLiveCommentRequest,
   readLiveExerciseRequest,
   readLiveOperationRequest,
+  readLiveSetRemovalRequest,
   readLivePauseRequest,
   readLiveReorderRequest,
   readLiveMoveRequest,
@@ -817,6 +819,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   async function readYandexIdentity(
     command: { code: string; codeVerifier: string },
+    onStage?: (stage: YandexAuthStage) => void,
   ): Promise<VerifiedYandexIdentity | undefined> {
     if (
       options.oauthCodeProvider === undefined ||
@@ -825,10 +828,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return undefined
     }
 
+    onStage?.('oauth_code')
     const token = await options.oauthCodeProvider.exchangeCode(
       command.code,
       command.codeVerifier,
     )
+    onStage?.('identity')
     const identity = await options.identityProvider.verifyAccessToken(token)
     return identity
   }
@@ -1275,6 +1280,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   })
 
   app.post('/v1/auth/yandex/session', async (request, reply) => {
+    let authStage: YandexAuthStage = 'configuration'
     const command = readYandexCodeRequest(request.body)
     if (command === undefined) {
       return reply.code(400).send({ error: 'invalid_request' })
@@ -1284,20 +1290,25 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       options.identityProvider === undefined ||
       options.yandexAppSessionIssuer === undefined
     ) {
+      request.log.error(yandexAuthFailureDiagnostics(authStage), 'Yandex login unavailable')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
 
     let identity: VerifiedYandexIdentity
     try {
-      const resolvedIdentity = await readYandexIdentity(command)
+      const resolvedIdentity = await readYandexIdentity(command, (stage) => { authStage = stage })
       if (resolvedIdentity === undefined) {
+        request.log.error(yandexAuthFailureDiagnostics(authStage), 'Yandex login unavailable')
         return reply.code(503).send({ error: 'service_unavailable' })
       }
       identity = resolvedIdentity
     } catch (error) {
+      request.log.warn(yandexAuthFailureDiagnostics(authStage, error), 'Yandex login provider failed')
       const response = sendYandexOAuthFailure(reply, error)
       if (response !== undefined) return response
-      throw error
+      // Preserve 500 without forwarding a credential-bearing exception to the
+      // generic logger/serializer. Its safe stage/code have already been logged.
+      return reply.code(500).send({ statusCode: 500, error: 'Internal Server Error', message: 'Yandex login provider failed' })
     }
 
     try {
@@ -1305,25 +1316,31 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         options.trainerScheduleV2AutoActivator !== undefined
         && identity.loginHash !== undefined
       ) {
+        authStage = 'trainer_activation'
         await options.trainerScheduleV2AutoActivator.activate(
           identity.subjectHash,
           identity.loginHash,
         )
       }
       if (options.fitLimeAutoActivator !== undefined && identity.loginHash !== undefined) {
+        authStage = 'lime_activation'
         await options.fitLimeAutoActivator.bind(identity.subjectHash, identity.loginHash)
       }
       if (options.assistantFeatureLinksAutoActivator !== undefined && identity.loginHash !== undefined) {
+        authStage = 'assistant_activation'
         await options.assistantFeatureLinksAutoActivator.bind(identity.subjectHash, identity.loginHash)
       }
       if (options.nutritionAutoActivator !== undefined && identity.nutritionLoginHash !== undefined) {
+        authStage = 'nutrition_activation'
         await options.nutritionAutoActivator.bind(identity.subjectHash, identity.nutritionLoginHash)
       }
+      authStage = 'session_issue'
       const session = await options.yandexAppSessionIssuer.issue(identity.subjectHash)
       if (session === undefined) {
         if (!options.yandexOnlyAuthEnabled || options.yandexAuthHandoffService === undefined) {
           return reply.code(403).send({ error: 'yandex_session_denied' })
         }
+        authStage = 'handoff_issue'
         const handoff = await options.yandexAuthHandoffService.issue(identity.subjectHash)
         return handoff === undefined
           ? reply.code(403).send({ error: 'yandex_access_disabled' })
@@ -1339,6 +1356,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           return reply.code(403).send({ error: 'yandex_session_denied' })
         }
         try {
+          authStage = 'handoff_issue'
           const handoff = await options.yandexAuthHandoffService.issue(identity.subjectHash)
           return handoff === undefined
             ? reply.code(403).send({ error: 'yandex_access_disabled' })
@@ -1347,10 +1365,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
                 handoff,
               })
         } catch (handoffError) {
+          request.log.error(yandexAuthFailureDiagnostics(authStage, handoffError), 'Yandex login handoff failed')
           const response = sendHandoffFailure(reply, handoffError)
           if (response !== undefined) return response
+          return reply.code(503).send({ error: 'service_unavailable' })
         }
       }
+      request.log.error(yandexAuthFailureDiagnostics(authStage, error), 'Yandex login session failed')
       return reply.code(503).send({ error: 'service_unavailable' })
     }
   })
@@ -3726,7 +3747,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.delete('/v1/workout-sets/:setId', async (request, reply) => {
     const sessionToken = readCompatibleYandexActorSession(request.headers)
     const { setId } = request.params as { setId?: unknown }
-    const command = readLiveOperationRequest(request.body)
+    const command = readLiveSetRemovalRequest(request.body)
     if (sessionToken === undefined) {
       return reply.code(401).send({ error: 'unauthorized' })
     }
@@ -3748,6 +3769,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         setId,
         command.expectedVersion,
         command.operationId,
+        command.expectedSetVersion,
       ),
       (result) => reply
         .header('cache-control', 'no-store')

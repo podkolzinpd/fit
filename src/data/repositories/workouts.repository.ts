@@ -313,7 +313,8 @@ export const workoutsRepository = {
     void workout; void blockId; void operationId
     return Promise.reject(new Error('Разделение суперсета доступно после перехода на новый сервер'))
   },
-  async removeLiveSet(workout: Workout, setId: string): Promise<number> {
+  async removeLiveSet(workout: Workout, setId: string, guard?: { expectedSetVersion: number; operationId: string }): Promise<number> {
+    if (guard) throw new Error('Не удалось безопасно удалить подход. Обновите приложение и попробуйте снова.')
     const result = await workoutQueries.removeLiveSet(setId, workout.version)
     if (result.error) throw repositoryError(result.error)
     return result.data

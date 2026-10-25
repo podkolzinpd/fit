@@ -549,6 +549,17 @@ export async function mockPilot(page: Page, options: { role?: 'trainer' | 'clien
       body = { workout: { version: 2 } }
     } else if (/^\/v1\/workout-sets\/[0-9a-f-]+$/.test(url.pathname) && route.request().method() === 'DELETE') {
       const id = url.pathname.split('/')[3]
+      const command = route.request().postDataJSON() as { expectedVersion: number; expectedSetVersion?: number }
+      if (command.expectedSetVersion !== undefined) {
+        const item = workouts.find(item => item.exercises.some(exercise => exercise.sets.some(set => set.id === id)))
+        const exercise = item?.exercises.find(exercise => exercise.sets.some(set => set.id === id)), set = exercise?.sets.find(set => set.id === id)
+        if (!item || !set || command.expectedVersion !== item.version || command.expectedSetVersion !== set.version) {
+          await route.fulfill({ status: 409, json: { error: 'workout_conflict' } }); return
+        }
+        if (!exercise || exercise.sets.length <= 1 || exercise.blockType !== 'single') {
+          await route.fulfill({ status: 422, json: { error: 'workout_invalid' } }); return
+        }
+      }
       workouts = workouts.map((item) => item.exercises.some((exercise) => exercise.sets.some((set) => set.id === id))
         ? { ...item, version: item.version + 1, exercises: item.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.filter((set) => set.id !== id).map((set, position) => ({ ...set, position })) })) } : item)
       body = { set: { version: workouts.find((item) => item.id === workoutId)!.version } }

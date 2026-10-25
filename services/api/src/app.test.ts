@@ -5436,6 +5436,20 @@ describe('pilot live workout structural commands', () => {
     inputKind: 'strength' as const,
   }
 
+  it('forwards an optional set version and rejects invalid guarded removal before writing', async () => {
+    const writer = buildWorkoutsWriter()
+    const app = buildApp({ pilotWorkoutsWriter: writer.pilotWorkoutsWriter, logger: false }); apps.push(app)
+    const payload = { expectedVersion: 4, expectedSetVersion: 7, operationId: OPERATION_IDS.removeSet }
+    for (const value of [0, -1, 1.5, null, '7']) {
+      const response = await app.inject({ method: 'DELETE', url: `/v1/workout-sets/${WORKOUT_SET_ID}`, headers: { 'x-fit-pilot-session': sessionToken }, payload: { ...payload, expectedSetVersion: value } })
+      expect(response.statusCode).toBe(400)
+    }
+    expect(writer.removeLiveSet).not.toHaveBeenCalled()
+    const response = await app.inject({ method: 'DELETE', url: `/v1/workout-sets/${WORKOUT_SET_ID}`, headers: { 'x-fit-pilot-session': sessionToken }, payload })
+    expect(response.statusCode).toBe(200)
+    expect(writer.removeLiveSet).toHaveBeenCalledWith(sessionToken, WORKOUT_SET_ID, 4, OPERATION_IDS.removeSet, 7)
+  })
+
   it('adds, removes, reorders, replaces and comments with operation identities', async () => {
     const writer = buildWorkoutsWriter()
     const app = buildApp({
@@ -5566,6 +5580,7 @@ describe('pilot live workout structural commands', () => {
       WORKOUT_SET_ID,
       4,
       OPERATION_IDS.removeSet,
+      undefined,
     )
     expect(writer.reorderLiveBlock).toHaveBeenCalledWith(
       sessionToken,

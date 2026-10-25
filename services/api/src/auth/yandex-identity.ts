@@ -19,7 +19,10 @@ export class YandexIdentityRejectedError extends Error {
 }
 
 export class YandexIdentityUnavailableError extends Error {
-  constructor() {
+  constructor(
+    readonly failure: 'network' | 'http' | 'invalid_response' | 'unknown' = 'unknown',
+    readonly httpStatus?: number,
+  ) {
     super('Yandex identity service is unavailable')
     this.name = 'YandexIdentityUnavailableError'
   }
@@ -94,19 +97,19 @@ export class YandexIdentityClient implements YandexIdentityProvider {
         },
       )
     } catch {
-      throw new YandexIdentityUnavailableError()
+      throw new YandexIdentityUnavailableError('network')
     }
 
     if (response.status === 401 || response.status === 403) {
       throw new YandexIdentityRejectedError()
     }
-    if (!response.ok) throw new YandexIdentityUnavailableError()
+    if (!response.ok) throw new YandexIdentityUnavailableError('http', response.status)
 
     let payload: unknown
     try {
       payload = await response.json()
     } catch {
-      throw new YandexIdentityUnavailableError()
+      throw new YandexIdentityUnavailableError('invalid_response')
     }
 
     const identity = parseIdentityPayload(payload)

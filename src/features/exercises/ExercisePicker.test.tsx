@@ -67,6 +67,34 @@ function PickerDraftHarness({ onPickMany = () => undefined }: { onPickMany?: (ex
 }
 
 describe('ExercisePicker', () => {
+  it('only the coach-v79 dismissal waits for source motion and cannot close twice', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    vi.stubGlobal('matchMedia', (media: string) => ({ matches: false, media, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent: () => true }))
+    const onClose = vi.fn()
+    const view = render(<ExercisePicker reference coachLiveV79 catalog={catalog()} onPick={vi.fn()} onClose={onClose} />)
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Закрыть', hidden: true }))
+      act(() => vi.advanceTimersByTime(419))
+      expect(onClose).not.toHaveBeenCalled()
+      act(() => vi.advanceTimersByTime(1))
+      expect(onClose).toHaveBeenCalledTimes(1)
+    } finally { view.unmount(); vi.useRealTimers() }
+  })
+
+  it('coach-v79 dismissal cancels its pending callback on unmount', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    vi.stubGlobal('matchMedia', (media: string) => ({ matches: false, media, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent: () => true }))
+    const onClose = vi.fn()
+    const view = render(<ExercisePicker reference coachLiveV79 catalog={catalog()} onPick={vi.fn()} onClose={onClose} />)
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+      view.unmount()
+      act(() => vi.advanceTimersByTime(420))
+      expect(onClose).not.toHaveBeenCalled()
+    } finally { vi.useRealTimers() }
+  })
+
   it('client reference appearance retains filter search and normalized batch retry without trainer behavior', async () => {
     const user = userEvent.setup()
     const onPickMany = vi.fn().mockRejectedValueOnce(new Error('internal-sensitive-detail')).mockResolvedValueOnce(undefined)
@@ -238,6 +266,8 @@ describe('ExercisePicker', () => {
     prepareExerciseImage.mockResolvedValue({ dataUrl: 'data:image/jpeg;base64,AQID', mimeType: 'image/jpeg', width: 800, height: 800, sizeBytes: 3 })
   })
   afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
     if (originalLocalStorage) Object.defineProperty(window, 'localStorage', originalLocalStorage)
     else delete (window as { localStorage?: Storage }).localStorage
     if (originalVisualViewport) Object.defineProperty(window, 'visualViewport', originalVisualViewport)

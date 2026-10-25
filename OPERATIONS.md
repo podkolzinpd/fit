@@ -1,5 +1,24 @@
 # Эксплуатация Fit V2
 
+## Coach Live v79 — YAFIT-653
+
+Согласованный план: `docs/design/COACH_LIVE_V79_INTEGRATION_20261025.md`.
+Независимый `VITE_COACH_LIVE_V79_ENABLED=true` и
+`VITE_COACH_LIVE_V79_PILOT_USER_IDS=<original-id-1>,<original-id-2>`.
+По умолчанию выключен. Gate требует тренерскую роль, существующие workout/density
+gates и точное совпадение новой пары с исходным workout allowlist; другая пара,
+пустой список, дубли и расширение закрывают новый UI. Это presentation-only:
+API ownership, данные и клиентский пилот не меняются. До готовности обоих
+режимов flag не включать. В web и Android OTA переменные передаются из
+environment fit-frontend-candidate с тем же default-off fallback. Native
+пересобирается с той же проверенной публичной конфигурацией и canonical API.
+Не менять родительские allowlist и клиентские флаги ради этого rollout.
+Включение допускается после приёмки PR6, только для точной исходной пары.
+Rollback: выключить только VITE_COACH_LIVE_V79_ENABLED и выполнить новый штатный
+выпуск; данные/БД не откатывать. Старый UI и сохранённый выбор плотности остаются.
+Проверять опубликованные bytes/health/current SHA, роль вне пилота, обе плотности
+и свежий native bundle. Реальный OAuth и физический iPhone указывать отдельно.
+
 ## Автоматический выбор проверок PR
 
 `scripts/e2e-scope.mjs` определяет frontend/browser scope по полному diff PR.
@@ -355,7 +374,26 @@ token, Authorization, email, имя, UUID профиля, URL/query с иден�
 request/response body или пользовательский текст. Диагностика копируется только
 по явному действию пользователя и не сохраняется в отдельной таблице.
 
-Для server-side расследования запустите ручной workflow `Diagnose Yandex stage`
+Для текущего Cloud.ru production используйте `Inspect Cloud.ru production
+operations`: `api_request_id` и UTC `api_request_time` ограничивают чтение
+четырьмя минутами и одним request ID. `authFailures` содержит только этап
+(`oauth_code`, `identity`, activation, `session_issue`, `handoff_issue`),
+фиксированную причину, SQLSTATE/сетевой код и, если доступен, HTTP-статус
+внешнего провайдера. Raw exceptions, OAuth-коды, токены, verifier и identity
+не выводятся. Readiness200 означает `select 1`, не успешный реальный вход.
+
+Фоновый отчёт дополняет код ошибки фиксированными `dispatchFailures`
+(операция/этап) и `transactionFailures` (connect/begin/timeout/work/commit).
+Ручной default-off `runtime_database_probe` отдельно проверяет fit_api connection,
+READ ONLY transaction, тот же SET LOCAL timeout и `select 1`, затем rollback.
+Он не вызывает application functions, не читает пользовательские таблицы,
+не отправляет push и не перезапускает процессы. Временный root0600 env удаляется
+EXIT; owner/VAPID credentials в probe-контейнер не передаются.
+До получения этих доказательств код22023 не считается установленной причиной
+ошибки авторизации, а перепубликация не считается исправлением.
+
+Только при отдельном согласованном расследовании старого rollback-контура
+используется ручной workflow `Diagnose Yandex stage`
 с `Request ID`, окном не более 30 минут и, если она известна вызывающей стороне,
 операцией вида `GET /health` без query. Отчёт явно показывает
 `serviceName=fit-stage-api`, `resourceType=serverless_container`, активные на

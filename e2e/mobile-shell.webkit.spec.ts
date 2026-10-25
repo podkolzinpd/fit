@@ -372,7 +372,10 @@ async function expectCompactBodyMap(map: Locator) {
   }
   if (geometry.detail) {
     expect(geometry.detail.top).toBeGreaterThanOrEqual(geometry.visual!.bottom)
-    expect(geometry.detail.top - geometry.visual!.bottom).toBeLessThanOrEqual(12)
+    // Subtracting WebKit DOMRect coordinates can report 12px as 12.000015px.
+    // Keep the 12px limit; discard only sub-thousandth CSS-pixel noise.
+    const detailGap = Math.round((geometry.detail.top - geometry.visual!.bottom) * 1000) / 1000
+    expect(detailGap).toBeLessThanOrEqual(12)
   }
 }
 

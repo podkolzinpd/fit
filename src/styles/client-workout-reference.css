@@ -34,7 +34,6 @@
   --workout-live-accent: var(--lime-accent-ink);
   --workout-live-warning: var(--warning-fg);
 }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-digits { font-family: 'REM', sans-serif; font-variation-settings: normal; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-status { color: var(--lime-accent-ink); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-status.resting { color: var(--warning-fg); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .coach-live-colon::before { background: currentColor; color: var(--lime-accent-ink); box-shadow: 0 .28em 0 currentColor; }
@@ -241,3 +240,34 @@
 /* Pending remains announced; errors retain their visible retry path. Neither
    idle nor successful saves reserve a caption row between recorded sets. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-save-feedback:has(.save-status-saving) { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+
+/* Reuse the released trainer sheet flow. Its apply action follows the wheels
+   and presets instead of covering them; all timer callbacks stay unchanged. */
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet.live-rest-sheet { display: flex; flex-direction: column; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet.live-rest-sheet > * { flex-shrink: 0; }
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-time-sheet.live-rest-sheet .live-rest-apply { position: static; padding: 0; background: transparent; }
+
+/* Same native disclosure interaction as exercise notes; the stored workout
+   text remains complete and separate from personal/trainer exercise notes. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-workout-note { min-height: 0; padding: 0 16px 8px; white-space: normal; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; list-style: none; cursor: pointer; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note summary::-webkit-details-marker { display: none; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note summary::after { content: none; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note :is(.live-workout-note-read, .live-workout-note-hide) { color: var(--lime-text-secondary); font-size: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note .live-workout-note-hide,
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note[open] .live-workout-note-read { display: none; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note[open] .live-workout-note-hide { display: inline; }
+.phone-frame.fit-client-lime.client-workout-reference .client-live-workout-note p { margin: 0; padding: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--lime-text); }
+
+/* Standard client controls: native selects need an explicit height in WebKit;
+   the resume link needs a layout box before its existing min-height can apply. */
+.phone-frame.fit-client-lime.client-workout-reference .client-reference-form select[name='stageId'] {
+  height: var(--control-height-standard);
+}
+.phone-frame.fit-client-lime.client-workout-reference .workout-detail-page > a.button.primary.wide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+}

@@ -585,6 +585,67 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
     let enrollmentPool: PgDatabasePool | undefined
     let runtimePool: PgDatabasePool | undefined
 
+    it('atomically checks the removed set version while preserving replay, ownership, facts and last-set guards', async () => {
+      if (!ownerPool || !runtimePool) throw new Error('Database not ready')
+      const id = randomUUID(), exercise = randomUUID(), target = randomUUID(), sibling = randomUUID(), op = randomUUID()
+      const operations = [op, randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()]
+      await ownerPool.query(`insert into public.workouts (id,trainer_id,client_id,created_by,workout_date,status,started_at) values ($1,$2,$3,$2,current_date,'in_progress',now())`, [id, ACTOR_ID, CLIENT_ID])
+      try {
+        await ownerPool.query(`insert into public.workout_exercises (id,workout_id,trainer_id,client_id,position,exercise_source,exercise_ref,exercise_name,muscle_group,input_kind,block_id,block_type,block_preset,block_rounds)
+          values ($1,$2,$3,$4,0,'system','push-up','Отжимания','chest','reps',$5,'single','set',1)`, [exercise,id,ACTOR_ID,CLIENT_ID,randomUUID()])
+        await ownerPool.query(`insert into public.workout_sets (id,workout_exercise_id,trainer_id,client_id,position,plan_reps,fact_reps,confirmed_at)
+          values ($1,$3,$4,$5,0,10,12,now()),($2,$3,$4,$5,1,10,11,now())`, [target,sibling,exercise,ACTOR_ID,CLIENT_ID])
+        const before = (await ownerPool.query('select fact_reps,confirmed_at,version from public.workout_sets where id=$1', [sibling])).rows
+        const call = (actor: string, root: number, version: number, receipt = op, setId = target) => withActorTransaction(runtimePool!, actor, client => removeLiveSet(client,setId,root,receipt,version))
+        // A normal fact save advances only set.version, not root.version.
+        const runtimeUrl = new URL(requireLocalTestDatabaseUrl())
+        runtimeUrl.username = 'fit_api'; runtimeUrl.password = RUNTIME_PASSWORD
+        const parallelSaver = new PgDatabasePool({ connectionString: runtimeUrl.toString(), max: 1 })
+        let allowCommit: () => void = () => undefined, saved: () => void = () => undefined
+        const commitGate = new Promise<void>(resolve => { allowCommit = resolve })
+        const savedGate = new Promise<void>(resolve => { saved = resolve })
+        const saving = withActorTransaction(parallelSaver, OTHER_ACTOR_ID, async client => {
+          await saveLiveSetDraft(client, target, { weightKg:null,reps:15,durationMin:null,durationSec:null,distanceKm:null,rpe:null }, 1, operations[1]!)
+          saved(); await commitGate
+        })
+        let deleting: Promise<{ error?: unknown; deleted?: boolean }> | undefined
+        try {
+          await Promise.race([savedGate, saving])
+          let deletingPid = 0
+          deleting = withActorTransaction(runtimePool, OTHER_ACTOR_ID, async client => {
+            deletingPid = (await client.query<{ pid: number }>('select pg_backend_pid() as pid'))[0]!.pid
+            return removeLiveSet(client,target,1,operations[2]!,1)
+          }).then(() => ({ deleted: true }), (error: unknown) => ({ error }))
+          // Observe the real PostgreSQL lock, rather than relying on a sleep:
+          // deletion must wait for the uncommitted fact save on this parent.
+          await expect.poll(async () => deletingPid === 0 ? 0 : Number((await ownerPool!.query<{ count: number }>('select cardinality(pg_blocking_pids($1)) as count',[deletingPid])).rows[0]!.count), { timeout: 5000 }).toBeGreaterThan(0)
+        } finally {
+          allowCommit()
+          try { await saving } finally { await parallelSaver.end() }
+        }
+        expect(await deleting).toMatchObject({ error: { failure: 'conflict' } })
+        expect(Number((await ownerPool.query<{ version: string }>('select version from public.workouts where id=$1',[id])).rows[0]!.version)).toBe(1)
+        await expect(call(OTHER_ACTOR_ID,1,1,operations[2])).rejects.toMatchObject({ failure:'conflict' })
+        expect((await ownerPool.query<{ fact_reps: number }>('select fact_reps from public.workout_sets where id=$1',[target])).rows[0]!.fact_reps).toBe(15)
+        await expect(call(MEMBER_TRAINER_ID,1,2,operations[3])).rejects.toMatchObject({ failure:'forbidden' })
+        await expect(call(OTHER_ACTOR_ID,2,2,operations[4])).rejects.toMatchObject({ failure:'conflict' })
+        await ownerPool.query("update public.workout_exercises set block_type='group' where id=$1",[exercise])
+        await expect(call(OTHER_ACTOR_ID,1,2,operations[5])).rejects.toMatchObject({ failure:'invalid' })
+        await ownerPool.query("update public.workout_exercises set block_type='single' where id=$1",[exercise])
+        await expect(call(OTHER_ACTOR_ID,1,2)).resolves.toEqual({ resourceId:target,version:2,replayed:false })
+        await expect(call(OTHER_ACTOR_ID,1,2)).resolves.toEqual({ resourceId:target,version:2,replayed:true })
+        await expect(call(OTHER_ACTOR_ID,1,3)).rejects.toMatchObject({ failure:'invalid' })
+        expect((await ownerPool.query('select fact_reps,confirmed_at,version from public.workout_sets where id=$1',[sibling])).rows).toEqual(before)
+        await expect(call(OTHER_ACTOR_ID,2,1,operations[5],sibling)).rejects.toMatchObject({ failure:'invalid' })
+        expect(Number((await ownerPool.query<{ version: string }>('select version from public.workouts where id=$1',[id])).rows[0]!.version)).toBe(2)
+        expect((await ownerPool.query('select id,position from public.workout_sets where workout_exercise_id=$1',[exercise])).rows).toEqual([{id:sibling,position:0}])
+        expect((await ownerPool.query("select exists(select 1 from pg_proc p, lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid='public.remove_live_set(uuid,bigint,uuid,bigint)'::regprocedure and a.grantee=0 and a.privilege_type='EXECUTE') as public, has_function_privilege('fit_api','public.remove_live_set(uuid,bigint,uuid,bigint)','EXECUTE') as api")).rows[0]).toEqual({public:false,api:true})
+      } finally {
+        await ownerPool.query('delete from public.workouts where id=$1',[id])
+        await ownerPool.query('delete from app_private.live_workout_operations where operation_id=any($1::uuid[])',[operations])
+      }
+    })
+
     it('persists favorite snapshots through HTTP and PostgreSQL with session, limit and ownership checks', async () => {
       if (!ownerPool || !runtimePool) throw new Error('Database not initialized')
       const actors = [randomUUID(), randomUUID(), randomUUID()]

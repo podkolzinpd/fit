@@ -66,13 +66,13 @@ main a208339d; публичный интерфейс59d92706, UI-diff между
 | Пункт | PR | Статус | Доказательство |
 | --- | --- | --- | --- |
 | A01 | 1 | Закрыто PR#1786 /3f4c4047 | Исходный дефект воспроизведён в обеих темах/плотностях |
-| A02 | 5 | Запланировано | Три запрета подтверждены кодом/браузером |
-| A03 | 2 | В работе PR#1788 | Обратное действие отсутствует |
-| A04 | 3 | Запланировано | REM computed против матричного SVG |
-| A05 | 3 | Запланировано | Пересечение footer/wheels измерено |
+| A02 | 5 | Локально принято, CI/public ещё гейты | actual298clean/DB180/DownUp/localverify/check passed |
+| A03 | 2 | Закрыто PR#1788 /b4f2d757 | Финальные54/54 public,8/8 cohort,212 public files |
+| A04 | 3 | Закрыто PR#1794 /c34d69d3 | Finalpublic54/cohort8/native213,48:00:02 Doto просмотрен |
+| A05 | 3 | Закрыто PR#1794 /c34d69d3 | Finalpublic54/cohort8, оба окна/568px просмотрены |
 | A06 | 1 | Закрыто PR#1786 /3f4c4047 | Смещение9.5px в обеих темах |
 | A07 | 1 | Закрыто PR#1786 /3f4c4047 | Лишняя колонка73.3px, header133px |
-| A08 | 4 | Запланировано | Полный длинный p без раскрытия |
+| A08 | 4 | Локально проверено PR4 | Свежий publicbaseline4/4, текст не сокращается |
 
 Для общих условных состояний: данные есть/нет (прошлый результат, анимация, заметка), загрузка, ошибка с retry, pending, success, пустой контент; пилот/вне пилота/тренер проверяются отдельно. Прежний внешний вид вне пилота сохраняется. API, БД, роли, LLM и SpeechKit не меняются в PR1–4. Реальное удаление/версия/конфликт проверяются отдельно в PR5.
 
@@ -94,3 +94,49 @@ PR2 локальная приёмка:25/26 в первом browser-прогон
 PR2 интеграция64f2a906 (#1781): удалены только obsolete deploy-vital-media script/workflow и обновлены ops/docs; git diff1241b10e..integrated --src --e2e пуст. Работающий public3f4c4047 сохраняет тот же runtime. Источник A03 и проверенные26 сценариев побайтно прежние. Новый полный check и свежий CI обязательны; активные1784/1787 проверяются перед merge.
 
 PR2 интеграция70b86892 (#1784): переиспользуем уже слитый browser wake-lock; его native-ветка прежняя, поля/таймер/подтверждение и меню им не изменяются. Source review подтвердил только visibilitychange/Screen Wake Lock без перехвата ввода. Обязательны новый check и42 целевых browser-кейса с keyboard/подтверждением/обратным сворачиванием. Published baseline3f4c4047, физический экран/wake-lock вне этих browser-fixtures не проверен.
+
+### PR2: выпуск и финальная приёмка
+
+#1788 /b4f2d757 опубликован: CI39952999850, API39958503276 и frontend39958503275 success. Финальный полный public-набор54/54, cohort8/8 для прежних4профилей и212файлов до/после совпали. Fresh native213файлов/установленный bundle проверены; simulator welcome просмотрен. Первый public-прогон имел53/54 и один Chromium timeout с необычной длительностью1039614ms; причина не установлена. Без изменения продукта/проверяемых условий тот же сценарий прошёл trace-recheck и3повтора, затем полный54-case набор завершился чисто за1.2мин. Исходный отчёт/trace сохранены в outputs/client-live-remediation-20261023. Physical iPhone/authenticated native Live НЕ ПРОВЕРЕНО.
+
+### PR3: свежая сверка и реализация
+
+База3b31960a (#1790, критическое исправление Android publisher); опубликованный UIb4f2d757. Diff src/e2e между ними пуст: новая база меняет только publisher/test/docs, HTTPS проверяет сертификат и canonical Host/SNI. Повторный public preflight4/4 (обе темы/WebKit/Chromium) подтвердил REM и перекрытие активного окна на568px: wheelBottom653.7/presetsBottom725.7, applyTop481. Снимок просмотрен.
+
+Уже работает: LiveRestTimer/TimeWheel, режимы выполнения, пауза, подготовка, ±15, отрицательный малый отдых и общий крупный таймер после нуля. Переиспользуем shared Doto с прежними весом/вариациями и существующую вертикальную компоновку. Primary окна — прежнее применение времени/начало отдыха. Меняем только клиентский font override и поток footer (flex, без sticky/подложки); callbacks, поля, хранение, роли и флаги не меняются. Полный исходный шрифт SVG отсутствует, точное совпадение исходных glyph outlines не заявляется.
+
+Новые слияния временно согласованно ждут публикации/production-приёмки YAFIT-650/#1787; локальная подготовка и тесты продолжаются. PR3 ещё не опубликован, CI/merge/public/native — будущие гейты. Проверка физического iPhone остаётся отдельной.
+
+PR3 локальная приёмка: npm run check exit0 (314frontend suites/2821tests; API1445passed+188conditional DB skips, lint/types/infra/build/startup). WebKit/Chromium54/54: обе темы/плотности,390/430,высоты568/844; matrix glyph-load/48:00:00, начальное/активное окно, пресеты/применение/±15/stop, режимы/пауза/подготовка/feedback/negative rest и outside-pilot regression. Снимки Doto/light и обоих окон просмотрены: footer следует за пресетами, прямоугольная подложка убрана только у клиентского wrapper. Обработчики LiveRestTimer, TimeWheel и API не изменены. CI/публикация/новый native ещё не выполнены; локальный коммит ждёт снятия согласованной merge-паузы после1787.
+
+PR3 интеграция main96723f26 (#1787) после локальной сверки финального diff: редактор готовой тренировки, его fieldset/safe input и editor-scoped CSS; Live handlers/таймер/свайп/факт не меняются. Промежуточные1791/1792 затрагивают только Android publisher/test/docs. Сохранены изменения соседних задач в CURRENT_STATE/PRODUCT_WIKI. На новой базе заново выполняются полный check и54browser; merge-пауза сохраняется до официальной публикации/production-приёмки1787. Финальные8находок дополнительно сверяются одним298-case набором после PR5 (включая анимации/drag/режимы), а не только отдельными тестами удаления.
+
+PR3 интеграция main5101b252 (#1795 / QA652 исходного650): просмотрен финальный diff. Единственная продуктовая строка задаёт существующий `--lime-accent-ink` для summary настроек блока внутри `.workout-editor-reference`. Live CSS/обработчики, API, миграции, геометрия и флаги этим дополнением не меняются. Сохранена свежая фактура650 из входящего CURRENT_STATE, удалены только устаревшие дубли собственной649. Прежние локальные2825/1445 и54browser/33CI относились к967; на новой базе повторяются check/54browser/CI. Слияние1794 по-прежнему ждёт production-приёмки650/652. Самостоятельно сверены опубликованные967: official CI/API/frontend success,212файлов+health, fresh baseline4/4; первая попытка baseline была остановлена deny-guard из-за отсутствующего адреса мокируемого API, исходный отчёт сохранён, повтор с корректной конфигурацией прошёл без изменения продукта.
+
+PR3 возобновление25.10: прямой ответ владельца «разрешаю» на вопрос снятия паузы/самослияния оставшихся3PR, только4 прежних тестовых профиля. Проверены новые слитые1793/1796 (документация) и1798 (safe auth/background diagnostics). В510..a0c src/e2e diff пуст; Live, схема и флаги не менялись. Входящие данные CURRENT_STATE сохранены, собственная649 актуализирована. После интеграции a0c395c1 заново выполняются check/54browser/CI; прежние зелёные результаты e245 не выдаются за новую приёмку.
+
+### PR3: выпуск и приёмка
+
+#1794/c34d69d3: mainCI40172158167/API40173211081/frontend40173211052 success,212public files до/после совпали; финальные54/54WebKit/Chromium и8/8cohort. Native213asset/sync/build/install/restart/launch прошли, фактический welcomePNG просмотрен (только unauth startup). Исходные52/54 сохранены: две проверки ждали локальный /v1 вместо опубликованного /api/v1, хотя приложение завершало тренировку. Исправлен только hosted harness adapter, точные endpoint/assertions/deny-guard сохранены; продукт не менялся. Новый полный54набор чистый. Physical iPhone/authenticatednativeLive не проверены.
+
+### PR4: свежая сверка и реализация
+
+База и productionc34d69d3, source/main/релевантныйPR1797 проверены: чужой media-refactor неактивен, не меняет заметки. Свежие4/4public preflight в обеих темах/движках воспроизвели обычный длинный p; baseline390WebKit просмотрен. Уже работает хранение полного текста и независимые заметки упражнения/тренера. Переиспользуется их native details/summary + Читать/Скрыть и существующие Lime/YSGeo роли. Меняется только clientReference-представление общей заметки: пустой нетDOM, по умолчанию компактна, полный текст с pre-wrap и обратным сворачиванием. Primary остаётся подтверждение текущего подхода; API/Assistant/флаги/тренерский p прежние. Новая empty-проверка сначала требует реально смонтированный Live, чтобы не принять welcome за отсутствие заметки. Physical iPhone НЕ ПРОВЕРЕНО.
+
+PR4 окончательная локальная проверка на c34d69d3: полный npm run check прошёл (2825 frontend /1469 API,188 условных DBskip), браузеры48/48 без повторов в WebKit/Chromium. Просмотрены реальные390px darkcompact/lightoriginal screenshots: компактная строка заметки не заслоняет упражнения, независимые заметки тренера/спортсмена сохранены; тесты проверяют430px, полный текст/переносы, обратное сворачивание/перезагрузку и отсутствие записи в API. Физический iPhone не проверен.
+
+PR4 первая CI40174788622 остановлена: WebKit4 до тестов не поднял legacySupabase (registry Data limit/port busy); WebKit3 выявил независимый320px Progress assert:12.000015px против12px. Progress/егоCSS не менялись. Только измерение разницы DOMRect округлено до0.001CSSpx, предел12px/проверка неперекрытия сохранены; все исходные логи сохранены. Есть отдельные WebKit internal navigation/login flakes в старой lane; их причина не доказана, они не выданы за продуктовый успех. Новая ревизия проходит полныйcheck и весь официальныйCI заново.
+
+PR4 DOMRect follow-up: повторные lint/types/coverage2825/DBtypes/permissions/media прошли; сетевые policy-тесты остановлены sandbox listenEPERM. Та же оставшаяся последовательность infra/calendar/hosting/API1469+188DBskip/build/startup завершена с разрешением локальных соединений. Это одна полная цепочка с возобновлением, не отдельный чистый npmcheck-run. Продуктовые исходники и48browser-case body идентичны bacdcb7a; исходные48/48 остаются доказательством неизменённого UI, исправленный legacyassert принимает12.000015px как12px и отклоняет12.001px/выше; полныйCI проверяется заново.
+
+### PR5: актуальное состояние и границы
+
+До правки: main9fe0c14c, publishedc34d69d3 (212bytes/health), removeSet/requestRemoveLiveSet byte-identical между ними;4/4public baseline подтвердили запрет confirmed swipe в обеих темах/движках, фактический lightWebKit screenshot просмотрен. Чужой PR1797 media-only/stale; перегрузки/intent/версии подхода ещё нет, latestmigration155. Сохраняются существующие WorkoutSwipe, draftqueue, confirm dialog и atomicround path. Primary: удалить выбранный подход после явного подтверждения; нельзя удалить чужую/изменённую запись, последний подход или часть суперсета.
+
+Только clientReference получает confirmed removal с точным ID/set.version/operationId. Новая numbered156 добавляет4arg overload с version recheck под той же parent-lock, старые3args не меняются. Approval другогоsetId отвергается. Сначала waitForIdle, pendingtarget inert, старые/sibling факты и отдых сохраняются; временная ошибка использует прежнийoperationId, authoritative missing-set read восстанавливает потерянный ответ. Изменённый факт требует нового explicit approval; это дополнительно проверяется браузером. WebKit blur оболочки не превращается в ложную запись метрики; обычный input/select/timebutton autosave сохранён. Старый trainer/nonpilot контракт и last-set/superset guards сохранены.
+
+PR5 начинается пока PR4 проходит официальный mainCI: его native worker уже завершил sync/build/install и восстановил исходники. Оставшаяся PR4 проверка использует отдельные неизменяемые hosted copies; до приёмки4 они не обновляются. Пятый PR не сливается раньше полной приёмки4. Чистая собственная PG17.11 port55492 до миграций:0public tables/0application schemas; общие БД не затрагиваются. Fullsource/public298, actor/RLS/реальная гонка/grants/backup-restore/DownUp и safe canonicallocalverify ещё предстоят; подготовки/rehearsal не выдаются за actual acceptance. Physical iPhone/authnativeLive НЕ ПРОВЕРЕНО.
+
+PR5 actual DB-приёмка: новая собственная чистаяPG17.11, все180/180 tests чистые, включая backup/restore; реальная двухсоединительная гонка наблюдает parentlock через pg_blocking_pids и отклоняет stale version без потери15повторов. API actor/RLS, чужойactor, root/set conflict, replay и fingerprint, group/last-set, siblingfact/reindex/grants прошли. Только156 Down/Up прошла: old3arg retained/new4arg restored/PUBLIC denied/fit_api allowed, digest всехsetrows unchanged. Рискованный browser smoke4/4 (fresh approval after conflict + distance WebKit/Chromium) прошёл; полныйactual298 и check выполняются.
+
+PR5 stable implementation846f8540: полный npmcheck exit0 (2828frontend/1471API+189условныхDBskip/policies/types/lint/build/startup), полный source298/298 без skips/flaky/retries, WebKit/Chromium. Все8 находок/12 групп сохранённых механик проверены вместе, не только новый свайп. Просмотрены confirmed deletion430compact и реальный warning-dialog390 в обеих темах,2/2visual tests; отмена не меняет данные. Canonical npmrunlocalverify final exit0 на846:179actor/RLS passed+1optionalbackupskip, migration safety1additive156 passed. Первый запуск дошёл доDB/179pass, затем упал только из-за Gitarchive без origin/main; исходный лог сохранён. В собственной копии подключены НАСТОЯЩИЕ commits846/9fe через localfetch, index real846; только2resource configdiff остаются. Checker/test/migration код не менялся, повторный полныйcanonical чистый. Отдельный freshownedDB180/180 включаетbackuprestore и не имеет skips. PR/officialCI/public298/cohort8/nativefinal ещё обязательны; физическийiPhone/authnativeLive не заявлены.

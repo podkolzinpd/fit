@@ -292,6 +292,11 @@ jobs:
             --env VITE_SPEECHKIT_RELAY_URL=wss://api.fit-training.ru/stt \
             --env FIT_YANDEX_E2E_REQUIRED \
             --env FIT_CLIENT_WORKOUT_ACCEPTANCE=1 \
+            --env FIT_COACH_LIVE_V79_ACCEPTANCE=1 \
+            --env VITE_COACH_LIVE_DENSITY_ENABLED=true \
+            --env VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS=c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002 \
+            --env VITE_COACH_LIVE_V79_ENABLED=true \
+            --env VITE_COACH_LIVE_V79_PILOT_USER_IDS=c0ac0000-6010-4000-8000-000000000001,c0ac0000-6010-4000-8000-000000000002 \
             --env VITE_CLIENT_WORKOUT_REDESIGN_ENABLED=true \
             --env VITE_CLIENT_WORKOUT_REDESIGN_PILOT_USER_IDS=c11e0000-6010-4000-8000-000000000001 \
             --env VITE_COACH_WORKOUT_REDESIGN_ENABLED=true \
@@ -306,7 +311,7 @@ jobs:
             --volume "${{ github.workspace }}:/work" \
             --workdir /work \
             "$PLAYWRIGHT_IMAGE" \
-            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
+            sh -c 'npm run build && npx playwright test e2e/yandex-only-auth.webkit.spec.ts e2e/nutrition-diary.webkit.spec.ts e2e/nutrition-home.webkit.spec.ts e2e/client-workout-reference.spec.ts e2e/coach-live-v79.spec.ts --project=iphone-13-webkit --project=mobile-chromium --workers=1 --fail-on-flaky-tests'
       - name: Upload Yandex-only browser diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

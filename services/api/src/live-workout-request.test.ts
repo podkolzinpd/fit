@@ -4,6 +4,7 @@ import {
   readLiveCommentRequest,
   readLiveExerciseRequest,
   readLiveOperationRequest,
+  readLiveSetRemovalRequest,
   readLiveReorderRequest,
   readLiveSetRequest,
 } from './live-workout-request.js'
@@ -147,5 +148,16 @@ describe('live workout request validation', () => {
         ? readLiveReorderRequest(request)
         : readLiveCommentRequest(request)
     expect(result).toBeUndefined()
+  })
+})
+
+describe('versioned Live set removal', () => {
+  it('keeps old callers compatible and validates the optional set version', () => {
+    const base = { operationId, expectedVersion: 3 }
+    expect(readLiveSetRemovalRequest(base)).toEqual(base)
+    expect(readLiveSetRemovalRequest({ ...base, expectedSetVersion: 7 })).toEqual({ ...base, expectedSetVersion: 7 })
+    for (const expectedSetVersion of [null, 0, -1, 1.5, '7', Number.MAX_SAFE_INTEGER + 1]) {
+      expect(readLiveSetRemovalRequest({ ...base, expectedSetVersion })).toBeUndefined()
+    }
   })
 })

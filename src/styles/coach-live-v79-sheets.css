@@ -1,0 +1,24 @@
+/* v79 ExerciseSheet geometry. This route-scoped parent also covers portals,
+   never client, planning, global html/body or the rest of the trainer UI. */
+.phone-frame.fit-lime-shell.coach-live-v79-shell .sheet-overlay { background: rgb(0 0 0 / 72%); }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .coach-v79-picker-overlay { align-items: flex-end; padding: 0; animation: coach-v79-dimmer-in .42s cubic-bezier(.22,1,.36,1) both; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .coach-v79-picker-overlay .exercise-picker { width: 100%; max-width: 430px; height: calc(var(--app-visible-height,100dvh) - max(24px,env(safe-area-inset-top,0px) + 9px)); max-height: calc(var(--app-visible-height,100dvh) - max(24px,env(safe-area-inset-top,0px) + 9px)); margin: 0 auto; border-radius: 40px; background: var(--lime-surface); animation: coach-v79-sheet-in .42s cubic-bezier(.22,1,.36,1) both; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .coach-v79-picker-overlay.closing { animation: coach-v79-dimmer-out .42s cubic-bezier(.22,1,.36,1) both; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .coach-v79-picker-overlay.closing .exercise-picker { animation: coach-v79-sheet-out .42s cubic-bezier(.22,1,.36,1) both; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .client-lime-sheet-header { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; flex: 0 0 auto; gap: 8px; min-height: 88px; padding: 20px; margin: 0; border-bottom: 1px solid var(--lime-divider); color: var(--lime-text); }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .client-lime-sheet-header h1 { grid-column: 2; grid-row: 1; margin: 0; text-align: center; font-size: 16px; line-height: 20px; font-weight: 500; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .client-lime-sheet-header > button { grid-column: 1; grid-row: 1; display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 10px; border: 0; border-radius: 0; background: transparent; color: inherit; box-shadow: none; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .client-lime-sheet-header > .client-lime-sheet-confirm { grid-column: 3; border-radius: 50%; background: var(--lime-surface-high); }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .client-lime-sheet-header svg { width: 24px; height: 24px; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-list { padding-inline: 2px; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-item { min-height: 112px; border-radius: 32px; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-item-name { font-size: 16px; line-height: 20px; font-weight: 400; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-item-copy small { font-size: 14px; line-height: 16px; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-item-media { width: 65px; height: 80px; min-width: 65px; border-radius: 20px; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell :is(.workout-decision-sheet,.workout-duration-sheet) { border-radius: 40px; background: var(--lime-surface); }
+.phone-frame.fit-lime-shell.coach-live-v79-shell:has(.sheet-overlay) .coach-v79-glow { visibility: hidden; }
+@keyframes coach-v79-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes coach-v79-sheet-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes coach-v79-dimmer-in { from { background-color: transparent; } to { background-color: rgb(0 0 0 / 72%); } }
+@keyframes coach-v79-dimmer-out { from { background-color: rgb(0 0 0 / 72%); } to { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { .phone-frame.fit-lime-shell.coach-live-v79-shell .coach-v79-picker-overlay, .phone-frame.fit-lime-shell.coach-live-v79-shell .coach-v79-picker-overlay .exercise-picker { animation: none; } }

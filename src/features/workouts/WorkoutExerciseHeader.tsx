@@ -13,14 +13,15 @@ interface WorkoutExerciseHeaderProps {
   summary?: ReactNode
   description?: ReactNode
   onTitleClick?: () => void
+  titleActionLabel?: string
   showTechniqueLabel?: boolean
 }
 
 // Общий каркас шапки упражнения. Содержимое действий и бизнес-логика остаются
 // в конкретном сценарии, поэтому эта основа не меняет поведение карточек.
-export function WorkoutExerciseHeader({ name, className, as: Container = 'div', titleAs: Title = 'h2', leading, actions, summary, description, onTitleClick, showTechniqueLabel = true }: WorkoutExerciseHeaderProps) {
+export function WorkoutExerciseHeader({ name, className, as: Container = 'div', titleAs: Title = 'h2', leading, actions, summary, description, onTitleClick, titleActionLabel, showTechniqueLabel = true }: WorkoutExerciseHeaderProps) {
   const title = onTitleClick
-    ? <button type="button" className="exercise-technique-trigger" aria-label={`Посмотреть технику: ${name}`} onClick={onTitleClick}><Title>{name}</Title>{showTechniqueLabel && <span>Техника</span>}</button>
+    ? <button type="button" className="exercise-technique-trigger" aria-label={titleActionLabel ?? `Посмотреть технику: ${name}`} onClick={onTitleClick}><Title>{name}</Title>{showTechniqueLabel && <span>Техника</span>}</button>
     : <Title>{name}</Title>
   const copy = description ? <span className="workout-exercise-header-copy">{title}{description}</span> : title
   return <Container className={className}>

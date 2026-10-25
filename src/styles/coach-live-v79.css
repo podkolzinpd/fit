@@ -1,0 +1,37 @@
+/* v79 prototype provenance: source geometry, not demo globals or demo state.
+   Scoped to the original trainer pair by isCoachLiveV79Enabled. */
+.phone-frame.fit-lime-shell .live-workout-page.coach-live-v79 { position: relative; isolation: isolate; padding-inline: 2px; --v79-large-opacity: 1; --v79-small-opacity: 0; --v79-status-opacity: 1; --v79-glow-opacity: 1; }
+.phone-frame.fit-lime-shell .live-workout-page.coach-live-v79:not(:has(.live-pinned-empty)) { min-height: calc(var(--app-visible-height, 100dvh) + 236px); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 > .page-header { background: transparent; isolation: isolate; min-height: 52px; padding-inline: 14px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 > .page-header::before { content: ''; position: absolute; inset: 0 -2px -8px; z-index: -1; background: linear-gradient(var(--lime-bg) 75%, transparent); opacity: var(--v79-small-opacity); pointer-events: none; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 > .page-header .coach-live-status { opacity: var(--v79-status-opacity); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-pinned { position: relative; top: auto; z-index: 8; background: transparent; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-timer-toolbar { position: relative; }
+.coach-live-v79 .coach-v79-timer { position: relative; isolation: isolate; }
+.coach-live-v79 .coach-v79-glow { position: absolute; z-index: -1; pointer-events: none; inset: -52px -2px auto; height: 587px; opacity: var(--v79-glow-opacity); background-image: url('../assets/coach-live-v79/glow-inner.png'), url('../assets/coach-live-v79/glow-middle.svg'), url('../assets/coach-live-v79/glow-outer.svg'); background-size: 267px 259px, 419px 540px, 543px 587px; background-position: center top, center -159px, center -140px; background-repeat: no-repeat; }
+.coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-glow { background: var(--lime-yellow); mask-image: url('../assets/coach-live-v79/glow-inner.png'), url('../assets/coach-live-v79/glow-middle.svg'), url('../assets/coach-live-v79/glow-outer.svg'); mask-size: 267px 259px, 419px 540px, 543px 587px; mask-position: center top, center -159px, center -140px; mask-repeat: no-repeat; }
+.coach-live-v79 .coach-v79-timer[data-state='paused'] .coach-v79-glow { filter: grayscale(1); opacity: calc(var(--v79-glow-opacity) * .6); }
+.coach-live-v79 .coach-v79-large-clock { position: relative; height: 156px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--lime-accent); opacity: var(--v79-large-opacity); transition: height .48s cubic-bezier(.22,1,.36,1), color .48s cubic-bezier(.22,1,.36,1); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-large-clock .coach-live-digits { font-size: 60px; line-height: 66px; letter-spacing: -2px; }
+.coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-large-clock { height: 248px; color: var(--lime-yellow); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-timer[data-state='rest'] .coach-v79-large-clock > .coach-live-digits { font-size: 96px; line-height: 104px; }
+.coach-live-v79 .coach-v79-elapsed { margin-top: 24px; color: var(--lime-text-secondary); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-elapsed .coach-live-digits { font-size: 30px; line-height: 32px; letter-spacing: -1px; }
+.coach-live-v79 .coach-v79-actions { position: relative; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-actions .live-rest-trigger { margin: 0; width: 100%; height: 60px; min-height: 60px; border-radius: 20px; }
+.coach-live-v79 .coach-v79-dock { position: absolute; inset: 0; opacity: var(--v79-small-opacity); pointer-events: none; }
+.coach-live-v79 .coach-v79-small-clock { position: absolute; inset: 0 100px 0 64px; display: flex; align-items: center; justify-content: center; color: var(--lime-accent); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-clock .coach-live-digits { font-size: 28px; line-height: 32px; letter-spacing: -1px; }
+.coach-live-v79 .coach-v79-dock[data-state='rest'] .coach-v79-small-clock { color: var(--lime-yellow); }
+.coach-live-v79 .coach-v79-dock[data-state='paused'] .coach-v79-small-clock { color: var(--lime-text-secondary); }
+.coach-live-v79 .coach-v79-small-action { position: absolute; right: 44px; top: 0; width: 44px; height: 44px; pointer-events: auto; }
+.coach-live-v79 .coach-v79-small-action[inert] { pointer-events: none; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-action .live-rest-trigger { width: 44px; min-width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 14px; border: 0; border-radius: 50%; background: var(--lime-surface-raised); }
+.coach-live-v79 .coach-v79-small-action .live-rest-trigger > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.coach-live-v79 .coach-v79-timer[data-state='rest'], .coach-live-v79 .coach-v79-dock[data-state='rest'] { --v79-clock-color: var(--lime-yellow); }
+.coach-live-v79 .coach-v79-elapsed { --v79-clock-color: var(--lime-text-secondary); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-live-colon::before { background: var(--v79-clock-color, var(--lime-accent)); box-shadow: 0 .28em 0 var(--v79-clock-color, var(--lime-accent)); }
+.coach-live-v79 .coach-v79-paused { color: var(--lime-text-secondary); font-size: 32px; line-height: 40px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .long-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-clock.long-clock .coach-live-digits { font-size: 20px; line-height: 28px; }
+@media (prefers-reduced-motion: reduce) { .coach-live-v79 .coach-v79-large-clock { transition: none; } }
