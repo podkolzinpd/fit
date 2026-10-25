@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
 import { isClientLimeEnabled } from '../../app/client-lime'
+import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { useClientRealtime } from '../../app/use-client-realtime'
 import { useDataBackend } from '../../app/data-backend-context'
 import { splitClientWorkouts } from '../../data/repositories/workout-rules'
@@ -241,6 +242,7 @@ export function MyProgressPage() {
   const { progress: progressRepository } = useDataBackend()
   const { actor } = useAuth()
   const clientLime = isClientLimeEnabled(actor)
+  const clientReference = isClientWorkoutRedesignEnabled(actor)
   const today = todayInTimeZone(actor?.timezone)
   const mine = useMine()
   const queryClient = useQueryClient()
@@ -248,6 +250,7 @@ export function MyProgressPage() {
   const [measurementFormOpen, setMeasurementFormOpen] = useState(false)
   const [measurementHistoryOpen, setMeasurementHistoryOpen] = useState(false)
   const [metricsOpen, setMetricsOpen] = useState(false)
+  const [removeError, setRemoveError] = useState<Error | null>(null)
   const [recognizedInBody, setRecognizedInBody] = useState<InBodyRecognitionResult | null>(null)
   const entries = useQuery({ queryKey: ['progress', mine.data?.id], queryFn: () => progressRepository.list(mine.data!.id), enabled: Boolean(mine.data) })
   const metrics = useQuery({ queryKey: ['metrics', mine.data?.id], queryFn: () => progressRepository.listMetrics(mine.data!.id), enabled: Boolean(mine.data) })
@@ -284,10 +287,30 @@ export function MyProgressPage() {
       queryClient.invalidateQueries({ queryKey: ['clients'] }),
     ])
   } })
-  const remove = useMutation({ mutationFn: (entry: Parameters<typeof progressRepository.remove>[0]) => progressRepository.remove(entry), onSuccess: async () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['progress', mine.data?.id] }),
-    queryClient.invalidateQueries({ queryKey: ['client-progress-story-measurements', mine.data?.id] }),
-  ]) })
+  const remove = useMutation({ mutationFn: async (entry: ProgressEntry) => {
+    if (!clientReference) return progressRepository.remove(entry)
+    // Every attempt reads first, including after a remount or an unknown reply.
+    const current = await progressRepository.list(entry.clientId)
+    queryClient.setQueryData(['progress', entry.clientId], current)
+    const stored = current.find(item => item.id === entry.id)
+    if (!stored) return
+    if (stored.version !== entry.version) throw new RepositoryError('progress_changed', 'Замер изменился. Проверьте его и подтвердите удаление ещё раз.')
+    try { await progressRepository.remove(entry) }
+    catch (error) {
+      try {
+        const after = await progressRepository.list(entry.clientId)
+        queryClient.setQueryData(['progress', entry.clientId], after)
+        if (!after.some(item => item.id === entry.id)) return
+      } catch { /* Keep the original diagnostic when the readback also fails. */ }
+      throw error
+    }
+  }, onError: (error) => { if (clientReference) setRemoveError(error) }, onSuccess: async () => {
+    setRemoveError(null)
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['progress', mine.data?.id] }),
+      queryClient.invalidateQueries({ queryKey: ['client-progress-story-measurements', mine.data?.id] }),
+    ])
+  } })
   const createMetric = useMutation({ mutationFn: ({ name, unit }: { name: string; unit: string | null }) => progressRepository.createMetric(mine.data!.id, name, unit), onSuccess: async () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['metrics', mine.data?.id] }),
     queryClient.invalidateQueries({ queryKey: ['progress-metrics', mine.data?.id] }),
@@ -304,7 +327,19 @@ export function MyProgressPage() {
     <InBodyImport busy={recognizeInBody.isPending} error={recognizeInBody.error} result={recognizedInBody} onRecognize={(image) => recognizeInBody.mutate(image)} onReset={() => { recognizeInBody.reset(); setRecognizedInBody(null) }} onApply={() => setMeasurementFormOpen(true)} />
     <nav className="measurement-actions" aria-label="Действия с замерами"><button type="button" className="secondary measurement-primary-action" aria-expanded={measurementFormOpen} onClick={() => setMeasurementFormOpen((open) => !open)}>{measurementFormOpen ? 'Закрыть форму' : 'Добавить замер'}</button>{entries.data.length > 0 && <button type="button" className="link" aria-expanded={measurementHistoryOpen} onClick={() => setMeasurementHistoryOpen((open) => !open)}>История замеров · {entries.data.length}</button>}<button type="button" className="link" aria-expanded={metricsOpen} onClick={() => setMetricsOpen((open) => !open)}>{metricsOpen ? 'Закрыть показатели' : 'Настроить показатели'}</button></nav>
     {measurementFormOpen && <ClientProgressForm clientLime={clientLime} entry={null} recognized={recognizedInBody} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, null)} onCancel={() => { setMeasurementFormOpen(false); setRecognizedInBody(null) }} />}
-    {measurementHistoryOpen && <section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ИСТОРИЯ</p><h2>Все замеры</h2></div><div className="cards">{entries.data.map((entry) => editing?.id === entry.id
+    {measurementHistoryOpen && <section className="client-progress-history"><div className="client-progress-section-head"><p className="eyebrow">ИСТОРИЯ</p><h2>Все замеры</h2></div>
+      {clientReference && removeError && <div className="client-measurement-delete-error">
+        <InlineRequestError error={removeError} message={removeError instanceof RepositoryError && removeError.code === 'progress_changed' ? removeError.message : 'Не удалось подтвердить удаление замера. Попробуйте ещё раз.'} />
+        <div className="actions"><button type="button" className="secondary" disabled={remove.isPending || !remove.variables} onClick={() => {
+          const entry = remove.variables
+          if (!entry) return
+          if (removeError instanceof RepositoryError && removeError.code === 'progress_changed') {
+            const current = entries.data.find(item => item.id === entry.id)
+            if (current) void confirmRemove(current)
+          } else remove.mutate(entry)
+        }}>{remove.isPending ? 'Проверяем…' : 'Повторить'}</button></div>
+      </div>}
+      <div className="cards">{entries.data.map((entry) => editing?.id === entry.id
       ? <article className="card editing" key={entry.id}><ClientProgressForm clientLime={clientLime} entry={entry} recognized={null} metrics={metrics.data ?? []} today={today} busy={save.isPending} error={save.error} onSubmit={(event) => submit(event, entry)} onCancel={() => setEditing(null)} /></article>
       : <article className="card" key={entry.id}><div><strong>{formatLocalDate(entry.recordedOn)}</strong><p>{measurementSummaryText(entry, metrics.data ?? []) || 'Показатели не указаны'}</p>{entry.inBody && <InBodyDetails result={entry.inBody} clientLime={clientLime} />}{entry.notes && <p className="muted">{entry.notes}</p>}</div><div className="row-actions"><button className="link" onClick={() => setEditing(entry)}>Изменить</button><button className="link danger" disabled={remove.isPending} onClick={() => void confirmRemove(entry)}>Удалить</button></div></article>)}</div></section>}
     {metricsOpen && <MetricsManager metrics={metrics.data ?? []} busy={createMetric.isPending || archiveMetric.isPending} error={createMetric.error ?? archiveMetric.error} onCreate={(name, unit) => createMetric.mutate({ name, unit })} onArchive={(metric) => archiveMetric.mutate(metric)} />}
