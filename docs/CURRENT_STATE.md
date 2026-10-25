@@ -105,12 +105,14 @@ YAFIT-645; план design/FAVORITE_EDITOR_DRAFT_RECOVERY_20261022.md. На св
 - YAFIT-653 закрыта: PR1801–1806 слиты/выпущены, final f45aedae,
   public213/health, OTA/signature/readback, native214/simulator проверены;
   точная исходная пара, один owner, поля54/48; receipts в YAFIT-653.
-- 25.10 YAFIT-655: план design/COACH_LIVE_V79_POLISH_20261025.md,4PR,
-  только исходные2 тренера. PR1: малая шапка без пересечения кнопок44,
-  видимый отрицательный отдых; clocks/дедлайн/формы/клиент не переписаны.
-  База b901fb19 включает клиентские PR1807–1810; параллельные PR сохраняем.
-  Production-build browser46/46 WebKit/Chromium и fullcheck exit0 passed;
-  PR2: source spring/crossfade/reduced-motion на прежнем owner; browser50/50,
-  fullcheck exit0. PR3: исходные SVG/движение стрелок и фон, focus/fields,
-  scoped correction реального clipping при смене плотности;50/50 + real-clock2/2,
-  fullcheck exit0 (2836frontend/1487API). CI/release гейты; physical/OAuth не проверены.
+- 26.10 YAFIT-655, сверка перед PR4: design/COACH_LIVE_V79_POLISH_20261025.md.
+  Только исходные2 тренера; Original54/Compact48, прежние owner/дедлайны/данные.
+  PR1#1813/ea694486 и PR2#1815/f18c0807 опубликованы: каждый public213/health
+  и published browser8/8. Клиентский#1814/0e0666ad включён и отдельно принят.
+  PR3#1816/554ccb70 слит после greenCI; повторный fullcheck2839frontend/1488API
+  (+196conditionalDBskip), browser50/50. Клиентские поля/CSS/spec не заменены.
+  PR4: header-only drag/cancel/native scroll, nested drafts и close guard;
+  первоначальные52/52 и fullcheck2840/1487 passed. Повторная интеграция на554ccb70
+  проходит полный check/browser, затем свежий CI и официальный public readback.
+  Post-merge PR3 обязателен до merge4. Итоговые CI/web/cohort/OTA/fresh-native
+  квитанции и живой статус — YAFIT-655. Physical iPhone/OAuth не проверены.

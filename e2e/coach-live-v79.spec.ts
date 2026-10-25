@@ -307,6 +307,51 @@ test('v79 sheets keep real catalogue filters creation and single add', async ({ 
   await expect(picker).toHaveCount(0)
 })
 
+// One root sheet flow per engine: shared by both densities. Chromium drives
+// actual CDP touch; WebKit exercises pointer capture/mouse (not a real iPhone).
+test('v79 catalogue header drag preserves scroll drafts and single add', async ({ page, browserName }, info) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [coachGestureWorkout()] })
+  const count = backend.getWorkouts()[0]!.exercises.length
+  await page.goto(`/workouts/${workoutId}/live`)
+  await page.locator('.live-add-exercise').click()
+  const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true }), title = picker.locator('.client-lime-sheet-header h1')
+  await expect.poll(() => picker.evaluate(e => e.getAnimations().filter(a => a.playState === 'running').length)).toBe(0)
+  const top = (await picker.boundingBox())!.y
+  let gesture = await beginClientGesture(page, picker, browserName, title)
+  await gesture.move(0, 32); await page.waitForTimeout(100); await gesture.end()
+  await expect(picker).toBeVisible()
+  await expect.poll(async () => Math.abs((await picker.boundingBox())!.y - top)).toBeLessThan(1)
+  gesture = await beginClientGesture(page, picker, browserName, title)
+  await gesture.move(0, 200); await gesture.end(true)
+  await expect(picker).toBeVisible()
+  await expect.poll(async () => Math.abs((await picker.boundingBox())!.y - top)).toBeLessThan(1)
+  const list = picker.locator('.picker-list')
+  if (browserName === 'chromium') {
+    gesture = await beginClientGesture(page, list, browserName); await gesture.move(0, -120); await gesture.end()
+  } else {
+    // Mobile WebKit's automation has no wheel/touch-pan API. Check retained
+    // scroll here; genuine touch-pan is exercised above through Chromium CDP.
+    await list.evaluate(e => e.scrollTop = 200)
+  }
+  await expect.poll(() => list.evaluate(e => e.scrollTop)).toBeGreaterThan(0)
+  await expect(picker).toBeVisible()
+  await picker.getByRole('button', { name: /Фильтровать/ }).click()
+  gesture = await beginClientGesture(page, picker, browserName, title); await gesture.move(0, 200); await gesture.end()
+  await expect(picker.getByRole('region', { name: 'Фильтры упражнений' })).toBeVisible()
+  await picker.getByRole('button', { name: 'Применить фильтры', exact: true }).click()
+  await picker.getByRole('button', { name: 'Создать упражнение', exact: true }).click()
+  const name = picker.getByPlaceholder('Например: Болгарский присед')
+  await name.fill('Несохранённое упражнение')
+  gesture = await beginClientGesture(page, picker, browserName, title); await gesture.move(0, 200); await gesture.end()
+  await expect(name).toHaveValue('Несохранённое упражнение')
+  await picker.getByRole('button', { name: 'Назад к упражнениям', exact: true }).click()
+  gesture = await beginClientGesture(page, picker, browserName, title); await gesture.move(0, 200)
+  await page.screenshot({ path: info.outputPath('catalogue-drag-in-progress.png') })
+  await gesture.end()
+  await expect(picker).toHaveCount(0)
+  expect(backend.getWorkouts()[0]!.exercises).toHaveLength(count)
+})
 test('v79 row and exercise swipes stay separate from drag and editing', async ({ page, browserName }) => {
   await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
   const source = coachGestureWorkout(), first = source.exercises[0]!

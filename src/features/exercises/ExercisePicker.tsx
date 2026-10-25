@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { FitLimeSheetHeader } from '../../shared/FitLimeSheetHeader'
+import { useCoachV79PickerDrag } from './use-coach-v79-picker-drag'
 import { useAppViewport } from '../../app/app-viewport'
 import type { ExerciseSnapshot, InputKind, MuscleGroup } from '../../shared/domain'
 import type { PreparedImage } from '../../shared/image-prep'
@@ -196,6 +197,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [photo, setPhoto] = useState<PreparedImage | null>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const v79Drag = useCoachV79PickerDrag(coachLiveV79 && !closing && !addingSelected && !filtersOpen && !creating && !previewExercise, onClose)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const { keyboardOpen } = useAppViewport()
   const activeMode = mode
@@ -545,7 +547,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
       backdropStart.current = null
       if (intended && event.target === event.currentTarget && !addingSelected) onClose()
     }}>
-    <section ref={dialogRef} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
+    <section ref={dialogRef} {...(coachLiveV79 ? v79Drag : {})} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
       {clientLime || coachLiveV79 ? <FitLimeSheetHeader
         title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? <>Фильтры{referenceAppearance && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</> : coachLiveV79 ? 'Добавить упражнение' : 'Выберите упражнения'}
         backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}
