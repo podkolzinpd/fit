@@ -92,4 +92,6 @@
 
 - PR4 проверено: API lint/typecheck/build и1487 unit прошли; реальная PostgreSQL157/RLS и S3 приёмка185pass+1условный skip. Потерянный COMMIT, sign/upload failure, concurrent retry, старый no-photo и normal metadata update проверены. Дополнен отдельный legacy-image тест; canonical local:verify выполняется отдельно на собственных локальных ресурсах.
 
+- PR4 финальные локальные результаты: full npm run check exit0 (обязателен по classifier из-за API contract boundary); DB/S3186passed+1conditional skip, legacy photo2048px сохранено без SHA/path rewrite. Canonical PostgreSQL17 clean-chain/local:verify passed; два условных skip — environment-gated проверки, реальный S3 отдельно прошёл. Проверка safety migration1 additive passed.
+
 - Перед открытием PR3: main95e2b630 после merge PR1808; git diff561c6f22..95e2b630 пустой, перенос PR3 выполнен без конфликтов и без изменения проверенного дерева. Публикация PR2 ещё идёт, merge PR3 ждёт её приёмки. Свежая runtime-проверка12/12 на новом основании пройдена, включая сохранность полей при задержанной цели.
