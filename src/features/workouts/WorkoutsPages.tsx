@@ -2792,13 +2792,13 @@ export function LiveWorkoutPage() {
     setNoteState(current => ({ scope: noteScope, drafts: new Map(current.scope === noteScope ? current.drafts : []).set(exerciseId, value) }))
   }
   useEffect(() => {
-    if (!densityEnabled) return
+    if (!densityEnabled && !clientReference) return
     const frame = requestAnimationFrame(() => {
       const target = document.activeElement
       if (target instanceof HTMLElement && target.closest('.live-workout-page') && target.matches('.live-set-input, .live-set-rpe')) keepLiveInputVisible(target)
     })
     return () => cancelAnimationFrame(frame)
-  }, [densityEnabled, liveDensity])
+  }, [densityEnabled, liveDensity, clientReference, clientLiveDensity])
   const { keyboardOpen } = useAppViewport()
   useLiveInputVisibility(directLiveInput)
   const showRpeByDefault = useRpeDisplay(actor?.userId)

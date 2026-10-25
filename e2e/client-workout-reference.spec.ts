@@ -332,11 +332,8 @@ for (const rpe of [false, true]) test(`client Live metric keyboard preserves fin
     await expect(field).toBeFocused()
     await expect(field).toHaveValue('27')
     expect(await element!.evaluate(e => e.isConnected && e === document.activeElement)).toBe(true)
-    await expect.poll(() => field.evaluate(e => {
-      const bounds = e.getBoundingClientRect()
-      const pinned = document.querySelector('.live-pinned')!.getBoundingClientRect()
-      return bounds.top >= pinned.bottom && bounds.bottom <= 420
-    })).toBe(true)
+    await expect.poll(() => field.evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(420)
+    await expect.poll(() => field.evaluate(e => e.getBoundingClientRect().top - document.querySelector('.live-pinned')!.getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(0)
     await expect(field).toHaveCSS('height', density === 'original' ? '54px' : '48px')
   }
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.reps).toBe(27)
