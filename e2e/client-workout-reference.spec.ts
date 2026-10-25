@@ -2221,3 +2221,25 @@ for (const theme of ['light', 'dark']) test(`client goal stage awaits initial go
   await expect.poll(savedStage).toBe('')
   await page.reload(); await expect(stage).toHaveValue('')
 })
+
+for (const theme of ['light', 'dark']) test(`client goal delay never clears existing time and plan fields ${theme}`, async ({ page }) => {
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: pilotId, theme })
+  const source = { ...coachGestureWorkout(), createdBy: pilotId, status: 'planned', startedAt: null, stageId: '10000000-0000-4000-8000-000000000041', notes: 'План сохранить', prepSeconds: 15 }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, withGoal: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route(`**/v1/clients/${clientId}/progress`, async route => { await gate; return route.fallback() })
+  const writes: Array<{ startTime: string; endTime: string; stageId: string; notes: string; prepSeconds: number; exercises: unknown[] }> = []
+  await page.route(`**/v1/workouts/${workoutId}`, route => {
+    if (route.request().method() !== 'PUT') return route.fallback()
+    writes.push(route.request().postDataJSON() as typeof writes[number])
+    return route.fulfill({ status: 503, json: { error: 'unavailable' } })
+  })
+  await page.goto(`/workouts/${workoutId}/edit`)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0]).toMatchObject({ startTime: '10:00', endTime: '11:00', notes: 'План сохранить', prepSeconds: 15, stageId: source.stageId })
+  expect(writes[0]!.exercises).toHaveLength(source.exercises.length)
+  release()
+  await expect(page.locator('select[name="stageId"]')).toHaveValue(source.stageId)
+})

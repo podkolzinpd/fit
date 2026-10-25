@@ -1351,6 +1351,7 @@ export function WorkoutFormPage() {
   const coachReference = limePlan && isCoachWorkoutRedesignEnabled(actor)
   const clientReference = isClientWorkoutRedesignEnabled(actor)
   const selectedStageId = clientReference ? stageId ?? defaultStageId : stageId || defaultStageId
+  const stageLoading = clientReference && stageId === undefined && !source.data?.stageId && goal.isLoading
   const safePlanInput = coachReference && isCoachPlanInputEnabled(actor) && (!workoutId || source.data?.status === 'planned')
   const readyPlan = clientLime && !workoutId && Boolean(favoriteId || presetId) && !completedMode
   const refinedPlan = coachReference && isCoachPlanLayoutEnabled(actor) && (!workoutId || source.data?.status === 'planned')
@@ -1370,7 +1371,7 @@ export function WorkoutFormPage() {
     closeTemplatePicker()
   }
   useEffect(() => {
-    if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (clientReference && goal.isLoading) || (plannedFromFavorite && (favorites.isFetching || favorites.error || !favorite)) || (presetId && (catalog.loading || catalog.error || !preset)) || formDraftReady) return
+    if (!actor || source.isLoading || templateSource.isLoading || (clientMode && mine.isLoading) || (plannedFromFavorite && (favorites.isFetching || favorites.error || !favorite)) || (presetId && (catalog.loading || catalog.error || !preset)) || formDraftReady) return
     // The closed pilot's edit uses a separate key and the exact source version.
     const saved = workoutId ? safePlanInput ? readWorkoutEditDraft(planDraftKey, source.data?.version) : null : templateDraftChoice === 'fresh' ? null : readWorkoutFormDraft(draftKey)
     if ((plannedFromFavorite || presetId) && saved && templateDraftChoice === null) { setTemplateDraftWaiting(true); return }
@@ -1423,7 +1424,7 @@ export function WorkoutFormPage() {
       trainingFormatTouched.current = Boolean(workoutId)
     }
     setFormDraftReady(true)
-  }, [actor, clientMode, coachReference, clientReference, draftKey, planDraftKey, safePlanInput, favorites.isFetching, favorites.error, favorite, formDraftReady, initial, mine.isLoading, goal.isLoading, plannedFromFavorite, presetId, preset, catalog.loading, catalog.error, templateDraftChoice, routeClientId, source.data?.stageId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading, workoutId])
+  }, [actor, clientMode, coachReference, clientReference, draftKey, planDraftKey, safePlanInput, favorites.isFetching, favorites.error, favorite, formDraftReady, initial, mine.isLoading, plannedFromFavorite, presetId, preset, catalog.loading, catalog.error, templateDraftChoice, routeClientId, source.data?.stageId, source.data?.status, source.data?.version, source.isLoading, templateId, templateSource.isLoading, workoutId])
 
   useEffect(() => {
     if (clientMode) { setTrainingFormat('self'); return }
@@ -1433,7 +1434,7 @@ export function WorkoutFormPage() {
   }, [clientMode, entryDate, finance.data, workoutId])
 
   useEffect(() => {
-    if (!formDraftReady || safePlanInput && planSaved.current || workoutId && !safePlanInput) return
+    if (!formDraftReady || stageLoading || safePlanInput && planSaved.current || workoutId && !safePlanInput) return
     const draft = { clientId, workoutDate: entryDate, startTime, endTime, actualDurationMinutes, notes, title, stageId: clientReference ? selectedStageId : stageId ?? '', recordCompleted, exercises, trainingFormat, prepSeconds, executionMode }
     if (workoutId) {
       const fingerprint = JSON.stringify(draft)
@@ -1448,7 +1449,7 @@ export function WorkoutFormPage() {
       }
       writeWorkoutFormDraft(planDraftKey, { ...draft, sourceVersion: editSourceVersion.current })
     } else writeWorkoutFormDraft(draftKey, { ...draft, sourceVersion: favoriteDraftVersion.current, requestId: createRequestId.current })
-  }, [actualDurationMinutes, clientId, clientReference, selectedStageId, draftKey, planDraftKey, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, executionMode, workoutId])
+  }, [actualDurationMinutes, clientId, clientReference, selectedStageId, stageLoading, draftKey, planDraftKey, safePlanInput, endTime, entryDate, exercises, formDraftReady, notes, title, recordCompleted, stageId, startTime, trainingFormat, prepSeconds, executionMode, workoutId])
 
   useEffect(() => {
     if (!safePlanInput || !hasEditChanges) return
@@ -1591,7 +1592,7 @@ export function WorkoutFormPage() {
   function closePicker() { parsedExerciseSelection.current = null; setPickerOpen(false); setReplaceIndex(null); setPickerSearch('') }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (mutation.isPending || (exercises.length === 0 && !limePlan)) return
+    if (mutation.isPending || stageLoading || (exercises.length === 0 && !limePlan)) return
     const form = new FormData(event.currentTarget)
     const submitClientId = String(form.get('clientId'))
     if (!submitClientId) { setClientSelectionError('Выберите клиента для тренировки'); return }
@@ -1754,7 +1755,7 @@ export function WorkoutFormPage() {
       {prefillError && <p className="error">{prefillError}</p>}
       {!refinedPlan && mutation.error && <InlineRequestError error={mutation.error} message={saveErrorMessage} />}
       {limePlan && !coachReference && params.get('entry') === 'quick' && <p className="today-plan-summary">{clients.data?.find((client) => client.id === clientId)?.fullName ?? 'Выберите клиента'} · {formatLocalDate(entryDate)} · {startTime ? `${startTime}${endTime ? `–${endTime}` : ''}` : 'Без времени'} · {workoutTrainingFormatLabel(trainingFormat ?? 'self')}</p>}
-      {!coachReference && <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>}
+      {!coachReference && <div className="actions workout-action-row"><WorkoutCta pending={mutation.isPending} pendingLabel="Сохраняем…" disabled={stageLoading || exercises.length === 0 && !limePlan}>{recordPlannedResult ? 'Сохранить результат' : recordCompleted ? 'Записать тренировку' : completedMode ? 'Сохранить изменения' : 'Сохранить план'}</WorkoutCta></div>}
       </CoachFormControls>
       {coachReference && mutation.isPending && <p role="status" className="coach-plan-saving">Сохраняем план…</p>}
     </form>}</AsyncView>
