@@ -153,6 +153,44 @@ for (const density of ['original', 'compact']) test(`v79 clock handoff preserves
   await expect(field).toHaveValue('29.5')
   await page.screenshot({ path: info.outputPath(`${density}-clock.png`), fullPage: true })
 })
+// Two densities have different clock sizes/heights; browser engines differ in
+// CSS animation and sticky scroll. No extra users or width cross-product.
+for (const density of ['original', 'compact']) test(`v79 source rest motion keeps scroll and inputs ${density}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
+  await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [coachGestureWorkout()] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const field = page.getByLabel('Фактический вес', { exact: true }).last(), element = await field.elementHandle()
+  await field.fill('29.5'); await field.blur()
+  await page.locator('.content').evaluate(e => e.scrollTop = 0)
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  const clock = page.locator('.coach-v79-large-clock > .coach-live-digits')
+  const motion = await clock.evaluate(e => {
+    const animation = e.getAnimations().find(a => (a as CSSAnimation).animationName === 'coach-v79-rest-entry')!
+    const frames = (animation.effect as KeyframeEffect).getKeyframes()
+    animation.pause(); animation.currentTime = 100
+    return { first: frames[0]!.transform, last: frames.at(-1)!.transform, duration: animation.effect!.getTiming().duration, scale: getComputedStyle(e).transform }
+  })
+  expect(motion.first).toBe('scale(0.4)')
+  expect(motion.last).toBe('scale(1)')
+  expect(motion.duration).toBe(600)
+  expect(motion.scale).not.toBe('none')
+  await page.screenshot({ path: info.outputPath(`${density}-rest-entry.png`) })
+  await clock.evaluate(e => e.getAnimations().forEach(a => a.finish()))
+  await page.locator('.content').evaluate(e => e.scrollTop = 400)
+  await expect.poll(() => page.locator('.coach-live-v79').evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-small-opacity')))).toBeGreaterThan(.98)
+  await page.locator('.coach-v79-small-action button').click({ button: 'right' })
+  await page.getByRole('dialog', { name: 'Таймер отдыха', exact: true }).getByRole('button', { name: 'Остановить отдых', exact: true }).click()
+  await page.locator('.content').evaluate(e => e.scrollTop = 0)
+  await expect(page.locator('.coach-v79-timer')).toHaveAttribute('data-state', 'live')
+  expect(await element!.evaluate(e => e.isConnected)).toBe(true)
+  await expect(field).toHaveValue('29.5')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
+  await expect(clock).toHaveCSS('animation-name', 'none')
+  // Global Fit reduced-motion uses !important .01ms (not literal zero).
+  expect(await page.locator('.coach-v79-glow').evaluate(e => Number.parseFloat(getComputedStyle(e, '::after').transitionDuration))).toBeLessThanOrEqual(.00001)
+})
 for (const role of ['client', 'trainer'] as const) test(`v79 never reaches outside ${role}`, async ({ page }) => {
   await mockPilot(page, { role, profileId: role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000003' : pilot, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
   await page.goto(`/workouts/${workoutId}/live`)

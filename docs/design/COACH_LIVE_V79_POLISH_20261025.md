@@ -89,3 +89,24 @@
 - Изменений флагов/API/клиентских координаторов нет. Проверено браузером;
   физический телефон и реальный OAuth не проверены. Артефакты локально:
   outputs/coach-live-v79-polish-20261025/pr1-{browser,overdue,check}.log.
+
+### PR2: локальная подготовка поверх PR1, публикация после его merge
+
+- Fresh preflight: main всё ещё b901fb19; PR1813/head8b118662 проходит CI,
+  впереди активные1811/1812. Рабочая база — проверенная ветка PR1. Локальный
+  baseline заново повторён:4/4, WebKit/Chromium + исходный прототип.
+- Уже работает: `.content`/scroll handoff, размеры/цифры/clock owner и фоновые
+  исходные файлы. Меняем только движение цифр и crossfade тех же слоёв.
+- Source WorkoutHeader: scale.4→1, stiffness540/damping28.5/mass1,
+  opacity entry.22/exit.12 и общий easing(.22,1,.36,1). Spring аналитически
+  дискретизирована60Hz в CSS, без новой библиотеки, interval или состояния.
+- Все5 пунктов PR2 покрыты: source-entry/возврат/scroll/поля в обоих видах,
+  неизменный дедлайн старым handoff-тестом, reduced-motion отдельным состоянием.
+  Production-build50/50 passed. Четыре новых случая — density × engine:
+  отличие48/96 и реальные риски CSS-animation/sticky требуют обе оси;
+  дополнительные пользователи/ширины не размножены. Fullcheck exit0:
+  frontend2834/API1487 (+196conditionalDBskips), lint/types/policy/build.
+  Финальный targeted motion4/4 с видимыми Original/Compact screenshot passed.
+- Initial test failure — не продуктовая регрессия: общий Fit reduced-motion
+  устанавливает !important.01ms, ожидание буквального0 исправлено на контракт.
+- Physical iPhone/real OAuth не проверены; проверка жестов — отдельно PR4.
