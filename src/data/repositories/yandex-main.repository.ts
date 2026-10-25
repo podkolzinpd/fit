@@ -1367,6 +1367,7 @@ export function createYandexMainRepository(
       },
     },
     exercises: {
+      vitalMediaMode: 'signed',
       system: SYSTEM_EXERCISE_CATALOG,
       async createVitalMediaUrl(path, expiresIn) {
         if (expiresIn !== 60 * 60) {

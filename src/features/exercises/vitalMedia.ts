@@ -6,7 +6,7 @@ const LOCAL_PREFIX = '/exercises/vital-pro/'
 const STORAGE_FOLDER = 'vital-pro/'
 const SIGNED_URL_TTL_SECONDS = 60 * 60
 const CACHE_TTL_MS = 50 * 60 * 1_000
-const YANDEX_RETRY_DELAYS_MS = [250, 1_000] as const
+const SIGNING_RETRY_DELAYS_MS = [250, 1_000] as const
 
 const signedUrlCache = createSignedUrlCache(CACHE_TTL_MS)
 
@@ -19,14 +19,8 @@ export type VitalMediaState = {
   retry: (failedUrl?: string) => boolean
 }
 
-export function shouldUsePrivateVitalStorage(source: string | undefined, backendSource: 'supabase' | 'yandex') {
-  if (!source) return false
-  if (!source.startsWith(LOCAL_PREFIX) || import.meta.env.MODE === 'test') return false
-  if (backendSource === 'yandex') return true
-  const configuredUrl = import.meta.env.DEV ? import.meta.env.VITE_SUPABASE_URL as string | undefined : undefined
-  if (!configuredUrl) return false
-  const hostname = new URL(configuredUrl).hostname
-  return hostname !== '127.0.0.1' && hostname !== 'localhost'
+export function shouldUsePrivateVitalStorage(source: string | undefined, mediaMode: 'public' | 'signed') {
+  return Boolean(source?.startsWith(LOCAL_PREFIX)) && import.meta.env.MODE !== 'test' && mediaMode === 'signed'
 }
 
 async function createVitalSignedUrl(source: string, signer: (path: string, expiresIn: number) => Promise<string>) {
@@ -41,12 +35,13 @@ function publicMediaRetryUrl(source: string, attempt: number) {
 }
 
 export function useVitalMediaState(source: string | undefined, enabled = true): VitalMediaState {
-  const { exercises, source: backendSource } = useDataBackend()
+  const { exercises } = useDataBackend()
+  const mediaMode = exercises.vitalMediaMode
   const exercisesRef = useRef(exercises)
   useEffect(() => { exercisesRef.current = exercises }, [exercises])
   const retryRef = useRef<(failedUrl?: string) => boolean>(() => false)
   const retry = useCallback((failedUrl?: string) => retryRef.current(failedUrl), [])
-  const [media, setMedia] = useState<Omit<VitalMediaState, 'retry'>>(() => source && !shouldUsePrivateVitalStorage(source, backendSource)
+  const [media, setMedia] = useState<Omit<VitalMediaState, 'retry'>>(() => source && !shouldUsePrivateVitalStorage(source, mediaMode)
     ? { url: source, status: 'ready' }
     : { url: undefined, status: enabled && source ? 'loading' : 'idle' })
 
@@ -60,7 +55,7 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
       setMedia({ url: undefined, status: 'idle' })
       return () => { active = false }
     }
-    if (!shouldUsePrivateVitalStorage(source, backendSource)) {
+    if (!shouldUsePrivateVitalStorage(source, mediaMode)) {
       setMedia({ url: source, status: 'ready' })
       let currentUrl = source
       let loadRecoveryUsed = false
@@ -110,7 +105,7 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
       setMedia({ url: undefined, status: 'idle' })
       return () => { active = false }
     }
-    const key = `${backendSource}:${source}`
+    const key = `${mediaMode}:${source}`
     let signed: SignedMediaUrl | undefined
     let inFlight = false
     let pending = false
@@ -145,7 +140,7 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
           refreshTimer = setTimeout(resume, Math.max(0, result.expiresAt - Date.now()))
         },
         () => {
-          const delay = backendSource === 'yandex' ? YANDEX_RETRY_DELAYS_MS[attempt] : undefined
+          const delay = SIGNING_RETRY_DELAYS_MS[attempt]
           if (!active) return
           if (delay === undefined) {
             inFlight = false
@@ -188,7 +183,7 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
     }
     document.addEventListener('visibilitychange', resume)
     window.addEventListener('online', resume)
-    // A changed exercise/backend must not retain the previous exercise's URL
+    // A changed exercise/media mode must not retain the previous exercise's URL
     // when the new request has to wait for the network or foreground state.
     setMedia({ url: undefined, status: 'loading' })
     resolve(0)
@@ -200,7 +195,7 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
       document.removeEventListener('visibilitychange', resume)
       window.removeEventListener('online', resume)
     }
-  }, [backendSource, enabled, source])
+  }, [mediaMode, enabled, source])
 
   return { ...media, retry }
 }

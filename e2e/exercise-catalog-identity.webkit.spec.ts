@@ -1,13 +1,27 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+import { z } from 'zod'
+import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
+
+async function openNativeCatalog(page: Page) {
+  await mockNativeAiSession(page, 'trainer')
+  const blocked: string[] = []
+  const signedPaths: string[] = []
+  await page.route(/\/(auth|rest|storage)\/v1\//, async (route) => {
+    blocked.push(new URL(route.request().url()).pathname.split('/')[1]!)
+    await route.abort()
+  })
+  await page.route('**/v1/exercise-media/sign-batch', async (route) => {
+    expect(route.request().headers()['x-fit-session']).toBeTruthy()
+    const { paths } = z.object({ paths: z.array(z.string()).min(1).max(32) }).parse(route.request().postDataJSON())
+    signedPaths.push(...paths)
+    await route.fulfill({ json: { signedUrls: paths.map((path) => ({ path, signedUrl: nativeAiUrl(`/exercises/${path}`) })) } })
+  })
+  await page.goto(nativeAiUrl('/exercises'))
+  return { blocked, signedPaths }
+}
 
 test('exercise catalog search and technique detail work in the iOS shell', async ({ page }) => {
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
-
-  await page.goto('/exercises')
+  const { blocked } = await openNativeCatalog(page)
   await expect(page.locator('.phone-frame')).toHaveClass(/exercise-catalog-identity/)
   await page.getByLabel('Поиск упражнения').fill('лестница')
   const result = page.locator('.catalog-media-card').first()
@@ -45,6 +59,7 @@ test('exercise catalog search and technique detail work in the iOS shell', async
   await expect(page.getByRole('dialog').locator('video')).toHaveCount(0)
   await expect(page.getByRole('dialog').getByText('Расстояние', { exact: true })).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  expect(blocked).toEqual([])
 })
 
 test('narrow-grip pulldown keeps exact media separate from the wide-grip variant', async ({ page }, testInfo) => {
@@ -60,17 +75,11 @@ test('narrow-grip pulldown keeps exact media separate from the wide-grip variant
       body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64'),
     })
   })
-  await page.goto('/auth')
-  await page.getByLabel('Email').fill('trainer@fit.local')
-  await page.getByLabel('Пароль').fill('FitLocal123!')
-  await page.getByRole('button', { name: 'Войти' }).click()
-  await expect(page).toHaveURL(/\/(today|clients)$/, { timeout: 20_000 })
-
-  await page.goto('/exercises')
+  const { blocked, signedPaths } = await openNativeCatalog(page)
   await page.getByLabel('Поиск упражнения').fill('тяга верхнего блока узким хватом')
   const narrowGrip = page.locator('.catalog-media-card').filter({ hasText: 'Тяга верхнего блока узким хватом' }).first()
   await expect(narrowGrip).toBeVisible()
-  await expect(narrowGrip.locator('img')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713-end.jpg')
+  await expect(narrowGrip.locator('img')).toHaveAttribute('src', nativeAiUrl('/exercises/vital-pro/vital-gym-pro-r407-1713-end.jpg'))
   await expect(narrowGrip.locator('video')).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('narrow-grip-pulldown-search-mobile.png'), fullPage: true })
   await narrowGrip.click()
@@ -79,9 +88,11 @@ test('narrow-grip pulldown keeps exact media separate from the wide-grip variant
   await expect(detail.getByRole('heading', { name: 'Тяга верхнего блока узким хватом' })).toBeVisible()
   const technique = detail.locator('.exercise-image-technique')
   await expect(technique.locator('img')).toHaveCount(1)
-  await expect(technique.locator('img')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713.jpg')
-  await expect(technique.locator('video')).toHaveAttribute('src', '/exercises/vital-pro/vital-gym-pro-r407-1713.mp4')
+  await expect(technique.locator('img')).toHaveAttribute('src', nativeAiUrl('/exercises/vital-pro/vital-gym-pro-r407-1713.jpg'))
+  await expect(technique.locator('video')).toHaveAttribute('src', nativeAiUrl('/exercises/vital-pro/vital-gym-pro-r407-1713.mp4'))
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
+  expect(signedPaths).toEqual(expect.arrayContaining(['vital-pro/vital-gym-pro-r407-1713.jpg', 'vital-pro/vital-gym-pro-r407-1713.mp4']))
+  expect(blocked).toEqual([])
   await page.waitForTimeout(1_800)
   await page.screenshot({ path: testInfo.outputPath('narrow-grip-pulldown-technique-mobile.png'), fullPage: true })
 })

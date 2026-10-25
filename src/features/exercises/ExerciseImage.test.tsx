@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { exercisesRepository } from '../../data/repositories/exercises.repository'
 import { ExerciseImage, exerciseMediaPresentationKey } from './ExerciseImage'
 
+const mediaBackend = vi.hoisted(() => ({ mode: 'public' as 'public' | 'signed' }))
+vi.mock('../../app/data-backend-context', () => ({
+  useDataBackend: () => ({ exercises: { ...exercisesRepository, vitalMediaMode: mediaBackend.mode } }),
+}))
+
 function markImageLoaded(image: Element | null) {
   if (!image) throw new Error('Expected an exercise image')
   Object.defineProperty(image, 'naturalWidth', { configurable: true, value: 540 })
@@ -11,6 +16,7 @@ function markImageLoaded(image: Element | null) {
 
 describe('ExerciseImage', () => {
   afterEach(() => {
+    mediaBackend.mode = 'public'
     vi.restoreAllMocks()
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
@@ -201,7 +207,7 @@ describe('ExerciseImage', () => {
 
   it('shows no legacy frame while private Gym Pro media is resolving', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    mediaBackend.mode = 'signed'
     const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockReturnValue(new Promise(() => {}))
 
     const { container } = render(<ExerciseImage
@@ -224,7 +230,7 @@ describe('ExerciseImage', () => {
 
   it('signs private picker media only when its card approaches the viewport', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    mediaBackend.mode = 'signed'
     let intersectionCallback: IntersectionObserverCallback | undefined
     const observe = vi.fn()
     const disconnect = vi.fn()
@@ -257,7 +263,7 @@ describe('ExerciseImage', () => {
 
   it('keeps the matching Gym Pro poster visible until its video is ready', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    mediaBackend.mode = 'signed'
     vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => (
       path.endsWith('.jpg')
         ? Promise.resolve('https://signed.example/dumbbell-lunge.jpg')
@@ -280,8 +286,9 @@ describe('ExerciseImage', () => {
   })
 
   it('uses a neutral placeholder when private Gym Pro media cannot be signed', async () => {
+    vi.useFakeTimers()
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    mediaBackend.mode = 'signed'
     const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockRejectedValue(new Error('denied'))
 
     const { container } = render(<ExerciseImage
@@ -293,7 +300,8 @@ describe('ExerciseImage', () => {
       variant="technique"
     />)
 
-    await waitFor(() => expect(createVitalMediaUrl).toHaveBeenCalledTimes(2))
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    expect(createVitalMediaUrl).toHaveBeenCalledTimes(6)
     expect(container.firstElementChild).toHaveClass('exercise-image-empty')
     expect(container.firstElementChild).not.toHaveClass('exercise-image-loading')
     expect(container.querySelector('img, video')).not.toBeInTheDocument()
@@ -357,7 +365,7 @@ describe('ExerciseImage', () => {
 
   it('signs only the private end-frame cover first and falls back to the start frame', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    mediaBackend.mode = 'signed'
     const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
       path.endsWith('-end.jpg')
         ? 'https://signed.example/cycling-end.jpg'
@@ -385,7 +393,7 @@ describe('ExerciseImage', () => {
 
   it('falls back to private start and end frames when a technique video cannot be loaded', async () => {
     vi.stubEnv('MODE', 'production')
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://project.supabase.co')
+    mediaBackend.mode = 'signed'
     const createVitalMediaUrl = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation((path) => Promise.resolve(
       `https://signed.example/${path.split('/').at(-1)}`,
     ))

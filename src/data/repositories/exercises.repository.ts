@@ -2,7 +2,7 @@ import type { CustomMetric, ExerciseSnapshot, InputKind, MuscleGroup } from '../
 import { blobFromDataUrl, type PreparedImage } from '../../shared/image-prep'
 import { SYSTEM_EXERCISE_CATALOG } from '../../shared/system-exercises'
 import { customExerciseMedia, exerciseQueries, type WorkoutParseResponse } from '../queries/exercises.queries'
-import { repositoryError } from './error'
+import { RepositoryError, repositoryError } from './error'
 import { validateGoalCriteriaSuggestion, type GoalCriteriaSuggestionResult } from '../../shared/goal-criteria-suggestions'
 
 export type { WorkoutParseResponse } from '../queries/exercises.queries'
@@ -34,13 +34,14 @@ function map(row: CustomExerciseRow): CustomExercise {
     createdBy: row.created_by, archivedAt: row.archived_at, version: row.version, imagePath: row.image_path }
 }
 
+const unavailableVitalSigner: (path: string, expiresIn: number) => Promise<string> = () => (
+  Promise.reject(new RepositoryError('native_media_required', 'Приватные медиа доступны через основной API.'))
+)
+
 export const exercisesRepository = {
+  vitalMediaMode: 'public' as 'public' | 'signed',
   system: SYSTEM_EXERCISE_CATALOG,
-  async createVitalMediaUrl(path: string, expiresIn: number) {
-    const result = await exerciseQueries.createVitalMediaUrl(path, expiresIn)
-    if (result.error || !result.data?.signedUrl) throw repositoryError(result.error ?? new Error('Пустой адрес медиа'))
-    return result.data.signedUrl
-  },
+  createVitalMediaUrl: unavailableVitalSigner,
   async createCustomExercisePhotoUrl(path: string, expiresIn: number) {
     const result = await exerciseQueries.createCustomExercisePhotoUrl(path, expiresIn)
     if (result.error || !result.data?.signedUrl) throw repositoryError(result.error ?? new Error('Пустой адрес фото'))

@@ -69,9 +69,6 @@ export const customExerciseMedia = {
 }
 
 export const exerciseQueries = {
-  async createVitalMediaUrl(path: string, expiresIn: number) {
-    return supabase.storage.from('fit-exercise-media').createSignedUrl(path, expiresIn)
-  },
   async createCustomExercisePhotoUrl(path: string, expiresIn: number) {
     return customExerciseMedia.createSignedUrl(path, expiresIn)
   },
