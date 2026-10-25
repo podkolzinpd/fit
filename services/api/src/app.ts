@@ -156,6 +156,8 @@ import {
 } from './vital-media.js'
 import { MAX_TRAINER_CATALOG_PAGE_SIZE, readTrainerProfileDraft, TrainerProfileError, type PilotTrainerProfiles, type TrainerCatalogFilters } from './trainer-profile.js'
 import { readTrainerPhotoUpload } from './trainer-profile-media.js'
+import { readCustomExercisePhoto } from './custom-exercise-media.js'
+import { CustomExercisePhotoError, type PilotCustomExercisePhotos } from './custom-exercise-photo.js'
 import {
   TrainerDiscoveryError,
   type PilotTrainerDiscovery,
@@ -207,6 +209,7 @@ interface BuildAppOptions {
   pilotPushNotifications?: PilotPushNotifications
   pilotChat?: PilotChat
   chatMediaStore?: ChatMediaStore
+  pilotCustomExercisePhotos?: PilotCustomExercisePhotos
   legacyChatMediaBridge?: LegacyChatMediaBridge
   pilotClientsReader?: PilotClientsReader
   pilotConnectionsReader?: PilotConnectionsReader
@@ -1968,6 +1971,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         }
         return reply.code(422).send({ error: 'invalid_domain_data' })
       }
+      if (error instanceof CustomExercisePhotoError) {
+        const status = { forbidden: 403, not_found: 404, conflict: 409, unavailable: 503 }[error.failure]
+        const code = { forbidden: 'action_not_allowed', not_found: 'resource_not_found', conflict: 'version_conflict', unavailable: 'service_unavailable' }[error.failure]
+        return reply.code(status).send({ error: code })
+      }
       if (error instanceof PilotWorkoutCommandError) {
         if (error.planSaveDiagnostic) {
           reply.request.log.warn({ planSaveStep: error.planSaveDiagnostic.step,
@@ -2808,6 +2816,28 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         .header('cache-control', 'no-store')
         .send({ client: { id: clientId, membershipVersion } }),
     )
+  })
+
+  app.post('/v1/custom-exercises/with-photo', { bodyLimit: 3 * 1024 * 1024 }, async (request, reply) => {
+    const session = readYandexActorSession(request.headers)
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (session.accessMode !== 'read_write') return reply.code(403).send({ error: 'read_write_session_required' })
+    const body = request.body as { id?: unknown; draft?: unknown; image?: unknown } | null
+    const draft = readCustomExerciseDraft(body?.draft), image = readCustomExercisePhoto(body?.image)
+    if (typeof body?.id !== 'string' || !uuidPattern.test(body.id) || !draft || !image) return reply.code(400).send({ error: 'invalid_request' })
+    if (!options.pilotCustomExercisePhotos) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotCustomExercisePhotos!.create(session, body.id as string, draft, image),
+      exercise => reply.header('cache-control', 'no-store').code(201).send({ exercise }))
+  })
+
+  app.get('/v1/custom-exercises/:exerciseId/photo', async (request, reply) => {
+    const session = readCompatibleYandexActorSession(request.headers)
+    const { exerciseId } = request.params as { exerciseId?: unknown }
+    if (session === undefined) return reply.code(401).send({ error: 'unauthorized' })
+    if (typeof exerciseId !== 'string' || !uuidPattern.test(exerciseId)) return reply.code(400).send({ error: 'invalid_request' })
+    if (!options.pilotCustomExercisePhotos) return reply.code(503).send({ error: 'service_unavailable' })
+    return sendPilotCommand(reply, () => options.pilotCustomExercisePhotos!.sign(session, exerciseId),
+      result => reply.header('cache-control', 'no-store').send(result))
   })
 
   app.post('/v1/custom-exercises', async (request, reply) => {

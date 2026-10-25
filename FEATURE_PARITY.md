@@ -758,3 +758,5 @@ native/CI и signed candidate passed; physical-device/pilot и store distributio
 release/publisher APK1.1.1/code5 и автоматического compatible feed описана в
 `docs/design/ANDROID_OTA_ROLLOUT_20261023.md`. Фактическая публикация и телефонная
 приёмка отмечаются отдельно; исходные3пункта acceptance не меняются.
+
+YAFIT-654, photo backend: additive migration157, idempotent owner-bound create/read; API1487 и локальная DB/S3185passed. Клиентский upload доPR5 не заявлен как Implemented.

@@ -81,4 +81,15 @@
 - Для карты используются существующие Skeleton/StatePanel/EmptyState, диагностика запроса и secondary «Повторить». Известные данные остаются видимыми при фоне ошибки; при отсутствии профиля есть существующий переход к заполнению. Без пола по-прежнему только список.
 - Локальная приёмка32/32: failed/lost/unreadable/changed deletion, cancel/reconfirm, loading/empty/error/retry карты, обе темы390/430 WebKit/Chromium, другие учётки, прежние display preferences. CSS/токены/хранение/API не менялись. Физический iPhone/реальный OAuth не проверены.
 
+## Локальная подготовка PR4 — data-media
+
+- Пользовательский результат: фото собственного упражнения проходит API/частное хранилище/БД; интерфейс подключается только PR5. Зависимость: PR3, окончательная ветка обновляется от его опубликованного main перед выпуском.
+- База подготовкиe38f725f (локальный PR3); backend идентичен опубликованной базе95e2b630. Свежий baseline4/4 на реальном ExercisePicker подтвердил: preview есть, POST/v1/custom-exercises не передаёт фото. До API-правки проверены существующие create/read mapper, actor context, immutable Object Storage write и JPEG2MB/1600edge подготовка.
+- Переиспользуются YandexActorSession/DatabasePool, существующий private S3 MediaObjectStorage и SHA/IfNoneMatch; без Supabase runtime/fallback/миграций. Новый optional image DTO не меняет старый no-photo POST. Изменяются custom_exercises (additive API migration157), app/server, training-data, namespace Object Storage; UI/repositories и rollout-переменные в PR4 не меняются.
+- Контракт: отдельный idempotent POST with-photo со стабильным UUID, владелец/path определяется сервером, GET подписи по доступному exercise ID. Мismatch повторного payload — conflict, чужой владелец — forbidden. Не удалять object после неопределённого commit/signing failure.
+- Локальные проверки: чистая API chain156/RLS179pass+1conditional skip уже зелёная; для157 — clean chain/actor/RLS/API и обязательный local:verify на собственных ресурсах. Реальный локальный S3 bucket готов (SeaweedFS через Podman), успешен SDK HeadBucket. Новая media-проверка ещё не выполнена.
+- Запрещено: расширение четырёх клиентских профилей, новая legacy-зависимость, remote SQL/apply/смена routing, изменение общей айдентики и подключение UI доPR5. Физический iPhone/real OAuth и новый production upload не проверены.
+
+- PR4 проверено: API lint/typecheck/build и1487 unit прошли; реальная PostgreSQL157/RLS и S3 приёмка185pass+1условный skip. Потерянный COMMIT, sign/upload failure, concurrent retry, старый no-photo и normal metadata update проверены. Дополнен отдельный legacy-image тест; canonical local:verify выполняется отдельно на собственных локальных ресурсах.
+
 - Перед открытием PR3: main95e2b630 после merge PR1808; git diff561c6f22..95e2b630 пустой, перенос PR3 выполнен без конфликтов и без изменения проверенного дерева. Публикация PR2 ещё идёт, merge PR3 ждёт её приёмки. Свежая runtime-проверка12/12 на новом основании пройдена, включая сохранность полей при задержанной цели.

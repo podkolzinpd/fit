@@ -88,6 +88,7 @@ describe('mediaObjectKey', () => {
       .toBe('chat-media/conversation/message.jpg')
     expect(mediaObjectKey('fit-exercise-media', 'vital-pro/squat.mp4'))
       .toBe('fit-exercise-media/vital-pro/squat.mp4')
+    expect(mediaObjectKey('custom-exercise-media', 'owner/exercise/hash.jpg')).toBe('custom-exercise-media/owner/exercise/hash.jpg')
     expect(mediaObjectKey('trainer-profile-media', 'trainer/photo/full.jpg'))
       .toBe('trainer-profile-media/trainer/photo/full.jpg')
   })

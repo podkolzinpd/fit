@@ -1,4 +1,8 @@
-import { randomBytes, randomUUID } from 'node:crypto'
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { DatabasePilotCustomExercisePhotos } from '../custom-exercise-photo.js'
+import { YandexMediaObjectStorage } from '../object-storage-media.js'
+import { DatabasePilotDomainWriter } from '../pilot-domain-writer.js'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { DatabaseNutritionDiary, type NutritionDraft } from '../nutrition-diary.js'
 import { parseCatalogFood, type NutritionCatalog } from '../nutrition-catalog.js'
 import { DatabaseNutritionAutoActivator, nutritionProfileAllowed, type NutritionPilot } from '../nutrition-pilot.js'
@@ -70,7 +74,7 @@ import { DatabasePilotSessionIssuer } from '../pilot-session.js'
 import { DatabasePilotTrainingDataReader } from '../pilot-training-data-reader.js'
 import type { PlannedWorkoutDraft } from '../planned-workout-request.js'
 import { DatabasePilotProgressData } from '../progress-data.js'
-import { readAccessibleTrainingData } from '../training-data.js'
+import { readAccessibleTrainingData, type PilotTrainingDataResponse } from '../training-data.js'
 import { readClientWorkoutStats } from '../client-workout-stats.js'
 import { readActiveWorkout, readWorkoutHome } from '../workout-home-reader.js'
 import type { MediaObjectStorage } from '../object-storage-media.js'
@@ -4411,6 +4415,149 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         attentionPreferences: [],
         hasMoreWorkouts: false,
         totalWorkouts: 0,
+      })
+    })
+
+    it.skipIf(!process.env.TEST_CUSTOM_PHOTO_S3_ENDPOINT)('persists custom photos through the real local API, PostgreSQL and S3 with safe retries', async () => {
+      const endpoint = process.env.TEST_CUSTOM_PHOTO_S3_ENDPOINT!
+      if (new URL(endpoint).hostname !== '127.0.0.1' || new URL(endpoint).protocol !== 'http:') throw new Error('Only owned local S3 is allowed')
+      const bucket = process.env.TEST_CUSTOM_PHOTO_S3_BUCKET ?? 'fit-custom-photos-test'
+      const url = new URL(requireLocalTestDatabaseUrl()); url.username = 'fit_api'; url.password = RUNTIME_PASSWORD
+      const pool = new PgDatabasePool({ connectionString: url.toString(), max: 4 })
+      const s3 = new S3Client({ endpoint, region: 'us-east-1', forcePathStyle: true, credentials: { accessKeyId: 'fit-local-media', secretAccessKey: 'fit-local-media-test-only' } })
+      const media = new YandexMediaObjectStorage({ provider: 'cloudru', bucket, accessKeyId: 'fit-local-media', secretAccessKey: 'fit-local-media-test-only' })
+      // Existing storage test seam; all actual SDK requests stay on local S3.
+      Object.assign(media, { client: s3 })
+      const writes = vi.spyOn(media, 'write'), removes = vi.spyOn(media, 'remove')
+      const profiles: string[] = [], ids: string[] = []
+      const subject = randomBytes(32).toString('hex')
+      const registration = await new DatabaseYandexNativeRegistrar(pool).register(subject, { accountRole: 'client', firstName: 'Synthetic photo', timezone: 'Europe/Moscow' })
+      profiles.push(registration.profileId)
+      const issued = await new DatabaseYandexAppSessionIssuer(pool).issue(subject)
+      if (!issued) throw new Error('Synthetic session not issued')
+      const headers = { 'x-fit-session': issued.session.token }
+      await new DatabasePilotDomainWriter(pool).createQuickOwnClient({ accessMode: 'read_write', token: issued.session.token }, 'Synthetic photo')
+      let loseCommit = true
+      const uncertainPool: DatabasePool = {
+        connect: async () => {
+          const connection = await pool.connect(); let inserted = false
+          return { query: async <Row extends QueryResultRow>(sql: string, values?: readonly unknown[]) => {
+            const rows = await connection.query<Row>(sql, values)
+            if (sql.includes('create_custom_exercise_with_photo(')) inserted = true
+            if (sql.trim().toLowerCase() === 'commit' && inserted && loseCommit) { loseCommit = false; throw new Error('synthetic_lost_commit_reply') }
+            return rows
+          }, release: () => connection.release() }
+        }, end: () => Promise.resolve(),
+      }
+      const photos = new DatabasePilotCustomExercisePhotos(uncertainPool, media)
+      const app = buildApp({ pilotCustomExercisePhotos: photos, pilotTrainingDataReader: new DatabasePilotTrainingDataReader(pool), pilotDomainWriter: new DatabasePilotDomainWriter(pool), logger: false })
+      const dataUrl = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAACKADAAQAAAABAAAACAAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgACAAIAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMAAQEBAQEBAgEBAgMCAgIDBQMDAwMFBgUFBQUFBgcGBgYGBgYHBwcHBwcHBwgICAgICAoKCgoKCwsLCwsLCwsLC//bAEMBAgICAwMDBQMDBQwIBggMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDP/dAAQAAf/aAAwDAQACEQMRAD8A/p4ooor/ADTPz8//2Q=="
+      const bytes = Buffer.from(dataUrl.split(',')[1]!, 'base64'), sha = createHash('sha256').update(bytes).digest('hex')
+      const image = { dataUrl, mimeType: 'image/jpeg', width: 8, height: 8, sizeBytes: bytes.length }
+      const makePayload = () => { const id = randomUUID(); ids.push(id); return { id, draft: { name: `PhotoAPI ${id}`, muscleGroup: 'chest', inputKind: 'strength' }, image } }
+      const post = (payload: ReturnType<typeof makePayload>) => app.inject({ method: 'POST', url: '/v1/custom-exercises/with-photo', headers, payload })
+      const signed = async (id: string) => {
+        const response = await app.inject({ method: 'GET', url: `/v1/custom-exercises/${id}/photo`, headers })
+        expect(response.statusCode).toBe(200)
+        const file = await fetch(response.json<{ url: string }>().url)
+        expect(file.status).toBe(200); expect(Buffer.from(await file.arrayBuffer())).toEqual(bytes)
+      }
+      try {
+        const lost = makePayload(), first = await post(lost)
+        expect(first.statusCode).toBe(503)
+        expect(writes).toHaveBeenCalledTimes(1); expect(removes).not.toHaveBeenCalled()
+        const retry = await post(lost)
+        expect(retry.statusCode).toBe(201); expect(writes).toHaveBeenCalledTimes(1)
+        expect((await ownerPool!.query<{ count: string }>('select count(*) from public.custom_exercises where id=$1', [lost.id])).rows[0]?.count).toBe('1')
+        await signed(lost.id)
+        vi.spyOn(media, 'sign').mockRejectedValueOnce(new Error('synthetic_signing_failure'))
+        expect((await app.inject({ method: 'GET', url: `/v1/custom-exercises/${lost.id}/photo`, headers })).statusCode).toBe(503)
+        expect(removes).not.toHaveBeenCalled(); await signed(lost.id)
+        const failed = makePayload(); writes.mockRejectedValueOnce(new Error('synthetic_storage_failure'))
+        expect((await post(failed)).statusCode).toBe(503)
+        expect((await ownerPool!.query('select id from public.custom_exercises where id=$1', [failed.id])).rows).toHaveLength(0)
+        expect((await post(failed)).statusCode).toBe(201); await signed(failed.id)
+        const concurrent = makePayload(), replies = await Promise.all([post(concurrent), post(concurrent)])
+        expect(replies.map(r => r.statusCode)).toEqual([201, 201]); await signed(concurrent.id)
+        const edited = await app.inject({ method: 'PUT', url: `/v1/custom-exercises/${lost.id}`, headers, payload: { draft: { ...lost.draft, description: 'Photo retained' }, expectedVersion: 1 } })
+        expect(edited.statusCode).toBe(200)
+        const loaded = await app.inject({ method: 'GET', url: '/v1/training-data?scope=metadata', headers })
+        expect(loaded.statusCode).toBe(200)
+        const exercise = loaded.json<PilotTrainingDataResponse>().customExercises.find(item => item.id === lost.id)
+        expect(exercise).toMatchObject({ version: 2, image: { path: `${registration.profileId}/${lost.id}/${sha}.jpg`, sha256: sha, sizeBytes: bytes.length } })
+        const outsideSubject = randomBytes(32).toString('hex')
+        const outside = await new DatabaseYandexNativeRegistrar(pool).register(outsideSubject, { accountRole: 'client', firstName: 'Other synthetic photo', timezone: 'Europe/Moscow' }); profiles.push(outside.profileId)
+        const outsideSession = await new DatabaseYandexAppSessionIssuer(pool).issue(outsideSubject)
+        if (!outsideSession) throw new Error('Other synthetic session not issued')
+        expect((await app.inject({ method: 'GET', url: `/v1/custom-exercises/${lost.id}/photo`, headers: { 'x-fit-session': outsideSession.session.token } })).statusCode).toBe(404)
+        const plain = await app.inject({ method: 'POST', url: '/v1/custom-exercises', headers, payload: { ...lost.draft, name: `Plain ${lost.id}` } })
+        expect(plain.statusCode).toBe(201); ids.push(plain.json<{ exercise: { id: string } }>().exercise.id)
+        expect(plain.json<{ exercise: { image?: unknown } }>().exercise.image).toBeUndefined()
+        expect(removes).not.toHaveBeenCalled()
+      } finally {
+        await app.close()
+        for (const id of ids) await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: `custom-exercise-media/${registration.profileId}/${id}/${sha}.jpg` }))
+        await ownerPool!.query('delete from public.custom_exercises where id=any($1::uuid[])', [ids])
+        await ownerPool!.query('delete from public.clients where auth_user_id=any($1::uuid[])', [profiles])
+        await ownerPool!.query('delete from public.profiles where id=any($1::uuid[])', [profiles])
+        await pool.end(); s3.destroy()
+      }
+    })
+
+    describe('custom exercise photo metadata', () => {
+      const ids: string[] = []
+      const nextId = () => { const id = randomUUID(); ids.push(id); return id }
+      const image = (id: string, actor = OTHER_ACTOR_ID) => ({ path: `${actor}/${id}/${'a'.repeat(64)}.jpg`, mimeType: 'image/jpeg', width: 8, height: 8, sizeBytes: 4, sha256: 'a'.repeat(64) })
+      const draft = (id: string) => ({ name: `Photo ${id}`, muscleGroup: 'back', inputKind: 'strength' })
+      function call(actor: string, id: string, value: object = draft(id), photo: object = image(id, actor)) {
+        if (!runtimePool) throw new Error('Runtime pool not ready')
+        return withActorTransaction(runtimePool, actor, client => client.query<{ id: string; created_by: string; trainer_id: string; version: string; image_path: string }>(
+          'select * from public.create_custom_exercise_with_photo($1, $2::jsonb, $3::jsonb)', [id, JSON.stringify(value), JSON.stringify(photo)]))
+      }
+      afterEach(async () => { if (ownerPool && ids.length) await ownerPool.query('delete from public.custom_exercises where id = any($1::uuid[])', [ids.splice(0)]) })
+      it('keeps the author, metadata and one stable row across retries', async () => {
+        const id = nextId(), photo = image(id)
+        const first = await call(OTHER_ACTOR_ID, id), second = await call(OTHER_ACTOR_ID, id)
+        expect(first).toEqual(second); expect(first[0]).toMatchObject({ id, created_by: OTHER_ACTOR_ID, trainer_id: ACTOR_ID, version: '1', image_path: photo.path })
+        const data = await withActorTransaction(runtimePool!, OTHER_ACTOR_ID, readAccessibleTrainingData)
+        expect(data.customExercises.find(item => item.id === id)?.image).toEqual(photo)
+        expect((await ownerPool!.query<{ count: string }>('select count(*) from public.custom_exercises where id=$1', [id])).rows[0]?.count).toBe('1')
+      })
+      it('preserves legacy image metadata without requiring a new hash or path', async () => {
+        const id = nextId()
+        await ownerPool!.query(`insert into public.custom_exercises
+          (id, trainer_id, created_by, name, muscle_group, input_kind, image_path, image_mime_type, image_width, image_height, image_size_bytes)
+          values ($1,$2,$3,'Legacy photo','back','strength','legacy/original.jpg','image/jpeg',2048,2048,1024)`, [id, ACTOR_ID, OTHER_ACTOR_ID])
+        await withActorTransaction(runtimePool!, OTHER_ACTOR_ID, client => updateCustomExercise(client, id, { ...draft(id), muscleGroup: 'back', inputKind: 'strength' }, 1))
+        const stored = await ownerPool!.query('select image_path, image_width, image_sha256 from public.custom_exercises where id=$1', [id])
+        expect(stored.rows).toEqual([{ image_path: 'legacy/original.jpg', image_width: 2048, image_sha256: null }])
+        const data = await withActorTransaction(runtimePool!, OTHER_ACTOR_ID, readAccessibleTrainingData)
+        expect(data.customExercises.find(item => item.id === id)).not.toHaveProperty('image')
+      })
+      it('serializes simultaneous retries without a second row or version bump', async () => {
+        const id = nextId()
+        const [first, second] = await Promise.all([call(OTHER_ACTOR_ID, id), call(OTHER_ACTOR_ID, id)])
+        expect(first).toEqual(second); expect(first[0]?.version).toBe('1')
+      })
+      it('denies another owner and keeps cross-tenant photo metadata invisible', async () => {
+        const id = nextId(); await call(OTHER_ACTOR_ID, id)
+        await expect(call(OUTSIDE_TRAINER_ID, id)).rejects.toThrow('custom_exercise_forbidden')
+        const outside = await withActorTransaction(runtimePool!, OUTSIDE_TRAINER_ID, readAccessibleTrainingData)
+        expect(outside.customExercises.find(item => item.id === id)).toBeUndefined()
+        const trainer = await withActorTransaction(runtimePool!, ACTOR_ID, readAccessibleTrainingData)
+        expect(trainer.customExercises.find(item => item.id === id)?.image?.path).toBe(image(id).path)
+      })
+      it('rejects a changed replay and preserves the image during normal metadata edits', async () => {
+        const id = nextId(); await call(OTHER_ACTOR_ID, id)
+        await expect(call(OTHER_ACTOR_ID, id, { ...draft(id), name: 'Changed replay' })).rejects.toThrow('custom_exercise_conflict')
+        await withActorTransaction(runtimePool!, OTHER_ACTOR_ID, client => updateCustomExercise(client, id, { ...draft(id), muscleGroup: 'back', inputKind: 'strength', description: 'Edited description' }, 1))
+        const data = await withActorTransaction(runtimePool!, OTHER_ACTOR_ID, readAccessibleTrainingData)
+        expect(data.customExercises.find(item => item.id === id)).toMatchObject({ image: image(id), description: 'Edited description', version: 2 })
+      })
+      it('enforces metadata limits and owner-bound paths at the database boundary', async () => {
+        for (const patch of [{ mimeType: null }, { mimeType: 'image/png' }, { width: 1601 }, { height: 0 }, { sizeBytes: 2097153 }, { sha256: 'bad' }, { path: '../other.jpg' }]) {
+          const id = nextId(); await expect(call(OTHER_ACTOR_ID, id, draft(id), { ...image(id), ...patch })).rejects.toThrow('custom_exercise_invalid')
+        }
       })
     })
 
