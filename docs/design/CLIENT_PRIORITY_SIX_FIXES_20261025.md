@@ -95,3 +95,5 @@
 - PR4 финальные локальные результаты: full npm run check exit0 (обязателен по classifier из-за API contract boundary); DB/S3186passed+1conditional skip, legacy photo2048px сохранено без SHA/path rewrite. Canonical PostgreSQL17 clean-chain/local:verify passed; два условных skip — environment-gated проверки, реальный S3 отдельно прошёл. Проверка safety migration1 additive passed.
 
 - Перед открытием PR3: main95e2b630 после merge PR1808; git diff561c6f22..95e2b630 пустой, перенос PR3 выполнен без конфликтов и без изменения проверенного дерева. Публикация PR2 ещё идёт, merge PR3 ждёт её приёмки. Свежая runtime-проверка12/12 на новом основании пройдена, включая сохранность полей при задержанной цели.
+
+- Формальный PR4: основаниеa58edef6 после PR1809. Перенесены только два собственных коммита; функциональное дерево services/api идентично проверенному370ff141, конфликтов кода нет (сведена только документация). Merge ждёт полной приёмки PR3; серверная поддержка не включает UI доPR5.
