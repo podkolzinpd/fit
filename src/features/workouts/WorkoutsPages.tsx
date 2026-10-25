@@ -3863,7 +3863,7 @@ export function LiveWorkoutPage() {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
   }
   function swipeLive(exercise: WorkoutExerciseModel, content: ReactNode, key = exercise.id) {
-    return liveSwipeEnabled ? <WorkoutSwipe key={key} id={key} disabled={gestureDisabled} swipeFromCardButton={clientReference}
+    return liveSwipeEnabled ? <WorkoutSwipe key={key} id={key} disabled={gestureDisabled} swipeFromCardButton={clientReference || coachV79}
       onDelete={() => { void deleteLiveExercise(exercise) }}
       onReplace={coachReference ? () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } : undefined}>{content}</WorkoutSwipe> : content
   }

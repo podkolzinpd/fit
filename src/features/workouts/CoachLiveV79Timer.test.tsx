@@ -4,11 +4,11 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { CoachLiveV79Timer } from './CoachLiveV79Timer'
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
-function Surface({ time = '01:00', resting = false }: { time?: string; resting?: boolean }) {
+function Surface({ time = '01:00', resting = false, phaseLabel }: { time?: string; resting?: boolean; phaseLabel?: string }) {
   const [slot, setSlot] = useState<HTMLSpanElement | null>(null)
   return <div className="content"><main className="live-workout-page coach-live-v79">
     <header className="page-header"><span ref={setSlot} /></header>
-    <CoachLiveV79Timer time={time} elapsed="01:00" resting={resting} paused={false} density="original" headerSlot={slot} restAction={<button>Отдых</button>} compactAction={<button>Открыть отдых</button>} />
+    <CoachLiveV79Timer time={time} elapsed="01:00" resting={resting} paused={false} phaseLabel={phaseLabel} density="original" headerSlot={slot} restAction={<button>Отдых</button>} compactAction={<button>Открыть отдых</button>} />
     <input defaultValue="29.5" />
   </main></div>
 }
@@ -37,6 +37,10 @@ it('hands one supplied clock to both displays without touching focused forms', (
   expect(screen.getByRole('img', { name: 'Отдых: 00:30' })).toBeVisible()
   expect(view.container.querySelector('.coach-v79-small-clock')).toHaveTextContent('00:30')
   expect(input).toHaveValue('29.5')
+  expect(document.activeElement).toBe(input)
+  view.rerender(<Surface time="00:20" phaseLabel="Подход" />)
+  expect(screen.getByRole('img', { name: 'Подход: 00:20' })).toBeVisible()
+  expect(view.container.querySelector('.coach-v79-elapsed')).toHaveTextContent('01:00')
   expect(document.activeElement).toBe(input)
   view.unmount()
   expect(root.style.getPropertyValue('--v79-small-opacity')).toBe('')

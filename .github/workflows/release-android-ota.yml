@@ -130,6 +130,8 @@ jobs:
           VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS: ${{ vars.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS || '' }}
           VITE_COACH_LIVE_DENSITY_ENABLED: ${{ vars.VITE_COACH_LIVE_DENSITY_ENABLED || 'false' }}
           VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS: ${{ vars.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS || '' }}
+          VITE_COACH_LIVE_V79_ENABLED: ${{ vars.VITE_COACH_LIVE_V79_ENABLED || 'false' }}
+          VITE_COACH_LIVE_V79_PILOT_USER_IDS: ${{ vars.VITE_COACH_LIVE_V79_PILOT_USER_IDS || '' }}
         run: |
           node scripts/check-production-api-routing.mjs
           npm run ios:env:check

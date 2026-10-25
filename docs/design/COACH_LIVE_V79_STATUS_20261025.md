@@ -93,3 +93,51 @@ pending callback при unmount. Реальный browser6/6 WebKit/Chromium п�
 Полный check exit0: frontend2833/API1471, lint/types/policy/build.
 Весь diff WorkoutsPages — один optional prop только в Live caller; прежнее
 меню суперсетов/действий и клиентские изменения не заменены старой копией.
+
+## PR6 — финальная интеграция
+
+База подготовки ee53a8c8. До публикации выполняются fresh-main rebase,
+проверка byte-identical tree и повтор фактических гейтов, без копирования
+устаревшего WorkoutsPages поверх клиентских изменений.
+
+Подтверждённые стыки и исправления:
+
+- Новый title-toggle — кнопка; старый WorkoutSwipe корректно исключал её.
+  Только coachV79 подключён к уже существующему swipeFromCardButton.
+  Shared WorkoutGestures не переписан, клиентская ветка не изменена.
+- Крупные/маленькие действия отдыха доступны по очереди; возврат фокуса
+  идёт на реально использованную видимую кнопку, включая клавиатурный вход.
+- Существующие фазы сохраняют свои подписи/время и вторичный общий таймер.
+  Новый timer-owner/Start/countdown/тренерская пауза не добавлены.
+- Уточнён каскад measured geometry: исходные48/54, clock/rest и small action
+  больше не перекрываются прежними общими selectors.
+- Source dot6s и separator cadence перенесены scoped CSS, reduced-motion
+  останавливает декоративное движение. Source auto-scroll snapping не
+  переносится на .content и не вмешивается в ввод.
+- При визуальном просмотре пустой сессии обнаружено перекрытие CTA нижней
+  панелью: вместо слепого viewport-offset рассчитывается оставшееся место
+  по настоящим клиентскому контексту/CTA/footer. Новая проверка запрещает
+  перекрытие; Original сохраняет крупные104px часы, Compact — малый верх.
+
+Фактические локальные доказательства:
+
+- Полный стабильный check exit0: frontend2834, API1471/189conditionalDBskips,
+  lint/types/hosting/policy/build. Workflow-contract tests сохраняют старые
+  наборы, оба браузера и fail-on-flaky; добавляют обязательный gate-on набор.
+- Финальный единый production-build прогон46/46 passed (предшествовали44+2):
+  WebKit/Chromium,375/430/1440,Original/Compact, long title,6sets, notes,
+  одно дерево форм/фокус/viewport400, время/дистанция/RPE, ошибочный confirm
+  и retry, partial finish/reload, empty/add, role outsiders, nested sheets.
+  Обе исходные идентичности проверены в сценарии merge/rounds/split/reload.
+- Source bytes5/5 в постоянном unit-тесте, цифровые отображения используют
+  один supplied clock, не второй interval. PNG/SVG не перерисованы.
+- Xcode prepare build exit0 без установки и без замены конфигурации на demo.
+
+Первый выпуск PR1801/f6c8066a проверен по212 публичным файлам и health.
+PR1802/3e08c3dc —213 файлов/health, PR1803 слит в6eea63b3 и проходит
+официальную main-приёмку. PR4/5 подготовлены отдельными проверенными commit.
+Окончательные PR6 CI, включение двухпользовательского флага, официальный
+readback и current-main native sync/build/install/launch остаются release
+гейтами, а не считаются выполненными по локальным screenshots.
+Реальный OAuth, физический iPhone и настоящее пользовательское выполнение
+Live не подменяются mock API, браузером или симулятором.
