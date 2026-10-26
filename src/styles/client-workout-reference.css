@@ -314,9 +314,9 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-circuit .circuit-counter { min-width: 0; color: var(--lime-text-secondary); font-size: 14px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-toggle { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--lime-text); text-align: left; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-summary { flex-basis: 100%; color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body[hidden] { display: none; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > .circuit-round { opacity: 1; margin: 0; padding: 0; border-color: var(--lime-divider); }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > .circuit-round:first-child.current { border: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body.folded { pointer-events: none; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > div > .circuit-round { opacity: 1; margin: 0; padding: 0; border-color: var(--lime-divider); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > div > .circuit-round:first-child.current { border: 0; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body .circuit-round-toggle:hover { background: transparent; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body .circuit-round-toggle:active { background: var(--lime-surface-raised); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body .circuit-round > .workout-swipe + .workout-swipe { border-top: 1px solid var(--lime-divider); border-radius: 0; }
@@ -332,8 +332,8 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note:not([open]):not([data-has-note]) { display: none; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note { margin: 0 0 8px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note summary { min-height: 44px; padding: 8px 0; }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > .live-round-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--lime-divider); }
-.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > .live-round-actions .live-add-set { min-height: 44px; margin: 0; padding: 0 8px; border: 0; background: transparent; font-size: 14px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > div > .live-round-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--lime-divider); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > div > .live-round-actions .live-add-set { min-height: 44px; margin: 0; padding: 0 8px; border: 0; background: transparent; font-size: 14px; }
 .phone-frame.fit-client-lime.client-workout-reference .workout-detail-page > a.button.primary.wide {
   display: flex;
   align-items: center;
@@ -341,3 +341,9 @@
   box-sizing: border-box;
   width: 100%;
 }
+
+/* Original filled glyph stays unchanged; opacity and a separate content mark
+   distinguish an empty note without shrinking either 44px target. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note-toggle { position: relative; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note-toggle:not([data-has-note]):not([aria-expanded="true"]) svg { opacity: .4; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note-toggle[data-has-note]::after { content: ""; position: absolute; right: 8px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--lime-accent-ink); }

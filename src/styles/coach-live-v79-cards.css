@@ -22,9 +22,9 @@
 .coach-live-v79 .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-arrow { transform: rotate(180deg); }
 .coach-live-v79 .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-open { opacity: 1; }
 .coach-live-v79 .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-closed { opacity: 0; }
-.coach-live-v79 .coach-v79-card-body { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .32s cubic-bezier(.22,1,.36,1), opacity .32s cubic-bezier(.22,1,.36,1); }
-.coach-live-v79 .coach-v79-card-body.folded { grid-template-rows: 0fr; opacity: 0; }
-.coach-live-v79 .coach-v79-card-body > div { min-height: 0; overflow: hidden; }
+.coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .32s cubic-bezier(.22,1,.36,1), opacity .32s cubic-bezier(.22,1,.36,1); }
+.coach-live-v79 .coach-v79-card-body.folded, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body.folded { grid-template-rows: 0fr; opacity: 0; }
+.coach-live-v79 .coach-v79-card-body > div, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body > div { min-height: 0; overflow: clip; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-exercise-tools { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: center; gap: 12px; padding: 12px 0 16px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-exercise-tools:has(.coach-v79-instruction) { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-exercise-tools :is(button.live-add-set,button.coach-v79-instruction,button.overflow-trigger) { min-width: 0; width: 100%; height: 44px; min-height: 44px; padding: 8px 4px; margin: 0; border: 0; border-radius: 0; background: transparent; font-size: 14px; line-height: 16px; font-weight: 400; color: var(--lime-text-secondary); overflow-wrap: anywhere; }
@@ -36,6 +36,6 @@
 .coach-live-v79 .coach-v79-card-body .live-exercise-note { padding-bottom: 12px; }
 @media (prefers-reduced-motion: reduce) {
   .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise,
-  .coach-live-v79 .coach-v79-card-body, .coach-live-v79 .coach-v79-toggle-arrow,
+  .coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body, .coach-live-v79 .coach-v79-toggle-arrow,
   .coach-live-v79 .coach-v79-toggle-arrow img { transition: none; }
 }
