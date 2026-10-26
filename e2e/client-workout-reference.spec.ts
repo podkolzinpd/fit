@@ -1634,16 +1634,26 @@ for (const withTrainer of [true, false]) for (const animation of [true, false]) 
   await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /отдыха/)
   // An unsaved field must not blur-disable the already enabled rail between
   // pointerdown and click. Opening confirmation may blur; deleting waits for it.
-  await page.locator(`form[data-live-set-id="${exercise.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true }).fill('32')
+  const editedWeight = page.locator(`form[data-live-set-id="${exercise.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true })
+  await editedWeight.fill('31')
   const card = page.locator(`[data-workout-block="${target.blockId}"]`)
   const title = page.getByRole('heading', { name: target.name, exact: true })
   // The heading is a button in the client composition; short taps and full-card
   // holds remain available while a horizontal gesture can reveal deletion.
   const surface = page.locator('[data-workout-swipe]').filter({ has: title }).first()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact.weightKg).toBe(31)
+  await expect(card).toHaveAttribute('data-card-drag', 'true')
   const gesture = await beginClientGesture(page, surface, browserName, title)
-  await gesture.move(100); await gesture.end()
+  await gesture.move(100)
+  // Start with the save guard idle. Finish typing while the rail is being
+  // revealed: the 650ms autosave must not race the gesture setup itself.
+  await expect(editedWeight).toBeFocused()
+  await page.keyboard.press('ControlOrMeta+A')
+  await page.keyboard.insertText('32')
+  await gesture.end()
   const remove = surface.getByRole('button', { name: 'Удалить', exact: true })
   await expect(remove).toBeVisible()
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact.weightKg).toBe(31)
   await remove.click()
   await expect(page.getByRole('alertdialog')).toContainText('включая выполненные')
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
