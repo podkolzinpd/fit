@@ -2609,7 +2609,7 @@ function LiveCircuitLayout({ client, expanded, children }: { client: boolean; ex
   return client ? <WorkoutFoldBody className="client-circuit-body" folded={!expanded}>{children}</WorkoutFoldBody> : children
 }
 
-function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, clientLayout = false, directInput = false, quietUnits = false, workTimer }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; clientLayout?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode }) {
+function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, clientLayout = false, directInput = false, quietUnits = false, workTimer, referenceHeader = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; clientLayout?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode; referenceHeader?: boolean }) {
   // Lime keeps confirmed facts directly editable; completion is independent of
   // field availability. The old UI retains its explicit editing mode.
   const locked = Boolean(set.confirmedAt) && !editing && !directInput
@@ -2649,7 +2649,7 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {rpeField}
   </>
   if (inputKind === 'reps') return <>
-    {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />), 'мин:с')}
+    {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact referenceHeader={referenceHeader} />), 'мин:с')}
     {metric(<LiveSetInput name="reps" label="Фактические повторы" placeholder={quietUnits ? '—' : 'повт.'} defaultValue={value(set.fact.reps, set.reps)} planHint={isPlanHint(set.fact.reps, set.reps)} step={1} disabled={locked} inputKey={`r-${k}`} selectZero directInput={directInput} />, 'повт.')}
     {rpeField}
   </>
@@ -2657,7 +2657,7 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     {allowsDurationWeight(measurements) && <input type="hidden" name="distanceKm" value={value(set.fact.distanceKm, set.distanceKm) ?? ''} />}
     {allowsRepetitionTimeChoice(measurements) && <input type="hidden" name="reps" value={value(set.fact.reps, set.reps) ?? ''} />}
     {allowsDurationWeight(measurements) && weightField}
-    {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact />), 'мин:с')}
+    {metric(withWorkTimer(<WorkoutDurationField key={`d-${k}`} name="durationSec" label="Фактическое время" className="live-set-input" durationSec={value(factDuration, planDuration)} planHint={isPlanHint(factDuration, planDuration)} disabled={locked} compact referenceHeader={referenceHeader} />), 'мин:с')}
     {!clientLayout && !allowsDurationWeight(measurements) && <span className="live-set-empty" aria-hidden="true" />}
     {rpeField}
   </>
@@ -2665,6 +2665,7 @@ function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, s
     <RunMetricsFields
       liveLayout={clientLayout}
       reference={reference}
+      referenceHeader={referenceHeader}
       loadField={isLoadedDistance(measurements) ? weightField : undefined}
       idPrefix={`live-run-${set.id}-${k}`}
       rowing={isRowingExerciseRef(exerciseRef)}
@@ -4109,7 +4110,7 @@ export function LiveWorkoutPage() {
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
         <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? (clientReference ? null : '•')}</span>
         <LiveSetLayout client={clientReference}>
-        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} clientLayout={clientReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} />
+        <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} clientLayout={clientReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} referenceHeader={coachV79} />
         <div className="live-set-confirm">
           {set.confirmedAt && isEditing
             ? <button type="button" className="secondary live-set-save" aria-label="Сохранить" disabled={save.isPending}

@@ -20,7 +20,7 @@ export function formatWorkoutDuration(seconds: number | undefined): string {
 }
 
 /** A set duration is always stored as seconds; keyboard and wheel are presentation only. */
-export function WorkoutDurationField({ durationSec, onCommit, name, label, className = '', disabled = false, planHint = false, compact = false, planInput = false, emptyLabel }: {
+export function WorkoutDurationField({ durationSec, onCommit, name, label, className = '', disabled = false, planHint = false, compact = false, planInput = false, emptyLabel, referenceHeader = false }: {
   durationSec?: number
   onCommit?: (seconds: number | undefined) => void
   name?: string
@@ -31,6 +31,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
   compact?: boolean
   planInput?: boolean
   emptyLabel?: string
+  referenceHeader?: boolean
 }) {
   const clientReference = use(ClientWorkoutReferenceContext)
   const wheelEnabled = useWorkoutTimeWheel()
@@ -135,7 +136,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
     </div>}
     {pickerEnabled && open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className={`workout-decision-sheet workout-duration-sheet${clientReference ? ' client-reference-time-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={label} onClick={(event) => event.stopPropagation()}>
-        {clientReference ? <FitLimeSheetHeader title={label} backLabel="Закрыть выбор времени" onBack={() => setOpen(false)} /> : <header className="picker-header"><h2>{label}</h2><button type="button" className="picker-close" aria-label="Закрыть выбор времени" onClick={() => setOpen(false)}><CloseIcon /></button></header>}
+        {clientReference || referenceHeader ? <FitLimeSheetHeader title={label} backLabel="Закрыть выбор времени" onBack={() => setOpen(false)} /> : <header className="picker-header"><h2>{label}</h2><button type="button" className="picker-close" aria-label="Закрыть выбор времени" onClick={() => setOpen(false)}><CloseIcon /></button></header>}
         <div className="rest-time-picker" aria-label="Минуты и секунды">
           <TimeWheel label="минуты" value={minutes} values={minuteValues} onChange={changeMinutes} />
           <span className="rest-time-separator" aria-hidden="true">:</span>

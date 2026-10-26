@@ -19,6 +19,10 @@
 .phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-item-copy small { font-size: 14px; line-height: 16px; }
 .phone-frame.fit-lime-shell.coach-live-v79-shell .exercise-picker .picker-item-media { width: 65px; height: 80px; min-width: 65px; border-radius: 20px; }
 .phone-frame.fit-lime-shell.coach-live-v79-shell :is(.workout-decision-sheet,.workout-duration-sheet) { border-radius: 40px; background: var(--lime-surface); }
+/* The shared source header owns its20px gutter. Remove the legacy shell's
+   second top/side inset, without changing the picker, its draft or actions. */
+.phone-frame.fit-lime-shell.coach-live-v79-shell .workout-decision-sheet:has(> .client-lime-sheet-header) { padding: 0 20px max(20px,env(safe-area-inset-bottom)); border: 0; gap: 16px; }
+.phone-frame.fit-lime-shell.coach-live-v79-shell .workout-decision-sheet > .client-lime-sheet-header { margin-inline: -20px; }
 .phone-frame.fit-lime-shell.coach-live-v79-shell:has(.sheet-overlay) .coach-v79-glow { visibility: hidden; }
 @keyframes coach-v79-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes coach-v79-sheet-out { from { transform: translateY(0); } to { transform: translateY(calc(100% - var(--v79-picker-drag,0px))); } }

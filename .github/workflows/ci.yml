@@ -576,9 +576,11 @@ jobs:
       # Keep the same signed Ubuntu suites/packages and Playwright version.
       - name: Use the official Ubuntu archive for browser dependencies
         run: |
-          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g; s|https://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
-          fi
+          for fit_ubuntu_source in /etc/apt/sources.list.d/ubuntu.sources /etc/apt/apt-mirrors.txt; do
+            if [ -f "$fit_ubuntu_source" ]; then
+              sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g; s|https://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$fit_ubuntu_source"
+            fi
+          done
       - run: npx playwright install --with-deps ${{ matrix.engine.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.
