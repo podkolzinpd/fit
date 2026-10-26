@@ -13,6 +13,39 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('parseQuickWorkoutEntry', () => {
+  it.each([
+    ['front-squat', 'Фронтальный присед со штангой'],
+    ['stiff-leg-deadlift', 'Становая тяга на прямых ногах со штангой'],
+    ['fedb-smith-machine-incline-bench-press', 'Наклонный жим в Смите'],
+    ['fedb-dumbbell-rear-lunge', 'Обратные выпады с гантелями'],
+    ['vital-dumbbell-bulgarian-split-squat', 'Болгарский сплит-присед с гантелями'],
+  ])('сохраняет полное название %s вместо вложенных упражнений', (ref, name) => {
+    const text = `${name} 3 по 10 20 кг`
+    expect(splitWorkoutText(text, SYSTEM_EXERCISE_CATALOG)).toEqual([text])
+    const result = parseQuickWorkoutEntry(text, SYSTEM_EXERCISE_CATALOG)
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed).toHaveLength(1)
+    expect(result.parsed[0]?.exercise.ref).toBe(ref)
+    expect(result.parsed[0]?.sets).toEqual(Array.from({ length: 3 }, (_, position) => ({ position, weightKg: 20, reps: 10 })))
+  })
+
+  it('отделяет настоящие соседние упражнения после длинного названия и сохраняет повторы', () => {
+    const first = 'Фронтальный присед со штангой 3 по 10 20 кг'
+    const second = 'Присед со штангой 2 по 8 30 кг'
+    const result = parseQuickWorkoutEntry(`${first} ${second} ${first}`, SYSTEM_EXERCISE_CATALOG)
+    expect(result.unparsed).toEqual([])
+    expect(result.parsed.map((item) => item.exercise.ref)).toEqual(['front-squat', 'barbell-squat', 'front-squat'])
+    expect(result.parsed.map((item) => item.sets.length)).toEqual([3, 2, 3])
+  })
+
+  it('учитывает длину фактически совпавшего имени при повторных пробелах и табуляции', () => {
+    const first = 'Фронтальный\t присед   со штангой 3 по 10 20 кг'
+    const second = 'Планка 30 сек'
+    expect(formatWorkoutText(`${first} ${second}`, SYSTEM_EXERCISE_CATALOG)).toBe(`${first}\n${second}`)
+    const once = formatWorkoutText(`${first} ${second}`, SYSTEM_EXERCISE_CATALOG)
+    expect(formatWorkoutText(once, SYSTEM_EXERCISE_CATALOG)).toBe(once)
+  })
+
   it('разбирает клиентский пример: два жима с весом и минутная планка', () => {
     const result = parseQuickWorkoutEntry(CLIENT_LIME_WORKOUT_EXAMPLE, SYSTEM_EXERCISE_CATALOG)
     expect(result.unparsed).toEqual([])
