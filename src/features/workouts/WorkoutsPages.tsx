@@ -1,5 +1,6 @@
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
 import { isCoachLiveV79Enabled } from '../../app/coach-live-v79'
+import { WorkoutFoldBody } from './WorkoutFoldBody'
 import { CoachLiveV79CardToggleIcon } from './CoachLiveV79CardToggleIcon'
 import { useClientLiveDensity } from '../../app/client-live-density'
 import { ClientWorkoutDateControl } from './ClientWorkoutDateControl'
@@ -2605,7 +2606,7 @@ function LiveSetLayout({ client, children }: { client: boolean; children: ReactN
 
 function LiveCircuitLayout({ client, expanded, children }: { client: boolean; expanded: boolean; children: ReactNode }) {
   // Folding is presentation only: keep forms and unsent input mounted.
-  return client ? <div className="client-circuit-body" hidden={!expanded}>{children}</div> : children
+  return client ? <WorkoutFoldBody className="client-circuit-body" folded={!expanded}>{children}</WorkoutFoldBody> : children
 }
 
 function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, clientLayout = false, directInput = false, quietUnits = false, workTimer }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; clientLayout?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode }) {
@@ -3939,7 +3940,7 @@ export function LiveWorkoutPage() {
     if (!coachV79) return body
     const folded = v79Folded.has(v79CardKey(exercise))
     // CSS clips the same forms; never unmount an unsent value to fold a card.
-    return <div className={`coach-v79-card-body${folded ? ' folded' : ''}`} inert={folded} aria-hidden={folded}><div>{body}</div></div>
+    return <WorkoutFoldBody className="coach-v79-card-body" folded={folded}>{body}</WorkoutFoldBody>
   }
   function liveExerciseFooter(exercise: WorkoutExerciseModel, actions?: ReactNode) {
     const add = canManageLiveStructure && <button type="button" className="secondary live-add-set" disabled={coachReference ? structureMutationPending : rootMutationPending} onClick={() => appendSet.mutate(exercise.id)}><AddActionLabel>Подход</AddActionLabel></button>
@@ -4573,7 +4574,7 @@ export function LiveWorkoutPage() {
                 leading={coachReference ? referenceNumber(exercise) : roundIndex === 0 || clientLime && set.id === activeCircuitSetId ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
                 summary={coachReference ? referenceLiveSummary({ ...exercise, sets: [set] }) : undefined}
                 onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 || clientReference ? <>
-                  {clientReference && showNote && <button type="button" className="client-circuit-note-toggle" aria-label={`Моя заметка: ${displayName}`} aria-expanded={openClientNotes.has(set.id)} aria-controls={`live-note-${set.id}`}
+                  {clientReference && showNote && <button type="button" className="client-circuit-note-toggle" data-has-note={Boolean((pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim()) || undefined} aria-description={(pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim() ? 'Есть заметка' : 'Добавить заметку'} aria-label={`Моя заметка: ${displayName}`} aria-expanded={openClientNotes.has(set.id)} aria-controls={`live-note-${set.id}`}
                     onClick={() => setOpenClientNotes(previous => { const next = new Set(previous); if (next.has(set.id)) next.delete(set.id); else next.add(set.id); return next })}><MessageIcon /></button>}
                   {(roundIndex === 0 || clientReference) && exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])}
                 </> : undefined} />

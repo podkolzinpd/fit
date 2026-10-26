@@ -213,6 +213,8 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
      form controls, 3/4-metric grid, #1818 preference and pilot boundaries.
      PR2: client supersets reuse activeCircuitSetId; future/current/completed
      presentation only, existing any-order and ragged round model retained.
+     PR3: shared mounted WorkoutFoldBody and note content state, unchanged
+     input/gesture handlers, left media and client/trainer note ownership.
      Acceptance: docs/design/CLIENT_LIVE_V79_REUSE_20261026.md. -->
 
 <!-- YAFIT-656: client reference presentation only; Live/coordinator/timers,
