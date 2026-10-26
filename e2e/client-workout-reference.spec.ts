@@ -2320,7 +2320,10 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   }
 })
 
-for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client matrix clock and rest sheet flow ${theme} ${density}`, async ({ page }, info) => {
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const height of [844, 568]) for (const width of [390, 430]) test(`client matrix clock and rest sheet flow ${theme} ${density} ${width}x${height}`, async ({ page }, info) => {
+  // Separate phone layouts need separate browser contexts, not navigation
+  // history/scroll restoration from another viewport in the same page.
+  await page.setViewportSize({ width, height })
   await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
   // Screenshots must not spend a real second of the tested 60s deadline.
   await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'))
@@ -2336,47 +2339,46 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     return loaded.some(font => font.family.replace(/['"]/g, '') === 'Doto' && font.status === 'loaded')
   })).toBe(true)
   const restTrigger = page.locator('.live-rest-trigger').and(page.getByRole('button'))
-  for (const height of [844, 568]) for (const width of [390, 430]) {
-    await page.setViewportSize({ width, height })
-    // Each size is a separate phone layout. A mid-session height contraction
-    // is deliberately treated as keyboard recovery by AppViewportProvider.
-    // Reload at the measured size; do not reset that production protection.
-    await page.reload()
-    await expect(page.locator('.coach-v79-large-clock')).toHaveClass(/long-clock/)
-    await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
-    await expect(page.locator('html')).toHaveCSS('--app-visible-height', `${height}px`)
-    expect(await digits.evaluate(node => node.getBoundingClientRect().width <= innerWidth)).toBe(true)
-    await page.screenshot({ path: info.outputPath(`matrix-clock-${width}-${height}.png`) })
-    await restTrigger.click()
-    const sheet = page.locator('.live-rest-sheet'), apply = sheet.locator('.live-rest-apply')
-    await expect(apply).toHaveCSS('position', 'static')
-    await expect(apply).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-    await expect(apply).toHaveCSS('padding-top', '0px')
-    const boxes = await sheet.evaluate(node => {
-      const wheels=node.querySelector('.rest-time-picker')!.getBoundingClientRect(), presets=node.querySelector('.rest-presets')!.getBoundingClientRect(), apply=node.querySelector('.live-rest-apply')!.getBoundingClientRect()
-      return { wheelBottom:wheels.bottom, presetTop:presets.top, presetBottom:presets.bottom, applyTop:apply.top }
-    })
-    expect(boxes.presetTop).toBeGreaterThanOrEqual(boxes.wheelBottom)
-    expect(boxes.applyTop).toBeGreaterThanOrEqual(boxes.presetBottom)
-    await sheet.getByRole('button', { name: '1:00', exact: true }).click()
-    await apply.getByRole('button').scrollIntoViewIfNeeded()
-    await page.screenshot({ path: info.outputPath(`rest-flow-${width}-${height}.png`) })
-    await apply.getByRole('button').click()
-    await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
-    await restTrigger.click()
-    const activeFlow = await sheet.evaluate(node => {
-      const wheels = node.querySelector('.rest-time-picker')!.getBoundingClientRect(), apply = node.querySelector('.live-rest-apply')!.getBoundingClientRect()
-      return { wheelBottom: wheels.bottom, applyTop: apply.top }
-    })
-    expect(activeFlow.applyTop).toBeGreaterThanOrEqual(activeFlow.wheelBottom)
-    await sheet.getByRole('button', { name: '3:00', exact: true }).scrollIntoViewIfNeeded()
-    await expect(sheet.getByRole('button', { name: '3:00', exact: true })).toBeVisible()
-    await page.screenshot({ path: info.outputPath(`rest-active-flow-${width}-${height}.png`) })
-    await sheet.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
-    await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:15')
-    await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
-    await expect(sheet).toBeHidden()
-  }
+  await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
+  await expect(page.locator('html')).toHaveCSS('--app-visible-height', `${height}px`)
+  expect(await digits.evaluate(node => node.getBoundingClientRect().width <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath(`matrix-clock-${width}-${height}.png`) })
+  await restTrigger.click()
+  const sheet = page.locator('.live-rest-sheet'), apply = sheet.locator('.live-rest-apply')
+  await expect(apply).toHaveCSS('position', 'static')
+  await expect(apply).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(apply).toHaveCSS('padding-top', '0px')
+  const boxes = await sheet.evaluate(node => {
+    const wheels=node.querySelector('.rest-time-picker')!.getBoundingClientRect(), presets=node.querySelector('.rest-presets')!.getBoundingClientRect(), apply=node.querySelector('.live-rest-apply')!.getBoundingClientRect()
+    return { wheelBottom:wheels.bottom, presetTop:presets.top, presetBottom:presets.bottom, applyTop:apply.top }
+  })
+  expect(boxes.presetTop).toBeGreaterThanOrEqual(boxes.wheelBottom)
+  expect(boxes.applyTop).toBeGreaterThanOrEqual(boxes.presetBottom)
+  await sheet.getByRole('button', { name: '1:00', exact: true }).click()
+  await apply.getByRole('button').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath(`rest-flow-${width}-${height}.png`) })
+  await apply.getByRole('button').click()
+  // The source clock expands during rest. Check its final layout and the
+  // actual user hit target before opening the settings again.
+  await expect(page.locator('.coach-v79-large-clock')).toHaveCSS('height', density === 'original' ? '248px' : '132px')
+  await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
+  await expect.poll(() => restTrigger.evaluate(element => {
+    const box = element.getBoundingClientRect()
+    return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+  })).toBe(true)
+  await restTrigger.click()
+  const activeFlow = await sheet.evaluate(node => {
+    const wheels = node.querySelector('.rest-time-picker')!.getBoundingClientRect(), apply = node.querySelector('.live-rest-apply')!.getBoundingClientRect()
+    return { wheelBottom: wheels.bottom, applyTop: apply.top }
+  })
+  expect(activeFlow.applyTop).toBeGreaterThanOrEqual(activeFlow.wheelBottom)
+  await sheet.getByRole('button', { name: '3:00', exact: true }).scrollIntoViewIfNeeded()
+  await expect(sheet.getByRole('button', { name: '3:00', exact: true })).toBeVisible()
+  await page.screenshot({ path: info.outputPath(`rest-active-flow-${width}-${height}.png`) })
+  await sheet.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
+  await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:15')
+  await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
+  await expect(sheet).toBeHidden()
 })
 
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const length of ['empty', 'short', 'long']) test(`client workout note disclosure ${theme} ${density} ${length}`, async ({ page }, info) => {

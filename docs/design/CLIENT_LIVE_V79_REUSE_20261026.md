@@ -140,3 +140,11 @@ CI40324096239 в задании e2e-yandex-auth выявил2 fail/1 retry в н
 Уточнённые matrix+handoff+keyboard/manual-focus38/38 WebKit/Chromium passed. Полный check и новый официальный CI обязательны перед merge. Завершённые diagnostics сохранены в outputs/client-live-v79-remediation-20261026/pr4-auth-diagnostics; предыдущие552/8skip относятся к прежней локальной матрице и не выдаются за Linux CI.
 
 PR4 после уточнения матрицы: полный frontend2854 и все предыдущие lint/typecheck/policy этапы passed; один неизменённый API bundle compression превысил5000ms при общем запуске (1487 passed/1 timeout). Диагностированный повтор ВСЕГО API-набора с maxWorkers2:1488 passed+196 штатных DBskip; API build и frontend build/startup passed. Assertions/таймауты/CI policy не менялись. Логи pr4-matrix-{independent,check,check-recovery}; официальный CI нового head обязателен.
+
+### PR4 — независимые phone-contexts: Linux-проверка
+
+Второй CI40330782558 оставил1 fail (dark/original matrix,636 passed/8skip) на повторном открытии отдыха. Reload внутри общей страницы не исключил смену доступного action во время клика. В отдельном Linux WebKit на точном product-head4eb воспроизведено превышение общего30s бюджета большой матрицы; один изолированный390×568 сценарий прошёл.
+
+Матрица разбита на независимые test/browser-context для каждой темы, плотности и размера: все прежние32 сочетания движок×тема×плотность×размер сохранены, но больше не наследуют историю прокрутки другого телефона. После применения отдыха проверяются конечная высота исходной анимации и реальное попадание в кнопку, затем выполняются прежние click/1:00/+15sec/1:15 и проверки окон. Runtime/AppViewport/расчёты/обработчики не менялись. Никаких force-click, новых retries, увеличения30s лимита или skip.
+
+Linux WebKit16/16 (Ubuntu image1.61.1/browser2311,arm64,одинworker) passed1.3min; точные native CI-профили iPhone13/WebKit и Pixel7/Chromium,DPR3,UTC,workers2:32/32 passed1.2min. Каждый самостоятельный сценарий3–5s. Это локальная проверка матрицы, не принятие прежнего эксперимента замены CI-установок; repo CI/policy не менялись. Новый официальный CI и полный check ещё обязательны. Артефакты linux-matrix-independent-after.log, ci-matrix-isolated.log, LINUX_MATRIX_REPRO.md в outputs/client-live-v79-remediation-20261026.
