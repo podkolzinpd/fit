@@ -229,8 +229,15 @@ export function isRelevantCatalogSearch(query: string, foodName: string): boolea
   if (queryWords.length === 0) return true
   const nameWords = foodWords(foodName)
   const stem = (word: string) => word.slice(0, Math.min(word.length, 5))
-  return queryWords.every(word => nameWords.some(candidate => /^\d+$/.test(word)
-    ? candidate === word : candidate.startsWith(stem(word))))
+  return queryWords.every((word, index) => nameWords.some(candidate => {
+    if (/^\d+$/.test(word)) return candidate === word
+    // Short standalone words must match a whole token: otherwise unrelated
+    // foods share the same prefix. A final token in a phrase can still be
+    // unfinished ("сыр пар"); longer tokens retain the existing stem search.
+    const unfinishedLastWord = queryWords.length > 1 && index === queryWords.length - 1
+    return word.length < 4 && !unfinishedLastWord
+      ? candidate === word : candidate.startsWith(stem(word))
+  }))
 }
 
 export function parsePerekFood(value: unknown): CatalogFood | null {

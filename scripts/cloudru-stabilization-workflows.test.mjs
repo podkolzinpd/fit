@@ -20,7 +20,7 @@ test('food search probe is manual, bounded and uses the running API without diar
   assert.ok(step)
   assert.match(step, /github.event_name == 'workflow_dispatch' && inputs\.nutrition_search/)
   assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
-  assert.match(step, /timeout 45 podman exec fit-api-stage node dist\/nutrition-search-probe\.js/)
+  assert.match(step, /timeout 65 podman exec fit-api-stage node dist\/nutrition-search-probe\.js/)
   assert.doesNotMatch(step, /--env-file|printenv|DATABASE|--format.*Env|configure|\/v1\/nutrition\/entries/)
 })
 test('runtime connection probe only reads settings, rolls back and never calls an application function', async () => {
