@@ -213,7 +213,9 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
      stored metric/round/history contracts and trainer/legacy DOM preserved.
      Acceptance: docs/design/CLIENT_LIVE_SUPERSET_METRICS_20261025.md.
      Approved follow-up: CLIENT_LIVE_TIME_PREFERENCE_20261026.md restores
-     the existing text/wheel preference in client reference Live only. -->
+     the existing text/wheel preference in client reference Live only.
+     CLIENT_LIVE_FOCUS_GUARD_20261026.md keeps late focus handoff cancellable
+     by manual client field intent; no save/timer/data/history change. -->
 
 Для пустой Live-тренировки после быстрого старта у клиента и тренера главное
 действие — выбор первого упражнения; нулевой прогресс не показывается. Корзинка
