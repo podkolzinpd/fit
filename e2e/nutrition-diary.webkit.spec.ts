@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { scaledNutrition, type NutritionDraft, type NutritionEntry, type NutritionValues } from '../src/shared/nutrition'
+import { BasicNutritionCatalog, FallbackNutritionCatalog, VkusvillNutritionCatalog } from '../services/api/src/nutrition-catalog'
 
 const actors = Array.from({ length: 5 }, (_, index) => `f00d0000-6010-4000-8000-00000000000${index + 1}`)
 const clientId = 'f00d0000-6010-4000-8000-000000000011'
@@ -89,6 +90,52 @@ test('native nutrition refuses a denied server decision even for a legacy-allowl
   await expect(page).toHaveURL(/\/me$/)
   await expect(page.getByRole('heading', { name: 'Дневник питания' })).toHaveCount(0)
   expect(requests.filter(url => url.includes('/v1/'))).toEqual([])
+})
+
+test('nutrition search retains multiword dishes, producer recipes and continuation after an empty page', async ({ page }, info) => {
+  await fixture(page, { theme: 'light' })
+  // Exercise the real server adapter with a bounded public-source example;
+  // the browser receives the same public DTO as the native API route.
+  const sourceItems = [{ id: 34385, name: 'Салат "Оливье" с колбасой', properties: [{
+    name: 'Пищевая и энергетическая ценность в 100 г',
+    value: 'ООО "ГЛОБАЛ ФУД": белки 5.9 г, жиры 10.5 г, углеводы 6.1 г; 142.5 ккал<br>ООО "КОРОНА-ФУД": белки 5.9 г, жиры 13.2 г, углеводы 6.4 г; 168 ккал',
+  }] }]
+  const catalog = new FallbackNutritionCatalog(new BasicNutritionCatalog(), new VkusvillNutritionCatalog(() => Promise.resolve(new Response(JSON.stringify({
+    result: { content: [{ type: 'text', text: JSON.stringify({ ok: true, data: { items: sourceItems, meta: { has_more: false } } }) }] },
+  })))))
+  await page.route('**/v1/nutrition/foods?**', async route => {
+    const url = new URL(route.request().url()), query = url.searchParams.get('q') ?? '', number = Number(url.searchParams.get('page') ?? 1)
+    if (query === 'пропуск страницы') return route.fulfill({ json: number === 1 ? { foods: [], hasMore: true } : await catalog.search('оливье', 1) })
+    return route.fulfill({ json: await catalog.search(query, number) })
+  })
+  await page.goto('/me/nutrition?date=2026-10-10&action=add')
+  const search = page.getByRole('searchbox', { name: 'Поиск по названию' })
+  const yogurt = page.getByRole('button', { name: /Йогурт натуральный 3,25%/ })
+  await search.fill('йогурт')
+  await expect(yogurt).toBeVisible()
+  await search.fill('йогурт натуральный')
+  await expect(yogurt).toBeVisible()
+  const first = page.getByRole('button', { name: /Салат "Оливье" с колбасой — ГЛОБАЛ ФУД/ })
+  await search.fill('оливье')
+  await expect(first).toContainText('142,5 ккал')
+  await expect(page.getByRole('button', { name: /Салат "Оливье" с колбасой — КОРОНА-ФУД/ })).toContainText('168 ккал')
+  await search.fill('салат оливье')
+  await expect(first).toBeVisible()
+  await verifiedFonts(page)
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 932 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`nutrition-search-recipes-light-${width}.png`) })
+  }
+  await search.fill('пропуск страницы')
+  await expect(page.getByText('На этой странице совпадений нет. Попробуйте показать ещё.')).toBeVisible()
+  await page.screenshot({ path: info.outputPath('nutrition-search-continuation.png') })
+  await expect(page.getByText('Подходящей еды не нашлось.', { exact: false })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Показать ещё' }).click()
+  await expect(first).toBeVisible()
+  await first.click()
+  await page.getByLabel('Сколько съели, г').fill('100')
+  await expect(page.getByText('142,5 ккал', { exact: true })).toBeVisible()
 })
 
 async function verifiedFonts(page: Page) {

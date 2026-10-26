@@ -5,6 +5,10 @@ on:
     - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
+      nutrition_search:
+        description: Read only four public food searches from the running API, without actor or diary access
+        type: boolean
+        default: false
       runtime_database_probe:
         description: Read-only runtime-role connection and transaction-limit probe, without application queries
         type: boolean
@@ -58,6 +62,15 @@ jobs:
           sudo systemctl show fit-background.service --property=Result --property=ExecMainCode --property=ExecMainStatus
           sudo journalctl --unit=fit-background.service --since="15 minutes ago" --lines=100 --output=json --no-pager |
             python3 scripts/cloudru-background-diagnostics.py
+      - name: Probe public nutrition search in the running API
+        if: github.event_name == 'workflow_dispatch' && inputs.nutrition_search
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          sudo podman inspect fit-api-stage --format '{{.Config.Image}}' | tee -a "$GITHUB_STEP_SUMMARY"
+          sudo timeout 45 podman exec fit-api-stage node dist/nutrition-search-probe.js | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Read only bounded API command error-code counts
         if: github.event_name == 'workflow_dispatch' && inputs.api_errors
         run: |
