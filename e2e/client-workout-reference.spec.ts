@@ -5,6 +5,45 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+for (const theme of ['light', 'dark']) test(`client inactivity actions share Lime geometry ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, workoutId }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit:workout-inactivity:${id}:${workoutId}`, JSON.stringify({ version: 1, userId: id, workoutId, dueAt: Date.now() - 1000 }))
+  }, { id: pilotId, theme, workoutId })
+  const source = coachGestureWorkout(false, 1)
+  source.startedAt = new Date(Date.now() - 8 * 3600000).toISOString()
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.route('**/v1/push-notifications/status', route => route.fulfill({ json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } } }))
+  await page.goto(`/workouts/${workoutId}/live`)
+  const reminder = page.getByRole('alert', { name: 'Тренировка ещё идёт', exact: true })
+  for (const density of ['original', 'compact']) {
+    await page.evaluate(({ id, density }) => localStorage.setItem(`fit.clientLiveDensity.${id}`, density), { id: pilotId, density })
+    await page.reload()
+    await expect(reminder).toBeVisible()
+    const buttons = reminder.getByRole('button')
+    const geometry = await buttons.evaluateAll(elements => elements.map(element => {
+      const style = getComputedStyle(element), box = element.getBoundingClientRect()
+      return { height: box.height, radius: style.borderRadius, font: style.fontFamily, size: style.fontSize, weight: style.fontWeight, y: box.y }
+    }))
+    expect(geometry).toHaveLength(2)
+    expect(geometry[0]).toEqual(geometry[1])
+    expect(geometry[0]!.height).toBe(density === 'original' ? 60 : 48)
+    for (const button of await buttons.all()) {
+      expect(await button.evaluate(element => {
+        const box = element.getBoundingClientRect()
+        return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+      })).toBe(true)
+    }
+    const add = page.locator('button.live-add-exercise')
+    await expect(add).toHaveCSS('min-height', density === 'original' ? '60px' : '48px')
+    await reminder.screenshot({ path: info.outputPath(`reminder-${density}.png`) })
+  }
+  await reminder.getByRole('button', { name: 'Продолжить', exact: true }).click()
+  await expect(reminder).toHaveCount(0)
+  await expect(page.locator('.live-workout-page')).toBeVisible()
+})
+
+
 // Z-order is density-independent; both themes exercise different halo surfaces.
 for (const theme of ['light', 'dark']) test(`client v79 glow keeps reminder and header above the clock ${theme}`, async ({ page }, info) => {
   await page.addInitScript(({ id, theme, workoutId }) => {
