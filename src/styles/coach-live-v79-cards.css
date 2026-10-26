@@ -34,6 +34,12 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-set.confirmed :is(.live-set-input,.live-set-rpe,.workout-duration-trigger,.run-distance-control) { background: color-mix(in srgb, var(--lime-text) 30%,var(--lime-surface-raised)); color: var(--lime-text); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-set.confirmed .live-set-check.done { background: var(--lime-text); color: var(--lime-bg); }
 .coach-live-v79 .coach-v79-card-body .live-exercise-note { padding-bottom: 12px; }
+/* One timed metric is still the same field, not half of a weight/reps pair.
+   Preserve the number/check columns and the secondary RPE row. */
+.coach-live-v79 .live-set-grid:has(> .live-set-empty) > .coach-live-metric:not(.coach-live-rpe-metric) { grid-column: 2 / 4; }
+.coach-live-v79 .live-set-grid > .live-set-empty { display: none; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-original .coach-v79-exercise-tools { padding-bottom: 8px; }
+.coach-live-v79 .coach-v79-card-body .live-exercise-note { border-top: 1px solid var(--lime-divider); padding-top: 4px; }
 @media (prefers-reduced-motion: reduce) {
   .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise,
   .coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body, .coach-live-v79 .coach-v79-toggle-arrow,

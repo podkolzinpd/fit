@@ -93,6 +93,21 @@ test('requires Fit Lime route checks in both engines without production secrets'
   assert.match(workflow, /"\$FIT_LIME_RESULT" != "success"/)
 })
 
+test('Fit Lime archive replacement preserves suites, components and signing trust', () => {
+  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
+  const expression = job.match(/sudo sed -i '([^']+)' \/etc\/apt\/sources\.list\.d\/ubuntu\.sources/)?.[1]
+  assert.ok(expression)
+  assert.ok(job.indexOf('Use the official Ubuntu archive') < job.indexOf('playwright install --with-deps'))
+  for (const uri of ['http://azure.archive.ubuntu.com/ubuntu', 'https://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu', 'http://security.ubuntu.com/ubuntu']) {
+    const source = `Types: deb\nURIs: ${uri}\nSuites: noble noble-updates noble-backports\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n`
+    // Execute the workflow's substitution without sudo, -i or system files.
+    const result = spawnSync('sed', ['-e', expression], { input: source, encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr)
+    const expectedUri = uri.includes('azure.archive.ubuntu.com') ? 'https://archive.ubuntu.com/ubuntu' : uri
+    assert.equal(result.stdout, source.replace(`URIs: ${uri}`, `URIs: ${expectedUri}`))
+  }
+})
+
 test('Fit Lime scope is computed from the real PR diff and trusted event without a bypass input', () => {
   assert.match(workflow, /lime_mode: \$\{\{ steps\.lime-scope\.outputs\.mode \}\}/)
   assert.match(workflow, /lime_tags: \$\{\{ steps\.lime-scope\.outputs\.tags \}\}/)

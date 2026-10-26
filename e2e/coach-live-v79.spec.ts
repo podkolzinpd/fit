@@ -212,6 +212,8 @@ for (const density of ['original', 'compact']) test(`v79 cards keep notes full i
     await expect(card.locator('.live-exercise-head')).toHaveCSS('padding-top', '16px')
   }
   await expect(card.locator('.coach-v79-exercise-tools .live-add-set')).toHaveCSS('height', '44px')
+  await expect(card.locator('.live-exercise-note')).toHaveCSS('border-top-width', '1px')
+  await expect(card.locator('.live-exercise-note > summary')).toHaveCSS('min-height', '44px')
   const field = rows.first().getByLabel('Фактический вес', { exact: true })
   expect(await field.evaluate(e => e.getBoundingClientRect().height)).toBe(density === 'original' ? 54 : 48)
   await card.getByRole('button', { name: 'Ещё действия', exact: true }).click()
@@ -469,8 +471,11 @@ for (const density of ['original', 'compact']) test(`v79 empty session preserves
   await expect(page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })).toBeVisible()
 })
 
-test('v79 duration distance RPE and reduced-motion sheets use existing controls', async ({ page }) => {
+// Two densities exercise the approved54/48 geometry, not duplicate business flows.
+for (const density of ['original', 'compact']) test(`v79 duration distance RPE and reduced-motion sheets use existing controls ${density}`, async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
   const source = coachGestureWorkout()
   source.exercises[1] = { ...source.exercises[1]!, ref: 'plank', name: 'Планка', inputKind: 'duration', sets: source.exercises[1]!.sets.map(s => ({ ...s, weightKg: undefined, reps: undefined, durationSec: 60 })) }
   source.exercises[2] = { ...source.exercises[2]!, ref: 'running', name: 'Бег', inputKind: 'distance', sets: source.exercises[2]!.sets.map(s => ({ ...s, weightKg: undefined, reps: undefined, durationSec: 600, distanceKm: 1.5 })) }
@@ -478,16 +483,21 @@ test('v79 duration distance RPE and reduced-motion sheets use existing controls'
   await page.goto(`/workouts/${workoutId}/live`)
   const cards = page.locator('.live-exercise')
   const duration = cards.nth(1).getByRole('button', { name: /Фактическое время:/ }).first()
-  await expect(duration).toHaveCSS('height', '54px')
+  const height = density === 'original' ? '54px' : '48px'
+  await expect(duration).toHaveCSS('height', height)
+  await expect(duration.locator('..')).toHaveCSS('grid-column', '2 / 4')
+  await expect(cards.nth(1).locator('.live-set-empty').first()).toHaveCSS('display', 'none')
   await duration.click()
   const sheet = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
   await expect(sheet).toBeVisible(); await expect(sheet).toHaveCSS('border-radius', '40px')
   await sheet.getByRole('button', { name: 'Закрыть выбор времени', exact: true }).click()
   await expect(duration).toBeFocused()
-  await expect(cards.nth(2).locator('.run-distance-control').first()).toHaveCSS('height', '54px')
+  await expect(cards.nth(2).locator('.run-distance-control').first()).toHaveCSS('height', height)
   await cards.first().getByRole('button', { name: 'Ещё действия', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
-  await expect(cards.first().locator('.live-set-rpe').first()).toHaveCSS('height', '54px')
+  await expect(cards.first().locator('.live-set-rpe').first()).toHaveCSS('height', height)
+  await cards.nth(1).scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath(`${density}-duration-distance.png`) })
 })
 
 test('v79 Live presentation never enters the existing planner', async ({ page }) => {

@@ -572,6 +572,13 @@ jobs:
         run: node scripts/prepare-fit-lime-ci-fonts.mjs
         env:
           GH_TOKEN: ${{ github.token }}
+      # Azure's package mirror repeatedly exhausted this job's time budget.
+      # Keep the same signed Ubuntu suites/packages and Playwright version.
+      - name: Use the official Ubuntu archive for browser dependencies
+        run: |
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g; s|https://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+          fi
       - run: npx playwright install --with-deps ${{ matrix.engine.browser }}
       # Each test owns its BrowserContext and page-scoped API mocks; there is
       # no shared database. Two workers shorten the suite on the same runner.
