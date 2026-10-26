@@ -11,6 +11,9 @@ describe('live phase timer', () => {
     expect(timedSetSeconds({ confirmedAt: null })).toBeNull()
     expect(timedSetSeconds({ durationSec: 0, confirmedAt: null })).toBeNull()
     expect(timedSetSeconds({ durationSec: 45, confirmedAt: '2026-10-06T10:00:00Z' })).toBeNull()
+    // Исправленное в Live время сохраняется в факт, отсчёт идёт от него, а не от плана.
+    expect(timedSetSeconds({ durationSec: 45, fact: { durationSec: 30 }, confirmedAt: null })).toBe(30)
+    expect(timedSetSeconds({ durationSec: 45, fact: {}, confirmedAt: null })).toBe(45)
   })
 
   // «Веду сам»: после нуля время идёт дальше, засчитывается фактическое, а не план.

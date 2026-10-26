@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { chooseWorkoutTime } from './workout-time-wheel'
 import { mockFinancePaymentLifecycle, mockTemplateUncertainSave, copyTemplateDiagnostic, sessionToken, holdClientLiveCard } from './fit-lime-fixtures'
 import { trainerId, clientId, workoutId, conversationId, newWorkoutId, coachGestureWorkout, restTimerWorkout, workout, type MockWorkout, mockPilot, scheduleVisibilityRows, limeClients, beginClientGesture, openSwipeFixture, mockClientStreamingVoice, publicTrainerId, mockPublicTrainer } from './fit-lime-fixtures'
 
@@ -435,6 +436,30 @@ test('Live manual mode times a set from Start and records the time past zero', a
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
   expect(drafts.at(-1)).toMatchObject({ durationSec: 5 })
   expect(drafts.at(-1)?.timerConfirmed).toBeUndefined()
+})
+
+// Исправленное в строке подхода время — то, от чего идёт отсчёт, а не план из создания тренировки.
+test('Live manual mode counts down the edited set time instead of the plan', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toHaveText('Таймер')
+  await page.clock.pauseAt(new Date('2026-10-08T09:01:00Z'))
+  await chooseWorkoutTime(page, 'Фактическое время', 10)
+  await page.getByRole('button', { name: 'Старт подхода' }).first().click()
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:10')
+})
+
+test('Live timer mode starts the next set from its edited time', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
+  await mockPilot(page, { role: 'client', profileId: clientId, workouts: [restTimerWorkout(0, true, 'timer')] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await page.clock.pauseAt(new Date('2026-10-08T09:01:00Z'))
+  await chooseWorkoutTime(page, 'Фактическое время', 9, 1)
+  // Первый подход 3 с, отдых 2 с — дальше второй подход стартует сам.
+  await page.clock.fastForward(5_000)
+  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:09')
 })
 
 // Подготовка идёт и в «Веду сам»: после неё первый подход со временем стартует как от ▶.
