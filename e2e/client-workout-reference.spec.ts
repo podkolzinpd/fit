@@ -5,6 +5,64 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// Force both race windows: a slow confirmation and a queued focus frame.
+// Strength/time exercise different native inputs; two engines cover touch focus.
+for (const metric of ['weight', 'seconds'] as const) for (const phase of ['response', 'frame'] as const) test(`client manual focus wins confirmation ${metric} ${phase}`, async ({ page }, info) => {
+  const source = restTimerWorkout()
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const exercise = source.exercises[0]!, target = exercise.sets[0]!, sibling = exercise.sets[1]!
+  if (metric === 'seconds') {
+    Object.assign(exercise, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
+    exercise.sets.forEach(set => Object.assign(set, { weightKg: undefined, durationSec: 90, distanceKm: 1.02 }))
+  }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route(`**/v1/workout-sets/${target.id}/confirm`, async route => { await gate; await route.fallback() })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator(`form[data-live-set-id="${target.id}"]`)
+  const next = page.locator(`form[data-live-set-id="${sibling.id}"]`)
+  const label = metric === 'weight' ? 'Фактический вес' : 'Фактическое время: секунды'
+  const field = row.getByRole('textbox', { name: label, exact: true })
+  await field.fill('35')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row.getByRole('button', { name: 'Готово, отдых', exact: true })).toBeDisabled()
+  await page.evaluate(() => {
+    const frames: FrameRequestCallback[] = []
+    const native = window.requestAnimationFrame.bind(window)
+    window.requestAnimationFrame = callback => { frames.push(callback); return -frames.length }
+    Object.assign(window, { flushFocusFrames: () => {
+      window.requestAnimationFrame = native
+      for (const frame of frames.splice(0)) frame(performance.now())
+    } })
+  })
+  if (phase === 'frame') { release(); await expect(row).toHaveClass(/confirmed/) }
+  // Real touch and keyboard events, without actionability waiting on held rAF.
+  const rect = (await field.boundingBox())!
+  await page.touchscreen.tap(rect.x + rect.width / 2, rect.y + rect.height / 2)
+  await expect(field).toBeFocused()
+  // Safari may retain focus through the check tap; explicitly replace the
+  // value rather than assuming a second tap on the same input selects it.
+  await page.keyboard.press('ControlOrMeta+A')
+  await page.keyboard.insertText(metric === 'weight' ? '37.5' : '45')
+  if (phase === 'response') { release(); await expect(row).toHaveClass(/confirmed/) }
+  const stamp = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  await page.evaluate(() => (window as unknown as { flushFocusFrames: () => void }).flushFocusFrames())
+  await expect(field).toBeFocused()
+  await expect(field).toHaveValue(metric === 'weight' ? '37.5' : '45')
+  await expect(next.getByRole('textbox', { name: label, exact: true })).not.toBeFocused()
+  await field.blur()
+  await expect.poll(() => {
+    const fact = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact
+    return metric === 'weight' ? fact.weightKg : fact.durationSec
+  }).toBe(metric === 'weight' ? 37.5 : 105)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact).toEqual(sibling.fact)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(stamp)
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+  await page.screenshot({ path: info.outputPath(`manual-focus-${metric}-${phase}.png`) })
+})
+
 // One interaction contract per real structural consumer, not per visual axis.
 for (const grouped of [false, true]) test(`client Live time preference text confirm retry reload and wheel grouped-${grouped}`, async ({ page }, info) => {
   await page.addInitScript(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'); localStorage.setItem(`fit.rpeDisplay.${id}`, 'true') }, pilotId)
@@ -2242,6 +2300,9 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await first.getByLabel('Фактический вес', { exact:true }).fill('35')
   await first.getByRole('button', { name:'Готово, отдых', exact:true }).click()
   await expect(first).toHaveClass(/confirmed/)
+  // CRUD starts after the existing focus handoff; the forced-race cases above
+  // independently verify manual interaction before that handoff completes.
+  await expect(second.getByLabel('Фактический вес', { exact:true })).toBeFocused()
   const stamp = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
   await first.getByLabel('Фактический вес', { exact:true }).fill('37.5')
   await first.getByLabel('Фактический вес', { exact:true }).blur()
