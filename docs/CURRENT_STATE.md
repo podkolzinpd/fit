@@ -118,7 +118,8 @@ YAFIT-645; план design/FAVORITE_EDITOR_DRAFT_RECOVERY_20261022.md. На св
   public213/health, published8/8, OTA и fresh-native214/simulator проверены.
   План design/COACH_LIVE_V79_POLISH_20261025.md; physical iPhone/OAuth не проверены.
 - 26.10 YAFIT-658: согласованы4PR, design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md.
-  База8f7986a4 включает клиентские1818–1822 и voice1825. PR1: только scoped-композиция
-  контекста/прогресса, включая видимую Compact-строку; часы/механика прежние.
-  Fresh rebase: browser52/52/fullcheck2854frontend/1488API passed; новый exact-head CI/public ещё гейты. Только исходные2
+  PR1#1823/main62ccbb80 выпущен:213public/health+8/8role/cohort; клиентские1818–1822 и voice1825 сохранены.
+  PR2#1830 на готовом client1827/af4c38bd:54/54 browser+full2855/1516 passed; пока не main, remote ждёт его merge/паритета.
+  Для Fit Lime CI Azure-зеркало заменяется официальным Ubuntu HTTPS archive; прежние gates/таймауты,349infra и финальный fullcheck passed.
+  PR3#1831/PR4#1832 — docs-only drafts до переноса product diff; client1826/1827 и phase/voice сохранены. Только исходные2
   тренера, Original54/Compact48; физический телефон и реальный OAuth не проверены.
