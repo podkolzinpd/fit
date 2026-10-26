@@ -146,6 +146,38 @@ describe('Perek API source', () => {
 })
 
 describe('reviewed basic foods', () => {
+  it('does not mistake raw broccoli for cheese or hide retailer cheese matches', async () => {
+    expect((await new BasicNutritionCatalog().search('сыр', 1)).foods).toEqual([])
+    const call = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify({
+      ok: true, data: { items: [fixture(verifiedValues, 'Брокколи, сырая'),
+        { ...fixture('356 ккал; белки 35 г, жиры 24 г, углеводы 0 г', 'Сыр Пармезан «Аргентинский»'), id: 120065 }], meta: { has_more: false } },
+    }) }] } }))))
+    const catalog = createNutritionCatalog(undefined, call)
+    for (const query of ['сыр', 'сыр пар']) {
+      expect((await catalog.search(query, 1)).foods.map(food => food.name)).toEqual(['Сыр Пармезан «Аргентинский»'])
+    }
+  })
+  it.each(['Брокколи, сырая', 'Морковь сырая', 'Мясо сырое', 'Сыровяленая колбаса', 'Сырники'])('does not interpret the word cheese as %s', name => {
+    expect(isRelevantCatalogSearch('сыр', name)).toBe(false)
+  })
+  it.each(['Сыр Пармезан', 'Сыр «Российский»', 'Салат, сыр и томаты'])('matches the whole short food name in %s', name => {
+    expect(isRelevantCatalogSearch('сыр', name)).toBe(true)
+  })
+  it.each([
+    ['рис', 'Рис длиннозерный', 'Рисовая мука'],
+    ['мак', 'Мак пищевой', 'Макароны'],
+    ['лук', 'Лук репчатый', 'Луковый соус'],
+    ['чай', 'Чай черный', 'Чайный напиток'],
+    ['сок', 'Сок яблочный', 'Сокосодержащий напиток'],
+  ])('uses the same whole-token rule for %s without a food dictionary', (query, exact, other) => {
+    expect(isRelevantCatalogSearch(query, exact)).toBe(true)
+    expect(isRelevantCatalogSearch(query, other)).toBe(false)
+  })
+  it.each([
+    ['сыр пар', 'Сыр Пармезан'], ['рис бас', 'Рис Басмати'], ['чай зел', 'Чай зеленый'],
+  ])('keeps final-word autocomplete for %s', (query, name) => {
+    expect(isRelevantCatalogSearch(query, name)).toBe(true)
+  })
   it('supplements a broad yogurt search with the reviewed record without hiding existing varieties', async () => {
     const call = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify({
       ok: true, data: { items: [fixture('76 ккал; белки 6 г, жиры 4 г, углеводы 4 г', 'Йогурт греческий 4%')], meta: { has_more: true } },
@@ -168,7 +200,8 @@ describe('reviewed basic foods', () => {
   it('does not replace a specific yogurt recipe with a generic natural yogurt', async () => {
     expect((await new BasicNutritionCatalog().search('йогурт клубничный', 1)).foods).toEqual([])
     expect((await new BasicNutritionCatalog().search('йогурт 2%', 1)).foods).toEqual([])
-    expect((await new BasicNutritionCatalog().search('йо', 1)).foods.map(food => food.sourceId)).toEqual([171284])
+    expect((await new BasicNutritionCatalog().search('йо', 1)).foods).toEqual([])
+    expect((await new BasicNutritionCatalog().search('йогу', 1)).foods.map(food => food.sourceId)).toEqual([171284])
   })
   it.each(['яичница', 'глазунья', 'жареное яйцо'])('finds the canonical fried-egg record for %s', async (query) => {
     await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{

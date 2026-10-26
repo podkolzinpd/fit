@@ -99,6 +99,8 @@ test('nutrition search retains multiword dishes, producer recipes and continuati
   const sourceItems = [{ id: 34385, name: 'Салат "Оливье" с колбасой', properties: [{
     name: 'Пищевая и энергетическая ценность в 100 г',
     value: 'ООО "ГЛОБАЛ ФУД": белки 5.9 г, жиры 10.5 г, углеводы 6.1 г; 142.5 ккал<br>ООО "КОРОНА-ФУД": белки 5.9 г, жиры 13.2 г, углеводы 6.4 г; 168 ккал',
+  }] }, { id: 120065, name: 'Сыр Пармезан «Аргентинский»', properties: [{
+    name: 'Пищевая и энергетическая ценность в 100 г', value: '356 ккал; белки 35 г, жиры 24 г, углеводы 0 г',
   }] }]
   const catalog = createNutritionCatalog(undefined, () => Promise.resolve(new Response(JSON.stringify({
     result: { content: [{ type: 'text', text: JSON.stringify({ ok: true, data: { items: sourceItems, meta: { has_more: false } } }) }] },
@@ -110,6 +112,12 @@ test('nutrition search retains multiword dishes, producer recipes and continuati
   })
   await page.goto('/me/nutrition?date=2026-10-10&action=add')
   const search = page.getByRole('searchbox', { name: 'Поиск по названию' })
+  for (const query of ['сыр', 'сыр пар']) {
+    await search.fill(query)
+    await expect(page.getByRole('button', { name: /Сыр Пармезан/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Брокколи/ })).toHaveCount(0)
+  }
+  await page.screenshot({ path: info.outputPath('nutrition-search-cheese.png') })
   const yogurt = page.getByRole('button', { name: /Йогурт натуральный 3,25%/ })
   await search.fill('йогурт')
   await expect(yogurt).toBeVisible()
