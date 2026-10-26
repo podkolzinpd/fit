@@ -15,6 +15,7 @@ describe('WorkoutDurationField', () => {
   afterEach(() => setWorkoutTimeWheel(false))
 
   it('inherits client sheet presentation through a portal without changing draft or commit', async () => {
+    setWorkoutTimeWheel(true)
     const user = userEvent.setup(), commit = vi.fn()
     render(<ClientWorkoutReferenceContext value={true}><WorkoutDurationField compact label="Время" durationSec={90} onCommit={commit} /></ClientWorkoutReferenceContext>)
     await user.click(screen.getByRole('button', { name: 'Время: 1:30' }))
@@ -27,6 +28,39 @@ describe('WorkoutDurationField', () => {
     await choose(user, 'секунды', 45)
     await user.click(screen.getByRole('button', { name: 'Применить · 1:45' }))
     expect(commit).toHaveBeenCalledExactlyOnceWith(105)
+  })
+
+  it('client Live text commits before blur, marks equal plan entry and preserves invalid drafts', async () => {
+    const user = userEvent.setup()
+    render(<ClientWorkoutReferenceContext value={true}><form aria-label="Клиентский подход" onInput={(event) => markLiveMetricEntered(event.currentTarget, event.target)}>
+      <WorkoutDurationField name="durationSec" label="Время" durationSec={90} compact />
+    </form></ClientWorkoutReferenceContext>)
+    const seconds = screen.getByRole('textbox', { name: 'Время: секунды' })
+    const form = screen.getByRole('form', { name: 'Клиентский подход' }) as HTMLFormElement
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    await user.clear(seconds); await user.type(seconds, '30')
+    expect(seconds).toHaveFocus()
+    expect(new FormData(form).get('durationSec')).toBe('90')
+    expect(form.dataset.enteredDuration).toBe('1')
+    await user.clear(seconds); await user.type(seconds, '45')
+    expect(new FormData(form).get('durationSec')).toBe('105')
+    await user.clear(seconds); await user.type(seconds, '65'); await user.tab()
+    expect(seconds).toHaveValue('65')
+    expect(seconds).toBeInvalid()
+  })
+
+  it('client Live follows changes of the existing device preference without changing seconds', async () => {
+    const user = userEvent.setup(), commit = vi.fn()
+    function Harness() {
+      return <ClientWorkoutReferenceContext value={true}><button onClick={() => setWorkoutTimeWheel(true)}>Колесо</button><button onClick={() => setWorkoutTimeWheel(false)}>Текст</button><WorkoutDurationField compact label="Время" durationSec={3725} onCommit={commit} /></ClientWorkoutReferenceContext>
+    }
+    render(<Harness />)
+    expect(screen.getByRole('textbox', { name: 'Время: минуты' })).toHaveValue('62')
+    await user.click(screen.getByRole('button', { name: 'Колесо' }))
+    expect(screen.getByRole('button', { name: 'Время: 62:05' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Текст' }))
+    expect(screen.getByRole('textbox', { name: 'Время: секунды' })).toHaveValue('05')
+    expect(commit).not.toHaveBeenCalled()
   })
 
   it.each([false, true])('an empty display label never changes the keyboard/wheel choice %s', (wheel) => {
@@ -123,7 +157,7 @@ describe('WorkoutDurationField', () => {
     expect(onCommit).toHaveBeenCalledWith(3720)
   })
 
-  it('uses one compact control in Live even when the global wheel rollout is off', async () => {
+  it('keeps the existing non-client compact wheel contract when the preference is off', async () => {
     const user = userEvent.setup()
     const onCommit = vi.fn()
     render(<WorkoutDurationField label="Фактическое время" compact onCommit={onCommit} />)

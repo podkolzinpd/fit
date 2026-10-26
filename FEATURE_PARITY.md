@@ -211,7 +211,9 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 
 <!-- YAFIT-656: client reference presentation only; Live/coordinator/timers,
      stored metric/round/history contracts and trainer/legacy DOM preserved.
-     Acceptance: docs/design/CLIENT_LIVE_SUPERSET_METRICS_20261025.md. -->
+     Acceptance: docs/design/CLIENT_LIVE_SUPERSET_METRICS_20261025.md.
+     Approved follow-up: CLIENT_LIVE_TIME_PREFERENCE_20261026.md restores
+     the existing text/wheel preference in client reference Live only. -->
 
 Для пустой Live-тренировки после быстрого старта у клиента и тренера главное
 действие — выбор первого упражнения; нулевой прогресс не показывается. Корзинка

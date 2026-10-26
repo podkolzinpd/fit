@@ -34,7 +34,9 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
 }) {
   const clientReference = use(ClientWorkoutReferenceContext)
   const wheelEnabled = useWorkoutTimeWheel()
-  const pickerEnabled = wheelEnabled || compact && !planInput
+  const clientLiveInput = clientReference && compact && !planInput
+  const directInput = planInput || clientLiveInput
+  const pickerEnabled = wheelEnabled || compact && !planInput && !clientReference
   const [current, setCurrent] = useState(durationSec)
   const [parts, setParts] = useState(() => durationParts(durationSec))
   const [open, setOpen] = useState(false)
@@ -99,7 +101,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
 
   function changePart(part: 'minutes' | 'seconds', value: string) {
     if (!/^\d*$/.test(value) || value.length > 4) return
-    if (!planInput) { setParts((previous) => ({ ...previous, [part]: value })); return }
+    if (!directInput) { setParts((previous) => ({ ...previous, [part]: value })); return }
     const next = { ...parts, [part]: value }
     setParts(next)
     if (Number(next.minutes) <= DEFAULT_MAX_MINUTES && Number(next.seconds) <= 59) {
@@ -109,7 +111,7 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
 
   function commitParts() {
     if (Number(parts.minutes) > DEFAULT_MAX_MINUTES || Number(parts.seconds) > 59) {
-      if (!planInput) setParts(durationParts(current))
+      if (!directInput) setParts(durationParts(current))
       return
     }
     const value = parts.minutes === '' && parts.seconds === ''
@@ -123,11 +125,11 @@ export function WorkoutDurationField({ durationSec, onCommit, name, label, class
     {name && <input ref={input} type="hidden" name={name} value={current ?? ''} readOnly disabled={disabled} />}
     {pickerEnabled ? <button ref={trigger} type="button" className={`workout-duration-trigger ${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: ${current === undefined ? 'не указано' : formatWorkoutDuration(current)}`} disabled={disabled} onClick={openPicker}>{displayLabel}</button> : <div ref={partsGroup} className="workout-duration-parts" role="group" aria-label={label}>
       <label className="workout-duration-part">
-        <input type="text" inputMode="numeric" enterKeyHint={planInput ? 'next' : undefined} pattern={planInput ? '[0-9]{0,3}' : '[0-9]*'} autoComplete="off" className={`${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: минуты`} aria-invalid={Number(parts.minutes) > DEFAULT_MAX_MINUTES || undefined} placeholder="—" value={parts.minutes} disabled={disabled} onFocus={(event) => event.currentTarget.select()} onChange={(event) => changePart('minutes', event.target.value)} onBlur={commitParts} />
+        <input type="text" inputMode="numeric" enterKeyHint={directInput ? 'next' : undefined} pattern={directInput ? '[0-9]{0,3}' : '[0-9]*'} data-live-direct={clientLiveInput || undefined} autoComplete="off" className={`${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: минуты`} aria-invalid={Number(parts.minutes) > DEFAULT_MAX_MINUTES || undefined} placeholder="—" value={parts.minutes} disabled={disabled} onFocus={(event) => event.currentTarget.select()} onChange={(event) => changePart('minutes', event.target.value)} onBlur={commitParts} />
         <span>мин</span>
       </label>
       <label className="workout-duration-part">
-        <input type="text" inputMode="numeric" enterKeyHint={planInput ? 'next' : undefined} pattern={planInput ? '([0-5]?[0-9])?' : '[0-9]*'} autoComplete="off" className={`${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: секунды`} aria-invalid={Number(parts.seconds) > 59 || undefined} placeholder="—" value={parts.seconds} disabled={disabled} onFocus={(event) => event.currentTarget.select()} onChange={(event) => changePart('seconds', event.target.value)} onBlur={commitParts} />
+        <input type="text" inputMode="numeric" enterKeyHint={directInput ? 'next' : undefined} pattern={directInput ? '([0-5]?[0-9])?' : '[0-9]*'} data-live-direct={clientLiveInput || undefined} autoComplete="off" className={`${className}${planHint ? ' plan-hint' : ''}`.trim()} aria-label={`${label}: секунды`} aria-invalid={Number(parts.seconds) > 59 || undefined} placeholder="—" value={parts.seconds} disabled={disabled} onFocus={(event) => event.currentTarget.select()} onChange={(event) => changePart('seconds', event.target.value)} onBlur={commitParts} />
         <span>сек</span>
       </label>
     </div>}
