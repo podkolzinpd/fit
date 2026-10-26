@@ -63,3 +63,24 @@ fixture: в Safari повторный тап уже активного поля 
 а не выделять всё. Перед заменой тест явно выполняет Select All; проверки
 фокуса/точного значения/соседнего подхода сохранены. Таймауты/retries прежние.
 Целевые32 случая заняли51.6s, дополнительные30 —31.9s с2workers.
+
+## Диагностика первого CI и уточнение harness
+
+CI40282647052:624passed/8conditional skips/1flaky, exit1; не слит.
+Новый weight-response WebKit отказал на первоначальном tap/focus до release()
+confirm-ответа, не после проверяемого handoff; retry прошёл. Failed-run trace
+отсутствует (только error-context); он не доказывает точную позицию тапа.
+Хрупкое место теста подтверждено кодом: замораживались все rAF и использовался
+raw-coordinate tap без обычной проверки доступности/стабильности поля.
+
+Уточнение только тестовое: задерживается callback с существующим next-input
+селектором; прочие rAF работают. В frame-case обязательно captured-count=1,
+иначе тест красный. Используется locator.tap(), затем flush и проверка фокуса
+ещё до ввода. Сохраняются все прежние проверки фокуса, результата, соседа,
+confirmedAt и отдыха. Код продукта после1ca76315 не менялся.
+Stability8cases×5, workers1/retries0:40/40 passed,41.2s. Это проверка устранения
+нестабильности harness, не расширение CI-матрицы и не повтор CI до зелёного.
+Финальный targeted после уточнения:32/32 passed,32.1s. Повторный полный
+npm run check exit0:2845frontend/1488API+196standard conditional skips,
+lint/typecheck/coverage/policies/build passed. Runtime/CSS diff после1ca76315
+нулевой. Новый head CI и production остаются обязательными.

@@ -30,17 +30,28 @@ for (const metric of ['weight', 'seconds'] as const) for (const phase of ['respo
   await page.evaluate(() => {
     const frames: FrameRequestCallback[] = []
     const native = window.requestAnimationFrame.bind(window)
-    window.requestAnimationFrame = callback => { frames.push(callback); return -frames.length }
-    Object.assign(window, { flushFocusFrames: () => {
+    // Hold only the next-set handoff, not visibility/actionability frames.
+    // The selector is the existing next-input contract, independent of names
+    // changed by minification. The frame case asserts the callback was held.
+    window.requestAnimationFrame = callback => {
+      if (!String(callback).includes('input.live-set-input:not(:disabled)')) return native(callback)
+      frames.push(callback); return -frames.length
+    }
+    Object.assign(window, { heldFocusFrameCount: () => frames.length, flushFocusFrames: () => {
       window.requestAnimationFrame = native
       for (const frame of frames.splice(0)) frame(performance.now())
     } })
   })
-  if (phase === 'frame') { release(); await expect(row).toHaveClass(/confirmed/) }
-  // Real touch and keyboard events, without actionability waiting on held rAF.
-  const rect = (await field.boundingBox())!
-  await page.touchscreen.tap(rect.x + rect.width / 2, rect.y + rect.height / 2)
+  if (phase === 'frame') {
+    release(); await expect(row).toHaveClass(/confirmed/)
+    await expect.poll(() => page.evaluate(() => (window as unknown as { heldFocusFrameCount: () => number }).heldFocusFrameCount())).toBe(1)
+  }
+  await field.tap()
   await expect(field).toBeFocused()
+  if (phase === 'frame') {
+    await page.evaluate(() => (window as unknown as { flushFocusFrames: () => void }).flushFocusFrames())
+    await expect(field).toBeFocused()
+  }
   // Safari may retain focus through the check tap; explicitly replace the
   // value rather than assuming a second tap on the same input selects it.
   await page.keyboard.press('ControlOrMeta+A')
