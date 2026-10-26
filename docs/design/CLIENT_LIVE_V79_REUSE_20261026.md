@@ -105,3 +105,13 @@
 База mainadd1b44c/#1820, открытых PR нет. Повторный real-route baseline4/4 WebKit/Chromium (dark/original390, light/compact430) воспроизвёл одновременно три current-строки: обычную и два будущих упражнения раскрытого суперсета; hover добавлял rgb(59,59,64)/rgb(216,221,206). Повторно использован existing activeCircuitSetId; меняются только client current predicate, fallback bullet и локальный hover. Backend, rounds, gesture/confirm handlers, #1819 focus guard не менялись. Физическое устройство и OAuth не проверены.
 
 PR2 локальная приёмка на mainadd1b44c:14/14 browser (superset final input/notes, ragged/manual expansion/any-order, last-added-round atomic swipe, #1819 manual focus),4/4 visual captures; одна current-строка вне будущего блока, hover transparent в двух темах. Снимки WebKit просмотрены. Полный npm run check exit0, diff-check passed. Официальная приёмка PR1 и CI PR2 остаются обязательными перед merge.
+
+### PR1 — подтверждённая публикация
+
+#1820/mainadd1b44c: официальный CI40294401976/frontend40296999059 success,213/213 public bytes+health;14/14 public bundle browser (4client,2coach,outsider), allowlist hash прежний. Fresh native production sync/build/install/launch:214 matched assets. Процесс жив, settled auth screen просмотрен. Physical iPhone и OAuth не проверены. Receipt в outputs/client-live-v79-remediation-20261026/pr1-{release,published,native}.json и YAFIT-657.
+
+### PR3 — свежая сверка перед применением
+
+main66bdd387/#1821, очередь открытых PR пуста. Реальный baseline6/6 client dark/original390 +light/compact430 и coach-original390 в WebKit/Chromium. Уже работают меню справа без круга, note/+set baseline, left media, completed fold, drag/swipe. Суперсет клиента скрывал DOM через hidden, источник coach сохранял mounted forms; пустая note была такой же filled SVG, как с текстом. Переиспользована ровно тренерская оболочка WorkoutFoldBody с прежним coach DOM/классом, easing/clip; клиентский body получает inner wrapper с сохранённой сеткой. Меняются presentation и marker/description заметки, не handlers, модель заметок или gestures. #1818/#1819 сохранены.
+
+PR3 актуальная локальная приёмка: client30/30 (notes/final input, superset, completed fold/pending errors, animation settings, full-card drag/swipe distinction, manual focus), coach-v79 gate-on6/6 (оба режима, mounted input/notes/menu и keyboard), real-route captures6/6 обе identities/темы. Исходный coach запуск без dedicated env дал6 skip и не засчитан; повтор с правильным gate6 passed. Полный npm run check exit0, включая новый unit сохранения того же DOM input/value при fold/reopen. Снимки просмотрены. Выпуск только после принятой публикации #1821.
