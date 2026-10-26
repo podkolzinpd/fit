@@ -78,11 +78,11 @@
 
 | PR | Находки | Уже работает → переиспользуем → действительно меняем | Статус |
 | --- | --- | --- | --- |
-| 1 | F01/F09 | LiveSetFields/RunMetricsFields, ввод/сетка/54–48 и #1818 → те же формы и --lime-* → видимость дублирующих подписей и scoped-документ | Локально проверено; CI/публикация — гейты |
-| 2 | F02/F06/F07 | Круги/any-order/жесты → renderLiveSet/WorkoutSetRow → только current-state, bullet и feedback | Ожидает PR1 |
-| 3 | F05 | Левая анимация, меню/заметки/сворачивание → WorkoutExerciseHeader/WorkoutGestures/v79-fold → компактная стабильная компоновка и признаки заметки | Ожидает PR2 |
-| 4 | F04 | Один LiveRestTimer с отрицательным отдыхом → CoachLiveV79Timer renderer → клиентское представление часов, dock и пауза | Ожидает PR3 |
-| 5 | F03/F08 | Напоминание/окна/каталог multi → FitLimeSheetHeader и существующие обработчики → геометрия вложенных состояний и 60/48 add action | Ожидает PR4 |
+| 1 | F01/F09 | LiveSetFields/RunMetricsFields, ввод/сетка/54–48 и #1818 → те же формы и --lime-* → видимость дублирующих подписей и scoped-документ | Опубликован и принят: #1820/add1b44c, public/browser/native receipts |
+| 2 | F02/F06/F07 | Круги/any-order/жесты → renderLiveSet/WorkoutSetRow → только current-state, bullet и feedback | Опубликован и принят: #1821/66bdd387, public/browser/native receipts |
+| 3 | F05 | Левая анимация, меню/заметки/сворачивание → WorkoutExerciseHeader/WorkoutGestures/v79-fold → компактная стабильная компоновка и признаки заметки | Опубликован и принят: #1822/a673 в публикации62ccbb80, receipts |
+| 4 | F04 | Один LiveRestTimer с отрицательным отдыхом → CoachLiveV79Timer renderer → клиентское представление часов, dock и пауза | Слит #1826/7da206fc после полногоCI40378260156; собственная публикация/приёмка — гейт перед merge5 |
+| 5 | F03/F08 | Напоминание/окна/каталог multi → FitLimeSheetHeader и существующие обработчики → геометрия вложенных состояний и 60/48 add action | Реализован и полностью проверен локально; официальный CI/публикация — гейты |
 
 Общие потребители: coach-v79 и внепилотный клиент не получают клиентский вариант.
 Для каждого пункта выше результаты, тесты, screenshots, release/readback добавляются ниже, исходный план не переписывается.
@@ -163,3 +163,13 @@ PR4 swipe regression уточнён без изменения runtime/fixture-he
 ### PR5 — подготовка уведомлений и действий
 
 Согласованный scope неизменен: существующее напоминание получает клиентский Lime presentation, одинаковые60/48 действия и r20/16, прежние Continue/Finish handlers; нижнее добавление60/48. Existing FitLimeSheetHeader/rest/time sheets, phase notices и клиентский multi-add уже работают и переиспользуются. Локальный итоговый кандидат (включая проверку порядка слоёв halo/reminder/header)548 passed/8 conditional skip; снимки обеих тем просмотрены. Черновик PR5 пока фиксирует scope; prepared product commitd79fc081 переносится после актуализации main и PR4, новый полный CI обязателен. Последовательная публикация после приёмки PR4, прежние4 тестовых клиента, flags/allowlist/API/координаторы без изменения.
+
+### PR5 — актуальная сверка после merge4
+
+База7da206fca9b7e3c00063f1067e2f74e72d761087 — фактически слитый #1826, официальный PR-CI40378260156 success (общий набор662 passed+8 прежних conditional skip, fail-on-flaky включён). Отдельная публикация main4 ещё проходит свой CI40384244460; merge5 допускается только после public/browser/native приёмки4. Предыдущие1–3 опубликованы и приняты.
+
+До применения5 real-route preflight6/6 WebKit/Chromium: клиент light/compact430, тренер dark/original390 и светлое напоминание. Снимки просмотрены: таймер уже v79, ввод/карточки/окна работают; у напоминания оставалась разная геометрия действий. Повторно использованы существующие FitLimeSheetHeader/состояния/dialogs/handlers и прежний multi-add. Меняются только12 scopedCSS строк: одинаковые60/48 иr20/16 у двух действий, YSGeo500, текущие --lime-*; нижнее добавление60/48.
+
+Фактическая продуктовая ветка основана наmain7da; прежний docs-only коммитeadd сохранён обычным merge, перенесён только продуктовыйe78 (новыйc9cbfa14). Runtime, e2e, assets, lockfiles и остальные непрозовые файлы побайтно совпадают с проверенным кандидатом44274ac5; подготовленная история не переносится. Полный npmruncheck exit0: frontend2855/API1516+196 штатных DBskip, lint/types/policy/build/startup. Полный584-case WebKit/Chromium:576 passed,8 прежних условных Assistant program/history-fixture skip,0failure/0flaky. Это не проверка реальной генерации или реального OAuth. Light/dark reminder/grid390/430/animationsON–OFF снимки просмотрены.
+
+Не меняются gates/четыре клиентские учётки, данные, API, поля/координаторы,650ms autosave guard, свайпы/перенос, часы/дедлайны/минус после нуля, #1818/#1819/#1828. Физический iPhone и настоящий OAuth не проверены. Новый официальный CI, принятие4 и отдельная публикация5 с точным public/browser/native readback обязательны; итоговый оперативный статус/receipts — YAFIT-657.
