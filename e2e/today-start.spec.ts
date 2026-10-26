@@ -61,6 +61,23 @@ test('today: voice-first запускает запись, отменяет её 
   await expect(page.locator('.today-exercise')).toHaveCount(1)
 })
 
+for (const role of ['trainer', 'client'] as const) test(`today: ${role} voice keeps a nested catalog name as one exercise`, async ({ page }) => {
+  await mockNativeAiSession(page, role)
+  await mockStreamingVoice(page, 'Фронтальный присед со штангой 3 по 10 20 кг Планка 30 сек')
+  let remoteCalls = 0
+  await page.route('**/v1/assistant/yandex/parse-workout', async route => {
+    remoteCalls += 1
+    await route.fulfill({ json: { items: [], unmatched: [] } })
+  })
+  await page.goto(nativeAiUrl('/today'))
+  await page.getByRole('button', { name: 'Надиктовать тренировку' }).click()
+  await page.getByRole('button', { name: 'Готово', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Проверьте тренировку' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.locator('.today-exercise')).toHaveCount(2)
+  await expect(page.getByText('Фронтальный присед со штангой', { exact: true })).toBeVisible()
+  expect(remoteCalls).toBe(0)
+})
+
 test('today: голосовой ввод сохраняет значения при любом порядке веса и подходов', async ({ page }) => {
   const transcript = [
     'Приседания с гирей 3 по 10 20кг',

@@ -9,6 +9,15 @@ const catalog: ExerciseSnapshot[] = [
 ]
 
 describe('formatLlmWorkoutText', () => {
+  it('не вызывает ИИ и не создаёт вложенные упражнения для полного каталожного названия', async () => {
+    const remoteParser = vi.fn()
+    const result = await parseWorkoutWithLlm('Фронтальный присед со штангой 3 по 10 20 кг Планка 30 сек', SYSTEM_EXERCISE_CATALOG, { remoteParser })
+    expect(remoteParser).not.toHaveBeenCalled()
+    expect(result.unmatched).toEqual([])
+    expect(result.items.map((item) => item.exerciseRef)).toEqual(['front-squat', 'plank'])
+    expect(result.items[0]?.sets).toEqual(Array.from({ length: 3 }, () => ({ weightKg: 20, reps: 10 })))
+  })
+
   it('does not send retired refs to the model or accept them back as new exercises', async () => {
     const retired: ExerciseSnapshot = { source: 'system', ref: 'fedb-atlas-stones', name: 'Подъём камней Атласа', muscleGroup: 'other', inputKind: 'strength' }
     const remoteParser = vi.fn().mockResolvedValue({ items: [{ sourceText: retired.name, exerciseRef: retired.ref, confidence: 1, sets: [{ reps: 10 }] }], unmatched: [] })

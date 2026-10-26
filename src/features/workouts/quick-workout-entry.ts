@@ -134,10 +134,17 @@ export function formatWorkoutText(text: string, catalog: readonly ExerciseSnapsh
       ? `(?=\\s+(?:${WORKOUT_NUMBER_SOURCE})(?:\\s|$)|$)`
       : '(?=\\s|[:—-]|$)'
     return [...text.matchAll(new RegExp(`(?:^|\\s)${escaped}${nextToken}`, 'giu'))]
-      .map((match) => ({ index: (match.index ?? 0) + match[0].length - match[0].trimStart().length, length: phrase.length }))
+      .map((match) => ({ index: (match.index ?? 0) + match[0].length - match[0].trimStart().length, length: match[0].trimStart().length }))
       .filter((match) => !singleWord || isSingleWordExerciseBoundary(text, match.index))
   }).sort((left, right) => left.index - right.index || right.length - left.length)
-  const startsAt = matches.reduce<number[]>((result, match) => result.some((index) => index === match.index) ? result : [...result, match.index], [])
+  // A shorter catalog phrase inside an already selected name belongs to that
+  // exercise, not to a new line (e.g. «Фронтальный присед со штангой»).
+  // Use the actual matched span so repeated spaces cannot expose its suffix.
+  const nonOverlapping = matches.reduce<typeof matches>((result, match) => {
+    const previous = result.at(-1)
+    return previous && match.index < previous.index + previous.length ? result : [...result, match]
+  }, [])
+  const startsAt = nonOverlapping.map((match) => match.index)
   if (startsAt.length < 2) return text.replace(/\n{2,}/g, '\n')
   return startsAt.slice(1).reverse().reduce((result, index) => `${result.slice(0, index).trimEnd()}\n${result.slice(index).trimStart()}`, text).replace(/\n{2,}/g, '\n')
 }
