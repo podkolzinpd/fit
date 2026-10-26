@@ -21,10 +21,17 @@ export type LivePhaseTimer =
  * неподтверждённый подход со временем в плане — на время, повторы, дистанция.
  * null — времени нет, такой подход человек подтверждает сам.
  */
-export function timedSetSeconds(set: Pick<WorkoutSet, 'durationSec' | 'durationMin' | 'confirmedAt'>): number | null {
+export function timedSetSeconds(set: Pick<WorkoutSet, 'durationSec' | 'durationMin' | 'confirmedAt'> & { fact?: Pick<WorkoutSet['fact'], 'durationSec' | 'durationMin'> }): number | null {
   if (set.confirmedAt) return null
-  const seconds = set.durationSec ?? (set.durationMin === undefined ? undefined : Math.round(set.durationMin * 60))
-  return seconds !== undefined && seconds > 0 ? seconds : null
+  // Поле времени в Live показывает сохранённый факт, а без него план; таймер
+  // отсчитывает то же, что видит человек.
+  const seconds = positiveSeconds(set.fact ?? {}) ?? positiveSeconds(set)
+  return seconds ?? null
+}
+
+function positiveSeconds(value: { durationSec?: number; durationMin?: number }): number | undefined {
+  const seconds = value.durationSec ?? (value.durationMin === undefined ? undefined : Math.round(value.durationMin * 60))
+  return seconds !== undefined && seconds > 0 ? seconds : undefined
 }
 
 /**
