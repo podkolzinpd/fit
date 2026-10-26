@@ -2289,12 +2289,14 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
 
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client matrix clock and rest sheet flow ${theme} ${density}`, async ({ page }, info) => {
   await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  // Screenshots must not spend a real second of the tested 60s deadline.
+  await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'))
   await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
   const source = restTimerWorkout(); source.startedAt = '2026-10-19T09:00:00Z'
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
-  const digits = page.locator('.coach-live-digits')
-  await expect(digits).toHaveClass(/coach-live-digits-long/)
+  const digits = page.locator('.coach-v79-large-clock > .coach-live-digits')
+  await expect(page.locator('.coach-v79-large-clock')).toHaveClass(/long-clock/)
   await expect(digits).toHaveCSS('font-family', /Doto/)
   expect(await page.evaluate(async () => {
     const loaded = await document.fonts.load('700 64px Doto', '0123456789−+:')
