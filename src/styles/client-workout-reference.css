@@ -292,6 +292,12 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields > .live-set-confirm { grid-column: 3; grid-row: var(--live-metric-rows); align-self: end; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .live-metric-label { display: block; min-height: 16px; margin: 0; color: var(--lime-text-secondary); font-family: var(--lime-font); font-size: var(--type-caption-size); font-weight: 400; line-height: 16px; text-align: left; overflow-wrap: anywhere; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .coach-live-metric { width: 100%; }
+/* Reuse the editor's minute/second composition within the existing Live height.
+   Units are inside each field, not an extra row beneath the confirm target. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .workout-duration-parts { height: var(--client-live-field-height); gap: 2px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .workout-duration-part { position: relative; display: block; height: var(--client-live-field-height); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .workout-duration-part > span { position: absolute; right: 5px; bottom: 3px; color: var(--lime-text-secondary); font-size: var(--type-caption-size); line-height: 14px; pointer-events: none; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .coach-live-metric:has(.workout-duration-parts) > .coach-live-field-unit { display: none; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .live-metrics-pace { order: 2; grid-column: 1 / -1; margin: 0; color: var(--lime-text-secondary); font-size: var(--type-caption-size); line-height: var(--leading-snug); text-align: left; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields .run-distance-control { grid-template-columns: minmax(0, 1fr) 44px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .live-set-fields :is(.run-distance-add, .run-distance-remove) { min-height: 44px; font-size: 14px; }

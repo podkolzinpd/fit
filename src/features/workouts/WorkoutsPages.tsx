@@ -3846,7 +3846,7 @@ export function LiveWorkoutPage() {
     window.requestAnimationFrame(() => {
       const form = liveSetForms.current.get(cardioSetMissingTime.setId)
       form?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      form?.querySelector<HTMLElement>('button.workout-duration-trigger, input[name="runDuration"]:not([type="hidden"]), input[name="durationSec"]:not([type="hidden"])')?.focus({ preventScroll: true })
+      form?.querySelector<HTMLElement>('button.workout-duration-trigger, .workout-duration-parts input:not(:disabled), input[name="runDuration"]:not([type="hidden"]), input[name="durationSec"]:not([type="hidden"])')?.focus({ preventScroll: true })
     })
   }
   function finishFromInactivityReminder() {

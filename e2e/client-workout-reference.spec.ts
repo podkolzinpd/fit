@@ -5,6 +5,65 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// One interaction contract per real structural consumer, not per visual axis.
+for (const grouped of [false, true]) test(`client Live time preference text confirm retry reload and wheel grouped-${grouped}`, async ({ page }, info) => {
+  await page.addInitScript(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'); localStorage.setItem(`fit.rpeDisplay.${id}`, 'true') }, pilotId)
+  const source = coachGestureWorkout(grouped, grouped ? 2 : 1), exercise = source.exercises[0]!
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  Object.assign(exercise, { ref: 'rowing-machine', name: 'Гребной тренажёр', inputKind: 'distance' })
+  exercise.sets.forEach(set => Object.assign(set, { weightKg: undefined, durationSec: 90, distanceKm: 1.02, reps: 24, rpe: 8 }))
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source], failFirstSetConfirm: true })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.client-workout-reference')).toBeVisible()
+  const row = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
+  const seconds = row.getByRole('textbox', { name: 'Фактическое время: секунды', exact: true })
+  await expect(row.locator('.live-metric-field')).toHaveCount(4)
+  await expect(row.locator('.workout-duration-trigger')).toHaveCount(0)
+  const node = await seconds.elementHandle()
+  await seconds.fill('65')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeNull()
+  await expect(seconds).toHaveValue('65')
+  const saving = page.waitForRequest(request => {
+    if (request.method() !== 'PUT' || !request.url().endsWith(`/workout-sets/${exercise.sets[0]!.id}/draft`)) return false
+    return (request.postDataJSON() as { draft: { durationSec?: number } }).draft.durationSec === 105
+  })
+  await seconds.fill('45')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  const command = (await saving).postDataJSON() as { draft: { metricSources: { duration: string } } }
+  expect(command.draft.metricSources.duration).toBe('entered')
+  await expect(row.locator('.save-status-error')).toBeVisible()
+  await expect(seconds).toHaveValue('45')
+  await row.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
+  await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(105)
+  expect(await node!.evaluate(element => element.isConnected)).toBe(true)
+  const confirmedAt = backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt
+  await seconds.fill('50'); await seconds.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(110)
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
+  await page.reload()
+  await expect(seconds).toHaveValue('50')
+  await row.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath('text-time.png') })
+  await page.goto('/me/settings')
+  const preference = page.getByRole('switch', { name: 'Ввод времени колёсиком', exact: true })
+  await expect(preference).not.toBeChecked()
+  await preference.click()
+  await page.goto(`/workouts/${workoutId}/live`)
+  const trigger = row.getByRole('button', { name: 'Фактическое время: 1:50', exact: true })
+  await trigger.click()
+  const sheet = page.getByRole('dialog', { name: 'Фактическое время', exact: true })
+  await expect(sheet).toHaveClass(/client-reference-time-sheet/)
+  await sheet.getByRole('listbox', { name: 'секунды', exact: true }).getByRole('option', { name: '55 секунды', exact: true }).click()
+  await sheet.getByRole('button', { name: 'Применить · 1:55', exact: true }).click()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(115)
+  await page.goto('/me/settings'); await preference.click()
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(seconds).toHaveValue('55')
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
+})
+
 test('client Live metrics and superset preserve final input and notes', async ({ page }, info) => {
   await page.addInitScript(id => {
     localStorage.setItem(`fit.clientLime.theme.${id}`, 'dark')
@@ -157,6 +216,16 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     expect(geometry.check.x).toBeGreaterThanOrEqual(geometry.cells[3]!.right)
     expect(geometry.paceY).toBeGreaterThanOrEqual(geometry.check.bottom)
     expect(geometry.check.height).toBe(density === 'original' ? 54 : 48)
+    const timeInputs = await row.locator('.workout-duration-parts input').evaluateAll(inputs => inputs.map(input => {
+      const box = input.getBoundingClientRect(), style = getComputedStyle(input)
+      return { width: box.width, height: box.height, fontSize: parseFloat(style.fontSize) }
+    }))
+    expect(timeInputs).toHaveLength(2)
+    for (const field of timeInputs) {
+      expect(field.width).toBeGreaterThanOrEqual(44)
+      expect(field.height).toBe(geometry.check.height)
+      expect(field.fontSize).toBeGreaterThanOrEqual(16)
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await expect(group.locator('.live-header-animation, .exercise-thumbnail').first()).toHaveCount(animation ? 1 : 0)
     const heights = await group.locator('.client-circuit-note-toggle, .overflow-trigger').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height))
@@ -304,6 +373,31 @@ async function tapVisible(page: Page, target: ReturnType<Page['locator']>) {
   if (!box) throw new Error('Action is not visible')
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
 }
+
+test('client Live text seconds keep focus above keyboard during density change', async ({ page }) => {
+  await modelKeyboard(page)
+  const source = restTimerWorkout(0, true, 'manual')
+  source.startedAt = new Date(Date.now() - 120000).toISOString()
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const field = page.getByRole('textbox', { name: 'Фактическое время: секунды', exact: true }).first()
+  await field.fill('25')
+  const element = await field.elementHandle()
+  await showModeledKeyboard(page)
+  for (const density of ['compact', 'original']) {
+    await page.evaluate(({ id, density }) => {
+      const key = `fit.clientLiveDensity.${id}`
+      localStorage.setItem(key, density)
+      dispatchEvent(new StorageEvent('storage', { key, newValue: density }))
+    }, { id: pilotId, density })
+    await expect(field).toBeFocused()
+    await expect(field).toHaveValue('25')
+    expect(await element!.evaluate(e => e.isConnected && e === document.activeElement)).toBe(true)
+    await expect.poll(() => field.evaluate(e => e.getBoundingClientRect().bottom)).toBeLessThanOrEqual(420)
+    await expect.poll(() => field.evaluate(e => e.getBoundingClientRect().top - document.querySelector('.live-pinned')!.getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(0)
+  }
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.durationSec).toBe(25)
+})
 
 for (const rpe of [false, true]) test(`client Live metric keyboard preserves final field rpe-${rpe}`, async ({ page }) => {
   await modelKeyboard(page)
@@ -613,8 +707,8 @@ test('client reference top finish retains missing cardio time warning', async ({
   await expect(page.locator('.finish-confirm')).toContainText('нет фактического времени')
   await page.getByRole('button', { name: 'Внести время', exact: true }).click()
   await expect(page.locator('.finish-confirm')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^Фактическое время:/ })).toBeEnabled()
-  await expect(page.getByRole('button', { name: /^Фактическое время:/ })).toBeFocused()
+  await expect(page.getByRole('textbox', { name: 'Фактическое время: минуты', exact: true })).toBeEnabled()
+  await expect(page.getByRole('textbox', { name: 'Фактическое время: минуты', exact: true })).toBeFocused()
   expect(finishes).toBe(0)
   await page.reload()
   await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).click()
@@ -1561,6 +1655,7 @@ for (const entry of ['live', 'new', 'today']) for (const theme of ['light', 'dar
 })
 
 for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`client time sheets keep draft seconds cancel and rest ${theme} ${width}`, async ({ page }, info) => {
+  await page.addInitScript(() => localStorage.setItem('fit.workoutTimeWheel', 'true'))
   await page.setViewportSize({ width, height: 844 })
   await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
   await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
@@ -1795,6 +1890,7 @@ function liveContrast(foreground: string, background: string) {
 }
 
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client Live metric readability ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(() => localStorage.setItem('fit.workoutTimeWheel', 'true'))
   await page.addInitScript(({ id, theme, density }) => {
     localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
     localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
@@ -1995,6 +2091,7 @@ for (const role of ['trainer', 'client'] as const) test(`Live outside client pil
 
 
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client pilot dense cardio grid and title ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(() => localStorage.setItem('fit.workoutTimeWheel', 'true'))
   await page.addInitScript(({ id, theme, density }) => {
     localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
     localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
