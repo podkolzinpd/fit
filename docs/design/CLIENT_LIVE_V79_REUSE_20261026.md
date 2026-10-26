@@ -128,3 +128,15 @@ PR2 опубликован и принят: #1821/main66bdd387, CI40301392514/fr
 На этой базе полный npm run check exit0 (frontend2854, API1488+196 штатных DBskip), клиентские92/92 browser cases: обе темы/плотности, handoff, matrix clock, отрицательный отдых, correction/undo, manual-focus response/frame, text/wheel, keyboard first-tap, stable inline feedback и retry. Дополнительная диагностическая проверка запуска отдыха в точке смены dock —2/2, возврат фокуса корректен, предположительная правка не добавлялась. Финальная coach/visual приёмка и official CI/публикация ещё обязательны. #1824 активен, merge4 не обходит его; #1828 создан позже4/5 и очередь не блокирует. Физический iPhone/OAuth не проверены.
 
 PR4 дополнительная локальная приёмка: coach gate-on28/28 (handoff, rest motion, keyboard/density, dock focus, geometry375/430/1440 и outside-pilot), real-route visual24/24; client dark/original390 и light/compact430 снимки просмотрены. Ни расчёты, ни поля/координаторы, ни входящие coach-context правила не меняются. Official CI/публикация/нативная приёмка ещё впереди.
+
+### PR3 — подтверждённая интегрированная публикация
+
+Source merge #1822/a673d713e97bc8e3b9b9db26b0347f892aa8c195 сохранён в официальной опубликованной сборке62ccbb809e83221e71707234e6b7f3dc2ec9680b с соседними #1825/#1823. CI40322508796/frontend40328444542 success,213/213 bytes+health,14/14 public browser, fresh native214assets match/install/launch/startupProcessAlive. Installed auth-screen просмотрен. В receipt sourceMergeCommit и publication commit раздельные, ancestry подтверждён. Приняты3/5; physical iPhone/OAuth не проверены.
+
+### PR4 — матрица размеров и CI
+
+CI40324096239 в задании e2e-yandex-auth выявил2 fail/1 retry в новом client matrix clock test; это не сбой авторизации. Trace121576314175: viewport390×568, у оболочки stable/visible844 после искусственного изменения размеров одной сессии; авто-прокрутка Playwright переключила большую кнопку в inert dock. Защита AppViewportProvider специально сохраняет опорную высоту после сжатия и не меняется ради теста. Матрица отдельных phone layouts теперь перезагружает экран на измеренном размере, проверяет отсутствие keyboard-open и точный visible-height, затем выполняет прежние реальные нажатия и точные assertions1:00/+15sec/1:15. Force-click, новые retries/таймауты и изменения runtime не добавлены.
+
+Уточнённые matrix+handoff+keyboard/manual-focus38/38 WebKit/Chromium passed. Полный check и новый официальный CI обязательны перед merge. Завершённые diagnostics сохранены в outputs/client-live-v79-remediation-20261026/pr4-auth-diagnostics; предыдущие552/8skip относятся к прежней локальной матрице и не выдаются за Linux CI.
+
+PR4 после уточнения матрицы: полный frontend2854 и все предыдущие lint/typecheck/policy этапы passed; один неизменённый API bundle compression превысил5000ms при общем запуске (1487 passed/1 timeout). Диагностированный повтор ВСЕГО API-набора с maxWorkers2:1488 passed+196 штатных DBskip; API build и frontend build/startup passed. Assertions/таймауты/CI policy не менялись. Логи pr4-matrix-{independent,check,check-recovery}; официальный CI нового head обязателен.

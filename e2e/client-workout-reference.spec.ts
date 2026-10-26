@@ -2338,6 +2338,13 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   const restTrigger = page.locator('.live-rest-trigger').and(page.getByRole('button'))
   for (const height of [844, 568]) for (const width of [390, 430]) {
     await page.setViewportSize({ width, height })
+    // Each size is a separate phone layout. A mid-session height contraction
+    // is deliberately treated as keyboard recovery by AppViewportProvider.
+    // Reload at the measured size; do not reset that production protection.
+    await page.reload()
+    await expect(page.locator('.coach-v79-large-clock')).toHaveClass(/long-clock/)
+    await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
+    await expect(page.locator('html')).toHaveCSS('--app-visible-height', `${height}px`)
     expect(await digits.evaluate(node => node.getBoundingClientRect().width <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`matrix-clock-${width}-${height}.png`) })
     await restTrigger.click()
@@ -2368,6 +2375,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     await sheet.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
     await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:15')
     await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
+    await expect(sheet).toBeHidden()
   }
 })
 
