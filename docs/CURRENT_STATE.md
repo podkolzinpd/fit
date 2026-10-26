@@ -108,14 +108,11 @@ YAFIT-645; план design/FAVORITE_EDITOR_DRAFT_RECOVERY_20261022.md. На св
 - YAFIT-653 закрыта: PR1801–1806 слиты/выпущены, final f45aedae,
   public213/health, OTA/signature/readback, native214/simulator проверены;
   точная исходная пара, один owner, поля54/48; receipts в YAFIT-653.
-- 26.10 YAFIT-655, сверка перед PR4: design/COACH_LIVE_V79_POLISH_20261025.md.
-  Только исходные2 тренера; Original54/Compact48, прежние owner/дедлайны/данные.
-  PR1#1813/ea694486 и PR2#1815/f18c0807 опубликованы: каждый public213/health
-  и published browser8/8. Клиентский#1814/0e0666ad включён и отдельно принят.
-  PR3#1816/554ccb70 слит после greenCI; повторный fullcheck2839frontend/1488API
-  (+196conditionalDBskip), browser50/50. Клиентские поля/CSS/spec не заменены.
-  PR4: header-only drag/cancel/native scroll, nested drafts и close guard;
-  первоначальные52/52 и fullcheck2840/1487 passed. Повторная интеграция на554ccb70
-  проходит полный check/browser, затем свежий CI и официальный public readback.
-  Post-merge PR3 обязателен до merge4. Итоговые CI/web/cohort/OTA/fresh-native
-  квитанции и живой статус — YAFIT-655. Physical iPhone/OAuth не проверены.
+- YAFIT-655 закрыта:1813/1815/1816/1817 опубликованы, final220defc4;
+  public213/health, published8/8, OTA и fresh-native214/simulator проверены.
+  План design/COACH_LIVE_V79_POLISH_20261025.md; physical iPhone/OAuth не проверены.
+- 26.10 YAFIT-658: согласованы4PR, design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md.
+  База8f7986a4 включает клиентские1818–1822 и voice1825. PR1: только scoped-композиция
+  контекста/прогресса, включая видимую Compact-строку; часы/механика прежние.
+  Fresh rebase: browser52/52/fullcheck2854frontend/1488API passed; новый exact-head CI/public ещё гейты. Только исходные2
+  тренера, Original54/Compact48; физический телефон и реальный OAuth не проверены.

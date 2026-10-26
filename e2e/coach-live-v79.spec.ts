@@ -402,6 +402,7 @@ for (const width of [375, 430, 1440]) for (const density of ['original', 'compac
   await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
   const source = coachGestureWorkout()
   source.exercises[0]!.name = 'Жим гантелей на наклонной скамье с полным длинным названием упражнения'
+  source.clientName = 'Алексей Константинович Смирнов — длинное имя клиента'
   source.notes = 'Полная заметка к тренировке без подмены демонстрационными данными'
   await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
@@ -412,6 +413,14 @@ for (const width of [375, 430, 1440]) for (const density of ['original', 'compac
   expect(await title.evaluate(e => e.scrollHeight <= e.clientHeight + 1)).toBe(true)
   await expect(card.locator('.coach-v79-card-toggle')).toHaveCSS('height', '44px')
   await expect(page.getByLabel('Заметка к тренировке', { exact: true })).toHaveText(source.notes)
+  const header = page.locator('.live-session-header'), progress = header.locator('.live-session-progress-copy')
+  await expect(header.locator('h2')).toHaveCSS('font-size', density === 'original' ? '24px' : '20px')
+  await expect(header.locator('.coach-live-client')).toHaveText(source.clientName)
+  await expect(progress).toContainText('подход 1 из 2')
+  await expect(progress).toContainText('Готово 0 из 6')
+  await expect(progress).toHaveCSS('clip-path', 'none')
+  await expect(progress).toHaveCSS('position', 'static')
+  expect(await progress.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThan(1)
   expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
   await page.locator('.content').evaluate(e => e.scrollTop = 0)
   await page.screenshot({ path: info.outputPath(`${density}-${width}-source.png`) })
