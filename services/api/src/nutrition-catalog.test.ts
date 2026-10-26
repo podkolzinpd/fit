@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { BasicNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
+import { BasicNutritionCatalog, createNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseCatalogFoods, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -30,12 +30,26 @@ describe('food catalog normalization', () => {
   ])('rejects ambiguous or invalid nutrition: %s', (value) => {
     expect(parseCatalogFood(fixture(value))).toBeNull()
   })
-  it('rejects a missing or wrong nutrition basis and trade names', () => {
+  it('rejects a wrong nutrition basis and unreviewed Latin names, but accepts quoted dishes', () => {
     const wrong = fixture(verifiedValues)
     wrong.properties[0]!.name = 'Пищевая ценность в 100 мл'
     expect(parseCatalogFood(wrong)).toBeNull()
     expect(parseCatalogFood(fixture(verifiedValues, 'Йогурт Brand'))).toBeNull()
-    expect(parseCatalogFood(fixture(verifiedValues, 'Салат «Бренд»'))).toBeNull()
+    expect(parseCatalogFood(fixture(verifiedValues, 'Салат «Оливье»'))).toMatchObject({ name: 'Салат «Оливье»' })
+  })
+  it('keeps explicitly labelled producer recipes separate and stable without averaging', () => {
+    const product = fixture('ООО "ГЛОБАЛ ФУД": белки 5.9 г, жиры 10.5 г, углеводы 6.1 г; 142.5 ккал<br>ООО "КОРОНА-ФУД": белки 5.9 г, жиры 13.2 г, углеводы 6.4 г; 168 ккал', 'Салат "Оливье" с колбасой')
+    const foods = parseCatalogFoods(product)
+    expect(foods).toMatchObject([
+      { name: 'Салат "Оливье" с колбасой — ГЛОБАЛ ФУД', calories: 142.5, fat: 10.5 },
+      { name: 'Салат "Оливье" с колбасой — КОРОНА-ФУД', calories: 168, fat: 13.2 },
+    ])
+    expect(foods[0]?.id).not.toBe(foods[1]?.id)
+    expect(parseCatalogFoods(product)).toEqual(foods)
+    expect(parseCatalogFood(product)).toBeNull()
+    expect(parseCatalogFoods(fixture('белки 1 г; 5 ккал<br>белки 2 г; 10 ккал'))).toEqual([])
+    expect(parseCatalogFoods(fixture('ООО "А": белки 1 г; 5 ккал<br>без подписи: 10 ккал'))).toEqual([])
+    expect(parseCatalogFoods(fixture('ООО "А": белки 1 г; 5 ккал<br>ООО "Б": белки 101 г; 10 ккал'))).toEqual([])
   })
   it('does not merge different product identities or recipes', () => {
     const a = parseCatalogFood(fixture(verifiedValues))
@@ -74,6 +88,22 @@ describe('read-only public food source', () => {
     await expect(new VkusvillNutritionCatalog(call).search('глазунья', 1)).resolves.toMatchObject({ foods: [{ name: 'Глазунья из двух яиц' }] })
     expect(isRelevantCatalogSearch('яичница', 'Оладьи на кефире')).toBe(false)
     expect(isRelevantCatalogSearch('куриная грудка', 'Филе куриной грудки')).toBe(true)
+    expect(isRelevantCatalogSearch('оливье', 'Салат "Оливье" с колбасой')).toBe(true)
+    expect(isRelevantCatalogSearch('натуральный йогурт', 'Йогурт натуральный')).toBe(true)
+    expect(isRelevantCatalogSearch('йогурт натуральный', 'Йогурт клубничный')).toBe(false)
+    expect(isRelevantCatalogSearch('йогурт 2%', 'Йогурт натуральный 3,25%')).toBe(false)
+    expect(isRelevantCatalogSearch('йогу', 'Йогурт натуральный')).toBe(true)
+  })
+  it('offers quoted Olivier and producer variants on the first result page and honors upstream pagination', async () => {
+    const call = vi.fn<typeof fetch>().mockResolvedValue(response({ meta: { has_more: false }, items: [
+      fixture('117 ккал; белки 3 г, жиры 7 г, углеводы 10 г', 'Салат "Оливье вегетарианский"'),
+      fixture('ООО "А": 142.5 ккал; белки 5.9 г, жиры 10.5 г, углеводы 6.1 г<br>ООО "Б": 168 ккал; белки 5.9 г, жиры 13.2 г, углеводы 6.4 г', 'Салат "Оливье" с колбасой'),
+    ] }))
+    const result = await new VkusvillNutritionCatalog(call).search('оливье', 1)
+    expect(result.foods.map(food => food.calories)).toEqual([117, 142.5, 168])
+    expect(result.hasMore).toBe(false)
+    call.mockResolvedValue(response({ meta: { has_more: true }, items: [] }))
+    expect(await new VkusvillNutritionCatalog(call).search('оливье', 2)).toEqual({ foods: [], hasMore: true })
   })
   it.each([new Response('private upstream body', { status: 429 }), new Response('{}'), new Response('<html>')])(
     'reports source errors safely, never as empty results', async (upstream) => {
@@ -104,9 +134,42 @@ describe('Perek API source', () => {
     expect(parsePerekFood({ ...perek, url: 'https://not-perek.example/food/a' })).toBeNull()
     expect(parsePerekFood({ ...perek, per100: { ...perek.per100, protein: 150 } })).toBeNull()
   })
+  it('keeps multiword matches in any order and brand searches, but lets unrelated similar foods fall back', async () => {
+    const call = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
+      foods: [{ ...perek, name: 'Натуральный йогурт' }, perek], more: true,
+    }))))
+    const catalog = new PerekNutritionCatalog('pk_test_key', call)
+    expect((await catalog.search('йогурт натуральный', 1)).foods.map(food => food.name)).toEqual(['Натуральный йогурт'])
+    expect((await catalog.search('бургер кинг', 1)).foods).toHaveLength(2)
+    expect(await catalog.search('салат оливье', 1)).toEqual({ foods: [], hasMore: true })
+  })
 })
 
 describe('reviewed basic foods', () => {
+  it('supplements a broad yogurt search with the reviewed record without hiding existing varieties', async () => {
+    const call = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify({
+      ok: true, data: { items: [fixture('76 ккал; белки 6 г, жиры 4 г, углеводы 4 г', 'Йогурт греческий 4%')], meta: { has_more: true } },
+    }) }] } }))))
+    const catalog = createNutritionCatalog(undefined, call)
+    const first = await catalog.search('йогурт', 1)
+    expect(first.foods.map(food => food.name)).toEqual(['Йогурт натуральный 3,25%', 'Йогурт греческий 4%'])
+    expect(first.hasMore).toBe(true)
+    const second = await catalog.search('йогурт', 2)
+    expect(second.foods.map(food => food.name)).toEqual(['Йогурт греческий 4%'])
+    call.mockRejectedValue(new NutritionCatalogUnavailableError())
+    expect((await catalog.search('йогурт натуральный', 1)).foods).toHaveLength(1)
+    await expect(catalog.search('оливье', 1)).rejects.toThrow(NutritionCatalogUnavailableError)
+  })
+  it.each(['йогурт', 'йогурт натуральный', 'натуральный йогурт'])('finds the same verified whole-milk yogurt for %s', async query => {
+    expect(await new BasicNutritionCatalog().search(query, 1)).toMatchObject({ foods: [{
+      sourceId: 171284, name: 'Йогурт натуральный 3,25%', calories: 61, protein: 3.47, fat: 3.25, carbs: 4.66,
+    }] })
+  })
+  it('does not replace a specific yogurt recipe with a generic natural yogurt', async () => {
+    expect((await new BasicNutritionCatalog().search('йогурт клубничный', 1)).foods).toEqual([])
+    expect((await new BasicNutritionCatalog().search('йогурт 2%', 1)).foods).toEqual([])
+    expect((await new BasicNutritionCatalog().search('йо', 1)).foods.map(food => food.sourceId)).toEqual([171284])
+  })
   it.each(['яичница', 'глазунья', 'жареное яйцо'])('finds the canonical fried-egg record for %s', async (query) => {
     await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{
       name: 'Яичница-глазунья', calories: 196, protein: 13.61, fat: 14.84, carbs: 0.83,
@@ -141,6 +204,12 @@ describe('source fallback', () => {
     const fallback = vi.fn<NutritionCatalog['search']>().mockResolvedValue({ foods: [food], hasMore: false })
     const combined = new FallbackNutritionCatalog(catalog(() => Promise.reject(new NutritionCatalogUnavailableError())), catalog(fallback))
     expect(await combined.search('рис', 1)).toEqual({ foods: [food], hasMore: false })
+    expect(fallback).toHaveBeenCalledOnce()
+  })
+  it('tries another source after an empty filtered page and preserves remaining primary pages', async () => {
+    const fallback = vi.fn<NutritionCatalog['search']>().mockResolvedValue({ foods: [food], hasMore: false })
+    const combined = new FallbackNutritionCatalog(catalog(() => Promise.resolve({ foods: [], hasMore: true })), catalog(fallback))
+    expect(await combined.search('рис', 1)).toEqual({ foods: [food], hasMore: true })
     expect(fallback).toHaveBeenCalledOnce()
   })
 })

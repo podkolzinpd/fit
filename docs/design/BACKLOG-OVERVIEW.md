@@ -19,6 +19,10 @@
 
 ## Актуальный порядок
 
+YAFIT-659: исправление поиска еды по нескольким словам и выдачи оливье.
+План: [NUTRITION_SEARCH_20261026.md](./NUTRITION_SEARCH_20261026.md).
+Реализация и локальная приёмка готовы; CI/merge/production read-back — гейты выпуска.
+
 YAFIT-644: надёжность готовых тренировок спортсмена и упрощение Lime.
 Неизменяемый план из9пунктов: [CLIENT_READY_WORKOUTS_RELIABILITY_20261022.md](./CLIENT_READY_WORKOUTS_RELIABILITY_20261022.md).
 Работа поверх main53cc1e22/#1769; лимит — migration155, без удаления snapshots.

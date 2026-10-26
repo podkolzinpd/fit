@@ -14,6 +14,15 @@ const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8'
 const configurations = ['configure-cloudru-ai', 'configure-cloudru-background', 'configure-cloudru-speech', 'configure-cloudru-nutrition']
 
 const historyFixtureIds = [1, 2, 3, 4, 5].map(n => `a0000000-0000-4000-8000-${String(n).padStart(12, '0')}`)
+test('food search probe is manual, bounded and uses the running API without diary or secret export', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const step = workflow.split('- name: Probe public nutrition search in the running API')[1]?.split('- name:')[0]
+  assert.ok(step)
+  assert.match(step, /github.event_name == 'workflow_dispatch' && inputs\.nutrition_search/)
+  assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(step, /timeout 45 podman exec fit-api-stage node dist\/nutrition-search-probe\.js/)
+  assert.doesNotMatch(step, /--env-file|printenv|DATABASE|--format.*Env|configure|\/v1\/nutrition\/entries/)
+})
 test('runtime connection probe only reads settings, rolls back and never calls an application function', async () => {
   const statements = []
   let ended = false
