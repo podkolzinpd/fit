@@ -5,6 +5,33 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// Z-order is density-independent; both themes exercise different halo surfaces.
+for (const theme of ['light', 'dark']) test(`client v79 glow keeps reminder and header above the clock ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, workoutId }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'original')
+    localStorage.setItem(`fit:workout-inactivity:${id}:${workoutId}`, JSON.stringify({ version: 1, userId: id, workoutId, dueAt: Date.now() - 1000 }))
+  }, { id: pilotId, theme, workoutId })
+  const source = coachGestureWorkout(false, 1)
+  source.startedAt = new Date(Date.now() - 60000).toISOString()
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.route('**/v1/push-notifications/status', route => route.fulfill({ json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } } }))
+  await page.goto(`/workouts/${workoutId}/live`)
+  const reminder = page.getByRole('alert', { name: 'Тренировка ещё идёт', exact: true })
+  await expect(reminder).toBeVisible()
+  await page.screenshot({ path: info.outputPath('clock-reminder-layers.png') })
+  const layers = await reminder.evaluate(element => ({
+    reminder: Number(getComputedStyle(element).zIndex),
+    timer: Number(getComputedStyle(document.querySelector('.live-pinned')!).zIndex),
+    header: Number(getComputedStyle(document.querySelector('.live-workout-page > .page-header')!).zIndex),
+  }))
+  expect(layers.reminder).toBeGreaterThan(layers.timer)
+  expect(layers.header).toBeGreaterThan(layers.reminder)
+  await reminder.getByRole('button', { name: 'Продолжить', exact: true }).click()
+  await expect(reminder).toHaveCount(0)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
+})
+
 // Header geometry differs by density; verify actual targets, not scroll offsets.
 for (const density of ['original', 'compact']) test(`client v79 clock handoff keeps compact actions reachable ${density}`, async ({ page }, info) => {
   await page.addInitScript(({ id, density }) => {

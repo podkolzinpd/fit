@@ -363,3 +363,7 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 :is(.coach-v79-timer,.coach-v79-dock)[data-state='rest'] :is(.coach-v79-large-clock,.coach-v79-small-clock) { color: var(--warning-fg); --v79-clock-color: var(--warning-fg); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .coach-v79-elapsed { --v79-clock-color: var(--lime-text-secondary); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .coach-v79-actions[inert] { visibility: hidden; }
+
+/* Keep the new halo below the existing reminder and sticky header actions. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .live-inactivity-reminder { position: relative; z-index: 9; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79:has(.live-inactivity-reminder) > .page-header { z-index: 10; }
