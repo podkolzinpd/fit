@@ -4097,7 +4097,7 @@ export function LiveWorkoutPage() {
       persistLiveDraft(set, draftFrom(event.currentTarget, set), true)
     }}>
       {swipeSet(<WorkoutSetRow state={set.confirmedAt && !isEditing ? 'completed' : (clientLime || coachReference) && !current && !isEditing ? 'planned' : 'current'} className="live-set-grid">
-        <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? '•'}</span>
+        <span className="workout-set-number live-set-number" aria-label={label}>{setNumber ?? (clientReference ? null : '•')}</span>
         <LiveSetLayout client={clientReference}>
         <LiveSetFields inputKind={exercise.inputKind} exerciseRef={exercise.ref} source={exercise.source} set={displayedSet} editing={isEditing} showRpe={showRpe} carriedWeightKey={carriedLiveWeightKey(exercise, set)} reference={visualReference} clientLayout={clientReference} directInput={directLiveInput} quietUnits={densityEnabled || clientReference} workTimer={personWorkTimer} />
         <div className="live-set-confirm">
@@ -4579,7 +4579,7 @@ export function LiveWorkoutPage() {
                 </> : undefined} />
               {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {showNote && liveTrainerNote(exercise)}
-              {renderLiveSet(exercise, set, undefined, roundIndex === current && !set.confirmedAt,
+              {renderLiveSet(exercise, set, undefined, clientReference ? set.id === activeCircuitSetId : roundIndex === current && !set.confirmedAt,
                 liveSwipeEnabled && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
                   ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
                   : undefined)}
