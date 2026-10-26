@@ -1757,8 +1757,8 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     expect(Math.abs(a.width - b.width)).toBeLessThanOrEqual(1)
     expect(b.x - (a.x + a.width)).toBe(2)
     expect(a.y).toBe(b.y)
-    await expect(pause).toHaveCSS('border-radius', '20px')
-    await expect(rest).toHaveCSS('border-radius', '20px')
+    await expect(pause).toHaveCSS('border-radius', density === 'compact' ? '16px' : '20px')
+    await expect(rest).toHaveCSS('border-radius', density === 'compact' ? '16px' : '20px')
     await page.screenshot({ path: info.outputPath(`header-${width}.png`) })
   }
   await page.locator('form[data-live-set-id]').first().getByRole('button', { name: 'Готово, отдых', exact: true }).click()
@@ -1985,8 +1985,9 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await row.getByLabel('Фактический вес', { exact: true }).fill('27.5')
   await confirm.click()
   await expect(row.locator('.save-status-error')).toContainText('Не удалось подтвердить')
-  const a = (await row.locator('.save-status-error').boundingBox())!, b = (await row.locator('.live-set-grid').boundingBox())!
-  expect(a.y).toBeGreaterThanOrEqual(b.y + b.height)
+  // One layout sample: source timer entry may move the whole card between frames.
+  const boxes = await row.evaluate(element => ({ errorTop: element.querySelector('.save-status-error')!.getBoundingClientRect().top, controlsBottom: element.querySelector('.live-set-grid')!.getBoundingClientRect().bottom }))
+  expect(boxes.errorTop).toBeGreaterThanOrEqual(boxes.controlsBottom)
   const sync = page.locator('.live-sync-state.error')
   await expect(sync).toHaveCSS('border-radius', '20px')
   await expect(sync.locator('strong')).toHaveCSS('font-weight', '500')
@@ -2025,6 +2026,11 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await notice.getByRole('button', { name: 'Исправить', exact: true }).click()
   await expect(notice).toHaveCount(0)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmed)
+  // Correction deliberately scrolls to its input. Return to the large action;
+  // the compact copy's hit/focus path is covered by the handoff test.
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  await page.locator('.content').evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')) })
+  await expect(page.locator('.coach-v79-actions')).toBeVisible()
   await page.locator('.live-rest-trigger').and(page.getByRole('button')).click()
   await expect(notice).toContainText('Отдых остановлен')
   await notice.getByRole('button', { name: 'Вернуть', exact: true }).click()
@@ -2487,7 +2493,7 @@ for (const theme of ['light','dark']) for (const failure of ['lost','retry','cha
   }else{
     if(failure==='retry'){
       await expect(retry).toBeEnabled();await retry.click()
-      expect(commands).toHaveLength(2);expect(commands[1]!.operationId).toBe(commands[0]!.operationId)
+      await expect.poll(() => commands.length).toBe(2);expect(commands[1]!.operationId).toBe(commands[0]!.operationId)
       expect(commands[1]!.expectedSetVersion).toBe(commands[0]!.expectedSetVersion)
     }
     await expect(row).toHaveCount(0);await expect(retry).toHaveCount(0)

@@ -190,7 +190,7 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause > img { background: var(--lime-text-secondary); mask: url('../shared/client-live-pause.svg') center / contain no-repeat; object-position: -9999px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-reference-pause[aria-pressed='true'] { color: var(--warning-fg); }
 /* Compact mode keeps its released48px controls; both actions share that size. */
-.phone-frame.fit-lime-shell.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .client-reference-timer-actions > button { height: 48px; min-height: 48px; }
+.phone-frame.fit-lime-shell.fit-client-lime.client-workout-reference.live-identity .coach-live-density-compact .client-reference-timer-actions > button { height: 48px; min-height: 48px; border-radius: 16px; }
 
 /* Catalog SVG zero-selection state: float Create without reserving a blank
    action row. The selected-state Add/Clear/Create controls retain their paths. */
