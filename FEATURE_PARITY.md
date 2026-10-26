@@ -215,6 +215,8 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
      presentation only, existing any-order and ragged round model retained.
      PR3: shared mounted WorkoutFoldBody and note content state, unchanged
      input/gesture handlers, left media and client/trainer note ownership.
+     PR4: client reuses CoachLiveV79Timer presentation, retains pause and
+     existing LiveRestTimer values/deadlines; visible dock actions and layers.
      Acceptance: docs/design/CLIENT_LIVE_V79_REUSE_20261026.md. -->
 
 <!-- YAFIT-656: client reference presentation only; Live/coordinator/timers,

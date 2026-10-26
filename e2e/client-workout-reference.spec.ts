@@ -5,6 +5,69 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// Z-order is density-independent; both themes exercise different halo surfaces.
+for (const theme of ['light', 'dark']) test(`client v79 glow keeps reminder and header above the clock ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, workoutId }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme)
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, 'original')
+    localStorage.setItem(`fit:workout-inactivity:${id}:${workoutId}`, JSON.stringify({ version: 1, userId: id, workoutId, dueAt: Date.now() - 1000 }))
+  }, { id: pilotId, theme, workoutId })
+  const source = coachGestureWorkout(false, 1)
+  source.startedAt = new Date(Date.now() - 60000).toISOString()
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.route('**/v1/push-notifications/status', route => route.fulfill({ json: { status: { subscribed: false, preferences: { workout_reminder: true, workout_scheduled: true, chat_message: true } } } }))
+  await page.goto(`/workouts/${workoutId}/live`)
+  const reminder = page.getByRole('alert', { name: 'Тренировка ещё идёт', exact: true })
+  await expect(reminder).toBeVisible()
+  await page.screenshot({ path: info.outputPath('clock-reminder-layers.png') })
+  const layers = await reminder.evaluate(element => ({
+    reminder: Number(getComputedStyle(element).zIndex),
+    timer: Number(getComputedStyle(document.querySelector('.live-pinned')!).zIndex),
+    header: Number(getComputedStyle(document.querySelector('.live-workout-page > .page-header')!).zIndex),
+  }))
+  expect(layers.reminder).toBeGreaterThan(layers.timer)
+  expect(layers.header).toBeGreaterThan(layers.reminder)
+  await reminder.getByRole('button', { name: 'Продолжить', exact: true }).click()
+  await expect(reminder).toHaveCount(0)
+  await expect(page).toHaveURL(new RegExp(`/workouts/${workoutId}/live$`))
+})
+
+// Header geometry differs by density; verify actual targets, not scroll offsets.
+for (const density of ['original', 'compact']) test(`client v79 clock handoff keeps compact actions reachable ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.clientLime.theme.${id}`, 'light')
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10', 'client-live-card-drag-2026-10']))
+  }, { id: pilotId, density })
+  const source = coachGestureWorkout(false, 6)
+  source.startedAt = new Date(Date.now() - 60000).toISOString()
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const large = page.locator('.client-live-v79 .coach-v79-large-clock')
+  await expect(large).toBeVisible()
+  const colors = await large.evaluate(element => ({ color: getComputedStyle(element).color, background: getComputedStyle(document.querySelector('.phone-frame')!).backgroundColor }))
+  expect(liveContrast(colors.color, colors.background)).toBeGreaterThanOrEqual(4.5)
+  await page.locator('.content').evaluate(element => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event('scroll')) })
+  const actions = page.locator('.client-live-v79 .coach-v79-small-action')
+  await expect(actions).not.toHaveAttribute('inert')
+  await expect(page.locator('.coach-v79-actions')).toBeHidden()
+  const targets = actions.locator('button')
+  await expect(targets).toHaveCount(2)
+  for (const target of await targets.all()) {
+    const hit = await target.evaluate(element => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height, reachable: element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)) }
+    })
+    expect(hit.width).toBeGreaterThanOrEqual(44); expect(hit.height).toBeGreaterThanOrEqual(44); expect(hit.reachable).toBe(true)
+  }
+  const rest = actions.locator('.live-rest-trigger')
+  await rest.click()
+  await expect(page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
+  await expect(rest).toBeFocused()
+  await page.screenshot({ path: info.outputPath('client-v79-header-actions.png') })
+})
+
 // Density/viewport affect actual field geometry, not confirmation semantics.
 for (const density of ['original', 'compact']) test(`client Live strength rows keep dense labelled inputs ${density}`, async ({ page }, info) => {
   await page.addInitScript(({ id, density }) => {
@@ -402,14 +465,14 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(compact).toBeVisible()
   await page.clock.fastForward(4000)
   await expect(compact).toBeVisible()
-  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /Отдых превышен/)
   await compact.click()
   const row = page.locator(`form[data-live-set-id="${exercise.sets[0]!.id}"]`)
   await row.getByLabel('Фактический вес', { exact: true }).fill('35')
   await row.getByLabel('Фактический вес', { exact: true }).blur()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
   await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
-  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /Отдых превышен/)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
@@ -418,7 +481,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
     await expect(row).toHaveCount(0)
     await expect(compact).toBeVisible()
-    await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Отдых превышен/)
+    await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /Отдых превышен/)
     await page.screenshot({ path: info.outputPath(`folded-again-${width}.png`) })
     await compact.click()
     await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('35')
@@ -701,10 +764,10 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) for (cons
     await expect(page.locator('.live-set-input').first()).toHaveCSS('min-height', density === 'original' ? '54px' : '48px')
     await expect(page.locator('.phone-frame')).toHaveCSS('background-color', theme === 'light' ? 'rgb(246, 247, 242)' : 'rgb(0, 0, 0)')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    await expect(page.locator('.coach-live-clock')).toBeVisible()
+    await expect(page.locator('.coach-v79-large-clock')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Завершить тренировку', exact: true })).toHaveCount(1)
     await expect(page.locator('.coach-live-metric').first()).toBeVisible()
-    await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /Doto/)
+    await expect(page.locator('.coach-v79-large-clock > .coach-live-digits')).toHaveCSS('font-family', /Doto/)
     await expect(page.locator('.live-exercise-head .exercise-thumbnail')).toHaveCount(animation ? source.exercises.length : 0)
     await expect(page.locator('.live-header-animation')).toHaveCount(animation ? 1 : 0)
     const title = page.locator('.live-exercise-head h2').first()
@@ -843,12 +906,12 @@ function timedRepsWorkout() {
 }
 
 async function runTwoTimedSets(page: Page, waitForServer: boolean) {
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход 0:03')
   await page.clock.fastForward(3_000)
   if (waitForServer) await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
-  await expect(page.locator('.live-rest-trigger')).toContainText('Отдых 0:02')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Отдых 0:02')
   await page.clock.fastForward(2_000)
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход 0:03')
   await page.clock.fastForward(3_000)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 2 из 2')
 }
@@ -866,13 +929,13 @@ test('client reference Live manual mode keeps timed sets manual', async ({ page 
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(0, true)] })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-rest-trigger')).toHaveText('Отдых')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveText('Отдых')
   await page.clock.fastForward(10_000)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
   await page.getByRole('button', { name: 'Готово, отдых', exact: true }).first().click()
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
   await page.clock.fastForward(4_000)
-  await expect(page.locator('.live-rest-trigger')).toContainText('−0:02')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('−0:02')
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 1 из 2')
 })
 
@@ -896,13 +959,13 @@ test('client reference Live mode switch in the timer settings stops the timer fl
   await page.clock.install({ time: new Date('2026-10-08T09:00:00Z') })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(0, true, 'timer')] })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
-  await page.locator('.live-rest-trigger').click({ button: 'right' })
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход 0:03')
+  await page.locator('.live-rest-trigger').and(page.getByRole('button')).click({ button: 'right' })
   const mode = page.getByRole('dialog').getByRole('group', { name: 'Кто ведёт тренировку' })
   await expect(mode.getByRole('button', { name: 'Ведёт таймер' })).toHaveAttribute('aria-pressed', 'true')
   await mode.getByRole('button', { name: 'Веду сам', exact: true }).click()
   await page.getByRole('button', { name: 'Закрыть таймер' }).click()
-  await expect(page.locator('.live-rest-trigger')).toHaveText('Отдых')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveText('Отдых')
   await page.clock.fastForward(5_000)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
 })
@@ -919,8 +982,8 @@ for (const density of ['original', 'compact']) test(`client reference pause cloc
   const pauses: boolean[] = []
   page.on('request', request => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
-  const clock = page.locator('.client-reference-pause')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход 0:03')
+  const clock = page.locator('.client-reference-pause').and(page.getByRole('button'))
   await expect(clock).toHaveCount(1)
   await expect(clock).toHaveAttribute('aria-pressed', 'false')
   await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 500)
@@ -931,11 +994,11 @@ for (const density of ['original', 'compact']) test(`client reference pause cloc
   await expect(clock).toHaveAttribute('aria-pressed', 'true')
   await expect(clock).toHaveText('Продолжить')
   const elapsed = (await clock.getAttribute('aria-label'))!.split(', прошло ')[1]!
-  const frozen = await page.locator('.live-rest-trigger').innerText()
+  const frozen = await page.locator('.live-rest-trigger').and(page.getByRole('button')).innerText()
   await page.screenshot({ path: info.outputPath('paused-clock.png'), animations: 'disabled' })
   expect(await page.locator('.live-exercise').first().locator('.live-set-check,.live-add-set,.live-exercise-note summary').evaluateAll(nodes => nodes.every(node => { const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth }))).toBe(true)
   await page.clock.fastForward(10_000)
-  await expect(page.locator('.live-rest-trigger')).toHaveText(frozen)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveText(frozen)
   await expect(clock).toHaveAttribute('aria-label', `Продолжить тренировку, прошло ${elapsed}`)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
   expect(Math.abs((await page.locator('.live-exercise').first().evaluate(el => el.getBoundingClientRect().top)) - cardTop)).toBeLessThanOrEqual(1)
@@ -955,7 +1018,7 @@ for (const density of ['original', 'compact']) test(`client reference pause rest
   const pauses: boolean[] = []
   page.on('request', request => { if (new URL(request.url()).pathname.endsWith('/pause')) pauses.push((request.postDataJSON() as { paused: boolean }).paused) })
   await page.goto(`/workouts/${workoutId}/live`)
-  const clock = page.locator('.client-reference-pause')
+  const clock = page.locator('.client-reference-pause').and(page.getByRole('button'))
   await expect(clock).toHaveAttribute('aria-label', 'Продолжить тренировку, прошло 00:40')
   await expect(clock).toHaveText('Продолжить')
   await page.clock.fastForward(10_000)
@@ -965,7 +1028,7 @@ for (const density of ['original', 'compact']) test(`client reference pause rest
   await page.getByRole('button', { name: 'Старт подхода' }).first().click()
   await expect(clock).toHaveAttribute('aria-pressed', 'false')
   await expect(clock).toHaveText('Пауза')
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход 0:03')
   await expect.poll(() => pauses).toEqual([false])
 })
 
@@ -978,13 +1041,13 @@ test('client reference Live manual mode times a set from Start and records the t
     if (/\/v1\/workout-sets\/[^/]+\/draft$/.test(new URL(request.url()).pathname)) drafts.push((request.postDataJSON() as { draft: { durationSec?: number; timerConfirmed?: true } }).draft)
   })
   await page.goto(`/workouts/${workoutId}/live`)
-  await expect(page.locator('.live-rest-trigger')).toHaveText('Отдых')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveText('Отдых')
   await page.clock.pauseAt(new Date('2026-10-08T09:01:00Z'))
   await page.getByRole('button', { name: 'Старт подхода' }).first().click()
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход 0:03')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход 0:03')
   await page.clock.fastForward(5_000)
-  await expect(page.locator('.live-rest-trigger')).toContainText('Подход +0:02')
-  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', 'Подход: +00:02')
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toContainText('Подход +0:02')
+  await expect(page.locator('.coach-v79-large-clock')).toHaveAttribute('aria-label', 'Подход: +00:02')
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 2')
   await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toHaveCSS('border-radius', '16px')
   await expect(page.getByRole('button', { name: /^Засчитать подход:/ })).toHaveCSS('min-height', '54px')
@@ -1568,19 +1631,29 @@ for (const withTrainer of [true, false]) for (const animation of [true, false]) 
   await first.getByLabel('Фактический вес', { exact: true }).fill('27.5')
   await first.getByRole('button', { name: 'Готово, отдых', exact: true }).click()
   await expect(first).toHaveClass(/confirmed/)
-  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /отдыха/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /отдыха/)
   // An unsaved field must not blur-disable the already enabled rail between
   // pointerdown and click. Opening confirmation may blur; deleting waits for it.
-  await page.locator(`form[data-live-set-id="${exercise.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true }).fill('32')
+  const editedWeight = page.locator(`form[data-live-set-id="${exercise.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true })
+  await editedWeight.fill('31')
   const card = page.locator(`[data-workout-block="${target.blockId}"]`)
   const title = page.getByRole('heading', { name: target.name, exact: true })
   // The heading is a button in the client composition; short taps and full-card
   // holds remain available while a horizontal gesture can reveal deletion.
   const surface = page.locator('[data-workout-swipe]').filter({ has: title }).first()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact.weightKg).toBe(31)
+  await expect(card).toHaveAttribute('data-card-drag', 'true')
   const gesture = await beginClientGesture(page, surface, browserName, title)
-  await gesture.move(100); await gesture.end()
+  await gesture.move(100)
+  // Start with the save guard idle. Finish typing while the rail is being
+  // revealed: the 650ms autosave must not race the gesture setup itself.
+  await expect(editedWeight).toBeFocused()
+  await page.keyboard.press('ControlOrMeta+A')
+  await page.keyboard.insertText('32')
+  await gesture.end()
   const remove = surface.getByRole('button', { name: 'Удалить', exact: true })
   await expect(remove).toBeVisible()
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact.weightKg).toBe(31)
   await remove.click()
   await expect(page.getByRole('alertdialog')).toContainText('включая выполненные')
   await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
@@ -1595,7 +1668,7 @@ for (const withTrainer of [true, false]) for (const animation of [true, false]) 
   expect(backend.getWorkouts()[0]!.exercises.map(item => item.name)).toEqual([source.exercises[0]!.name, source.exercises[2]!.name])
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.fact.weightKg).toBe(32)
-  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /отдыха/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /отдыха/)
   await expect(first).toHaveClass(/confirmed/)
   await expect(card).toHaveCount(0)
   await page.screenshot({ path: info.outputPath('client-exercise-swipe.png') })
@@ -1713,7 +1786,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   await expect(page.locator('button.coach-live-clock')).toHaveCount(0)
-  const actions = page.locator('.client-reference-timer-actions'), pause = actions.locator('.client-reference-pause'), rest = actions.locator('.live-rest-trigger')
+  const actions = page.locator('.client-reference-timer-actions'), pause = actions.locator('.client-reference-pause:not([data-compact])'), rest = actions.locator('.live-rest-trigger:not([data-compact])')
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const a = (await pause.boundingBox())!, b = (await rest.boundingBox())!
@@ -1721,17 +1794,17 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
     expect(Math.abs(a.width - b.width)).toBeLessThanOrEqual(1)
     expect(b.x - (a.x + a.width)).toBe(2)
     expect(a.y).toBe(b.y)
-    await expect(pause).toHaveCSS('border-radius', '20px')
-    await expect(rest).toHaveCSS('border-radius', '20px')
+    await expect(pause).toHaveCSS('border-radius', density === 'compact' ? '16px' : '20px')
+    await expect(rest).toHaveCSS('border-radius', density === 'compact' ? '16px' : '20px')
     await page.screenshot({ path: info.outputPath(`header-${width}.png`) })
   }
   await page.locator('form[data-live-set-id]').first().getByRole('button', { name: 'Готово, отдых', exact: true }).click()
-  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', /Отдых:/)
+  await expect(page.locator('.coach-v79-large-clock')).toHaveAttribute('aria-label', /Отдых:/)
   await page.clock.fastForward(4000)
   await expect(rest).toHaveAttribute('aria-label', /Отдых превышен/)
-  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label', /Тренировка:/)
+  await expect(page.locator('.coach-v79-large-clock')).toHaveAttribute('aria-label', /Тренировка:/)
   await expect(page.locator('.coach-live-status')).toContainText('Live')
-  await expect(page.locator('.coach-live-digits')).toHaveCSS('font-family', /Doto/)
+  await expect(page.locator('.coach-v79-large-clock > .coach-live-digits')).toHaveCSS('font-family', /Doto/)
 })
 
 for (const entry of ['live', 'new', 'today']) for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`client catalog actions SVG state and header ${entry} ${theme} ${width}`, async ({ page }, info) => {
@@ -1799,7 +1872,7 @@ for (const theme of ['light', 'dark']) for (const width of [390, 430]) test(`cli
   await trigger.click()
   await duration.getByRole('button', { name: 'Убрать время', exact: true }).click()
   await expect(duration).toHaveCount(0)
-  const restTrigger = page.locator('.live-rest-trigger')
+  const restTrigger = page.locator('.live-rest-trigger').and(page.getByRole('button'))
   await restTrigger.click()
   const rest = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })
   await expect(rest).toHaveClass(/client-reference-time-sheet/)
@@ -1839,7 +1912,7 @@ test('client rest mode selection survives close and reload without recording str
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   const initial = JSON.stringify(backend.getWorkouts()[0]!.exercises)
   await page.goto(`/workouts/${workoutId}/live`)
-  await page.locator('.live-rest-trigger').click()
+  await page.locator('.live-rest-trigger').and(page.getByRole('button')).click()
   const mode = page.getByRole('group', { name: 'Кто ведёт тренировку', exact: true })
   await mode.getByRole('button', { name: 'Ведёт таймер', exact: true }).click()
   await expect(mode.getByRole('button', { name: 'Ведёт таймер', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -1847,7 +1920,7 @@ test('client rest mode selection survives close and reload without recording str
   await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Закрыть таймер', exact: true }).click()
   await page.reload()
-  await page.locator('.live-rest-trigger').click()
+  await page.locator('.live-rest-trigger').and(page.getByRole('button')).click()
   await expect(mode.getByRole('button', { name: 'Веду сам', exact: true })).toHaveAttribute('aria-pressed', 'true')
   expect(JSON.stringify(backend.getWorkouts()[0]!.exercises)).toBe(initial)
 })
@@ -1949,8 +2022,9 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await row.getByLabel('Фактический вес', { exact: true }).fill('27.5')
   await confirm.click()
   await expect(row.locator('.save-status-error')).toContainText('Не удалось подтвердить')
-  const a = (await row.locator('.save-status-error').boundingBox())!, b = (await row.locator('.live-set-grid').boundingBox())!
-  expect(a.y).toBeGreaterThanOrEqual(b.y + b.height)
+  // One layout sample: source timer entry may move the whole card between frames.
+  const boxes = await row.evaluate(element => ({ errorTop: element.querySelector('.save-status-error')!.getBoundingClientRect().top, controlsBottom: element.querySelector('.live-set-grid')!.getBoundingClientRect().bottom }))
+  expect(boxes.errorTop).toBeGreaterThanOrEqual(boxes.controlsBottom)
   const sync = page.locator('.live-sync-state.error')
   await expect(sync).toHaveCSS('border-radius', '20px')
   await expect(sync.locator('strong')).toHaveCSS('font-weight', '500')
@@ -1989,11 +2063,16 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await notice.getByRole('button', { name: 'Исправить', exact: true }).click()
   await expect(notice).toHaveCount(0)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmed)
-  await page.locator('.live-rest-trigger').click()
+  // Correction deliberately scrolls to its input. Return to the large action;
+  // the compact copy's hit/focus path is covered by the handoff test.
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+  await page.locator('.content').evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event('scroll')) })
+  await expect(page.locator('.coach-v79-actions')).toBeVisible()
+  await page.locator('.live-rest-trigger').and(page.getByRole('button')).click()
   await expect(notice).toContainText('Отдых остановлен')
   await notice.getByRole('button', { name: 'Вернуть', exact: true }).click()
   await expect(notice).toHaveCount(0)
-  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label', /Таймер отдыха:/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /Таймер отдыха:/)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[1]!.confirmedAt).toBeNull()
 })
 
@@ -2052,7 +2131,7 @@ for (const theme of ['light', 'dark']) test(`client Live phase text contrast ${t
   await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [restTimerWorkout(5, true, 'timer')] })
   await page.goto(`/workouts/${workoutId}/live`)
-  const phase = page.locator('.live-rest-trigger')
+  const phase = page.locator('.live-rest-trigger').and(page.getByRole('button'))
   for (const label of ['Подготовка', 'Подход']) {
     await expect(phase).toContainText(label)
     const colors = await phase.evaluate(element => ({ color: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor }))
@@ -2098,7 +2177,7 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe(confirmedAt)
   await expect(rows.first().getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
-  await expect(page.locator('.live-rest-trigger')).not.toHaveAttribute('aria-label', /Отдых идёт/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).not.toHaveAttribute('aria-label', /Отдых идёт/)
 })
 
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client Live media-off header and group menu ${theme} ${density}`, async ({ page }, info) => {
@@ -2251,53 +2330,65 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   }
 })
 
-for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client matrix clock and rest sheet flow ${theme} ${density}`, async ({ page }, info) => {
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const height of [844, 568]) for (const width of [390, 430]) test(`client matrix clock and rest sheet flow ${theme} ${density} ${width}x${height}`, async ({ page }, info) => {
+  // Separate phone layouts need separate browser contexts, not navigation
+  // history/scroll restoration from another viewport in the same page.
+  await page.setViewportSize({ width, height })
   await page.clock.install({ time: new Date('2026-10-21T09:00:00Z') })
+  // Screenshots must not spend a real second of the tested 60s deadline.
+  await page.clock.setFixedTime(new Date('2026-10-21T09:00:00Z'))
   await page.addInitScript(({ id, theme, density }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density) }, { id: pilotId, theme, density })
   const source = restTimerWorkout(); source.startedAt = '2026-10-19T09:00:00Z'
   await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
-  const digits = page.locator('.coach-live-digits')
-  await expect(digits).toHaveClass(/coach-live-digits-long/)
+  const digits = page.locator('.coach-v79-large-clock > .coach-live-digits')
+  await expect(page.locator('.coach-v79-large-clock')).toHaveClass(/long-clock/)
   await expect(digits).toHaveCSS('font-family', /Doto/)
   expect(await page.evaluate(async () => {
     const loaded = await document.fonts.load('700 64px Doto', '0123456789−+:')
     return loaded.some(font => font.family.replace(/['"]/g, '') === 'Doto' && font.status === 'loaded')
   })).toBe(true)
-  const restTrigger = page.locator('.live-rest-trigger')
-  for (const height of [844, 568]) for (const width of [390, 430]) {
-    await page.setViewportSize({ width, height })
-    expect(await digits.evaluate(node => node.getBoundingClientRect().width <= innerWidth)).toBe(true)
-    await page.screenshot({ path: info.outputPath(`matrix-clock-${width}-${height}.png`) })
-    await restTrigger.click()
-    const sheet = page.locator('.live-rest-sheet'), apply = sheet.locator('.live-rest-apply')
-    await expect(apply).toHaveCSS('position', 'static')
-    await expect(apply).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-    await expect(apply).toHaveCSS('padding-top', '0px')
-    const boxes = await sheet.evaluate(node => {
-      const wheels=node.querySelector('.rest-time-picker')!.getBoundingClientRect(), presets=node.querySelector('.rest-presets')!.getBoundingClientRect(), apply=node.querySelector('.live-rest-apply')!.getBoundingClientRect()
-      return { wheelBottom:wheels.bottom, presetTop:presets.top, presetBottom:presets.bottom, applyTop:apply.top }
-    })
-    expect(boxes.presetTop).toBeGreaterThanOrEqual(boxes.wheelBottom)
-    expect(boxes.applyTop).toBeGreaterThanOrEqual(boxes.presetBottom)
-    await sheet.getByRole('button', { name: '1:00', exact: true }).click()
-    await apply.getByRole('button').scrollIntoViewIfNeeded()
-    await page.screenshot({ path: info.outputPath(`rest-flow-${width}-${height}.png`) })
-    await apply.getByRole('button').click()
-    await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
-    await restTrigger.click()
-    const activeFlow = await sheet.evaluate(node => {
-      const wheels = node.querySelector('.rest-time-picker')!.getBoundingClientRect(), apply = node.querySelector('.live-rest-apply')!.getBoundingClientRect()
-      return { wheelBottom: wheels.bottom, applyTop: apply.top }
-    })
-    expect(activeFlow.applyTop).toBeGreaterThanOrEqual(activeFlow.wheelBottom)
-    await sheet.getByRole('button', { name: '3:00', exact: true }).scrollIntoViewIfNeeded()
-    await expect(sheet.getByRole('button', { name: '3:00', exact: true })).toBeVisible()
-    await page.screenshot({ path: info.outputPath(`rest-active-flow-${width}-${height}.png`) })
-    await sheet.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
-    await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:15')
-    await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
-  }
+  const restTrigger = page.locator('.live-rest-trigger').and(page.getByRole('button'))
+  await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
+  await expect(page.locator('html')).toHaveCSS('--app-visible-height', `${height}px`)
+  expect(await digits.evaluate(node => node.getBoundingClientRect().width <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath(`matrix-clock-${width}-${height}.png`) })
+  await restTrigger.click()
+  const sheet = page.locator('.live-rest-sheet'), apply = sheet.locator('.live-rest-apply')
+  await expect(apply).toHaveCSS('position', 'static')
+  await expect(apply).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(apply).toHaveCSS('padding-top', '0px')
+  const boxes = await sheet.evaluate(node => {
+    const wheels=node.querySelector('.rest-time-picker')!.getBoundingClientRect(), presets=node.querySelector('.rest-presets')!.getBoundingClientRect(), apply=node.querySelector('.live-rest-apply')!.getBoundingClientRect()
+    return { wheelBottom:wheels.bottom, presetTop:presets.top, presetBottom:presets.bottom, applyTop:apply.top }
+  })
+  expect(boxes.presetTop).toBeGreaterThanOrEqual(boxes.wheelBottom)
+  expect(boxes.applyTop).toBeGreaterThanOrEqual(boxes.presetBottom)
+  await sheet.getByRole('button', { name: '1:00', exact: true }).click()
+  await apply.getByRole('button').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath(`rest-flow-${width}-${height}.png`) })
+  await apply.getByRole('button').click()
+  // The source clock expands during rest. Check its final layout and the
+  // actual user hit target before opening the settings again.
+  await expect(page.locator('.coach-v79-large-clock')).toHaveCSS('height', density === 'original' ? '248px' : '132px')
+  await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:00')
+  await expect.poll(() => restTrigger.evaluate(element => {
+    const box = element.getBoundingClientRect()
+    return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+  })).toBe(true)
+  await restTrigger.click()
+  const activeFlow = await sheet.evaluate(node => {
+    const wheels = node.querySelector('.rest-time-picker')!.getBoundingClientRect(), apply = node.querySelector('.live-rest-apply')!.getBoundingClientRect()
+    return { wheelBottom: wheels.bottom, applyTop: apply.top }
+  })
+  expect(activeFlow.applyTop).toBeGreaterThanOrEqual(activeFlow.wheelBottom)
+  await sheet.getByRole('button', { name: '3:00', exact: true }).scrollIntoViewIfNeeded()
+  await expect(sheet.getByRole('button', { name: '3:00', exact: true })).toBeVisible()
+  await page.screenshot({ path: info.outputPath(`rest-active-flow-${width}-${height}.png`) })
+  await sheet.getByRole('button', { name: 'Плюс 15 секунд', exact: true }).click()
+  await expect(restTrigger).toHaveAttribute('aria-label', 'Таймер отдыха: 1:15')
+  await sheet.getByRole('button', { name: 'Остановить отдых', exact: true }).click()
+  await expect(sheet).toBeHidden()
 })
 
 for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) for (const length of ['empty', 'short', 'long']) test(`client workout note disclosure ${theme} ${density} ${length}`, async ({ page }, info) => {
@@ -2393,8 +2484,8 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   await expect(second.getByLabel('Фактический вес',{exact:true})).toHaveValue('40')
   expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
   await page.clock.fastForward(3000)
-  await expect(page.locator('.live-rest-trigger')).toHaveAttribute('aria-label',/Отдых превышен/)
-  await expect(page.locator('.coach-live-digits')).toHaveAttribute('aria-label',/Тренировка:/)
+  await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label',/Отдых превышен/)
+  await expect(page.locator('.coach-v79-large-clock')).toHaveAttribute('aria-label',/Тренировка:/)
   await expect(page.locator('.live-session-progress-copy')).toContainText('Готово 0 из 1')
   await expect(second.locator('.workout-swipe-action')).toHaveCount(0)
   await page.reload()
@@ -2449,7 +2540,7 @@ for (const theme of ['light','dark']) for (const failure of ['lost','retry','cha
   }else{
     if(failure==='retry'){
       await expect(retry).toBeEnabled();await retry.click()
-      expect(commands).toHaveLength(2);expect(commands[1]!.operationId).toBe(commands[0]!.operationId)
+      await expect.poll(() => commands.length).toBe(2);expect(commands[1]!.operationId).toBe(commands[0]!.operationId)
       expect(commands[1]!.expectedSetVersion).toBe(commands[0]!.expectedSetVersion)
     }
     await expect(row).toHaveCount(0);await expect(retry).toHaveCount(0)

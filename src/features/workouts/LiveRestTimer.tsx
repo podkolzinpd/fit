@@ -299,23 +299,24 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
   const compactClock = phaseRemaining !== null ? phaseClock : signedRemaining !== null ? formatRest(signedRemaining) : null
-  const compactRestTrigger = coachV79 && <button type="button" className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel}
+  const compactRestTrigger = coachV79 && <button type="button" data-compact={referenceActions || undefined} className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel}
     aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
     onPointerDown={event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
     onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }} onClick={onPrimary ? tap : openPicker}>
     <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" />{compactClock !== null && <span>{compactClock}</span>}
   </button>
+  const pauseAction = (compact = false) => <button type="button" className="secondary client-reference-pause" data-compact={compact || undefined} disabled={!onReferencePauseToggle}
+    aria-pressed={referencePaused} aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
+    onClick={onReferencePauseToggle}>
+    {referencePaused ? <PlayIcon /> : <img src={clientPauseIcon} width="16" height="16" alt="" aria-hidden="true" />}
+    <span>{referencePaused ? 'Продолжить' : 'Пауза'}</span>
+  </button>
+  const clientActions = <div className="client-reference-timer-actions">{pauseAction()}{restTrigger}</div>
   return <>
     {coachV79 ? <CoachLiveV79Timer time={bigTime} elapsed={formatReferenceClock(elapsed)} resting={active && !phase} paused={pausedAt !== null} phaseLabel={copy?.label}
-      density={coachV79.density} headerSlot={coachV79.headerSlot} restAction={restTrigger} compactAction={compactRestTrigger} /> : referenceClock}
-    {!coachV79 && (referenceActions ? <div className="client-reference-timer-actions">
-      <button type="button" className="secondary client-reference-pause" disabled={!onReferencePauseToggle}
-        aria-pressed={referencePaused} aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
-        onClick={onReferencePauseToggle}>
-        {referencePaused ? <PlayIcon /> : <img src={clientPauseIcon} width="16" height="16" alt="" aria-hidden="true" />}
-        <span>{referencePaused ? 'Продолжить' : 'Пауза'}</span>
-      </button>{restTrigger}
-    </div> : restTrigger)}
+      density={coachV79.density} headerSlot={coachV79.headerSlot} restAction={referenceActions ? clientActions : restTrigger}
+      compactAction={referenceActions ? <div className="client-v79-compact-actions">{pauseAction(true)}{compactRestTrigger}</div> : compactRestTrigger} /> : referenceClock}
+    {!coachV79 && (referenceActions ? clientActions : restTrigger)}
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className={`workout-decision-sheet live-rest-sheet${referenceActions ? ' client-reference-time-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
         {referenceActions || coachV79 ? <FitLimeSheetHeader title={sheetTitle} backLabel="Закрыть таймер" onBack={() => setOpen(false)} /> : <header className="picker-header"><h2>{sheetTitle}</h2><button type="button" className="picker-close" aria-label="Закрыть таймер" onClick={() => setOpen(false)}><CloseIcon /></button></header>}

@@ -63,7 +63,7 @@ export function CoachLiveV79Timer({ time, elapsed, resting, paused, phaseLabel, 
     window.addEventListener('resize', paint)
     // The header keeps changing height after a density/keyboard resize event.
     // Follow measured layout (not every scroll) and move only a clipped field.
-    // This renderer is fixed2-only; client visibility rules stay untouched.
+    // Both roles reuse the same clipping-only helper as their input listener.
     const observer = new ResizeObserver(() => {
       paint()
       const target = document.activeElement

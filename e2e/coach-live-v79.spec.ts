@@ -116,7 +116,7 @@ for (const density of ['original', 'compact']) test(`v79 clock handoff preserves
   const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const root = page.locator('.coach-live-v79')
-  await expect(root).toBeVisible()
+  await expect(root.locator('.coach-v79-large-clock')).toBeVisible()
   await page.clock.pauseAt(new Date('2026-10-25T09:00:00Z'))
   const big = root.locator('.coach-v79-large-clock'), small = root.locator('.coach-v79-small-clock')
   await expect(big).toHaveAttribute('aria-label', 'Тренировка: 01:00')
