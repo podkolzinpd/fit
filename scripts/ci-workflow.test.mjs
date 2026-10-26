@@ -95,7 +95,7 @@ test('requires Fit Lime route checks in both engines without production secrets'
 
 test('Fit Lime archive replacement preserves suites, components and signing trust', () => {
   const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
-  const expression = job.match(/sudo sed -i '([^']+)' \/etc\/apt\/sources\.list\.d\/ubuntu\.sources/)?.[1]
+  const expression = job.match(/sudo sed -i '([^']+)'/)?.[1]
   assert.ok(expression)
   assert.ok(job.indexOf('Use the official Ubuntu archive') < job.indexOf('playwright install --with-deps'))
   for (const uri of ['http://azure.archive.ubuntu.com/ubuntu', 'https://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu', 'http://security.ubuntu.com/ubuntu']) {
@@ -105,6 +105,33 @@ test('Fit Lime archive replacement preserves suites, components and signing trus
     assert.equal(result.status, 0, result.stderr)
     const expectedUri = uri.includes('azure.archive.ubuntu.com') ? 'https://archive.ubuntu.com/ubuntu' : uri
     assert.equal(result.stdout, source.replace(`URIs: ${uri}`, `URIs: ${expectedUri}`))
+  }
+})
+
+test('Fit Lime updates the actual deb822 and mirror-list runner configurations', () => {
+  const job = workflow.slice(workflow.indexOf('  e2e-fit-lime:\n'), workflow.indexOf('  e2e:\n'))
+  const actual = inlineShell(job).find(script => script.includes('azure.archive.ubuntu.com'))
+  assert.ok(actual)
+  // Run the workflow shell against temporary files. The backup suffix makes
+  // sed portable on macOS/Linux; neither sudo nor system apt files are used.
+  const script = actual.replaceAll('/etc/apt/', '"$FIT_APT_TEST_ROOT"/').replace('sudo sed -i ', 'sed -i.bak ')
+  const sources = {
+    'sources.list.d/ubuntu.sources': 'Types: deb\nURIs: http://azure.archive.ubuntu.com/ubuntu\nSuites: noble noble-updates noble-security\nComponents: main universe\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n',
+    'apt-mirrors.txt': 'http://azure.archive.ubuntu.com/ubuntu priority:1\nhttps://azure.archive.ubuntu.com/ubuntu priority:2\nhttps://archive.ubuntu.com/ubuntu\nhttp://security.ubuntu.com/ubuntu\n',
+  }
+  for (const present of [[], ['sources.list.d/ubuntu.sources'], ['apt-mirrors.txt'], Object.keys(sources)]) {
+    const directory = mkdtempSync(join(tmpdir(), 'fit-apt-archive-'))
+    try {
+      mkdirSync(join(directory, 'sources.list.d'))
+      for (const path of present) writeFileSync(join(directory, path), sources[path])
+      const result = spawnSync('bash', ['-eu', '-c', script], {
+        encoding: 'utf8', env: { ...process.env, FIT_APT_TEST_ROOT: directory },
+      })
+      assert.equal(result.status, 0, result.stderr)
+      for (const path of present) {
+        assert.equal(readFileSync(join(directory, path), 'utf8'), sources[path].replaceAll('http://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu').replaceAll('https://azure.archive.ubuntu.com/ubuntu', 'https://archive.ubuntu.com/ubuntu'))
+      }
+    } finally { rmSync(directory, { recursive: true, force: true }) }
   }
 })
 

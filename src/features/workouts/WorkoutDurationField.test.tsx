@@ -14,6 +14,17 @@ function choose(user: ReturnType<typeof userEvent.setup>, column: 'минуты'
 describe('WorkoutDurationField', () => {
   afterEach(() => setWorkoutTimeWheel(false))
 
+  it.each([false, true])('source header is explicit and never changes the seconds or cancel flow %s', async (referenceHeader) => {
+    const user = userEvent.setup(), commit = vi.fn()
+    render(<WorkoutDurationField compact referenceHeader={referenceHeader} label="Время" durationSec={90} onCommit={commit} />)
+    await user.click(screen.getByRole('button', { name: 'Время: 1:30' }))
+    expect(Boolean(screen.getByRole('heading', { name: 'Время' }).closest('.client-lime-sheet-header'))).toBe(referenceHeader)
+    await choose(user, 'секунды', 45)
+    await user.click(screen.getByRole('button', { name: 'Закрыть выбор времени' }))
+    expect(commit).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Время: 1:30' })).toBeInTheDocument()
+  })
+
   it('inherits client sheet presentation through a portal without changing draft or commit', async () => {
     setWorkoutTimeWheel(true)
     const user = userEvent.setup(), commit = vi.fn()
