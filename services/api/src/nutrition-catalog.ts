@@ -396,22 +396,31 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
 }
 
 export class FallbackNutritionCatalog implements NutritionCatalog {
-  constructor(private readonly primary: NutritionCatalog | undefined, private readonly fallback: NutritionCatalog) {}
+  constructor(private readonly primary: NutritionCatalog | undefined, private readonly fallback: NutritionCatalog,
+    private readonly includeFallbackMatches = false) {}
 
   async search(query: string, page: number) {
     let primaryHasMore = false
+    let primaryFoods: CatalogFood[] = []
     if (this.primary !== undefined) {
       try {
         const result = await this.primary.search(query, page)
-        if (result.foods.length > 0) return result
+        if (result.foods.length > 0 && !this.includeFallbackMatches) return result
+        primaryFoods = result.foods
         primaryHasMore = result.hasMore
       } catch {
         // The pilot still has the existing source when perek.us is rate-limited
         // or temporarily unavailable.
       }
     }
-    const result = await this.fallback.search(query, page)
-    return { ...result, hasMore: primaryHasMore || result.hasMore }
+    try {
+      const result = await this.fallback.search(query, page)
+      return { foods: [...new Map([...primaryFoods, ...result.foods].map(food => [food.id, food])).values()],
+        hasMore: primaryHasMore || result.hasMore }
+    } catch (error) {
+      if (primaryFoods.length > 0) return { foods: primaryFoods, hasMore: primaryHasMore }
+      throw error
+    }
   }
 
   details(sourceId: number) { return this.fallback.details(sourceId) }
@@ -427,4 +436,12 @@ export class FallbackNutritionCatalog implements NutritionCatalog {
     }
     return this.fallback.barcode?.(barcode) ?? null
   }
+}
+
+/** Reviewed basics supplement broad searches instead of hiding branded foods.
+ * Runtime and the read-only production probe use the same composition. */
+export function createNutritionCatalog(apiKey?: string, request: typeof fetch = globalThis.fetch): NutritionCatalog {
+  return new FallbackNutritionCatalog(new BasicNutritionCatalog(),
+    new FallbackNutritionCatalog(apiKey ? new PerekNutritionCatalog(apiKey, request) : undefined,
+      new VkusvillNutritionCatalog(request)), true)
 }

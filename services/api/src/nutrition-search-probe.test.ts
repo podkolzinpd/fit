@@ -12,7 +12,7 @@ it('probes only four public searches without actor/database access or credential
   expect(report.ready).toBe(true)
   expect(report.perekConfigured).toBe(false)
   expect(report.cases.map(item => item.query)).toEqual(['йогурт', 'йогурт натуральный', 'оливье', 'салат оливье'])
-  expect(request).toHaveBeenCalledTimes(2)
+  expect(request).toHaveBeenCalledTimes(4)
   expect(request.mock.calls.every(([url]) => url === 'https://mcp.vkusvill.ru/mcp')).toBe(true)
 })
 

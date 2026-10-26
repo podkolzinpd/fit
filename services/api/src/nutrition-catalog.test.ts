@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { BasicNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseCatalogFoods, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
+import { BasicNutritionCatalog, createNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseCatalogFoods, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -146,6 +146,20 @@ describe('Perek API source', () => {
 })
 
 describe('reviewed basic foods', () => {
+  it('supplements a broad yogurt search with the reviewed record without hiding existing varieties', async () => {
+    const call = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify({
+      ok: true, data: { items: [fixture('76 ккал; белки 6 г, жиры 4 г, углеводы 4 г', 'Йогурт греческий 4%')], meta: { has_more: true } },
+    }) }] } }))))
+    const catalog = createNutritionCatalog(undefined, call)
+    const first = await catalog.search('йогурт', 1)
+    expect(first.foods.map(food => food.name)).toEqual(['Йогурт натуральный 3,25%', 'Йогурт греческий 4%'])
+    expect(first.hasMore).toBe(true)
+    const second = await catalog.search('йогурт', 2)
+    expect(second.foods.map(food => food.name)).toEqual(['Йогурт греческий 4%'])
+    call.mockRejectedValue(new NutritionCatalogUnavailableError())
+    expect((await catalog.search('йогурт натуральный', 1)).foods).toHaveLength(1)
+    await expect(catalog.search('оливье', 1)).rejects.toThrow(NutritionCatalogUnavailableError)
+  })
   it.each(['йогурт', 'йогурт натуральный', 'натуральный йогурт'])('finds the same verified whole-milk yogurt for %s', async query => {
     expect(await new BasicNutritionCatalog().search(query, 1)).toMatchObject({ foods: [{
       sourceId: 171284, name: 'Йогурт натуральный 3,25%', calories: 61, protein: 3.47, fat: 3.25, carbs: 4.66,

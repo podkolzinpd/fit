@@ -1,11 +1,9 @@
 import { pathToFileURL } from 'node:url'
-import { BasicNutritionCatalog, FallbackNutritionCatalog, PerekNutritionCatalog, VkusvillNutritionCatalog, publicNutritionFood, isRelevantCatalogSearch } from './nutrition-catalog.js'
+import { createNutritionCatalog, publicNutritionFood, isRelevantCatalogSearch } from './nutrition-catalog.js'
 
 // No actor sessions or database queries: only the public catalog contract.
 export async function probeNutritionSearch(apiKey: string | undefined, request: typeof fetch = globalThis.fetch) {
-  const retailer = new VkusvillNutritionCatalog(request)
-  const catalog = new FallbackNutritionCatalog(new BasicNutritionCatalog(),
-    new FallbackNutritionCatalog(apiKey ? new PerekNutritionCatalog(apiKey, request) : undefined, retailer))
+  const catalog = createNutritionCatalog(apiKey, request)
   const cases = []
   for (const query of ['йогурт', 'йогурт натуральный', 'оливье', 'салат оливье']) {
     try {

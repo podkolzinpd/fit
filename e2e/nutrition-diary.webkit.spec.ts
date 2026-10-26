@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { scaledNutrition, type NutritionDraft, type NutritionEntry, type NutritionValues } from '../src/shared/nutrition'
-import { BasicNutritionCatalog, FallbackNutritionCatalog, VkusvillNutritionCatalog } from '../services/api/src/nutrition-catalog'
+import { createNutritionCatalog } from '../services/api/src/nutrition-catalog'
 
 const actors = Array.from({ length: 5 }, (_, index) => `f00d0000-6010-4000-8000-00000000000${index + 1}`)
 const clientId = 'f00d0000-6010-4000-8000-000000000011'
@@ -100,9 +100,9 @@ test('nutrition search retains multiword dishes, producer recipes and continuati
     name: 'Пищевая и энергетическая ценность в 100 г',
     value: 'ООО "ГЛОБАЛ ФУД": белки 5.9 г, жиры 10.5 г, углеводы 6.1 г; 142.5 ккал<br>ООО "КОРОНА-ФУД": белки 5.9 г, жиры 13.2 г, углеводы 6.4 г; 168 ккал',
   }] }]
-  const catalog = new FallbackNutritionCatalog(new BasicNutritionCatalog(), new VkusvillNutritionCatalog(() => Promise.resolve(new Response(JSON.stringify({
+  const catalog = createNutritionCatalog(undefined, () => Promise.resolve(new Response(JSON.stringify({
     result: { content: [{ type: 'text', text: JSON.stringify({ ok: true, data: { items: sourceItems, meta: { has_more: false } } }) }] },
-  })))))
+  }))))
   await page.route('**/v1/nutrition/foods?**', async route => {
     const url = new URL(route.request().url()), query = url.searchParams.get('q') ?? '', number = Number(url.searchParams.get('page') ?? 1)
     if (query === 'пропуск страницы') return route.fulfill({ json: number === 1 ? { foods: [], hasMore: true } : await catalog.search('оливье', 1) })
