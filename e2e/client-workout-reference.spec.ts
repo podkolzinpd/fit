@@ -5,6 +5,36 @@ test.skip(process.env.FIT_CLIENT_WORKOUT_ACCEPTANCE !== '1', 'Dedicated native c
 
 const pilotId = 'c11e0000-6010-4000-8000-000000000001'
 
+// Density/viewport affect actual field geometry, not confirmation semantics.
+for (const density of ['original', 'compact']) test(`client Live strength rows keep dense labelled inputs ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, density }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.rpeDisplay.${id}`, 'false')
+    localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false')
+  }, { id: pilotId, density })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [coachGestureWorkout(false, 1)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.client-workout-reference')).toBeVisible()
+  const row = page.locator('.live-set.current').first()
+  await expect(row.getByRole('textbox', { name: 'Фактический вес', exact: true })).toBeVisible()
+  await expect(row.getByRole('textbox', { name: 'Фактические повторы', exact: true })).toBeVisible()
+  await expect(row.locator('.live-metric-label').first()).toBeHidden()
+  await expect(row.locator('.live-metric-label').last()).toBeHidden()
+  await expect(row.locator('.coach-live-field-unit')).toHaveText(['кг', 'повт.'])
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const geometry = await row.evaluate(element => {
+      const fields = element.querySelector('.live-set-fields')!.getBoundingClientRect()
+      const controls = [...element.querySelectorAll('.live-set-input, .live-set-confirm')].map(control => control.getBoundingClientRect())
+      return { height: fields.height, controls: controls.map(box => ({ y: box.y, height: box.height })), overflow: document.documentElement.scrollWidth > innerWidth }
+    })
+    expect(geometry.height).toBe(density === 'original' ? 54 : 48)
+    expect(geometry.controls.every(box => box.height === geometry.height && Math.abs(box.y - geometry.controls[0]!.y) < 1)).toBe(true)
+    expect(geometry.overflow).toBe(false)
+    await row.screenshot({ path: info.outputPath(`dense-strength-${width}.png`) })
+  }
+})
+
 // One interaction contract per real structural consumer, not per visual axis.
 for (const grouped of [false, true]) test(`client Live time preference text confirm retry reload and wheel grouped-${grouped}`, async ({ page }, info) => {
   await page.addInitScript(id => { localStorage.setItem(`fit.liveExerciseAnimation.${id}`, 'false'); localStorage.setItem(`fit.rpeDisplay.${id}`, 'true') }, pilotId)

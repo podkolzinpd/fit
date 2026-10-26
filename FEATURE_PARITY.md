@@ -209,6 +209,10 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 | Schedule | Week/month/local date, timed/untimed, open workout/back | Implemented: недельная сетка по два дня в строке с полноширинным воскресеньем и всеми тренировками «время + имя» без скрытого остатка; переход в часовую сетку дня (timed по времени, untimed отдельно), закреплённая шапка с прокруткой только сетки, автоскролл к 07:00/первой тренировке, кнопка «Сегодня», выбор дня и недели в URL, календарь-переход к дате. Назначение тренера, начатое и завершённое самим спортсменом, имеет явную метку «Самостоятельно» и отдельный нейтральный тон; Supabase/Yandex сохраняют `started_by` и `completed_by`, старые строки без них не угадываются; covered unit + SQL + API integration + E2E |
 | Live | Start, autosave, confirm, rest, append, resume, partial finish | Implemented: ввод сохраняется на устройстве при каждом изменении, autosave объединяет частые правки, offline-черновики автоматически досылаются, запросы ограничены по времени, finish flush-ит открытую строку; sticky retry, transactional append и optimistic conflicts покрыты Chromium/WebKit/unit/visual |
 
+<!-- YAFIT-657: dense strength captions and scoped v79 reuse contract; same
+     form controls, 3/4-metric grid, #1818 preference and pilot boundaries.
+     Acceptance: docs/design/CLIENT_LIVE_V79_REUSE_20261026.md. -->
+
 <!-- YAFIT-656: client reference presentation only; Live/coordinator/timers,
      stored metric/round/history contracts and trainer/legacy DOM preserved.
      Acceptance: docs/design/CLIENT_LIVE_SUPERSET_METRICS_20261025.md.
