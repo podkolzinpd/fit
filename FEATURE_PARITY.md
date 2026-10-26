@@ -211,6 +211,8 @@ retry сохранены. План/приёмка: `docs/design/WORKOUT_ACTUAL_D
 
 <!-- YAFIT-657: dense strength captions and scoped v79 reuse contract; same
      form controls, 3/4-metric grid, #1818 preference and pilot boundaries.
+     PR2: client supersets reuse activeCircuitSetId; future/current/completed
+     presentation only, existing any-order and ragged round model retained.
      Acceptance: docs/design/CLIENT_LIVE_V79_REUSE_20261026.md. -->
 
 <!-- YAFIT-656: client reference presentation only; Live/coordinator/timers,
