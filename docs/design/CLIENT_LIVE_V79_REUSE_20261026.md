@@ -95,3 +95,7 @@
 4. Full npm run check exit0; diff-check passed. Backend/DB/API и координаторы не меняются. Физический iPhone/OAuth не проверены.
 5. Production allowlist проверен без вывода ID: ровно4 прежних профиля, hash70b06e8c32c8cfb66b7133f7ad340434b1fa778082aea98277f952757d05cf52; флаги не менялись.
 Артефакты: outputs/client-live-v79-remediation-20261026/pr1-{browser,visual,check}.log. Исходные ошибки harness до baseline — отсутствующие локальные native-auth/Lime flags, не дефекты продукта; итоговые captures проверяют реальный client-workout-reference.
+
+### PR1 — обновление после активного #1819
+
+Предшественник слит в main58e57fca. Подлит в нашу ветку; конфликт только двух независимых групп тестов в начале spec разрешён сохранением ОБЕИХ. Новый focus guard и все8 его browser cases сохранены. Интеграционная приёмка20/20 WebKit/Chromium (focus race response/frame, weight/seconds, плотность, text/wheel и keyboard) и повторный полный npm run check exit0. Предыдущий head6091ae01 CI зелёный; новый CI обязателен. Рабочий release-checkout отделён от preview, чтобы обновление не прерывало полный548-case прогон подготовленной серии.
