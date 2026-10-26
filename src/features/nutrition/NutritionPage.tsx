@@ -258,7 +258,9 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           </button>)}</div>
         </section>}
         {search.length >= 2 ? <AsyncView loading={foods.isLoading} error={foods.error} onRetry={() => void foods.refetch()}>
-          {foods.data?.pages.every((page) => page.foods.length === 0) && <p className="muted">Подходящей еды не нашлось. Можно добавить свою.</p>}
+          {foods.data?.pages.every((page) => page.foods.length === 0) && <p className="muted">{foods.hasNextPage
+            ? 'На этой странице совпадений нет. Попробуйте показать ещё.'
+            : 'Подходящей еды не нашлось. Можно добавить свою.'}</p>}
           <div className="nutrition-food-list">{foods.data?.pages.flatMap((page) => page.foods).map((food) => <div className="nutrition-food-result" key={food.id}><button type="button" className="secondary nutrition-food" onClick={() => choose(food)}><span>{food.name}{food.manufacturer && <small>{food.manufacturer}</small>}<small>{nutritionNumber(food.calories)} ккал · Б {nutritionNumber(food.protein)} · Ж {nutritionNumber(food.fat)} · У {nutritionNumber(food.carbs)} на 100 г</small></span><ChevronRightIcon /></button></div>)}</div>
           {foods.hasNextPage && <button type="button" className="secondary" disabled={foods.isFetchingNextPage} onClick={() => void foods.fetchNextPage()}>{foods.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
         </AsyncView> : null}

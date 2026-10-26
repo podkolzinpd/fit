@@ -31,9 +31,14 @@ interface BasicFood extends CatalogFood { readonly aliases: readonly string[] }
 // barcode. Keep the small, reviewed base separate from retailer adapters so a
 // user never receives a confectionery item for a dish name. Every record is a
 // specific food, not a guessed average. Values are per 100 g edible portion.
-// Sources: USDA FoodData Central (CC0), SR Legacy FDC 173423 and Foundation
+// Sources: USDA FoodData Central (CC0), SR Legacy FDC 173423/171284 and Foundation
 // Foods release 2026-04-30 (the corresponding FDC IDs are sourceId values).
 const BASIC_FOODS: readonly BasicFood[] = [
+  {
+    id: '17128400-0000-4000-8000-000000000000', sourceId: 171284,
+    name: 'Йогурт натуральный 3,25%', aliases: ['натуральный йогурт'], basis: '100g',
+    calories: 61, protein: 3.47, fat: 3.25, carbs: 4.66,
+  },
   {
     id: '17342300-0000-4000-8000-000000000000', sourceId: 173423,
     name: 'Яичница-глазунья', aliases: ['яичница', 'глазунья', 'жареное яйцо'], basis: '100g',
@@ -84,7 +89,7 @@ export class BasicNutritionCatalog implements NutritionCatalog {
     }
     if (page !== 1) return Promise.resolve({ foods: [], hasMore: false })
     const foods = BASIC_FOODS.filter(food => [food.name, ...food.aliases]
-      .some(term => normalizedFoodTerm(term).includes(normalized) || normalized.includes(normalizedFoodTerm(term))))
+      .some(term => isRelevantCatalogSearch(normalized, term)))
     return Promise.resolve({ foods, hasMore: false })
   }
 
@@ -126,9 +131,9 @@ export function parseCatalogFood(value: unknown): CatalogFood | null {
     || typeof product.name !== 'string' || !Array.isArray(product.properties)) return null
   const name = plainText(product.name).replace(/вкус\s*вилл|яндекс\s*лавка|лавка/gi, '')
     .replace(/\s+/g, ' ').replace(/^[\s,;—-]+|[\s,;—-]+$/g, '').trim()
-  // Keep a narrow, ordinary-language catalog. Trade names need review, not
-  // speculative rewriting that changes what food the nutrition describes.
-  if (name.length < 2 || name.length > 160 || /[<>"«»®™]|https?:|[a-z]/i.test(name)) return null
+  // Quotation marks are ordinary punctuation in dish names, not a reason to
+  // discard a valid recipe. Keep rejecting markup, URLs and unreviewed names.
+  if (name.length < 2 || name.length > 160 || /[<>®™]|https?:|[a-z]/i.test(name)) return null
   const nutrition = product.properties.map(object).filter((property) =>
     typeof property?.name === 'string'
     && /пищевая.*ценность.*\b100\s*г(?:\s|$)/i.test(property.name),
@@ -148,6 +153,32 @@ export function parseCatalogFood(value: unknown): CatalogFood | null {
   ])).digest('hex')
   const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
   return { id, sourceId: product.id, name, basis: '100g', calories, protein, fat, carbs }
+}
+
+/** Search may offer explicitly labelled recipes separately; barcode/details
+ * still refuse ambiguous nutrition instead of choosing a producer at random. */
+export function parseCatalogFoods(value: unknown): CatalogFood[] {
+  const single = parseCatalogFood(value)
+  if (single !== null) return [single]
+  const product = object(value)
+  if (product === undefined || typeof product.name !== 'string' || !Array.isArray(product.properties)) return []
+  const productName = product.name
+  const nutrition = product.properties.map(object).filter(property => typeof property?.name === 'string'
+    && /пищевая.*ценность.*\b100\s*г(?:\s|$)/i.test(property.name))
+  if (nutrition.length !== 1 || typeof nutrition[0]?.value !== 'string') return []
+  const lines = nutrition[0].value.split(/<br\s*\/?\s*>/i).map(plainText).filter(Boolean)
+  if (lines.length < 2 || lines.length > 12) return []
+  const foods = lines.map(line => {
+    const match = /^((?:ООО|АО|ПАО|ЗАО|ОАО|ИП)\s+[^:]{1,100}):\s*(.+)$/u.exec(line)
+    if (match === null) return null
+    const manufacturer = match[1]!.replace(/^(?:ООО|АО|ПАО|ЗАО|ОАО|ИП)\s+/u, '').replace(/^["«]|["»]$/g, '').trim()
+    if (manufacturer.length === 0) return null
+    return parseCatalogFood({ ...product, name: `${productName} — ${manufacturer}`,
+      properties: [{ name: nutrition[0]!.name, value: match[2] }] })
+  })
+  // A malformed/unlabelled line is not permission to silently select another.
+  if (foods.some(food => food === null)) return []
+  return [...new Map(foods.filter((food): food is CatalogFood => food !== null).map(food => [food.id, food])).values()]
 }
 
 export function publicNutritionFood(food: CatalogFood): NutritionFood {
@@ -193,12 +224,13 @@ function foodWords(value: string): string[] {
  * fallback, but it must never masquerade as an exact food match.
  */
 export function isRelevantCatalogSearch(query: string, foodName: string): boolean {
-  const queryWords = foodWords(query).filter(word => word.length >= 3)
+  const queryWords = foodWords(query).filter(word => /^\d+$/.test(word)
+    || (word.length >= 2 && !['из', 'на', 'со', 'по', 'от'].includes(word)))
   if (queryWords.length === 0) return true
   const nameWords = foodWords(foodName)
   const stem = (word: string) => word.slice(0, Math.min(word.length, 5))
-  if (queryWords.length === 1) return stem(nameWords[0] ?? '') === stem(queryWords[0]!)
-  return queryWords.every(word => nameWords.some(candidate => stem(candidate) === stem(word)))
+  return queryWords.every(word => nameWords.some(candidate => /^\d+$/.test(word)
+    ? candidate === word : candidate.startsWith(stem(word))))
 }
 
 export function parsePerekFood(value: unknown): CatalogFood | null {
@@ -253,7 +285,8 @@ export class PerekNutritionCatalog implements NutritionCatalog {
     const params = new URLSearchParams({ q: query.trim(), limit: '10', offset: String((page - 1) * 10), market: 'ru', full: 'true' })
     const payload = await this.request(`/search?${params.toString()}`)
     if (payload === null || !Array.isArray(payload.foods) || typeof payload.more !== 'boolean') throw new NutritionCatalogUnavailableError()
-    return { foods: payload.foods.map(parsePerekFood).filter((food): food is CatalogFood => food !== null), hasMore: payload.more }
+    return { foods: payload.foods.map(parsePerekFood).filter((food): food is CatalogFood => food !== null
+      && isRelevantCatalogSearch(query, `${food.name} ${food.manufacturer ?? ''}`)), hasMore: payload.more }
   }
 
   details(sourceId: number) {
@@ -327,8 +360,9 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
       mode: 'custom', fields: ['id', 'name', 'properties'],
     })
     if (!Array.isArray(data.items)) throw new NutritionCatalogUnavailableError()
-    const foods = data.items.map(parseCatalogFood).filter((food): food is CatalogFood => food !== null && isRelevantCatalogSearch(query, food.name))
-    return { foods, hasMore: data.items.length === 10 }
+    const foods = data.items.flatMap(parseCatalogFoods).filter(food => isRelevantCatalogSearch(query, food.name))
+    const meta = object(data.meta)
+    return { foods, hasMore: typeof meta?.has_more === 'boolean' ? meta.has_more : data.items.length === 10 }
   }
 
   async details(sourceId: number) {
@@ -362,19 +396,31 @@ export class VkusvillNutritionCatalog implements NutritionCatalog {
 }
 
 export class FallbackNutritionCatalog implements NutritionCatalog {
-  constructor(private readonly primary: NutritionCatalog | undefined, private readonly fallback: NutritionCatalog) {}
+  constructor(private readonly primary: NutritionCatalog | undefined, private readonly fallback: NutritionCatalog,
+    private readonly includeFallbackMatches = false) {}
 
   async search(query: string, page: number) {
+    let primaryHasMore = false
+    let primaryFoods: CatalogFood[] = []
     if (this.primary !== undefined) {
       try {
         const result = await this.primary.search(query, page)
-        if (result.foods.length > 0 || result.hasMore) return result
+        if (result.foods.length > 0 && !this.includeFallbackMatches) return result
+        primaryFoods = result.foods
+        primaryHasMore = result.hasMore
       } catch {
         // The pilot still has the existing source when perek.us is rate-limited
         // or temporarily unavailable.
       }
     }
-    return this.fallback.search(query, page)
+    try {
+      const result = await this.fallback.search(query, page)
+      return { foods: [...new Map([...primaryFoods, ...result.foods].map(food => [food.id, food])).values()],
+        hasMore: primaryHasMore || result.hasMore }
+    } catch (error) {
+      if (primaryFoods.length > 0) return { foods: primaryFoods, hasMore: primaryHasMore }
+      throw error
+    }
   }
 
   details(sourceId: number) { return this.fallback.details(sourceId) }
@@ -390,4 +436,12 @@ export class FallbackNutritionCatalog implements NutritionCatalog {
     }
     return this.fallback.barcode?.(barcode) ?? null
   }
+}
+
+/** Reviewed basics supplement broad searches instead of hiding branded foods.
+ * Runtime and the read-only production probe use the same composition. */
+export function createNutritionCatalog(apiKey?: string, request: typeof fetch = globalThis.fetch): NutritionCatalog {
+  return new FallbackNutritionCatalog(new BasicNutritionCatalog(),
+    new FallbackNutritionCatalog(apiKey ? new PerekNutritionCatalog(apiKey, request) : undefined,
+      new VkusvillNutritionCatalog(request)), true)
 }
