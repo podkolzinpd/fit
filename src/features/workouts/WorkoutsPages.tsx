@@ -3287,8 +3287,14 @@ export function LiveWorkoutPage() {
         ? applyLiveSetConfirmation(workout, set.id, draft, version, new Date().toISOString()) : workout)
       acknowledgeLiveDraft(set.id, draft, true)
       if (advanceAfterConfirm.current === set.id) {
-        advanceAfterConfirm.current = null
+        if (!clientReference) advanceAfterConfirm.current = null
         window.requestAnimationFrame(() => {
+          // Keep the client intent cancellable until the frame actually runs.
+          // A manual field selection/edit takes priority over the late handoff.
+          if (clientReference) {
+            if (advanceAfterConfirm.current !== set.id) return
+            advanceAfterConfirm.current = null
+          }
           const workout = queryClient.getQueryData<Workout>(['workout', workoutId])
           const sets = workout?.exercises.flatMap((exercise) => exercise.sets) ?? []
           const next = sets.slice(sets.findIndex((item) => item.id === set.id) + 1).find((item) => !item.confirmedAt)
@@ -4018,6 +4024,9 @@ export function LiveWorkoutPage() {
       <button type="button" className="reorder-btn" aria-label="Вниз" disabled={isLast || rootMutationPending} onClick={() => move(1)}><ArrowDownIcon /></button>
     </span>
   }
+  function cancelClientFocusAdvance(target: EventTarget) {
+    if (clientReference && target instanceof Element && target.matches('input, select, textarea, .workout-duration-trigger')) advanceAfterConfirm.current = null
+  }
   // Форма одного подхода в live: подтверждение / правка / удаление / автосейв по blur.
   function renderLiveSet(exercise: WorkoutExerciseModel, set: WorkoutSet, label?: string, current = false, roundRemoval?: { label: string; remove: () => void }) {
     const localDraft = localSetDrafts.get(set.id)
@@ -4058,7 +4067,8 @@ export function LiveWorkoutPage() {
           actionLabel={roundRemoval?.label ?? `Удалить подход ${exercise.sets.findIndex((item) => item.id === set.id) + 1}: ${exercise.name}`}
           onDelete={() => roundRemoval ? roundRemoval.remove() : void requestRemoveLiveSet(exercise, set)}>{content}</WorkoutSwipe>
       : content
-    return <form data-live-set-id={set.id} aria-busy={deletingSet || undefined} inert={deletingSet || undefined} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onFocusCapture={(event) => {
+    return <form data-live-set-id={set.id} aria-busy={deletingSet || undefined} inert={deletingSet || undefined} ref={(node) => { if (node) liveSetForms.current.set(set.id, node); else liveSetForms.current.delete(set.id) }} className={`exercise live-set live-set-expanded ${stateClass} ${isEditing ? 'editing' : ''} ${showRpe ? 'rpe-visible' : ''} ${validationError ? 'invalid' : ''}`} key={`${set.id}:${recoveryKey}`} onPointerDownCapture={event => cancelClientFocusAdvance(event.target)} onKeyDownCapture={event => cancelClientFocusAdvance(event.target)} onFocusCapture={(event) => {
+      cancelClientFocusAdvance(event.target)
       if (liveSwipeEnabled && event.target instanceof Element && event.target.closest('.workout-swipe-action')) return
       if (!set.confirmedAt) openLiveSet(set.id)
       const target = event.target
@@ -4068,6 +4078,7 @@ export function LiveWorkoutPage() {
         else keepLiveSetFieldVisible(target)
       }
     }} onInput={(event) => {
+      cancelClientFocusAdvance(event.target)
       if (deletingSet) return
       if (validationErrorSetIds.has(set.id)) setValidationErrorSetIds((current) => { const next = new Set(current); next.delete(set.id); return next })
       captureLiveDraft(set, event.currentTarget, event.target)
