@@ -124,6 +124,27 @@ for (const density of ['original', 'compact']) test(`v79 clock handoff preserves
   const field = page.getByLabel('Фактический вес', { exact: true }).last()
   const input = await field.elementHandle()
   await field.fill('29.5'); await field.blur()
+  // Intermediate scroll positions catch the old hard seam, not only endpoints.
+  // Sample the same real scroll owner; no new timer, fixture or viewport axis.
+  let previousGlow = 1, previousLarge = 1, previousSmall = 0
+  for (const offset of [0, 40, 80, 120, 160, 180]) {
+    await page.locator('.content').evaluate((e, value) => { e.scrollTop = value }, offset)
+    await expect.poll(() => root.evaluate(e => {
+      const clock = e.querySelector('.coach-v79-large-clock')!.getBoundingClientRect(), header = e.querySelector('.page-header')!.getBoundingClientRect()
+      const x = Math.max(0, Math.min(1, (header.bottom - clock.top) / clock.height))
+      return Math.abs(Number(getComputedStyle(e).getPropertyValue('--v79-glow-opacity')) - (1 - x * x * (3 - 2 * x)))
+    })).toBeLessThan(.001)
+    const presentation = await root.evaluate(e => {
+      const css = getComputedStyle(e)
+      return { glow: Number(css.getPropertyValue('--v79-glow-opacity')), large: Number(css.getPropertyValue('--v79-large-opacity')), small: Number(css.getPropertyValue('--v79-small-opacity')) }
+    })
+    expect(presentation.glow).toBeLessThanOrEqual(previousGlow + .001)
+    expect(presentation.large).toBeLessThanOrEqual(previousLarge + .001)
+    expect(presentation.small).toBeGreaterThanOrEqual(previousSmall - .001)
+    expect(presentation.large * presentation.small).toBeLessThan(.001)
+    previousGlow = presentation.glow; previousLarge = presentation.large; previousSmall = presentation.small
+  }
+  await expect(big).toHaveAttribute('aria-label', 'Тренировка: 01:00')
   await page.locator('.content').evaluate(e => e.scrollTop = 180)
   await expect.poll(() => root.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-small-opacity')))).toBeGreaterThan(.98)
   await expect.poll(() => root.evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-status-opacity')))).toBe(0)
@@ -196,6 +217,7 @@ for (const density of ['original', 'compact']) test(`v79 source rest motion keep
   await expect(clock).toHaveCSS('animation-name', 'none')
   // Global Fit reduced-motion uses !important .01ms (not literal zero).
   expect(await page.locator('.coach-v79-glow').evaluate(e => Number.parseFloat(getComputedStyle(e, '::after').transitionDuration))).toBeLessThanOrEqual(.00001)
+  expect(await page.locator('.coach-v79-toggle-arrow').first().evaluate(e => Number.parseFloat(getComputedStyle(e).transitionDuration))).toBeLessThanOrEqual(.00001)
 })
 for (const role of ['client', 'trainer'] as const) test(`v79 never reaches outside ${role}`, async ({ page }) => {
   await mockPilot(page, { role, profileId: role === 'trainer' ? 'c0ac0000-6010-4000-8000-000000000003' : pilot, fitLime: true, clientLime: role === 'client', workouts: [restTimerWorkout()] })
@@ -508,6 +530,9 @@ for (const density of ['original', 'compact']) test(`v79 duration distance RPE a
   await page.getByRole('menuitem', { name: 'Указать RPE', exact: true }).click()
   await expect(cards.first().locator('.live-set-rpe').first()).toHaveCSS('height', height)
   await cards.nth(1).scrollIntoViewIfNeeded()
+  // WebKit may capture its sticky layer before the scroll frame is painted.
+  await expect.poll(() => page.locator('.coach-live-v79').evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-small-opacity')))).toBeGreaterThan(.98)
+  await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))))
   await page.screenshot({ path: info.outputPath(`${density}-duration-distance.png`) })
 })
 
