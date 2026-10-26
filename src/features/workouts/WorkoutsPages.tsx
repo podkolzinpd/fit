@@ -3424,10 +3424,19 @@ export function LiveWorkoutPage() {
     if (restEndsAt !== null) startRestUntil(null)
     setLivePhase({ kind: 'prep', startedAt: now, endsAt: now + seconds * 1000 })
   }
+  // Длительность для отсчёта: время из поля подхода, даже если правка ещё не
+  // сохранена, иначе сохранённый факт или план.
+  function liveTimerSeconds(set: WorkoutSet): number | null {
+    const planned = timedSetSeconds(set)
+    if (planned === null) return null
+    const form = liveSetForms.current.get(set.id)
+    const edited = form ? draftFrom(form, set).durationSec : localSetDrafts.get(set.id)?.durationSec
+    return edited !== undefined && edited > 0 ? edited : planned
+  }
   // Запускает таймер подхода на время; false — у подхода нет плановой длительности.
   function startWorkTimer(set: WorkoutSet | undefined, exercise: WorkoutExerciseModel | undefined): boolean {
     if (!timerLeads) return false
-    const seconds = set && exercise ? timedSetSeconds(set) : null
+    const seconds = set && exercise ? liveTimerSeconds(set) : null
     if (!set || seconds === null || pendingSetConfirmations.current.has(set.id)) return false
     const now = Date.now()
     if (restEndsAt !== null) startRestUntil(null)
@@ -4245,7 +4254,7 @@ export function LiveWorkoutPage() {
   // и сигналит на нуле, засчитывает подход повторное нажатие или «Готово».
   function startPersonWorkTimer(set: WorkoutSet) {
     resumeWorkoutIfPaused()
-    const seconds = timedSetSeconds(set)
+    const seconds = liveTimerSeconds(set)
     if (timerLeads || coachReference || seconds === null || livePhaseRef.current || pendingSetConfirmations.current.has(set.id)) return
     prepareGong()
     if (restEndsAt !== null) startRestUntil(null)

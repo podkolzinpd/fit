@@ -48,6 +48,21 @@ function setup(path = '/me/nutrition?date=2026-10-10&action=add') {
   return { ...result, user: userEvent.setup(), cache }
 }
 
+it('continues after a filtered empty page instead of declaring the entire search empty', async () => {
+  fixture.search.mockResolvedValueOnce({ foods: [], hasMore: true }).mockResolvedValueOnce({ foods: [{
+    id: 'f00d0000-6010-4000-8000-000000000014', name: 'Йогурт натуральный', basis: '100g',
+    calories: 61, protein: 3.47, fat: 3.25, carbs: 4.66,
+  }], hasMore: false })
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox'), 'йогурт натуральный')
+  expect(await screen.findByText('На этой странице совпадений нет. Попробуйте показать ещё.')).toBeVisible()
+  expect(screen.queryByText('Подходящей еды не нашлось.', { exact: false })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Показать ещё' }))
+  expect(await screen.findByRole('button', { name: /Йогурт натуральный/ })).toBeVisible()
+  expect(fixture.search).toHaveBeenLastCalledWith('йогурт натуральный', 2)
+  expect(screen.queryByText('На этой странице совпадений нет.', { exact: false })).not.toBeInTheDocument()
+})
+
 it('repeats the displayed snapshot and validates quantity without an automatic save', async () => {
   const { user } = setup()
   await user.click(await screen.findByRole('button', { name: /Курица с рисом/ }))

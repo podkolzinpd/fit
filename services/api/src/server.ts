@@ -58,7 +58,7 @@ import { DatabaseFitLimeAutoActivator } from './fit-lime-auto-activation.js'
 import { DatabaseAssistantFeatureLinksAutoActivator } from './assistant-feature-links-auto-activation.js'
 import { DatabasePilotTrainerFinance } from './trainer-finance.js'
 import { DatabaseNutritionDiary } from './nutrition-diary.js'
-import { BasicNutritionCatalog, FallbackNutritionCatalog, PerekNutritionCatalog, VkusvillNutritionCatalog } from './nutrition-catalog.js'
+import { createNutritionCatalog } from './nutrition-catalog.js'
 import { DatabaseNutritionAutoActivator, readNativeNutritionPilot, readNutritionBarcodePilot } from './nutrition-pilot.js'
 
 function parsePort(value: string | undefined): number {
@@ -80,11 +80,10 @@ const databasePool =
 const nutritionPilot = readNativeNutritionPilot(process.env.NUTRITION_ENABLED, process.env.NUTRITION_LOGIN_COHORT)
 const nutritionBarcodePilot = readNutritionBarcodePilot(process.env.NUTRITION_BARCODE_ENABLED, process.env.NUTRITION_BARCODE_LOGIN_HASH)
 const nutritionAutoActivator = databasePool === undefined ? undefined : new DatabaseNutritionAutoActivator(databasePool, nutritionPilot)
-const retailerNutritionCatalog = new VkusvillNutritionCatalog()
-const defaultNutritionCatalog = new FallbackNutritionCatalog(new BasicNutritionCatalog(), retailerNutritionCatalog)
+const defaultNutritionCatalog = createNutritionCatalog()
 const barcodeNutritionCatalog = process.env.NUTRITION_PEREK_API_KEY === undefined || process.env.NUTRITION_PEREK_API_KEY === ''
   ? undefined
-  : new FallbackNutritionCatalog(new BasicNutritionCatalog(), new FallbackNutritionCatalog(new PerekNutritionCatalog(process.env.NUTRITION_PEREK_API_KEY), retailerNutritionCatalog))
+  : createNutritionCatalog(process.env.NUTRITION_PEREK_API_KEY)
 const nutritionDiary = databasePool === undefined ? undefined : new DatabaseNutritionDiary(
   databasePool, defaultNutritionCatalog, nutritionPilot, nutritionBarcodePilot, barcodeNutritionCatalog,
 )
