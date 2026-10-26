@@ -119,7 +119,7 @@ YAFIT-645; план design/FAVORITE_EDITOR_DRAFT_RECOVERY_20261022.md. На св
   План design/COACH_LIVE_V79_POLISH_20261025.md; physical iPhone/OAuth не проверены.
 - 26.10 YAFIT-658: согласованы4PR, design/COACH_LIVE_COMPOSITION_FIXED2_20261026.md.
   PR1#1823/main62ccbb80 выпущен:213public/health+8/8role/cohort; клиентские1818–1822 и voice1825 сохранены.
-  PR2#1830 слит в0b273615 после полного зелёного exact-head CI; официальный выпуск проверяется отдельно.
-  PR3#1831 Time Header/inset перенесён на фактический merge PR2. Src/API/assets совпали с принятой интеграцией:68/68 browser и full2857/1516; поддержка CI apt-mirrors.txt дополнительно проверена350infra tests. Gates и таймауты прежние.
-  PR4#1832 пока draft до актуализации продуктового diff и нового exact-head CI. Client1826/1827 и phase/voice сохранены. Только исходные2
+  PR2#1830/main0b273615 официально опубликован:213public/health и8/8 role/cohort пройдены, оба вида просмотрены.
+  PR3#1831/main d56d42fe слит после полного зелёного CI40406348093. Time Header/inset и поддержка CI apt-mirrors.txt реализованы;350infra tests, gates/таймауты прежние.
+  PR4 regression подготовлен на фактическом merge PR3. Runtime/E2E совпали с принятой интеграцией0c64bdc1:68/68 browser+full2857/1516. В PR4 нет runtime diff; актуальный head проходит полный CI. Факты официальных публикаций, OTA и нативной приёмки фиксируются в YAFIT-658. Client1826/1827 и phase/voice сохранены. Только исходные2
   тренера, Original54/Compact48; физический телефон и реальный OAuth не проверены.
