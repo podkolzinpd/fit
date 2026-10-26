@@ -317,6 +317,8 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body[hidden] { display: none; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > .circuit-round { opacity: 1; margin: 0; padding: 0; border-color: var(--lime-divider); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body > .circuit-round:first-child.current { border: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body .circuit-round-toggle:hover { background: transparent; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body .circuit-round-toggle:active { background: var(--lime-surface-raised); }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-body .circuit-round > .workout-swipe + .workout-swipe { border-top: 1px solid var(--lime-divider); border-radius: 0; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-circuit .circuit-round .live-exercise-head { grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; padding: 12px 0 8px; margin: 0; border: 0; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-circuit .live-exercise-head:has(.workout-exercise-header-main) { grid-template-columns: 44px minmax(0, 1fr) 44px; }
