@@ -33,7 +33,7 @@ USDA official [portal record171284](https://fdc.nal.usda.gov/portal-data/externa
 
 На свежих публичных ответах ВкусВилла старый main давал6/0/0/0 записей для
 «йогурт» / «йогурт натуральный» / «оливье» / «салат оливье».
-Новый общий Basic→Vkusvill путь на тех же ответах даёт7/1/12/12.
+Новый общий Basic→Vkusvill путь на тех же ответах даёт11/1/12/12.
 Для разных производителей сохраняются отдельные названия и идентификаторы;
 никакого выбора первого набора КБЖУ или усреднения нет. Barcode/details
 продолжают отказывать при неоднозначной рецептуре.
@@ -52,7 +52,7 @@ Perek public UI сейчас находит «йогурт натуральны�
 | 3 | API tests: labelled variants, stable IDs, malformed/ambiguous/negative bounds; actual public replay12 Olivier records | Passed |
 | 4 | API fallback/pagination + component test + real-route WebKit continuation | Passed |
 | 5 | WebKit390/430 overflow/text/recipe selection/100g142.5kcal | Passed |
-| 5 | Full check, exact-head CI, merge, release and running-image probe | Pending at PR preparation |
+| 5 | Full check exit0: frontend2846/API1499+196 штатныхDBskip/policy/hosting/build; CI/merge/release/probe ещё гейты | Local passed; release pending |
 
 Снимки WebKit — диагностические, автоматические assertions проверяют текст,
 выбор, расчёт и отсутствие overflow; снимки не выданы за visual regression.
@@ -63,6 +63,12 @@ Perek public UI сейчас находит «йогурт натуральны�
 Проверенные снимки: [390px](nutrition-search-20261026/nutrition-search-recipes-light-390.png), [430px](nutrition-search-20261026/nutrition-search-recipes-light-430.png), [продолжение](nutrition-search-20261026/nutrition-search-continuation.png).
 Полный WebKit-сценарий питания:10/10; живой собранный адаптер без Perek: ready=true, все4 запроса found.
 
-Первый общий check: frontend2846/2846, lint/typecheck/policy/hosting passed; API1497+196skip и1 timeout в неизменённом tenant-migration/bundle.test. Диагностированный повтор: bundle9/9 (3.08s), весь API1498/1498+196 штатныхDBskip с maxWorkers2, без изменения timeout/assertions. API build passed. Финальный check после обновления main ещё выполняется.
+Первый общий check: frontend2846/2846, lint/typecheck/policy/hosting passed; API1497+196skip и1 timeout в неизменённом tenant-migration/bundle.test. Диагностированный повтор: bundle9/9 (3.08s), весь API1498/1498+196 штатныхDBskip с maxWorkers2, без изменения timeout/assertions. API build passed. Финальный check после обновления main завершился exit0: frontend2846/API1499+196 штатныхDBskip; lint/typecheck/policy/hosting/build/startup прошли.
 
 Базовые продукты дополняют широкую выдачу, а не скрывают существующие сорта/бренды. Runtime, production probe и browser contract используют общий createNutritionCatalog. Регрессия отдельным API-тестом: natural + Greek на первой странице, без повторного Basic на второй, сохранение базового продукта при недоступном внешнем источнике.
+
+Финальный живой source probe собранного runtime: ready=true, выдача11/1/12/12; широкая выдача йогуртов сохранена. Данные источника меняются, это результат проверки26.10.2026, а не фиксированное обещание размера каталога.
+
+Интеграция опубликованного main a673d713: range-diff runtime питания без изменений; конфликт только CURRENT_STATE, входящие записи сохранены. Повторные WebKit10/10 и полный npm run check exit0: frontend2847/API1499+196 штатныхDBskip. CI нового итогового head и очередь1823 остаются гейтами выпуска.
+
+Main затем продвинулся до8f7986a4 (#1825, voice). Питание сохранено без runtime-diff; конфликт только CURRENT_STATE. Targeted nutrition + входящие quick-workout/parser:112/112, root typecheck exit0, полный WebKit nutrition10/10. Новый exact-head CI обязателен; очередь по-прежнему1823, если владелец не изменит приоритет.
