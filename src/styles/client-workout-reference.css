@@ -347,3 +347,19 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note-toggle { position: relative; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note-toggle:not([data-has-note]):not([aria-expanded="true"]) svg { opacity: .4; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-circuit-note-toggle[data-has-note]::after { content: ""; position: absolute; right: 8px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--lime-accent-ink); }
+
+/* Client adaptation of the shared v79 renderer: retain pause and rest in both
+   measured positions, with a separate 44px target for finish. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 { background-image: none; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .live-pinned { background-image: none; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .coach-v79-small-clock { inset-inline: 48px 164px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .coach-v79-small-action { width: 92px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-v79-compact-actions { display: flex; gap: 4px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-v79-compact-actions .client-reference-pause { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 10px; margin: 0; border: 0; border-radius: 12px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-v79-compact-actions .client-reference-pause > span { display: none; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-v79-compact-actions .client-reference-pause > :is(img,svg) { position: static; }
+/* The source prototype is dark; reuse the client's existing ink roles in light. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 :is(.coach-v79-large-clock,.coach-v79-small-clock) { color: var(--lime-accent-ink); --v79-clock-color: var(--lime-accent-ink); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 :is(.coach-v79-timer,.coach-v79-dock)[data-state='rest'] :is(.coach-v79-large-clock,.coach-v79-small-clock) { color: var(--warning-fg); --v79-clock-color: var(--warning-fg); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .coach-v79-elapsed { --v79-clock-color: var(--lime-text-secondary); }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-v79 .coach-v79-actions[inert] { visibility: hidden; }

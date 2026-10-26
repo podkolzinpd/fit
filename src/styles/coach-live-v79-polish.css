@@ -1,14 +1,14 @@
 /* Original Figma598:9856 six-second dot loop; 598:9864 separator cadence.
    No additional interval/state, and no motion for reduced-motion users. */
-.coach-live-v79 .coach-live-status > span { animation: coach-v79-live-dot 6s ease-in-out infinite; }
-.coach-live-v79 .coach-live-colon { animation: coach-v79-separator 1.333333s step-end infinite; }
-.coach-live-v79 :is([data-state='paused'],[data-state='paused'] *) .coach-live-colon { animation: none; }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-small-action .live-rest-trigger { padding: 10px; }
-.coach-live-v79 .coach-v79-small-action .live-rest-trigger img { width: 24px; height: 24px; }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-original .live-pinned-empty .coach-v79-large-clock { height: clamp(156px,var(--v79-empty-clock-height,calc(var(--app-visible-height,100dvh) - 460px)),480px); }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-original .live-pinned-empty .coach-v79-large-clock > .coach-live-digits { font-size: 104px; line-height: 112px; }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-original .live-pinned-empty .coach-v79-large-clock.long-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
-.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-v79-timer[data-state='rest'] .coach-v79-large-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
+:is(.coach-live-v79,.client-live-v79) .coach-live-status > span { animation: coach-v79-live-dot 6s ease-in-out infinite; }
+:is(.coach-live-v79,.client-live-v79) .coach-live-colon { animation: coach-v79-separator 1.333333s step-end infinite; }
+:is(.coach-live-v79,.client-live-v79) :is([data-state='paused'],[data-state='paused'] *) .coach-live-colon { animation: none; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) .coach-v79-small-action .live-rest-trigger { padding: 10px; }
+:is(.coach-live-v79,.client-live-v79) .coach-v79-small-action .live-rest-trigger img { width: 24px; height: 24px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-original .live-pinned-empty .coach-v79-large-clock { height: clamp(156px,var(--v79-empty-clock-height,calc(var(--app-visible-height,100dvh) - 460px)),480px); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-original .live-pinned-empty .coach-v79-large-clock > .coach-live-digits { font-size: 104px; line-height: 112px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-original .live-pinned-empty .coach-v79-large-clock.long-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79).coach-live-density-compact .coach-v79-timer[data-state='rest'] .coach-v79-large-clock > .coach-live-digits { font-size: 48px; line-height: 56px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-original .coach-live-field-unit { font-size: 10px; line-height: 10px; bottom: 6px; }
 /* Fixed2 presentation only: keep the real context, including exact progress
    in Compact. The previous density rule clipped that copy to a 1px box. */
@@ -30,4 +30,4 @@
   15.83%,40.83% { transform: scale(1.025); }
 }
 @keyframes coach-v79-separator { 0% { opacity: 1; } 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .coach-live-v79 .coach-live-status > span, .coach-live-v79 .coach-live-colon { animation: none; } }
+@media (prefers-reduced-motion: reduce) { :is(.coach-live-v79,.client-live-v79) .coach-live-status > span, :is(.coach-live-v79,.client-live-v79) .coach-live-colon { animation: none; } }
