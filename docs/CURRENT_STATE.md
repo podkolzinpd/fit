@@ -1,3 +1,7 @@
+## YAFIT-664 — этап1 принят, подготовлен отдельный PR2 (2026-10-27)
+
+PR#1836/main21465007: official CI/frontend success; web213files/health passed; published14/14 (исходные4клиента/2тренера/outside), fresh iOS source21465007 sync/build/install/launch/214files byte-match. Physical iPhone/OAuth Live не проверены. PR2 parent-only7db5ca1f на тот же фактический main: check0(2860/1516+196условных DB skip), fresh54/54. Новая запись фактов меняет только Markdown; runtime/tests проверенной ревизии не меняются. Собственный PR2 ждёт зелёную CI и очередь; следующие PR3/4 не сливаются до последовательной приёмки предшественников. Флаги/когорта не менялись.
+
 27.10 — YAFIT-664 PR2 локально: openLiveReplacement общий для ⋯/правого свайпа, только clientReference; светлый rail через accent-ink. Новые8/8, регрессия72/72 и check0(2857/1516+196conditionalDBskip), снимки просмотрены. PR1 #1836 ещё CI/очередь; PR2 public/native и свежая интеграция после PR1 — гейты. Пилот прежние4, API/таймер/handlers замены прежние.
 
 ## YAFIT-664 — PR1 исправление WebKit после CI (2026-10-27)
