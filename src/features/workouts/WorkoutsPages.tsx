@@ -4463,9 +4463,8 @@ export function LiveWorkoutPage() {
             <span className="circuit-counter">Круг {circuitRounds[circuitCurrent]?.round ?? 1} из {circuitRounds.length}</span>
             <span className="circuit-dots" aria-hidden="true">{circuitRounds.map((r, i) => <span key={r.round} className={`circuit-dot ${r.items.every(({ set }) => set.confirmedAt) ? 'done' : i === circuitCurrent ? 'current' : ''}`} />)}</span>
           </div>}
-        </div>{visualReference && liveHeader}{(densityEnabled || clientReference) && query.data.notes?.trim() && (clientReference
-          ? <details className="coach-live-workout-note client-live-workout-note"><summary><span>Заметка к тренировке</span><span className="live-workout-note-read">Читать</span><span className="live-workout-note-hide">Скрыть</span></summary><p>{query.data.notes}</p></details>
-          : <p className="coach-live-workout-note" aria-label="Заметка к тренировке">{query.data.notes}</p>)}</>)
+        </div>{visualReference && liveHeader}{(densityEnabled || clientReference) && query.data.notes?.trim() &&
+          <details className={`coach-live-workout-note ${clientReference ? 'client-live-workout-note' : 'coach-live-workout-note-disclosure'}`}><summary><span>Заметка к тренировке</span><span className="live-workout-note-read">Читать</span><span className="live-workout-note-hide">Скрыть</span></summary><p aria-label={clientReference ? undefined : 'Заметка к тренировке'}>{query.data.notes}</p></details>}</>)
       })()}
       {(!liveDrag || clientLime) && reordering && <div className="live-reorder-mode" role="status"><span>Изменение порядка</span><button type="button" className="secondary" onClick={() => setReordering(false)}>Готово</button></div>}
       {(() => { const liveBlocks = groupIntoBlocks(query.data.exercises);
