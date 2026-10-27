@@ -1,590 +1,78 @@
-# Fit V2 — обязательные правила разработки
-
-Этот файл автоматически является входным контрактом для Codex и обязателен для
-людей и ИИ-агентов. В начале **каждой** новой сессии, до плана и изменений,
-полностью прочитайте:
-
-1. `docs/FIT_WORKFLOW.md`;
-2. `docs/CURRENT_STATE.md`;
-3. `docs/UI_TASK_PROMPT.md`.
-
-`docs/UI_TASK_PROMPT.md` — обязательный базовый контекст каждого запуска, даже
-если задача изначально кажется backend- или data-only: системные состояния,
-ошибки, loading, пользовательский текст и новые действия часто затрагивают UI.
-Его не нужно вручную прикладывать к каждой постановке. Остальные документы
-открывайте только по правилам ниже и по таблице workflow — не загружайте всю
-документацию без необходимости.
-
-Production frontend работает на `https://fit-training.ru` через Cloud.ru
-Nginx, а app-session/API/PostgreSQL и media размещены в Cloud.ru. Yandex ID
-остаётся внешним провайдером входа. Упоминания Yandex API/migrations ниже
-обозначают сохранённые кодовые контракты, а не разрешение создавать ресурсы
-или направлять production-запросы в Yandex Cloud; старый контур — только rollback.
-Vercel
-сохранён только для редиректа со старого адреса; новые Vercel deployments,
-включая PR Preview, выключены, GitHub repository отключён от Vercel-проекта.
-Supabase остаётся временной legacy-зависимостью для
-recovery, неперенесённых media, локальных тестов и rollback; это не второй
-production backend для новых функций. **Новые миграции в Supabase не создавайте.**
-
-До завершения вывода Supabase из эксплуатации для задач, затрагивающих auth, БД,
-repositories/queries, media, Assistant, SpeechKit, push, backend routing или
-переносимые продуктовые данные, также полностью прочитайте
-`docs/YANDEX_CUTOVER_PLAYBOOK.md`. Текущие фаза и блокеры остаются в
-`docs/CURRENT_STATE.md`, а не дублируются в этом файле.
-
-## Обязательный дизайн-контекст
-
-Если задача добавляет или меняет пользовательский экран, действие, состояние,
-форму, карточку, навигацию, график, иконку, текст или визуальное поведение:
-
-1. До предложения решения полностью прочитайте `docs/UI_IDENTITY.md`.
-2. Прочитайте релевантные разделы `docs/UI_DESIGN_SYSTEM.md` и проверьте
-   актуальную реализацию в коде.
-3. Откройте реальный маршрут и ближайший утверждённый экран-референс.
-4. В плане явно назовите переиспользуемые Fit-компоненты и токены, единственное
-   primary-действие, проверяемые состояния и границы scope.
-
-Это обязательный preflight, а не рекомендация. Нельзя начинать UI-код или
-генерировать макет до его выполнения. Нельзя создавать локальную айдентику,
-палитру, типографическую шкалу, набор радиусов, библиотеку компонентов или
-вариант навигации, параллельные действующей утверждённой айдентике Fit. Для
-Lime обязателен `docs/design/FIT_LIME_DESIGN_CODE.md`; исторические Foundation /
-Monochrome документы не назначают палитру, шрифт и геометрию новых Lime-экранов.
-Для каждой клиентской доработки обязательна §8.1 этого дизайн-кода: реальный
-gate, карта вложенных окон/уведомлений, завершённые состояния, каскад стилей
-и нажатия при клавиатуре. Общие базовые классы не доказывают перенос в Lime;
-не удаляйте их без карты действующих потребителей.
-Если существующая
-система не покрывает реальную продуктовую потребность, сначала зафиксируйте
-конкретный gap и вынесите расширение общего контракта на отдельное решение.
-
-## Проверка существующего перед каждой доработкой
-
-Перед окончательным планом и изменением кода каждой доработки, включая каждый
-следующий PR одной задачи, выполните проверку из
-`docs/FIT_WORKFLOW.md#проверка-существующего-перед-каждой-доработкой`.
-Проверка только в начале сессии не заменяет проверку перед следующим PR.
-
-Зафиксируйте актуальный commit, проверяемую сборку, роль и применимые флаги;
-проверьте затронутый сценарий в работающем приложении, текущий код, общие
-компоненты, релевантные слитые и открытые PR. До реализации покажите короткую
-сверку «уже работает → переиспользуем → действительно меняем → не проверено»
-с доказательствами. Не планируйте создание уже работающей функции заново.
-Код без визуального воспроизведения не доказывает текущее поведение UI;
-старые скриншоты, память и предыдущая проверка другой сборки его не заменяют.
-Если состояние недоступно, явно отметьте ограничение, не выдавайте гипотезу
-за подтверждённую ошибку и не делайте предположительную UI-правку этого состояния.
-Независимую подтверждённую часть задачи можно продолжать.
-
-## Порядок работы
-
-1. Сформулируйте пользовательский результат и acceptance cases.
-2. Найдите существующий публичный контракт feature. Для parity-задачи сравните его с точным V1 baseline из `FEATURE_PARITY.md`: данные, состояния, действия и mobile visual. Не создавайте параллельный путь к тем же данным.
-3. Если меняется БД: numbered Yandex PostgreSQL migration в
-   `services/api/db/migrations` → локальная clean-chain/RLS проверка →
-   API/domain types → query/repository → UI. Не добавляйте парную Supabase migration.
-4. Добавьте happy path, validation, loading, empty, error и retry states.
-5. Если изменилось пользовательское поведение, роли, доступы, навигация или известные ограничения, обновите `docs/PRODUCT_WIKI.md`. Описывайте только уже реализованный функционал; планы и идеи оставляйте в `docs/design` и `FEATURE_PARITY.md`.
-6. Выберите проверки по автоматическому scope ниже; для frontend/shared или
-   неизвестного diff запустите `npm run check`. Для DB-изменений также `npm run local:verify` и
-   целевые Yandex API/actor-RLS тесты. `db:reset`/`db:test` проверяют только
-   замороженную локальную Supabase-цепочку и не доказывают новую Yandex-схему.
-7. Обновите `docs/CURRENT_STATE.md` в той же ветке, когда фактура уже известна;
-   после merge только сверьте snapshot с новым `main`. Отдельный docs-only PR
-   нужен лишь для действительно новой post-merge фактуры. Это обязанность агента,
-   а не пользователя.
-
-## Постоянные договорённости с владельцем продукта
-
-- Для каждой задачи по умолчанию создавать тикет в очереди YAFIT и записывать
-  технический план и проверки без повторного вопроса. Не отправлять туда
-  аккаунты, записи экрана и другие данные пользователей без отдельного разрешения.
-- Для запрошенных изменений действует постоянное разрешение владельца продукта:
-  агент самостоятельно реализует задачу, отправляет ветку, открывает PR, ждёт
-  зелёный CI, штатно сливает, проверяет production и обновляет затронутые
-  мобильные сборки без повторных запросов. Последняя прямая команда пользователя,
-  включая «только проверить» или «пока не вносить», всегда имеет приоритет.
-- Одна явно выбранная задача или один экран = одна ветка и один PR. Если
-  пользователь заранее разрешил автономное завершение, агент сам ждёт зелёный
-  CI, сливает PR, проверяет production и останавливается, не начиная следующий
-  экран без отдельной команды. Красный PR не сливать и обязательные проверки не
-  обходить.
-- Перед merge сверяйте активные параллельные PR в `main`: PR с более ранним
-  `createdAt` выпускается первым, следующий ждёт его merge, обновляется от нового
-  `main` и заново проходит обязательный CI. Более поздний PR ждёт текущий. Старые
-  неактивные PR из прошлых выпусков эту очередь не блокируют.
-- Главные страницы клиента и тренера не менять без прямой просьбы. На Client
-  Home голосовой ввод и ввод текстом остаются основными действиями.
-- UI-задача не меняет LLM prompt/matching/fallback/сохранение и SpeechKit без
-  отдельного продуктового решения.
-- Неделя начинается в понедельник. Любая завершённая тренировка считается
-  состоявшейся, даже при частично выполненном плане; неполнота плана показывается
-  отдельно от факта тренировки.
-- Пользовательские тексты должны быть понятны без знания англоязычных терминов:
-  «Личный рекорд», «ИИ-анализ». Проценты Progress округляются до целых, прочие
-  показатели — максимум до одного знака после запятой.
-- Локальные контейнеры, включая PostgreSQL 17 и legacy Supabase, запускаются
-  только через Podman. Docker у
-  пользователя не установлен и не планируется; не предлагайте его установку.
-- Desktop trainer и задачи P2 отложены до нового прямого решения пользователя.
-
-## Три уровня проверки и rollout
-
-Для каждой новой пользовательской функции агент использует следующий порядок.
-Если пользователь не просил иначе, работа останавливается после локальной
-проверки, зелёного CI и передачи PR: удалённый Preview и production-пилот не
-запускаются автоматически.
-
-### 1. Локальная проверка — обязательный первый уровень
-
-- Сначала реализуйте и проверьте функцию локально. `npm run dev` через Podman
-  готовит **две локальные** базы: PostgreSQL 17 для Yandex API и замороженную
-  Supabase-цепочку для существующих legacy-тестов. Обычная development-сборка
-  ещё может выбирать Supabase; это не проверка новой production-функции.
-- Новую функцию проверяйте через локальный Yandex API/PostgreSQL (или его
-  изолированный contract test), а не только через Supabase-сценарий. Не
-  подключайте локальное приложение к удалённым production-базам и не копируйте
-  production URL/секреты в локальные env-файлы.
-- Если меняется БД, добавьте только numbered migration в
-  `services/api/db/migrations`, затем выполните `npm run local:verify` и
-  целевые Yandex API/RLS тесты. Generated Supabase types обновляются только
-  при отдельной явно разрешённой legacy-правке, не ради Yandex-изменения.
-- Выполните целевые тесты, обязательную UI/WebKit-проверку и `npm run check` по
-  правилам этого файла. Успешная локальная проверка сама по себе не разрешает
-  deployment или изменение production.
-
-### 2. Удалённая проверка до merge — пока недоступна
-
-- Vercel оставлен только как переход со старого адреса на `fit-training.ru`.
-  Не используйте комментарий `/preview`, не создавайте Vercel Preview и не
-  запускайте Vercel deployment для проверки PR.
-- Для PR проверяйте функцию локально и в CI. Если нужен отдельный удалённый
-  сайт до merge, сначала согласуйте новую Yandex-hosted Preview-среду как
-  отдельную задачу; её пока нет. Не считайте production frontend тестовой средой.
-- Удалённый Preview сам по себе не применял бы Yandex PostgreSQL migrations из
-  PR; до появления новой среды полный сценарий с новой схемой проверяется
-  локально на PostgreSQL 17 и Yandex API.
-
-### 3. Production-пилот для отдельных пользователей — через default-off флаг
-
-- Используйте этот уровень только когда пользователь прямо просит показать
-  готовую функцию выбранным production-пользователям. Самостоятельно не
-  включайте пилот, не расширяйте allowlist и не меняйте build-time переменные
-  production-сборки Yandex frontend в GitHub.
-- Для каждой функции создавайте независимые build-time переменные:
-  `VITE_<FEATURE>_ENABLED=true` и
-  `VITE_<FEATURE>_PILOT_USER_IDS=<auth-user-uuid-1>,<auth-user-uuid-2>`, а также
-  отдельную функцию `is<Feature>PilotEnabled(userId: string): boolean` в
-  `src/app/feature-flags.ts`.
-- Функция включена только при точном значении глобального флага `"true"` и
-  наличии текущего `actor.userId` в собственном allowlist функции. При разборе
-  списка убирайте пробелы и пустые элементы. Отсутствующий или пустой allowlist
-  никому не включает функцию.
-- Не переиспользуйте allowlist другой функции и не создавайте generic
-  feature-flag framework без отдельной доказанной необходимости. Скрывайте все
-  пользовательские входы вне пилота; прямые маршруты защищайте guard и
-  безопасным fallback.
-- Frontend allowlist не является авторизацией: UUID видны в публичном JS bundle.
-  Данные и mutation по-прежнему защищаются RLS и backend ownership-проверками;
-  UUID и allowlist не выводятся в UI, логи, аналитику и ошибки.
-- Добавьте unit-тесты флага и тесты поведения пользователя внутри и вне пилота,
-  включая прямой маршрут. Зафиксируйте переменные и default-off семантику в
-  `OPERATIONS.md`, а изменившееся фактическое поведение — в релевантном разделе
-  `docs/PRODUCT_WIKI.md`. Production-переменные берутся из конфигурации
-  `.github/workflows/deploy-yandex-frontend.yml`, не из Vercel.
-- Изменение build-time переменных или allowlist требует нового deployment.
-  Runtime-переключение без deployment в этот механизм не входит.
-
-В handoff агент явно сообщает, на каком уровне проверена функция: локально,
-в CI или в production-пилоте. Не называйте недоступный Vercel Preview
-выполненной проверкой.
-
-## Скорость без потери качества
-
-- Обычная точечная правка одного экрана должна стремиться к циклу примерно
-  20–27 минут, если нет внешнего блокера. Если срок заметно растёт, сообщите
-  конкретную причину: CI, окружение, найденная регрессия или расширение scope.
-- В начале сделайте один preflight: маршрут, feature-компоненты, Fit primitives,
-  стили, реальные состояния, все изменяемые тексты и зависящие от них тесты.
-- Во время реализации запускайте целевые проверки. Полный `npm run check`
-  запускайте один раз после стабилизации diff; не отправляйте промежуточный push,
-  который заведомо запустит лишний полный CI.
-- Документацию реализованного поведения и rolling snapshot обновляйте в том же
-  продуктовом PR. Не создавайте второй PR только ради служебного handoff, если
-  после merge не появилось новой существенной фактуры.
-- Не сокращайте lint, typecheck, тесты, WebKit, mobile/visual/e2e и production
-  verification ради скорости. Допустимое ускорение — кэширование, точный scope,
-  параллельные независимые проверки и устранение повторных запусков.
-- Временное исключение по прямому решению владельца 12.10.2026 — только PR CI
-  Fit Lime: critical + явно затронутые feature tags по
-  `docs/design/TEMPORARY_FIT_LIME_CI_SCOPE_20261012.md`. Main/manual release
-  acceptance остаётся полной, локальная приёмка не сокращается. Shared/unknown
-  изменения требуют full; с 26.10.2026 00:00 МСК автоматически full. Изменённый
-  spec выключает сокращение до нового аудита; не обновляйте SHA256 автоматически.
-
-## Тесты без избыточного дублирования
-
-### Автоматический scope проверок PR
-
-- Пользователь не обязан просить сокращённый прогон в промпте. Перед дорогими
-  проверками агент сам получает фактический diff и запускает
-  `EVENT_NAME=pull_request node scripts/e2e-scope.mjs <base-sha> <head-sha> --json`.
-  Для незакоммиченных изменений учитывайте также весь working-tree diff;
-  результат только для старого HEAD не разрешает пропустить новые изменения.
-- Источник политики — `scripts/e2e-scope.mjs`, общий для CI и агента. Только
-  явно проверенные documentation/API-only/operations-only пути разрешают
-  пропустить frontend build/unit, visual/browser/WebView и пересборку native.
-  Сами изменённые серверные и служебные контракты всё равно проверяются;
-  repository lint/policy, API и PostgreSQL gates не отключаются.
-- Documentation-only здесь означает Markdown, не всю папку `docs/`:
-  `docs/design` содержит SVG и другие inputs frontend. Изменение таких assets
-  или неизвестных data-файлов требует frontend/browser проверки.
-- Auth, routing, API-контракты, frontend/native, общие зависимости, CI-конфиги,
-  неизвестные пути, diff со frontend/shared и недоступная история требуют полного
-  набора. Не добавляйте blanket skip для `scripts/`, workflows или всей infra:
-  Nginx, CSP, CORS и конфигурация сборки могут менять frontend/WebView.
-- При scope `frontendRequired=false` полный frontend `npm run check` и
-  browser/native-прогоны не обязательны. Выполните применимые серверные и
-  служебные проверки, общий lint/policy; в handoff укажите scope и основание
-  пропуска. В остальных случаях действуют все прежние требования проверки.
-- На main/manual CI сохраняется полный набор; required `app`/`e2e` остаются
-  обязательными и проверяют успех классификатора и ожидаемые результаты jobs.
-  Ошибка/неизвестный результат — не разрешение пропуска. Scope не выбирается
-  меткой PR, текстом промпта или ручным флагом отключения.
-- Изменение классификатора/CI само требует полного CI и regression-тестов
-  разрешённых пропусков, смешанного/неизвестного scope и отказов gates.
-
-### Выбор уровня и сохранение уникального покрытия
-
-Перед добавлением или расширением тестов агент обязан:
-
-1. Найти существующее покрытие того же контракта. Определить, какую новую
-   регрессию обнаружит новый тест. «Для надёжности» без конкретного риска
-   не является основанием для дублирования.
-
-2. Выбрать подходящий уровень:
-
-   - вычисления и правила — unit;
-   - серверные права, транзакции и идемпотентность — API/БД;
-   - пользовательское взаимодействие — component/browser;
-   - оформление, темы и размеры — visual.
-
-   Проверки на разных уровнях допустимы, если ловят разные классы ошибок.
-
-3. Не размножать длинные функциональные сценарии декартовым произведением
-   тем, размеров, оформления и пользователей. Поведенческий сценарий
-   проверяется отдельно; визуальная матрица получает нужное состояние через
-   изолированные fixtures и проверяет только соответствующий UI-контракт.
-
-4. Повторять взаимодействие на разных размерах и темах только при конкретном
-   риске: клавиатура, touch, scroll, responsive-разметка, focus или другой
-   зависимый от окружения механизм. Причину записать рядом с параметризацией.
-   Проверки Chromium и WebKit не считаются лишними дублями автоматически.
-
-5. Для параметризованного теста явно проверить число фактически запускаемых
-   случаев, включая браузерные проекты. Каждая ось матрицы должна иметь
-   самостоятельную причину. Разные пользователи нужны для различий доступа
-   или поведения, а не только для смены идентификатора.
-
-6. Скриншот без сравнения с эталоном — диагностический артефакт, а не
-   автоматическая проверка визуальной регрессии. Не подменять им assertions.
-
-При изменении тяжёлого набора агент обязан:
-
-- показать добавленные случаи и их уникальное назначение;
-- проверить пересечение CI-частей, исключив повторный запуск одного случая
-  в одинаковом окружении;
-- сравнить доступные тайминги до/после; отсутствие замера указать явно.
-
-При устранении дублей составить соответствие
-«старая проверка → сохраняющая её новая проверка».
-Не удалять уникальные assertions, состояния, браузеры или проверки доступа
-ради скорости. Не ослаблять таймауты, retries и обязательные CI-гейты.
-Изменение защищённого Fit Lime inventory требует явного повторного аудита;
-его SHA256 нельзя обновлять автоматически.
-
-## Границы архитектуры
-
-- UI, hooks и feature-код зависят только от provider-neutral доменных
-  контрактов: они не импортируют SDK, не вызывают Supabase/Yandex API и не
-  ветвятся по имени backend. Provider-specific transport остаётся в
-  queries/repositories и серверных adapters.
-- `src/data/queries` — единственное место с Data API/RPC вызовами.
-- `src/data/repositories` преобразует DB rows/errors в доменные DTO; SQL там запрещён.
-- Feature использует другую feature только через её публичный `index.ts`.
-- Не добавляйте generic repository/service, Redux или глобальный mutable state без ADR.
-- Server state хранится в TanStack Query; route state — в URL; form state — в React Hook Form.
-- Календарная дата — `LocalDate`, а не результат `toISOString()`.
-
-## База данных
-
-- Источник истины для новых изменений схемы — numbered migrations в
-  `services/api/db/migrations` (PostgreSQL 17, `node-pg-migrate`). Новые файлы в
-  `supabase/migrations` не добавляйте. Существующую Supabase-цепочку не
-  переписывайте: она остаётся для локальных legacy-тестов и rollback-архива.
-  Ручной SQL в production Dashboard/WebSQL запрещён.
-- `npm run dev` автоматически применяет pending Yandex migrations только к
-  локальному Podman PostgreSQL. `npm run local:verify` проверяет локальную
-  цепочку и actor/RLS. `.github/workflows/release-cloudru-api-stage.yml`
-  после зелёного current-main CI применяет только pending forward migrations
-  к Cloud.ru до запуска кандидата API, с отдельной owner-ролью, backup и
-  advisory lock. Автоматический выпуск требует CLOUDRU_API_AUTODEPLOY_ENABLED=true;
-  иначе он ручной. Build workflow не применяет миграции. Не повторяйте initial
-  import на nonempty target; откат API не откатывает уже применённую схему.
-- PK бизнес-сущностей: `uuid default gen_random_uuid()`.
-- `created_at`: `default now()`; единственный trigger — общий `updated_at` trigger.
-- Бизнес- и auth-trigger запрещены. Инициализация пользователя вызывается явно.
-- Простая запись выполняется через Yandex API с actor context; aggregate из
-  нескольких таблиц — в одной транзакции. SQL не размещайте в UI/repository.
-- Команда не принимает `trainer_id` как основание прав: actor определяется
-  серверной app-session, ownership проверяется в транзакции; root при update
-  блокируется.
-- На доступных runtime таблицах обязательны RLS, минимальные grants, `USING`
-  и `WITH CHECK`; роль `fit_api` не получает owner/BYPASSRLS.
-- FK обязательны для aggregate children; snapshot/optional links могут быть логическими UUID.
-- Архивные записи не участвуют в новых операциях, но история остаётся читаемой.
-
-## Production Yandex и замороженный Supabase
-
-- Production auth и продуктовые чтения/записи идут через Yandex ID/API и
-  Managed PostgreSQL. Dual-write и fallback на Supabase после ошибки запрещены.
-  Новая функция получает один доменный контракт и Yandex implementation;
-  создавать ради неё Supabase adapter или парную migration не нужно.
-- Supabase ещё задействован в ограниченных legacy-путях (recovery, оставшиеся
-  media и локальные тесты). Не удаляйте их или старые таблицы до отдельного
-  decommission/rollback-решения. Если изменение пересекается с таким путём,
-  зафиксируйте конкретную совместимость и целевой тест; не расширяйте старую
-  схему молча и не направляйте новые production-данные обратно в Supabase.
-- Для новой Yandex-схемы в том же PR обновите API/DTO, repository/queries,
-  actor/RLS/grants и проверку clean migration chain. При необходимости переноса
-  **уже существующих** legacy-данных обновите tenant catalog,
-  export/import/validation и локальную rehearsal; для Yandex-only данных
-  не добавляйте фиктивное mapping в Supabase.
-- Когда старый Supabase-based UI/E2E не умеет создать новые данные, добавьте
-  локальный Yandex API/PostgreSQL fixture или contract test. Не считайте
-  зелёный Supabase-тест доказательством работы новой production-функции.
-- Выявленный gap Yandex-сценария нельзя обходить Supabase fallback. Оставьте
-  пользовательский вход default-off или явно заблокированным, зафиксируйте
-  блокер в `docs/CURRENT_STATE.md`/`FEATURE_PARITY.md` и закройте его до rollout.
-- Никогда не подключайте локальные тесты к production-БД. Не выводите PII в
-  логи, fixtures и отчёты. Исторический Supabase snapshot сохраняется до
-  завершения observation/backup/rollback-гейтов; это не работающая копия новых
-  Yandex-записей.
-
-## Push-уведомления пользователям
-
-Production использует Yandex PostgreSQL `app_private.push_notifications_outbox`
-и Yandex dispatcher/sender. Для нового сценария ориентируйтесь на
-`services/api/db/migrations/000030_yandex_push_pipeline.sql` и последующие
-Yandex migrations, а не на исторические `supabase/migrations` и `pg_cron`.
-
-1. Добавьте actor-scoped producer в новую numbered Yandex migration: уникальный
-   `kind`, fan-out на все активные `public.push_subscriptions` получателя,
-   `subscription_id` в каждой строке outbox и idempotent dedupe. Уважайте
-   `notification_preferences` (отсутствие строки = включено).
-2. Если событие периодическое, используйте отдельный Yandex timer/invoker по
-   действующему pipeline; не создавайте Supabase cron или Edge Function.
-3. Общий dispatcher/sender меняйте лишь при доказанной необходимости. Пуш
-   шифруется и отправляется в Cloud Function, не в SQL.
-4. Проверьте Yandex producer/dispatcher на идемпотентность, opt-out,
-   отсутствие подписок, несколько устройств и отказ отправки. Legacy pgTAP
-   остаётся регрессией замороженной Supabase-цепочки, не приёмкой новой функции.
-
-## Качество и безопасность
-
-- Не используйте `select('*')`, `any`, небезопасные casts и проглоченные ошибки.
-- Не коммитьте `.env`, DB password, secret/service-role/OAuth secret.
-- Локальная разработка использует только локальные Podman Supabase и PostgreSQL
-  17; production URL/секреты не копируются в локальные env-файлы. Production
-  frontend строится GitHub Actions для Yandex Object Storage, не Vercel.
-- Для обычного локального запуска используйте `npm run dev`: команда сама
-  запускает обе локальные базы. Не подменяйте `.env.development` удалённым проектом.
-- Любая mutation должна подтверждать, что изменилась ожидаемая запись.
-- Многошаговая запись обязана полностью откатываться при любой ошибке.
-- Добавляйте тест на cross-tenant доступ для каждого нового tenant ID.
-- Не копируйте legacy `src/db` или старые migrations; переносите только проверенное поведение.
-- Старый источник называйте только `V1 baseline` или `legacy trainer-app`; не переносите в Fit V2 названия и URL исходных репозиториев.
-- Не отмечайте parity-сценарий как `Implemented` по одному happy path: зафиксируйте проверяемый инвентарь V1 и тест на каждое обязательное поведение.
-
-## Definition of Done
-
-- Пользовательский сценарий отражён в `FEATURE_PARITY.md`.
-- `docs/PRODUCT_WIKI.md` отражает актуальный пользовательский функционал и ограничения после изменения.
-- Новая Yandex migration воспроизводится на чистом локальном PostgreSQL 17;
-  `npm run local:verify` и actor/RLS тесты зелёные.
-- API/domain types актуальны; generated Supabase types не меняются без
-  отдельной явно согласованной legacy-правки.
-- Unit/component/integration/E2E покрытие соответствует риску.
-- `npm run check` зелёный либо подтверждённый non-frontend scope прошёл
-  применимые серверные/служебные lint/policy проверки; Yandex DB/RLS тесты
-  зелёные для изменений БД.
-
-# Fit UI / UX Engineering Rules
-
-These rules apply to every UI task in addition to the architectural and product
-rules above. The current product is the starting point; a generated component,
-Figma frame, screenshot, or external registry is reference material, not a new
-source of truth by itself. Every UI task must also read `docs/UI_TASK_PROMPT.md`
-and `docs/UI_IDENTITY.md`; `docs/UI_DESIGN_SYSTEM.md` describes the current
-implementation that is being migrated.
-
-## EXISTING SYSTEM FIRST
-
-- Inspect the relevant route, feature component, `src/shared/ui.tsx`,
-  `src/shared/icons.tsx`, and the applicable tokens/selectors in
-  `src/styles.css` before proposing or implementing UI.
-- Reproduce the current information architecture, vocabulary, data states, and
-  interaction contract before changing presentation.
-- Do not replace working controls, layouts, or CSS merely because an external
-  library offers an alternative.
-
-## COMPONENT PRIORITY
-
-Use this order: an existing Fit component; a small extension of an existing Fit
-component; a focused new Fit primitive; a registry component only when the
-first three options are demonstrably unsuitable. Keep domain behavior in the
-feature layer. `shadcn`, 21st.dev, and Figma may inform a primitive, but imported
-code must be reduced to Fit tokens, accessibility conventions, and actual need.
-
-## DO NOT INVENT A NEW DESIGN LANGUAGE
-
-For active Lime scopes, use `docs/design/FIT_LIME_DESIGN_CODE.md`, its SVG source
-catalog and the existing Lime components/tokens. Inspect the actual role, route
-and gate first. Historical Monochrome colors, typography and radii are not the
-target for new Lime work; they remain archived evidence. Outside Lime preserve
-the current working contour unless its migration is explicitly authorized.
-Apply the selected contour through the existing token and component system. Preserve
-the current screen's information architecture and behavior using
-`docs/UI_DESIGN_SYSTEM.md` and real baselines. Do not create feature-local
-palettes, a second token system, Tailwind, an unrelated font, a new brand color,
-or a parallel component kit.
-
-## AVOID AI-GENERATED UI
-
-Do not ship generic dashboard grids, excessive gradients, floating glass
-panels, decorative metrics, fabricated charts, placeholder copy, or controls
-that are not backed by a real user action. Generated UI must be treated as a
-draft to inspect and simplify, never pasted as the finished Fit interface.
-
-## HIERARCHY BEFORE DECORATION
-
-First make the primary action, reading order, grouping, labels, feedback, and
-empty/error behavior unambiguous. Add visual emphasis only after hierarchy is
-correct. One screen should have one obvious primary action; secondary and rare
-actions must not compete with it.
-
-## MOBILE FIRST FOR CLIENT
-
-- Design and verify Client at 390 px first, then 430 px; preserve safe areas,
-  bottom navigation, readable wrapping, touch targets, and keyboard behavior.
-- Never rely on hover. Keep primary tasks reachable with one thumb and avoid
-  horizontal scrolling except for an explicitly scrollable control such as
-  metric tabs.
-- A completed workout remains completed even when its plan was only partially
-  performed; incomplete plan and confirmed fact are shown separately.
-
-## TRAINER DESKTOP
-
-Trainer changes must be checked at approximately 1440 px as well as in the
-existing compact shell. Do not assume a wider viewport automatically creates a
-useful desktop layout. Preserve dense operational scanning, keyboard access,
-and clear client/workout context; do not turn trainer tools into a marketing
-dashboard.
-
-## REUSE WITHOUT OVERENGINEERING
-
-Extract a shared primitive when two or more real consumers share semantics and
-interaction, not merely similar pixels. Prefer a small explicit API and local
-composition over a configurable mega-component. Do not refactor unrelated
-screens to justify reuse.
-
-Creation, review, Live, completion, and history form one workout lifecycle.
-Keep a common semantic component contract for WorkoutHeader, Exercise, SetRow,
-Status, and CTA across these states. Do not implement separate lookalike
-components whose labels, status rules, or interaction states can drift.
-
-## ICONS
-
-Reuse the stroke SVG vocabulary in `src/shared/icons.tsx`. Add an icon there
-only when it represents a repeated or important action. Do not mix icon packs,
-use emoji as navigation, or substitute ambiguous Unicode glyphs when an
-accessible labeled control is required. Icon-only buttons need an accessible
-name and at least the standard touch target.
-
-## STATES
-
-Every changed data surface must deliberately cover loading, empty, error,
-success, disabled, and retry states that can occur. Mutations need visible
-pending and outcome feedback. Never present planned data as confirmed fact, and
-never use color as the only status signal.
-
-## NOTIFY USERS OF NOTABLE CHANGES (COACHMARKS)
-
-Trainers reported too many silent UI/behavior changes. When a PR changes
-navigation, terminology, or the primary flow of an existing trainer/client
-screen in a way a returning user would notice and need explained, wrap the
-changed element with `Coachmark` from `src/shared/ui.tsx` (pilot:
-`TrainerProgressOverviewCard`).
-
-- One `Coachmark` per notable change, with a new unique `id` (e.g.
-  `"<feature>-<yyyy-mm>"`) and `userId={actor?.userId}`. Reusing an old id
-  means the message will never show again for users who already dismissed it.
-- Keep the copy to a title and one short sentence: what changed and why it
-  helps. No images, no multi-step tours.
-- Skip it for cosmetic-only tweaks, internal/service tasks, and changes too
-  small to need explanation — do not add one to every PR by default.
-- Storage is `localStorage` only (`src/shared/coachmarks.ts`), scoped per
-  `userId`; no migration or DB table needed for this.
-- This is a lightweight in-app alternative to stories/onboarding videos,
-  chosen because it scales with weekly release cadence without a separate
-  production cycle. Do not build a stories/video system without a new
-  decision — see the pilot PR discussion for the tradeoff.
-
-## VISUAL VERIFICATION
-
-Visual verification is mandatory for UI changes. Run the relevant component or
-behavioral tests, then inspect the real route with Playwright. At minimum check
-Client 390 px and 430 px or Trainer 1440 px according to the affected role;
-cross-role/shared changes require all three. Check horizontal overflow, long
-Russian text, loading/empty/error/success where applicable, safe-area and fixed
-bars, and compare screenshots before and after. Update a committed screenshot
-baseline only when the visual change is intentional and explained in the PR.
-
-## FIGMA RULE
-
-When a Figma frame exists, inspect it through the Figma MCP and identify its
-component, token, layout, and state mapping before coding. Match product intent,
-not accidental coordinates. If Figma conflicts with current behavior,
-accessibility, or the established Fit system, document the conflict and do not
-silently choose either version. No Figma frame means existing Fit UI remains
-the design source of truth.
-
-## UI WORKFLOW
-
-### A. INSPECT
-
-Read the route and its real data states, reusable components, tokens, tests,
-and current screenshots. State the user goal and the one primary action.
-
-### B. REFERENCE
-
-Use Figma, shadcn, or 21st.dev only for the missing pattern. Record what is
-being borrowed and how it maps to the existing Fit system before adding code.
-
-### C. IMPLEMENT
-
-Make the smallest accessible change inside existing architecture. Reuse Fit
-tokens and primitives, preserve API/business logic, and add targeted tests for
-new behavior or state transitions.
-
-### D. VERIFY
-
-Run lint, typecheck, targeted tests, and the appropriate Playwright visual
-profiles. Inspect screenshots rather than relying only on green assertions.
-
-### E. POLISH
-
-Check copy, wrapping, spacing rhythm, focus/touch behavior, reduced motion,
-overflow, and all realistic states. Remove decorative or duplicated UI before
-requesting review.
+# Fit — общий контракт работы
+
+Действует для всего репозитория: всех экранов, ролей, сервисов и режимов.
+Схема владельца: задача → согласованный план → самостоятельное выполнение,
+проверка и разрешённый выпуск. Новых пользовательских этапов согласования нет.
+
+## Старт
+
+1. Установить реальный Git root, ветку, состояние дерева и актуальный main.
+   В зеркале ChatGPT-проекта сначала найти checkout и прочитать его AGENTS;
+   не считать вложенные инструкции автоматически загруженными.
+2. Прочитать [FIT_WORKFLOW](docs/FIT_WORKFLOW.md) и
+   [CURRENT_STATE](docs/CURRENT_STATE.md).
+3. Найти область в [индексе решений](docs/ACTIVE_CONTRACTS.md): действующие
+   требования, прошлые ошибки и релевантные параллельные PR.
+4. Для UI прочитать [UI_IDENTITY](docs/UI_IDENTITY.md) и
+   [UI_TASK_PROMPT](docs/UI_TASK_PROMPT.md); остальное — по scope.
+
+## Приоритет и разрешения
+
+- Последняя команда пользователя определяет объём и ограничения. «Только аудит»
+  означает никаких изменений/выкатки. Разрешённый план из нескольких PR выполнять
+  целиком, не останавливаться после первого PR или экрана.
+- Целевой результат — согласованный план, принятые SVG/handoff и действующий
+  дизайн-код. Main показывает реализацию, не отменяет принятый результат.
+  Непринятый внешний макет не меняет механику.
+- Для запрошенных изменений действует разрешение владельца на реализацию, push,
+  PR, ожидание зелёного CI, merge и проверку затронутого выпуска без повторного
+  вопроса. Не расширять задачу, пилот или права доступа.
+- Перед merge сверять активные параллельные PR: более ранний active PR выпускается
+  первым, если владелец не разрешил иной порядок. Неактивный старый PR не блокирует
+  очередь; неактивность проверять, не выводить из возраста. После интеграции main
+  повторить затронутые проверки. Чужие изменения не затирать.
+- Вести YAFIT; один канонический план, ссылки из тикета/PR вместо независимо
+  редактируемых копий. Аккаунты, записи экрана и другие приватные данные не
+  публиковать без соответствующего разрешения.
+- Невыполненное/непроверенное не называть готовым. Запреты платформы не отменяются
+  разрешением на выпуск; независимую разрешённую работу продолжать.
+
+## Сохраняемые ограничения
+
+- Общий процесс не расширяет rollout и не делает все экраны одинаковыми.
+  Сохранить роли, ownership, темы и режимы в их действующих областях.
+- Тренерский fixed2 — исходная согласованная пара; оригинальный 54 px /
+  компактный 48 px. Эти размеры не распространяются на все поля приложения.
+  UUID/контакты не помещать в публичную документацию.
+- Главные страницы менять только в разрешённом scope. Client Home остаётся
+  voice-first: диктовка и ввод текстом — основные действия.
+- UI-задача сама по себе не меняет LLM, SpeechKit, matching, fallback, сохранение,
+  таймеры и завершение. Завершённая тренировка считается состоявшейся даже при
+  неполном плане; неделя начинается в понедельник, календарная дата — LocalDate.
+- Пользовательские тексты — понятные русские. Проценты Progress округляются до
+  целых, другие показатели — максимум до одного знака. Desktop trainer/P2 не
+  расширять без прямой задачи; проверка совместимости не означает новый редизайн.
+- Не добавлять панели, кнопки и повторы ради «полноты». Сохранность механики
+  проверяется действиями, а не количеством постоянно видимых контролов.
+- Не удалять legacy migrations, шрифты/fallback и rollback из-за возраста:
+  сначала проверить потребителей и решение о выводе из эксплуатации.
+- Запрещены секреты/PII в публичных материалах, локальные тесты на production-БД,
+  ручной production SQL и обход RLS/проверок выпуска.
+
+## Инженерный контекст по scope
+
+- [ENGINEERING_RULES](docs/ENGINEERING_RULES.md): архитектура, БД, тесты,
+  scope-классификатор, push и безопасность. Читать соответствующий раздел до кода.
+- [YANDEX_CUTOVER_PLAYBOOK](docs/YANDEX_CUTOVER_PLAYBOOK.md): перед auth, БД,
+  repositories, media, AI/SpeechKit, push и backend routing.
+  Production — Cloud.ru, Yandex ID внешний; Yandex-имена в коде — контракты.
+  Vercel — redirect, Supabase — ограниченный legacy, не второй backend.
+- Локальная инфраструктура — Podman. Новые migrations только
+  services/api/db/migrations; старую Supabase-цепочку не переписывать.
+- Зависимости/браузеры проверить до дорогих тестов. Не переустанавливать при
+  неизменном lock без причины; полный набор не повторять без нового сигнала.
+
+Полнота плана проверяется внутри существующего PR по FIT_WORKFLOW, без нового
+согласования. Docs-only задача не требует выпуска неизменившегося приложения.
+Действующие решения читать по области; завершённую хронику — по необходимости.
+Общая корпоративная KB не подменяет контекст Fit.
