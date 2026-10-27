@@ -1,3 +1,4 @@
+import { CorporateAdminEntry } from '../corporate-admin'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth-context'
@@ -94,6 +95,7 @@ export function TrainerProfileSettingsPage() {
 
     <SettingsSection title="Аккаунт и помощь">
       <AccountSettingsCard />
+      <CorporateAdminEntry />
       <div className="menu">
         {!fitLimeSettings && <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>}
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>

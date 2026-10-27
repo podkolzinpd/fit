@@ -1,3 +1,4 @@
+import { CorporateAdminStore } from './corporate-admin.js'
 import { buildApp } from './app.js'
 import { DatabasePilotCustomExercisePhotos } from './custom-exercise-photo.js'
 import { aiFunctionsEnabled } from './ai-functions-enabled.js'
@@ -307,6 +308,7 @@ const app = buildApp(
     ...(pilotTrainerProfiles === undefined ? {} : { pilotTrainerProfiles }),
     ...(pilotTrainerDiscovery === undefined ? {} : { pilotTrainerDiscovery }),
     ...(pilotFavoriteWorkouts === undefined ? {} : { pilotFavoriteWorkouts }),
+    ...(databasePool === undefined ? {} : { corporateAdmin: new CorporateAdminStore(databasePool) }),
     ...(pilotTrainerFinance === undefined ? {} : { pilotTrainerFinance }),
     ...(pilotWorkoutsWriter === undefined ? {} : { pilotWorkoutsWriter }),
     ...(pilotWorkoutTemplates === undefined ? {} : { pilotWorkoutTemplates }),
