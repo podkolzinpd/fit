@@ -1,15 +1,17 @@
 import { expect, test, type Page } from '@playwright/test'
-import { scaledNutrition, type NutritionDraft, type NutritionEntry, type NutritionValues } from '../src/shared/nutrition'
-import { createNutritionCatalog } from '../services/api/src/nutrition-catalog'
+import { fileURLToPath } from 'node:url'
+import { nutritionFoodSchema, scaledNutrition, type NutritionDraft, type NutritionEntry, type NutritionFood, type NutritionValues } from '../src/shared/nutrition'
+import { createNutritionCatalog, publicNutritionFood } from '../services/api/src/nutrition-catalog'
 
 const actors = Array.from({ length: 5 }, (_, index) => `f00d0000-6010-4000-8000-00000000000${index + 1}`)
 const clientId = 'f00d0000-6010-4000-8000-000000000011'
 const food = { id: 'f00d0000-6010-4000-8000-000000000012', name: 'Курица с рисом', basis: '100g' as const,
   calories: 152.2, protein: 9.8, fat: 4.2, carbs: 18.8 }
-async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outside?: boolean; nativeProfile?: boolean; denied?: boolean; theme?: 'light' | 'dark'; lostResponse?: boolean } = {}) {
+async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outside?: boolean; nativeProfile?: boolean; denied?: boolean; theme?: 'light' | 'dark'; lostResponse?: boolean; barcode?: boolean } = {}) {
   await page.clock.install({ time: new Date('2026-10-10T09:00:00Z') })
   const role = options.role ?? 'client', actorId = options.outside || options.nativeProfile ? 'f00d0000-6010-4000-8000-000000000009' : role === 'client' ? actors[0]! : actors[3]!
-  const state = { entries: [] as NutritionEntry[], granted: false, searchError: false, saved: 0, writes: 0 }
+  const state = { entries: [] as NutritionEntry[], granted: false, searchError: false, saved: 0, writes: 0,
+    catalogFoods: new Map<string, NutritionFood>([[food.id, food]]) }
   await page.route('**/health', (route) => route.fulfill({ json: { status: 'ok' }, headers: {
     'x-fit-request-id': 'nutrition-synthetic-health', 'access-control-expose-headers': 'x-fit-request-id',
   } }))
@@ -19,7 +21,7 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
     if (path === '/v1/auth/yandex/session') return route.fulfill({ json: { accessMode: 'read_write', profile: { id: actorId,
       firstName: role === 'client' ? 'Анна' : 'Тренер', lastName: null, timezone: 'Europe/Moscow', accountRole: role,
       client: role === 'client' ? { id: clientId, trainerId: actors[3], fullName: 'Анна' } : null,
-      experiments: { nutrition: !options.outside && !options.denied, clientLime: role === 'client', fitLime: role === 'trainer' && options.theme !== 'light', trainerScheduleV2: true } } } })
+      experiments: { nutrition: !options.outside && !options.denied, nutritionBarcode: options.barcode === true, clientLime: role === 'client', fitLime: role === 'trainer' && options.theme !== 'light', trainerScheduleV2: true } } } })
     if (path === '/v1/legal/acceptance') return route.fulfill({ json: { applicable: true, accepted: true, acceptedAt: '2026-01-01T00:00:00Z' } })
     if (path === '/v1/clients') return route.fulfill({ json: { clients: [{ id: clientId, canArchive: false, hasAccount: true,
       fullName: 'Анна', canonicalFullName: 'Анна', gender: 'female', ageYears: 30, ageUpdatedAt: '2026-09-01', heightCm: 170,
@@ -36,7 +38,8 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
     if (path.endsWith('/nutrition/entries') && request.method() === 'PUT') {
       const draft = request.postDataJSON() as NutritionDraft
       state.writes++
-      const values = draft.food.kind === 'catalog' ? food : draft.food.kind === 'manual' ? draft.food : state.entries.find((entry) => entry.id === (draft.food.kind === 'recent' ? draft.food.entryId : ''))!
+      const values = draft.food.kind === 'catalog' ? state.catalogFoods.get(draft.food.id) : draft.food.kind === 'manual' ? draft.food : state.entries.find((entry) => entry.id === (draft.food.kind === 'recent' ? draft.food.entryId : ''))
+      if (!values) return route.fulfill({ status: 400, json: { error: 'invalid_food' } })
       const old = state.entries.find((entry) => entry.id === draft.id)
       const entry: NutritionEntry = { id: draft.id, day: draft.day, meal: draft.meal, name: values.name, basis: values.basis,
         grams: draft.grams, calories: values.calories, protein: values.protein, fat: values.fat, carbs: values.carbs,
@@ -74,6 +77,95 @@ async function fixture(page: Page, options: { role?: 'client' | 'trainer'; outsi
   return state
 }
 test.beforeEach(() => test.skip(process.env.VITE_YANDEX_ONLY_AUTH_ENABLED !== 'true', 'Requires isolated Yandex auth lane'))
+
+for (const theme of ['light', 'dark'] as const) test(`nutrition barcode single chooser, cancel, retry and rotated EAN ${theme}`, async ({ page }, info) => {
+  await fixture(page, { theme, barcode: true })
+  await page.setViewportSize({ width: theme === 'light' ? 390 : 430, height: 932 })
+  await page.goto('/me/nutrition?date=2026-10-10&action=add')
+  await verifiedFonts(page)
+  const scan = page.getByRole('button', { name: 'Сканировать штрихкод', exact: true })
+  const input = page.locator('input[type="file"][aria-label="Фото штрихкода"]')
+  await expect(scan).toHaveCount(1)
+  await expect(input).toHaveAttribute('accept', 'image/*')
+  await expect(input).not.toHaveAttribute('capture')
+  await expect(page.getByRole('dialog', { name: 'Импорт штрихкода' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Камера', exact: true })).toHaveCount(0)
+  await expect(page.getByText('Галерея', { exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Штрихкод', { exact: true })).toHaveCount(0)
+  await page.screenshot({ path: info.outputPath(`nutrition-barcode-single-${theme}.png`) })
+  const codes: string[] = []
+  let releaseLookup: () => void = () => { throw new Error('Lookup has not started') }
+  await page.route('**/v1/nutrition/foods/barcode/*', async route => {
+    codes.push(new URL(route.request().url()).pathname.split('/').at(-1)!)
+    if (codes.length === 1) await new Promise<void>(resolve => { releaseLookup = resolve })
+    return route.fulfill({ json: { food } })
+  })
+  const upload = async (filename?: string) => {
+    const chooser = page.waitForEvent('filechooser')
+    await scan.click()
+    await (await chooser).setFiles(filename ? fileURLToPath(new URL(`./fixtures/nutrition/${filename}`, import.meta.url)) : [])
+  }
+  await upload()
+  await expect(scan).toBeEnabled()
+  expect(codes).toEqual([])
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await upload('blank.png')
+    await expect(page.getByText('На фото не найден EAN‑8 или EAN‑13. Введите штрихкод вручную.')).toBeVisible()
+    await expect(scan).toBeEnabled()
+  }
+  const manual = page.getByLabel('Штрихкод', { exact: true })
+  await manual.fill('20')
+  await upload()
+  await expect(manual).toHaveValue('20')
+  expect(codes).toEqual([])
+  await upload(theme === 'dark' ? 'ean13-rotated.png' : 'ean13.png')
+  await expect.poll(() => codes).toEqual(['2001234567893'])
+  await expect(page.getByRole('button', { name: 'Ищем продукт…' })).toBeDisabled()
+  await page.screenshot({ path: info.outputPath(`nutrition-barcode-pending-${theme}.png`) })
+  releaseLookup()
+  await expect(page.getByRole('heading', { name: food.name, exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Выбрать другую еду' }).click()
+  await upload('ean8.png')
+  await expect.poll(() => codes).toEqual(['2001234567893', '20012342'])
+  await expect(page.getByRole('heading', { name: food.name, exact: true })).toBeVisible()
+  await page.getByLabel('Сколько съели, г').fill('100')
+  await expect(page.getByText('152,2 ккал', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+for (const theme of ['light', 'dark'] as const) test(`nutrition raw produce keeps first-page food and saves the selected reference ${theme}`, async ({ page }, info) => {
+  const state = await fixture(page, { theme, barcode: true })
+  const catalog = createNutritionCatalog(undefined, () => Promise.reject(new Error('synthetic source unavailable')))
+  await page.route('**/v1/nutrition/foods?**', async route => {
+    const url = new URL(route.request().url())
+    const result = await catalog.search(url.searchParams.get('q') ?? '', Number(url.searchParams.get('page') ?? 1))
+    const foods = result.foods.map(item => nutritionFoodSchema.parse(publicNutritionFood(item)))
+    for (const item of foods) state.catalogFoods.set(item.id, item)
+    return route.fulfill({ json: { foods, hasMore: result.hasMore } })
+  })
+  await page.setViewportSize({ width: theme === 'light' ? 390 : 430, height: 932 })
+  await page.goto('/me/nutrition?date=2026-10-10&action=add')
+  const search = page.getByRole('searchbox', { name: 'Поиск по названию' })
+  for (const [query, name, kcal] of [
+    ['огурец', 'Огурец, свежий', '16 ккал'], ['перец', 'Перец сладкий зелёный, свежий', '23 ккал'],
+    ['яблоко', 'Яблоко, свежее', '61 ккал'], ['мандарин', 'Мандарин, свежий', '53 ккал'],
+  ]) {
+    await search.fill(query!)
+    await expect(page.getByRole('button', { name: new RegExp(name!) })).toContainText(kcal!)
+    await expect(page.getByText('На этой странице совпадений нет.', { exact: false })).toHaveCount(0)
+  }
+  await verifiedFonts(page)
+  await page.screenshot({ path: info.outputPath(`nutrition-raw-produce-${theme}.png`) })
+  await search.fill('яблоко')
+  await page.getByRole('button', { name: /Яблоко, свежее/ }).click()
+  await page.getByLabel('Сколько съели, г').fill('200')
+  await expect(page.getByText('122 ккал', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Сохранить', exact: true }).click()
+  await expect(page.locator('.nutrition-entry')).toContainText('Яблоко, свежее')
+  await expect(page.locator('.nutrition-entry')).toContainText('122 ккал')
+  expect(state.saved).toBe(1)
+  expect(state.entries[0]).toMatchObject({ name: 'Яблоко, свежее', calories: 61, grams: 200, totals: { calories: 122 } })
+})
 
 test('native nutrition accepts a verified profile decision without legacy UUID membership', async ({ page }) => {
   await fixture(page, { nativeProfile: true })

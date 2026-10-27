@@ -116,17 +116,33 @@ it('shows the manufacturer instead of an external catalog source', async () => {
   expect(screen.getByLabelText('Сколько съели, г')).toHaveValue('274')
 })
 
-it('shows barcode camera and SpeechKit food entry only for the server-authorized cohort', async () => {
+it('opens one system photo chooser and SpeechKit only for the server-authorized cohort', async () => {
   fixture.barcodeEnabled = true
   const { user } = setup()
   expect(screen.getByRole('button', { name: 'Сканировать штрихкод' })).toBeVisible()
+  const input = screen.getByLabelText('Фото штрихкода')
+  const open = vi.spyOn(input, 'click')
   await user.click(screen.getByRole('button', { name: 'Сканировать штрихкод' }))
-  expect(screen.getByRole('dialog', { name: 'Импорт штрихкода' })).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Камера' })).toBeVisible()
-  expect(screen.getByLabelText('Галерея')).toHaveAttribute('type', 'file')
+  expect(open).toHaveBeenCalledTimes(1)
+  expect(input).toHaveAttribute('type', 'file')
+  expect(input).toHaveAttribute('accept', 'image/*')
+  expect(input).not.toHaveAttribute('capture')
+  expect(screen.queryByRole('dialog', { name: 'Импорт штрихкода' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Камера' })).toBeNull()
+  expect(screen.queryByText('Галерея')).toBeNull()
+  fireEvent.change(input, { target: { files: [] } })
   expect(screen.queryByLabelText('Штрихкод')).toBeNull()
   await user.click(screen.getByRole('button', { name: 'Надиктовать еду' }))
   await waitFor(() => expect(fixture.search).toHaveBeenCalledWith('рис отварной', 1))
+})
+
+it('keeps a composed dish name when moving from search to manual entry', async () => {
+  const { user } = setup()
+  await user.type(screen.getByRole('searchbox', { name: 'Поиск по названию' }), 'Бутерброд с маслом и сыром')
+  await user.click(screen.getByRole('button', { name: 'Добавить свое блюдо' }))
+  expect(screen.getByRole('textbox', { name: 'Название' })).toHaveValue('Бутерброд с маслом и сыром')
+  expect(screen.getByLabelText('Калории съеденной порции')).toHaveValue('')
+  expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled()
 })
 
 it('manual portion needs only name and calories; unknown macros remain null', async () => {

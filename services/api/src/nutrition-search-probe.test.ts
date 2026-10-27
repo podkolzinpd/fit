@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest'
 import { probeNutritionSearch } from './nutrition-search-probe.js'
 
-it('probes only six public searches without actor/database access or credential output', async () => {
+it('probes only ten public searches without actor/database access or credential output', async () => {
   // Fresh response bodies for each independent external request.
   const request = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text',
     text: JSON.stringify({ ok: true, data: { items: [{ id: 1, name: 'Салат "Оливье"', properties: [
@@ -13,8 +13,8 @@ it('probes only six public searches without actor/database access or credential 
   const report = await probeNutritionSearch(undefined, request)
   expect(report.ready).toBe(true)
   expect(report.perekConfigured).toBe(false)
-  expect(report.cases.map(item => item.query)).toEqual(['йогурт', 'йогурт натуральный', 'оливье', 'салат оливье', 'сыр', 'сыр пар'])
-  expect(request).toHaveBeenCalledTimes(6)
+  expect(report.cases.map(item => item.query)).toEqual(['йогурт', 'йогурт натуральный', 'оливье', 'салат оливье', 'сыр', 'сыр пар', 'огурец', 'перец', 'яблоко', 'мандарин'])
+  expect(request).toHaveBeenCalledTimes(10)
   expect(request.mock.calls.every(([url]) => url === 'https://mcp.vkusvill.ru/mcp')).toBe(true)
 })
 
@@ -22,6 +22,6 @@ it('reports failures with fixed statuses and never serializes a key or upstream 
   const request = vi.fn<typeof fetch>().mockRejectedValue(new Error('synthetic-private-key upstream body'))
   const report = await probeNutritionSearch('synthetic-private-key', request)
   expect(report.ready).toBe(false)
-  expect(report.cases.map(item => item.status)).toEqual(['found', 'found', 'unavailable', 'unavailable', 'unavailable', 'unavailable'])
+  expect(report.cases.map(item => item.status)).toEqual(['found', 'found', 'unavailable', 'unavailable', 'unavailable', 'unavailable', 'found', 'found', 'found', 'found'])
   expect(JSON.stringify(report)).not.toMatch(/synthetic-private-key|upstream body/)
 })

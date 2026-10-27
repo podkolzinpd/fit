@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { BasicNutritionCatalog, createNutritionCatalog, FallbackNutritionCatalog, isEanBarcode, isRelevantCatalogSearch, parseCatalogFood, parseCatalogFoods, parseOpenFoodFactsBarcode, parsePerekFood, PerekNutritionCatalog, publicNutritionFood, VkusvillNutritionCatalog, NutritionCatalogUnavailableError, type CatalogFood, type NutritionCatalog } from './nutrition-catalog.js'
+import { USDA_RAW_PRODUCE, USDA_RAW_PRODUCE_SOURCE } from './nutrition-raw-produce.data.js'
 
 const fixture = (value: string, name = 'Курица в сливочно-шпинатном соусе с рисом') => ({
   id: 120063, name, properties: [{ name: 'Пищевая и энергетическая ценность в 100 г', value }],
@@ -146,6 +147,69 @@ describe('Perek API source', () => {
 })
 
 describe('reviewed basic foods', () => {
+  it('keeps the complete pinned raw produce slice with traceable, finite per100g values', () => {
+    expect(USDA_RAW_PRODUCE).toHaveLength(96)
+    expect(new Set(USDA_RAW_PRODUCE.map(food => food.sourceId)).size).toBe(96)
+    expect(USDA_RAW_PRODUCE_SOURCE).toMatchObject({ basis: '100g', dataType: 'Survey (FNDDS)',
+      nutrientIds: { calories: 1008, protein: 1003, fat: 1004, carbs: 1005 } })
+    for (const food of USDA_RAW_PRODUCE) {
+      expect(food.sourceDescription).toMatch(/, raw$/i)
+      expect(String(food.foodCode)).toMatch(/^[67]/)
+      expect(food.name).toMatch(/[а-я]/i)
+      expect(food.name.length).toBeLessThanOrEqual(160)
+      for (const key of ['protein', 'fat', 'carbs'] as const) {
+        expect(Number.isFinite(food[key])).toBe(true)
+        expect(food[key]).toBeGreaterThanOrEqual(0)
+        expect(food[key]).toBeLessThanOrEqual(100)
+      }
+      expect(food.protein + food.fat + food.carbs).toBeLessThanOrEqual(101)
+      expect(food.calories).toBeGreaterThanOrEqual(0)
+      expect(food.calories).toBeLessThanOrEqual(1000)
+    }
+  })
+  it.each([
+    ['огурец', 'Огурец, свежий', 2709784, 16],
+    ['перец', 'Перец сладкий зелёный, свежий', 2709800, 23],
+    ['яблоко', 'Яблоко, свежее', 2709215, 61],
+    ['мандарин', 'Мандарин, свежий', 2709175, 53],
+    ['авокадо', 'Авокадо, свежее', 2709223, 160],
+    ['клубника', 'Клубника, свежая', 2709283, 36],
+    ['арбуз', 'Арбуз, свежий', 2709270, 30],
+    ['морковь', 'Морковь, сырая', 2709660, 44],
+  ])('finds %s with a source-backed identity even when upstream is unavailable', async (query, name, sourceId, calories) => {
+    const request = vi.fn<typeof fetch>().mockRejectedValue(new NutritionCatalogUnavailableError())
+    const catalog = createNutritionCatalog('synthetic-key', request)
+    const result = await catalog.search(query, 1)
+    const food = result.foods.find(item => item.sourceId === sourceId)
+    expect(food).toMatchObject({ name, sourceId, calories, basis: '100g' })
+    expect((await catalog.search(query, 1)).foods.find(item => item.sourceId === sourceId)?.id).toBe(food?.id)
+    expect(await new BasicNutritionCatalog().details(sourceId)).toEqual(food)
+    expect(result.hasMore).toBe(false)
+  })
+  it('puts the actual fruit before packaged flavor matches without substituting their recipe', async () => {
+    const request = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify({
+      ok: true, data: { items: [{ ...fixture('315.4 ккал; белки 6.1 г, жиры 13.4 г, углеводы 42.6 г', 'Круассаны-мини «Облепиха-мандарин»'), id: 120067 }], meta: { has_more: false } },
+    }) }] } }))))
+    const catalog = createNutritionCatalog(undefined, request)
+    expect((await catalog.search('мандарин', 1)).foods.map(food => food.name)).toEqual(['Мандарин, свежий', 'Круассаны-мини «Облепиха-мандарин»'])
+    expect((await catalog.search('мандарин круассаны', 1)).foods.map(food => food.calories)).toEqual([315.4])
+    const basics = new BasicNutritionCatalog()
+    for (const query of ['огурец маринованный', 'яблоко сушёное', 'бутерброд с маслом и сыром']) {
+      expect((await basics.search(query, 1)).foods).toEqual([])
+    }
+  })
+  it('paginates broad reference matches without repeating or losing identities', async () => {
+    const catalog = new BasicNutritionCatalog(), ids: string[] = []
+    for (let page = 1; page <= 20; page++) {
+      const result = await catalog.search('свеж', page)
+      expect(result.foods.length).toBeLessThanOrEqual(10)
+      ids.push(...result.foods.map(food => food.id))
+      if (!result.hasMore) break
+    }
+    expect(ids.length).toBeGreaterThan(10)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(await catalog.search('свеж', 100)).toEqual({ foods: [], hasMore: false })
+  })
   it('does not mistake raw broccoli for cheese or hide retailer cheese matches', async () => {
     expect((await new BasicNutritionCatalog().search('сыр', 1)).foods).toEqual([])
     const call = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ result: { content: [{ type: 'text', text: JSON.stringify({
@@ -221,7 +285,8 @@ describe('reviewed basic foods', () => {
     ['помидоры черри', 'Помидоры черри', 27, { label: '5 помидоров', grams: 49.7 }],
     ['брокколи', 'Брокколи, сырая', 31, { label: '1 чашка', grams: 76 }],
   ])('finds the reviewed Foundation food for %s', async (query, name, calories, serving) => {
-    await expect(new BasicNutritionCatalog().search(query, 1)).resolves.toMatchObject({ foods: [{ name, calories, servings: [serving] }] })
+    const foods = (await new BasicNutritionCatalog().search(query, 1)).foods
+    expect(foods).toEqual(expect.arrayContaining([expect.objectContaining({ name, calories, servings: [serving] })]))
   })
 })
 

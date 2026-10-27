@@ -1,0 +1,36 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { pickNativeBarcodePhoto, usesNativeBarcodePicker } from './barcode-native'
+const fixture = vi.hoisted(() => ({ platform: vi.fn(), available: vi.fn(), getPhoto: vi.fn() }))
+vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: fixture.platform, isPluginAvailable: fixture.available } }))
+vi.mock('@capacitor/camera', () => ({ Camera: { getPhoto: fixture.getPhoto }, CameraSource: { Prompt: 'PROMPT' }, CameraResultType: { Uri: 'uri' } }))
+beforeEach(() => { fixture.platform.mockReturnValue('android'); fixture.available.mockReturnValue(true); fixture.getPhoto.mockReset() })
+afterEach(() => vi.unstubAllGlobals())
+it('uses the native prompt only in Android builds that contain Camera', () => {
+  expect(usesNativeBarcodePicker()).toBe(true)
+  fixture.available.mockReturnValue(false)
+  expect(usesNativeBarcodePicker()).toBe(false)
+  fixture.available.mockReturnValue(true)
+  fixture.platform.mockReturnValue('ios')
+  expect(usesNativeBarcodePicker()).toBe(false)
+})
+it('reads selected local image without credentials or remote upload', async () => {
+  fixture.getPhoto.mockResolvedValue({ webPath: '/_capacitor_file_/test.jpg' })
+  const read = vi.fn().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/jpeg' } }))
+  vi.stubGlobal('fetch', read)
+  const file = await pickNativeBarcodePhoto()
+  expect(file?.type).toBe('image/jpeg')
+  expect(read).toHaveBeenCalledExactlyOnceWith(new URL('/_capacitor_file_/test.jpg', window.location.href), { credentials: 'omit', redirect: 'error' })
+  expect(fixture.getPhoto).toHaveBeenCalledWith(expect.objectContaining({ source: 'PROMPT', saveToGallery: false }))
+})
+it('ignores native cancellation but preserves actual errors', async () => {
+  fixture.getPhoto.mockRejectedValueOnce(new Error('User cancelled photos app'))
+  expect(await pickNativeBarcodePhoto()).toBeNull()
+  fixture.getPhoto.mockRejectedValueOnce(new Error('Permission denied'))
+  await expect(pickNativeBarcodePhoto()).rejects.toThrow('Permission denied')
+})
+it('rejects remote image paths', async () => {
+  const read = vi.fn(); vi.stubGlobal('fetch', read)
+  fixture.getPhoto.mockResolvedValue({ webPath: 'https://untrusted.example/photo.jpg' })
+  await expect(pickNativeBarcodePhoto()).rejects.toThrow('Unexpected photo origin')
+  expect(read).not.toHaveBeenCalled()
+})
