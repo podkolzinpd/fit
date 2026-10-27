@@ -2,6 +2,28 @@ import { expect, test, type Page } from '@playwright/test'
 import { z } from 'zod'
 import { mockNativeAiSession, nativeAiUrl } from './native-ai-fixture'
 
+// Shared trainer dialog must retain playback in both compact and desktop shells.
+for (const width of [390, 1440]) test(`technique video starts with reduced motion after a private URL resolves at ${width}px`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 1000 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.route('**/exercises/vital-pro/**', async route => {
+    if (new URL(route.request().url()).pathname.endsWith('.mp4')) {
+      await route.continue({ url: nativeAiUrl('/exercises/vital/stationary-bike.mp4') })
+    } else {
+      await route.fulfill({ contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64') })
+    }
+  })
+  await openNativeCatalog(page)
+  await page.getByLabel('Поиск упражнения').fill('Кошка-корова')
+  await page.locator('.catalog-media-card').first().click()
+  const detail = page.getByRole('dialog')
+  const video = detail.locator('video')
+  await expect(video).toHaveCount(1)
+  await detail.screenshot({ path: info.outputPath('private-video-reduced-motion.png') })
+  await expect(video).toHaveAttribute('autoplay', '')
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
+})
+
 async function openNativeCatalog(page: Page) {
   await mockNativeAiSession(page, 'trainer')
   const blocked: string[] = []
@@ -44,9 +66,9 @@ test('exercise catalog search and technique detail work in the iOS shell', async
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(video).toBeVisible()
-  await expect(video).not.toHaveAttribute('autoplay', '')
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
-  await page.getByRole('dialog').locator('button.secondary').click()
+  await expect(video).toHaveAttribute('autoplay', '')
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
+  await page.getByRole('dialog').locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
 
   await page.getByLabel('Поиск упражнения').fill('лежачий велотренажер')
   await expect(page.getByText('Найдено: 1', { exact: true })).toBeVisible()
@@ -119,7 +141,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
       await expect(detail.getByText('Как выполнять', { exact: true })).toBeVisible()
       await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`safe-technique-${name}-${viewport.width}.png`), fullPage: true })
-      await detail.locator('button.secondary').click()
+      await detail.locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
     }
   })
 
