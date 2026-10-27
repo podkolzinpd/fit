@@ -28,5 +28,5 @@
   .corporate-admin-list li { align-items:flex-start; flex-direction:column; gap:12px; }
   .corporate-admin-editor { padding:16px; }
 }
-.corporate-admin-shell select { min-height:48px; padding:10px 12px; }
+.corporate-admin-shell select { height:var(--control-height-standard); min-height:var(--control-height-standard); padding:10px 12px; }
 .corporate-admin-workspace h2, .corporate-admin-editor h3 { margin:0; }
