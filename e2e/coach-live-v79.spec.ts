@@ -40,7 +40,7 @@ for (const density of ['original', 'compact'] as const) {
       await expect(group).toHaveCount(1)
       const head = group.locator(':scope > .circuit-head')
       await expect(head).toContainText('Суперсет')
-      await expect(head).toContainText(state === 'complete' ? '3 из 3 кругов · завершено' : `Круг ${state === 'middle' ? 2 : 1} из 3`)
+      await expect(head).toContainText(state === 'complete' ? 'Завершено · 3/3' : `Круг ${state === 'middle' ? 2 : 1} из 3`)
       await expect(group.locator('.coach-v79-circuit-summary')).toHaveText('Приседания · Жим')
       await expect(head).toHaveCSS('flex-wrap', 'nowrap')
       const menu = head.getByRole('button', { name: 'Ещё действия', exact: true })
@@ -49,16 +49,22 @@ for (const density of ['original', 'compact'] as const) {
       const add = group.locator('.live-round-actions')
       expect(await add.evaluate(element => Boolean(element.previousElementSibling?.matches('.circuit-round')))).toBe(true)
       if (state !== 'complete') {
-        await expect(group.getByLabel('Фактический вес', { exact: true }).first()).toHaveCSS('height', density === 'original' ? '54px' : '48px')
-        await expect(group.locator('.workout-exercise-header-summary').first()).toContainText('План на круг:')
-        await expect(group.locator('.live-set-number').first()).toHaveText(state === 'middle' ? '2' : '1')
+        const current = group.locator('.circuit-round.current')
+        await expect(current.getByLabel('Фактический вес', { exact: true }).first()).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+        await expect(current.locator('.workout-exercise-header-summary').first()).toContainText('План на круг:')
+        await expect(current.locator('.live-set-number').first()).toHaveText(state === 'middle' ? '2' : '1')
         await expect(group.locator('.circuit-round-toggle').last()).toContainText('Впереди')
       }
       const rounds = group.locator('.circuit-round')
       if (state === 'complete') {
+        await expect(group.locator('.coach-v79-circuit-body')).toHaveAttribute('inert', '')
+        expect((await group.boundingBox())!.height).toBeLessThan(180)
+        await group.screenshot({ path: info.outputPath(`superset-${density}-completed-summary.png`) })
+        await head.getByRole('button', { name: /^Результаты суперсета:/ }).click()
         for (const index of [0, 1]) {
           await rounds.nth(index).locator('.circuit-round-toggle').click()
           await expect(rounds.nth(index).locator('.live-exercise-note')).toHaveCount(2)
+          await expect(rounds.nth(index).locator('.live-exercise-note').first()).toBeVisible()
           await expect(rounds.nth(index).locator('.coach-v79-circuit-tools .overflow-trigger')).toHaveCount(2)
           await expect(rounds.nth(index).locator('.live-exercise-note').first()).toContainText('Контролировать темп')
         }
@@ -163,7 +169,14 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       const lastRound = group.locator('.circuit-round').last()
       await lastRound.getByRole('button', { name: /Круг 3/ }).click()
       const row = lastRound.locator('[data-live-set-id]').first()
-      const swipeRound = async () => { const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true })); await gesture.move(60); await gesture.end() }
+      const swipeRound = async () => {
+        const field = row.getByLabel('Фактический вес', { exact: true })
+        // A round now unfolds; begin the real gesture only once its origin is
+        // stable and hittable. Trial does not focus/edit or dispatch the swipe.
+        await field.click({ trial: true })
+        const gesture = await beginClientGesture(page, row, browserName, field)
+        await gesture.move(60); await gesture.end()
+      }
       await swipeRound()
       await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
