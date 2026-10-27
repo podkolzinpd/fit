@@ -1,3 +1,7 @@
+## YAFIT-664 — PR1 исправление WebKit после CI (2026-10-27)
+
+CI40460758474:2compact cardio geometry failures (обе темы),683passed/8прежнихskip. Найден stale intrinsic grid track при390→430; локально воспроизведён, сохранялся после двух кадров. Минимальный client-only flex-header сохраняет72px media/88px controls и прошёл8/8 исходных geometry cases WebKit/Chromium без ослабления tests. Полная регрессия/check повторяются; PR#1836 НЕ слит и НЕ опубликован. Тренерские/чужие клиентские root и когорта не изменялись.
+
 27.10 — YAFIT-664 PR1: интеграция main75162bb8/#1834 сохраняет новый autoplay/play-state техники и обе обновлённые визуальные базы. Новые проверки интеграции/CI идут; публикация/native ещё гейты. Клиентский пилот прежние4.
 27.10 — YAFIT-664 PR1: интегрирован trainer #1833/main5f95c301, клиентская когорта прежние4. Целевые16/16, регрессия98/98, time10/10, объединённый client/coach20/20; снимки обеих тем просмотрены. Frontend2857/API1516+196 conditionalDBskip; полный check exit0, CI/public/native ещё гейты. План design/CLIENT_LIVE_INTERACTIONS_20261027.md.
 27.10 — YAFIT-664 PR1: от main57423a94, явное сворачивание обычных клиентских карточек; формы остаются смонтированными, отдельные title/technique и fold actions, pending/error guard. Целевые проверки16/16 WebKit+Chromium; расширенная регрессия/check ещё идут, CI/официальная публикация/native — гейты. План design/CLIENT_LIVE_INTERACTIONS_20261027.md, cohort прежние4, флаги/API/таймер неизменны.

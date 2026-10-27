@@ -384,6 +384,10 @@
    button gets its own44px target; the body keeps the original mounted forms. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { grid-template-columns: minmax(0,1fr) 88px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.workout-exercise-header-main) { grid-template-columns: 72px minmax(0,1fr) 88px; }
+/* A flex header lets WebKit recompute long-title height after a width change. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { display: flex; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head .workout-exercise-header-main { display: flex; align-items: center; gap: 8px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head :is(.live-header-animation, .exercise-thumbnail) { flex: 0 0 72px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .exercise-head-actions { width: 88px; align-self: start; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-controls { display: flex; flex-wrap: wrap; align-items: start; justify-content: flex-end; width: 88px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-controls > button { flex: 0 0 44px; }
