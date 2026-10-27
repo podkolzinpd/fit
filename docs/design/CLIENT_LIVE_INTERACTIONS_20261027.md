@@ -172,3 +172,22 @@ Main241ea73c сохраняет coach #1843/0ace и #1844: новые свора
 Свежая сверка перед финальным обновлением PR3: отдельная built-сборка именно main241e;2/2 preflight WebKit/Chromium подтвердили работающий крестик и отсутствие headerdrag, после жеста состав из3 упражнений прежний;390px screenshot просмотрен. Это локальный main, не заявление о публикации241e: official baseline/public bytes отдельно требуются перед merge. Уже работает прежнее закрытие, поиск/выбор и callbacks; переиспользуются trainer gesture/motion; действительно меняется только client Live headerdrag с безопасным dismiss/focus/scroll. Актуальные source/e2e полностью равны проверенномуQA, после него меняются только собственные Markdown-факты.
 
 Далее обязательны CI новой exact-head ревизии, штатный merge и отдельные official/public/browser/fresh-native PR3 до remote PR4. Прежний CI40519551815 относится кff54 и не заменяет эти новые гейты. Когорта4client/2coach без изменений; physical iPhone/авторизованный native Live остаются НЕ ПРОВЕРЕНО.
+
+
+### PR3 принят; окончательная сверка и приёмка PR4
+
+PR3 #1845/maina491372f принят последовательно после PR2: exact-head CI40536194459 и post-merge CI40542605592 success, официальный frontend40546991173 success;213 public bytes и health совпали,14/14 published WebKit/Chromium passed. Свежая canonical iOS-сборка собрана, установлена и запущена в симуляторе;214 native bytes совпали. Реальные light/dark и native startup просмотрены; physical iPhone и авторизованный native Live не проверены.
+
+Свежий PR4 preflight выполнен именно на принятом maina491372f:4/4 WebKit/Chromium, обе темы, обе плотности,390/430, current/completed/upcoming. Уже работают двухколоночная строка, одинаковые44px и отдельная заметка тренера; переиспользуем существующий footer без переноса тренерской трёхкнопочной строки. Действительно меняются только400 вместо500 и нейтральный текст пустой раскрытой заметки. Обработчики, coordinator, timer/deadline, APIs/storage, swipes/drag и flags не меняются. Снимки390px обеих тем просмотрены. Авторизованный native Live/physical остаются НЕ ПРОВЕРЕНО.
+
+| Пункт4 / обязательный контракт | Видимый результат и доказательство | Статус |
+| --- | --- | --- |
+| Нижняя строка | Моя заметка слева / + Подход справа;44px, общий baseline, YS Geo400; both themes/densities390/430 | Local passed |
+| Пустая / раскрытая / заполненная заметка | Пустая нейтральна, заполненная accent-ink, длинный текст без overflow;503/retry сохраняет текст | Local passed |
+| Тренер и меню | От тренера отдельно;⋯ сверху; Add-exercise60/48; новая тренерская строка не скопирована | Local passed |
+| Добавление подхода / клавиатура | Same DOM, note focus/model keyboard420; последний ввод и confirmed facts сохранены, rest deadline47s прежний | Local passed |
+| Последняя карточка / завершение | Готовые клиентские lifecycle и geometry checks сохранены, тренерский completed compact control тоже | Local passed |
+| Общая безопасность каждого PR | Выделение/повтор веса/Next; confirmed edit; stable focus/scroll; pause/manual/timer/negative rest; swipe/delete/cancel/drag/error/retry; темы/плотности390/430; trainer/outside | Local passed,156-case inventory |
+| Выпуск4 | Exact-head CI → штатный merge → official213/public14/fresh iOS → закрытие YAFIT | Ещё не выполнен |
+
+Финальный runtime/e2e равен проверенному0d064f5f; от него отличаются только два Markdown-файла с актуальной фактурой. Полный check exit0:2870 frontend/1523 API+204 прежних условных DB-проверки. Все156 уникальных неизменённых browser cases проверены: Chromium78, отдельные WebKit client58 и trainer20; inventory SHA256 2fcf1fae069dacd8b27c52377251cb5089d3f39b6e41ceb24034c056af82ec0e. Без retries/skips/изменений assertions или timeout. Два длинных смешанных WebKit-прогона остановились на одном page.goto/load45s до HTTP/app-запросов (about:blank); исходные отчёты/trace сохранены, причина не установлена. Тот же случай отдельно3/3, полная WebKit-инвентаризация затем выполнена в двух независимых процессах. Это156 проверенных случаев, не заявление об одном зелёном смешанном прогоне. Свежие light/dark footer и trainer completed screenshots просмотрены. Исходный утверждённый план сохранён byte-for-byte,4client/2coach прежние. Общий дизайн-код не менялся.

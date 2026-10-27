@@ -798,3 +798,6 @@ account_role. Локальные API/PG/RLS и browser проверки — в
 - YAFIT-664, PR2: клиентская правая rail-кнопка использует существующий openLiveReplacement; левые удаления, факт начатого, отмена/error/retry и coordinator не меняются. Новые8/8 + регрессия72/72, полныйcheck0; отдельный выпуск после public/native PR1. Прежние4 профиля.
 
 - YAFIT-664 PR3: clientLiveV79 переиспользует header drag/420ms/reduced motion, сохраняя свою тему/геометрию и multi-add. Inert диалог с активным backdrop защищает повторный вход; pending/nested и focus/scroll проверяются. Флаги и4 профиля прежние; публикация последовательно после PR2.
+
+
+YAFIT-664 / PR4: существующий клиентский footer переиспользован с YS Geo400 и нейтральным пустым disclosure. Local12/12, обе темы/плотности/390/430; regression60/60+replacement4/4/check0. Публикация только после PR3 и приёмки каждого предшественника, исходная когорта не расширяется.
