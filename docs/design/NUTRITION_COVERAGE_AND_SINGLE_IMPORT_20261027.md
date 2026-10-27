@@ -74,8 +74,13 @@ Pin SHA256 и английские описания сохранены; Python b
 31 UI tests passed после Android-adapter (ошибки доступа/отмена/повтор/локальный URI).
 До него: API71/71, генератор96/96, WebKit14/14, Chromium4/4,
 полный check exit0 (frontend2867/API1527+196 conditionalDBskip).
-Финальная проверка после native dependency идёт отдельно.
+Финальный полный check после native dependency: exit0, frontend2873/API1527
++196 штатных conditionalDBskip; lint/typecheck/policy/hosting/build/startup passed.
+Повтор WebKit14/14 и Chromium4/4 passed; synthetic light390/dark430 просмотрены.
+Ограничение первого sandbox-запуска — EPERM loopback, с доступом к локальным портам check прошёл.
 Android plugin8.2.6 зарегистрирован cap sync; iOS SwiftPM синхронизирован,
 privacy descriptions добавлены. Камера не запрашивает сохранение в галерею.
 Физические системные меню и новая native сборка не проверены; Xcode отсутствует.
 Ни пользовательские записи экрана, ни реальные дневники в тесты не перенесены.
+
+Main21465007 интегрирован после проверки: чужие Live-изменения сохранены.
