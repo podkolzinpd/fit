@@ -1,3 +1,4 @@
+import { registerCorporateAdminRoutes, type CorporateAdminService } from './corporate-admin.js'
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify'
 import { yandexAuthFailureDiagnostics, type YandexAuthStage } from './auth/yandex-auth-diagnostics.js'
 
@@ -197,6 +198,7 @@ function readCompatibleYandexActorSession(
 }
 
 interface BuildAppOptions {
+  corporateAdmin?: CorporateAdminService
   nutritionAutoActivator?: import('./nutrition-pilot.js').NutritionAutoActivator
   nutritionDiary?: NutritionDiary
   allowedOrigins?: readonly string[]
@@ -266,6 +268,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         : crypto.randomUUID()
     },
   })
+  registerCorporateAdminRoutes(app, options.corporateAdmin)
   const allowedOrigins = new Set(options.allowedOrigins ?? [])
   const publicChatMessage = async (message: ChatMessage) => {
     if (!message.image) return { ...message, image: null }

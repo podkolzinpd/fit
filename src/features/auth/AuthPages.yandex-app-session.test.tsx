@@ -582,6 +582,8 @@ describe('Yandex app session auth flow', () => {
     </MemoryRouter>)
 
     await screen.findByRole('main', { name: 'Регистрация' })
+    expect(screen.getAllByRole('radio')).toHaveLength(2)
+    expect(screen.queryByText(/администр/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Да, был аккаунт' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Email старого аккаунта')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Пароль старого аккаунта')).not.toBeInTheDocument()

@@ -53,6 +53,10 @@ export function createYandexMainQueries(
           : { ...sessionHeaders, 'content-type': 'application/json' },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       }
+      if (method === 'POST' && path === '/v1/exercise-media/sign-batch') {
+        return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, YANDEX_MAIN_READ_TIMEOUT_MS, 'Exercise media URL request timed out')
+      }
+      if (/^\/v1\/admin\//.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Admin request timed out')
       if (/^\/v1\/me\/nutrition\//.test(path)) return fetchWithTimeout(request, endpoint(apiBaseUrl, path), init, 15_000, 'Nutrition request timed out')
       if (!isLiveWorkoutWrite(path)) return request(endpoint(apiBaseUrl, path), init)
       const timedFetch: typeof fetch = (input, requestInit) => fetchWithTimeout(

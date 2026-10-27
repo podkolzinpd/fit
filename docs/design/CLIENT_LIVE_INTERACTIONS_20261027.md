@@ -122,3 +122,10 @@ PR2 main1837-интеграция/9c56337c: общий check exit0(frontend2861/
 
 
 PR2 интеграция coach #1838/main28f37c5a: сохранены действия, заметки и отдельное сворачивание каждого круга тренера. Общий focusNextLiveField пропускает retained inert-поля в обоих пилотах, legacy-путь прежний; обе независимые unit-проверки сохранены, полный файл5/5. Обработчики значений, keyboard coordinator, API, timer/deadline и flags не изменялись. Новый полный check и86 browser на собранном приложении выполняются; до их успеха local-ready снят, слияние запрещено. Dev-прогон не засчитан: startup fallback при reload и clock.pauseAt в прошлом; tests/assertions/таймауты не менялись.
+
+
+### PR2 — итоговая база после активной очереди
+
+База250ef5af (#1839/#1840): новый административный доступ, migrations159/160, App/router/settings и общий deadline15s для sign-batch сохранены без правок. Native/lock/Live/input/catalog этой базой не изменены. Свежий built preflight2/2 WebKit/Chromium подтвердил работающий прежний пункт ⋯, отмену с прежним значением20 и отсутствие клиентской правой rail; реальный снимок просмотрен. Переиспользуются прежние WorkoutSwipe/openLiveReplacement и оба Next-guard, меняется тот же согласованный client-only сценарий.
+
+Предыдущая композицияE5/1a2 полностью прошла check0(2862frontend/1516API+196условныхDBskip),built86/86,viewport2/2,unit5/5 и CI40490365330. Это не подмена приёмки новой композиции: merge-ready снят до нового exact-head check/browser/CI, official/public/fresh-native обязательны. Snapshot содержит полный новый media/admin контекст и прежнюю663/657 фактуру; для лимита120 строк свёрнуты только заголовки/переносы, исходный утверждённый план не сокращён. Wiki отделяет наши два абзаца Live от нового административного раздела.

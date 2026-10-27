@@ -2181,3 +2181,53 @@ on the device under its own preference key. The common design-code files are unc
 При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
 требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
 Это не выдаётся за доставленное обновление старым оболочкам.
+
+## Кабинет корпоративных тренеров — этап 1
+
+Маршрут `/admin`, вход существующей Yandex ID/app-session учёткой ФИТ.
+Это отдельная capability, не третья account_role: тренер/спортсмен сохраняет
+свою роль. Регистрация аккаунта не даёт административного доступа; ни Staff,
+ни email/domain, ни отметка «Тренер Яндекса» его не назначают.
+
+Первый доступ назначается оператором только после сверки существующего
+profile id выбранного владельцем аккаунта. Контакты/реальные UUID не записывать
+в публичный репозиторий, аргументы Actions или журналы. Таблица
+`app_private.corporate_admins` недоступна runtime fit_api, HTTP-ручки выдачи прав
+нет. Ссылка «Администрирование» появляется в настройках обеих ролей после
+успешной серверной проверки capability.
+
+Подготовлена owner-only утилита `services/api/dist/corporate-admin-access-cli.js`.
+После сборки API запускать в защищённом операторском окружении с уже настроенным
+`MIGRATION_DATABASE_*`, а не с обычными API credentials:
+
+```sh
+node dist/corporate-admin-access-cli.js --profile-id=<reviewed-existing-profile-id> --grant
+node dist/corporate-admin-access-cli.js --profile-id=<reviewed-existing-profile-id> --grant --apply
+```
+
+Первый вызов — транзакционная проверка с rollback, второй — применение.
+Для отзыва заменить `--grant` на `--revoke`. Утилита проверяет существование
+профиля и результат записи, не создаёт аккаунт и не печатает идентификаторы
+или credentials. Отзыв действует на следующем серверном запросе, без перевыпуска
+учётки или токенов. Из локальной среды remote grant не выполнялся.
+
+Migration159 изолирована от рабочих данных и не требует Staff PR1835.
+Пустая таблица администраторов означает отсутствие доступа у всех пользователей.
+Корпоративные признаки в этапе1 не меняют каталог, расписание, связи с тренером,
+тренировки или оплату. Статистика — отдельный следующий этап.
+
+### Единственный разрешённый Yandex ID
+
+`Manage exclusive corporate admin access` (`manage-corporate-admin.yml`)
+запускается только с current main на текущей Cloud.ru API-ревизии после
+публикации migrations159/160. Target — один приватный repository secret
+`FIT_CORPORATE_ADMIN_LOGIN_SHA256`: SHA256 точного trim/lower provider login,
+без удаления точек/дефисов и без подстановки почты. Идентификатор не передаётся
+workflow input и не выводится в журнал. Действия inspect/grant/revoke.
+Workflow отказывает при любом другом включённом profile/login administrator,
+не снимает чужие права молча. После grant разрешение может быть pending:
+пользователь заново входит выбранным Yandex ID и при необходимости завершает
+обычную регистрацию. В ней остаются только спортсмен/тренер. Сервер связывает
+разрешённый login с проверенным OAuth subject; повторный bind к другому subject
+запрещён. Результат inspect содержит только enabled/bound/readyProfiles и
+otherEnabledAdmins, без UUID, контактов или токенов.

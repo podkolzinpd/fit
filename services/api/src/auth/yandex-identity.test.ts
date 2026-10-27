@@ -129,3 +129,26 @@ describe('readBearerToken', () => {
     expect(readBearerToken(undefined)).toBeUndefined()
   })
 })
+
+describe('closed corporate admin login observer', () => {
+  it('receives only provider-verified subject and exact login hashes, never a claimed email', async () => {
+    const observe=vi.fn().mockResolvedValue(undefined)
+    const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},
+      fetchImplementation:vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({id:'synthetic',psuid:'synthetic-subject',client_id:CLIENT_ID,
+        login:' Synthetic-Admin ',default_email:'other@example.test'}))})
+    const identity=await client.verifyAccessToken('synthetic-token')
+    expect(observe).toHaveBeenCalledExactlyOnceWith(identity.subjectHash,identity.loginHash)
+    expect(identity.loginHash).toBe(createHash('sha256').update('synthetic-admin').digest('hex'))
+  })
+  it('never observes a rejected OAuth app and preserves ordinary sign-in on an observer failure', async () => {
+    const observe=vi.fn().mockRejectedValue(new Error('synthetic-database-unavailable'))
+    const payload={id:'synthetic',psuid:'synthetic-subject',client_id:'wrong-app',login:'synthetic-admin'}
+    const fetchImplementation=vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse(payload))
+      .mockResolvedValueOnce(jsonResponse({...payload,client_id:CLIENT_ID}))
+    const client=new YandexIdentityClient({expectedClientId:CLIENT_ID,corporateAdminObserver:{observe},fetchImplementation})
+    await expect(client.verifyAccessToken('synthetic-token')).rejects.toBeInstanceOf(YandexIdentityRejectedError)
+    expect(observe).not.toHaveBeenCalled()
+    await expect(client.verifyAccessToken('synthetic-token')).resolves.toHaveProperty('subjectHash')
+    expect(observe).toHaveBeenCalledOnce()
+  })
+})
