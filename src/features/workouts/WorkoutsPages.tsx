@@ -2604,9 +2604,13 @@ function LiveSetLayout({ client, children }: { client: boolean; children: ReactN
   return client ? <div className="live-set-fields">{children}</div> : children
 }
 
-function LiveCircuitLayout({ client, expanded, children }: { client: boolean; expanded: boolean; children: ReactNode }) {
+function LiveCircuitLayout({ client, coach = false, expanded, children }: { client: boolean; coach?: boolean; expanded: boolean; children: ReactNode }) {
   // Folding is presentation only: keep forms and unsent input mounted.
-  return client ? <WorkoutFoldBody className="client-circuit-body" folded={!expanded}>{children}</WorkoutFoldBody> : children
+  return client || coach ? <WorkoutFoldBody className={coach ? 'coach-v79-circuit-body' : 'client-circuit-body'} folded={!expanded}>{children}</WorkoutFoldBody> : children
+}
+
+function LiveCircuitRoundLayout({ coach, collapsed, children }: { coach: boolean; collapsed: boolean; children: ReactNode }) {
+  return coach ? <WorkoutFoldBody className="coach-v79-round-body" folded={collapsed}>{children}</WorkoutFoldBody> : children
 }
 
 function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, clientLayout = false, directInput = false, quietUnits = false, workTimer, referenceHeader = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; clientLayout?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode; referenceHeader?: boolean }) {
@@ -2891,6 +2895,8 @@ export function LiveWorkoutPage() {
   const [lastAddedRound, setLastAddedRound] = useState<{ blockId: string; position: number } | null>(null)
   const [expandedCircuitRounds, setExpandedCircuitRounds] = useState<Set<string>>(() => new Set())
   const [expandedClientBlocks, setExpandedClientBlocks] = useState<Set<string>>(() => new Set())
+  const [expandedCoachCircuits, setExpandedCoachCircuits] = useState<Set<string>>(() => new Set())
+  const [focusedCoachCircuitRound, setFocusedCoachCircuitRound] = useState<string | null>(null)
   const [openClientNotes, setOpenClientNotes] = useState<Set<string>>(() => new Set())
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
@@ -4604,7 +4610,15 @@ export function LiveWorkoutPage() {
         const activeCircuitSetId = blockStatus === 'current'
           ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
           : undefined
-        const blockExpanded = !clientReference || blockStatus === 'current' || expandedClientBlocks.has(block.blockId)
+        const needsAttention = (set: WorkoutSet) => set.id === saveErrorSetId || validationErrorSetIds.has(set.id) || pendingSetConfirmations.current.has(set.id)
+        const coachHoldingInput = coachV79 && rounds.some(round => focusedCoachCircuitRound === `${block.blockId}:${round.round}` || round.items.some(({ set }) => needsAttention(set)))
+        const blockExpanded = coachV79 ? !blockDone || coachHoldingInput || expandedCoachCircuits.has(block.blockId)
+          : !clientReference || blockStatus === 'current' || expandedClientBlocks.has(block.blockId)
+        const coachCircuitHeading = coachV79 && <>
+          <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
+          <span className="circuit-counter">{blockDone ? `Завершено · ${rounds.length}/${rounds.length}` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
+          {blockDone && <span className="coach-v79-circuit-result-icon"><CoachLiveV79CardToggleIcon folded={!blockExpanded} /></span>}
+        </>
         const roundActions = canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
           <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
             onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : <AddActionLabel>{clientReference ? 'Добавить круг' : 'Круг'}</AddActionLabel>}</button>
@@ -4616,10 +4630,9 @@ export function LiveWorkoutPage() {
           setExpandedClientBlocks(previous => previous.has(block.blockId) ? previous : new Set(previous).add(block.blockId))
         } : undefined}>
           <div className={`circuit-head${!clientReference && !coachV79 && blockStatus === 'current' ? ' circuit-head-actions-only' : ''}`}>
-            {coachV79 ? <div className="coach-v79-circuit-heading">
-              <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
-              <span className="circuit-counter">{blockDone ? `${rounds.length} из ${rounds.length} ${rounds.length === 1 ? 'круга' : 'кругов'} · завершено` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
-            </div> : clientReference && blockStatus !== 'current' ? <button type="button" className="client-circuit-toggle" aria-expanded={blockExpanded}
+            {coachV79 ? blockDone ? <button type="button" className="coach-v79-circuit-heading" aria-label={`Результаты ${block.blockPreset === 'set' ? 'суперсета' : 'группы'}: ${block.exercises.map(exercise => exercise.name).join(', ')}`} aria-expanded={blockExpanded}
+              onClick={event => { event.currentTarget.focus({ preventScroll: true }); setExpandedCoachCircuits(previous => { const next = new Set(previous); if (next.has(block.blockId)) next.delete(block.blockId); else next.add(block.blockId); return next }) }}>{coachCircuitHeading}</button>
+              : <div className="coach-v79-circuit-heading">{coachCircuitHeading}</div> : clientReference && blockStatus !== 'current' ? <button type="button" className="client-circuit-toggle" aria-expanded={blockExpanded}
               onClick={() => setExpandedClientBlocks(previous => { const next = new Set(previous); if (next.has(block.blockId)) next.delete(block.blockId); else next.add(block.blockId); return next })}>
               <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
               <span className="circuit-counter">{blockDone ? 'Завершён' : `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'}`} · {blockExpanded ? 'Свернуть' : 'Показать'}</span>
@@ -4644,19 +4657,27 @@ export function LiveWorkoutPage() {
             {reorder}
           </div>
           {coachV79 && <p className="coach-v79-circuit-summary">{block.exercises.map(exercise => exercise.name).join(' · ')}</p>}
-          <LiveCircuitLayout client={clientReference} expanded={blockExpanded}>
+          <LiveCircuitLayout client={clientReference} coach={coachV79} expanded={blockExpanded}>
           {!clientReference && !coachV79 && roundActions}
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt)
             const roundKey = `${block.blockId}:${round.round}`
             const isCurrent = roundIndex === current
-            const collapsed = !isCurrent && !expandedCircuitRounds.has(roundKey)
+            const holdingInput = coachV79 && (focusedCoachCircuitRound === roundKey || round.items.some(({ set }) => needsAttention(set)))
+            const collapsed = !isCurrent && !holdingInput && !expandedCircuitRounds.has(roundKey)
             const doneCount = round.items.filter(({ set }) => set.confirmedAt).length
-            return <div className={`circuit-round ${roundDone ? 'done' : isCurrent ? 'current' : ''}${collapsed ? ' collapsed' : ''}`} key={round.round}>
+            return <div className={`circuit-round ${roundDone ? 'done' : isCurrent ? 'current' : ''}${collapsed ? ' collapsed' : ''}`} key={round.round}
+              onFocusCapture={coachV79 ? event => { if (event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger')) setFocusedCoachCircuitRound(roundKey) } : undefined}
+              onBlurCapture={coachV79 ? event => {
+                const target = event.relatedTarget
+                if (target instanceof Element && event.currentTarget.contains(target) && target.matches('input, select, textarea, .workout-duration-trigger')) return
+                setFocusedCoachCircuitRound(previous => previous === roundKey ? null : previous)
+              } : undefined}>
             {isCurrent ? !clientReference && <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
               onClick={() => setExpandedCircuitRounds((previous) => { const next = new Set(previous); if (next.has(roundKey)) next.delete(roundKey); else next.add(roundKey); return next })}>
               <span>Круг {round.round}</span><span>{coachV79 && doneCount === 0 ? 'Впереди' : `${doneCount} из ${round.items.length} выполнено`}</span><span>{collapsed ? 'Показать' : 'Свернуть'}</span>
             </button>}
-            {!collapsed && round.items.map(({ exercise, set }) => { const duplicateNames = block.exercises.filter((item) => item.name === exercise.name)
+            <LiveCircuitRoundLayout coach={coachV79} collapsed={collapsed}>
+            {(coachV79 || !collapsed) && round.items.map(({ exercise, set }) => { const duplicateNames = block.exercises.filter((item) => item.name === exercise.name)
               const displayName = duplicateNames.length > 1 ? `${exercise.name} №${duplicateNames.findIndex((item) => item.id === exercise.id) + 1}` : exercise.name
               const showNote = coachV79 || isCurrent || (blockDone && roundIndex === 0)
               const circuitCardKey = `round:${set.id}`
@@ -4682,6 +4703,7 @@ export function LiveWorkoutPage() {
               </div>}
               {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined)}</>, circuitCardKey)}
             </section>, set.id)})}
+            </LiveCircuitRoundLayout>
           </div> })}
           {(clientReference || coachV79) && roundActions}
           </LiveCircuitLayout>
