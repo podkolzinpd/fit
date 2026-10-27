@@ -8,8 +8,11 @@ export function liveNumberValue(value: FormDataEntryValue | null): number | unde
 export function focusNextLiveField(input: HTMLElement): void {
   const root = input.closest('.live-workout-page')
   if (!root) return
+  const coach = root.classList.contains('coach-live-v79')
   const fields = [...root.querySelectorAll<HTMLElement>('input.live-set-input:not(:disabled):not([type="hidden"]), select.live-set-rpe:not(:disabled)')]
-    .filter((field) => field.getClientRects().length > 0)
+    // Retained coach rounds have rectangles even while clipped and inert.
+    // Leave the existing client/legacy navigation contract unchanged.
+    .filter((field) => field.getClientRects().length > 0 && (!coach || !field.closest('[inert]')))
   const index = fields.indexOf(input)
   if (index >= 0) fields[index + 1]?.focus({ preventScroll: true })
 }
