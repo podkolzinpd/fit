@@ -1,3 +1,4 @@
+import type { CorporateAdminLoginObserver } from '../corporate-admin-login.js'
 import { createHash } from 'node:crypto'
 import { nutritionLoginHash } from '../nutrition-pilot.js'
 
@@ -29,6 +30,7 @@ export class YandexIdentityUnavailableError extends Error {
 }
 
 interface YandexIdentityClientOptions {
+  corporateAdminObserver?: CorporateAdminLoginObserver
   expectedClientId: string
   fetchImplementation?: typeof fetch
   timeoutMs?: number
@@ -69,6 +71,7 @@ function parseIdentityPayload(value: unknown): {
 }
 
 export class YandexIdentityClient implements YandexIdentityProvider {
+  private readonly corporateAdminObserver: CorporateAdminLoginObserver | undefined
   private readonly expectedClientId: string
   private readonly fetchImplementation: typeof fetch
   private readonly timeoutMs: number
@@ -79,6 +82,7 @@ export class YandexIdentityClient implements YandexIdentityProvider {
       throw new Error('Yandex OAuth client ID must not be empty')
     }
 
+    this.corporateAdminObserver = options.corporateAdminObserver
     this.expectedClientId = expectedClientId
     this.fetchImplementation = options.fetchImplementation ?? globalThis.fetch
     this.timeoutMs = options.timeoutMs ?? 3_000
@@ -120,14 +124,15 @@ export class YandexIdentityClient implements YandexIdentityProvider {
       throw new YandexIdentityRejectedError()
     }
 
+    const subjectHash = createHash('sha256').update(identity.psuid, 'utf8').digest('hex')
+    const loginHash = createHash('sha256').update(identity.login.trim().toLowerCase(), 'utf8').digest('hex')
+    try { await this.corporateAdminObserver?.observe(subjectHash, loginHash) } catch {
+      // Closed admin access must never prevent ordinary trainer/client sign-in.
+    }
     return {
       ...(nutritionLoginHash(identity.login) === undefined ? {} : { nutritionLoginHash: nutritionLoginHash(identity.login)! }),
-      subjectHash: createHash('sha256')
-        .update(identity.psuid, 'utf8')
-        .digest('hex'),
-      loginHash: createHash('sha256')
-        .update(identity.login.trim().toLowerCase(), 'utf8')
-        .digest('hex'),
+      subjectHash,
+      loginHash,
     }
   }
 }

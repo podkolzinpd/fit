@@ -1,0 +1,60 @@
+name: Manage exclusive corporate admin access
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Inspect, grant or revoke the single owner-approved login
+        type: choice
+        required: true
+        default: inspect
+        options: [inspect, grant, revoke]
+permissions:
+  contents: read
+concurrency:
+  group: cloudru-stage-vm
+  cancel-in-progress: false
+jobs:
+  access:
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply only the privately approved login on the current release
+        env:
+          CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
+          CORPORATE_ADMIN_LOGIN_SHA256: ${{ secrets.FIT_CORPORATE_ADMIN_LOGIN_SHA256 }}
+          CORPORATE_ADMIN_ACTION: ${{ inputs.action }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(hostname)" = fit-stage-app
+          test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | cut -f1)"
+          [[ "$CORPORATE_ADMIN_LOGIN_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          case "$CORPORATE_ADMIN_ACTION" in inspect|grant|revoke) ;; *) exit 1 ;; esac
+          release=$(cat /opt/fit/RUNNING_SHA)
+          test "$release" = "$(git rev-parse HEAD)"
+          jq -e '.MIGRATION_DATABASE_HOST == "10.70.10.67" and .MIGRATION_DATABASE_PORT == "5432" and
+            .MIGRATION_DATABASE_NAME == "fit" and .MIGRATION_DATABASE_USER == "fit_owner" and
+            .MIGRATION_DATABASE_URL == null and all(.[]; type == "string" and length > 0 and
+            (test("[\u0000-\u001f\u007f]") | not))' <<<"$CLOUDRU_DATABASE_CONFIG_JSON" >/dev/null
+          umask 077
+          owner="/opt/fit/secrets/corporate-admin-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          sudo test ! -e "$owner"
+          sudo install -m 600 /dev/null "$owner"
+          trap 'sudo rm -f -- "$owner"' EXIT
+          jq -r 'to_entries[] | select(.key | startswith("MIGRATION_DATABASE_")) | "\(.key)=\(.value)"' \
+            <<<"$CLOUDRU_DATABASE_CONFIG_JSON" | sudo tee "$owner" >/dev/null
+          printf 'MIGRATION_DATABASE_SSL_MODE=require\nGITHUB_REF=refs/heads/main\nGITHUB_REPOSITORY=podkolzinpd/fit\n' | sudo tee -a "$owner" >/dev/null
+          printf 'CORPORATE_ADMIN_ACTION=%s\nCORPORATE_ADMIN_LOGIN_SHA256=%s\n' "$CORPORATE_ADMIN_ACTION" "$CORPORATE_ADMIN_LOGIN_SHA256" | sudo tee -a "$owner" >/dev/null
+          sudo podman run --rm --read-only --memory=128m --cpus=0.5 --timeout=25 --cap-drop=ALL \
+            --security-opt=no-new-privileges --env-file "$owner" --user "$(id -u):$(id -g)" \
+            -v "$PWD/scripts/manage-corporate-admin-access.mjs:/operation.mjs:ro" \
+            "localhost/fit-api:$release" node /operation.mjs
