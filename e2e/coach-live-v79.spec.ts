@@ -154,6 +154,76 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
   })
 }
 const pilot = 'c0ac0000-6010-4000-8000-000000000001'
+// Theme/density affect wrapping and touch geometry. Each scenario checks one
+// disclosure cycle; the extra widths only exercise the same open layout.
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`v79 workout note disclosure ${theme} ${density}`, async ({ page }, info) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(({ pilot, density, theme }) => {
+    localStorage.setItem('fit.appTheme', theme)
+    localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density)
+  }, { pilot, density, theme })
+  const source = coachGestureWorkout()
+  source.notes = ('Полная общая заметка из Ассистента, без сокращения текста.\n').repeat(30)
+  source.exercises[0]!.trainerComment = 'Отдельная заметка к упражнению'
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-live-v79')).toBeVisible()
+  const note = page.locator('.coach-live-workout-note-disclosure'), summary = note.locator('summary')
+  const field = page.getByLabel('Фактический вес', { exact: true }).first()
+  const element = await field.elementHandle(), value = await field.inputValue()
+  const stored = JSON.stringify(backend.getWorkouts()[0])
+  await expect(note).not.toHaveAttribute('open', '')
+  await expect(note.locator('p')).toBeHidden()
+  await expect(summary.locator('span').first()).toHaveText('Заметка к тренировке')
+  await expect(note.locator('.live-workout-note-read')).toBeVisible()
+  await expect(note.locator('.live-workout-note-hide')).toBeHidden()
+  expect((await note.boundingBox())!.height).toBeLessThanOrEqual(60)
+  expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await summary.focus()
+  await page.keyboard.press('Enter')
+  await expect(note.locator('p')).toBeVisible()
+  expect(await note.locator('p').textContent()).toBe(source.notes)
+  await expect(note.locator('p')).toHaveCSS('white-space', 'pre-wrap')
+  await expect(note.locator('.live-workout-note-hide')).toBeVisible()
+  for (const width of [390, 430, 1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await note.screenshot({ path: info.outputPath(`coach-note-open-${width}.png`) })
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await summary.click()
+  await expect(note.locator('p')).toBeHidden()
+  await summary.focus()
+  await page.keyboard.press('Space')
+  await expect(note.locator('p')).toBeVisible()
+  await summary.click()
+  expect(await element!.evaluate(e => e.isConnected)).toBe(true)
+  await expect(field).toHaveValue(value)
+  expect(JSON.stringify(backend.getWorkouts()[0])).toBe(stored)
+  await page.locator('.content').evaluate(e => { e.scrollTop = 0 })
+  await page.screenshot({ path: info.outputPath('coach-note-collapsed.png') })
+  await page.reload()
+  await expect(page.locator('.coach-live-v79')).toBeVisible()
+  await expect(note.locator('p')).toBeHidden()
+  await summary.click()
+  expect(await note.locator('p').textContent()).toBe(source.notes)
+  expect(JSON.stringify(backend.getWorkouts()[0])).toBe(stored)
+})
+
+test('v79 workout note empty and short', async ({ page }) => {
+  const source = coachGestureWorkout(); source.notes = '  '
+  const backend = await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.coach-live-v79')).toBeVisible()
+  await expect(page.locator('.coach-live-workout-note')).toHaveCount(0)
+  backend.getWorkouts()[0]!.notes = 'Спокойный темп.'
+  await page.reload()
+  const note = page.locator('.coach-live-workout-note-disclosure')
+  await expect(note.locator('p')).toBeHidden()
+  await note.locator('summary').click()
+  await expect(note.locator('p')).toHaveText('Спокойный темп.')
+})
 for (const density of ['original', 'compact']) test(`v79 clock handoff preserves fields and deadline ${density}`, async ({ page }, info) => {
   await page.clock.install({ time: new Date('2026-10-25T08:59:00Z') })
   await page.addInitScript(({ pilot, density }) => localStorage.setItem(`fit.coachLiveDensity.${pilot}`, density), { pilot, density })
