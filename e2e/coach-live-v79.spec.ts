@@ -40,7 +40,7 @@ for (const density of ['original', 'compact'] as const) {
       await expect(group).toHaveCount(1)
       const head = group.locator(':scope > .circuit-head')
       await expect(head).toContainText('Суперсет')
-      await expect(head).toContainText(state === 'complete' ? '3 из 3 кругов · завершено' : `Круг ${state === 'middle' ? 2 : 1} из 3`)
+      await expect(head).toContainText(state === 'complete' ? 'Завершено · 3/3' : `Круг ${state === 'middle' ? 2 : 1} из 3`)
       await expect(group.locator('.coach-v79-circuit-summary')).toHaveText('Приседания · Жим')
       await expect(head).toHaveCSS('flex-wrap', 'nowrap')
       const menu = head.getByRole('button', { name: 'Ещё действия', exact: true })
@@ -49,16 +49,22 @@ for (const density of ['original', 'compact'] as const) {
       const add = group.locator('.live-round-actions')
       expect(await add.evaluate(element => Boolean(element.previousElementSibling?.matches('.circuit-round')))).toBe(true)
       if (state !== 'complete') {
-        await expect(group.getByLabel('Фактический вес', { exact: true }).first()).toHaveCSS('height', density === 'original' ? '54px' : '48px')
-        await expect(group.locator('.workout-exercise-header-summary').first()).toContainText('План на круг:')
-        await expect(group.locator('.live-set-number').first()).toHaveText(state === 'middle' ? '2' : '1')
+        const current = group.locator('.circuit-round.current')
+        await expect(current.getByLabel('Фактический вес', { exact: true }).first()).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+        await expect(current.locator('.workout-exercise-header-summary').first()).toContainText('План на круг:')
+        await expect(current.locator('.live-set-number').first()).toHaveText(state === 'middle' ? '2' : '1')
         await expect(group.locator('.circuit-round-toggle').last()).toContainText('Впереди')
       }
       const rounds = group.locator('.circuit-round')
       if (state === 'complete') {
+        await expect(group.locator('.coach-v79-circuit-body')).toHaveAttribute('inert', '')
+        expect((await group.boundingBox())!.height).toBeLessThan(180)
+        await group.screenshot({ path: info.outputPath(`superset-${density}-completed-summary.png`) })
+        await head.getByRole('button', { name: /^Результаты суперсета:/ }).click()
         for (const index of [0, 1]) {
           await rounds.nth(index).locator('.circuit-round-toggle').click()
           await expect(rounds.nth(index).locator('.live-exercise-note')).toHaveCount(2)
+          await expect(rounds.nth(index).locator('.live-exercise-note').first()).toBeVisible()
           await expect(rounds.nth(index).locator('.coach-v79-circuit-tools .overflow-trigger')).toHaveCount(2)
           await expect(rounds.nth(index).locator('.live-exercise-note').first()).toContainText('Контролировать темп')
         }
@@ -98,6 +104,72 @@ for (const density of ['original', 'compact'] as const) {
 }
 
 test.skip(process.env.FIT_COACH_LIVE_V79_ACCEPTANCE !== '1', 'Dedicated coach-v79 production-build harness')
+for(const density of ['original','compact'])test(`v79 superset lifecycle ${density}`,async({page})=>{
+ const profileId='c0ac0000-6010-4000-8000-000000000001'
+ await page.clock.install({time:new Date('2026-10-08T09:01:00Z')})
+ await page.addInitScript(({profileId,density})=>localStorage.setItem(`fit.coachLiveDensity.${profileId}`,density),{profileId,density})
+ const source=coachGestureWorkout(true,3),groupId=source.exercises[0]!.blockId
+ source.exercises.slice(0,2).forEach(e=>{e.blockRounds=2;e.restBetweenExercisesSec=0;e.restBetweenRoundsSec=90})
+ const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[source],failFirstSetConfirm:density==='original'})
+ await page.route('**/blocks/*/rounds',async route=>{
+  const current=backend.getWorkouts()[0]!
+  expect(route.request().postDataJSON()).toMatchObject({expectedVersion:current.version})
+  current.exercises.filter(e=>e.blockId===groupId).forEach((e,i)=>{e.sets.push({...e.sets.at(-1)!,id:`c0ac0000-6010-4000-8000-0000000009${i}3`,position:2,fact:{},confirmedAt:null});e.blockRounds=3})
+  current.version++
+  await route.fulfill({json:{block:{id:groupId,version:current.version,replayed:false}}})
+ })
+ await page.goto(`/workouts/${workoutId}/live`)
+ const group=page.locator('.coach-v79-circuit'),rounds=group.locator('.circuit-round')
+ await expect(group.locator(':scope > .circuit-head')).toContainText('Круг 1 из 2')
+ const firstId=source.exercises[0]!.sets[0]!.id,first=page.locator(`[data-live-set-id="${firstId}"]`)
+ const field=first.getByLabel('Фактический вес',{exact:true}),fieldNode=await field.elementHandle()
+ await rounds.first().getByLabel('Фактические повторы',{exact:true}).last().press('Enter')
+ await expect(page.locator(`[data-live-set-id="${source.exercises[2]!.sets[0]!.id}"]`).getByLabel('Фактический вес',{exact:true})).toBeFocused()
+ await field.fill('27.5');await first.locator('button.live-set-check').click()
+ if(density==='original'){
+  await expect(page.locator('.live-sync-state')).toContainText('Не удалось отправить')
+  await expect(field).toHaveValue('27.5')
+  await page.locator('.live-sync-state').getByRole('button',{name:'Повторить',exact:true}).click()
+ }
+ await expect.poll(()=>backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).not.toBeNull()
+ await expect(first.locator('.live-set-check')).toHaveClass(/done/)
+ await page.locator(`[data-live-set-id="${source.exercises[1]!.sets[0]!.id}"] button.live-set-check`).click()
+ await expect(rounds.nth(1)).toHaveClass(/current/)
+ await expect(rounds.first().locator('.coach-v79-round-body')).toHaveAttribute('inert','')
+ expect(await fieldNode!.evaluate(e=>e.isConnected)).toBe(true)
+ await expect(field).toHaveValue('27.5')
+ await expect(rounds.nth(1).getByLabel('Фактический вес',{exact:true}).first()).toHaveValue('27.5')
+ await expect(page.locator('.coach-v79-actions .live-rest-trigger')).toContainText('1:30')
+ await page.clock.runFor(91000)
+ await expect(page.locator('.coach-v79-timer')).toHaveAttribute('data-state','live')
+ await expect(page.locator('.coach-v79-actions .live-rest-trigger')).toContainText('−')
+ for(const exercise of source.exercises.slice(0,2))await page.locator(`[data-live-set-id="${exercise.sets[1]!.id}"] button.live-set-check`).click()
+ await expect(group.locator('.coach-v79-circuit-body')).toHaveAttribute('inert','')
+ await expect(group).toContainText('Завершено · 2/2')
+ await group.getByRole('button',{name:/^Результаты суперсета:/}).click()
+ await rounds.nth(1).locator('.circuit-round-toggle').click()
+ const editedId=source.exercises[1]!.sets[1]!.id,edited=page.locator(`[data-live-set-id="${editedId}"]`).getByLabel('Фактический вес',{exact:true})
+ const beforeRest=await page.evaluate(id=>sessionStorage.getItem(`fit:live-rest-until:${id}`),workoutId)
+ await edited.fill('31.5');await edited.press('Tab')
+ await expect.poll(()=>backend.getWorkouts()[0]!.exercises[1]!.sets[1]!.fact.weightKg).toBe(31.5)
+ expect(await page.evaluate(id=>sessionStorage.getItem(`fit:live-rest-until:${id}`),workoutId)).toBe(beforeRest)
+ await group.getByRole('button',{name:'Круг',exact:true}).click()
+ await expect(rounds).toHaveCount(3)
+ expect(backend.getWorkouts()[0]!.exercises.slice(0,2).flatMap(e=>e.sets).filter(s=>s.confirmedAt)).toHaveLength(4)
+ await page.reload()
+ await expect(group.locator(':scope > .circuit-head')).toContainText('Круг 3 из 3')
+ const current=backend.getWorkouts()[0]!
+ for(const exercise of current.exercises.slice(0,2))await page.locator(`[data-live-set-id="${exercise.sets[2]!.id}"] button.live-set-check`).click()
+ for(const set of current.exercises[2]!.sets)await page.locator(`[data-live-set-id="${set.id}"] button.live-set-check`).click()
+ await page.getByRole('button',{name:'Завершить тренировку',exact:true}).click()
+ await expect(page).not.toHaveURL(/\/live$/)
+ await page.reload()
+ expect(backend.getWorkouts()[0]!.status).toBe('done')
+ expect(backend.getWorkouts()[0]!.startedAt).toBe(source.startedAt)
+ expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(27.5)
+ expect(backend.getWorkouts()[0]!.exercises[1]!.sets[1]!.fact.weightKg).toBe(31.5)
+})
+
 
 for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
   test(`v79 adjacent superset ${profileId}`, async ({ page, browserName }, info) => {
@@ -163,7 +235,14 @@ for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-
       const lastRound = group.locator('.circuit-round').last()
       await lastRound.getByRole('button', { name: /Круг 3/ }).click()
       const row = lastRound.locator('[data-live-set-id]').first()
-      const swipeRound = async () => { const gesture = await beginClientGesture(page, row, browserName, row.getByLabel('Фактический вес', { exact: true })); await gesture.move(60); await gesture.end() }
+      const swipeRound = async () => {
+        const field = row.getByLabel('Фактический вес', { exact: true })
+        // A round now unfolds; begin the real gesture only once its origin is
+        // stable and hittable. Trial does not focus/edit or dispatch the swipe.
+        await field.click({ trial: true })
+        const gesture = await beginClientGesture(page, row, browserName, field)
+        await gesture.move(60); await gesture.end()
+      }
       await swipeRound()
       await row.getByRole('button', { name: 'Удалить круг 3: суперсет', exact: true }).click()
       await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена', exact: true }).click()
@@ -597,6 +676,13 @@ for (const width of [375, 430, 1440]) for (const density of ['original', 'compac
   source.exercises[0]!.name = 'Жим гантелей на наклонной скамье с полным длинным названием упражнения'
   source.clientName = 'Алексей Константинович Смирнов — длинное имя клиента'
   source.notes = 'Полная заметка к тренировке без подмены демонстрационными данными'
+  const groupId = 'c0ac0000-6010-4000-8000-000000000700'
+  source.exercises.push(...coachGestureWorkout(true, 2).exercises.map((exercise, index) => ({
+    ...exercise, id: `c0ac0000-6010-4000-8000-${String(701 + index).padStart(12, '0')}`,
+    name: index === 0 ? 'Болгарский сплит-присед с гантелями и длинным названием' : 'Тяга верхнего блока',
+    position: 3 + index, blockId: groupId, blockRounds: 2,
+    sets: exercise.sets.map(set => ({ ...set, id: `c0ac0000-6010-4000-8000-${String(730 + index * 10 + set.position).padStart(12, '0')}` })),
+  })))
   await mockPilot(page, { profileId: pilot, fitLime: true, workouts: [source] })
   await page.goto(`/workouts/${workoutId}/live`)
   const card = page.locator('.live-exercise').first(), field = card.getByLabel('Фактический вес', { exact: true }).first()
@@ -610,13 +696,27 @@ for (const width of [375, 430, 1440]) for (const density of ['original', 'compac
   await expect(header.locator('h2')).toHaveCSS('font-size', density === 'original' ? '24px' : '20px')
   await expect(header.locator('.coach-live-client')).toHaveText(source.clientName)
   await expect(progress).toContainText('подход 1 из 2')
-  await expect(progress).toContainText('Готово 0 из 6')
+  await expect(progress).toContainText('Готово 0 из 10')
   await expect(progress).toHaveCSS('clip-path', 'none')
   await expect(progress).toHaveCSS('position', 'static')
   expect(await progress.evaluate(e => e.getBoundingClientRect().height)).toBeGreaterThan(1)
   expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
   await page.locator('.content').evaluate(e => e.scrollTop = 0)
   await page.screenshot({ path: info.outputPath(`${density}-${width}-source.png`) })
+  const group = page.locator('.coach-v79-circuit'), groupHead = group.locator(':scope > .circuit-head')
+  await expect(groupHead).toHaveCSS('flex-wrap', 'nowrap')
+  const groupBox = (await group.boundingBox())!
+  for (const button of await groupHead.locator('button').all()) {
+    const box = (await button.boundingBox())!
+    expect(box.width).toBeGreaterThanOrEqual(44)
+    expect(box.x).toBeGreaterThanOrEqual(groupBox.x)
+    expect(box.x + box.width).toBeLessThanOrEqual(groupBox.x + groupBox.width + 1)
+  }
+  await expect(group.locator('.circuit-round.current').getByLabel('Фактический вес', { exact: true }).first()).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+  await expect(group.locator('.coach-v79-round-body').last()).toHaveAttribute('inert', '')
+  await group.evaluate(element => element.scrollIntoView({ block: 'start' }))
+  await page.locator('.content').evaluate(element => { element.scrollTop = Math.max(0, element.scrollTop - 80) })
+  await page.screenshot({ path: info.outputPath(`${density}-${width}-superset.png`) })
 })
 
 test('v79 retry and partial finish keep actual facts instead of demo reset', async ({ page }) => {
@@ -708,4 +808,24 @@ test('v79 Live presentation never enters the existing planner', async ({ page })
   await page.getByRole('button', { name: 'Выбрать упражнения', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })).toBeVisible()
   await expect(page.locator('.coach-v79-picker-overlay')).toHaveCount(0)
+})
+
+// Other grouped presets retain their existing round-action restrictions.
+test('v79 completed circuit preserves results and unsupported round action',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+ const profileId='c0ac0000-6010-4000-8000-000000000001',source=coachGestureWorkout(true)
+ for(const exercise of source.exercises.slice(0,2)){
+  exercise.blockPreset='circuit';exercise.blockRounds=2
+  exercise.sets=Array.from({length:2},(_,position)=>({...exercise.sets[0]!,id:`${exercise.id.slice(0,-1)}${position+1}`,position,fact:{weightKg:20,reps:10},confirmedAt:'2026-10-08T09:00:30Z'}))
+ }
+ await page.addInitScript(id=>localStorage.setItem(`fit.coachLiveDensity.${id}`,'original'),profileId)
+ const backend=await mockPilot(page,{profileId,fitLime:true,workouts:[source]})
+ await page.goto(`/workouts/${workoutId}/live`)
+ const group=page.locator('.coach-v79-circuit')
+ await expect(group.locator('.coach-v79-circuit-body')).toHaveAttribute('inert','')
+ await group.getByRole('button',{name:/^Результаты группы:/}).click()
+ await group.locator('.circuit-round').first().locator('.circuit-round-toggle').click()
+ await expect(group.locator('.circuit-round').first().getByLabel('Фактический вес',{exact:true}).first()).toHaveCSS('height','54px')
+ await expect(group.locator('.live-round-actions')).toHaveCount(0)
+ expect(backend.getWorkouts()[0]!.exercises.slice(0,2).flatMap(e=>e.sets).every(s=>s.confirmedAt&&s.fact.weightKg===20)).toBe(true)
 })
