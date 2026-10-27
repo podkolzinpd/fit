@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
 import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
@@ -2988,3 +2989,82 @@ for (const theme of ['light', 'dark']) test(`client custom photo survives failur
     await page.screenshot({ path: info.outputPath(`photo-reloaded-${width}.png`) })
   }
 })
+
+async function openClientVideo(page: Page, theme: string, width: number) {
+  await page.setViewportSize({ width, height: 932 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+  const source = coachGestureWorkout(false, 1)
+  source.startedAt = new Date().toISOString()
+  Object.assign(source.exercises[0]!, { ref: 'cat-cow', name: 'Кошка-корова', inputKind: 'duration' })
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [source] })
+  let available = false
+  let signedVideos = 0
+  await page.route('**/v1/exercise-media/sign-batch', async route => {
+    const { paths } = z.object({ paths: z.array(z.string()) }).parse(route.request().postDataJSON())
+    await route.fulfill({ json: { signedUrls: paths.map(path => ({ path, signedUrl: new URL(`/exercises/${path}${path.endsWith('.mp4') ? `?attempt=${++signedVideos}` : ''}`, page.url()).href })) } })
+  })
+  await page.route('**/exercises/vital-pro/**', async route => {
+    if (new URL(route.request().url()).pathname.endsWith('.mp4')) {
+      if (!available) await route.fulfill({ status: 503, body: '' })
+      else await route.continue({ url: new URL('/exercises/vital/stationary-bike.mp4', route.request().url()).href })
+    } else {
+      await route.fulfill({ contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64') })
+    }
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+  return { recover: () => { available = true }, signedVideos: () => signedVideos }
+}
+
+test('client technique retries failed video and keeps manual play usable', async ({ page }, info) => {
+  const fixture = await openClientVideo(page, 'dark', 390)
+  const inline = page.locator('.live-header-animation')
+  const inlineRetry = inline.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' })
+  await expect(inlineRetry).toBeVisible()
+  const bounds = (await inlineRetry.boundingBox())!
+  expect(bounds.width).toBeGreaterThanOrEqual(44)
+  expect(bounds.height).toBeGreaterThanOrEqual(44)
+  await inline.screenshot({ path: info.outputPath('client-inline-video-retry.png') })
+  await page.getByRole('button', { name: 'Посмотреть технику: Кошка-корова', exact: true }).click()
+  const detail = page.getByRole('dialog', { name: 'Техника: Кошка-корова', exact: true })
+  await expect(detail.getByText('Видео не загрузилось')).toBeVisible()
+  await detail.screenshot({ path: info.outputPath('client-video-error.png') })
+  const failedAttempts = fixture.signedVideos()
+  fixture.recover()
+  await detail.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' }).click()
+  const video = detail.locator('video')
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+  expect(fixture.signedVideos()).toBeGreaterThan(failedAttempts)
+  await expect(detail.getByText('Видео не загрузилось')).toHaveCount(0)
+  await expect(detail.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })).toHaveCount(0)
+  await video.evaluate((element: HTMLVideoElement) => element.pause())
+  const play = detail.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })
+  await expect(play).toBeVisible()
+  await play.click()
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0)
+  await expect(play).toHaveCount(0)
+  await detail.screenshot({ path: info.outputPath('client-video-playing.png') })
+  await detail.getByRole('button', { name: 'Закрыть технику' }).click()
+  await expect(detail).toHaveCount(0)
+  await expect(inlineRetry).toBeVisible()
+  await inlineRetry.click()
+  await expect.poll(() => inline.locator('video').evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+})
+
+// Themes and widths cover token contrast and wrapping only; recovery runs once above.
+for (const sample of [{ width: 390, theme: 'light' }, { width: 430, theme: 'light' }, { width: 430, theme: 'dark' }]) {
+  test(`client video error fits Lime ${sample.theme} ${sample.width}`, async ({ page }, info) => {
+    await openClientVideo(page, sample.theme, sample.width)
+    await page.getByRole('button', { name: 'Посмотреть технику: Кошка-корова', exact: true }).click()
+    const detail = page.getByRole('dialog', { name: 'Техника: Кошка-корова', exact: true })
+    const retry = detail.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' })
+    await expect(retry).toBeVisible()
+    expect(await retry.evaluate(element => {
+      const bounds = element.getBoundingClientRect(), parent = element.closest('.exercise-image')!.getBoundingClientRect()
+      return bounds.height >= 44 && bounds.left >= parent.left && bounds.right <= parent.right && bounds.bottom <= parent.bottom
+    })).toBe(true)
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
+    await detail.screenshot({ path: info.outputPath(`client-video-error-${sample.theme}-${sample.width}.png`) })
+  })
+}

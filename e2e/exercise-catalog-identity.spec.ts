@@ -58,10 +58,10 @@ test('exercise catalog preview keeps search, media and detail transitions usable
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(techniqueVideo).toBeVisible()
-  await expect(techniqueVideo).not.toHaveAttribute('autoplay', '')
-  await expect.poll(() => techniqueVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
+  await expect(techniqueVideo).toHaveAttribute('autoplay', '')
+  await expect.poll(() => techniqueVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(false)
   await expect(detail.getByText('Оборудование', { exact: true })).toBeVisible()
-  await detail.locator('button.secondary').click()
+  await detail.locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
   await expect(detail).toHaveCount(0)
 
   await search.fill('лежачий велотренажер')
@@ -75,7 +75,7 @@ test('exercise catalog preview keeps search, media and detail transitions usable
   await expect(recumbentBikeDetail).toBeVisible()
   await expect(recumbentBikeDetail.locator('video')).toHaveCount(0)
   await expect(recumbentBikeDetail.getByText('Расстояние', { exact: true })).toBeVisible()
-  await recumbentBikeDetail.locator('button.secondary').click()
+  await recumbentBikeDetail.locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
   await expect(page.getByLabel('Название')).toBeVisible()
   await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
 })
