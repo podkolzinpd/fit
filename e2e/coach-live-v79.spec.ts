@@ -4,6 +4,51 @@ import { expect, test } from '@playwright/test'
 import { mockPilot, restTimerWorkout, workoutId } from './fit-lime-fixtures'
 import { coachGestureWorkout, beginClientGesture } from './fit-lime-fixtures'
 
+// State fixtures isolate visual layout from the merge/split behavior scenario.
+// Both densities are needed for the approved 54/48px fields and header geometry.
+for (const density of ['original', 'compact'] as const) {
+  for (const state of ['initial', 'middle', 'complete'] as const) {
+    test(`v79 superset presentation ${density} ${state}`, async ({ page }, info) => {
+      const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+      const source = coachGestureWorkout(true)
+      for (const exercise of source.exercises.slice(0, 2)) {
+        exercise.blockRounds = 3
+        exercise.trainerComment = 'Контролировать темп'
+        exercise.sets = Array.from({ length: 3 }, (_, position) => ({
+          ...exercise.sets[0]!, id: `${exercise.id.slice(0, -1)}${position + 1}`, position,
+          fact: state === 'complete' || state === 'middle' && position === 0 ? { weightKg: 20, reps: 10 } : {},
+          confirmedAt: state === 'complete' || state === 'middle' && position === 0 ? '2026-10-08T09:00:30Z' : null,
+        }))
+      }
+      await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+      await page.addInitScript(({ profileId, density }) => localStorage.setItem(`fit.coachLiveDensity.${profileId}`, density), { profileId, density })
+      await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+      await page.goto(`/workouts/${workoutId}/live`)
+      const group = page.locator('.coach-v79-circuit')
+      await expect(group).toHaveCount(1)
+      const head = group.locator(':scope > .circuit-head')
+      await expect(head).toContainText('Суперсет')
+      await expect(head).toContainText(state === 'complete' ? '3 из 3 кругов · завершено' : `Круг ${state === 'middle' ? 2 : 1} из 3`)
+      await expect(group.locator('.coach-v79-circuit-summary')).toHaveText('Приседания · Жим')
+      await expect(head).toHaveCSS('flex-wrap', 'nowrap')
+      const menu = head.getByRole('button', { name: 'Ещё действия', exact: true })
+      const headBox = await head.boundingBox(), menuBox = await menu.boundingBox()
+      expect(headBox && menuBox && menuBox.x > headBox.x + headBox.width / 2).toBeTruthy()
+      const add = group.locator('.live-round-actions')
+      expect(await add.evaluate(element => Boolean(element.previousElementSibling?.matches('.circuit-round')))).toBe(true)
+      if (state !== 'complete') {
+        await expect(group.getByLabel('Фактический вес', { exact: true }).first()).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+        await expect(group.locator('.workout-exercise-header-summary').first()).toContainText('План на круг:')
+        await expect(group.locator('.live-set-number').first()).toHaveText(state === 'middle' ? '2' : '1')
+        await expect(group.locator('.circuit-round-toggle').last()).toContainText('Впереди')
+      }
+      await group.evaluate(element => element.scrollIntoView({ block: 'start' }))
+      await page.locator('.content').evaluate(element => { element.scrollTop = Math.max(0, element.scrollTop - 80) })
+      await page.screenshot({ path: info.outputPath(`superset-${density}-${state}.png`) })
+    })
+  }
+}
+
 test.skip(process.env.FIT_COACH_LIVE_V79_ACCEPTANCE !== '1', 'Dedicated coach-v79 production-build harness')
 
 for (const profileId of ['c0ac0000-6010-4000-8000-000000000001', 'c0ac0000-6010-4000-8000-000000000002']) {
