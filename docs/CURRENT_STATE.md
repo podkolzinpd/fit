@@ -1,3 +1,6 @@
+## YAFIT-666 — таймаут медиассылки (27.10.2026)
+От main21465007: только POST sign-batch получает общий deadline15с вместе с телом. ExerciseImage/hooks/retries/CSS/APIserver/данные прежние. План design/EXERCISE_MEDIA_SIGN_TIMEOUT_20261027.md. Red2 до правки, target81passed; до/после обеих ролей WebKit390 и trainerChromium1440:3/3, новый URL → H264/play/manual/reopen. Fullcheck/CI/официальный web+OTA/fresh-iOS и production ещё гейты. YAFIT-663/#1834 уже выпущен75162bb8: public213, fullCI, OTA/signatures и свежий iOS/симулятор подтверждены в тикете; physical iPhone не проверен.
+
 ## YAFIT-664 — PR1 исправление WebKit после CI (2026-10-27)
 
 CI40460758474:2compact cardio geometry failures (обе темы),683passed/8прежнихskip. Найден stale intrinsic grid track при390→430; локально воспроизведён, сохранялся после двух кадров. Минимальный client-only flex-header сохраняет72px media/88px controls и прошёл8/8 исходных geometry cases WebKit/Chromium без ослабления tests. Полная регрессия/check повторяются; PR#1836 НЕ слит и НЕ опубликован. Тренерские/чужие клиентские root и когорта не изменялись.
