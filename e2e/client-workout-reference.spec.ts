@@ -3047,6 +3047,9 @@ test('client technique retries failed video and keeps manual play usable', async
   await detail.screenshot({ path: info.outputPath('client-video-playing.png') })
   await detail.getByRole('button', { name: 'Закрыть технику' }).click()
   await expect(detail).toHaveCount(0)
+  await expect(inlineRetry).toBeVisible()
+  await inlineRetry.click()
+  await expect.poll(() => inline.locator('video').evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
 })
 
 // Themes and widths cover token contrast and wrapping only; recovery runs once above.

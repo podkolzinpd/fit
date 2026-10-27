@@ -68,7 +68,7 @@ test('exercise catalog search and technique detail work in the iOS shell', async
   await expect(video).toBeVisible()
   await expect(video).toHaveAttribute('autoplay', '')
   await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false)
-  await page.getByRole('dialog').locator('button.secondary').click()
+  await page.getByRole('dialog').locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
 
   await page.getByLabel('Поиск упражнения').fill('лежачий велотренажер')
   await expect(page.getByText('Найдено: 1', { exact: true })).toBeVisible()
@@ -141,7 +141,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 430, height: 932 }
       await expect(detail.getByText('Как выполнять', { exact: true })).toBeVisible()
       await expect(page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).resolves.toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`safe-technique-${name}-${viewport.width}.png`), fullPage: true })
-      await detail.locator('button.secondary').click()
+      await detail.locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
     }
   })
 

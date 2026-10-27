@@ -75,3 +75,14 @@ Physical iPhone и реальный OAuth отмечаются отдельно,
 и196 штатных conditional DBskip; lint/typecheck/policy/hosting/build/startup passed.
 WebKit3/3 trainer/native +4/4 client; Chromium4/4 client.
 CI, merge, official publication и production readback ещё не завершены.
+
+Первый CI выявил только два устаревших E2E-ожидания: trainer-flow ожидал
+остановку при reduce, а ui-visual выбирал закрытие по одному secondary-классу.
+Уточнены эти ожидания и остальные такие селекторы техники: явный footer
+«Закрыть», autoplay при reduce и реальное pause→нажатие play. Runtime не менялся.
+Точные локальные trainer-flow и visual-trainer1440 прошли; client inline retry
+дополнен реальным нажатием и прошёл в обоих движках2/2; lint passed.
+Полный локальный check относится к неизменённому runtime; новый полный CI обязателен.
+Локальная подготовка PostgreSQL остановилась на существующем duplicate function
+append_live_round (42723), без reset/правки схемы; Supabase через Podman готов,
+два legacy-сценария проверены на нём. Эта задача не меняет БД/API.
