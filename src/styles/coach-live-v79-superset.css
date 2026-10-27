@@ -1,0 +1,15 @@
+/* The existing fixed2 coach gate owns this variant; client markup is unchanged. */
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-circuit { padding: 16px; }
+.coach-live-v79 .coach-v79-circuit > .circuit-head { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; min-height: 44px; }
+.coach-live-v79 .coach-v79-circuit-heading { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.coach-live-v79 .coach-v79-circuit-heading .circuit-counter { color: var(--lime-text-secondary); font-size: 13px; line-height: 18px; font-weight: 400; }
+.coach-live-v79 .coach-v79-circuit > .circuit-head > :is(.overflow-menu,.workout-drag-handle) { flex: none; }
+.coach-live-v79 .coach-v79-circuit-summary { margin: 4px 0 12px; color: var(--lime-text-secondary); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.coach-live-v79 .coach-v79-circuit .circuit-round { padding-top: 8px; border-color: var(--lime-divider); opacity: 1; }
+.coach-live-v79 .coach-v79-circuit .circuit-round.collapsed { padding-top: 0; }
+.coach-live-v79 .coach-v79-circuit .circuit-round-label { margin: 0; padding-block: 4px; }
+.coach-live-v79 .coach-v79-circuit .circuit-round-toggle { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 8px; min-height: 44px; padding-block: 12px; }
+.coach-live-v79 .coach-v79-circuit .circuit-round-toggle span:nth-child(2) { text-align: right; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-circuit .live-round-actions { display: flex; margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--lime-divider); }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-circuit .live-round-actions .live-add-set { width: auto; min-height: 44px; margin: 0; padding: 8px; border: 0; background: transparent; color: var(--lime-accent); font-size: 14px; line-height: 20px; }
+.coach-live-v79.coach-live-density-compact .coach-v79-circuit-summary { margin-bottom: 8px; }
