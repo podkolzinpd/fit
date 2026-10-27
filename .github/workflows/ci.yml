@@ -45,6 +45,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - name: Check workflow document budgets, links and preserved history
+        run: |
+          node scripts/check-workflow-docs.mjs
+          node --test scripts/check-workflow-docs.test.mjs
       - run: npm run db:types:check
       - run: npm run infra:policy:test
       - run: npm run frontend:hosting:test
