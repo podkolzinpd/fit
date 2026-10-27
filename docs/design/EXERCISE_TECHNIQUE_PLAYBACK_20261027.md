@@ -86,3 +86,11 @@ CI, merge, official publication и production readback ещё не заверш�
 Локальная подготовка PostgreSQL остановилась на существующем duplicate function
 append_live_round (42723), без reset/правки схемы; Supabase через Podman готов,
 два legacy-сценария проверены на нём. Эта задача не меняет БД/API.
+
+Первый CI также показал ожидаемое новое состояние ошибки в legacy Live430:
+вместо молчаливого placeholder теперь есть «Видео не загрузилось / Повторить».
+Снимки просмотрены до изменения эталонов. Только два430 light/dark baseline
+обновлены в pinned Linux Playwright1.61.1 через Podman; сравнение390 прошло
+с прежними эталонами. Порог сравнения, assertions и retries не ослаблялись.
+Локальный Linux WebKit один раз завершил процесс Target crashed до приложения;
+повтор с штатными --init/--ipc=host прошёл. Продуктовый код не менялся.
