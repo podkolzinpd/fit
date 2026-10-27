@@ -628,6 +628,32 @@ for (const density of ['original', 'compact']) test(`client explicit card folds 
   await page.screenshot({ path: info.outputPath(`explicit-fold-${density}.png`) })
 })
 
+test('client keyboard Next skips a folded retained card and preserves rest', async ({ page }) => {
+  await modelKeyboard(page)
+  const restUntil = String(Date.now() + 47000)
+  await page.addInitScript(({ id, workoutId, restUntil }) => {
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10', 'client-live-card-drag-2026-10', 'client-live-multiple-exercises-2026-10']))
+    sessionStorage.setItem(`fit:live-rest-until:${workoutId}`, restUntil)
+  }, { id: pilotId, workoutId, restUntil })
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [coachGestureWorkout(false, 3)] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const cards = page.locator('.client-live-card'), middle = cards.nth(1), last = cards.nth(2)
+  await middle.getByRole('button', { name: /^Развернуть:/ }).click()
+  await last.getByRole('button', { name: /^Развернуть:/ }).click()
+  await middle.getByRole('button', { name: /^Свернуть:/ }).click()
+  await expect(middle.locator('.client-live-card-body')).toHaveAttribute('inert', '')
+  expect(await middle.locator('input.live-set-input').first().evaluate(e => e.getClientRects().length)).toBeGreaterThan(0)
+  const from = cards.first().locator('input.live-set-input:not([type=hidden])').last()
+  const target = last.locator('input.live-set-input:not([type=hidden])').first()
+  await from.focus()
+  await showModeledKeyboard(page)
+  await from.press('Enter')
+  await expect(target).toBeFocused()
+  expect(await target.evaluate((e: HTMLInputElement) => [e.selectionStart, e.selectionEnd])).toEqual([0, (await target.inputValue()).length])
+  await expect(page.locator('html')).toHaveClass(/app-keyboard-open/)
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(restUntil)
+})
+
 async function modelKeyboard(page: Page) {
   await page.addInitScript(() => {
     const state = window as typeof window & { fitTestKeyboardHeight?: number }

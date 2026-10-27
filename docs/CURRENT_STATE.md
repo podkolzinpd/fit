@@ -1,3 +1,7 @@
+## YAFIT-664 — PR2 защищает Next после удержанного сворачивания (2026-10-27)
+
+Дополнительный аудит общего LiveSetInput воспроизвёл Enter→inert-форму в обоих браузерах:2/2 fail на прежнем кандидате PR2. Новый client-live-v79 guard пропускает такие поля, сохраняя select-all/preventScroll/validation и остальную механику. Новый browser-кейс2/2 с keyboard420 и неизменным deadline47s; unit4/4. Предыдущий local-ready PR2 отозван, fresh full-check/регрессия ещё обязательны перед слиянием. Тренерская аналогичная правка #1838 сохраняется при будущей интеграции, непилотный путь не меняется. Собственная серия остаётся4 PR, PR1 принят, когорта/флаги прежние.
+
 ## YAFIT-664 — этап1 принят, подготовлен отдельный PR2 (2026-10-27)
 
 PR#1836/main21465007: official CI/frontend success; web213files/health passed; published14/14 (исходные4клиента/2тренера/outside), fresh iOS source21465007 sync/build/install/launch/214files byte-match. Physical iPhone/OAuth Live не проверены. PR2 parent-only7db5ca1f на тот же фактический main: check0(2860/1516+196условных DB skip), fresh54/54. Новая запись фактов меняет только Markdown; runtime/tests проверенной ревизии не меняются. Собственный PR2 ждёт зелёную CI и очередь; следующие PR3/4 не сливаются до последовательной приёмки предшественников. Флаги/когорта не менялись.
