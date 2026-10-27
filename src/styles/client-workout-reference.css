@@ -397,3 +397,6 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-arrow img { background: var(--lime-text-secondary); object-position: -9999px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-closed { mask: url('../assets/coach-live-v79/card-collapse.svg') center / contain no-repeat; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-open { mask: url('../assets/coach-live-v79/card-expand.svg') center / contain no-repeat; }
+
+/* The newly exposed replacement rail uses the client's readable accent ink. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity button.workout-swipe-action.replace { color: var(--lime-accent-ink); }
