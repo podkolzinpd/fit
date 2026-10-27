@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { expect, test, type Page } from '@playwright/test'
 import { beginClientGesture, coachGestureWorkout, restTimerWorkout, holdClientLiveCard, mockClientStreamingVoice, mockPilot, newWorkoutId, workoutId, conversationId, messageId, clientId } from './fit-lime-fixtures'
 
@@ -476,9 +477,10 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
       const button = card.querySelector('.workout-exercise-compact')!, copy = card.querySelector('.workout-exercise-compact-copy')!
       const thumb = card.querySelector('.exercise-thumbnail'), menu = card.querySelector('.overflow-trigger')!
       const b = button.getBoundingClientRect(), c = copy.getBoundingClientRect(), m = menu.getBoundingClientRect(), t = thumb?.getBoundingClientRect()
-      return { height: card.getBoundingClientRect().height, copyX: c.x, buttonX: b.x, copyRight: c.right, menuX: m.x, thumbRight: t?.right }
+      return { height: card.getBoundingClientRect().height, copyWidth: c.width, copyX: c.x, buttonX: b.x, copyRight: c.right, menuX: m.x, thumbRight: t?.right }
     })
     expect(geometry.height).toBeLessThan(140)
+    expect(geometry.copyWidth).toBeGreaterThan(100)
     expect(geometry.copyRight).toBeLessThanOrEqual(geometry.menuX)
     if (animation) expect(geometry.thumbRight).toBeLessThan(geometry.copyX)
     else expect(geometry.copyX).toBe(geometry.buttonX)
@@ -516,13 +518,20 @@ for (const theme of ['light', 'dark']) for (const density of ['original', 'compa
   for (const width of [390, 430]) {
     await page.setViewportSize({ width, height: 844 })
     const card = page.locator('.live-exercise').filter({ has: row })
-    await card.locator('.overflow-trigger').click()
-    await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
-    await expect(row).toHaveCount(0)
+    const input = await row.getByLabel('Фактический вес', { exact: true }).elementHandle()
+    if (width === 390) await card.getByRole('button', { name: `Свернуть: ${exercise.name}`, exact: true }).click()
+    else {
+      await card.locator('.overflow-trigger').click()
+      await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
+    }
+    await expect(row).not.toBeInViewport()
+    expect(await input!.evaluate(element => element.isConnected)).toBe(true)
+    await expect(row.locator('xpath=ancestor::div[contains(@class,"client-live-card-body")]')).toHaveAttribute('inert', '')
     await expect(compact).toBeVisible()
     await expect(page.locator('.live-rest-trigger').and(page.getByRole('button'))).toHaveAttribute('aria-label', /Отдых превышен/)
     await page.screenshot({ path: info.outputPath(`folded-again-${width}.png`) })
     await compact.click()
+    expect(await input!.evaluate(element => element.isConnected)).toBe(true)
     await expect(row.getByLabel('Фактический вес', { exact: true })).toHaveValue('35')
     await expect(row.getByRole('img', { name: 'Подход выполнен' })).toBeVisible()
     expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
@@ -552,6 +561,7 @@ for (const theme of ['light', 'dark']) test(`client completed collapse waits for
   await expect.poll(() => attempts).toBeGreaterThan(0)
   await card.locator('.overflow-trigger').click()
   await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeDisabled()
+  await expect(card.getByRole('button', { name: `Свернуть: ${exercise.name}`, exact: true })).toBeDisabled()
   mode = 'success'; release()
   await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(35)
   await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeEnabled()
@@ -561,6 +571,7 @@ for (const theme of ['light', 'dark']) test(`client completed collapse waits for
   await expect(row.locator('.save-status-error')).toBeVisible()
   await card.locator('.overflow-trigger').click()
   await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeDisabled()
+  await expect(card.getByRole('button', { name: `Свернуть: ${exercise.name}`, exact: true })).toBeDisabled()
   await page.keyboard.press('Escape')
   mode = 'success'
   await field.focus(); await field.blur()
@@ -568,8 +579,53 @@ for (const theme of ['light', 'dark']) test(`client completed collapse waits for
   await card.locator('.overflow-trigger').click()
   await expect(page.getByRole('menuitem', { name: 'Свернуть', exact: true })).toBeEnabled()
   await page.getByRole('menuitem', { name: 'Свернуть', exact: true }).click()
-  await expect(row).toHaveCount(0)
+  await expect(row).not.toBeInViewport()
+  await expect(row.locator('xpath=ancestor::div[contains(@class,"client-live-card-body")]')).toHaveAttribute('inert', '')
   expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBe('2026-10-21T08:59:00Z')
+})
+
+// Density changes the header/keyboard geometry, not the business scenario.
+for (const density of ['original', 'compact']) test(`client explicit card folds retain input and active exercise ${density}`, async ({ page }, info) => {
+  await modelKeyboard(page)
+  await page.clock.setFixedTime(new Date('2026-10-27T09:00:00Z'))
+  await page.addInitScript(({ id, density, workoutId }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    sessionStorage.setItem(`fit:live-rest-until:${workoutId}`, String(Date.parse('2026-10-27T09:01:30Z')))
+  }, { id: pilotId, density, workoutId })
+  const source = coachGestureWorkout(), exercise = source.exercises[0]!, future = source.exercises[1]!
+  exercise.name = 'Разведение гантелей на заднюю дельту стоя с опорой'
+  source.startedAt = '2026-10-27T08:59:00Z'
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const card = page.locator(`[data-workout-block="${exercise.blockId}"]`), row = card.locator('form[data-live-set-id]').first()
+  const field = row.getByLabel('Фактический вес', { exact: true }), input = await field.elementHandle()
+  await field.click(); await showModeledKeyboard(page)
+  await expect.poll(() => field.evaluate(e => e instanceof HTMLInputElement ? e.selectionEnd! - e.selectionStart! : null)).toBe(2)
+  await page.keyboard.insertText('31.5'); await field.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(31.5)
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  const progress = await page.locator('.live-session-progress-copy').innerText()
+  await card.getByRole('button', { name: `Свернуть: ${exercise.name}`, exact: true }).click()
+  await expect(row).not.toBeInViewport(); expect(await input!.evaluate(e => e.isConnected)).toBe(true)
+  await expect(card.getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true })).toBeFocused()
+  await page.evaluate(() => { (window as typeof window & { fitTestKeyboardHeight?: number }).fitTestKeyboardHeight = undefined; visualViewport?.dispatchEvent(new Event('resize')) })
+  await card.getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true }).click()
+  await expect(field).toHaveValue('31.5'); expect(await input!.evaluate(e => e.isConnected)).toBe(true)
+  await expect(field).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const futureCard = page.locator(`[data-workout-block="${future.blockId}"]`)
+    await futureCard.getByRole('button', { name: `Развернуть: ${future.name}`, exact: true }).click()
+    await expect(futureCard.getByLabel('Фактический вес', { exact: true }).first()).toBeVisible()
+    await futureCard.getByRole('button', { name: `Свернуть: ${future.name}`, exact: true }).click()
+    await expect(futureCard.getByRole('button', { name: `Начать упражнение «${future.name}»`, exact: true })).toBeVisible()
+    await expect(page.locator('.live-session-progress-copy')).toHaveText(progress, { useInnerText: true })
+    expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+    expect(backend.getWorkouts()[0]!.exercises.flatMap(e => e.sets).every(s => !s.confirmedAt)).toBe(true)
+    expect(await page.locator('.phone-frame').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+  }
+  await card.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath(`explicit-fold-${density}.png`) })
 })
 
 async function modelKeyboard(page: Page) {
@@ -2988,3 +3044,82 @@ for (const theme of ['light', 'dark']) test(`client custom photo survives failur
     await page.screenshot({ path: info.outputPath(`photo-reloaded-${width}.png`) })
   }
 })
+
+async function openClientVideo(page: Page, theme: string, width: number) {
+  await page.setViewportSize({ width, height: 932 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.addInitScript(({ id, theme }) => localStorage.setItem(`fit.clientLime.theme.${id}`, theme), { id: clientId, theme })
+  const source = coachGestureWorkout(false, 1)
+  source.startedAt = new Date().toISOString()
+  Object.assign(source.exercises[0]!, { ref: 'cat-cow', name: 'Кошка-корова', inputKind: 'duration' })
+  await mockPilot(page, { role: 'client', profileId: clientId, clientLime: true, workouts: [source] })
+  let available = false
+  let signedVideos = 0
+  await page.route('**/v1/exercise-media/sign-batch', async route => {
+    const { paths } = z.object({ paths: z.array(z.string()) }).parse(route.request().postDataJSON())
+    await route.fulfill({ json: { signedUrls: paths.map(path => ({ path, signedUrl: new URL(`/exercises/${path}${path.endsWith('.mp4') ? `?attempt=${++signedVideos}` : ''}`, page.url()).href })) } })
+  })
+  await page.route('**/exercises/vital-pro/**', async route => {
+    if (new URL(route.request().url()).pathname.endsWith('.mp4')) {
+      if (!available) await route.fulfill({ status: 503, body: '' })
+      else await route.continue({ url: new URL('/exercises/vital/stationary-bike.mp4', route.request().url()).href })
+    } else {
+      await route.fulfill({ contentType: 'image/gif', body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64') })
+    }
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.phone-frame')).toHaveClass(/fit-client-lime/)
+  return { recover: () => { available = true }, signedVideos: () => signedVideos }
+}
+
+test('client technique retries failed video and keeps manual play usable', async ({ page }, info) => {
+  const fixture = await openClientVideo(page, 'dark', 390)
+  const inline = page.locator('.live-header-animation')
+  const inlineRetry = inline.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' })
+  await expect(inlineRetry).toBeVisible()
+  const bounds = (await inlineRetry.boundingBox())!
+  expect(bounds.width).toBeGreaterThanOrEqual(44)
+  expect(bounds.height).toBeGreaterThanOrEqual(44)
+  await inline.screenshot({ path: info.outputPath('client-inline-video-retry.png') })
+  await page.getByRole('button', { name: 'Посмотреть технику: Кошка-корова', exact: true }).click()
+  const detail = page.getByRole('dialog', { name: 'Техника: Кошка-корова', exact: true })
+  await expect(detail.getByText('Видео не загрузилось')).toBeVisible()
+  await detail.screenshot({ path: info.outputPath('client-video-error.png') })
+  const failedAttempts = fixture.signedVideos()
+  fixture.recover()
+  await detail.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' }).click()
+  const video = detail.locator('video')
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+  expect(fixture.signedVideos()).toBeGreaterThan(failedAttempts)
+  await expect(detail.getByText('Видео не загрузилось')).toHaveCount(0)
+  await expect(detail.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })).toHaveCount(0)
+  await video.evaluate((element: HTMLVideoElement) => element.pause())
+  const play = detail.getByRole('button', { name: 'Запустить анимацию: Кошка-корова' })
+  await expect(play).toBeVisible()
+  await play.click()
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0)
+  await expect(play).toHaveCount(0)
+  await detail.screenshot({ path: info.outputPath('client-video-playing.png') })
+  await detail.getByRole('button', { name: 'Закрыть технику' }).click()
+  await expect(detail).toHaveCount(0)
+  await expect(inlineRetry).toBeVisible()
+  await inlineRetry.click()
+  await expect.poll(() => inline.locator('video').evaluate((element: HTMLVideoElement) => !element.paused)).toBe(true)
+})
+
+// Themes and widths cover token contrast and wrapping only; recovery runs once above.
+for (const sample of [{ width: 390, theme: 'light' }, { width: 430, theme: 'light' }, { width: 430, theme: 'dark' }]) {
+  test(`client video error fits Lime ${sample.theme} ${sample.width}`, async ({ page }, info) => {
+    await openClientVideo(page, sample.theme, sample.width)
+    await page.getByRole('button', { name: 'Посмотреть технику: Кошка-корова', exact: true }).click()
+    const detail = page.getByRole('dialog', { name: 'Техника: Кошка-корова', exact: true })
+    const retry = detail.getByRole('button', { name: 'Повторить загрузку видео: Кошка-корова' })
+    await expect(retry).toBeVisible()
+    expect(await retry.evaluate(element => {
+      const bounds = element.getBoundingClientRect(), parent = element.closest('.exercise-image')!.getBoundingClientRect()
+      return bounds.height >= 44 && bounds.left >= parent.left && bounds.right <= parent.right && bounds.bottom <= parent.bottom
+    })).toBe(true)
+    await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true)
+    await detail.screenshot({ path: info.outputPath(`client-video-error-${sample.theme}-${sample.width}.png`) })
+  })
+}

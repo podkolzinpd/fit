@@ -448,8 +448,9 @@ Auth/DataBackend/Assistant используют native composition, development/
   gap и не входит в этот metadata-контракт.
 - Превью и название открывают технику внутри того же picker, отдельный `+ / ✓`
   меняет выбор. Возврат сохраняет поиск, фильтры, выбор и scroll. До двух видимых
-  строк показывают один короткий цикл; reduced motion оставляет первый кадр, а
-  ошибка необязательного медиа не скрывает обложку.
+  строк показывают один короткий цикл. Обучающее видео техники запускается
+  независимо от reduced motion; до playing доступен ручной запуск. Ошибка
+  выдачи ссылки/файла сохраняет обложку и даёт явный ручной повтор (YAFIT-663).
 - «Тяга верхнего блока узким хватом» использует отдельную проверенную пару
   кадров узкого прямого хвата; общий и широкий варианты сохраняют wide-grip
   Vital-ролик. Тест фиксирует разные media URL и согласованные инструкции.
@@ -782,3 +783,5 @@ YAFIT-654, photo backend: additive migration157, idempotent owner-bound create/r
 YAFIT-654 PR5: client pilot подключает native custom-exercise photo API; локально UI→API→PostgreSQL→S3→reload8/8, errors/retry/idempotency проверены. Старый Supabase не используется для нового фото. Rollout только прежние четыре тестовых профиля; публикация проверяется отдельно.
 
 - YAFIT-657, client Live v79 PR5: scoped reminder/actions60/48 +r20/16 иadd60/48, без изменения handlers/API/пилота. Freshmain7da preflight6/6; exact runtime parity с проверенным44274ac5, check0 и584cases(576pass/8 прежних fixture skip). CI/предыдущая публикация4/собственная публикация5 — гейты; actualstatus вTracker.
+
+- YAFIT-664, PR1: клиентское обычное упражнение получает явное обратимое сворачивание через общий WorkoutFoldBody/исходный v79 CardToggleIcon. Название/техника, mounted ввод, pending/error guard и автоматическое завершение сохраняются. Результат проверок и последовательной публикации — в design/CLIENT_LIVE_INTERACTIONS_20261027.md; только прежние четыре тестовых профиля.

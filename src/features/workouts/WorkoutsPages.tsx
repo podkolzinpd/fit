@@ -3093,6 +3093,10 @@ export function LiveWorkoutPage() {
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
   const [v79Folded, setV79Folded] = useState<Set<string>>(() => new Set())
+  // A manual fold belongs to this presentation state. Completing an exercise
+  // or making a future one current restores the existing automatic behaviour.
+  // Keeping the entry also keeps an already opened card's forms mounted.
+  const [clientCardDisplays, setClientCardDisplays] = useState<Map<string, { status: 'current' | 'upcoming' | 'done'; expanded: boolean | null }>>(() => new Map())
   // Общая настройка не меняет RPE-данные; меню упражнения позволяет временно
   // показать или скрыть поле только для конкретного упражнения.
   const [rpeOverrides, setRpeOverrides] = useState<Map<string, boolean>>(() => new Map())
@@ -3934,6 +3938,36 @@ export function LiveWorkoutPage() {
     return line ? <p className="live-previous-result">В прошлый раз: {line}</p> : null
   }
   const v79CardKey = (exercise: WorkoutExerciseModel) => `${exercise.id}:${exercise.source}:${exercise.ref}`
+  function clientCardStatus(exercise: WorkoutExerciseModel): 'current' | 'upcoming' | 'done' {
+    return exercise.sets.every(set => set.confirmedAt) ? 'done' : exercise.id === activeLiveExercise?.id ? 'current' : 'upcoming'
+  }
+  function clientCardExpanded(exercise: WorkoutExerciseModel) {
+    const status = clientCardStatus(exercise), display = clientCardDisplays.get(v79CardKey(exercise))
+    if (expandedExercises.has(exercise.id) || exercise.sets.some(set => editingSets.has(set.id) || set.id === saveErrorSetId
+      || status === 'done' && pendingSetDrafts.current.has(set.id))) return true
+    return display?.status === status && display.expanded !== null ? display.expanded : status === 'current'
+  }
+  function clientCardCollapseBlocked(exercise: WorkoutExerciseModel) {
+    return rootMutationPending || save.isPending || confirm.isPending
+      || exercise.sets.some(set => pendingSetDrafts.current.has(set.id) || set.id === saveErrorSetId)
+  }
+  function setClientCardExpanded(exercise: WorkoutExerciseModel, expanded: boolean) {
+    if (!expanded && clientCardCollapseBlocked(exercise)) return
+    setClientCardDisplays(current => new Map(current).set(v79CardKey(exercise), { status: clientCardStatus(exercise), expanded }))
+    setExpandedExercises(current => { if (!current.has(exercise.id)) return current; const next = new Set(current); next.delete(exercise.id); return next })
+    if (!expanded && exercise.sets.every(set => set.confirmedAt)) {
+      setEditingSets(current => new Set([...current].filter(id => !exercise.sets.some(set => set.id === id))))
+      setExpandedSetId(current => exercise.sets.some(set => set.id === current) ? null : current)
+    }
+  }
+  function clientCardToggle(exercise: WorkoutExerciseModel) {
+    const expanded = clientCardExpanded(exercise)
+    return <button type="button" className="coach-v79-card-toggle" aria-label={`${expanded ? 'Свернуть' : 'Развернуть'}: ${exercise.name}`} aria-expanded={expanded}
+      disabled={rootMutationPending || expanded && clientCardCollapseBlocked(exercise)}
+      onClick={event => { event.currentTarget.focus({ preventScroll: true }); setClientCardExpanded(exercise, !expanded) }}>
+      <CoachLiveV79CardToggleIcon folded={!expanded} />
+    </button>
+  }
   function v79IsFolded(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
     return v79Folded.has(key)
   }
@@ -3982,18 +4016,14 @@ export function LiveWorkoutPage() {
     if (!canManageLiveStructure) return null
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
-    const canCollapse = clientReference && exercise.sets.every((set) => set.confirmedAt)
-      && (expandedExercises.has(exercise.id) || exercise.sets.some((set) => editingSets.has(set.id)))
-    const collapseBlocked = rootMutationPending || save.isPending || confirm.isPending
-      || exercise.sets.some((set) => pendingSetDrafts.current.has(set.id) || set.id === saveErrorSetId)
+    const canCollapse = clientReference && exercise.sets.every((set) => set.confirmedAt) && clientCardExpanded(exercise)
+    const collapseBlocked = clientCardCollapseBlocked(exercise)
     return <OverflowMenu trigger={coachV79 && footer ? <span>Действия</span> : undefined} items={[
       ...(canCollapse ? [{ label: 'Свернуть', disabled: collapseBlocked, onClick: () => {
         // Never unmount an unsent fact. This is presentation only: confirmation,
         // rest and the active exercise keep their existing state.
         if (collapseBlocked) return
-        setExpandedExercises((current) => { const next = new Set(current); next.delete(exercise.id); return next })
-        setEditingSets((current) => new Set([...current].filter((id) => !exercise.sets.some((set) => set.id === id))))
-        setExpandedSetId((current) => exercise.sets.some((set) => set.id === current) ? null : current)
+        setClientCardExpanded(exercise, false)
       } }] : []),
       ...(canReorder && (clientLime || !liveDrag) && !reordering ? [{ label: 'Изменить порядок', onClick: () => setReordering(true) }] : []),
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
@@ -4160,6 +4190,11 @@ export function LiveWorkoutPage() {
   const activeLiveExercise = selectedLiveBlock && selectedLiveBlock.exercises.length > 1
     ? blockRoundsView(selectedLiveBlock)[currentRoundIndex(blockRoundsView(selectedLiveBlock))]?.items.find(({ set }) => !set.confirmedAt)?.exercise ?? selectedLiveExercise
     : selectedLiveExercise
+  const activeClientCardKey = clientReference && selectedLiveBlock?.exercises.length === 1 && activeLiveExercise ? v79CardKey(activeLiveExercise) : undefined
+  useEffect(() => {
+    if (!activeClientCardKey) return
+    setClientCardDisplays(current => current.has(activeClientCardKey) ? current : new Map(current).set(activeClientCardKey, { status: 'current', expanded: null }))
+  }, [activeClientCardKey])
   // Текущий подход: в суперсете/круге — первый невыполненный в текущем круге.
   const currentLiveSet = selectedLiveBlock && selectedLiveBlock.exercises.length > 1
     ? (() => { const rounds = blockRoundsView(selectedLiveBlock); return rounds[currentRoundIndex(rounds)]?.items.find(({ set }) => !set.confirmedAt)?.set })()
@@ -4470,6 +4505,44 @@ export function LiveWorkoutPage() {
             const justCompleted = !clientReference && exercise.id === recentExerciseId && restEndsAt !== null
             const editing = exercise.sets.some((set) => editingSets.has(set.id))
             const collapsed = !coachV79 && allDone && !expandedExercises.has(exercise.id) && !justCompleted && !editing
+            if (clientReference) {
+              const expanded = clientCardExpanded(exercise)
+              const compactCompleted = allDone && !expanded
+              const compactUpcoming = blockStatus === 'upcoming' && !expanded
+              const mounted = blockStatus === 'current' || expanded || clientCardDisplays.has(v79CardKey(exercise))
+              const controls = <span className="client-live-card-controls">{clientCardToggle(exercise)}{exerciseMenu(exercise, canReorder, removableSet, groupingItems)}{reorder}</span>
+              const timerPending = exercise.sets.some(set => set.confirmedAt && set.timerConfirmed)
+              const countLabel = exercise.sets.length === 1 ? 'подход' : exercise.sets.length < 5 ? 'подхода' : 'подходов'
+              const result = exercise.sets.map(set => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0]
+              const compact = <WorkoutExerciseCompact state="completed" className="live-exercise-collapsed" title={exercise.name} leading={liveHeaderThumbnail(exercise)}
+                meta={`${exercise.sets.length} ${countLabel}${result ? ` · ${result}` : ''}`} action={timerPending ? <span className="sr-only">Засчитано таймером</span> : undefined}
+                onClick={() => setClientCardExpanded(exercise, true)} />
+              return swipeLive(exercise, <WorkoutExercise state={blockStatus === 'done' ? 'completed' : blockStatus}
+                className={`client-live-card${compactCompleted ? ' client-live-card-compact' : compactUpcoming ? ' live-exercise-upcoming' : ` live-exercise ${blockStatus}`}`}>
+                {compactCompleted ? <div className="live-completed-gesture-head">
+                  {timerPending ? <div className="live-timer-pending" data-timer-pending={exercise.id}>{compact}
+                    <button type="button" className="live-timer-confirm" aria-label={`Подтвердить подходы: ${exercise.name}`} aria-busy={acceptingTimerSets === exercise.id}
+                      disabled={acceptingTimerSets !== null || save.isPending} onClick={() => void acceptExerciseTimerSets(exercise)}>Подтвердить</button>
+                  </div> : compact}
+                  <span className="exercise-head-actions">{controls}</span>
+                </div> : <WorkoutExerciseHeader className="live-exercise-head" name={exercise.name}
+                  leading={liveHeaderThumbnail(exercise, blockStatus === 'current')} description={compactUpcoming ? undefined : livePreviousResult(exercise)}
+                  onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={controls} />}
+                <WorkoutFoldBody className="client-live-card-body" folded={!expanded}>{mounted ? <>
+                  {liveTrainerNote(exercise)}
+                  <WorkoutSetTable variant="live" inputKind={exercise.inputKind} columnLabels={exerciseSetColumnLabels(exercise)} showRpe={isRpeVisible(exercise.id)} trailingLabel="Статус">
+                    {exercise.sets.map((set, index) => renderLiveSet(exercise, set, `Подход ${index + 1}`, set.id === activeSetId))}
+                  </WorkoutSetTable>
+                  {liveExerciseFooter(exercise)}
+                </> : null}</WorkoutFoldBody>
+                {compactUpcoming && <div className="live-upcoming-row"><p className="live-upcoming-summary">
+                  <span>{exercise.sets.some(set => set.confirmedAt) ? `Выполнено ${exercise.sets.filter(set => set.confirmedAt).length} из ${exercise.sets.length}` : `${exercise.sets.length} ${countLabel}`}</span>
+                  <span>{exercise.sets.map(set => planLine(exercise.inputKind, set, exercise.ref)).find(Boolean)}</span>
+                </p><button type="button" className="secondary live-exercise-start" disabled={rootMutationPending}
+                  aria-label={`${exercise.sets.some(set => set.confirmedAt) ? 'Продолжить' : 'Начать'} упражнение «${exercise.name}»`}
+                  onClick={() => { setClientCardExpanded(exercise, true); activateLiveExercise(exercise) }}>{exercise.sets.some(set => set.confirmedAt) ? 'Продолжить' : 'Начать'}</button></div>}
+              </WorkoutExercise>)
+            }
             if (collapsed) {
               const doneCount = exercise.sets.length
               const best = exercise.sets.map((set) => factLine(set, true, exercise.ref)).filter(Boolean).slice(-1)[0] ?? null

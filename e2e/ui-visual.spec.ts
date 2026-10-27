@@ -1625,7 +1625,7 @@ test('exercise catalog and technique detail keep their visual baselines in both 
   await result.click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expectVisualBaseline(page, `exercise-catalog-detail-${process.platform}.png`, [], true)
-  await page.getByRole('dialog').locator('button.secondary').click()
+  await page.getByRole('dialog').locator('button.secondary').filter({ hasText: /^Закрыть$/ }).click()
 
   await gotoStable(page, '/profile/settings')
   await page.getByRole('switch', { name: 'Тёмная тема' }).check()
