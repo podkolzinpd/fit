@@ -1,3 +1,4 @@
+import { configuredStaffVerifier, DatabaseYandexEmployeeObserver } from './staff-employee.js'
 import { buildApp } from './app.js'
 import { DatabasePilotCustomExercisePhotos } from './custom-exercise-photo.js'
 import { aiFunctionsEnabled } from './ai-functions-enabled.js'
@@ -87,11 +88,15 @@ const barcodeNutritionCatalog = process.env.NUTRITION_PEREK_API_KEY === undefine
 const nutritionDiary = databasePool === undefined ? undefined : new DatabaseNutritionDiary(
   databasePool, defaultNutritionCatalog, nutritionPilot, nutritionBarcodePilot, barcodeNutritionCatalog,
 )
+const staffVerifier = configuredStaffVerifier(process.env.FIT_STAFF_EMPLOYEE_ENABLED, process.env.FIT_STAFF_OAUTH_TOKEN)
+const employeeObserver = databasePool === undefined || staffVerifier === undefined
+  ? undefined : new DatabaseYandexEmployeeObserver(databasePool, staffVerifier)
 const identityProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined
     ? undefined
     : new YandexIdentityClient({
         expectedClientId: process.env.YANDEX_OAUTH_CLIENT_ID,
+        ...(employeeObserver === undefined ? {} : { employeeObserver }),
       })
 const oauthCodeProvider =
   process.env.YANDEX_OAUTH_CLIENT_ID === undefined

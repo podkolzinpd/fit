@@ -2181,3 +2181,19 @@ on the device under its own preference key. The common design-code files are unc
 При новой ABI автоматическая публикация останавливается с `OTA_NATIVE_APK_REQUIRED`;
 требуется manual `make_apk=true`, native tests и фактическая подпись нового APK.
 Это не выдаётся за доставленное обновление старым оболочкам.
+
+
+## Staff employee verification
+
+Default-off server-only integration: `FIT_STAFF_EMPLOYEE_ENABLED=true` together
+with a dedicated `FIT_STAFF_OAUTH_TOKEN` enables Staff v4 checks of the linked
+external Yandex login. Without both values OAuth works unchanged. Do not reuse
+an operator token, expose credentials to Vite, or enable production from local
+configuration. Cloud.ru network access and minimum field grants must be checked
+before rollout. Staff request timeout is 1.5s; failures leave previous evidence
+untouched and do not block login. Own profile exposes only `yandexEmployee`
+status/checkedAt. Evidence expires to unknown after 24h; a full OAuth login
+refreshes it. Session restoration is not a refresh. Old evidence is pruned after
+7 days on the next successful write. Re-run OAuth after linking/changing the
+personal account in Staff. No email scope is required. This change does not
+implement the corporate catalog, assign trainers, or grant admin access.

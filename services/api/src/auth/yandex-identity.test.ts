@@ -121,6 +121,31 @@ describe('YandexIdentityClient', () => {
   })
 })
 
+describe('Staff observer in verified OAuth login', () => {
+  it('observes only the provider-verified login; ignores a different email and returns hashes only', async () => {
+    const observe = vi.fn().mockResolvedValue(undefined)
+    const client = new YandexIdentityClient({ expectedClientId: CLIENT_ID, employeeObserver: { observe },
+      fetchImplementation: vi.fn().mockResolvedValue(jsonResponse({ id: 'synthetic-id', psuid: 'synthetic-subject',
+        client_id: CLIENT_ID, login: 'synthetic.person', default_email: 'unrelated@example.test' })) })
+    const identity = await client.verifyAccessToken('token')
+    expect(observe).toHaveBeenCalledWith(identity.subjectHash, 'synthetic.person')
+    expect(JSON.stringify(identity)).not.toMatch(/synthetic.person|unrelated/)
+  })
+  it('does not query Staff for a token issued to another application', async () => {
+    const observe = vi.fn()
+    const client = new YandexIdentityClient({ expectedClientId: CLIENT_ID, employeeObserver: { observe },
+      fetchImplementation: vi.fn().mockResolvedValue(jsonResponse({ id: 'id', psuid: 'subject', client_id: 'wrong', login: 'synthetic.person' })) })
+    await expect(client.verifyAccessToken('token')).rejects.toBeInstanceOf(YandexIdentityRejectedError)
+    expect(observe).not.toHaveBeenCalled()
+  })
+  it('preserves normal login when the optional Staff observer fails', async () => {
+    const client = new YandexIdentityClient({ expectedClientId: CLIENT_ID,
+      employeeObserver: { observe: vi.fn().mockRejectedValue(new Error('private upstream details')) },
+      fetchImplementation: vi.fn().mockResolvedValue(jsonResponse({ id: 'id', psuid: 'subject', client_id: CLIENT_ID, login: 'synthetic.person' })) })
+    expect(await client.verifyAccessToken('token')).toHaveProperty('subjectHash')
+  })
+})
+
 describe('readBearerToken', () => {
   it('accepts one bearer token and rejects ambiguous headers', () => {
     expect(readBearerToken('Bearer oauth-token')).toBe('oauth-token')

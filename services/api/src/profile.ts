@@ -11,6 +11,7 @@ interface ProfileRow extends QueryResultRow {
   client_id: string | null
   client_trainer_id: string | null
   client_full_name: string | null
+  yandex_employee_verification?: { status: 'employee' | 'not_employee' | 'unknown'; checkedAt: string | null }
   trainer_schedule_v2: boolean
   client_lime: boolean
   fit_lime: boolean
@@ -31,6 +32,7 @@ export interface ProfileResponse {
       trainerId: string
       fullName: string
     } | null
+    yandexEmployee?: { status: 'employee' | 'not_employee' | 'unknown'; checkedAt: string | null }
     experiments: {
       trainerScheduleV2: boolean
       clientLime?: boolean
@@ -54,6 +56,7 @@ export async function readOwnProfile(
       profile.timezone, profile.account_role, profile.schedule_density,
       client.id client_id, client.trainer_id client_trainer_id,
       client.full_name client_full_name,
+      app_private.own_yandex_employee_verification() yandex_employee_verification,
       app_private.trainer_schedule_v2_enabled() trainer_schedule_v2,
       app_private.fit_lime_enabled() fit_lime,
       app_private.client_lime_enabled() client_lime,
@@ -75,6 +78,7 @@ export async function readOwnProfile(
       lastName: row.last_name,
       timezone: row.timezone,
       accountRole: row.account_role,
+      ...(row.yandex_employee_verification === undefined ? {} : { yandexEmployee: row.yandex_employee_verification }),
       experiments: {
         trainerScheduleV2: row.trainer_schedule_v2 === true,
         fitLime: row.fit_lime === true,

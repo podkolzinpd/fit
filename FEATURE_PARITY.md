@@ -782,3 +782,11 @@ YAFIT-654, photo backend: additive migration157, idempotent owner-bound create/r
 YAFIT-654 PR5: client pilot подключает native custom-exercise photo API; локально UI→API→PostgreSQL→S3→reload8/8, errors/retry/idempotency проверены. Старый Supabase не используется для нового фото. Rollout только прежние четыре тестовых профиля; публикация проверяется отдельно.
 
 - YAFIT-657, client Live v79 PR5: scoped reminder/actions60/48 +r20/16 иadd60/48, без изменения handlers/API/пилота. Freshmain7da preflight6/6; exact runtime parity с проверенным44274ac5, check0 и584cases(576pass/8 прежних fixture skip). CI/предыдущая публикация4/собственная публикация5 — гейты; actualstatus вTracker.
+
+
+## Staff employee verification
+
+New server-only capability (not legacy parity): independently gated Staff v4
+lookup of the provider-verified external login, own-profile status/checkedAt,
+24h freshness and non-blocking failure. Corporate trainer catalog is separate.
+Acceptance and rollout boundaries: docs/design/STAFF_EMPLOYEE_VERIFICATION_20261027.md.

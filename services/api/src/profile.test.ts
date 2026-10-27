@@ -51,3 +51,14 @@ describe('readOwnProfile Fit Lime flag', () => {
   })
 
 })
+
+describe('own employee verification profile contract', () => {
+  it('returns the server decision without Staff identifiers or contacts', async () => {
+    const query = vi.fn().mockResolvedValue([{ ...trainerRow,
+      yandex_employee_verification: { status: 'employee', checkedAt: '2026-10-27T08:00:00Z' } }])
+    const result = await readOwnProfile({ query: query as DatabaseClient['query'] }, 'read_write')
+    expect(result?.profile.yandexEmployee).toEqual({ status: 'employee', checkedAt: '2026-10-27T08:00:00Z' })
+    expect(query.mock.calls[0]?.[0]).toContain('app_private.own_yandex_employee_verification()')
+    expect(JSON.stringify(result)).not.toMatch(/staffLogin|staffEmail/)
+  })
+})

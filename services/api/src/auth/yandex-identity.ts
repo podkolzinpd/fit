@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { nutritionLoginHash } from '../nutrition-pilot.js'
+import type { YandexEmployeeObserver } from '../staff-employee.js'
 
 export interface VerifiedYandexIdentity {
   subjectHash: string
@@ -32,6 +33,7 @@ interface YandexIdentityClientOptions {
   expectedClientId: string
   fetchImplementation?: typeof fetch
   timeoutMs?: number
+  employeeObserver?: YandexEmployeeObserver
 }
 
 function readRequiredString(
@@ -72,6 +74,7 @@ export class YandexIdentityClient implements YandexIdentityProvider {
   private readonly expectedClientId: string
   private readonly fetchImplementation: typeof fetch
   private readonly timeoutMs: number
+  private readonly employeeObserver: YandexEmployeeObserver | undefined
 
   constructor(options: YandexIdentityClientOptions) {
     const expectedClientId = options.expectedClientId.trim()
@@ -82,6 +85,7 @@ export class YandexIdentityClient implements YandexIdentityProvider {
     this.expectedClientId = expectedClientId
     this.fetchImplementation = options.fetchImplementation ?? globalThis.fetch
     this.timeoutMs = options.timeoutMs ?? 3_000
+    this.employeeObserver = options.employeeObserver
   }
 
   async verifyAccessToken(token: string): Promise<VerifiedYandexIdentity> {
@@ -120,11 +124,18 @@ export class YandexIdentityClient implements YandexIdentityProvider {
       throw new YandexIdentityRejectedError()
     }
 
+    const subjectHash = createHash('sha256').update(identity.psuid, 'utf8').digest('hex')
+    if (this.employeeObserver !== undefined) {
+      try {
+        await this.employeeObserver.observe(subjectHash, identity.login)
+      } catch {
+        // Staff/recording availability cannot break verified Yandex login.
+        // Keep the previous check; never log raw login or upstream exceptions.
+      }
+    }
     return {
       ...(nutritionLoginHash(identity.login) === undefined ? {} : { nutritionLoginHash: nutritionLoginHash(identity.login)! }),
-      subjectHash: createHash('sha256')
-        .update(identity.psuid, 'utf8')
-        .digest('hex'),
+      subjectHash,
       loginHash: createHash('sha256')
         .update(identity.login.trim().toLowerCase(), 'utf8')
         .digest('hex'),
