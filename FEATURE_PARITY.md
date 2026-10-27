@@ -791,3 +791,4 @@ YAFIT-654 PR5: client pilot подключает native custom-exercise photo AP
 account_role. Локальные API/PG/RLS и browser проверки — в
 `docs/design/CORPORATE_ADMIN_20261027.md`. Выдача реального доступа/production
 не подтверждены. Каталог и статистика в этот этап не входят.
+- YAFIT-664, PR1: клиентское обычное упражнение получает явное обратимое сворачивание через общий WorkoutFoldBody/исходный v79 CardToggleIcon. Название/техника, mounted ввод, pending/error guard и автоматическое завершение сохраняются. Результат проверок и последовательной публикации — в design/CLIENT_LIVE_INTERACTIONS_20261027.md; только прежние четыре тестовых профиля.
