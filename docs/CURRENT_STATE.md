@@ -1,3 +1,5 @@
+27.10 — YAFIT-664 PR2 локально: openLiveReplacement общий для ⋯/правого свайпа, только clientReference; светлый rail через accent-ink. Новые8/8, регрессия72/72 и check0(2857/1516+196conditionalDBskip), снимки просмотрены. PR1 #1836 ещё CI/очередь; PR2 public/native и свежая интеграция после PR1 — гейты. Пилот прежние4, API/таймер/handlers замены прежние.
+
 ## YAFIT-664 — PR1 исправление WebKit после CI (2026-10-27)
 
 CI40460758474:2compact cardio geometry failures (обе темы),683passed/8прежнихskip. Найден stale intrinsic grid track при390→430; локально воспроизведён, сохранялся после двух кадров. Минимальный client-only flex-header сохраняет72px media/88px controls и прошёл8/8 исходных geometry cases WebKit/Chromium без ослабления tests. Полная регрессия/check повторяются; PR#1836 НЕ слит и НЕ опубликован. Тренерские/чужие клиентские root и когорта не изменялись.

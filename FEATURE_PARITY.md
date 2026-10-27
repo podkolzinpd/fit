@@ -785,3 +785,5 @@ YAFIT-654 PR5: client pilot подключает native custom-exercise photo AP
 - YAFIT-657, client Live v79 PR5: scoped reminder/actions60/48 +r20/16 иadd60/48, без изменения handlers/API/пилота. Freshmain7da preflight6/6; exact runtime parity с проверенным44274ac5, check0 и584cases(576pass/8 прежних fixture skip). CI/предыдущая публикация4/собственная публикация5 — гейты; actualstatus вTracker.
 
 - YAFIT-664, PR1: клиентское обычное упражнение получает явное обратимое сворачивание через общий WorkoutFoldBody/исходный v79 CardToggleIcon. Название/техника, mounted ввод, pending/error guard и автоматическое завершение сохраняются. Результат проверок и последовательной публикации — в design/CLIENT_LIVE_INTERACTIONS_20261027.md; только прежние четыре тестовых профиля.
+
+- YAFIT-664, PR2: клиентская правая rail-кнопка использует существующий openLiveReplacement; левые удаления, факт начатого, отмена/error/retry и coordinator не меняются. Новые8/8 + регрессия72/72, полныйcheck0; отдельный выпуск после public/native PR1. Прежние4 профиля.

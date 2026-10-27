@@ -3905,10 +3905,14 @@ export function LiveWorkoutPage() {
   async function deleteLiveExercise(exercise: WorkoutExerciseModel) {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
   }
+  function openLiveReplacement(exerciseId: string) {
+    setReplaceExerciseId(exerciseId)
+    setPickerOpen(true)
+  }
   function swipeLive(exercise: WorkoutExerciseModel, content: ReactNode, key = exercise.id) {
     return liveSwipeEnabled ? <WorkoutSwipe key={key} id={key} disabled={gestureDisabled} swipeFromCardButton={clientReference || coachV79}
       onDelete={() => { void deleteLiveExercise(exercise) }}
-      onReplace={coachReference ? () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } : undefined}>{content}</WorkoutSwipe> : content
+      onReplace={coachReference || clientReference ? () => openLiveReplacement(exercise.id) : undefined}>{content}</WorkoutSwipe> : content
   }
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
   function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name, compactKey?: string) {
@@ -4029,7 +4033,7 @@ export function LiveWorkoutPage() {
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...groupingItems,
-      { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
+      { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => openLiveReplacement(exercise.id) },
       ...(removableSet ? [{ label: clientLime ? `Удалить подход ${exercise.sets.indexOf(removableSet) + 1}` : 'Удалить подход', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
         if (clientReference) return requestRemoveLiveSet(exercise, removableSet)
         const setId = removableSet.id
