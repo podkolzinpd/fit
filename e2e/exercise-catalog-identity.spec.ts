@@ -58,8 +58,8 @@ test('exercise catalog preview keeps search, media and detail transitions usable
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await expect(techniqueVideo).toBeVisible()
-  await expect(techniqueVideo).not.toHaveAttribute('autoplay', '')
-  await expect.poll(() => techniqueVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
+  await expect(techniqueVideo).toHaveAttribute('autoplay', '')
+  await expect.poll(() => techniqueVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(false)
   await expect(detail.getByText('Оборудование', { exact: true })).toBeVisible()
   await detail.locator('button.secondary').click()
   await expect(detail).toHaveCount(0)

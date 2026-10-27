@@ -430,7 +430,7 @@ describe('ExerciseImage', () => {
     expect(screen.getByRole('img', { name: 'Тяга' })).toHaveAttribute('src', '/public/end.jpg')
   })
 
-  it('uses a custom play action and disables autoplay when reduced motion is enabled', () => {
+  it('keeps instructional video autoplay and its play action with reduced motion', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,
       media: '(prefers-reduced-motion: reduce)',
@@ -439,12 +439,81 @@ describe('ExerciseImage', () => {
     }))
     const { container, rerender } = render(<ExerciseImage src="/exercises/start.jpg" motionSrc="/exercises/end.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="technique" />)
     expect(container.querySelector('video')).not.toHaveAttribute('controls')
-    expect(container.querySelector('video')).not.toHaveAttribute('autoplay')
+    expect(container.querySelector('video')).toHaveAttribute('autoplay')
     expect(screen.getByRole('button', { name: 'Запустить анимацию: Присед' })).toBeInTheDocument()
     expect(container.firstElementChild).not.toHaveClass('exercise-image-motion')
     rerender(<ExerciseImage src="/exercises/start.jpg" videoSrc="/exercises/technique.mp4" alt="Присед" variant="preview" />)
     expect(container.querySelector('video')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Присед' })).toBeVisible()
+  })
+
+  it('keeps play available for an asynchronous private video until playing, including after autoplay rejection', async () => {
+    vi.stubEnv('MODE', 'production')
+    mediaBackend.mode = 'signed'
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    let resolveVideo: (url: string) => void = () => {}
+    const pending = new Promise<string>(resolve => { resolveVideo = resolve })
+    vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation(path => path.endsWith('.mp4') ? pending : Promise.resolve('https://signed.example/async-play.jpg'))
+    const { container } = render(<ExerciseImage src="/exercises/vital-pro/async-play.jpg" videoSrc="/exercises/vital-pro/async-play.mp4" alt="Асинхронный присед" variant="technique" />)
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    await act(async () => { resolveVideo('https://signed.example/async-play.mp4'); await pending })
+    const video = screen.getByLabelText('Техника: Асинхронный присед') as HTMLVideoElement
+    const play = vi.spyOn(video, 'play').mockRejectedValueOnce(new DOMException('Autoplay blocked', 'NotAllowedError')).mockResolvedValue(undefined)
+    expect(video).toHaveAttribute('autoplay')
+    fireEvent.canPlay(video)
+    await act(async () => {})
+    const button = screen.getByRole('button', { name: 'Запустить анимацию: Асинхронный присед' })
+    fireEvent.click(button)
+    await act(async () => {})
+    expect(play).toHaveBeenCalledTimes(2)
+    expect(button).toBeInTheDocument()
+    fireEvent.playing(video)
+    expect(screen.queryByRole('button', { name: 'Запустить анимацию: Асинхронный присед' })).not.toBeInTheDocument()
+    fireEvent.pause(video)
+    expect(screen.getByRole('button', { name: 'Запустить анимацию: Асинхронный присед' })).toBeInTheDocument()
+  })
+
+  it('shows a retry after private URL issuance fails and recovers without losing its poster', async () => {
+    vi.useFakeTimers()
+    vi.stubEnv('MODE', 'production')
+    mediaBackend.mode = 'signed'
+    let available = false
+    const sign = vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation(path => (
+      path.endsWith('.mp4') && !available ? Promise.reject(new Error('unavailable')) : Promise.resolve(`https://signed.example/${path}`)
+    ))
+    const { container } = render(<ExerciseImage src="/exercises/vital-pro/sign-retry.jpg" videoSrc="/exercises/vital-pro/sign-retry.mp4" alt="Повтор ссылки" variant="technique" />)
+    await act(async () => vi.advanceTimersByTimeAsync(1_300))
+    const poster = screen.getByRole('img', { name: 'Повтор ссылки' })
+    expect(screen.getByText('Видео не загрузилось')).toBeInTheDocument()
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    available = true
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить загрузку видео: Повтор ссылки' }))
+    await act(async () => vi.advanceTimersByTimeAsync(0))
+    expect(container.querySelector('video')).toHaveAttribute('src', 'https://signed.example/vital-pro/sign-retry.mp4')
+    expect(screen.queryByText('Видео не загрузилось')).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Повтор ссылки' })).toBe(poster)
+    expect(sign.mock.calls.filter(([path]) => path.endsWith('.mp4'))).toHaveLength(4)
+  })
+
+  it('allows manual recovery after both automatic file-load attempts fail', async () => {
+    vi.stubEnv('MODE', 'production')
+    mediaBackend.mode = 'signed'
+    let signedVideos = 0
+    vi.spyOn(exercisesRepository, 'createVitalMediaUrl').mockImplementation(path => Promise.resolve(
+      `https://signed.example/${path}${path.endsWith('.mp4') ? `?attempt=${++signedVideos}` : ''}`,
+    ))
+    const { container } = render(<ExerciseImage src="/exercises/vital-pro/file-retry.jpg" videoSrc="/exercises/vital-pro/file-retry.mp4" alt="Повтор файла" variant="technique" />)
+    await waitFor(() => expect(container.querySelector('video')).toHaveAttribute('src', expect.stringContaining('attempt=1')))
+    fireEvent.error(container.querySelector('video')!)
+    await waitFor(() => expect(container.querySelector('video')).toHaveAttribute('src', expect.stringContaining('attempt=2')))
+    fireEvent.error(container.querySelector('video')!)
+    expect(screen.getByText('Видео не загрузилось')).toBeInTheDocument()
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Повторить загрузку видео: Повтор файла' }))
+    await waitFor(() => expect(container.querySelector('video')).toHaveAttribute('src', expect.stringContaining('attempt=3')))
+    fireEvent.playing(container.querySelector('video')!)
+    expect(screen.queryByText('Видео не загрузилось')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Запустить анимацию: Повтор файла' })).not.toBeInTheDocument()
   })
 
   it('shows the same neutral placeholder for missing and failed media', () => {
