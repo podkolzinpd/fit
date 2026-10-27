@@ -16,6 +16,7 @@ async function main() {
   const client=await pool.connect()
   try {
     await client.query('begin')
+    await client.query('select pg_advisory_xact_lock(159,1)')
     const target=await client.query('select id from public.profiles where id=$1 for update',[profileId])
     if(target.rowCount!==1) throw new Error('existing_profile_required')
     await client.query(`insert into app_private.corporate_admins(profile_id,enabled) values($1,$2)

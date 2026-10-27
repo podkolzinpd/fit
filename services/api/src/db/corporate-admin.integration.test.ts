@@ -112,10 +112,28 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     await pool.query('update app_private.corporate_admins set enabled=false where profile_id=$1',[admin])
     await expect(actor(admin,'select app_private.corporate_admin_bundle()')).rejects.toMatchObject({code:'PT403'})
   })
+  it('grants only the owner-approved login after verified binding, before or after account creation', async () => {
+    const login='c'.repeat(64), subject='d'.repeat(64)
+    await pool.query('insert into app_private.corporate_admin_logins(login_sha256) values($1)',[login])
+    expect(await actor(athlete,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
+    expect(await actor(athlete,'select app_private.bind_corporate_admin_login($1,$2) bound',[subject,'e'.repeat(64)])).toEqual([{bound:false}])
+    expect(await actor(athlete,'select app_private.bind_corporate_admin_login($1,$2) bound',[subject,login])).toEqual([{bound:true}])
+    // A verified subject alone does not grant access to an unrelated current session.
+    expect(await actor(athlete,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
+    await pool.query("insert into app_private.auth_identities(provider,provider_subject_sha256,profile_id) values('yandex',$1,$2)",[subject,athlete])
+    expect(await actor(athlete,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:true}])
+    expect(await actor(coach,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
+    expect(await actor(athlete,'select app_private.bind_corporate_admin_login($1,$2) bound',['f'.repeat(64),login])).toEqual([{bound:false}])
+    await expect(pool.query('insert into app_private.corporate_admin_logins(login_sha256) values($1)',['e'.repeat(64)])).rejects.toMatchObject({code:'23505'})
+    await expect(actor(coach,'update app_private.corporate_admin_logins set enabled=true')).rejects.toMatchObject({code:'42501'})
+    await pool.query('update app_private.corporate_admin_logins set enabled=false where login_sha256=$1',[login])
+    expect(await actor(athlete,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
+    expect((await pool.query('select account_role from public.profiles where id=$1',[athlete])).rows).toEqual([{account_role:'client'}])
+  })
   it('reverses and reapplies only the new migration without changing workouts', async () => {
     const url=new URL(source ?? ''); url.pathname=`/${database}`
     const options={ databaseUrl:url.href,dir:directory,migrationsTable:'fit_migrations',migrationsSchema:'app_private',verbose:false,log:()=>{} }
-    await runner({...options,direction:'down',count:1})
+    await runner({...options,direction:'down',count:2})
     expect((await pool.query("select to_regclass('public.corporate_offices') present")).rows).toEqual([{present:null}])
     expect((await pool.query('select status from public.workouts where id=$1',[workout])).rows).toEqual([{status:'done'}])
     await runner({...options,direction:'up'})
