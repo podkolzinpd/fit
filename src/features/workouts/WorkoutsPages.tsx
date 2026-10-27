@@ -3968,21 +3968,21 @@ export function LiveWorkoutPage() {
       <CoachLiveV79CardToggleIcon folded={!expanded} />
     </button>
   }
-  function v79IsFolded(exercise: WorkoutExerciseModel) {
-    return v79Folded.has(v79CardKey(exercise))
+  function v79IsFolded(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
+    return v79Folded.has(key)
   }
-  function toggleV79Card(exercise: WorkoutExerciseModel) {
-    setV79Folded(current => { const next = new Set(current), key = v79CardKey(exercise); if (next.has(key)) next.delete(key); else next.add(key); return next })
+  function toggleV79Card(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
+    setV79Folded(current => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next })
   }
-  function v79CardToggle(exercise: WorkoutExerciseModel) {
-    const folded = v79IsFolded(exercise)
-    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={event => { event.currentTarget.focus({ preventScroll: true }); toggleV79Card(exercise) }} disabled={rootMutationPending}>
+  function v79CardToggle(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
+    const folded = v79IsFolded(exercise, key)
+    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={event => { event.currentTarget.focus({ preventScroll: true }); toggleV79Card(exercise, key) }} disabled={rootMutationPending}>
       <CoachLiveV79CardToggleIcon folded={folded} />
     </button>
   }
-  function v79CardBody(exercise: WorkoutExerciseModel, body: ReactNode) {
+  function v79CardBody(exercise: WorkoutExerciseModel, body: ReactNode, key = v79CardKey(exercise)) {
     if (!coachV79) return body
-    const folded = v79Folded.has(v79CardKey(exercise))
+    const folded = v79Folded.has(key)
     // CSS clips the same forms; never unmount an unsent value to fold a card.
     return <WorkoutFoldBody className="coach-v79-card-body" folded={folded}>{body}</WorkoutFoldBody>
   }
@@ -4654,23 +4654,29 @@ export function LiveWorkoutPage() {
             </button>}
             {!collapsed && round.items.map(({ exercise, set }) => { const duplicateNames = block.exercises.filter((item) => item.name === exercise.name)
               const displayName = duplicateNames.length > 1 ? `${exercise.name} №${duplicateNames.findIndex((item) => item.id === exercise.id) + 1}` : exercise.name
-              const showNote = isCurrent || (blockDone && roundIndex === 0)
+              const showNote = coachV79 || isCurrent || (blockDone && roundIndex === 0)
+              const circuitCardKey = `round:${set.id}`
+              const circuitTechnique = coachV79 ? techniqueActionFor(exercise) : undefined
               return swipeLive(exercise, <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
                 leading={coachReference ? referenceNumber(exercise) : roundIndex === 0 || clientLime && set.id === activeCircuitSetId ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
                 summary={coachV79 ? `${set.confirmedAt ? 'Результат' : 'План'} на круг: ${set.confirmedAt ? factLine(set, false, exercise.ref) : planLine(exercise.inputKind, set, exercise.ref)}` : coachReference ? referenceLiveSummary({ ...exercise, sets: [set] }) : undefined}
-                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 || clientReference ? <>
+                onTitleClick={coachV79 ? () => toggleV79Card(exercise, circuitCardKey) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise, circuitCardKey) ? 'Развернуть' : 'Свернуть'}: ${displayName}` : undefined} titleExpanded={coachV79 ? !v79IsFolded(exercise, circuitCardKey) : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise, circuitCardKey) : roundIndex === 0 || clientReference ? <>
                   {clientReference && showNote && <button type="button" className="client-circuit-note-toggle" data-has-note={Boolean((pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim()) || undefined} aria-description={(pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim() ? 'Есть заметка' : 'Добавить заметку'} aria-label={`Моя заметка: ${displayName}`} aria-expanded={openClientNotes.has(set.id)} aria-controls={`live-note-${set.id}`}
                     onClick={() => setOpenClientNotes(previous => { const next = new Set(previous); if (next.has(set.id)) next.delete(set.id); else next.add(set.id); return next })}><MessageIcon /></button>}
                   {(roundIndex === 0 || clientReference) && exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])}
                 </> : undefined} />
-              {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
+              {v79CardBody(exercise, <>{liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {showNote && liveTrainerNote(exercise)}
               {renderLiveSet(exercise, set, coachV79 ? `Круг ${round.round}` : undefined, clientReference ? set.id === activeCircuitSetId : roundIndex === current && !set.confirmedAt,
                 liveSwipeEnabled && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
                   ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
                   : undefined)}
-              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined)}
+              {coachV79 && <div className={`coach-v79-exercise-tools coach-v79-circuit-tools${circuitTechnique ? ' has-instruction' : ''}`}>
+                {circuitTechnique && <button type="button" className="coach-v79-instruction" onClick={circuitTechnique}>Инструкция</button>}
+                {exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [], true)}
+              </div>}
+              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined)}</>, circuitCardKey)}
             </section>, set.id)})}
           </div> })}
           {(clientReference || coachV79) && roundActions}
