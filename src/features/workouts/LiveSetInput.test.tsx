@@ -1,8 +1,25 @@
 import { expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { LiveSetInput, liveNumberValue } from './LiveSetInput'
+import { focusNextLiveField, LiveSetInput, liveNumberValue } from './LiveSetInput'
 
 const props = { name: 'weightKg', label: 'Вес', placeholder: 'кг', defaultValue: 20, step: 'any' as const, disabled: false, inputKey: 'stable', directInput: true, decimal: true }
+
+it('coach Next skips retained inert round fields even when they have layout rectangles', () => {
+  render(<main className="live-workout-page coach-live-v79">
+    <input className="live-set-input" aria-label="Текущее" />
+    <div inert><input className="live-set-input" aria-label="Свёрнутый круг" /></div>
+    <input className="live-set-input" aria-label="Следующее доступное" />
+  </main>)
+  const rectangle = new DOMRect(0, 0, 44, 54)
+  const rectangles: DOMRectList = { 0: rectangle, length: 1, item: () => rectangle, [Symbol.iterator]: () => [rectangle][Symbol.iterator]() }
+  const bounds = vi.spyOn(HTMLElement.prototype, 'getClientRects').mockReturnValue(rectangles)
+  try {
+    const current = screen.getByLabelText('Текущее')
+    current.focus()
+    focusNextLiveField(current)
+    expect(screen.getByLabelText('Следующее доступное')).toHaveFocus()
+  } finally { bounds.mockRestore() }
+})
 
 it('keeps native numeric validation when using an iOS-selectable text field', () => {
   render(<LiveSetInput {...props} />)
