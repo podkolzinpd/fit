@@ -5,26 +5,26 @@
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise-head .exercise-technique-trigger > :is(h2,h3) { grid-column: 1; grid-row: auto; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-original .live-exercise-head :is(h2,h3) { font-size: 24px; line-height: 28px; letter-spacing: -.48px; font-weight: 500; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise-head .workout-exercise-header-summary { font-size: 14px; line-height: 16px; padding-block: 4px; font-weight: 400; }
-.coach-live-v79 .coach-v79-card-toggle { width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; background: transparent; display: grid; place-items: center; }
-.coach-live-v79 .coach-v79-card-toggle img { width: 24px; height: 24px; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-card-toggle { width: 44px; height: 44px; min-width: 44px; padding: 10px; border: 0; background: transparent; display: grid; place-items: center; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-card-toggle img { width: 24px; height: 24px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise { transition: background-color .32s ease; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise:has(> .coach-v79-card-body.folded) { background: var(--lime-surface); }
 /* Source CardToggleIcon spring400/damping28/mass1, sampled at60Hz. */
-.coach-live-v79 .coach-v79-toggle-icon { position: relative; display: block; width: 24px; height: 24px; --v79-arrow-easing: linear(0.000000 0.000%, 0.047407 2.778%, 0.160938 5.556%, 0.305946 8.333%, 0.457936 11.111%, 0.600934 13.889%, 0.725713 16.667%, 0.828090 19.444%, 0.907413 22.222%, 0.965301 25.000%, 1.004654 27.778%, 1.028923 30.556%, 1.041597 33.333%, 1.045885 36.111%, 1.044538 38.889%, 1.039775 41.667%, 1.033289 44.444%, 1.026293 47.222%, 1.019593 50.000%, 1.013668 52.778%, 1.008750 55.556%, 1.004896 58.333%, 1.002049 61.111%, 1.000083 63.889%, 0.998843 66.667%, 0.998167 69.444%, 0.997905 72.222%, 0.997924 75.000%, 0.998119 77.778%, 0.998407 80.556%, 0.998727 83.333%, 0.999040 86.111%, 0.999321 88.889%, 0.999557 91.667%, 0.999744 94.444%, 0.999883 97.222%, 1 100.000%); }
-.coach-live-v79 .coach-v79-toggle-arrow { position: absolute; inset: 0; transform: rotate(0deg); transition: transform .6s var(--v79-arrow-easing); }
-.coach-live-v79 .coach-v79-toggle-arrow.top { transform-origin: 18px 6px; }
-.coach-live-v79 .coach-v79-toggle-arrow.bottom { transform-origin: 6px 18px; }
-.coach-live-v79 .coach-v79-toggle-arrow img { position: absolute; inset: 0; transform-origin: inherit; transition: opacity .18s ease; }
-.coach-live-v79 .coach-v79-toggle-arrow.top img { clip-path: inset(0 0 50% 50%); }
-.coach-live-v79 .coach-v79-toggle-arrow.bottom img { clip-path: inset(50% 50% 0 0); }
-.coach-live-v79 .coach-v79-toggle-open { transform: rotate(180deg); opacity: 0; }
-.coach-live-v79 .coach-v79-toggle-closed { opacity: 1; }
-.coach-live-v79 .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-arrow { transform: rotate(180deg); }
-.coach-live-v79 .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-open { opacity: 1; }
-.coach-live-v79 .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-closed { opacity: 0; }
-.coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .32s cubic-bezier(.22,1,.36,1), opacity .32s cubic-bezier(.22,1,.36,1); }
-.coach-live-v79 .coach-v79-card-body.folded, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body.folded { grid-template-rows: 0fr; opacity: 0; }
-.coach-live-v79 .coach-v79-card-body > div, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body > div { min-height: 0; overflow: clip; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-icon { position: relative; display: block; width: 24px; height: 24px; --v79-arrow-easing: linear(0.000000 0.000%, 0.047407 2.778%, 0.160938 5.556%, 0.305946 8.333%, 0.457936 11.111%, 0.600934 13.889%, 0.725713 16.667%, 0.828090 19.444%, 0.907413 22.222%, 0.965301 25.000%, 1.004654 27.778%, 1.028923 30.556%, 1.041597 33.333%, 1.045885 36.111%, 1.044538 38.889%, 1.039775 41.667%, 1.033289 44.444%, 1.026293 47.222%, 1.019593 50.000%, 1.013668 52.778%, 1.008750 55.556%, 1.004896 58.333%, 1.002049 61.111%, 1.000083 63.889%, 0.998843 66.667%, 0.998167 69.444%, 0.997905 72.222%, 0.997924 75.000%, 0.998119 77.778%, 0.998407 80.556%, 0.998727 83.333%, 0.999040 86.111%, 0.999321 88.889%, 0.999557 91.667%, 0.999744 94.444%, 0.999883 97.222%, 1 100.000%); }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow { position: absolute; inset: 0; transform: rotate(0deg); transition: transform .6s var(--v79-arrow-easing); }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow.top { transform-origin: 18px 6px; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow.bottom { transform-origin: 6px 18px; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow img { position: absolute; inset: 0; transform-origin: inherit; transition: opacity .18s ease; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow.top img { clip-path: inset(0 0 50% 50%); }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow.bottom img { clip-path: inset(50% 50% 0 0); }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-open { transform: rotate(180deg); opacity: 0; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-closed { opacity: 1; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-arrow { transform: rotate(180deg); }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-open { opacity: 1; }
+:is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-icon[data-folded='true'] .coach-v79-toggle-closed { opacity: 0; }
+.coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference :is(.client-circuit-body, .client-live-card-body) { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows .32s cubic-bezier(.22,1,.36,1), opacity .32s cubic-bezier(.22,1,.36,1); }
+.coach-live-v79 .coach-v79-card-body.folded, .phone-frame.fit-client-lime.client-workout-reference :is(.client-circuit-body, .client-live-card-body).folded { grid-template-rows: 0fr; opacity: 0; }
+.coach-live-v79 .coach-v79-card-body > div, .phone-frame.fit-client-lime.client-workout-reference :is(.client-circuit-body, .client-live-card-body) > div { min-height: 0; overflow: clip; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-exercise-tools { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: center; gap: 12px; padding: 12px 0 16px; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-exercise-tools:has(.coach-v79-instruction) { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-exercise-tools :is(button.live-add-set,button.coach-v79-instruction,button.overflow-trigger) { min-width: 0; width: 100%; height: 44px; min-height: 44px; padding: 8px 4px; margin: 0; border: 0; border-radius: 0; background: transparent; font-size: 14px; line-height: 16px; font-weight: 400; color: var(--lime-text-secondary); overflow-wrap: anywhere; }
@@ -42,6 +42,6 @@
 .coach-live-v79 .coach-v79-card-body .live-exercise-note { border-top: 1px solid var(--lime-divider); padding-top: 4px; }
 @media (prefers-reduced-motion: reduce) {
   .phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .live-exercise,
-  .coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference .client-circuit-body, .coach-live-v79 .coach-v79-toggle-arrow,
-  .coach-live-v79 .coach-v79-toggle-arrow img { transition: none; }
+  .coach-live-v79 .coach-v79-card-body, .phone-frame.fit-client-lime.client-workout-reference :is(.client-circuit-body, .client-live-card-body), :is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow,
+  :is(.coach-live-v79, .client-live-v79) .coach-v79-toggle-arrow img { transition: none; }
 }

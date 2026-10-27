@@ -379,3 +379,17 @@
 .phone-frame.fit-client-lime.client-workout-reference.live-identity:has(.client-live-density-compact) .live-inactivity-reminder button { min-height: 48px; border-radius: 16px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-density button.live-add-exercise { min-height: 60px; border-radius: 20px; }
 .phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-density-compact button.live-add-exercise { min-height: 48px; border-radius: 16px; }
+
+/* The client retains its left media and top-right menu. The same source fold
+   button gets its own44px target; the body keeps the original mounted forms. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head { grid-template-columns: minmax(0,1fr) 88px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-head:has(.workout-exercise-header-main) { grid-template-columns: 72px minmax(0,1fr) 88px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .exercise-head-actions { width: 88px; align-self: start; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-controls { display: flex; flex-wrap: wrap; align-items: start; justify-content: flex-end; width: 88px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-controls > button { flex: 0 0 44px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-body > div { display: flex; flex-direction: column; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-compact { padding: 0; border: 0; background: transparent; gap: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card-compact .workout-exercise-compact { padding-right: 0; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-arrow img { background: var(--lime-text-secondary); object-position: -9999px; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-closed { mask: url('../assets/coach-live-v79/card-collapse.svg') center / contain no-repeat; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .coach-v79-toggle-open { mask: url('../assets/coach-live-v79/card-expand.svg') center / contain no-repeat; }
