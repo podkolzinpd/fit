@@ -119,3 +119,6 @@ PR2 после Next-guard: a2f39f92 full-check exit0(frontend2861/API1516+196 п
 
 
 PR2 main1837-интеграция/9c56337c: общий check exit0(frontend2861/API1516+196 прежних условных DB skip), смешанный client+coach browser80/80. Дополнительный Next-viewport аудит2/2 подтвердил выделение целого значения и положение следующего поля выше model keyboard420 при прежнем useLiveInputVisibility; координатор не переписывался. Rolling snapshot заменяет только текущую запись своей задачи и индексирует старую историю в Git/Tracker/плане;120строк, новая тренерская YAFIT-665 запись и остальные upstream-факты сохранены. После проверки меняется только Markdown, runtime/tests ревизии9c56337c прежние.
+
+
+PR2 интеграция coach #1838/main28f37c5a: сохранены действия, заметки и отдельное сворачивание каждого круга тренера. Общий focusNextLiveField пропускает retained inert-поля в обоих пилотах, legacy-путь прежний; обе независимые unit-проверки сохранены, полный файл5/5. Обработчики значений, keyboard coordinator, API, timer/deadline и flags не изменялись. Новый полный check и86 browser на собранном приложении выполняются; до их успеха local-ready снят, слияние запрещено. Dev-прогон не засчитан: startup fallback при reload и clock.pauseAt в прошлом; tests/assertions/таймауты не менялись.
