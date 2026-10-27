@@ -16,7 +16,7 @@ export type VitalMediaState = {
   url: string | undefined
   status: VitalMediaStatus
   /** Returns false when the caller should show its normal fallback. */
-  retry: (failedUrl?: string) => boolean
+  retry: (failedUrl?: string, options?: { manual: true }) => boolean
 }
 
 export function shouldUsePrivateVitalStorage(source: string | undefined, mediaMode: 'public' | 'signed') {
@@ -39,8 +39,8 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
   const mediaMode = exercises.vitalMediaMode
   const exercisesRef = useRef(exercises)
   useEffect(() => { exercisesRef.current = exercises }, [exercises])
-  const retryRef = useRef<(failedUrl?: string) => boolean>(() => false)
-  const retry = useCallback((failedUrl?: string) => retryRef.current(failedUrl), [])
+  const retryRef = useRef<VitalMediaState['retry']>(() => false)
+  const retry = useCallback<VitalMediaState['retry']>((failedUrl, options) => retryRef.current(failedUrl, options), [])
   const [media, setMedia] = useState<Omit<VitalMediaState, 'retry'>>(() => source && !shouldUsePrivateVitalStorage(source, mediaMode)
     ? { url: source, status: 'ready' }
     : { url: undefined, status: enabled && source ? 'loading' : 'idle' })
@@ -82,11 +82,12 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
           refresh()
         }
       }
-      retryRef.current = (failedUrl) => {
+      retryRef.current = (failedUrl, options) => {
         // Arbitrary custom/signed photo URLs must not receive extra query parameters.
         if (!active || !enabled || !source.startsWith('/exercises/')) return false
         if (pending || failedUrl && new URL(failedUrl, window.location.href).href !== new URL(currentUrl, window.location.href).href) return true
         failed = true
+        if (options?.manual) { loadRecoveryUsed = false; resumeRecoveryUsed = false }
         if (loadRecoveryUsed) return false
         loadRecoveryUsed = true
         refresh()
@@ -169,12 +170,20 @@ export function useVitalMediaState(source: string | undefined, enabled = true): 
         resolve(0)
       }
     }
-    retryRef.current = (failedUrl) => {
+    retryRef.current = (failedUrl, options) => {
       if (!active) return false
       if (inFlight || pending) return true
       if (failedUrl && signed && failedUrl !== signed.url) return true
       failed = true
       clearRefresh()
+      if (options?.manual) {
+        clearTimeout(retryTimer)
+        loadRecoveryUsed = false
+        resumeRecoveryUsed = false
+        if (signed) signedUrlCache.invalidate(key, signed.url)
+        resolve(0)
+        return true
+      }
       if (!signed || loadRecoveryUsed) return false
       loadRecoveryUsed = true
       signedUrlCache.invalidate(key, signed.url)
