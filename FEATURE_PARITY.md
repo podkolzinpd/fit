@@ -796,3 +796,5 @@ account_role. Локальные API/PG/RLS и browser проверки — в
 - YAFIT-664, PR1: клиентское обычное упражнение получает явное обратимое сворачивание через общий WorkoutFoldBody/исходный v79 CardToggleIcon. Название/техника, mounted ввод, pending/error guard и автоматическое завершение сохраняются. Результат проверок и последовательной публикации — в design/CLIENT_LIVE_INTERACTIONS_20261027.md; только прежние четыре тестовых профиля.
 
 - YAFIT-664, PR2: клиентская правая rail-кнопка использует существующий openLiveReplacement; левые удаления, факт начатого, отмена/error/retry и coordinator не меняются. Новые8/8 + регрессия72/72, полныйcheck0; отдельный выпуск после public/native PR1. Прежние4 профиля.
+
+- YAFIT-664 PR3: clientLiveV79 переиспользует header drag/420ms/reduced motion, сохраняя свою тему/геометрию и multi-add. Inert диалог с активным backdrop защищает повторный вход; pending/nested и focus/scroll проверяются. Флаги и4 профиля прежние; публикация последовательно после PR2.

@@ -1460,6 +1460,105 @@ async function openClientReferenceCatalog(page: Page) {
   await page.getByRole('button', { name: /^Выбрать упражнения$/ }).click()
   return page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
 }
+// Reduced motion changes close ownership/timing; keyboard and real gestures
+// are exercised once per mode, without multiplying by visual theme variants.
+for (const reduced of [false, true]) test(`client Live catalogue header drag retains keyboard selection and nested screens reduced-${reduced}`, async ({ page, browserName }, info) => {
+  await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' })
+  await modelKeyboard(page)
+  await page.clock.setFixedTime(new Date('2026-10-27T09:00:00Z'))
+  const restUntil = String(Date.parse('2026-10-27T09:01:30Z'))
+  await page.addInitScript(({ id, workoutId, restUntil }) => {
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10', 'client-live-card-drag-2026-10', 'client-live-multiple-exercises-2026-10']))
+    sessionStorage.setItem(`fit:live-rest-until:${workoutId}`, restUntil)
+  }, { id: pilotId, workoutId, restUntil })
+  const source = coachGestureWorkout(); source.startedAt = '2026-10-27T08:59:00Z'
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const trigger = page.locator('.live-add-exercise'), content = page.locator('.content')
+  await trigger.scrollIntoViewIfNeeded(); await trigger.focus()
+  const scroll = await content.evaluate(e => e.scrollTop)
+  await trigger.click()
+  const picker = page.locator('.exercise-picker'), title = picker.locator('.client-lime-sheet-header h1')
+  await expect(page.locator('.client-live-v79-picker-overlay')).toBeVisible()
+  await expect.poll(() => picker.evaluate(e => e.getAnimations().filter(a => a.playState === 'running').length)).toBe(0)
+  const search = picker.getByLabel('Поиск упражнения', { exact: true })
+  await search.fill('Жим'); await showModeledKeyboard(page)
+  await picker.locator('.picker-select-mark').nth(0).click(); await picker.locator('.picker-select-mark').nth(1).click()
+  await expect(picker.locator('.picker-item.selected')).toHaveCount(2)
+  const top = (await picker.boundingBox())!.y
+  const drag = async (distance: number, cancel = false) => {
+    const gesture = await beginClientGesture(page, picker, browserName, title)
+    await gesture.move(0, distance); await gesture.end(cancel)
+  }
+  await drag(32)
+  await expect(picker).toBeVisible()
+  await expect.poll(async () => Math.abs((await picker.boundingBox())!.y - top)).toBeLessThan(1)
+  await drag(200, true)
+  await expect(picker).toBeVisible()
+  await expect.poll(async () => Math.abs((await picker.boundingBox())!.y - top)).toBeLessThan(1)
+  await expect(search).toHaveValue('Жим')
+  await expect(picker.locator('.picker-item.selected')).toHaveCount(2)
+  await picker.getByRole('button', { name: /Фильтровать/ }).click()
+  await drag(200)
+  await expect(picker.getByRole('region', { name: 'Фильтры упражнений' })).toBeVisible()
+  await picker.getByRole('button', { name: 'Показать упражнения', exact: true }).click()
+  const technique = picker.locator('.picker-item-technique').first()
+  await technique.click()
+  if (!await picker.getByRole('heading', { name: 'Техника', exact: true }).count()) await technique.click()
+  await expect(picker.getByRole('heading', { name: 'Техника', exact: true })).toBeVisible()
+  await drag(200)
+  await expect(picker.getByRole('heading', { name: 'Техника', exact: true })).toBeVisible()
+  await picker.getByRole('button', { name: 'Назад к выбору', exact: true }).click()
+  await picker.getByRole('button', { name: 'Создать упражнение', exact: true }).click()
+  const name = picker.getByPlaceholder('Например: Болгарский присед')
+  await name.fill('Черновик своего упражнения')
+  await drag(200)
+  await expect(name).toHaveValue('Черновик своего упражнения')
+  await picker.getByRole('button', { name: 'Назад к упражнениям', exact: true }).click()
+  await expect(search).toHaveValue('Жим')
+  if (!reduced) await page.evaluate(() => {
+    const overlay = document.querySelector<HTMLElement>('.client-live-v79-picker-overlay')!
+    const observer = new MutationObserver(() => {
+      if (!overlay.classList.contains('closing')) return
+      const back = document.querySelector<HTMLElement>('.live-workout-page .page-back')!.getBoundingClientRect()
+      const hit = document.elementFromPoint(back.x + back.width / 2, back.y + back.height / 2)
+      ;(window as typeof window & { fitClosingShield?: { blocked: boolean; dialogInert: boolean; overlayInert: boolean } }).fitClosingShield = {
+        blocked: Boolean(hit && overlay.contains(hit)), dialogInert: overlay.querySelector<HTMLElement>('.exercise-picker')!.inert, overlayInert: overlay.inert,
+      }
+      observer.disconnect()
+    })
+    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] })
+  })
+  const gesture = await beginClientGesture(page, picker, browserName, title)
+  await gesture.move(0, 200)
+  await page.screenshot({ path: info.outputPath('catalogue-drag.png') })
+  await gesture.end()
+  await expect(picker).toHaveCount(0)
+  if (!reduced) expect(await page.evaluate(() => (window as typeof window & { fitClosingShield?: object }).fitClosingShield)).toEqual({ blocked: true, dialogInert: true, overlayInert: false })
+  await page.evaluate(() => { (window as typeof window & { fitTestKeyboardHeight?: number }).fitTestKeyboardHeight = innerHeight; visualViewport?.dispatchEvent(new Event('resize')) })
+  await expect(page.locator('html')).not.toHaveClass(/app-keyboard-open/)
+  await expect(trigger).toBeFocused()
+  await expect.poll(async () => Math.abs(await content.evaluate(e => e.scrollTop) - scroll)).toBeLessThan(1)
+  expect(backend.getAppendCommands()).toHaveLength(0)
+  expect(backend.getWorkouts()[0]!.exercises).toHaveLength(3)
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(restUntil)
+  await trigger.click()
+  await expect(picker.locator('.picker-item.selected')).toHaveCount(0)
+  await expect(search).toHaveValue('')
+  await picker.getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  const menu = page.locator(`[data-workout-block="${source.exercises[0]!.blockId}"] .overflow-trigger`)
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Заменить', exact: true }).click()
+  await expect(picker).toBeVisible()
+  await expect.poll(() => picker.evaluate(e => e.getAnimations().filter(a => a.playState === 'running').length)).toBe(0)
+  const replacementScroll = await content.evaluate(e => e.scrollTop)
+  await drag(200)
+  await expect(picker).toHaveCount(0)
+  await expect(menu).toBeFocused()
+  await expect.poll(async () => Math.abs(await content.evaluate(e => e.scrollTop) - replacementScroll)).toBeLessThan(1)
+})
+
 for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`client catalog reference geometry and retained filter search ${theme} ${width}`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 })
   await page.addInitScript(({ id, theme }) => { localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10'])) }, { id: pilotId, theme })
@@ -1509,11 +1608,17 @@ for (const theme of ['dark', 'light']) for (const width of [390, 430]) test(`cli
   await expect(page.locator('.planned-exercise')).toHaveCount(2)
 })
 
-test('client catalog reference Live batch retry keeps idempotent commands and confirmed facts', async ({ page }) => {
+test('client catalog reference Live batch retry keeps idempotent commands and confirmed facts', async ({ page, browserName }) => {
   const original = restTimerWorkout()
   original.exercises[0]!.sets[0]!.confirmedAt = '2026-10-08T09:00:00Z'
   original.exercises[0]!.sets[0]!.fact = { weightKg: 40, reps: 12 }
   const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [original], failAppendAfterCommitAt: 2 })
+  let releaseAppend: () => void = () => { throw new Error('Append gate was not initialized') }
+  const appendGate = new Promise<void>(resolve => { releaseAppend = resolve })
+  await page.route('**/v1/workouts/*/exercises', async route => {
+    if (route.request().method() === 'POST') await appendGate
+    return route.fallback()
+  })
   await page.goto(`/workouts/${workoutId}/live`)
   await page.getByRole('button', { name: 'Ещё упражнение', exact: true }).click()
   const picker = page.getByRole('dialog', { name: 'Добавить упражнение', exact: true })
@@ -1526,6 +1631,14 @@ test('client catalog reference Live batch retry keeps idempotent commands and co
   }
   expect(backend.getAppendCommands()).toHaveLength(0)
   await picker.getByRole('button', { name: 'Добавить выбранные упражнения', exact: true }).click()
+  try {
+    await expect(picker.getByRole('button', { name: 'Закрыть', exact: true })).toBeDisabled()
+    const gesture = await beginClientGesture(page, picker, browserName, picker.locator('.client-lime-sheet-header h1'))
+    await gesture.move(0, 200); await gesture.end()
+    await expect(picker).toBeVisible()
+    await expect(page.locator('.client-live-v79-picker-overlay')).not.toHaveClass(/closing/)
+    expect(backend.getAppendCommands()).toHaveLength(0)
+  } finally { releaseAppend() }
   await expect(picker.getByRole('alert')).toContainText('повторите добавление остальных')
   await expect(picker.getByRole('button', { name: /^Добавить.*2/ })).toBeEnabled()
   const pending = backend.getAppendCommands()[1]
@@ -1543,10 +1656,12 @@ test('client catalog reference also applies in Today and does not reach another 
   await page.goto('/me?entry=workout')
   await page.getByRole('button', { name: 'Выбрать упражнения вручную', exact: true }).click()
   await expect(page.locator('.client-reference-catalog')).toBeVisible()
+  await expect(page.locator('.client-live-v79-picker-overlay')).toHaveCount(0)
   await page.getByRole('button', { name: 'Закрыть', exact: true }).click()
   await mockPilot(page, { role: 'client', profileId: 'c11e0000-6010-4000-8000-000000000002', clientLime: true, workouts: [] })
   await openClientReferenceCatalog(page)
   await expect(page.locator('.client-reference-catalog')).toHaveCount(0)
+  await expect(page.locator('.client-live-v79-picker-overlay')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Фильтры', exact: true })).toBeVisible()
 })
 
@@ -1723,6 +1838,7 @@ for (const started of [false, true]) test(`client replacement rail preserves can
   const picker = page.locator('.exercise-picker')
   await expect(picker).toBeVisible()
   await picker.getByRole('button', { name: 'Закрыть', exact: true }).click()
+  await expect(picker).toHaveCount(0)
   expect(backend.getWorkouts()[0]!.exercises[0]).toEqual(preserved)
   expect(requests).toHaveLength(0)
   const choose = async () => {
