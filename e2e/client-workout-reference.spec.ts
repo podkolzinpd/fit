@@ -1799,6 +1799,109 @@ for (const mode of ['planned', 'completed']) test(`client date reference Today s
 })
 
 
+// Short visual fixtures cover state, theme and density without repeating the
+// editing flow. Widths cover the two approved phone grids.
+for (const theme of ['light', 'dark']) for (const density of ['original', 'compact']) test(`client lower tools source geometry ${theme} ${density}`, async ({ page }, info) => {
+  await page.addInitScript(({ id, theme, density }) => {
+    localStorage.setItem(`fit.clientLime.theme.${id}`, theme); localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10', 'client-live-card-drag-2026-10']))
+  }, { id: pilotId, theme, density })
+  const source = coachGestureWorkout(); source.startedAt = new Date(Date.now() - 60000).toISOString()
+  source.exercises[0]!.trainerComment = 'Сохраняйте темп движения'
+  source.exercises[1]!.clientNote = 'Моя сохранённая заметка'
+  source.exercises[2]!.clientNote = 'Длинная личная заметка '.repeat(30)
+  for (const set of source.exercises[1]!.sets) { set.confirmedAt = new Date().toISOString(); set.fact = { weightKg: 20, reps: 10 } }
+  await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  await page.goto(`/workouts/${workoutId}/live`)
+  for (const exercise of source.exercises.slice(1)) await page.getByRole('button', { name: `Развернуть: ${exercise.name}`, exact: true }).click()
+  const cards = page.locator('.client-live-card'), footer = cards.first().locator('.live-exercise-utilities'), note = footer.locator('.live-exercise-note')
+  for (const width of [390, 430]) {
+    await page.setViewportSize({ width, height: 844 })
+    const facts = await page.locator('.live-exercise-utilities').evaluateAll(elements => elements.map(e => {
+      const summary = e.querySelector('summary')!, add = e.querySelector('.live-add-set')!, details = e.querySelector('details')!
+      const n = summary.getBoundingClientRect(), a = add.getBoundingClientRect(), style = getComputedStyle(summary), button = getComputedStyle(add)
+      return { height: n.height, width: n.width, addHeight: a.height, addWidth: a.width, sameY: Math.abs(n.y - a.y) < 1, separated: n.right <= a.x,
+        font: style.fontFamily, weight: style.fontWeight, addWeight: button.fontWeight, color: style.color, addColor: button.color, background: getComputedStyle(e.closest('.client-live-card')!).backgroundColor, filled: details.hasAttribute('data-has-note') }
+    }))
+    expect(facts).toHaveLength(3)
+    for (const fact of facts) {
+      expect(fact.height).toBe(44); expect(fact.addHeight).toBe(44)
+      expect(Math.min(fact.width, fact.addWidth)).toBeGreaterThanOrEqual(44)
+      expect(fact.sameY).toBe(true); expect(fact.separated).toBe(true)
+      expect(fact.font).toMatch(/YS Geo/); expect(fact.weight).toBe('400'); expect(fact.addWeight).toBe('400')
+      expect(liveContrast(fact.color, fact.background)).toBeGreaterThanOrEqual(4.5)
+    }
+    expect(facts[0]!.color).toBe(facts[0]!.addColor)
+    expect(facts[1]!.color).not.toBe(facts[1]!.addColor)
+    expect(facts[2]!.filled).toBe(true)
+    const emptyColor = facts[0]!.color
+    await note.locator('summary').click()
+    await expect(note).toHaveAttribute('open', '')
+    await expect(note.locator('summary')).toHaveCSS('color', emptyColor)
+    await expect(note.locator('textarea')).toHaveValue('')
+    await expect(footer.locator('.live-add-set')).toHaveCSS('height', '44px')
+    await cards.first().screenshot({ path: info.outputPath(`footer-${width}.png`) })
+    await note.locator('summary').click()
+    await expect(cards.first().locator('.live-trainer-note summary')).toContainText('От тренера')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await expect(page.locator('.live-add-exercise')).toHaveCSS('min-height', density === 'original' ? '60px' : '48px')
+})
+
+// Note focus and row insertion depend on field density; themes use the visual fixture above.
+for (const density of ['original', 'compact']) test(`client lower tools retain note retry confirmed facts and keyboard ${density}`, async ({ page }, info) => {
+  await modelKeyboard(page)
+  await page.clock.setFixedTime(new Date('2026-10-27T09:00:00Z'))
+  const restUntil = String(Date.parse('2026-10-27T09:00:47Z'))
+  await page.addInitScript(({ id, density, workoutId, restUntil }) => {
+    localStorage.setItem(`fit.clientLiveDensity.${id}`, density)
+    localStorage.setItem(`fit.coachmarks-seen.${id}`, JSON.stringify(['client-live-reference-timer-2026-10', 'client-live-card-drag-2026-10']))
+    sessionStorage.setItem(`fit:live-rest-until:${workoutId}`, restUntil)
+  }, { id: pilotId, density, workoutId, restUntil })
+  const source = coachGestureWorkout(false, 1), original = source.exercises[0]!
+  source.startedAt = '2026-10-27T08:59:00Z'; original.trainerComment = 'Комментарий тренера сохраняется отдельно'
+  original.sets[0]!.confirmedAt = '2026-10-27T08:59:30Z'; original.sets[0]!.fact = { weightKg: 20, reps: 10 }
+  const backend = await mockPilot(page, { role: 'client', profileId: pilotId, clientLime: true, workouts: [source] })
+  let noteAttempts = 0
+  await page.route('**/v1/workout-exercises/*/comment', async route => {
+    noteAttempts += 1
+    if (noteAttempts === 1) { await route.fulfill({ status: 503, json: { error: 'unavailable' } }); return }
+    const workout = backend.getWorkouts()[0]!, target = workout.exercises[0]!
+    target.clientNote = (route.request().postDataJSON() as { comment: string }).comment; workout.version += 1
+    await route.fulfill({ json: { workout: { version: workout.version } } })
+  })
+  await page.route('**/v1/workout-exercises/*/sets', async route => {
+    const workout = backend.getWorkouts()[0]!, target = workout.exercises[0]!
+    expect((route.request().postDataJSON() as { expectedVersion: number }).expectedVersion).toBe(workout.version)
+    target.sets.push({ ...target.sets.at(-1)!, id: 'c11e0000-6010-4000-8000-000000000999', position: target.sets.length, fact: {}, confirmedAt: null })
+    workout.version += 1; await route.fulfill({ json: { workout: { version: workout.version } } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  const row = page.locator('form[data-live-set-id]').first(), weight = row.getByLabel('Фактический вес', { exact: true }), input = await weight.elementHandle()
+  await weight.fill('24.5'); await weight.blur()
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.fact.weightKg).toBe(24.5)
+  await expect(row).toHaveClass(/confirmed/)
+  const note = page.locator('.live-exercise-note'), summary = note.locator('summary'), textarea = note.locator('textarea')
+  await summary.click(); await textarea.fill('Сохранить личную заметку без потери результата'); await textarea.blur()
+  await expect(page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })).toBeVisible()
+  await expect(textarea).toHaveValue('Сохранить личную заметку без потери результата')
+  await page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true }).click()
+  await expect(note).toHaveAttribute('data-has-note', 'true')
+  expect(noteAttempts).toBe(2)
+  const textNode = await textarea.elementHandle(), add = page.locator('.live-add-set')
+  await expect(add).toBeEnabled()
+  await textarea.focus(); await showModeledKeyboard(page)
+  await tapVisible(page, add)
+  await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.sets.length).toBe(3)
+  await expect(page.locator('form[data-live-set-id]').last().getByLabel('Фактический вес', { exact: true })).toHaveCSS('height', density === 'original' ? '54px' : '48px')
+  expect(await input!.evaluate(e => e.isConnected)).toBe(true); expect(await textNode!.evaluate(e => e.isConnected)).toBe(true)
+  await expect(weight).toHaveValue('24.5'); await expect(row).toHaveClass(/confirmed/)
+  await expect(textarea).toHaveValue('Сохранить личную заметку без потери результата')
+  expect(backend.getWorkouts()[0]!.exercises[0]!.trainerComment).toBe('Комментарий тренера сохраняется отдельно')
+  expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(restUntil)
+  await page.screenshot({ path: info.outputPath('footer-keyboard.png') })
+})
+
 // The two states exercise the existing replacement confirmation, not visual variants.
 for (const started of [false, true]) test(`client replacement rail preserves cancel error and request started-${started}`, async ({ page, browserName }, info) => {
   await page.clock.setFixedTime(new Date('2026-10-27T09:00:00Z'))

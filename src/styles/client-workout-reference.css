@@ -400,3 +400,9 @@
 
 /* The newly exposed replacement rail uses the client's readable accent ink. */
 .phone-frame.fit-client-lime.client-workout-reference.live-identity button.workout-swipe-action.replace { color: var(--lime-accent-ink); }
+
+/* Source v79 secondary actions use Geo400. Keep the existing two-column44px
+   row; only saved note content earns the note accent, including while open. */
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-utilities :is(.live-add-set, .live-exercise-note summary) { font-weight: 400; }
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-utilities .live-add-set:not(:disabled),
+.phone-frame.fit-client-lime.client-workout-reference.live-identity .client-live-card .live-exercise-utilities .live-exercise-note:not([data-has-note]) summary { color: var(--lime-text-secondary); }
