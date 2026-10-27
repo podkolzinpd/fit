@@ -1,3 +1,4 @@
+import { CorporateAdminPage } from '../features/corporate-admin'
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { useAuth } from './auth-context'
 import { trackPageView } from '../shared/yandex-metrika'
@@ -94,7 +95,9 @@ const router = createBrowserRouter([
   { path: '/trainers/:publicId', element: <PublicTrainerProfilePage /> },
   { path: '/invite', element: <InvitationRoute /> },
   ] },
-  { element: <Protected />, children: [{ element: <AppLayout />, children: [
+  { element: <Protected />, children: [
+    { path: '/admin', element: <CorporateAdminPage /> },
+    { element: <AppLayout />, children: [
     { index: true, element: <Home /> },
     { path: '/join', element: <JoinPage /> },
     { path: '/chat', element: <ChatListPage /> },

@@ -1,0 +1,32 @@
+.corporate-admin-shell { min-height:100dvh; background:var(--bg); color:var(--fg); }
+.corporate-admin-shell .page { width:min(1200px,100%); max-width:none; margin:0 auto; padding:24px; box-sizing:border-box; }
+.corporate-admin-shell .page-header { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+.corporate-admin-shell .page-header h1 { font-size:28px; }
+.corporate-admin-shell .page-header a { text-decoration:none; padding:12px 16px; border-radius:var(--radius-md); }
+.corporate-admin-tabs { display:flex; gap:8px; padding:16px 0; border-bottom:1px solid var(--border); margin-bottom:24px; }
+.corporate-admin-tabs [aria-current=page] { outline:2px solid var(--fg); outline-offset:-2px; }
+.corporate-admin-workspace { display:grid; gap:16px; }
+.corporate-admin-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.corporate-admin-filters { display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:end; }
+.corporate-admin-checkbox { display:flex; align-items:center; gap:10px; min-height:44px; cursor:pointer; }
+.corporate-admin-checkbox input { flex:0 0 20px; width:20px; height:20px; margin:0; }
+.corporate-admin-list { list-style:none; margin:0; padding:0; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); }
+.corporate-admin-list li { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:16px; }
+.corporate-admin-list li+li { border-top:1px solid var(--border); }
+.corporate-admin-list li>div:first-child { min-width:0; }
+.corporate-admin-list p { color:var(--muted); margin:6px 0 0; overflow-wrap:anywhere; }
+.corporate-admin-list button { flex-shrink:0; }
+.corporate-admin-editor { display:grid; gap:16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:20px; }
+.corporate-admin-editor fieldset { border:0; margin:0; padding:0; min-width:0; display:grid; gap:16px; }
+.corporate-admin-editor .corporate-admin-office-options { padding:12px; border:1px solid var(--border); border-radius:var(--radius-md); }
+.corporate-admin-editor .actions, .corporate-admin-list .actions { display:flex; gap:8px; flex-wrap:wrap; }
+.corporate-admin-shell input:not([type=checkbox]), .corporate-admin-shell select { min-width:0; width:100%; box-sizing:border-box; font-size:16px; }
+@media(max-width:700px) {
+  .corporate-admin-shell .page { padding:16px; }
+  .corporate-admin-shell .page-header h1 { font-size:24px; overflow-wrap:anywhere; }
+  .corporate-admin-filters { grid-template-columns:1fr; }
+  .corporate-admin-list li { align-items:flex-start; flex-direction:column; gap:12px; }
+  .corporate-admin-editor { padding:16px; }
+}
+.corporate-admin-shell select { height:var(--control-height-standard); min-height:var(--control-height-standard); padding:10px 12px; }
+.corporate-admin-workspace h2, .corporate-admin-editor h3 { margin:0; }
