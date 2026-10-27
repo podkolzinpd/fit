@@ -122,6 +122,7 @@ interface ExercisePickerProps {
   referenceAppearance?: boolean
   clientLime?: boolean
   coachLiveV79?: boolean
+  clientLiveV79?: boolean
   onClose: () => void
 }
 
@@ -153,12 +154,16 @@ function pickerMuscleGroupLabel(group: MuscleGroup) {
   return group === 'core' ? 'Пресс' : MUSCLE_GROUP_LABELS[group]
 }
 
-export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, coachLiveV79 = false, onClose: commitClose }: ExercisePickerProps) {
+export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany, selectionDraft, onSelectionDraftChange, multiple = false, showEmptySelection = false, keepSelectionWhileAdding = false, initialSearch = '', initialMode = 'all', techniqueActionLabel = 'Добавить упражнение', reference = false, referenceAppearance = reference, clientLime = false, coachLiveV79 = false, clientLiveV79 = false, onClose: commitClose }: ExercisePickerProps) {
+  const liveSheetMotion = coachLiveV79 || clientLiveV79
   const [closing, setClosing] = useState(false)
   const closeTimer = useRef<number | null>(null)
+  const dismissed = useRef(false)
   useEffect(() => () => { if (closeTimer.current !== null) window.clearTimeout(closeTimer.current) }, [])
   function onClose() {
-    if (!coachLiveV79 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { commitClose(); return }
+    if (addingSelected || closing) return
+    dismissed.current = clientLiveV79
+    if (!liveSheetMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { commitClose(); return }
     if (closeTimer.current !== null) return
     setClosing(true)
     closeTimer.current = window.setTimeout(commitClose, 420)
@@ -197,7 +202,7 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   const [photo, setPhoto] = useState<PreparedImage | null>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
-  const v79Drag = useCoachV79PickerDrag(coachLiveV79 && !closing && !addingSelected && !filtersOpen && !creating && !previewExercise, onClose)
+  const v79Drag = useCoachV79PickerDrag(liveSheetMotion && !closing && !addingSelected && !filtersOpen && !creating && !previewExercise, onClose)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const { keyboardOpen } = useAppViewport()
   const activeMode = mode
@@ -318,9 +323,20 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
   useEffect(() => {
     if (!reference && !clientLime) return
     const previous = document.activeElement
-    dialogRef.current?.focus()
-    return () => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus() }
-  }, [reference, clientLime])
+    const content = clientLiveV79 && previous instanceof HTMLElement ? previous.closest<HTMLElement>('.content') : null
+    const position = content ? { top: content.scrollTop, left: content.scrollLeft } : null
+    dialogRef.current?.focus({ preventScroll: clientLiveV79 })
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: clientLiveV79 })
+      // WebKit can scroll the underlying list while focusing a field in a fixed
+      // keyboard sheet. Explicit dismissal returns to the original position;
+      // a successful add/replacement keeps its existing parent-owned behavior.
+      if (dismissed.current && content?.isConnected && position) {
+        content.scrollTop = position.top
+        content.scrollLeft = position.left
+      }
+    }
+  }, [reference, clientLime, clientLiveV79])
 
   function handleDialogKey(event: KeyboardEvent<HTMLElement>) {
     if ((!reference && !clientLime) || event.defaultPrevented) return
@@ -539,15 +555,18 @@ export function ExercisePicker({ catalog, clientRecent = [], onPick, onPickMany,
 
   const backdropStart = useRef<boolean | null>(null)
   const referenceList = referenceAppearance && !previewExercise && !creating
-  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}${coachLiveV79 ? ' coach-v79-picker-overlay' : ''}${closing ? ' closing' : ''}`} inert={closing}
+  // The closing client dialog is inert, but its backdrop must keep shielding
+  // the cards until the existing animation commits the close.
+  return <div className={`sheet-overlay exercise-picker-overlay${keyboardOpen ? ' keyboard-open' : ''}${coachLiveV79 ? ' coach-v79-picker-overlay' : ''}${clientLiveV79 ? ' client-live-v79-picker-overlay' : ''}${closing ? ' closing' : ''}`} inert={closing && !clientLiveV79}
     onPointerDownCapture={(event) => { backdropStart.current = event.target === event.currentTarget }}
     onPointerCancel={() => { backdropStart.current = null }}
     onClick={(event) => {
+      if (closing) { event.preventDefault(); event.stopPropagation(); return }
       const intended = backdropStart.current === true || backdropStart.current === null && event.detail === 0
       backdropStart.current = null
       if (intended && event.target === event.currentTarget && !addingSelected) onClose()
     }}>
-    <section ref={dialogRef} {...(coachLiveV79 ? v79Drag : {})} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
+    <section ref={dialogRef} inert={clientLiveV79 && closing} {...(liveSheetMotion ? v79Drag : {})} tabIndex={referenceAppearance || clientLime ? -1 : undefined} onKeyDown={handleDialogKey} className={`exercise-picker${referenceAppearance ? ' coach-reference-sheet coach-reference-catalog' : ''}${clientLime ? ' client-lime-catalog' : ''}${clientLime && referenceAppearance ? ' client-reference-catalog' : ''}${clientLime && filtersOpen ? ' client-lime-filters' : ''}${visibleSelection.size ? ' has-selection' : ''}`} role="dialog" aria-modal="true" aria-label="Добавить упражнение" onClick={stopPropagation}>
       {clientLime || coachLiveV79 ? <FitLimeSheetHeader
         title={previewExercise ? 'Техника' : creating ? 'Своё упражнение' : filtersOpen ? <>Фильтры{referenceAppearance && activeFilterChips.length > 0 && <span className="coach-filter-count" aria-hidden="true">{activeFilterChips.length}</span>}</> : coachLiveV79 ? 'Добавить упражнение' : 'Выберите упражнения'}
         backLabel={previewExercise ? 'Назад к выбору' : creating ? 'Назад к упражнениям' : filtersOpen ? 'Назад к упражнениям' : 'Закрыть'}
