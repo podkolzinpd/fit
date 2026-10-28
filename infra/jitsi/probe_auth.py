@@ -116,14 +116,14 @@ def probe(token, room, should_admit):
             return
         connection.send(opening)
         connection.until('features')
-        connection.send("<iq type='set' id='bind'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>probe</resource></bind></iq>")
+        connection.send("<iq xmlns='jabber:client' type='set' id='bind'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>probe</resource></bind></iq>")
         connection.until('jid', 'error')
         occupant = f'{room}@muc.meet.jitsi/probe'
-        connection.send(f"<presence to='{occupant}'><x xmlns='http://jabber.org/protocol/muc'/></presence>")
+        connection.send(f"<presence xmlns='jabber:client' to='{occupant}'><x xmlns='http://jabber.org/protocol/muc'/></presence>")
         presence = connection.until('<presence')
         admitted = 'type="error"' not in presence and "type='error'" not in presence
         if admitted:
-            connection.send(f"<presence to='{occupant}' type='unavailable'/>")
+            connection.send(f"<presence xmlns='jabber:client' to='{occupant}' type='unavailable'/>")
         if admitted != should_admit:
             raise RuntimeError('Unexpected room admission decision')
     except (EOFError, socket.timeout):
