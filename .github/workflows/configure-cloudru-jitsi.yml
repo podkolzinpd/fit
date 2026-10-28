@@ -1,0 +1,107 @@
+name: Prepare bounded Jitsi on the existing Cloud.ru VM
+
+on:
+  pull_request:
+    paths:
+      - infra/jitsi/**
+      - scripts/jitsi-*.mjs
+      - .github/workflows/configure-cloudru-jitsi.yml
+  workflow_dispatch:
+    inputs:
+      phase:
+        type: choice
+        default: prepare
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa, api-status, api-stage, api-enable, api-disable]
+      qa_public_key:
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      phase:
+        type: string
+        default: prepare
+      qa_public_key:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","cloudru-stage"]') }}
+    steps:
+      - name: Remove only the generated root-owned cache from prior meeting preparation
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          test "$GITHUB_WORKSPACE" = /opt/actions-runner/_work/fit/fit
+          sudo rm -f "$GITHUB_WORKSPACE/infra/jitsi/__pycache__/prepare.cpython-312.pyc"
+          sudo rmdir "$GITHUB_WORKSPACE/infra/jitsi/__pycache__" 2>/dev/null || true
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - if: github.event_name == 'pull_request'
+        run: sudo apt-get update -qq && sudo apt-get install -y nginx
+      - run: python3 -B -m unittest discover -s infra/jitsi -p 'test_*.py'
+      - run: bash -n infra/jitsi/prepare-host.sh
+      - run: bash -n infra/jitsi/activate-ingress.sh
+      - run: bash -n infra/jitsi/resume-host.sh && bash -n infra/jitsi/verify-host.sh
+      - name: Validate bounded compose without credentials
+        run: |
+          python3 -c 'import yaml; yaml.safe_load(open("infra/jitsi/compose.upstream.yml"))'
+  prepare:
+    if: github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 15
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    steps:
+      - if: inputs.phase == 'qa' || startsWith(inputs.phase, 'api-')
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Apply the explicitly selected meeting action on the existing VM
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$(hostname)" = fit-stage-app
+          if [[ "$JITSI_PHASE" == api-* ]]; then
+            sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+          fi
+          if [[ "$JITSI_PHASE" == api-enable ]]; then
+            sudo bash infra/jitsi/verify-host.sh
+            curl --fail --silent --max-time 10 --noproxy '*' \
+              --resolve fit-training.ru:443:127.0.0.1 https://fit-training.ru/api/ready >/dev/null
+          fi
+          case "$JITSI_PHASE" in
+            prepare) sudo bash infra/jitsi/prepare-host.sh ;;
+            resume) sudo bash infra/jitsi/resume-host.sh ;;
+            ingress) sudo bash infra/jitsi/activate-ingress.sh ;;
+            diagnose) sudo python3 -B infra/jitsi/diagnose-host.py ;;
+            auth) sudo python3 -B infra/jitsi/probe_auth.py ;;
+            proxy) sudo python3 -B infra/jitsi/refresh_proxy.py ;;
+            api-status) sudo python3 -B infra/jitsi/api_config.py status ;;
+            api-stage) sudo python3 -B infra/jitsi/api_config.py stage ;;
+            api-enable) sudo python3 -B infra/jitsi/api_config.py enable ;;
+            api-disable) sudo python3 -B infra/jitsi/api_config.py disable ;;
+            qa)
+              umask 077
+              sudo --preserve-env=QA_PUBLIC_KEY "$(command -v node)" scripts/jitsi-issue-qa.mjs > "$RUNNER_TEMP/fit-jitsi-qa.enc.json"
+              ;;
+            *) exit 1 ;;
+          esac
+        env:
+          JITSI_PHASE: ${{ inputs.phase }}
+          QA_PUBLIC_KEY: ${{ inputs.qa_public_key }}
+      - if: inputs.phase == 'qa'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit-jitsi-qa-ciphertext
+          path: ${{ runner.temp }}/fit-jitsi-qa.enc.json
+          retention-days: 1
