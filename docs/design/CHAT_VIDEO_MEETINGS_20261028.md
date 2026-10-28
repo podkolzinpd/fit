@@ -65,18 +65,26 @@ api.fit-training.ru с существующим TLS; внутренние XMPP n
 
 Инфраструктурное продолжение: [комплект](../../infra/jitsi/README.md).
 Общий предел2GiB/1CPU включает отдельные контейнеры и Coturn; существующие
-API/STT routes сохраняются. Подготовленные компоненты остановлены, пока
-проверка их фактической cgroup-изоляции не прошла; ключи не перегенерируются.
+API/STT routes сохраняются. Компоненты запущены, фактические cgroup limits
+проверены на VM; ключи не перегенерируются. Installed Ubuntu Compose требует
+явного --podman-run-args=--cgroup-parent и systemd EnvironmentFile: один YAML
+не доказывает, что parent/env применены. Повторный замер40686705514:
+MemAvailable2807MiB, свободно33GiB, OOM0; это idle после синтетической комнаты.
 
 | ID | Результат | Проверка | Статус |
 | --- | --- | --- | --- |
-| I1 | Изолированный запуск на текущей VM,2GiB/1CPU | offline renderer; installed Podman cgroups | проверяется на VM |
-| I2 | HTTPS SDK/XMPP и аутентифицированный TURN | Nginx integration, TLS, server admission | не проверено |
+| I1 | Изолированный запуск на текущей VM,2GiB/1CPU | cgroup read-back40684659185; capacity40686705514 | проверено |
+| I2 | HTTPS SDK/XMPP и аутентифицированный TURN | Nginx integration; TLS40683762312; JWT40685710970; compressed SDK40686470729 | proxy/TLS/JWT проверены; реальный TURN relay не проверен |
 | I3 | Реальное двустороннее media и forced TURN | два клиента, замер ресурсов, mobile | не проверено |
 | I4 | Включение через защищённый API env и штатный release | public app read-back | не проверено; flag off |
 
 Внешняя сеть расширяется только на10000/UDP,5349/TCP,49160–49200/UDP;
 SSH и внутренние XMPP/metrics порты не открываются. Допустимая ёмкость
 одновременных встреч определяется после реального media, не из idle-замера.
+JWT probe: valid-room допущен; missing/expired/wrong-signature/wrong-room
+отклонены. SDK полностью загружен реальным Chromium с опубликованного HTTPS;
+созданы и освобождены синтетические audio/video tracks. Это preview, не
+двусторонний media-тест. Порты ещё не открыты; запрошено отдельное подтверждение
+для трёх правил security group по правилам управления консолью.
 Локальные API/PG проверки не используют production credentials или БД.
 Два браузера и реальные устройства нужны для приёмки media; mock не доказывает видео.

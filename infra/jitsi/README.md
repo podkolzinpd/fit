@@ -22,6 +22,10 @@ Jicofo512MiB (heap256MiB), JVB1024MiB (heap640MiB). Coturn128MiB/10%CPU
 в той же slice. CPU/IO weight20. Фактические limits и cgroup parent проверяются
 после запуска; при ошибке запускаются rollback/остановка только meeting-сервисов.
 Параллельные deploy/inspect сериализованы group cloudru-stage-vm.
+В Ubuntu Compose1.0.6 cgroup_parent из YAML игнорируется: unit явно передаёт
+--podman-run-args=--cgroup-parent=fit-jitsi.slice. EnvironmentFile передаёт
+protected env сервису; один dotenv не заполняет bare environment list в этой
+версии. Обе настройки и фактическое наличие JWT/service credentials проверены.
 
 Подготовка не изменяет API env, его контейнер, маршруты или PostgreSQL.
 Каталог /opt/fit-jitsi0700; отдельные случайные JWT/TURN/Jicofo/JVB secrets,
@@ -54,6 +58,16 @@ Workflow configure-cloudru-jitsi.yml имеет prepare/resume/ingress; для �
 принимает prepare_jitsi=true и jitsi_phase. Остальные application diagnostics
 в таком запуске пропускаются. Только явный manual dispatch меняет сервер.
 Никаких runtime secrets в GitHub job inputs или outputs.
+Дополнительные bounded modes: diagnose (статусы и очищенные ошибки только новых
+контейнеров), auth (синтетические комнаты, пять JWT checks), proxy (обновление
+только managed snippets без ключей). SDK передаётся с proxy_buffering off:
+проверка всего compressed response и реальный Chromium preview обязательны,
+HTTP200/HEAD не доказывают, что большой script загрузился полностью.
+
+28.10: verified cgroups, HTTPS/TURN TLS, пять JWT probes и Chromium SDK preview
+audio/video. Реальное двустороннее media и forced relay ещё не проверены.
+После настройки доступно2807MiB RAM и33GiB диска, OOM0 (run40686705514).
+Security-group media ports пока закрыты; API flag не менялся.
 
 ## Допуск к комнатам и ограничения TURN
 
