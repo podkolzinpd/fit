@@ -22,19 +22,23 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || fromJSON('["self-hosted","cloudru-stage"]') }}
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: sudo apt-get update -qq && sudo apt-get install -y nginx
+      - if: github.event_name == 'pull_request'
+        run: sudo apt-get update -qq && sudo apt-get install -y nginx
       - run: python3 -B -m unittest discover -s infra/jitsi -p 'test_*.py'
       - run: bash -n infra/jitsi/prepare-host.sh
       - run: bash -n infra/jitsi/activate-ingress.sh
       - run: bash -n infra/jitsi/resume-host.sh && bash -n infra/jitsi/verify-host.sh
       - name: Validate bounded compose without credentials
         run: |
-          ruby -e 'require "yaml"; YAML.load_file("infra/jitsi/compose.upstream.yml")'
+          python3 -c 'import yaml; yaml.safe_load(open("infra/jitsi/compose.upstream.yml"))'
   prepare:
     if: github.event_name == 'workflow_dispatch'
     needs: check
