@@ -66,6 +66,7 @@
 }
 .fit-lime-shell .chat-reply-quote strong { color: var(--lime-accent) }
 .fit-lime-shell .chat-reply-quote span { color: var(--lime-text-secondary) }
+.fit-lime-shell .chat-day-divider { background: var(--lime-surface-raised); color: var(--lime-text-secondary); font-size: 13px }
 .fit-lime-shell .chat-unread-divider { color: var(--lime-accent); font-size: 12px }
 .fit-lime-shell .chat-unread-divider::before,
 .fit-lime-shell .chat-unread-divider::after { background: #729b27 }

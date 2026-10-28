@@ -6668,6 +6668,7 @@ details[open] > .progress-details-toggle svg { transform:rotate(180deg); }
 .chat-reply-quote { width:100%; display:grid; gap:1px; margin-bottom:7px; padding:5px 8px; border-left:3px solid var(--accent); border-radius:5px 9px 9px 5px; background:color-mix(in srgb,var(--surface-raised) 60%,transparent); color:var(--fg); text-align:left; }
 .chat-reply-quote strong { font-size:11px; }
 .chat-reply-quote span { overflow:hidden; color:var(--muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.chat-day-divider { align-self:center; margin:10px 0 2px; padding:3px 12px; border-radius:var(--radius-pill); background:var(--surface-raised); color:var(--muted); font-size:12px; font-weight:var(--weight-semibold, 600); font-variant-numeric:tabular-nums; }
 .chat-unread-divider { display:flex; align-items:center; gap:10px; margin:8px 0 4px; color:var(--accent); font-size:11px; font-weight:var(--weight-bold); }
 .chat-unread-divider::before, .chat-unread-divider::after { height:1px; flex:1; background:color-mix(in srgb,var(--accent) 35%,transparent); content:""; }
 .chat-new-button { position:sticky; z-index:2; bottom:8px; align-self:center; min-height:38px; display:flex; align-items:center; gap:7px; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius-pill); background:var(--surface-raised); color:var(--fg); font-size:12px; }
