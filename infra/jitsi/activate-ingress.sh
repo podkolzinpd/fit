@@ -10,11 +10,14 @@ test -L /etc/nginx/sites-enabled/fit-public-api
 openssl x509 -noout -checkend 604800 -in /etc/letsencrypt/live/api.fit-training.ru/fullchain.pem >/dev/null
 site=/etc/nginx/sites-available/fit-public-api
 backup=/opt/fit-jitsi/nginx-api-before-meetings.conf
-test ! -e "$backup"
+if test -e "$backup"; then
+  cmp -s "$site" "$backup" # A previous failed attempt must have restored the exact site.
+else
+  cp -p "$site" "$backup"
+  chmod 600 "$backup"
+fi
 test ! -e /etc/nginx/conf.d/fit-jitsi-origins.conf
 test ! -e /etc/nginx/snippets/fit-jitsi-locations.conf
-cp -p "$site" "$backup"
-chmod 600 "$backup"
 rollback() {
   cp "$backup" "$site"
   chmod 644 "$site"
@@ -29,9 +32,16 @@ install -m 644 /opt/fit-jitsi/nginx-locations.conf /etc/nginx/snippets/fit-jitsi
 python3 "$(dirname "$0")/patch_api_site.py" "$site"
 nginx -t
 systemctl reload nginx
-curl --fail --silent --max-time 10 --resolve api.fit-training.ru:443:127.0.0.1 \
-  https://api.fit-training.ru/libs/lib-jitsi-meet.min.js -o /dev/null
-test "$(curl --silent --max-time 5 --resolve api.fit-training.ru:443:127.0.0.1 \
+ready=false
+for attempt in $(seq 1 10); do
+  status=$(curl --silent --noproxy '*' --max-time 10 --resolve api.fit-training.ru:443:127.0.0.1 \
+    https://api.fit-training.ru/libs/lib-jitsi-meet.min.js -o /dev/null -w '%{http_code}')
+  printf 'Meeting SDK HTTPS status: %s\n' "$status"
+  if test "$status" = 200; then ready=true; break; fi
+  sleep 1
+done
+test "$ready" = true
+test "$(curl --silent --noproxy '*' --max-time 5 --resolve api.fit-training.ru:443:127.0.0.1 \
   -H 'Origin: https://untrusted.invalid' -o /dev/null -w '%{http_code}' \
   https://api.fit-training.ru/xmpp-websocket)" = 403
 install -d -m 750 -o root -g turnserver /etc/fit-jitsi
