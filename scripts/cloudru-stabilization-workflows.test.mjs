@@ -241,13 +241,13 @@ test('journal preflight accepts only private login/email/name hashes, never SQL,
   }
 })
 
-function journalClients({ readonly = true, candidates = [historyFixtureIds[0]], role = 'trainer', runtimeRole = 'fit_api', cards = [] } = {}) {
+function journalClients({ readonly = true, candidates = [historyFixtureIds[0]], role = 'trainer', identityLinked = false, runtimeRole = 'fit_api', cards = [] } = {}) {
   const queries = []
   const owner = { query: async (text, values) => {
     queries.push({ actor: 'owner', text, values })
     return { rows: text.includes('current_setting') ? [{ readonly: readonly ? 'on' : 'off' }]
       : text.includes('select distinct profile_id') ? candidates.map(profile_id => ({ profile_id }))
-      : text.includes('select account_role') ? [{ account_role: role }] : [] }
+      : text.includes('select account_role') ? [{ account_role: role, yandex_linked: identityLinked }] : [] }
   } }
   const runtime = { query: async (text, values) => {
     queries.push({ actor: 'runtime', text, values })
@@ -278,7 +278,7 @@ test('journal preflight reads scoped counts through the real runtime role withou
   const f = journalClients({ cards: [{ id: historyFixtureIds[2], auth_user_id: historyFixtureIds[3], archived: false, merged: false }] })
   const result = await inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget)
   assert.deepEqual(f.queries.find(q => q.text.includes('select distinct profile_id')).values, [['a'.repeat(64), 'c'.repeat(64)]])
-  assert.deepEqual(result, { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true,
+  assert.deepEqual(result, { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true, retainedLoginBinding: true, yandexIdentityLinked: false,
     matchingCards: 1, activeMatchingCards: 1, athleteLinked: true, existingWorkouts: [{ status: 'done', deleted: false, count: 2 }] })
   assert.doesNotMatch(JSON.stringify(result), /a0000000|private name|[ab]{64}/)
   assert.ok(f.queries.every(q => !/\b(?:insert|update|delete|alter|grant|truncate)\b/i.test(q.text)))
@@ -736,5 +736,18 @@ test('both public workout API proxies stream request bodies without a temp-file 
     assert.match(source,/client_max_body_size 50m;/)
     assert.match(api,/proxy_set_header Host \$host;/)
     assert.doesNotMatch(api,/proxy_set_header (?:Authorization|X-Fit-Session)|proxy_pass_request_body off/)
+  }
+})
+
+// Legacy email existence alone is insufficient to create a card in a current account.
+test('journal preflight distinguishes a retained login binding from legacy-only identity and linked login', async () => {
+  for (const [candidates, identityLinked] of [[[], false], [[], true], [[historyFixtureIds[0]], true]]) {
+    const f = journalClients({ candidates, identityLinked })
+    const report = await inspectWorkoutHistoryTarget(f.owner, f.runtime, journalTarget, historyFixtureIds[0])
+    assert.equal(report.retainedLoginBinding, candidates.length === 1)
+    assert.equal(report.yandexIdentityLinked, identityLinked)
+    assert.ok(f.queries.find(q => q.actor === 'owner' && q.text.includes('auth_identities')))
+    assert.doesNotMatch(JSON.stringify(report), /a0000000|[ac]{64}/)
+    assert.ok(f.queries.every(q => !/\b(?:insert|update|delete|alter|grant|truncate)\b/i.test(q.text)))
   }
 })

@@ -262,6 +262,8 @@ export function readWorkoutHistoryTarget(raw) {
 // does not return identities, contacts, workout contents or fingerprints.
 export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacyTrainerId = null) {
   let trainerId
+  let retainedLoginBinding = false
+  let yandexIdentityLinked = false
   await owner.query('begin transaction isolation level repeatable read read only')
   try {
     await owner.query("set local statement_timeout = '10s'")
@@ -275,6 +277,7 @@ export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacy
     if (candidates.length > 1 || (legacyTrainerId && candidates.some(row => row.profile_id !== legacyTrainerId))) {
       throw new Error('workout_history_trainer_ambiguous')
     }
+    retainedLoginBinding = candidates.length === 1
     trainerId = candidates[0]?.profile_id ?? legacyTrainerId
     if (!trainerId) {
       await owner.query('commit')
@@ -282,8 +285,12 @@ export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacy
         limitation: 'A native profile outside retained login bindings cannot be resolved by email; no match does not prove account absence.' }
     }
     if (!uuid.test(trainerId)) throw new Error('workout_history_target_invalid')
-    const profile = (await owner.query('select account_role from public.profiles where id=$1', [trainerId])).rows
+    const profile = (await owner.query(`select account_role, exists (
+      select 1 from app_private.auth_identities identity where identity.profile_id=public.profiles.id
+      and identity.provider='yandex'
+    ) yandex_linked from public.profiles where id=$1`, [trainerId])).rows
     if (profile.length !== 1 || profile[0].account_role !== 'trainer') throw new Error('workout_history_trainer_role_invalid')
+    yandexIdentityLinked = profile[0].yandex_linked === true
     await owner.query('commit')
   } catch (error) { await owner.query('rollback'); throw error }
   await runtime.query('begin transaction isolation level repeatable read read only')
@@ -311,7 +318,7 @@ export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacy
     const counts = active.length === 1 ? (await runtime.query(`select status, deleted_at is not null deleted,
       count(*)::integer count from public.workouts where client_id=$1 group by status, deleted_at is not null`, [active[0].id])).rows : []
     await runtime.query('commit')
-    return { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true,
+    return { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true, retainedLoginBinding, yandexIdentityLinked,
       matchingCards: cards.length, activeMatchingCards: active.length,
       athleteLinked: active.length === 1 ? Boolean(active[0].auth_user_id) : null, existingWorkouts: counts }
   } catch (error) { await runtime.query('rollback'); throw error }
