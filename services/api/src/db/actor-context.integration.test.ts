@@ -3846,7 +3846,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
       if (!ownerPool || !runtimePool) throw new Error('Database not ready')
       const trainer=randomUUID(), athlete=randomUUID(), stranger=randomUUID(), card=randomUUID(), conversation=randomUUID()
       const tab1=randomUUID(),tab2=randomUUID(),tab3=randomUUID()
-      const owner=ownerPool, runtime=runtimePool
+      const owner=ownerPool
+      const runtimeUrl=new URL(requireLocalTestDatabaseUrl()); runtimeUrl.username='fit_api'; runtimeUrl.password=RUNTIME_PASSWORD
+      const runtime=new PgDatabasePool({ connectionString:runtimeUrl.toString(),max:2 })
       type State = { available:boolean; meeting:{ id:string; participantCount:number } | null }
       const command = (actor:string, action:string, tab?:string, meeting?:string) => withActorTransaction(runtime,actor,async client => {
         const rows=await client.query<QueryResultRow & { state:State }>('select public.chat_meeting_command($1,$2,$3,$4) as state',[conversation,action,meeting??null,tab??null])
@@ -3856,9 +3858,28 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await owner.query(`insert into public.profiles(id,first_name,account_role) values ($1,'Meeting trainer','trainer'),($2,'Meeting athlete','client'),($3,'Meeting outsider','trainer')`,[trainer,athlete,stranger])
         await owner.query('insert into public.trainers(profile_id) values($1),($2)',[trainer,stranger])
         await owner.query("insert into public.clients(id,trainer_id,auth_user_id,full_name) values($1,$2,$3,'Synthetic meeting client')",[card,trainer,athlete])
+        await owner.query('insert into public.client_trainer_relationships(client_id,trainer_id,connected_by) values($1,$2,$3)',[card,trainer,athlete])
         await owner.query('insert into public.chat_conversations(id,client_id,client_user_id,trainer_id) values($1,$2,$3,$4)',[conversation,card,athlete,trainer])
         await expect(command(stranger,'read')).rejects.toThrow('chat_forbidden')
-        const [first,second]=await Promise.all([command(trainer,'prepare',tab1),command(athlete,'prepare',tab2)])
+        let unlock=()=>{}, ready=()=>{}, secondPid=0
+        const held=new Promise<void>(resolve=>{ready=resolve})
+        const release=new Promise<void>(resolve=>{unlock=resolve})
+        const firstPreparing=withActorTransaction(runtime,trainer,async client=>{
+          const rows=await client.query<QueryResultRow & { state:State }>('select public.chat_meeting_command($1,$2,$3,$4) as state',[conversation,'prepare',null,tab1])
+          ready(); await release; return rows[0]!.state
+        })
+        let secondPreparing:Promise<State> | undefined
+        try {
+          await Promise.race([held,firstPreparing])
+          secondPreparing=withActorTransaction(runtime,athlete,async client=>{
+            secondPid=(await client.query<QueryResultRow & { pid:number }>('select pg_backend_pid() as pid'))[0]!.pid
+            const rows=await client.query<QueryResultRow & { state:State }>('select public.chat_meeting_command($1,$2,$3,$4) as state',[conversation,'prepare',null,tab2])
+            return rows[0]!.state
+          })
+          // Prove actual PostgreSQL blocking, not serialization in a one-slot pool.
+          await expect.poll(async()=>secondPid===0?0:Number((await owner.query<{ count:number }>('select cardinality(pg_blocking_pids($1)) as count',[secondPid])).rows[0]!.count),{timeout:5000}).toBeGreaterThan(0)
+        } finally { unlock() }
+        const [first,second]=await Promise.all([firstPreparing,secondPreparing!])
         const meeting=first.meeting!.id
         expect(second.meeting!.id).toBe(meeting)
         expect((await owner.query('select * from public.chat_messages where conversation_id=$1',[conversation])).rows).toHaveLength(0)
@@ -3891,7 +3912,9 @@ describe.skipIf(process.env.TEST_DATABASE_URL === undefined)(
         await command(trainer,'joined',lastTab,last)
         expect((await command(trainer,'leave',lastTab,last)).meeting).toBeNull()
       } finally {
+        await runtime.end()
         await owner.query('delete from public.chat_conversations where id=$1',[conversation])
+        await owner.query('delete from public.client_trainer_relationships where client_id=$1',[card])
         await owner.query('delete from public.clients where id=$1',[card])
         await owner.query('delete from public.trainers where profile_id=any($1::uuid[])',[[trainer,stranger]])
         await owner.query('delete from public.profiles where id=any($1::uuid[])',[[trainer,athlete,stranger]])

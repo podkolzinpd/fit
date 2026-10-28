@@ -130,10 +130,15 @@ describe.skipIf(!source)('corporate administration on real actor/RLS', () => {
     expect(await actor(athlete,'select app_private.is_corporate_admin() allowed')).toEqual([{allowed:false}])
     expect((await pool.query('select account_role from public.profiles where id=$1',[athlete])).rows).toEqual([{account_role:'client'}])
   })
-  it('reverses and reapplies only the new migration without changing workouts', async () => {
+  it('reverses and reapplies corporate migrations and their successors without changing workouts', async () => {
     const url=new URL(source ?? ''); url.pathname=`/${database}`
     const options={ databaseUrl:url.href,dir:directory,migrationsTable:'fit_migrations',migrationsSchema:'app_private',verbose:false,log:()=>{} }
-    await runner({...options,direction:'down',count:2})
+    // Later feature migrations must be rolled back before the corporate boundary.
+    // A fixed count silently targets the wrong migrations as the chain grows.
+    const applied=await pool.query<{ count:string }>("select count(*) as count from app_private.fit_migrations where name >= '000159_corporate_admin'")
+    const count=Number(applied.rows[0]!.count)
+    expect(count).toBeGreaterThanOrEqual(2)
+    await runner({...options,direction:'down',count})
     expect((await pool.query("select to_regclass('public.corporate_offices') present")).rows).toEqual([{present:null}])
     expect((await pool.query('select status from public.workouts where id=$1',[workout])).rows).toEqual([{status:'done'}])
     await runner({...options,direction:'up'})
