@@ -2017,7 +2017,21 @@ and `SET_TRAINER_LIME_ALL` atomically enables trainer presentation + Schedule V2
 If calendar rollback is also requested, leave trainer all first, then inspect
 and choose target=trainer-schedule with mode=pilot and
 `SET_TRAINER_SCHEDULE_LIME_PILOT` (or separately confirmed off).
-The trainer workflow rejects client targets. No operation has been dispatched.
+The trainer workflow rejects client targets. Historical activation restrictions
+above describe the original preparation. Read-only inspect40632498785 on
+2026-10-28 found client/trainer/schedule all, revision2; YAFIT-668 did not
+activate those server controls and must preserve client mode.
+
+YAFIT-668 adds build-time `VITE_COACH_WORKOUT_ROLLOUT_MODE`: omitted=`pilot`,
+explicit `all` admits server-approved trainers to the existing redesign/input/
+layout/density/v79 surfaces; `off` or an invalid value closes them. Each existing
+feature ENABLED switch is still required. Set this variable in
+`fit-frontend-candidate` for both Cloud.ru and Android OTA builds. Owner28Oct
+approved all only after the combined PR1–3 release passes original-pair QA.
+Rollback: set mode=`pilot` and rebuild using the unchanged original cohort
+variables; mode=`off` is the presentation kill switch. Neither changes client
+rollout, stored density preferences or training data. Inspect server state
+again before activation; empty cohort configuration alone never means all.
 
 ## Legacy database/parser deployments — manual-only, 16.10.2026
 

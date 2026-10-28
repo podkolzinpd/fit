@@ -18,7 +18,7 @@ YAFIT-667 завершён: PR1847/main91ce5582, общие правила и а
 - Vercel — redirect, Supabase — ограниченный legacy, не второй backend.
 - Runtime/decommission: [playbook](YANDEX_CUTOVER_PLAYBOOK.md).
 - Дизайн/механики/пилоты: [индекс решений](ACTIVE_CONTRACTS.md).
-- До заключительного PR YAFIT-668 — fixed2. Original54/Compact48 сохраняются.
+- YAFIT-668: до public pilot QA — fixed2; затем явный coach mode=all. Original54/Compact48 сохраняются.
 - Локальные тесты не используют production-БД; полные макеты/пакет шрифтов не публикуются.
 
 ## Параллельная работа и остатки

@@ -178,9 +178,10 @@ test('runs required Yandex-only browser auth without starting local Supabase', (
   assert.doesNotMatch(job, /VITE_SUPABASE_|supabase\/setup-cli|supabase start|supabase db reset|wait-for-local-auth/)
 })
 
-test('coach-v79 public releases remain default-off with a dedicated cohort', () => {
+test('coach releases require explicit public rollout and preserve pilot rollback', () => {
   for (const name of ['prepare-cloudru-frontend.yml', 'release-android-ota.yml']) {
     const source = readFileSync(join(import.meta.dirname, '..', '.github', 'workflows', name), 'utf8')
+    assert.ok(source.includes("VITE_COACH_WORKOUT_ROLLOUT_MODE: ${{ vars.VITE_COACH_WORKOUT_ROLLOUT_MODE || 'pilot' }}"))
     assert.ok(source.includes("VITE_COACH_LIVE_V79_ENABLED: ${{ vars.VITE_COACH_LIVE_V79_ENABLED || 'false' }}"))
     assert.ok(source.includes("VITE_COACH_LIVE_V79_PILOT_USER_IDS: ${{ vars.VITE_COACH_LIVE_V79_PILOT_USER_IDS || '' }}"))
   }

@@ -1,10 +1,12 @@
 import type { SessionActor } from '../shared/domain'
+import { coachWorkoutRolloutMode } from './feature-flags'
 import { isCoachLiveDensityEnabled } from './coach-workout-redesign'
 
-/** Independent, default-off presentation. Never inherit the wider Lime cohort. */
+/** Explicit coach rollout; always requires trainer/server admission and feature switches. */
 export function isCoachLiveV79Enabled(actor: SessionActor | null | undefined): boolean {
   if (!actor || actor.role !== 'trainer' || !isCoachLiveDensityEnabled(actor)
     || import.meta.env.VITE_COACH_LIVE_V79_ENABLED !== 'true') return false
+  if (coachWorkoutRolloutMode() === 'all') return true
   const ids = String(import.meta.env.VITE_COACH_LIVE_V79_PILOT_USER_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean)
   const original = String(import.meta.env.VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean)
   return ids.length === 2 && new Set(ids).size === 2 && original.length === 2

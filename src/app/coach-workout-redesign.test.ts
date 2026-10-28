@@ -58,3 +58,42 @@ describe.each([
     expect(enabledFor(actor())).toBe(false)
   })
 })
+
+describe.each([
+  ['redesign', isCoachWorkoutRedesignEnabled, 'VITE_COACH_WORKOUT_REDESIGN'],
+  ['input', isCoachPlanInputEnabled, 'VITE_COACH_PLAN_INPUT'],
+  ['layout', isCoachPlanLayoutEnabled, 'VITE_COACH_PLAN_LAYOUT'],
+  ['density', isCoachLiveDensityEnabled, 'VITE_COACH_LIVE_DENSITY'],
+] as const)('explicit all-trainer %s rollout', (_label, enabledFor, prefix) => {
+  it('admits server-approved trainers without widening client or other feature gates', () => {
+    vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', 'all')
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS', '')
+    vi.stubEnv(`${prefix}_ENABLED`, 'true')
+    vi.stubEnv(`${prefix}_PILOT_USER_IDS`, '')
+    expect(enabledFor(actor('new-trainer'))).toBe(true)
+    expect(enabledFor(actor('new-trainer', 'client'))).toBe(false)
+    expect(enabledFor(actor('new-trainer', 'trainer', false))).toBe(false)
+    expect(enabledFor(null)).toBe(false)
+    vi.stubEnv(`${prefix}_ENABLED`, 'false')
+    expect(enabledFor(actor('new-trainer'))).toBe(false)
+    vi.stubEnv(`${prefix}_ENABLED`, 'true')
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'false')
+    expect(enabledFor(actor('new-trainer'))).toBe(false)
+  })
+  it('closes invalid/off modes and rolls back to the original pair', () => {
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_ENABLED', 'true')
+    vi.stubEnv('VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS', 'trainer-1,trainer-2')
+    vi.stubEnv(`${prefix}_ENABLED`, 'true')
+    vi.stubEnv(`${prefix}_PILOT_USER_IDS`, 'trainer-1,trainer-2')
+    for (const mode of ['off', '', 'ALL', 'typo']) {
+      vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', mode)
+      expect(enabledFor(actor())).toBe(false)
+    }
+    vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', 'all')
+    expect(enabledFor(actor('new-trainer'))).toBe(true)
+    vi.stubEnv('VITE_COACH_WORKOUT_ROLLOUT_MODE', 'pilot')
+    expect(enabledFor(actor('new-trainer'))).toBe(false)
+    expect(enabledFor(actor())).toBe(true)
+  })
+})
