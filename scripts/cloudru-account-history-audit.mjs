@@ -297,7 +297,10 @@ export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacy
     const cards = requireBound((await runtime.query(`select c.id, c.auth_user_id,
       c.archived_at is not null archived, c.merged_into_client_id is not null merged
       from public.clients c left join public.client_trainers ct on ct.client_id=c.id and ct.trainer_id=$1
-      where (c.trainer_id=$1 or ct.trainer_id=$1) and (
+      where (c.trainer_id=$1 or ct.trainer_id=$1 or exists (
+        select 1 from public.client_trainer_relationships relationship
+        where relationship.client_id=c.id and relationship.trainer_id=$1 and relationship.status='active'
+      )) and (
         encode(sha256(convert_to(lower(btrim(c.full_name)), 'UTF8')), 'hex')=$2
         or encode(sha256(convert_to(lower(btrim(ct.alias)), 'UTF8')), 'hex')=$2
       ) order by c.id limit 11`, [trainerId, target.clientNameSha256])).rows, 10)

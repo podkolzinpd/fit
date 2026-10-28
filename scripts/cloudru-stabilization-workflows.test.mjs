@@ -282,6 +282,7 @@ test('journal preflight reads scoped counts through the real runtime role withou
   assert.doesNotMatch(JSON.stringify(result), /a0000000|private name|[ab]{64}/)
   assert.ok(f.queries.every(q => !/\b(?:insert|update|delete|alter|grant|truncate)\b/i.test(q.text)))
   assert.ok(f.queries.some(q => q.actor === 'runtime' && q.text.includes('request.jwt.claim.sub') && q.values[0] === historyFixtureIds[0]))
+  assert.ok(f.queries.some(q => q.actor === 'runtime' && q.text.includes('relationship.client_id=c.id') && q.text.includes("relationship.status='active'")))
 })
 
 test('journal preflight preserves ambiguity and never chooses one of two active matching cards', async () => {
