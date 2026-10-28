@@ -36,27 +36,10 @@ done
 install -m 644 /opt/fit-jitsi/fit-jitsi.slice /etc/systemd/system/fit-jitsi.slice
 install -m 644 /opt/fit-jitsi/fit-jitsi.service /etc/systemd/system/fit-jitsi.service
 systemctl daemon-reload
-trap 'systemctl stop fit-jitsi.service >/dev/null 2>&1 || true' ERR
+trap 'systemctl disable --now fit-jitsi.service >/dev/null 2>&1 || true' ERR
 cd /opt/fit-jitsi
 # Never print interpolated compose config: it includes the JWT and service secrets.
 podman-compose -p fit-jitsi -f compose.yml -f compose.fit.yml pull >/dev/null
 systemctl enable --now fit-jitsi.service
-test "$(systemctl show fit-jitsi.slice --property=MemoryMax --value)" = 2147483648
-test "$(systemctl show fit-jitsi.slice --property=CPUQuotaPerSecUSec --value)" = 1s
-for service in web prosody jicofo jvb; do
-  container=$(podman ps --filter "label=io.podman.compose.project=fit-jitsi" \
-    --filter "label=io.podman.compose.service=$service" --format '{{.ID}}')
-  test -n "$container"
-  test "$(podman inspect "$container" --format '{{.HostConfig.CgroupParent}}')" = fit-jitsi.slice
-done
-for attempt in $(seq 1 30); do
-  if curl --fail --silent --max-time 5 http://127.0.0.1:8000/libs/lib-jitsi-meet.min.js -o /dev/null; then
-    echo 'Jitsi SDK is available on loopback; ingress and API flag remain unchanged.'
-    curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready >/dev/null
-    trap - ERR
-    exit 0
-  fi
-  sleep 2
-done
-echo 'Jitsi loopback SDK did not become ready.' >&2
-exit 1
+bash "$(dirname "$0")/verify-host.sh"
+trap - ERR

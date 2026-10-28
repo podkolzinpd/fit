@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Add only meeting locations to the existing API HTTPS virtual host.
+set -euo pipefail
+test "$(id -u)" = 0
+test "$(hostname)" = fit-stage-app
+systemctl is-active --quiet fit-jitsi.service
+curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready >/dev/null
+test -s /opt/fit-jitsi/nginx-locations.conf
+test -L /etc/nginx/sites-enabled/fit-public-api
+openssl x509 -noout -checkend 604800 -in /etc/letsencrypt/live/api.fit-training.ru/fullchain.pem >/dev/null
+site=/etc/nginx/sites-available/fit-public-api
+backup=/opt/fit-jitsi/nginx-api-before-meetings.conf
+test ! -e "$backup"
+test ! -e /etc/nginx/conf.d/fit-jitsi-origins.conf
+test ! -e /etc/nginx/snippets/fit-jitsi-locations.conf
+cp -p "$site" "$backup"
+chmod 600 "$backup"
+rollback() {
+  cp "$backup" "$site"
+  chmod 644 "$site"
+  rm -f /etc/nginx/conf.d/fit-jitsi-origins.conf /etc/nginx/snippets/fit-jitsi-locations.conf
+  nginx -t && systemctl reload nginx || true
+  systemctl disable --now coturn.service >/dev/null 2>&1 || true
+}
+trap rollback ERR
+install -d -m 755 /etc/nginx/snippets
+install -m 644 /opt/fit-jitsi/nginx-origins.conf /etc/nginx/conf.d/fit-jitsi-origins.conf
+install -m 644 /opt/fit-jitsi/nginx-locations.conf /etc/nginx/snippets/fit-jitsi-locations.conf
+python3 - <<'PY'
+from pathlib import Path
+path = Path('/etc/nginx/sites-available/fit-public-api')
+text = path.read_text()
+anchor = '    client_max_body_size 50m;'
+assert text.count(anchor) == 1
+assert 'server_name api.fit-training.ru;' in text
+assert 'fit-jitsi-locations' not in text
+path.write_text(text.replace(anchor, '    include /etc/nginx/snippets/fit-jitsi-locations.conf;\n\n' + anchor))
+PY
+nginx -t
+systemctl reload nginx
+curl --fail --silent --max-time 10 --resolve api.fit-training.ru:443:127.0.0.1 \
+  https://api.fit-training.ru/libs/lib-jitsi-meet.min.js -o /dev/null
+test "$(curl --silent --max-time 5 --resolve api.fit-training.ru:443:127.0.0.1 \
+  -H 'Origin: https://untrusted.invalid' -o /dev/null -w '%{http_code}' \
+  https://api.fit-training.ru/xmpp-websocket)" = 403
+install -d -m 750 -o root -g turnserver /etc/fit-jitsi
+install -m 640 -o root -g turnserver /opt/fit-jitsi/turnserver.conf /etc/turnserver.conf
+for file in fullchain.pem privkey.pem; do
+  install -m 640 -o root -g turnserver "/etc/letsencrypt/live/api.fit-training.ru/$file" "/etc/fit-jitsi/$file"
+done
+install -d -m 755 /etc/systemd/system/coturn.service.d
+install -m 644 /opt/fit-jitsi/coturn-limits.conf /etc/systemd/system/coturn.service.d/fit-meetings.conf
+install -m 700 /opt/fit-jitsi/renew-certificate /etc/letsencrypt/renewal-hooks/deploy/fit-meetings-turn
+systemctl unmask coturn.service
+systemctl daemon-reload
+systemctl enable --now coturn.service
+systemctl is-active --quiet coturn.service
+timeout 10 openssl s_client -connect 127.0.0.1:5349 -servername api.fit-training.ru \
+  -verify_hostname api.fit-training.ru -verify_return_error </dev/null >/dev/null 2>&1
+curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready >/dev/null
+trap - ERR
+echo 'Meeting HTTPS locations and authenticated TURN/TLS configured; API feature flag unchanged.'

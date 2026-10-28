@@ -2,7 +2,16 @@ name: Prepare bounded Jitsi on the existing Cloud.ru VM
 
 on:
   workflow_dispatch:
+    inputs:
+      phase:
+        type: choice
+        default: prepare
+        options: [prepare, resume, ingress]
   workflow_call:
+    inputs:
+      phase:
+        type: string
+        default: prepare
 
 permissions:
   contents: read
@@ -16,6 +25,8 @@ jobs:
           persist-credentials: false
       - run: python3 -B -m unittest discover -s infra/jitsi -p 'test_*.py'
       - run: bash -n infra/jitsi/prepare-host.sh
+      - run: bash -n infra/jitsi/activate-ingress.sh
+      - run: bash -n infra/jitsi/resume-host.sh && bash -n infra/jitsi/verify-host.sh
       - name: Validate bounded compose without credentials
         run: |
           ruby -e 'require "yaml"; YAML.load_file("infra/jitsi/compose.upstream.yml")'
@@ -35,4 +46,11 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
           test "$(hostname)" = fit-stage-app
-          sudo bash infra/jitsi/prepare-host.sh
+          case "$JITSI_PHASE" in
+            prepare) sudo bash infra/jitsi/prepare-host.sh ;;
+            resume) sudo bash infra/jitsi/resume-host.sh ;;
+            ingress) sudo bash infra/jitsi/activate-ingress.sh ;;
+            *) exit 1 ;;
+          esac
+        env:
+          JITSI_PHASE: ${{ inputs.phase }}

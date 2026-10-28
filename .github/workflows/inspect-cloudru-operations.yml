@@ -9,6 +9,11 @@ on:
         description: Prepare isolated bounded Jitsi containers on existing VM; no ingress, firewall or API activation
         type: boolean
         default: false
+      jitsi_phase:
+        description: Optional meeting infrastructure action; never changes API feature flag
+        type: choice
+        default: prepare
+        options: [prepare, resume, ingress]
       capacity:
         description: Read only bounded host/container resource aggregates; skip application diagnostics
         type: boolean
@@ -53,6 +58,8 @@ jobs:
   prepare-jitsi:
     if: github.event_name == 'workflow_dispatch' && inputs.prepare_jitsi
     uses: ./.github/workflows/configure-cloudru-jitsi.yml
+    with:
+      phase: ${{ inputs.jitsi_phase }}
   capacity:
     if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi
     runs-on: [self-hosted, cloudru-stage]
