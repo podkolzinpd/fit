@@ -54,7 +54,7 @@ const PHASE_COPY = {
  * phases never overlap. A short tap runs `onPrimary` (the next logical step);
  * a long press or the context menu always opens the timer sheet.
  */
-export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, referenceActions = false, coachV79, settings, pausedAt = null }: {
+export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90, onChange, onDurationChange, phase = null, onPrimary, onPhaseChange, onPhaseExpire, onRestExpire, referenceStartedAt, onReferenceRestActiveChange, referenceWorkOvertime = false, referencePausedSeconds = 0, onReferencePauseToggle, referenceActions = false, coachPauseActions = false, pausePending = false, coachV79, settings, pausedAt = null }: {
   workoutId: string
   deadline: number | null
   defaultDurationSeconds?: number
@@ -70,11 +70,14 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   referenceStartedAt?: string | null
   /** Client presentation follows the existing signed manual-work indicator. */
   referenceWorkOvertime?: boolean
-  /** Existing workout pause accounting; client presentation only. */
+  /** Existing workout pause accounting, shared by both reference roles. */
   referencePausedSeconds?: number
   onReferencePauseToggle?: () => void
   /** Client pilot uses the two separate actions measured in live-header SVG. */
   referenceActions?: boolean
+  /** Coach-only paired actions; does not opt into client sheet styling. */
+  coachPauseActions?: boolean
+  pausePending?: boolean
   /** Read-only presentation of this timer; never a second lifecycle owner. */
   coachV79?: { density: CoachLiveDensity; headerSlot: HTMLElement | null }
   /** Updates the pilot header only at the rest boundary, not on every tick. */
@@ -123,6 +126,20 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     tick()
     return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', tick) }
   }, [referenceStartedAt, tickDeadline])
+
+  const previousCoachPause = useRef({ pausedAt, deadline })
+  useEffect(() => {
+    const previous = previousCoachPause.current
+    if (coachPauseActions && previous.pausedAt !== null && pausedAt === null
+      && previous.deadline !== null && previous.deadline <= previous.pausedAt && deadline !== null && !phase) {
+      // Resume shifts the signed rest deadline but does not end a new rest.
+      // Keep the existing signal/expiry owner from ringing a second time.
+      notified.current = deadline
+      expiredRest.current = deadline
+      markGongPlayed(workoutId, deadline)
+    }
+    previousCoachPause.current = { pausedAt, deadline }
+  }, [coachPauseActions, pausedAt, deadline, phase, workoutId])
 
   useEffect(() => {
     if (tickDeadline === null || pausedAt !== null) return
@@ -227,7 +244,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
     if (duration <= 0 || duration > 3600) return
     prepareGong()
     onDurationChange?.(duration)
-    onChange(Date.now() + duration * 1000)
+    onChange((coachPauseActions && pausedAt !== null ? pausedAt : Date.now()) + duration * 1000)
     setOpen(false)
   }
 
@@ -291,7 +308,7 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
   const referenceClock = reference && (onReferencePauseToggle && !referenceActions ? <button type="button" className={`${referenceClockClass} live-timer-toggle`} aria-pressed={referencePaused}
       aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
       onClick={onReferencePauseToggle}>{referenceClockContent}</button> : <div className={referenceClockClass}>{referenceClockContent}</div>)
-  const restTrigger = <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel}
+  const restTrigger = <button ref={trigger} type="button" className={`secondary live-rest-trigger${stateClass}`} aria-label={triggerLabel} disabled={coachPauseActions && pausePending}
       aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
       onPointerDown={coachV79 ? event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() } : onPrimary ? startLongPress : undefined} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
       onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }}
@@ -299,23 +316,24 @@ export function LiveRestTimer({ workoutId, deadline, defaultDurationSeconds = 90
       {reference ? <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" /> : <TimerIcon />}<span>{reference && signedRemaining === null && !phase ? 'Отдых' : triggerText}</span>
     </button>
   const compactClock = phaseRemaining !== null ? phaseClock : signedRemaining !== null ? formatRest(signedRemaining) : null
-  const compactRestTrigger = coachV79 && <button type="button" data-compact={referenceActions || undefined} className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel}
+  const compactRestTrigger = coachV79 && <button type="button" data-compact={referenceActions || coachPauseActions || undefined} className={`secondary live-rest-trigger${stateClass}${compactClock !== null ? ' has-countdown' : ''}`} aria-label={triggerLabel} disabled={coachPauseActions && pausePending}
     aria-haspopup="dialog" aria-description={onPrimary ? 'Удерживайте, чтобы открыть настройки таймера' : undefined}
     onPointerDown={event => { returnTrigger.current = event.currentTarget; if (onPrimary) startLongPress() }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress}
     onContextMenu={(event) => { event.preventDefault(); cancelLongPress(); if (!open) openPicker() }} onClick={onPrimary ? tap : openPicker}>
     <img src={coachRestIcon} width="16" height="16" alt="" aria-hidden="true" />{compactClock !== null && <span>{compactClock}</span>}
   </button>
-  const pauseAction = (compact = false) => <button type="button" className="secondary client-reference-pause" data-compact={compact || undefined} disabled={!onReferencePauseToggle}
+  const pauseAction = (compact = false) => <button type="button" className={`secondary ${coachPauseActions ? 'coach-reference-pause' : 'client-reference-pause'}`} data-compact={compact || undefined} disabled={!onReferencePauseToggle || pausePending} aria-busy={pausePending || undefined}
     aria-pressed={referencePaused} aria-label={`${referencePaused ? 'Продолжить тренировку' : 'Поставить тренировку на паузу'}, прошло ${formatReferenceClock(elapsed)}`}
     onClick={onReferencePauseToggle}>
     {referencePaused ? <PlayIcon /> : <img src={clientPauseIcon} width="16" height="16" alt="" aria-hidden="true" />}
     <span>{referencePaused ? 'Продолжить' : 'Пауза'}</span>
   </button>
   const clientActions = <div className="client-reference-timer-actions">{pauseAction()}{restTrigger}</div>
+  const coachActions = <div className="coach-reference-timer-actions">{pauseAction()}{restTrigger}</div>
   return <>
     {coachV79 ? <CoachLiveV79Timer time={bigTime} elapsed={formatReferenceClock(elapsed)} resting={active && !phase} paused={pausedAt !== null} phaseLabel={copy?.label}
-      density={coachV79.density} headerSlot={coachV79.headerSlot} restAction={referenceActions ? clientActions : restTrigger}
-      compactAction={referenceActions ? <div className="client-v79-compact-actions">{pauseAction(true)}{compactRestTrigger}</div> : compactRestTrigger} /> : referenceClock}
+      density={coachV79.density} headerSlot={coachV79.headerSlot} restAction={referenceActions ? clientActions : coachPauseActions ? coachActions : restTrigger}
+      compactAction={referenceActions || coachPauseActions ? <div className={coachPauseActions ? 'coach-v79-compact-actions' : 'client-v79-compact-actions'}>{pauseAction(true)}{compactRestTrigger}</div> : compactRestTrigger} /> : referenceClock}
     {!coachV79 && (referenceActions ? clientActions : restTrigger)}
     {open && createPortal(<div className="sheet-overlay" onClick={() => setOpen(false)}>
       <section ref={dialog} className={`workout-decision-sheet live-rest-sheet${referenceActions ? ' client-reference-time-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={sheetTitle} onClick={(event) => event.stopPropagation()}>
