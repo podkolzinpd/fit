@@ -4,6 +4,7 @@ from pathlib import Path
 import stat
 import tempfile
 import unittest
+from patch_api_site import inject
 
 spec = importlib.util.spec_from_file_location('prepare', Path(__file__).with_name('prepare.py'))
 module = importlib.util.module_from_spec(spec)
@@ -11,6 +12,16 @@ spec.loader.exec_module(module)
 
 
 class BundleTest(unittest.TestCase):
+    def test_api_and_speech_routes_are_preserved(self):
+        original = (Path(__file__).parents[1] / 'cloudru/nginx-public-api.conf').read_text()
+        result = inject(original)
+        inserted = '    include /etc/nginx/snippets/fit-jitsi-locations.conf;\n\n'
+        self.assertEqual(result.replace(inserted, ''), original)
+        with self.assertRaises(ValueError):
+            inject(result)
+        with self.assertRaises(ValueError):
+            inject(original.replace('    client_max_body_size 50m;', ''))
+
     def test_secrets_match_services_without_becoming_public_or_overwritten(self):
         with tempfile.TemporaryDirectory() as root:
             output = Path(root) / 'bundle'

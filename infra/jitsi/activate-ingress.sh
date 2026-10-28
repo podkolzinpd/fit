@@ -26,16 +26,7 @@ trap rollback ERR
 install -d -m 755 /etc/nginx/snippets
 install -m 644 /opt/fit-jitsi/nginx-origins.conf /etc/nginx/conf.d/fit-jitsi-origins.conf
 install -m 644 /opt/fit-jitsi/nginx-locations.conf /etc/nginx/snippets/fit-jitsi-locations.conf
-python3 - <<'PY'
-from pathlib import Path
-path = Path('/etc/nginx/sites-available/fit-public-api')
-text = path.read_text()
-anchor = '    client_max_body_size 50m;'
-assert text.count(anchor) == 1
-assert 'server_name api.fit-training.ru;' in text
-assert 'fit-jitsi-locations' not in text
-path.write_text(text.replace(anchor, '    include /etc/nginx/snippets/fit-jitsi-locations.conf;\n\n' + anchor))
-PY
+python3 "$(dirname "$0")/patch_api_site.py" "$site"
 nginx -t
 systemctl reload nginx
 curl --fail --silent --max-time 10 --resolve api.fit-training.ru:443:127.0.0.1 \
@@ -55,7 +46,7 @@ systemctl unmask coturn.service
 systemctl daemon-reload
 systemctl enable --now coturn.service
 systemctl is-active --quiet coturn.service
-timeout 10 openssl s_client -connect 127.0.0.1:5349 -servername api.fit-training.ru \
+timeout 10 openssl s_client -connect 10.70.10.4:5349 -servername api.fit-training.ru \
   -verify_hostname api.fit-training.ru -verify_return_error </dev/null >/dev/null 2>&1
 curl --fail --silent --max-time 5 http://127.0.0.1:18080/ready >/dev/null
 trap - ERR
