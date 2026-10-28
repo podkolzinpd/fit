@@ -5,7 +5,7 @@ import { createNutritionCatalog, publicNutritionFood, isRelevantCatalogSearch } 
 export async function probeNutritionSearch(apiKey: string | undefined, request: typeof fetch = globalThis.fetch) {
   const catalog = createNutritionCatalog(apiKey, request)
   const cases = []
-  for (const query of ['йогурт', 'йогурт натуральный', 'оливье', 'салат оливье', 'сыр', 'сыр пар']) {
+  for (const query of ['йогурт', 'йогурт натуральный', 'оливье', 'салат оливье', 'сыр', 'сыр пар', 'огурец', 'перец', 'яблоко', 'мандарин']) {
     try {
       const result = await catalog.search(query, 1)
       cases.push({ query, status: result.foods.some(food => isRelevantCatalogSearch(query, food.name)) ? 'found' : 'empty', count: result.foods.length,

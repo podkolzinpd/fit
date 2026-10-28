@@ -13,7 +13,7 @@ import { AsyncView, Coachmark, Field, InlineRequestError, OverflowMenu, Page, Sa
 import { nutritionDecimal, removeNutritionForm } from './draft'
 import type { NutritionForm } from './draft'
 import { parseFoodText } from './free-text'
-import { BarcodePhotoPicker, BarcodeScanner } from './BarcodeScanner'
+import { BarcodePhotoPicker } from './BarcodeScanner'
 import './nutrition.css'
 import { ChatStartButton } from '../chat'
 import { VoiceInputButton } from '../voice-input'
@@ -106,7 +106,7 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
   const [suggestedGrams, setSuggestedGrams] = useState<string | null>(null)
   const [portionMode, setPortionMode] = useState(false), [portionCount, setPortionCount] = useState('1')
   const parsedSearch = useRef<string | null>(null)
-  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [barcodeImportOpen, setBarcodeImportOpen] = useState(false), [scannerOpen, setScannerOpen] = useState(false), [manualBarcodeEntry, setManualBarcodeEntry] = useState(false)
+  const [barcode, setBarcode] = useState(''), [barcodeError, setBarcodeError] = useState<string | null>(null), [barcodePending, setBarcodePending] = useState(false), [manualBarcodeEntry, setManualBarcodeEntry] = useState(false)
   const cache = useQueryClient(), active = useRef(true), allowNavigation = useRef(false), [confirm, dialog] = useConfirm()
   useEffect(() => { active.current = true; removeNutritionForm(userId, key); return () => { active.current = false } }, [userId, key])
   useEffect(() => {
@@ -242,12 +242,9 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           }}
         />}</span></Field>
         {actor?.experiments?.nutritionBarcode === true && <section className="nutrition-barcode" aria-label="Штрихкод продукта">
-          <button type="button" className="secondary wide" disabled={barcodePending} onClick={() => { setBarcodeError(null); setBarcodeImportOpen(true) }}>Сканировать штрихкод</button>
-          {barcodeImportOpen && <section className="nutrition-barcode-import" role="dialog" aria-label="Импорт штрихкода">
-            <header><strong>Сканировать штрихкод</strong><button type="button" className="link" onClick={() => { setScannerOpen(false); setBarcodeImportOpen(false) }}>Закрыть</button></header>
-            {scannerOpen ? <BarcodeScanner onClose={() => setScannerOpen(false)} onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); setScannerOpen(false); setBarcodeImportOpen(false); void lookupBarcode(code) }} /> : <div className="nutrition-barcode-actions"><button type="button" className="secondary" disabled={barcodePending} onClick={() => setScannerOpen(true)}>Камера</button>
-              <BarcodePhotoPicker onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); setBarcodeImportOpen(false); void lookupBarcode(code) }} onUnrecognized={() => { setBarcodeImportOpen(false); setManualBarcodeEntry(true); setBarcodeError('На фото не найден EAN‑8 или EAN‑13. Введите штрихкод вручную.') }} /></div>}
-          </section>}
+          <BarcodePhotoPicker pending={barcodePending} onStart={() => setBarcodeError(null)}
+            onDetected={(code) => { setBarcode(code); setManualBarcodeEntry(false); void lookupBarcode(code) }}
+            onUnrecognized={(reason) => { setManualBarcodeEntry(true); setBarcodeError(reason === 'picker' ? 'Не удалось открыть фото или камеру. Введите штрихкод вручную.' : 'На фото не найден EAN‑8 или EAN‑13. Введите штрихкод вручную.') }} />
           {manualBarcodeEntry && <><Field label="Штрихкод"><input inputMode="numeric" value={barcode} maxLength={13} placeholder="8 или 13 цифр" onChange={(event) => setBarcode(event.target.value)} /></Field>
             <button type="button" className="secondary" disabled={barcodePending} aria-busy={barcodePending} onClick={() => void lookupBarcode()}>{barcodePending ? 'Ищем…' : 'Найти по штрихкоду'}</button></>}
           {barcodeError && <p className="muted" role="status">{barcodeError}</p>}
@@ -264,7 +261,10 @@ function FoodForm({ userId, date, existing, onSaved, onBack }: {
           <div className="nutrition-food-list">{foods.data?.pages.flatMap((page) => page.foods).map((food) => <div className="nutrition-food-result" key={food.id}><button type="button" className="secondary nutrition-food" onClick={() => choose(food)}><span>{food.name}{food.manufacturer && <small>{food.manufacturer}</small>}<small>{nutritionNumber(food.calories)} ккал · Б {nutritionNumber(food.protein)} · Ж {nutritionNumber(food.fat)} · У {nutritionNumber(food.carbs)} на 100 г</small></span><ChevronRightIcon /></button></div>)}</div>
           {foods.hasNextPage && <button type="button" className="secondary" disabled={foods.isFetchingNextPage} onClick={() => void foods.fetchNextPage()}>{foods.isFetchingNextPage ? 'Загружаем…' : 'Показать ещё'}</button>}
         </AsyncView> : null}
-        <button type="button" className="secondary" onClick={() => form.setValue('manual', true, { shouldDirty: true })}>Добавить свое блюдо</button>
+        <button type="button" className="secondary" onClick={() => {
+          if (!form.getValues('name').trim()) form.setValue('name', parsedFood.length === 1 ? parsedFood[0]!.name : form.getValues('search').trim(), { shouldDirty: true })
+          form.setValue('manual', true, { shouldDirty: true })
+        }}>Добавить свое блюдо</button>
         {search.length < 2 && <><h2>Недавняя еда</h2><AsyncView loading={recent.isLoading} error={recent.error} onRetry={() => void recent.refetch()}>
           {!recent.data?.length && <p className="muted">Здесь появятся ваши записи для быстрого повторения.</p>}
           <div className="nutrition-food-list">{recent.data?.map((food) => <button type="button" className="secondary nutrition-food" key={food.id} onClick={() => choose(food)}><span>{food.name}<small>{food.grams ? `${nutritionNumber(food.grams)} г · ` : ''}{nutritionNumber(food.totals.calories)} ккал</small></span><ChevronRightIcon /></button>)}</div>

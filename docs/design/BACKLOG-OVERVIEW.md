@@ -23,7 +23,9 @@ YAFIT-659: исправление поиска еды по нескольким 
 План: [NUTRITION_SEARCH_20261026.md](./NUTRITION_SEARCH_20261026.md).
 PR1824 слит. Дополнение по новым скринам: общее сопоставление коротких слов,
 без исключений для отдельных продуктов; [приёмка](NUTRITION_SEARCH_TOKEN_MATCHING_20261026.md).
-CI/merge/production read-back дополнения — гейты выпуска.
+PR1829 слит; новый план [каталога и одного импорта](NUTRITION_COVERAGE_AND_SINGLE_IMPORT_20261027.md):
+полный96-record raw produce FNDDS, единый системный выбор фото, повороты EAN,
+сохранение названия своего блюда. Финальный CI/очередь/production/native read-back — гейты.
 
 YAFIT-644: надёжность готовых тренировок спортсмена и упрощение Lime.
 Неизменяемый план из9пунктов: [CLIENT_READY_WORKOUTS_RELIABILITY_20261022.md](./CLIENT_READY_WORKOUTS_RELIABILITY_20261022.md).

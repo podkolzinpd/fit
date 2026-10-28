@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { USDA_RAW_PRODUCE } from './nutrition-raw-produce.data.js'
 
 export interface NutritionValues {
   calories: number
@@ -77,6 +78,19 @@ const BASIC_FOODS: readonly BasicFood[] = [
   },
 ]
 
+// Separate, source-backed reference foods; never fill a retailer product's
+// missing label with these values. The generated slice covers all raw fruit
+// and vegetable records in the reviewed USDA FNDDS release, not query cases.
+const reviewedBasicNames = new Set(BASIC_FOODS.map(food => normalizedFoodTerm(food.name)))
+const ALL_BASIC_FOODS: readonly BasicFood[] = [...BASIC_FOODS, ...USDA_RAW_PRODUCE
+  .filter(food => !reviewedBasicNames.has(normalizedFoodTerm(food.name)))
+  .map(food => ({
+  id: stableCatalogId('fit-food:usda-fndds', String(food.sourceId), food.name,
+    food.calories, food.protein, food.fat, food.carbs).id,
+  sourceId: food.sourceId, name: food.name, aliases: food.aliases, basis: '100g' as const,
+  calories: food.calories, protein: food.protein, fat: food.fat, carbs: food.carbs,
+  }))]
+
 function normalizedFoodTerm(value: string): string {
   return value.toLocaleLowerCase('ru-RU').replaceAll('ё', 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 }
@@ -87,14 +101,14 @@ export class BasicNutritionCatalog implements NutritionCatalog {
     if (normalized.length < 2 || normalized.length > 120 || !Number.isSafeInteger(page) || page < 1 || page > 100) {
       return Promise.reject(new NutritionCatalogUnavailableError())
     }
-    if (page !== 1) return Promise.resolve({ foods: [], hasMore: false })
-    const foods = BASIC_FOODS.filter(food => [food.name, ...food.aliases]
+    const foods = ALL_BASIC_FOODS.filter(food => [food.name, ...food.aliases]
       .some(term => isRelevantCatalogSearch(normalized, term)))
-    return Promise.resolve({ foods, hasMore: false })
+    const offset = (page - 1) * 10
+    return Promise.resolve({ foods: foods.slice(offset, offset + 10), hasMore: offset + 10 < foods.length })
   }
 
   details(sourceId: number) {
-    return Promise.resolve(BASIC_FOODS.find(food => food.sourceId === sourceId) ?? null)
+    return Promise.resolve(ALL_BASIC_FOODS.find(food => food.sourceId === sourceId) ?? null)
   }
 }
 

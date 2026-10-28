@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       nutrition_search:
-        description: Read only six public food searches from the running API, without actor or diary access
+        description: Read only ten public food searches from the running API, without actor or diary access
         type: boolean
         default: false
       runtime_database_probe:
@@ -70,7 +70,7 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           test "$(hostname)" = fit-stage-app
           sudo podman inspect fit-api-stage --format '{{.Config.Image}}' | tee -a "$GITHUB_STEP_SUMMARY"
-          sudo timeout 65 podman exec fit-api-stage node dist/nutrition-search-probe.js | tee -a "$GITHUB_STEP_SUMMARY"
+          sudo timeout 105 podman exec fit-api-stage node dist/nutrition-search-probe.js | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Read only bounded API command error-code counts
         if: github.event_name == 'workflow_dispatch' && inputs.api_errors
         run: |

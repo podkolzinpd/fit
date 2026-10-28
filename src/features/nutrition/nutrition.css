@@ -49,12 +49,6 @@
 .nutrition-consents { border-top:1px solid var(--border); padding-top:var(--space-4); }
 .nutrition-page summary { min-height:44px; display:flex; align-items:center; cursor:pointer; }
 .nutrition-page .button { display:flex; justify-content:center; align-items:center; min-height:48px; border-radius:var(--radius-md); background:var(--accent); color:var(--on-accent); text-decoration:none; }
-.nutrition-barcode, .nutrition-scanner, .nutrition-barcode-import { display:grid; gap:var(--space-2); }
-.nutrition-barcode-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-2); }
+.nutrition-barcode { display:grid; gap:var(--space-2); }
 .nutrition-photo-picker { display:flex; align-items:center; justify-content:center; min-height:48px; cursor:pointer; text-align:center; }
-.nutrition-barcode-import { padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised); }
-.nutrition-barcode-import > header { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); }
-.nutrition-barcode-import > header .link { min-height:36px; }
 .nutrition-quantity-mode { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-2); }
-.nutrition-scanner { padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface-raised); }
-.nutrition-scanner video { width:100%; max-height:320px; border-radius:var(--radius-sm); background:#000; object-fit:cover; }
