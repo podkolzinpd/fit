@@ -5,7 +5,10 @@ import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import { planMediaAclReadRepair } from './repair-cloudru-media-acl.mjs'
-import { createHash } from 'node:crypto'
+import { createHash, generateKeyPairSync, privateDecrypt, createDecipheriv, constants } from 'node:crypto'
+import { gzipSync } from 'node:zlib'
+import { readJournalTransport, sealJournalReceipt } from './cloudru-journal-import.mjs'
+import { sealUpload, openUpload, journalObject, validateUploadCapability, uploadBytes } from './cloudru-journal-upload.mjs'
 import { readHistoryTargets, readHistoryRegistry, readHistoryPages, summarizeHistory, inspectCurrentHistory,
   readHistoryEvidenceSecret, resolveHistoryEvidence, readHistoryVisibility,
   readWorkoutHistoryTarget, inspectWorkoutHistoryTarget } from './cloudru-account-history-audit.mjs'
@@ -750,4 +753,124 @@ test('journal preflight distinguishes a retained login binding from legacy-only 
     assert.doesNotMatch(JSON.stringify(report), /a0000000|[ac]{64}/)
     assert.ok(f.queries.every(q => !/\b(?:insert|update|delete|alter|grant|truncate)\b/i.test(q.text)))
   }
+})
+
+
+test('private journal transport rejects corruption, redirected identity and decompression overflow before database access', () => {
+  const workouts = Array.from({ length: 137 }, (_, i) => ({ trainingFormat: 'with_trainer',
+    exercises: Array.from({ length: i === 136 ? 0 : i < 97 ? 5 : 4 }, (_, j) => ({
+      sets: i < 60 && j === 0 ? [{}, {}, {}, {}] : [],
+    })),
+  }))
+  const payload = { schemaVersion: 1, batchId: 'synthetic-batch', clientName: 'Synthetic', workouts }
+  const hash = x => createHash('sha256').update(x).digest('hex')
+  const encode = value => { const raw = JSON.stringify(value), encoded = gzipSync(raw).toString('base64')
+    const split = Math.ceil(encoded.length / 2)
+    return { parts: [encoded.slice(0, split), encoded.slice(split)], sha: hash(raw) } }
+  const { parts, sha } = encode(payload), name = hash('synthetic')
+  assert.deepEqual(readJournalTransport(parts, sha, name), payload)
+  for (const [data, digest, target] of [[parts, '0'.repeat(64), name], [parts, sha, '0'.repeat(64)],
+    [[parts[0] + '\n', parts[1]], sha, name], [[parts[0]], sha, name]]) {
+    assert.throws(() => readJournalTransport(data, digest, target), /private_payload_invalid/)
+  }
+  const redirected = encode({ ...payload, actorId: historyFixtureIds[0] })
+  assert.throws(() => readJournalTransport(redirected.parts, redirected.sha, name), /private_payload_invalid/)
+  const large = Buffer.alloc(3 * 1024 * 1024, 32), zipped = gzipSync(large).toString('base64')
+  assert.throws(() => readJournalTransport([zipped.slice(0, -4), zipped.slice(-4)], hash(large), name), /private_payload_invalid/)
+})
+
+test('private journal receipts are authenticated ciphertext and accept only a public RSA key', () => {
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } })
+  const data = { schemaVersion: 1, clientId: historyFixtureIds[0], created: [{ workoutId: historyFixtureIds[1] }] }
+  const a = sealJournalReceipt(data, publicKey), b = sealJournalReceipt(data, publicKey)
+  assert.notEqual(a.data, b.data)
+  assert.doesNotMatch(JSON.stringify(a), /a0000000|workoutId|clientId/)
+  const decode = envelope => {
+    const key = privateDecrypt({ key: privateKey, oaepHash: 'sha256', padding: constants.RSA_PKCS1_OAEP_PADDING }, Buffer.from(envelope.wrappedKey, 'base64'))
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'base64'))
+    decipher.setAAD(Buffer.from('fit-private-journal-receipt-v1')); decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'))
+    return JSON.parse(Buffer.concat([decipher.update(Buffer.from(envelope.data, 'base64')), decipher.final()]).toString('utf8'))
+  }
+  assert.deepEqual(decode(a), data)
+  const tampered = Buffer.from(a.data, 'base64'); tampered[0] ^= 1
+  assert.throws(() => decode({ ...a, data: tampered.toString('base64') }))
+  assert.throws(() => sealJournalReceipt(data, privateKey), /key_invalid/)
+})
+
+test('private import is manual, main-only, CI guarded and GitHub receives only encrypted capability metadata', () => {
+  const workflow = read('.github/workflows/import-cloudru-private-journal.yml')
+  assert.match(workflow, /options: \[prepare, inspect, apply, cleanup\]/)
+  assert.match(workflow, /default: inspect/)
+  assert.doesNotMatch(workflow, /\n  (push|pull_request|schedule):|actor_id:|client_id:/)
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/)
+  assert.match(workflow, /test "\$\(hostname\)" = fit-stage-app/)
+  assert.match(workflow, /test "\$commit" = "\$GITHUB_SHA"/)
+  assert.match(workflow, /if test "\$MODE" = apply/)
+  assert.match(workflow, /\.head_sha == \$sha/)
+  assert.match(workflow, /\.head_repository.full_name == \$repo/)
+  assert.match(workflow, /\.conclusion == "success"/)
+  assert.match(workflow, /group: cloudru-stage-vm/)
+  assert.match(workflow, /--read-only --user/)
+  assert.match(workflow, /--cap-drop=ALL --security-opt=no-new-privileges/)
+  assert.match(workflow, /\/capability\.encrypted\.json/)
+  assert.doesNotMatch(workflow, /FIT_JOURNAL_IMPORT_PART_|\/receipts|private-journal-receipts/)
+  assert.match(workflow, /CLOUDRU_MEDIA_MIGRATION_KEY_ID/)
+  assert.match(workflow, /sudo install -d -m 755 "\$output"/)
+  assert.match(workflow, /sudo install -d -m 700 "\$session"/)
+  assert.match(workflow, /journal-upload-\$FIT_JOURNAL_UPLOAD_SESSION/)
+  assert.match(workflow, /if: always\(\)/)
+  assert.doesNotMatch(workflow, /PRIVATE_KEY|--privileged|Config\.Env|api\.env|pg_restore|psql/)
+  for (const match of workflow.matchAll(/\n        run: \|\n([\s\S]*?)(?=\n      - |$)/g)) {
+    assert.equal(spawnSync('bash', ['-n'], { input: match[1].replace(/^          /gm, ''), encoding: 'utf8' }).status, 0)
+  }
+  const script = read('scripts/cloudru-journal-import.mjs')
+  assert.match(script, /begin transaction isolation level repeatable read read only/)
+  assert.match(script, /role\.name!=='fit_api'/)
+  assert.doesNotMatch(script, /set (?:local )?role|\b(?:grant|alter|truncate)\b|@gmail|@yandex/)
+  const check = spawnSync(process.execPath, ['scripts/cloudru-journal-import.mjs'], { encoding: 'utf8',
+    env: { GITHUB_REF: 'refs/heads/not-main', GITHUB_REPOSITORY: 'podkolzinpd/fit', FIT_JOURNAL_IMPORT_PART_1: 'synthetic-sensitive-marker' } })
+  assert.equal(check.status, 1)
+  assert.match(check.stderr, /source_invalid/)
+  assert.doesNotMatch(check.stdout + check.stderr, /synthetic-sensitive-marker/)
+})
+
+
+test('Cloud.ru upload encryption binds ciphertext to one session and rejects tampering or another key', () => {
+  const keys = generateKeyPairSync('rsa', { modulusLength: 3072,
+    publicKeyEncoding: { type: 'spki', format: 'pem' }, privateKeyEncoding: { type: 'pkcs8', format: 'pem' } })
+  const data = { session: '123-1', parts: ['synthetic-private-source', 'second'] }
+  const sealed = sealUpload(data, keys.publicKey, '123-1')
+  assert.doesNotMatch(JSON.stringify(sealed), /synthetic-private-source|second/)
+  assert.deepEqual(openUpload(sealed, keys.privateKey, '123-1'), data)
+  assert.throws(() => openUpload(sealed, keys.privateKey, '123-2'))
+  assert.throws(() => openUpload({ ...sealed, data: Buffer.from('changed').toString('base64') }, keys.privateKey, '123-1'))
+  assert.throws(() => sealUpload(data, keys.publicKey, '../123'))
+})
+test('Cloud.ru upload capability accepts only a fresh signed PUT for the one bounded primary-provider object', () => {
+  const digest = 'a'.repeat(64), now = Date.now()
+  const cap = { session: '123-1', digest, bytes: uploadBytes, expiresAt: now + 600000,
+    url: `https://s3.cloud.ru/fit-cloudru-stage-media-c2ad3760/${journalObject('123-1', 'payload')}?X-Amz-Expires=600&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-SignedHeaders=content-length%3Bhost%3Bif-none-match&X-Amz-Signature=${'a'.repeat(64)}` }
+  assert.equal(validateUploadCapability(cap, '123-1', digest, now), cap)
+  for (const changed of [{ session: '123-2' }, { digest: 'b'.repeat(64) }, { bytes: uploadBytes + 1 },
+    { expiresAt: now }, { expiresAt: now + 3600000 }, { url: cap.url.replace('s3.cloud.ru', 'example.test') },
+    { url: cap.url.replace('/payload.', '/readback.') }, { url: cap.url.replace('https:', 'http:') }]) {
+    assert.throws(() => validateUploadCapability({ ...cap, ...changed }, '123-1', digest, now))
+  }
+  for (const name of ['../payload', 'other', 'server.private.pem']) assert.throws(() => journalObject('123-1', name))
+})
+test('Cloud.ru payload and all customer-derived receipts stay on Cloud.ru; runtime has no GitHub payload fallback', () => {
+  const uploader = read('scripts/cloudru-journal-upload.mjs'), runner = read('scripts/cloudru-journal-import.mjs')
+  assert.match(uploader, /requestChecksumCalculation:'WHEN_REQUIRED'/)
+  assert.match(uploader, /chmodSync\('\/capability\/capability\.encrypted\.json',0o644\)/)
+  assert.match(uploader, /GetBucketPolicyCommand/)
+  assert.match(uploader, /GetBucketAclCommand/)
+  assert.doesNotMatch(uploader, /PutBucketAclCommand|PutBucketPolicyCommand|ListObjects|console\.(?:log|error)\([^\n]*(?:url|parts|receipt|manifest|error)/)
+  assert.match(uploader, /ContentLength:uploadBytes,IfNoneMatch:'\*'/)
+  assert.match(uploader, /durableFile\(`/)
+  assert.match(uploader, /fsyncSync/)
+  assert.match(uploader, /HeadObjectCommand/)
+  assert.match(runner, /parts:upload.parts/)
+  assert.doesNotMatch(runner, /FIT_JOURNAL_IMPORT_PART_|\/receipts/)
+  assert.match(read('services/api/package.json'), /test:db[^\n]*private-journal-import\.integration\.test\.ts/)
 })
