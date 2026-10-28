@@ -862,6 +862,7 @@ test('Cloud.ru upload capability accepts only a fresh signed PUT for the one bou
 test('Cloud.ru payload and all customer-derived receipts stay on Cloud.ru; runtime has no GitHub payload fallback', () => {
   const uploader = read('scripts/cloudru-journal-upload.mjs'), runner = read('scripts/cloudru-journal-import.mjs')
   assert.match(uploader, /requestChecksumCalculation:'WHEN_REQUIRED'/)
+  assert.match(uploader, /chmodSync\('\/capability\/capability\.encrypted\.json',0o644\)/)
   assert.match(uploader, /GetBucketPolicyCommand/)
   assert.match(uploader, /GetBucketAclCommand/)
   assert.doesNotMatch(uploader, /PutBucketAclCommand|PutBucketPolicyCommand|ListObjects|console\.(?:log|error)\([^\n]*(?:url|parts|receipt|manifest|error)/)

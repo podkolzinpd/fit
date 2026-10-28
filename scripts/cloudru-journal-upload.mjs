@@ -1,5 +1,5 @@
 import {createCipheriv,createDecipheriv,createHash,createPublicKey,createPrivateKey,generateKeyPairSync,randomBytes,publicEncrypt,privateDecrypt,constants} from 'node:crypto'
-import {readFileSync,writeFileSync,lstatSync,unlinkSync,readdirSync,fsyncSync,openSync,closeSync} from 'node:fs'
+import {readFileSync,writeFileSync,chmodSync,lstatSync,unlinkSync,readdirSync,fsyncSync,openSync,closeSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 import {planMediaAclReadRepair} from './repair-cloudru-media-acl.mjs'
@@ -87,6 +87,7 @@ function readManifest(target,digest,session,{allowExpired=false}={}) {
 function capability(value,key,session) {
  // GitHub receives only a short-lived, encrypted single-object capability. Never journal/receipt bytes.
  writeFileSync('/capability/capability.encrypted.json',JSON.stringify(sealUpload(value,key,session)),{mode:0o644,flag:'wx'})
+ chmodSync('/capability/capability.encrypted.json',0o644) // independent of a restrictive process umask; ciphertext metadata only
 }
 export async function prepareCloudruUpload(target,digest,session,operatorPublicPem) {
  journalSession(session);if(!/^[a-f0-9]{64}$/.test(digest??''))fail()

@@ -196,3 +196,11 @@ UID0 приcap-dropALL не может записать capability в прина
 session-папки. Измененыworkflow и регрессионный guard;54операционных теста и
 реальная Podman-проверка прошли, тестовый том удалён. Production пока не запускали.
 Далее: финальный зелёныйCI/main и прежние inspect/apply/readback/cleanup.
+
+Уточнениеитерации5: ciphertextmetadata-файл получает явныйchmod0644 после записи,
+чтобы строгаяprocessumask0077 не оставляла его0600 и не блокировалаuploader.
+Закрытые ключ/manifest/receipts остаются0600. Полныйfilesystemlifecycle реального
+helper повторно прошёл в readonlyNode24/cap-dropALL/networknone/processumask0077;
+использованы только syntheticRSA/data и локальнаяS3fixture. UID1000 прочитал
+ciphertextmetadata; ключевые файлы проверены0600, временный том удалён.
+Это проверка изоляции, не productionCloud.ru приёмка.54операционных теста прошли.
