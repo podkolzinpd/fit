@@ -1,10 +1,65 @@
 # Видеовстречи Fit / YAFIT-669
 
-Это контракт подготовки собственного Jitsi; сервер пока не развёрнут этим PR.
+Это контракт и подготовка собственного Jitsi; сервер пока не развёрнут этим PR.
 Проверенная upstream release: docker-jitsi-meet stable-11248-2 (28.10.2026).
 Не направлять production на meet.jit.si. Версию SDK сервировать из того же
 проверенного выпуска, что и сервер. В Fit используется только lib-jitsi-meet,
 без Jitsi Meet iframe, отдельного аккаунта и брендинга.
+
+## Подготовленный комплект
+
+`compose.upstream.yml` — неизменённый официальный compose stable-11248-2,
+SHA256 `da7904e9efb376c08773ca8e6f75fc4079a2fe869703cd1fdd263bb3439b22c8`;
+лицензия сохранена в LICENSE.upstream. Источник:
+https://github.com/jitsi/docker-jitsi-meet/tree/stable-11248-2.
+Параметры TURN сверены с https://github.com/coturn/coturn/blob/master/examples/etc/turnserver.conf.
+
+`prepare.py` запускается **на целевой VM** после выделения IP:
+
+```sh
+sudo python3 prepare.py --output /opt/fit-jitsi --public-ip PUBLIC_IPV4 --private-ip PRIVATE_IPV4
+```
+
+Он создаёт защищённый каталог0700, отдельные случайные JWT/TURN/Jicofo/JVB
+секреты, env0600, Nginx/Coturn config, systemd unit и certificate renewal hook.
+Секреты не печатаются. Повторный запуск в существующий каталог запрещён,
+чтобы не заменить действующие ключи. Комплект не активирует сервисы.
+Локальная проверка: `python3 -B -m unittest discover -s infra/jitsi -p 'test_*.py'`.
+Она проверяет границы ввода, согласованность секретов, права файлов и отказ
+от перезаписи; это не проверка установленного Nginx/Podman/Coturn или медиа.
+
+Целевой baseline — отдельная Ubuntu24.04 VM с Podman/podman-compose,
+Nginx, certbot, coturn из официальных пакетов дистрибутива. Версии пакетов
+записать при установке; совместимость compose проверить на этой VM.
+API fragment создаётся с JITSI_ENABLED=false; не включать по факту рендера.
+
+Порядок применения после выделения VM и проверки DNS:
+
+1. Установить пакеты, создать `/var/www/fit-acme`, каталоги CONFIG из compose.
+   Установить только nginx-http.conf; выполнить nginx -t и reload.
+2. Получить сертификат certbot certonly --webroot для meet.fit-training.ru
+   с webroot `/var/www/fit-acme`. Условия ACME/контакт согласовать при регистрации.
+3. Установить renew-certificate как deploy hook certbot; выполнить его первый
+   раз с RENEWED_LINEAGE=/etc/letsencrypt/live/meet.fit-training.ru.
+   Hook копирует сертификат/key с root:turnserver0640 в /etc/fit-jitsi.
+4. Установить nginx.conf и turnserver.conf (последний root:turnserver0640),
+   проверить nginx -t. Проверить фактический coturn unit/config path и TLS.
+   Включить fit-jitsi.service и coturn, перечитать listening sockets.
+5. На security group разрешить80/TCP только для ACME,443/TCP,10000/UDP,
+   5349/TCP и49160–49200/UDP. SSH только с административного /32 на время
+   настройки. Не открывать3478,5222,5347,5280,8000,8080,8443,8888 наружу.
+6. Проверить TLS/SDK CORS, origin filter, JWT admission и двух участников;
+   затем forced TURN/TLS и реальные устройства. Только после приёмки переносить
+   API fragment защищённым каналом в runtime env и включать штатным release.
+
+Сейчас TURN/TLS рекламируется на5349/TCP, relay ограничен41UDP-портом и40
+allocations. Это baseline проверки двух участников, не обещание ёмкости.
+Сеть, разрешающая только443/TCP, потребует отдельного TURN endpoint/IP на443;
+данный комплект не доказывает работу в такой сети. Private/loopback/multicast
+TURN peers запрещены; доступ к внутренней сети Cloud.ru через relay закрыт.
+NAT hairpin к публичному адресу JVB проверить фактической relay-передачей.
+Веб-корень отдаёт404; наружу доступны SDK/libs и XMPP WebSocket.
+Списки origins в Nginx проверить против текущего web/native production build.
 
 ## Требования до включения
 
