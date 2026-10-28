@@ -248,6 +248,69 @@ export async function inspectCurrentHistory(client, legacy, options = {}) {
   } catch (error) { await client.query('rollback'); throw error }
 }
 
+export function readWorkoutHistoryTarget(raw) {
+  let target
+  try { target = JSON.parse(raw) } catch { throw new Error('workout_history_target_invalid') }
+  if (!target || Object.keys(target).sort().join(',') !== 'clientNameSha256,trainerLoginSha256'
+    || ![target.clientNameSha256, target.trainerLoginSha256].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value))) {
+    throw new Error('workout_history_target_invalid')
+  }
+  return target
+}
+
+// Read-only preflight for one privately approved journal import. This operation
+// does not return identities, contacts, workout contents or fingerprints.
+export async function inspectWorkoutHistoryTarget(owner, runtime, target, legacyTrainerId = null) {
+  let trainerId
+  await owner.query('begin transaction isolation level repeatable read read only')
+  try {
+    await owner.query("set local statement_timeout = '10s'")
+    const mode = await owner.query("select current_setting('transaction_read_only') readonly")
+    if (mode.rows[0]?.readonly !== 'on') throw new Error('history_audit_readonly_required')
+    const candidates = requireBound((await owner.query(`select distinct profile_id from (
+      select profile_id from app_private.fit_lime_pilot_allowlist where login_sha256=$1
+      union select profile_id from app_private.trainer_schedule_v2_allowlist where login_sha256=$1
+      union select profile_id from app_private.nutrition_native_bindings where login_sha256=$1
+      ) matched where profile_id is not null limit 3`, [target.trainerLoginSha256])).rows, 2)
+    if (candidates.length > 1 || (legacyTrainerId && candidates.some(row => row.profile_id !== legacyTrainerId))) {
+      throw new Error('workout_history_trainer_ambiguous')
+    }
+    trainerId = candidates[0]?.profile_id ?? legacyTrainerId
+    if (!trainerId) {
+      await owner.query('commit')
+      return { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: false, matchingCards: 0 }
+    }
+    if (!uuid.test(trainerId)) throw new Error('workout_history_target_invalid')
+    const profile = (await owner.query('select account_role from public.profiles where id=$1', [trainerId])).rows
+    if (profile.length !== 1 || profile[0].account_role !== 'trainer') throw new Error('workout_history_trainer_role_invalid')
+    await owner.query('commit')
+  } catch (error) { await owner.query('rollback'); throw error }
+  await runtime.query('begin transaction isolation level repeatable read read only')
+  try {
+    await runtime.query("set local statement_timeout = '10s'")
+    const role = (await runtime.query(`select current_setting('transaction_read_only') readonly,
+      current_user name, rolsuper, rolbypassrls from pg_roles where rolname=current_user`)).rows[0]
+    if (role?.readonly !== 'on' || role.name !== 'fit_api' || role.rolsuper !== false || role.rolbypassrls !== false) {
+      throw new Error('history_audit_runtime_role_invalid')
+    }
+    await runtime.query("select set_config('request.jwt.claim.sub', $1, true)", [trainerId])
+    const cards = requireBound((await runtime.query(`select c.id, c.auth_user_id,
+      c.archived_at is not null archived, c.merged_into_client_id is not null merged
+      from public.clients c left join public.client_trainers ct on ct.client_id=c.id and ct.trainer_id=$1
+      where (c.trainer_id=$1 or ct.trainer_id=$1) and (
+        encode(sha256(convert_to(lower(btrim(c.full_name)), 'UTF8')), 'hex')=$2
+        or encode(sha256(convert_to(lower(btrim(ct.alias)), 'UTF8')), 'hex')=$2
+      ) order by c.id limit 11`, [trainerId, target.clientNameSha256])).rows, 10)
+    const active = cards.filter(card => !card.archived && !card.merged)
+    const counts = active.length === 1 ? (await runtime.query(`select status, deleted_at is not null deleted,
+      count(*)::integer count from public.workouts where client_id=$1 group by status, deleted_at is not null`, [active[0].id])).rows : []
+    await runtime.query('commit')
+    return { event: 'workout_history_import_preflight', readOnly: true, trainerMatched: true,
+      matchingCards: cards.length, activeMatchingCards: active.length,
+      athleteLinked: active.length === 1 ? Boolean(active[0].auth_user_id) : null, existingWorkouts: counts }
+  } catch (error) { await runtime.query('rollback'); throw error }
+}
+
 async function main() {
   if (process.env.GITHUB_REF !== 'refs/heads/main' || process.env.GITHUB_REPOSITORY !== 'podkolzinpd/fit') throw new Error('history_audit_target_invalid')
   const { buildDatabaseConnectionConfig } = await import('/app/dist/db/connection-config.js')
@@ -260,7 +323,10 @@ async function main() {
   const project = process.env.SUPABASE_PROJECT_ID ?? ''
   const token = process.env.SUPABASE_ACCESS_TOKEN
   if (!/^[a-z0-9]{20}$/.test(project) || !token) throw new Error('history_audit_source_config_missing')
-  const targets = readHistoryTargets(process.env.FIT_ACCOUNT_HISTORY_TARGETS)
+  const importTarget = process.env.FIT_WORKOUT_HISTORY_TARGET
+    ? readWorkoutHistoryTarget(process.env.FIT_WORKOUT_HISTORY_TARGET) : null
+  const targets = importTarget ? [{ emailHash: importTarget.trainerLoginSha256, label: 'importTrainer', role: 'trainer' }]
+    : readHistoryTargets(process.env.FIT_ACCOUNT_HISTORY_TARGETS)
   const legacy = await readLegacy(project, token, targets)
   const { Client } = createRequire('/app/package.json')('pg')
   const client = new Client({ ...config, connectionTimeoutMillis: 5000, query_timeout: 15000 })
@@ -268,9 +334,11 @@ async function main() {
   await client.connect()
   try {
     await runtimeClient.connect()
-    console.log(JSON.stringify(await inspectCurrentHistory(client, legacy, {
-      evidence: readHistoryEvidenceSecret(process.env.FIT_ACCOUNT_HISTORY_EVIDENCE), runtimeClient,
-    })))
+    console.log(JSON.stringify(importTarget
+      ? await inspectWorkoutHistoryTarget(client, runtimeClient, importTarget, legacy.profiles[0]?.id ?? null)
+      : await inspectCurrentHistory(client, legacy, {
+        evidence: readHistoryEvidenceSecret(process.env.FIT_ACCOUNT_HISTORY_EVIDENCE), runtimeClient,
+      })))
   } finally { await Promise.all([client.end(), runtimeClient.end()]) }
 }
 
@@ -282,7 +350,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       'history_audit_source_scope_invalid', 'history_audit_source_unavailable', 'history_audit_source_too_large',
       'history_audit_source_incomplete', 'history_audit_runtime_role_invalid', 'history_audit_evidence_invalid',
       'history_audit_evidence_not_found', 'history_audit_evidence_feedback_mismatch',
-      'history_audit_evidence_role_mismatch', 'history_audit_evidence_ambiguous'])
+      'history_audit_evidence_role_mismatch', 'history_audit_evidence_ambiguous',
+      'workout_history_target_invalid', 'workout_history_trainer_ambiguous', 'workout_history_trainer_role_invalid'])
     const safe = known.has(error?.message) ? error.message : 'history_audit_failed'
     console.error(safe)
     process.exitCode = 1
