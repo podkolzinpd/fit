@@ -125,6 +125,85 @@ for (const density of ['original', 'compact'] as const) {
 }
 
 test.skip(process.env.FIT_COACH_LIVE_V79_ACCEPTANCE !== '1', 'Dedicated coach-v79 production-build harness')
+// Both densities change action/dock geometry; WebKit and Chromium exercise
+// their distinct touch/scroll behaviour. Error paths run only in Original.
+for (const density of ['original', 'compact']) test(`v79 coach pause preserves rest and recovery ${density}`, async ({ page }, info) => {
+  const profileId = 'c0ac0000-6010-4000-8000-000000000001'
+  await page.clock.setFixedTime(new Date('2026-10-08T09:01:00Z'))
+  await page.addInitScript(({ profileId, density }) => localStorage.setItem(`fit.coachLiveDensity.${profileId}`, density), { profileId, density })
+  const source = Object.assign(restTimerWorkout(), { pausedSeconds: 20 })
+  source.exercises[0]!.restBetweenSetsSec = 90
+  const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
+  let pausedAt: string | undefined, pausedSeconds = 20
+  let failPause = density === 'original', failResume = density === 'original'
+  const commands: boolean[] = []
+  await page.route(`**/v1/workouts/${workoutId}/pause`, async route => {
+    const { paused } = route.request().postDataJSON() as { paused: boolean }
+    commands.push(paused)
+    if (paused && failPause || !paused && failResume) {
+      if (paused) failPause = false; else failResume = false
+      await route.fulfill({ status: 503, json: { error: 'service_unavailable' } }); return
+    }
+    const now = await page.evaluate(() => Date.now())
+    if (paused) pausedAt ??= new Date(now).toISOString()
+    else { pausedSeconds += pausedAt ? Math.round((now - Date.parse(pausedAt)) / 1000) : 0; pausedAt = undefined }
+    const current = backend.getWorkouts()[0]!
+    Object.assign(current, { pausedAt, pausedSeconds, version: current.version + 1 })
+    await route.fulfill({ json: { workout: { version: current.version } } })
+  })
+  await page.goto(`/workouts/${workoutId}/live`)
+  await expect(page.locator('.live-set-check').first()).toBeVisible()
+  await page.locator('.live-set-check').first().click()
+  await expect(page.locator('.live-set-check.done')).toHaveCount(1)
+  await page.locator('.content').evaluate(element => { element.scrollTop = 0 })
+  const pause = page.getByRole('button', { name: /^Поставить тренировку на паузу/ })
+  const actions = page.locator('.coach-reference-timer-actions')
+  const a = (await actions.locator('.coach-reference-pause').boundingBox())!, b = (await actions.locator('.live-rest-trigger').boundingBox())!
+  expect(a.height).toBe(density === 'original' ? 60 : 48)
+  expect(Math.abs(b.x - a.x - a.width - 2)).toBeLessThan(1)
+  await page.screenshot({ path: info.outputPath(`coach-pause-controls-${density}.png`), animations: 'disabled' })
+  const deadline = await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)
+  if (density === 'original') {
+    await pause.click()
+    await expect(page.getByRole('alert')).toContainText('Не удалось поставить тренировку на паузу')
+    await expect(pause).toBeEnabled()
+  }
+  const beforeCount = commands.length
+  await pause.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click() })
+  const resume = page.getByRole('button', { name: /^Продолжить тренировку, прошло/ })
+  await expect(resume).toBeEnabled()
+  await expect.poll(() => commands.length).toBe(beforeCount + 1)
+  const elapsed = (await resume.getAttribute('aria-label'))!.split(', прошло ')[1]!
+  const frozenRest = await actions.locator('.live-rest-trigger').innerText()
+  await page.clock.setFixedTime(new Date((await page.evaluate(() => Date.now())) + 10_000))
+  await expect(actions.locator('.live-rest-trigger')).toHaveText(frozenRest)
+  await expect(resume).toHaveAttribute('aria-label', `Продолжить тренировку, прошло ${elapsed}`)
+  await page.reload()
+  await expect(resume).toHaveAttribute('aria-label', `Продолжить тренировку, прошло ${elapsed}`)
+  if (density === 'original') {
+    await resume.click()
+    await expect(page.getByRole('alert')).toContainText('Не удалось продолжить тренировку')
+    await expect(resume).toBeEnabled()
+    expect(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId)).toBe(deadline)
+  }
+  const expectedShift = (await page.evaluate(() => Date.now())) - Date.parse(pausedAt!)
+  await resume.click()
+  await expect(pause).toBeEnabled()
+  await expect(pause).toHaveAttribute('aria-label', `Поставить тренировку на паузу, прошло ${elapsed}`)
+  expect(pausedSeconds).toBeGreaterThanOrEqual(30)
+  const shifted = Number(await page.evaluate(id => sessionStorage.getItem(`fit:live-rest-until:${id}`), workoutId))
+  expect(shifted - Number(deadline)).toBeGreaterThanOrEqual(10_000)
+  expect(Math.abs(shifted - Number(deadline) - expectedShift)).toBeLessThan(100)
+  await page.locator('.content').evaluate(element => { element.scrollTop = 500 })
+  const dock = page.locator('.coach-v79-small-action')
+  await expect(dock.getByRole('button', { name: /^Поставить тренировку на паузу/ })).toBeVisible()
+  const dockRest = (await dock.locator('.live-rest-trigger').boundingBox())!, finish = (await page.getByRole('button', { name: 'Завершить тренировку', exact: true }).boundingBox())!
+  expect(dockRest.x + dockRest.width).toBeLessThanOrEqual(finish.x)
+  await page.screenshot({ path: info.outputPath(`coach-pause-dock-${density}.png`) })
+  await page.screenshot({ path: info.outputPath(`coach-pause-dock-settled-${density}.png`), animations: "disabled" })
+  expect(backend.getWorkouts()[0]!.exercises[0]!.sets[0]!.confirmedAt).toBeTruthy()
+})
+
 for(const density of ['original','compact'])test(`v79 superset lifecycle ${density}`,async({page})=>{
  const profileId='c0ac0000-6010-4000-8000-000000000001'
  await page.clock.install({time:new Date('2026-10-08T09:01:00Z')})
@@ -463,7 +542,7 @@ for (const density of ['original', 'compact']) test(`v79 source rest motion keep
   await clock.evaluate(e => e.getAnimations().forEach(a => a.finish()))
   await page.locator('.content').evaluate(e => e.scrollTop = 400)
   await expect.poll(() => page.locator('.coach-live-v79').evaluate(e => Number(getComputedStyle(e).getPropertyValue('--v79-small-opacity')))).toBeGreaterThan(.98)
-  await page.locator('.coach-v79-small-action button').click({ button: 'right' })
+  await page.locator('.coach-v79-small-action .live-rest-trigger').click({ button: 'right' })
   const restSheet = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })
   await expect(restSheet).toHaveCSS('padding-top', '0px')
   const restHeader = restSheet.locator('.client-lime-sheet-header')
@@ -532,7 +611,7 @@ for (const density of ['original', 'compact']) test(`v79 cards keep notes full i
   expect(await card.locator('.coach-v79-card-body > div').evaluate(e => e.scrollTop)).toBe(0)
   expect(await page.locator('.content').evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
   await page.locator('.content').evaluate(e => e.scrollTop = 400)
-  const rest = page.locator('.coach-v79-small-action button'), finish = page.getByRole('button', { name: 'Завершить тренировку', exact: true })
+  const rest = page.locator('.coach-v79-small-action .live-rest-trigger'), finish = page.getByRole('button', { name: 'Завершить тренировку', exact: true })
   await expect(rest).toBeVisible()
   const restBox = (await rest.boundingBox())!, finishBox = (await finish.boundingBox())!
   expect(restBox.width).toBeGreaterThanOrEqual(44)
@@ -677,7 +756,7 @@ test('v79 docked rest returns keyboard focus to its visible trigger', async ({ p
   const root = page.locator('.coach-live-v79')
   await expect(root).toBeVisible()
   await page.locator('.content').evaluate(e => e.scrollTop = 220)
-  const small = root.locator('.coach-v79-small-action button')
+  const small = root.locator('.coach-v79-small-action .live-rest-trigger')
   await expect.poll(() => root.locator('.coach-v79-small-action').getAttribute('aria-hidden')).toBe('false')
   await small.click()
   const sheet = page.getByRole('dialog', { name: 'Таймер отдыха', exact: true })

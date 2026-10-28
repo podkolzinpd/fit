@@ -15,6 +15,45 @@ afterEach(() => {
 })
 
 describe('Live rest timer', () => {
+  it('exposes coach pause beside rest, keeps the elapsed pause accounting and blocks another pending toggle', () => {
+    vi.useFakeTimers(); vi.setSystemTime(100_000)
+    const toggle = vi.fn(), change = vi.fn()
+    const props = { workoutId: 'coach-pause', deadline: 101_000, onChange: change, referenceStartedAt: new Date(0).toISOString(), referencePausedSeconds: 20, onReferencePauseToggle: toggle, coachPauseActions: true, coachV79: { density: 'original' as const, headerSlot: null } }
+    const view = render(<LiveRestTimer {...props} />)
+    const pause = screen.getByRole('button', { name: 'Поставить тренировку на паузу, прошло 01:20' })
+    expect(pause.parentElement).toBe(screen.getByRole('button', { name: 'Таймер отдыха: 0:01' }).parentElement)
+    fireEvent.click(pause); expect(toggle).toHaveBeenCalledOnce()
+    view.rerender(<LiveRestTimer {...props} pausedAt={100_000} pausePending />)
+    const resume = screen.getByRole('button', { name: 'Продолжить тренировку, прошло 01:20' })
+    expect(resume).toBeDisabled()
+    fireEvent.click(resume); expect(toggle).toHaveBeenCalledOnce()
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(screen.getByRole('button', { name: 'Таймер отдыха: 0:01' })).toBeVisible()
+    expect(playGong).not.toHaveBeenCalled()
+    view.rerender(<LiveRestTimer {...props} pausedAt={100_000} />)
+    fireEvent.click(resume); expect(toggle).toHaveBeenCalledTimes(2)
+    expect(change).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Таймер отдыха: 0:01' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Применить время · 1:30' }))
+    expect(change).toHaveBeenCalledWith(190_000)
+  })
+
+  it('does not signal an already expired coach rest again after pause and resume', () => {
+    vi.useFakeTimers(); vi.setSystemTime(100_000)
+    const expired = vi.fn()
+    const props = { workoutId: 'coach-expired-pause', deadline: 101_000, onChange: vi.fn(), onRestExpire: expired, referenceStartedAt: new Date(0).toISOString(), onReferencePauseToggle: vi.fn(), coachPauseActions: true }
+    const view = render(<LiveRestTimer {...props} />)
+    act(() => vi.advanceTimersByTime(2_000))
+    expect(playGong).toHaveBeenCalledOnce()
+    expect(expired).toHaveBeenCalledOnce()
+    view.rerender(<LiveRestTimer {...props} pausedAt={102_000} />)
+    act(() => vi.advanceTimersByTime(10_000))
+    view.rerender(<LiveRestTimer {...props} deadline={111_000} referencePausedSeconds={10} />)
+    expect(screen.getByRole('button', { name: 'Отдых превышен на 0:01' })).toBeVisible()
+    expect(playGong).toHaveBeenCalledOnce()
+    expect(expired).toHaveBeenCalledOnce()
+  })
+
   it('keeps the client pause action and cumulative pause time on the reference clock without another timer owner', () => {
     vi.useFakeTimers()
     vi.setSystemTime(100_000)

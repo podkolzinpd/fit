@@ -3129,6 +3129,7 @@ export function LiveWorkoutPage() {
   // используем встроенный диалог в панели вместо нативного confirm.
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
+  const coachPausePending = useRef(false)
   const [referenceRestActive, setReferenceRestActive] = useState(false)
   const [restContextExerciseId, setRestContextExerciseId] = useState<string | null>(null)
   const [restPickerSeconds, setRestPickerSeconds] = useState(90)
@@ -3143,9 +3144,9 @@ export function LiveWorkoutPage() {
   const [liveModeOverride, setLiveModeOverride] = useState<WorkoutExecutionMode | null>(null)
   const liveExecutionMode = effectiveExecutionMode(query.data?.executionMode, liveModeOverride)
   const timerLeads = Boolean(query.data) && !coachReference && liveExecutionMode === 'timer'
-  // Пауза всей тренировки (YAFIT-627) — только у клиента: часы, отдых и подход
-  // замирают, на сервере время паузы вычитается из длительности.
-  const canPauseWorkout = clientMode && !coachReference && query.data?.status === 'in_progress'
+  // Reuse the existing pause contract for the coach pilot as well: clocks,
+  // rest and final duration share the same server-accounted pause.
+  const canPauseWorkout = (clientMode && !coachReference || coachV79) && query.data?.status === 'in_progress'
   const livePausedAt = query.data?.pausedAt ? Date.parse(query.data.pausedAt) : null
   const [phaseNotice, setPhaseNotice] = useState<
     | { kind: 'work-confirmed'; setId: string; exerciseId: string; seconds: number; shownAt: number }
@@ -3395,11 +3396,11 @@ export function LiveWorkoutPage() {
   }, [actor?.userId, query.data, workoutId, save.isPending, confirm.isPending])
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
-  function startRestUntil(endsAt: number | null) {
+  function startRestUntil(endsAt: number | null, pauseAt = livePausedAt) {
     setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
     inactivityReminder.noteActivity(endsAt)
-    if (endsAt !== null && endsAt > Date.now()) void scheduleNativeRestTimerNotification(workoutId, endsAt)
+    if (endsAt !== null && endsAt > Date.now() && (!coachV79 || pauseAt === null)) void scheduleNativeRestTimerNotification(workoutId, endsAt)
     else void cancelNativeRestTimerNotification(workoutId)
   }
   function stopRest() {
@@ -3420,12 +3421,12 @@ export function LiveWorkoutPage() {
     if (!preserveDeadline) startRestUntil(restDeadline(seconds))
     return seconds
   }
-  function setLivePhase(next: LivePhaseTimer | null) {
+  function setLivePhase(next: LivePhaseTimer | null, pauseAt = livePausedAt) {
     livePhaseRef.current = next
     setLivePhaseState(next)
     storeLivePhase(workoutId, next)
     inactivityReminder.noteActivity(next?.endsAt ?? null)
-    if (next === null) {
+    if (next === null || coachV79 && pauseAt !== null) {
       void cancelNativeRestTimerNotification(workoutId)
       return
     }
@@ -4287,30 +4288,43 @@ export function LiveWorkoutPage() {
     if (restEndsAt === null || restEndsAt <= Date.now()) startWorkTimer(currentLiveSet, activeLiveExercise)
   }, [timerLeads])
   const pauseWorkout = useMutation({
-    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean }) => workoutsRepository.setLivePause(workout, paused),
+    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean; timers?: { rest: number | null; phase: LivePhaseTimer | null } }) => workoutsRepository.setLivePause(workout, paused),
     onSuccess: (version) => queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout ? { ...workout, version } : workout),
-    onError: () => { void query.refetch() },
+    onError: async (_error, { workout, paused, timers }): Promise<void> => {
+      if (!coachV79 || !timers) { void query.refetch(); return }
+      const result = await query.refetch()
+      // An uncertain reply can still have committed. Read back before rolling
+      // back the optimistic clock or allowing a second resume to shift it.
+      if (!result.error && result.data && Boolean(result.data.pausedAt) === paused) { pauseWorkout.reset(); return }
+      const restoredPause = workout.pausedAt ? Date.parse(workout.pausedAt) : null
+      if (timers.phase) { startRestUntil(timers.rest, restoredPause); setLivePhase(timers.phase, restoredPause) }
+      else { setLivePhase(null, restoredPause); startRestUntil(timers.rest, restoredPause) }
+      queryClient.setQueryData<Workout>(['workout', workoutId], current => current ? { ...current, pausedAt: workout.pausedAt, pausedSeconds: workout.pausedSeconds } : current)
+    },
+    onSettled: () => { coachPausePending.current = false },
   })
   // Пауза замораживает всё сразу на экране; сервер фиксирует её следом.
   // Снятие сдвигает отдых и идущий подход на длительность паузы.
   function setWorkoutPaused(paused: boolean) {
     const workout = query.data
-    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null)) return
+    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null) || coachV79 && coachPausePending.current) return
+    if (coachV79) coachPausePending.current = true
+    const timers = coachV79 ? { rest: restEndsAt, phase: livePhaseRef.current } : undefined
     const now = Date.now()
     if (paused) {
       void cancelNativeRestTimerNotification(workoutId)
       queryClient.setQueryData<Workout>(['workout', workoutId], (current) => current ? { ...current, pausedAt: new Date(now).toISOString() } : current)
     } else {
       const shift = livePausedAt === null ? 0 : Math.max(0, now - livePausedAt)
-      if (restEndsAt !== null) startRestUntil(restEndsAt + shift)
+      if (restEndsAt !== null) startRestUntil(restEndsAt + shift, null)
       const phase = livePhaseRef.current
-      if (phase) setLivePhase({ ...phase, startedAt: phase.startedAt + shift, endsAt: phase.endsAt + shift })
+      if (phase) setLivePhase({ ...phase, startedAt: phase.startedAt + shift, endsAt: phase.endsAt + shift }, null)
       queryClient.setQueryData<Workout>(['workout', workoutId], (current) => current
         ? { ...current, pausedAt: undefined, pausedSeconds: (current.pausedSeconds ?? 0) + Math.round(shift / 1000) }
         : current)
     }
     trackGoal(paused ? 'live_workout_paused' : 'live_workout_resumed')
-    pauseWorkout.mutate({ workout, paused })
+    pauseWorkout.mutate({ workout, paused, timers })
   }
   /** Действие с подходом значит, что человек вернулся к тренировке, — пауза снимается сама. */
   function resumeWorkoutIfPaused() {
@@ -4476,14 +4490,15 @@ export function LiveWorkoutPage() {
               <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 coachV79={coachV79 || clientReference ? { density: clientReference ? clientLiveDensity : liveDensity, headerSlot: coachClockSlot } : undefined}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceActions={clientReference} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
-                referencePausedSeconds={clientReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={clientReference && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
+                referenceActions={clientReference} coachPauseActions={coachV79} pausePending={coachV79 && pauseWorkout.isPending} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
+                referencePausedSeconds={visualReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={(clientReference || coachV79) && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
                   {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}
                     className={liveExecutionMode === mode ? 'active' : ''} onClick={() => changeLiveExecutionMode(mode)}>{EXECUTION_MODE_LABELS[mode]}</button>)}
                 </div> : undefined} />
             </Coachmark>
           </div>
+          {coachV79 && pauseWorkout.isError && <p className="error" role="alert">Не удалось {pauseWorkout.variables?.paused ? 'поставить тренировку на паузу' : 'продолжить тренировку'}. Попробуйте ещё раз.</p>}
           {phaseNotice && <div className="live-phase-notice" role="status">
             <span>{phaseNotice.kind === 'work-confirmed' ? `Подход засчитан · ${formatRest(phaseNotice.seconds)}` : 'Отдых остановлен'}</span>
             <button type="button" className="secondary" onClick={undoPhaseNotice}>{phaseNotice.kind === 'work-confirmed' ? 'Исправить' : 'Вернуть'}</button>
