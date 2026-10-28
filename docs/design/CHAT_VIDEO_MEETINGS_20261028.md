@@ -23,6 +23,11 @@ P7. Проверить обе роли, конкуренцию входов, о�
 
 Без дозвона, принятия, отклонения, пропущенных звонков и системного входящего вызова.
 
+28.10.2026 пользователь явно согласовал включение после реального browser media
+и перенос проверки физических телефонов на этап сразу после включения.
+Физические камеры, переключение камер и Wi-Fi↔mobile остаются в этой приёмке;
+успешные синтетические устройства не объявляются физической проверкой.
+
 ## Реализация и границы
 
 Переиспользуем Page/header action, StatePanel, существующие кнопки и Lime
@@ -47,18 +52,18 @@ semantic tokens, icons.tsx. Новая feature-local палитра не соз�
 | ID | Результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | P1 | Кнопка/preview/вход у обеих ролей | WebKit real route, SDK double | UI проверен; реальные устройства не проверены |
-| P2 | До media joined нет command joined/notice | component4/4, API boundary3/3, WebKit2/2, PostgreSQL17 CI | порядок/DB проверены; real media не проверено |
+| P2 | До media joined нет command joined/notice | component4/4, API boundary3/3, WebKit2/2, PostgreSQL17 CI | порядок/DB проверены; двустороннее synthetic-device media проверено |
 | P3 | One-room root lock, leases и завершение | PostgreSQL17 CI, независимые connections/root blocking | проверено |
 | P4 | Черновик сохраняется при входе/выходе | WebKit2/2, chat regression31/31; recovery4/4 | черновик проверен; real reconnect не проверен |
-| P5 | UI390/430 и trainer390/1440, client light/dark | просмотренные screenshots, SDK double | UI проверен; камера/звук не проверены |
-| P6 | Auth/validation/JWT room/expiry/config off | API boundary/credentials, PostgreSQL17 CI | API/DB/RLS проверены; admission на сервере Jitsi не проверен |
-| P7 | Выпуск/двустороннее media/физические устройства | сервер ещё не настроен | не проверено |
+| P5 | UI390/430 и trainer390/1440, client light/dark | просмотренные screenshots, SDK double | UI проверен; synthetic-device audio/video/mute проверены, физические устройства после включения |
+| P6 | Auth/validation/JWT room/expiry/config off | API boundary/credentials, PostgreSQL17 CI | API/DB/RLS и реальный Jitsi JWT admission проверены |
+| P7 | Выпуск/двустороннее media/физические устройства | Chromium peers: UDP и forced TURN/TLS; mute/unmute audio/video | media проверено; выпуск в работе; физические устройства после включения по решению пользователя28.10 |
 
 Полный frontend unit/coverage:323 файла,2897 тестов; statements81.82%,
 branches76.75%, functions81.63%, lines86.33%. API:1537 passed,205 skipped;
 в skipped входят локально не запущенные DB integration tests.
 Это не доказательство сквозного видео. PR1852 уже слит в main a612842a;
-JITSI_ENABLED остаётся off. Пользователь согласовал настройку на существующей
+JITSI_ENABLED пока off; включение согласовано после browser media. Пользователь согласовал настройку на существующей
 VM после замера ресурсов40680981611: доступно3110MiB RAM и35GiB диска,
 обычно CPU1–4%. Отдельная VM не создаётся. Публичный origin — действующий
 api.fit-training.ru с существующим TLS; внутренние XMPP names прежние.
@@ -74,8 +79,8 @@ MemAvailable2807MiB, свободно33GiB, OOM0; это idle после син�
 | ID | Результат | Проверка | Статус |
 | --- | --- | --- | --- |
 | I1 | Изолированный запуск на текущей VM,2GiB/1CPU | cgroup read-back40684659185; capacity40686705514 | проверено |
-| I2 | HTTPS SDK/XMPP и аутентифицированный TURN | Nginx integration; TLS40683762312; JWT40685710970; compressed SDK40686470729 | proxy/TLS/JWT проверены; реальный TURN relay не проверен |
-| I3 | Реальное двустороннее media и forced TURN | два клиента, замер ресурсов, mobile | не проверено |
+| I2 | HTTPS SDK/XMPP и аутентифицированный TURN | Nginx integration; TLS40683762312; JWT40685710970; compressed SDK40686470729 | proxy/TLS/JWT и реальный TURN/TLS relay проверены |
+| I3 | Реальное двустороннее media и forced TURN | два независимых Chromium контекста, decoded video/audio bytes, relay policy и TLS; capacity40692320786 | browser media проверено; физические устройства перенесены после включения |
 | I4 | Включение через защищённый API env и штатный release | public app read-back | не проверено; flag off |
 
 Внешняя сеть расширяется только на10000/UDP,5349/TCP,49160–49200/UDP;
@@ -83,8 +88,15 @@ SSH и внутренние XMPP/metrics порты не открываются.
 одновременных встреч определяется после реального media, не из idle-замера.
 JWT probe: valid-room допущен; missing/expired/wrong-signature/wrong-room
 отклонены. SDK полностью загружен реальным Chromium с опубликованного HTTPS;
-созданы и освобождены синтетические audio/video tracks. Это preview, не
-двусторонний media-тест. Порты ещё не открыты; запрошено отдельное подтверждение
-для трёх правил security group по правилам управления консолью.
+созданы и освобождены синтетические audio/video tracks. После preview выполнена двусторонняя WebRTC-проверка с синтетическими
+устройствами в двух независимых браузерных контекстах: у обоих19 decoded
+video frames и входящее audio; normal UDP и принудительный iceTransportPolicy=relay
+с выбранным relayProtocol=tls. Mute/unmute обоих треков прошли.
+QA credentials выданы40692134007, проверка scripts/jitsi-media-acceptance.mjs.
+Пользователь отдельно разрешил три public ingress rules; все сохранены и
+прочитаны обратно в fit-stage-app-sg:10000/UDP,5349/TCP,49160–49200/UDP,
+source0.0.0.0/0. Замер40692320786: MemAvailable2715MiB, OOM0.
+Это одна синтетическая встреча, не предел параллельной нагрузки.
 Локальные API/PG проверки не используют production credentials или БД.
-Два браузера и реальные устройства нужны для приёмки media; mock не доказывает видео.
+Реальный WebRTC между браузерами проверен; физические устройства ещё не проверены.
+SDK double в UI-тесте сам по себе не доказывает передачу видео.

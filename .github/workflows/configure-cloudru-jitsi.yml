@@ -11,7 +11,7 @@ on:
       phase:
         type: choice
         default: prepare
-        options: [prepare, resume, ingress, diagnose, auth, proxy, qa]
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa, api-status, api-stage, api-enable, api-disable]
       qa_public_key:
         type: string
         default: ''
@@ -59,18 +59,25 @@ jobs:
       group: cloudru-stage-vm
       cancel-in-progress: false
     steps:
-      - if: inputs.phase == 'qa'
+      - if: inputs.phase == 'qa' || startsWith(inputs.phase, 'api-')
         uses: actions/setup-node@v4
         with:
           node-version: 22
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Prepare isolated meeting containers without public ingress or API enablement
+      - name: Apply the explicitly selected meeting action on the existing VM
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = podkolzinpd/fit
           test "$(hostname)" = fit-stage-app
+          if [[ "$JITSI_PHASE" == api-* ]]; then
+            sudo "$(command -v node)" scripts/check-cloudru-api-env.mjs
+          fi
+          if [[ "$JITSI_PHASE" == api-enable ]]; then
+            sudo bash infra/jitsi/verify-host.sh
+            curl --fail --silent --max-time 10 https://fit-training.ru/api/ready >/dev/null
+          fi
           case "$JITSI_PHASE" in
             prepare) sudo bash infra/jitsi/prepare-host.sh ;;
             resume) sudo bash infra/jitsi/resume-host.sh ;;
@@ -78,6 +85,10 @@ jobs:
             diagnose) sudo python3 -B infra/jitsi/diagnose-host.py ;;
             auth) sudo python3 -B infra/jitsi/probe_auth.py ;;
             proxy) sudo python3 -B infra/jitsi/refresh_proxy.py ;;
+            api-status) sudo python3 -B infra/jitsi/api_config.py status ;;
+            api-stage) sudo python3 -B infra/jitsi/api_config.py stage ;;
+            api-enable) sudo python3 -B infra/jitsi/api_config.py enable ;;
+            api-disable) sudo python3 -B infra/jitsi/api_config.py disable ;;
             qa)
               umask 077
               sudo --preserve-env=QA_PUBLIC_KEY "$(command -v node)" scripts/jitsi-issue-qa.mjs > "$RUNNER_TEMP/fit-jitsi-qa.enc.json"

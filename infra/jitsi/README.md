@@ -64,10 +64,15 @@ Workflow configure-cloudru-jitsi.yml имеет prepare/resume/ingress; для �
 проверка всего compressed response и реальный Chromium preview обязательны,
 HTTP200/HEAD не доказывают, что большой script загрузился полностью.
 
-28.10: verified cgroups, HTTPS/TURN TLS, пять JWT probes и Chromium SDK preview
-audio/video. Реальное двустороннее media и forced relay ещё не проверены.
-После настройки доступно2807MiB RAM и33GiB диска, OOM0 (run40686705514).
-Security-group media ports пока закрыты; API flag не менялся.
+28.10: verified cgroups, HTTPS/TURN TLS, пять JWT probes, Chromium preview и
+двусторонние audio/video с синтетическими устройствами. Два независимых клиента
+получили19 decoded video frames и входящее audio в normal UDP и forced TURN/TLS;
+в forced mode проверены actual iceTransportPolicy=relay и relayProtocol=tls.
+Mute/unmute обоих треков прошли. QA credentials40692134007; safe output
+содержит только счётчики/типы transport, без JWT/адресов участников.
+Замер40692320786: MemAvailable2715MiB, OOM0; одна встреча, не capacity limit.
+Три media rules открыты с отдельного разрешения пользователя и прочитаны обратно.
+Проверка физических телефонов явно перенесена пользователем после включения.
 
 ## Допуск к комнатам и ограничения TURN
 
@@ -97,8 +102,14 @@ JITSI_MUC_DOMAIN=muc.meet.jitsi
 JITSI_APP_ID=fit
 ```
 
-JITSI_JWT_SECRET переносится отдельно внутри VM, без вывода значения.
-Включать только после приёмки. Неполный enabled-config останавливает запуск API.
+api-status читает только configured/runtime flag, image и RUNNING_SHA.
+api-stage переносит JITSI_JWT_SECRET внутри VM без вывода значения, flag=false;
+api-enable/api-disable меняют только эти шесть meeting keys. Перед записью
+проверяются target, credential continuity и права root-owned0600; исходный
+API env сохраняется в /opt/fit-jitsi/api-before-meetings.env, запись атомарная.
+Остальные значения сохраняются; owner credentials не копируются. Эти действия
+не перезапускают API: затем нужен штатный release текущего main с зелёным CI.
+Неполный enabled-config останавливает запуск API.
 Контракт: GET/POST /v1/chat/conversations/:conversationId/meeting;
 prepare/joined/heartbeat/leave, tabId UUID; кроме prepare нужен meetingId.
 
@@ -111,8 +122,10 @@ bash syntax и YAML parsing. Проверяются credential continuity, за�
 
 До включения: фактические cgroups; default/no-token/wrong-room/expired JWT
 rejection; два независимых клиента с video/audio/mute/camera on-off/switch;
-Wi-Fi↔mobile и reconnect; forced TURN при запрещённом UDP; замер ресурсов при
-реальном видео и соседнем deployment. Начальный тест — одна встреча на двоих,
+forced TURN с policy=relay; замер ресурсов при
+реальном видео. По решению пользователя28.10 физические камеры/switch,
+Wi-Fi↔mobile и восстановление на телефонах проверяются сразу после включения.
+Нагрузку нескольких встреч и соседний deployment нельзя выводить из одного теста. Начальный тест — одна встреча на двоих,
 число одновременных встреч пока не принято. iPhone/Android — отдельно от WebKit.
 При нехватке ресурсов stop meeting services, сохранить работоспособность Fit.
 

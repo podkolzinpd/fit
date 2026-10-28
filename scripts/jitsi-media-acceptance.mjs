@@ -67,7 +67,8 @@ try {
           const local=reports.find(r=>r.id===pair.localCandidateId)
           return {type:local?.candidateType,protocol:local?.protocol,relayProtocol:local?.relayProtocol}
         })
-        return {state:window.__qa.state,error:window.__qa.error,frames,audio,selected}
+        const policies=window.__pcs.filter(pc=>pc.connectionState!=='closed').map(pc=>pc.getConfiguration().iceTransportPolicy)
+        return {state:window.__qa.state,error:window.__qa.error,frames,audio,selected,policies}
       })))
       let received
       for(let attempt=0;attempt<120;attempt++) {
@@ -78,7 +79,9 @@ try {
         if(attempt===119)throw new Error('Bidirectional media not received')
         await new Promise(resolve=>setTimeout(resolve,500))
       }
-      if(relay&&!received.every(peer=>peer.selected.some(candidate=>candidate.type==='relay'&&['tcp','tls'].includes(candidate.relayProtocol))))throw new Error('TURN TLS candidate not selected')
+      // Chromium can label the selected pair's local candidate prflx after ICE
+      // nomination; enforce the actual relay policy and TLS transport instead.
+      if(relay&&!received.every(peer=>peer.policies.length>0&&peer.policies.every(policy=>policy==='relay')&&peer.selected.some(candidate=>candidate.relayProtocol==='tls')))throw new Error('TURN TLS candidate not selected')
       await Promise.all(pages.map(page=>page.evaluate(async()=>{
         for(const track of window.__qa.tracks){await track.mute();if(!track.isMuted())throw new Error('Mute failed');await track.unmute();if(track.isMuted())throw new Error('Unmute failed')}
       })))

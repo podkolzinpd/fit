@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       prepare_jitsi:
-        description: Prepare isolated bounded Jitsi containers on existing VM; no ingress, firewall or API activation
+        description: Run one explicit bounded meeting setup action on the existing VM
         type: boolean
         default: false
       jitsi_phase:
-        description: Optional meeting infrastructure action; never changes API feature flag
+        description: Meeting action; api-stage/enable/disable update protected env only, then require normal API release
         type: choice
         default: prepare
-        options: [prepare, resume, ingress, diagnose, auth, proxy, qa]
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa, api-status, api-stage, api-enable, api-disable]
       qa_public_key:
         description: Ephemeral RSA public key for encrypted synthetic five-minute room credentials
         type: string
