@@ -311,6 +311,36 @@ describe('reliable chat screens', () => {
     expect(screen.getByText('Фото недоступно')).toBeVisible()
   })
 
+  // В пузыре только время, поэтому перед первым сообщением каждого дня стоит плашка даты.
+  it('separates message history by day and dates the last message in the dialog list', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 28, 9, 11))
+    try {
+      const at = (month: number, day: number, hour: number, year = 2026) => new Date(year, month, day, hour, 0).toISOString()
+      const chat = chatBackend()
+      chat.listMessages.mockResolvedValue({ messages: [
+        { ...incoming, id: 'old', body: 'В прошлом году', createdAt: at(2, 12, 18, 2025) },
+        { ...incoming, id: 'week', body: 'На неделе', createdAt: at(9, 26, 10) },
+        { ...incoming, id: 'yesterday-1', body: 'Привет', createdAt: at(9, 27, 19) },
+        { ...incoming, id: 'yesterday-2', body: 'Как дела?', createdAt: at(9, 27, 20) },
+        { ...incoming, id: 'today', body: 'Заполни профиль', createdAt: at(9, 28, 8) },
+      ], nextCursor: null })
+      chat.unreadState.mockResolvedValue({ firstMessageId: null, firstCreatedAt: null, unreadCount: 0 })
+      const view = renderAt('/chat/conversation-1', chat)
+      expect(await screen.findByText('Заполни профиль')).toBeVisible()
+      expect([...view.container.querySelectorAll('.chat-day-divider')].map((node) => node.textContent))
+        .toEqual(['12 марта 2025', '26 октября', 'Вчера', 'Сегодня'])
+      view.unmount()
+
+      const list = chatBackend()
+      list.listThreads.mockResolvedValue([{ ...thread, lastMessageAt: at(9, 27, 19) }])
+      renderAt('/chat', list)
+      expect(await screen.findByText('Вчера')).toBeVisible()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('lets the user remove a selected photo and reports preparation errors', async () => {
     const user = userEvent.setup()
     renderAt('/chat/conversation-1')
