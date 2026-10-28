@@ -5,6 +5,23 @@ on:
     - cron: '43 * * * *'
   workflow_dispatch:
     inputs:
+      prepare_jitsi:
+        description: Run one explicit bounded meeting setup action on the existing VM
+        type: boolean
+        default: false
+      jitsi_phase:
+        description: Meeting action; api-stage/enable/disable update protected env only, then require normal API release
+        type: choice
+        default: prepare
+        options: [prepare, resume, ingress, diagnose, auth, proxy, qa, api-status, api-stage, api-enable, api-disable]
+      qa_public_key:
+        description: Ephemeral RSA public key for encrypted synthetic five-minute room credentials
+        type: string
+        default: ''
+      capacity:
+        description: Read only bounded host/container resource aggregates; skip application diagnostics
+        type: boolean
+        default: false
       nutrition_search:
         description: Read only ten public food searches from the running API, without actor or diary access
         type: boolean
@@ -45,14 +62,50 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: cloudru-stage-vm
-  cancel-in-progress: false
-
 jobs:
+  prepare-jitsi:
+    if: github.event_name == 'workflow_dispatch' && inputs.prepare_jitsi
+    uses: ./.github/workflows/configure-cloudru-jitsi.yml
+    with:
+      phase: ${{ inputs.jitsi_phase }}
+      qa_public_key: ${{ inputs.qa_public_key }}
+  capacity:
+    if: github.event_name == 'workflow_dispatch' && inputs.capacity && !inputs.prepare_jitsi
+    runs-on: [self-hosted, cloudru-stage]
+    timeout-minutes: 3
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
+    steps:
+      - name: Read host and container capacity without application data or credentials
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = podkolzinpd/fit
+          test "$(hostname)" = fit-stage-app
+          date -u '+Measured at %Y-%m-%dT%H:%M:%SZ'
+          nproc
+          uptime
+          free -m
+          df -h /
+          vmstat 2 6
+          sudo timeout 20 podman ps --format 'table {{.Names}}\t{{.Status}}'
+          sudo timeout 20 podman stats --no-stream --format 'table {{.Name}}\t{{.CPU}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}'
+          for resource in cpu memory io; do
+            printf '%s pressure\n' "$resource"
+            cat "/proc/pressure/$resource"
+          done
+          printf 'OOM events in last 7 days: '
+          sudo journalctl -k --since='7 days ago' --output=cat --no-pager |
+            awk 'tolower($0) ~ /out of memory|oom-kill|killed process/ {count++} END {print count+0}'
+          printf 'Listening port numbers (no addresses/process arguments)\n'
+          ss -H -lntu | awk '{n=split($5,a,":"); print $1, a[n]}' | sort -u
   inspect:
+    if: github.event_name != 'workflow_dispatch' || (!inputs.capacity && !inputs.prepare_jitsi)
     runs-on: [self-hosted, cloudru-stage]
     timeout-minutes: 8
+    concurrency:
+      group: cloudru-stage-vm
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
