@@ -25,7 +25,9 @@ for (const density of ['original', 'compact'] as const) {
       await page.addInitScript(({ profileId, density }) => localStorage.setItem(`fit.coachLiveDensity.${profileId}`, density), { profileId, density })
       const backend = await mockPilot(page, { profileId, fitLime: true, workouts: [source] })
       if (density === 'original' && state === 'middle') {
+        let failNote = true
         await page.route('**/v1/workout-exercises/*/comment', async route => {
+          if (failNote) { failNote = false; await route.fulfill({ status: 503, json: { error: 'service_unavailable' } }); return }
           const current = backend.getWorkouts()[0]!
           const command = route.request().postDataJSON() as { comment: string; expectedVersion: number }
           expect(command.expectedVersion).toBe(current.version)
@@ -41,8 +43,10 @@ for (const density of ['original', 'compact'] as const) {
       const head = group.locator(':scope > .circuit-head')
       await expect(head).toContainText('Суперсет')
       await expect(head).toContainText(state === 'complete' ? 'Завершено · 3/3' : `Круг ${state === 'middle' ? 2 : 1} из 3`)
-      await expect(group.locator('.coach-v79-circuit-summary')).toHaveText('Приседания · Жим')
+      await expect(group.locator('.coach-v79-circuit-summary, .coach-v79-circuit-tools, .live-exercise-note')).toHaveCount(0)
       await expect(head).toHaveCSS('flex-wrap', 'nowrap')
+      const badgeBox = await head.locator('.block-badge').boundingBox(), counterBox = await head.locator('.circuit-counter').boundingBox()
+      expect(Math.abs(badgeBox!.y + badgeBox!.height / 2 - counterBox!.y - counterBox!.height / 2)).toBeLessThan(1)
       const menu = head.getByRole('button', { name: 'Ещё действия', exact: true })
       const headBox = await head.boundingBox(), menuBox = await menu.boundingBox()
       expect(headBox && menuBox && menuBox.x > headBox.x + headBox.width / 2).toBeTruthy()
@@ -56,6 +60,11 @@ for (const density of ['original', 'compact'] as const) {
         await expect(group.locator('.circuit-round-toggle').last()).toContainText('Впереди')
       }
       const rounds = group.locator('.circuit-round')
+      const openNote = async (round: ReturnType<typeof page.locator>) => {
+        await round.locator('.live-exercise-head .overflow-trigger').first().click()
+        await page.getByRole('menuitem', { name: 'Заметка тренера', exact: true }).click()
+        return round.locator('.live-exercise-note').first()
+      }
       if (state === 'complete') {
         await expect(group.locator('.coach-v79-circuit-body')).toHaveAttribute('inert', '')
         expect((await group.boundingBox())!.height).toBeLessThan(180)
@@ -63,23 +72,33 @@ for (const density of ['original', 'compact'] as const) {
         await head.getByRole('button', { name: /^Результаты суперсета:/ }).click()
         for (const index of [0, 1]) {
           await rounds.nth(index).locator('.circuit-round-toggle').click()
-          await expect(rounds.nth(index).locator('.live-exercise-note')).toHaveCount(2)
-          await expect(rounds.nth(index).locator('.live-exercise-note').first()).toBeVisible()
-          await expect(rounds.nth(index).locator('.coach-v79-circuit-tools .overflow-trigger')).toHaveCount(2)
-          await expect(rounds.nth(index).locator('.live-exercise-note').first()).toContainText('Контролировать темп')
+          await expect(rounds.nth(index).locator('.live-exercise-head .overflow-trigger')).toHaveCount(2)
+          const note = await openNote(rounds.nth(index))
+          await expect(note).toBeVisible()
+          await expect(note.locator('textarea')).toHaveValue('Контролировать темп')
+          // Opening the same exercise in another round moves its ONE editor;
+          // the shared exerciseId draft remains authoritative.
+          await expect(group.locator('.live-exercise-note')).toHaveCount(1)
         }
       } else {
-        await expect(rounds.filter({ has: page.locator('.circuit-round-label') }).locator('.coach-v79-circuit-tools .overflow-trigger')).toHaveCount(2)
+        await expect(group.locator('.circuit-round.current .live-exercise-head .overflow-trigger')).toHaveCount(2)
       }
       // One mutation path; the other cases verify the density/state presentation.
       if (density === 'original' && state === 'middle') {
-        const current = rounds.nth(1), note = current.locator('.live-exercise-note').first()
-        await note.locator('summary').click()
+        const current = rounds.nth(1), note = await openNote(current)
         await note.locator('textarea').fill('Не торопиться на опускании')
         await note.locator('textarea').press('Tab')
-        await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.trainerComment).toBe('Не торопиться на опускании')
+        const retryNote = page.getByRole('button', { name: 'Повторить сохранение заметки', exact: true })
+        await expect(retryNote).toBeVisible()
+        await expect(note.locator('textarea')).toHaveValue('Не торопиться на опускании')
         await rounds.first().locator('.circuit-round-toggle').click()
-        await expect(rounds.first().locator('.live-exercise-note').first()).toContainText('Не торопиться на опускании')
+        await openNote(rounds.first())
+        await expect(rounds.first().locator('.live-exercise-note textarea')).toHaveValue('Не торопиться на опускании')
+        await retryNote.click()
+        await expect.poll(() => backend.getWorkouts()[0]!.exercises[0]!.trainerComment).toBe('Не торопиться на опускании')
+        const earlierNote = await openNote(rounds.first())
+        await expect(earlierNote.locator('textarea')).toHaveValue('Не торопиться на опускании')
+        await expect(group.locator('.live-exercise-note')).toHaveCount(1)
         const title = current.locator('.exercise-technique-trigger').first()
         await title.click()
         await expect(current.locator('.coach-v79-card-body').first()).toHaveAttribute('inert', '')
@@ -87,11 +106,13 @@ for (const density of ['original', 'compact'] as const) {
         await rounds.first().getByLabel('Фактические повторы', { exact: true }).last().press('Enter')
         await expect(current.locator(`[data-live-set-id="${source.exercises[1]!.sets[1]!.id}"]`).getByLabel('Фактический вес', { exact: true })).toBeFocused()
         await title.click()
+        await openNote(current)
         await expect(note.locator('textarea')).toHaveValue('Не торопиться на опускании')
-        await current.locator('.coach-v79-circuit-tools .overflow-trigger').first().click()
+        await current.locator('.live-exercise-head .overflow-trigger').first().click()
         await expect(page.getByRole('menuitem', { name: 'Показать план', exact: true })).toBeVisible()
         await page.keyboard.press('Escape')
-        await current.getByRole('button', { name: 'Инструкция', exact: true }).click()
+        await current.locator('.live-exercise-head .overflow-trigger').first().click()
+        await page.getByRole('menuitem', { name: 'Инструкция', exact: true }).click()
         await expect(page.getByRole('dialog', { name: /^Техника:/ })).toBeVisible()
         await page.getByRole('button', { name: 'Закрыть технику', exact: true }).click()
         await expect(note.locator('textarea')).toHaveValue('Не торопиться на опускании')

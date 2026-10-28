@@ -3099,6 +3099,9 @@ export function LiveWorkoutPage() {
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
   const [v79Folded, setV79Folded] = useState<Set<string>>(() => new Set())
+  // One note editor per exercise, opened from the chosen round's menu. The
+  // existing exerciseId draft/save path remains shared between all its rounds.
+  const [coachCircuitNotes, setCoachCircuitNotes] = useState<Map<string, string>>(() => new Map())
   // A manual fold belongs to this presentation state. Completing an exercise
   // or making a future one current restores the existing automatic behaviour.
   // Keeping the entry also keeps an already opened card's forms mounted.
@@ -3926,11 +3929,17 @@ export function LiveWorkoutPage() {
       onReplace={coachReference || clientReference ? () => openLiveReplacement(exercise.id) : undefined}>{content}</WorkoutSwipe> : content
   }
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
-  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name, compactKey?: string) {
+  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name, compactKey?: string, circuitSetId?: string) {
+    const coachCircuitNote = coachV79 && circuitSetId !== undefined
+    if (coachCircuitNote && coachCircuitNotes.get(exercise.id) !== circuitSetId) return null
     const serverNote = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
     const note = pendingNotes.get(exercise.id) ?? serverNote
     const preview = focusedNote === exercise.id ? serverNote : note
     return <details className={`live-exercise-note${compactKey ? ' client-circuit-note' : ''}`} id={compactKey ? `live-note-${compactKey}` : undefined} data-has-note={Boolean(note.trim()) || undefined}
+      {...(coachCircuitNote ? { open: true, onToggle: (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+        if (event.currentTarget.open) return
+        setCoachCircuitNotes(previous => { if (previous.get(exercise.id) !== circuitSetId) return previous; const next = new Map(previous); next.delete(exercise.id); return next })
+      } } : {})}
       {...(compactKey ? { open: openClientNotes.has(compactKey), onToggle: (event: React.SyntheticEvent<HTMLDetailsElement>) => {
         const open = event.currentTarget.open
         setOpenClientNotes(previous => { if (previous.has(compactKey) === open) return previous; const next = new Set(previous); if (open) next.add(compactKey); else next.delete(compactKey); return next })
@@ -4027,13 +4036,19 @@ export function LiveWorkoutPage() {
             onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
         ]
   }
-  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = [], footer = false) {
+  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = [], footer = false, circuitSetId?: string) {
     if (!canManageLiveStructure) return null
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
     const canCollapse = clientReference && exercise.sets.every((set) => set.confirmedAt) && clientCardExpanded(exercise)
     const collapseBlocked = clientCardCollapseBlocked(exercise)
+    const circuitTechnique = coachV79 && circuitSetId ? techniqueActionFor(exercise) : undefined
     return <OverflowMenu trigger={coachV79 && footer ? <span>Действия</span> : undefined} items={[
+      ...(circuitTechnique ? [{ label: 'Инструкция', onClick: circuitTechnique }] : []),
+      ...(coachV79 && circuitSetId ? [{ label: 'Заметка тренера', onClick: () => {
+        setV79Folded(previous => { const next = new Set(previous); next.delete(`round:${circuitSetId}`); return next })
+        setCoachCircuitNotes(previous => new Map(previous).set(exercise.id, circuitSetId))
+      } }] : []),
       ...(canCollapse ? [{ label: 'Свернуть', disabled: collapseBlocked, onClick: () => {
         // Never unmount an unsent fact. This is presentation only: confirmation,
         // rest and the active exercise keep their existing state.
@@ -4661,7 +4676,6 @@ export function LiveWorkoutPage() {
             ]} />}
             {reorder}
           </div>
-          {coachV79 && <p className="coach-v79-circuit-summary">{block.exercises.map(exercise => exercise.name).join(' · ')}</p>}
           <LiveCircuitLayout client={clientReference} coach={coachV79} expanded={blockExpanded}>
           {!clientReference && !coachV79 && roundActions}
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt)
@@ -4677,7 +4691,7 @@ export function LiveWorkoutPage() {
                 if (target instanceof Element && event.currentTarget.contains(target) && target.matches('input, select, textarea, .workout-duration-trigger')) return
                 setFocusedCoachCircuitRound(previous => previous === roundKey ? null : previous)
               } : undefined}>
-            {isCurrent ? !clientReference && <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
+            {isCurrent ? !clientReference && !coachV79 && <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
               onClick={() => setExpandedCircuitRounds((previous) => { const next = new Set(previous); if (next.has(roundKey)) next.delete(roundKey); else next.add(roundKey); return next })}>
               <span>Круг {round.round}</span><span>{coachV79 && doneCount === 0 ? 'Впереди' : `${doneCount} из ${round.items.length} выполнено`}</span><span>{collapsed ? 'Показать' : 'Свернуть'}</span>
             </button>}
@@ -4686,12 +4700,11 @@ export function LiveWorkoutPage() {
               const displayName = duplicateNames.length > 1 ? `${exercise.name} №${duplicateNames.findIndex((item) => item.id === exercise.id) + 1}` : exercise.name
               const showNote = coachV79 || isCurrent || (blockDone && roundIndex === 0)
               const circuitCardKey = `round:${set.id}`
-              const circuitTechnique = coachV79 ? techniqueActionFor(exercise) : undefined
               return swipeLive(exercise, <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
                 leading={coachReference ? referenceNumber(exercise) : roundIndex === 0 || clientLime && set.id === activeCircuitSetId ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
                 summary={coachV79 ? `${set.confirmedAt ? 'Результат' : 'План'} на круг: ${set.confirmedAt ? factLine(set, false, exercise.ref) : planLine(exercise.inputKind, set, exercise.ref)}` : coachReference ? referenceLiveSummary({ ...exercise, sets: [set] }) : undefined}
-                onTitleClick={coachV79 ? () => toggleV79Card(exercise, circuitCardKey) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise, circuitCardKey) ? 'Развернуть' : 'Свернуть'}: ${displayName}` : undefined} titleExpanded={coachV79 ? !v79IsFolded(exercise, circuitCardKey) : undefined} showTechniqueLabel={false} actions={coachV79 ? v79CardToggle(exercise, circuitCardKey) : roundIndex === 0 || clientReference ? <>
+                onTitleClick={coachV79 ? () => toggleV79Card(exercise, circuitCardKey) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise, circuitCardKey) ? 'Развернуть' : 'Свернуть'}: ${displayName}` : undefined} titleExpanded={coachV79 ? !v79IsFolded(exercise, circuitCardKey) : undefined} showTechniqueLabel={false} actions={coachV79 ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [], false, set.id) : roundIndex === 0 || clientReference ? <>
                   {clientReference && showNote && <button type="button" className="client-circuit-note-toggle" data-has-note={Boolean((pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim()) || undefined} aria-description={(pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim() ? 'Есть заметка' : 'Добавить заметку'} aria-label={`Моя заметка: ${displayName}`} aria-expanded={openClientNotes.has(set.id)} aria-controls={`live-note-${set.id}`}
                     onClick={() => setOpenClientNotes(previous => { const next = new Set(previous); if (next.has(set.id)) next.delete(set.id); else next.add(set.id); return next })}><MessageIcon /></button>}
                   {(roundIndex === 0 || clientReference) && exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])}
@@ -4702,11 +4715,7 @@ export function LiveWorkoutPage() {
                 liveSwipeEnabled && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
                   ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
                   : undefined)}
-              {coachV79 && <div className={`coach-v79-exercise-tools coach-v79-circuit-tools${circuitTechnique ? ' has-instruction' : ''}`}>
-                {circuitTechnique && <button type="button" className="coach-v79-instruction" onClick={circuitTechnique}>Инструкция</button>}
-                {exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [], true)}
-              </div>}
-              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined)}</>, circuitCardKey)}
+              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined, coachV79 ? set.id : undefined)}</>, circuitCardKey)}
             </section>, set.id)})}
             </LiveCircuitRoundLayout>
           </div> })}
