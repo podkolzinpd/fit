@@ -219,7 +219,7 @@ test('account history inspection uses scoped read-only SQL and restores the acto
 test('account history operation is manual, main-only, fixed-scope and does not enable repairs or expose contacts', () => {
   const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
   const step = workflow.slice(workflow.indexOf('      - name: Inspect only the owner-approved account history'), workflow.indexOf('      - name: Verify certificate renewal'))
-  assert.match(step, /github.event_name == 'workflow_dispatch' && \(inputs.account_history \|\| inputs.workout_history_target\)/)
+  assert.match(step, /github.event_name == 'workflow_dispatch' && \(\(always\(\) && inputs.workout_history_target\) \|\| \(success\(\) && inputs.account_history\)\)/)
   assert.match(step, /test "\$GITHUB_REF" = refs\/heads\/main/)
   assert.match(step, /test "\$\(hostname\)" = fit-stage-app/)
   assert.match(step, /--read-only.*--timeout=120/)
@@ -306,6 +306,24 @@ test('journal preflight secret is isolated from the earlier history repair and c
   assert.match(workflow, /test "\$ACCOUNT_HISTORY_MODE" != true/)
   assert.match(workflow, /names\+=\(FIT_WORKOUT_HISTORY_TARGET\)/)
   assert.match(workflow, /test "\$WORKOUT_HISTORY_TARGET_MODE" != true && test -n "\$FIT_ACCOUNT_HISTORY_EVIDENCE"/)
+})
+
+test('journal read-only diagnostics run after monitor failure without hiding it or changing the earlier history gate', () => {
+  const workflow = read('.github/workflows/inspect-cloudru-operations.yml')
+  const step = workflow.split('      - name: Inspect only the owner-approved account history')[1]?.split('      - name:')[0]
+  const condition = step.match(/\n        if: (.+)\n/)[1]
+  // Evaluate the actual trusted workflow expression under the status cases.
+  const enabled = new Function('github', 'inputs', 'always', 'success', `return Boolean(${condition})`)
+  for (const healthy of [true, false]) {
+    assert.equal(enabled({ event_name: 'workflow_dispatch' }, { workout_history_target: true }, () => true, () => healthy), true)
+    assert.equal(enabled({ event_name: 'workflow_dispatch' }, { account_history: true }, () => true, () => healthy), healthy)
+    assert.equal(enabled({ event_name: 'workflow_dispatch' }, {}, () => true, () => healthy), false)
+    assert.equal(enabled({ event_name: 'schedule' }, { workout_history_target: true }, () => true, () => healthy), false)
+  }
+  assert.doesNotMatch(step, /continue-on-error/)
+  const monitor = workflow.split('      - name: Inspect runtime, workers, certificates and backup freshness')[1].split('      - name:')[0]
+  assert.match(monitor, /exit "\$failed"/)
+  assert.doesNotMatch(monitor, /continue-on-error/)
 })
 
 for (const name of configurations) {

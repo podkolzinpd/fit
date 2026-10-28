@@ -284,7 +284,7 @@ jobs:
             -v "$PWD/scripts/cloudru-runtime-db-probe.mjs:/inspection.mjs:ro" \
             "localhost/fit-api:$revision" node /inspection.mjs | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Inspect only the owner-approved account history without changing records
-        if: github.event_name == 'workflow_dispatch' && (inputs.account_history || inputs.workout_history_target)
+        if: github.event_name == 'workflow_dispatch' && ((always() && inputs.workout_history_target) || (success() && inputs.account_history))
         env:
           CLOUDRU_DATABASE_CONFIG_JSON: ${{ secrets.CLOUDRU_STAGE_DATABASE_CONFIG_JSON }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
