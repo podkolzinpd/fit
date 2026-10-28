@@ -1,5 +1,10 @@
 # Production Yandex Cloud Functions deployment
 
+> Historical legacy-functions runbook. The Supabase-backed migration window
+> described below is not the current production data path. Current API/data/AI
+> boundaries are in [the playbook](YANDEX_CUTOVER_PLAYBOOK.md). Preserve retained
+> resources and recovery knowledge; this file does not authorize a new deployment.
+
 This runbook covers `fit-parse-workout` and
 `fit-summarize-client-training`. Both functions execute in Yandex Cloud but
 still use Supabase Auth and data during the migration window.

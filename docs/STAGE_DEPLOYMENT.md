@@ -1,5 +1,11 @@
 # Yandex Cloud stage deployment
 
+> Historical Yandex stage runbook. References below to the then-current Supabase
+> production path describe that migration phase. Current production is Cloud.ru;
+> use [the current playbook](YANDEX_CUTOVER_PLAYBOOK.md) for its boundaries.
+> Retained Yandex resources are not a second live backend or permission to switch
+> production. Historical commands remain available for the relevant recovery scope.
+
 This runbook describes the durable stage delivery path. It does not authorize a
 production cutover or changes to the current Supabase production path. The
 stage API transport is browser-accessible for the default-off Yandex ID pilot;

@@ -7,9 +7,10 @@
 ## Codex и единая айдентика команды
 
 Запускайте Codex из этого репозитория или любой его вложенной папки. Корневой
-`AGENTS.md` автоматически задаёт одинаковый контракт для всех участников
-команды: старт — `docs/FIT_WORKFLOW.md` и `docs/CURRENT_STATE.md`; решения области —
-`docs/ACTIVE_CONTRACTS.md`. Для UI дополнительно читать `docs/UI_TASK_PROMPT.md`,
+`AGENTS.md` задаёт основные правила по новому документу владельца.
+`docs/FIT_WORKFLOW.md` — карта существующих записей, не второй процесс и не DEVLOG;
+текущая сводка — `docs/CURRENT_STATE.md`, решения области —
+`docs/ACTIVE_CONTRACTS.md`. Для UI читать `docs/UI_TASK_PROMPT.md`,
 `docs/UI_IDENTITY.md` и нужную часть `docs/UI_DESIGN_SYSTEM.md`.
 Если чат открыт в зеркале проекта, сначала выбрать настоящий Git checkout.
 История и корпоративная память не подменяют эти проектные инструкции.
@@ -71,7 +72,8 @@ npm run db:reset
 npm run db:test
 ```
 
-Полная проверка перед PR:
+Полная проверка приложения (применимость по изменениям —
+`docs/ENGINEERING_RULES.md`; документация проверяется отдельно):
 
 ```bash
 npm run check
@@ -107,7 +109,7 @@ npm run check
 
 - [docs/PRODUCT_WIKI.md](./docs/PRODUCT_WIKI.md) — актуальная продуктовая wiki с описанием реализованного функционала.
 - [AGENTS.md](./AGENTS.md) — правила для людей и ИИ-агентов.
-- [docs/FIT_WORKFLOW.md](./docs/FIT_WORKFLOW.md) — компактный процесс выполнения задач с загрузкой контекста по необходимости.
+- [docs/FIT_WORKFLOW.md](./docs/FIT_WORKFLOW.md) — карта контекста и записей для пунктов 1 и 6 основного документа, без второго процесса.
 - [docs/CURRENT_STATE.md](./docs/CURRENT_STATE.md) — короткая поддерживаемая исполнителем точка продолжения между сессиями.
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — границы слоёв и работа с БД.
 - [FEATURE_PARITY.md](./FEATURE_PARITY.md) — контракт переноса V1.
