@@ -2,6 +2,7 @@ import {createHash,createCipheriv,createPublicKey,publicEncrypt,randomBytes,cons
 import {createRequire} from 'node:module'
 import {pathToFileURL} from 'node:url'
 import {gunzipSync} from 'node:zlib'
+import {safeJournalUploadFailure} from './cloudru-journal-upload.mjs'
 
 // One owner-approved private journal, manual trusted-main operation only.
 // No app endpoint, schema change, identity mutation or generic actor/client input.
@@ -423,7 +424,7 @@ const safeCodes=new Set(['source_invalid','mode_invalid','database_target_invali
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
  main().catch(error=>{
   const suffix=error instanceof Error&&error.message.startsWith('journal_import_')?error.message.slice('journal_import_'.length):''
-  console.error(JSON.stringify({event:'private_journal_import_failed',code:safeCodes.has(suffix)?suffix:'failed'}))
+  console.error(JSON.stringify({event:'private_journal_import_failed',code:safeCodes.has(suffix)?suffix:'failed',...safeJournalUploadFailure(error)}))
   process.exitCode=1
  })
 }
