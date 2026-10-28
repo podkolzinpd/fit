@@ -1,6 +1,6 @@
 # Подключение ИИ-агента к Fit V2
 
-Эта инструкция позволяет выдать ИИ-агенту доступ к приватному репозиторию,
+Эта инструкция позволяет выдать ИИ-агенту доступ на запись в публичный репозиторий,
 подготовить локальное окружение и проверить, что оно готово к работе. Production
 frontend — `fit-training.ru` на Cloud.ru Nginx; app-session/API/PostgreSQL и media
 также размещены в Cloud.ru. Yandex ID — внешний провайдер входа; Vercel
@@ -13,7 +13,7 @@ frontend — `fit-training.ru` на Cloud.ru Nginx; app-session/API/PostgreSQL �
 
 Настройка завершена, если агент:
 
-- видит приватный репозиторий `podkolzinpd/fit`;
+- видит публичный репозиторий `podkolzinpd/fit`;
 - работает в отдельной ветке и может открыть pull request;
 - установил зависимости из lock-файла;
 - запускает локальные Supabase, PostgreSQL для Yandex API и frontend командой
@@ -31,9 +31,11 @@ frontend — `fit-training.ru` на Cloud.ru Nginx; app-session/API/PostgreSQL �
 3. Выдайте роль **Write**. Её достаточно для веток и pull request. Роль Admin,
    доступ к billing и изменение repository secrets агенту не нужны.
 4. Убедитесь, что для `main` запрещён прямой push и изменения проходят через PR
-   с обязательными проверками `app`, `database` и `e2e`.
-5. Попросите владельца machine user принять приглашение. До принятия приглашения
-   `gh repo view` и клонирование приватного репозитория будут возвращать ошибку.
+   с обязательными успешными проверками CI. Фактические rulesets проверять
+   отдельно: на27.10 PR-rule есть, required-status rule отсутствует. Write не
+   позволяет менять эту административную настройку; агент всё равно ждёт CI.
+5. Попросите владельца machine user принять приглашение. Без принятия приглашения чтение публичного репозитория доступно,
+   но право записи не подтверждено.
 
 Если используется организация с SAML SSO, владелец организации должен также
 разрешить этому аккаунту доступ, а учётные данные агента должны быть отдельно
@@ -126,8 +128,11 @@ Supabase CLI отдельно глобально устанавливать не
 AGENTS.md
 docs/FIT_WORKFLOW.md
 docs/CURRENT_STATE.md
-docs/UI_TASK_PROMPT.md
 ```
+
+Для UI дополнительно читать `docs/UI_TASK_PROMPT.md` и `docs/UI_IDENTITY.md`.
+Область найти в `docs/ACTIVE_CONTRACTS.md`, инженерные правила —
+`docs/ENGINEERING_RULES.md`.
 
 `ARCHITECTURE.md`, `FEATURE_PARITY.md`, `docs/PRODUCT_WIKI.md` и материалы из
 `docs/design/` читаются только релевантными текущей задаче разделами. После

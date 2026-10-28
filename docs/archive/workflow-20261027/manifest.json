@@ -1,0 +1,40 @@
+{
+  "sourceCommit": "4ed3f6a939208d9557c06fb9571f539809f8ca45",
+  "files": [
+    {
+      "source": "AGENTS.md",
+      "archive": "docs/archive/workflow-20261027/AGENTS.original.txt",
+      "sha256": "472498abd2a214867d0680ad7e97524d4eebde265736deebc545cfe858753b58"
+    },
+    {
+      "source": "docs/FIT_WORKFLOW.md",
+      "archive": "docs/archive/workflow-20261027/docs/FIT_WORKFLOW.md",
+      "sha256": "0f40714283399a489dc33b3e0a23cbf96a4817f11215fa8b04be9b89f39eb297"
+    },
+    {
+      "source": "docs/UI_TASK_PROMPT.md",
+      "archive": "docs/archive/workflow-20261027/docs/UI_TASK_PROMPT.md",
+      "sha256": "358ec5bb86d22ff39ae15fd808fdb56fb7076c02564d7b093c0b864a2420016e"
+    },
+    {
+      "source": "docs/CURRENT_STATE.md",
+      "archive": "docs/archive/workflow-20261027/docs/CURRENT_STATE.md",
+      "sha256": "f7a80cad6826bb677a1c45a3ce5e5135ebe2503d2a238f53f3d0b1fa7c095f10"
+    },
+    {
+      "source": "README.md",
+      "archive": "docs/archive/workflow-20261027/README.original.txt",
+      "sha256": "0d0c03f7b4350f5ceccd5771d91c7a59b9a9563a04d37f9c6793c2529f373f67"
+    },
+    {
+      "source": "docs/AI_AGENT_ONBOARDING.md",
+      "archive": "docs/archive/workflow-20261027/docs/AI_AGENT_ONBOARDING.md",
+      "sha256": "e35501f8535c49f518df03fbc0a9a3e97b10f9c664ea178b6d0ccab6c12bfc00"
+    },
+    {
+      "source": ".github/pull_request_template.md",
+      "archive": "docs/archive/workflow-20261027/.github/pull_request_template.md",
+      "sha256": "d503092d9a1eba4f006fee47ba5834eeed70aaba62b3e41689e94ad2eee56e87"
+    }
+  ]
+}

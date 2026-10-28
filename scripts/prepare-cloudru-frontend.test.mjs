@@ -180,7 +180,7 @@ test('frontend cannot overtake its server migrations or promote against a differ
   }
 })
 
-test('candidate preserves legacy VITE settings and adds only the reviewed Cloud.ru fixed2 plan pilot', async () => {
+test('candidate preserves legacy settings and reviewed coach controls with pilot-default rollout', async () => {
   const [production, candidate] = await Promise.all([
     readFile(new URL('../.github/workflows/deploy-yandex-frontend.yml', import.meta.url), 'utf8'),
     readFile(new URL('../.github/workflows/prepare-cloudru-frontend.yml', import.meta.url), 'utf8'),
@@ -189,7 +189,7 @@ test('candidate preserves legacy VITE settings and adds only the reviewed Cloud.
     .map((match) => [match[1], match[2]]))
   const original = settings(production)
   const next = settings(candidate)
-  const planPilot = ['VITE_COACH_PLAN_INPUT_ENABLED', 'VITE_COACH_PLAN_INPUT_PILOT_USER_IDS', 'VITE_COACH_PLAN_LAYOUT_ENABLED', 'VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS', 'VITE_COACH_LIVE_DENSITY_ENABLED', 'VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS']
+  const planPilot = ['VITE_COACH_PLAN_INPUT_ENABLED', 'VITE_COACH_PLAN_INPUT_PILOT_USER_IDS', 'VITE_COACH_PLAN_LAYOUT_ENABLED', 'VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS', 'VITE_COACH_LIVE_DENSITY_ENABLED', 'VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS', 'VITE_COACH_WORKOUT_ROLLOUT_MODE']
   assert.deepEqual([...next.keys()].filter(name => name !== 'VITE_SPEECHKIT_RELAY_URL').sort(), [...original.keys(), ...planPilot].sort())
   assert.equal(next.get(planPilot[0]), "${{ vars.VITE_COACH_PLAN_INPUT_ENABLED || 'false' }}")
   assert.equal(next.get(planPilot[1]), "${{ vars.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS || '' }}")
@@ -197,6 +197,7 @@ test('candidate preserves legacy VITE settings and adds only the reviewed Cloud.
   assert.equal(next.get(planPilot[3]), "${{ vars.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS || '' }}")
   assert.equal(next.get(planPilot[4]), "${{ vars.VITE_COACH_LIVE_DENSITY_ENABLED || 'false' }}")
   assert.equal(next.get(planPilot[5]), "${{ vars.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS || '' }}")
+  assert.equal(next.get('VITE_COACH_WORKOUT_ROLLOUT_MODE'), "${{ vars.VITE_COACH_WORKOUT_ROLLOUT_MODE || 'pilot' }}")
   for (const [name, value] of original) {
     // VITE_SERVICE_NOTICE_ENABLED: временная плашка о восстановлении ИИ, решение владельца 14.10.
     if (name === 'VITE_YANDEX_API_BASE_URL' || name === 'VITE_ASSISTANT_PROGRAM_ENABLED' || name === 'VITE_SERVICE_NOTICE_ENABLED') continue

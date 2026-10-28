@@ -195,7 +195,7 @@ function FitLimePlanForm({ date, returnTo, onClose, onBack, initialDraft }: {
         <Coachmark id="lime-quick-plan-2026-10" userId={actor?.userId} title="План можно сохранить сразу" description="Выберите клиента и дату, а упражнения добавьте сейчас или позже.">
           <button type="button" className="fit-lime-plan-exercises" onClick={openEditor}><AddIcon />{draft.exercises.length ? 'Продолжить редактирование' : 'Добавить упражнения'}</button>
         </Coachmark>
-        {reference ? <details className="coach-plan-options"><summary>Настройки и способы ввода</summary>{options}{onBack && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад к выбору действия</button>}</details> : <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить план'}</button>}
+        {reference ? <section className="coach-plan-options" aria-labelledby="coach-plan-options-title"><h3 id="coach-plan-options-title">Настройки и способы ввода</h3>{options}{onBack && <button type="button" className="fit-lime-plan-back" onClick={onBack}><BackIcon />Назад к выбору действия</button>}</section> : <button type="submit" className="primary wide fit-lime-plan-save" aria-busy={mutation.isPending}>{mutation.isPending ? 'Сохраняем…' : 'Сохранить план'}</button>}
       </fieldset>
       {(error || mutation.error) && <p className="error" role="alert">{error ?? mutation.error?.message}</p>}
       {mutation.isPending && <p role="status">Сохраняем…</p>}

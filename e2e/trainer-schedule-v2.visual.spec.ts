@@ -910,6 +910,10 @@ for (const width of [375, 390, 430, 1440]) {
     await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
     const composer = page.getByRole('dialog', { name: 'Быстрое создание тренировки' })
     await expect(composer).toHaveClass(/coach-reference-composer/)
+    await expect(composer.getByRole('button', { name: 'С тренером', exact: true })).toBeVisible()
+    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+    await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('coach-reference-plan-options-open.png') })
     if (width === 390) {
       const coachmark = composer.locator('.coachmark-bubble')
       await expect(coachmark).toContainText('План можно сохранить сразу')
@@ -946,7 +950,19 @@ for (const width of [375, 390, 430, 1440]) {
     await composer.getByRole('button', { name: 'Выбрать дату и время' }).click()
     await dates.getByLabel('Окончание', { exact: true }).fill('13:00')
     await dates.getByRole('button', { name: 'Применить дату' }).click()
-    await composer.getByText('Настройки и способы ввода', { exact: true }).click()
+    await expect(composer.getByRole('button', { name: 'С тренером', exact: true })).toBeVisible()
+    if (width === 375) {
+      // The longer always-open form must retain its own scroll on keyboard-sized
+      // viewports; no extra full functional matrix is introduced.
+      await page.setViewportSize({ width, height: 520 })
+      await composer.getByRole('textbox', { name: 'Название тренировки' }).focus()
+      await composer.getByRole('button', { name: 'Ввести текстом', exact: true }).scrollIntoViewIfNeeded()
+      await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
+      expect(await composer.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+      await page.screenshot({ path: info.outputPath('coach-reference-plan-options-small-viewport.png') })
+      await page.setViewportSize({ width, height: 932 })
+    }
     await composer.getByRole('button', { name: 'Самостоятельно', exact: true }).click()
     await composer.getByRole('button', { name: 'Закрыть создание', exact: true }).click()
     await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
@@ -957,6 +973,21 @@ for (const width of [375, 390, 430, 1440]) {
     await page.screenshot({ path: info.outputPath('coach-reference-draft-recovery.png') })
     await recovery.getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
     await expect(composer.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
+    await expect(composer.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+    await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
+    if (width === 390) {
+      await composer.getByRole('button', { name: 'Добавить упражнения', exact: true }).click()
+      await expect(page).toHaveURL(/\/workouts\/new\?date=2026-09-24&entry=quick$/)
+      await expect(page.getByRole('textbox', { name: 'Название тренировки' })).toHaveValue('Силовая с длинным названием')
+      await page.getByRole('button', { name: 'Назад', exact: true }).click()
+      await page.getByRole('button', { name: 'Новая тренировка', exact: true }).click()
+      await page.getByRole('button', { name: 'Запланировать', exact: true }).click()
+      await page.getByRole('dialog', { name: 'Черновик плана' }).getByRole('button', { name: 'Продолжить черновик', exact: true }).click()
+      await expect(composer.getByRole('button', { name: 'Самостоятельно', exact: true })).toHaveAttribute('aria-pressed', 'true')
+      await expect(composer.getByRole('switch', { name: 'Таймер сам ведёт подходы' })).toBeVisible()
+      await expect(composer.getByRole('button', { name: 'Ввести текстом', exact: true })).toBeVisible()
+    }
     const sent: Array<{ requestId: string; trainingFormat: string; startTime: string; endTime: string; exercises: unknown[] }> = []
     page.on('request', (request) => { if (request.method() === 'POST' && new URL(request.url()).pathname === '/v1/workouts') sent.push(request.postDataJSON() as typeof sent[number]) })
     await composer.getByRole('button', { name: 'Сохранить план' }).click()

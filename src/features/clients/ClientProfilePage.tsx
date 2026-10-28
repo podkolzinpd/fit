@@ -1,3 +1,4 @@
+import { CorporateAdminEntry } from '../corporate-admin'
 import { ClientLiveDensitySetting } from './ClientLiveDensitySetting'
 import { isClientLimeEnabled } from '../../app/client-lime'
 import { isClientWorkoutRedesignEnabled } from '../../app/client-workout-redesign'
@@ -114,6 +115,7 @@ export function ClientProfileSettingsPage() {
 
     <SettingsSection title="Аккаунт и помощь">
       <AccountSettingsCard />
+      <CorporateAdminEntry />
       <div className="menu">
         <button type="button" aria-expanded={installOpen} onClick={() => setInstallOpen((value) => !value)}>Fit на экране «Домой»</button>
         <button type="button" aria-expanded={feedbackOpen} onClick={() => setFeedbackOpen((value) => !value)}>Предложение или проблема</button>

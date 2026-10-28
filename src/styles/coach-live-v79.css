@@ -22,6 +22,14 @@
 :is(.coach-live-v79,.client-live-v79) .coach-v79-elapsed { margin-top: 24px; color: var(--lime-text-secondary); }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) .coach-v79-elapsed .coach-live-digits { font-size: 30px; line-height: 32px; letter-spacing: -1px; }
 :is(.coach-live-v79,.client-live-v79) .coach-v79-actions { position: relative; }
+.coach-live-v79 .coach-reference-timer-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-reference-pause { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; height: 60px; min-height: 60px; margin: 0; padding: 0 16px; border: 0; border-radius: 20px; background: var(--lime-surface-raised); color: var(--lime-text); font-family: var(--lime-font); font-size: 14px; font-weight: 400; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79.coach-live-density-compact .coach-reference-timer-actions > button { height: 48px; min-height: 48px; border-radius: 16px; }
+.coach-live-v79 .coach-v79-dock .coach-v79-small-clock { inset-inline: 48px 164px; }
+.coach-live-v79 .coach-v79-dock .coach-v79-small-action { width: 92px; }
+.coach-live-v79 .coach-v79-compact-actions { display: flex; gap: 4px; }
+.phone-frame.fit-lime-shell.workout-live-reference.live-identity .coach-live-v79 .coach-v79-compact-actions .coach-reference-pause { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 10px; border-radius: 12px; }
+.coach-live-v79 .coach-v79-compact-actions .coach-reference-pause > span { display: none; }
 .phone-frame.fit-lime-shell.workout-live-reference.live-identity :is(.coach-live-v79,.client-live-v79) .coach-v79-actions .live-rest-trigger { margin: 0; width: 100%; height: 60px; min-height: 60px; border-radius: 20px; }
 :is(.coach-live-v79,.client-live-v79) .coach-v79-dock { position: absolute; inset: 0; opacity: var(--v79-small-opacity); pointer-events: none; }
 :is(.coach-live-v79,.client-live-v79) .coach-v79-small-clock { position: absolute; inset: 0 100px 0 64px; display: flex; align-items: center; justify-content: center; color: var(--lime-accent); }

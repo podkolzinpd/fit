@@ -9,6 +9,56 @@ import {
 import { createYandexMainQueries, YANDEX_MAIN_READ_TIMEOUT_MS } from './yandex-main.queries'
 
 describe('Yandex main query timeout', () => {
+  it.each(['headers', 'body'] as const)('bounds media URL signing when response %s stall', async (stage) => {
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      if (String(input) === 'https://media.example/health') return Promise.resolve(new Response('{}', {
+        headers: { 'x-fit-request-id': 'media-health-request' },
+      }))
+      if (stage === 'body') return Promise.resolve(new Response(new ReadableStream({
+        start(controller) {
+          init?.signal?.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')), { once: true })
+        },
+      }), { headers: { 'content-type': 'application/json' } }))
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    })
+    const payload = { paths: ['vital-pro/cat-cow.mp4'] }
+    const request = createYandexMainQueries('https://media.example', 'session')
+      .write('/v1/exercise-media/sign-batch', 'POST', payload)
+    const result = request.then(() => undefined, (error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(YANDEX_MAIN_READ_TIMEOUT_MS)
+    const calls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/exercise-media/sign-batch'))
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.[1]?.signal?.aborted).toBe(true)
+    expect(await result).toMatchObject({ message: 'Exercise media URL request timed out' })
+    expect(calls[0]?.[1]?.body).toBe(JSON.stringify(payload))
+  })
+
+  it('keeps successful media signing and an unrelated write unchanged', async () => {
+    vi.useFakeTimers()
+    let finishWrite: ((response: Response) => void) | undefined
+    const signed = { signedUrls: [{ path: 'vital-pro/cat-cow.mp4', signedUrl: 'https://media.example/cat-cow.mp4' }] }
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input) === 'https://media.example/health') return Promise.resolve(new Response('{}', {
+        headers: { 'x-fit-request-id': 'media-health-request' },
+      }))
+      if (String(input).endsWith('/exercise-media/sign-batch')) return Promise.resolve(Response.json(signed))
+      return new Promise<Response>((resolve) => { finishWrite = resolve })
+    })
+    const queries = createYandexMainQueries('https://media.example', 'session')
+    const response = await queries.write('/v1/exercise-media/sign-batch', 'POST', { paths: ['vital-pro/cat-cow.mp4'] })
+    expect(await response.json()).toEqual(signed)
+    const write = queries.write('/v1/workout-templates', 'POST', { id: 'same-operation' })
+    await vi.advanceTimersByTimeAsync(YANDEX_MAIN_READ_TIMEOUT_MS + 1)
+    const calls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/workout-templates'))
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.[1]?.signal).toBeUndefined()
+    finishWrite?.(Response.json({ saved: true }))
+    expect(await (await write).json()).toEqual({ saved: true })
+  })
+
   it('bounds nutrition writes without an automatic retry or a new operation UUID', async () => {
     vi.useFakeTimers()
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {

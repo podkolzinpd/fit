@@ -25,34 +25,39 @@ export function isNutritionPilotEnabled(userId: string, serverDecision?: boolean
     && ids.includes(userId.toLowerCase())
 }
 
-// Independent, default-off UI pilot. An empty/misconfigured cohort never means all.
-export function isCoachWorkoutRedesignPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_COACH_WORKOUT_REDESIGN_ENABLED !== 'true') return false
-  const ids = String(import.meta.env.VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS ?? '')
-    .split(',').map((id) => id.trim()).filter(Boolean)
+// Default remains the original pair. Public expansion must be explicit; malformed
+// configuration closes coach presentation. Role/server admission stays in callers.
+export function coachWorkoutRolloutMode(): 'pilot' | 'all' | 'off' {
+  const mode: unknown = import.meta.env.VITE_COACH_WORKOUT_ROLLOUT_MODE ?? 'pilot'
+  return mode === 'pilot' || mode === 'all' ? mode : 'off'
+}
+
+function coachCohortAllows(userId: string, configuredIds: unknown): boolean {
+  const mode = coachWorkoutRolloutMode()
+  if (mode === 'all') return true
+  if (mode !== 'pilot') return false
+  const ids = String(configuredIds ?? '').split(',').map(id => id.trim()).filter(Boolean)
   return ids.length === 2 && new Set(ids).size === 2 && ids.includes(userId)
 }
 
-// Plan-entry fixes have their own closed rollout; never inherit a public Lime cohort.
+export function isCoachWorkoutRedesignPilotEnabled(userId: string): boolean {
+  return import.meta.env.VITE_COACH_WORKOUT_REDESIGN_ENABLED === 'true'
+    && coachCohortAllows(userId, import.meta.env.VITE_COACH_WORKOUT_REDESIGN_PILOT_USER_IDS)
+}
+
 export function isCoachPlanInputPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_COACH_PLAN_INPUT_ENABLED !== 'true') return false
-  const ids = String(import.meta.env.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS ?? '')
-    .split(',').map((id) => id.trim()).filter(Boolean)
-  return ids.length === 2 && new Set(ids).size === 2 && ids.includes(userId)
+  return import.meta.env.VITE_COACH_PLAN_INPUT_ENABLED === 'true'
+    && coachCohortAllows(userId, import.meta.env.VITE_COACH_PLAN_INPUT_PILOT_USER_IDS)
 }
 
 export function isCoachPlanLayoutPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_COACH_PLAN_LAYOUT_ENABLED !== 'true') return false
-  const ids = String(import.meta.env.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS ?? '')
-    .split(',').map((id) => id.trim()).filter(Boolean)
-  return ids.length === 2 && new Set(ids).size === 2 && ids.includes(userId)
+  return import.meta.env.VITE_COACH_PLAN_LAYOUT_ENABLED === 'true'
+    && coachCohortAllows(userId, import.meta.env.VITE_COACH_PLAN_LAYOUT_PILOT_USER_IDS)
 }
 
 export function isCoachLiveDensityPilotEnabled(userId: string): boolean {
-  if (import.meta.env.VITE_COACH_LIVE_DENSITY_ENABLED !== 'true') return false
-  const ids = String(import.meta.env.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS ?? '')
-    .split(',').map((id) => id.trim()).filter(Boolean)
-  return ids.length === 2 && new Set(ids).size === 2 && ids.includes(userId)
+  return import.meta.env.VITE_COACH_LIVE_DENSITY_ENABLED === 'true'
+    && coachCohortAllows(userId, import.meta.env.VITE_COACH_LIVE_DENSITY_PILOT_USER_IDS)
 }
 
 // Флаг позволяет включать новый стартовый путь постепенно и мгновенно

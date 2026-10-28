@@ -2604,9 +2604,13 @@ function LiveSetLayout({ client, children }: { client: boolean; children: ReactN
   return client ? <div className="live-set-fields">{children}</div> : children
 }
 
-function LiveCircuitLayout({ client, expanded, children }: { client: boolean; expanded: boolean; children: ReactNode }) {
+function LiveCircuitLayout({ client, coach = false, expanded, children }: { client: boolean; coach?: boolean; expanded: boolean; children: ReactNode }) {
   // Folding is presentation only: keep forms and unsent input mounted.
-  return client ? <WorkoutFoldBody className="client-circuit-body" folded={!expanded}>{children}</WorkoutFoldBody> : children
+  return client || coach ? <WorkoutFoldBody className={coach ? 'coach-v79-circuit-body' : 'client-circuit-body'} folded={!expanded}>{children}</WorkoutFoldBody> : children
+}
+
+function LiveCircuitRoundLayout({ coach, collapsed, children }: { coach: boolean; collapsed: boolean; children: ReactNode }) {
+  return coach ? <WorkoutFoldBody className="coach-v79-round-body" folded={collapsed}>{children}</WorkoutFoldBody> : children
 }
 
 function LiveSetFields({ inputKind, exerciseRef, source, set, editing = false, showRpe = false, carriedWeightKey = 'plan', reference = false, clientLayout = false, directInput = false, quietUnits = false, workTimer, referenceHeader = false }: { inputKind: ExerciseSnapshot['inputKind']; exerciseRef?: string; source: ExerciseSnapshot['source']; set: WorkoutSet; editing?: boolean; showRpe?: boolean; carriedWeightKey?: string; reference?: boolean; clientLayout?: boolean; directInput?: boolean; quietUnits?: boolean; workTimer?: ReactNode; referenceHeader?: boolean }) {
@@ -2891,6 +2895,8 @@ export function LiveWorkoutPage() {
   const [lastAddedRound, setLastAddedRound] = useState<{ blockId: string; position: number } | null>(null)
   const [expandedCircuitRounds, setExpandedCircuitRounds] = useState<Set<string>>(() => new Set())
   const [expandedClientBlocks, setExpandedClientBlocks] = useState<Set<string>>(() => new Set())
+  const [expandedCoachCircuits, setExpandedCoachCircuits] = useState<Set<string>>(() => new Set())
+  const [focusedCoachCircuitRound, setFocusedCoachCircuitRound] = useState<string | null>(null)
   const [openClientNotes, setOpenClientNotes] = useState<Set<string>>(() => new Set())
   const completedLocally = useRef(false)
   const skipBlurForSet = useRef<string | null>(null)
@@ -3093,6 +3099,9 @@ export function LiveWorkoutPage() {
   // тренером (тап по свёрнутой карточке), чтобы поправить факт.
   const [expandedExercises, setExpandedExercises] = useState<Set<string>>(() => new Set())
   const [v79Folded, setV79Folded] = useState<Set<string>>(() => new Set())
+  // One note editor per exercise, opened from the chosen round's menu. The
+  // existing exerciseId draft/save path remains shared between all its rounds.
+  const [coachCircuitNotes, setCoachCircuitNotes] = useState<Map<string, string>>(() => new Map())
   // A manual fold belongs to this presentation state. Completing an exercise
   // or making a future one current restores the existing automatic behaviour.
   // Keeping the entry also keeps an already opened card's forms mounted.
@@ -3120,6 +3129,7 @@ export function LiveWorkoutPage() {
   // используем встроенный диалог в панели вместо нативного confirm.
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
+  const coachPausePending = useRef(false)
   const [referenceRestActive, setReferenceRestActive] = useState(false)
   const [restContextExerciseId, setRestContextExerciseId] = useState<string | null>(null)
   const [restPickerSeconds, setRestPickerSeconds] = useState(90)
@@ -3134,9 +3144,9 @@ export function LiveWorkoutPage() {
   const [liveModeOverride, setLiveModeOverride] = useState<WorkoutExecutionMode | null>(null)
   const liveExecutionMode = effectiveExecutionMode(query.data?.executionMode, liveModeOverride)
   const timerLeads = Boolean(query.data) && !coachReference && liveExecutionMode === 'timer'
-  // Пауза всей тренировки (YAFIT-627) — только у клиента: часы, отдых и подход
-  // замирают, на сервере время паузы вычитается из длительности.
-  const canPauseWorkout = clientMode && !coachReference && query.data?.status === 'in_progress'
+  // Reuse the existing pause contract for the coach pilot as well: clocks,
+  // rest and final duration share the same server-accounted pause.
+  const canPauseWorkout = (clientMode && !coachReference || coachV79) && query.data?.status === 'in_progress'
   const livePausedAt = query.data?.pausedAt ? Date.parse(query.data.pausedAt) : null
   const [phaseNotice, setPhaseNotice] = useState<
     | { kind: 'work-confirmed'; setId: string; exerciseId: string; seconds: number; shownAt: number }
@@ -3386,11 +3396,11 @@ export function LiveWorkoutPage() {
   }, [actor?.userId, query.data, workoutId, save.isPending, confirm.isPending])
   // Запускает отдых до абсолютного момента endsAt (мс). null — отдыха нет
   // (напр. между упражнениями суперсета, seconds=0): таймер не показываем.
-  function startRestUntil(endsAt: number | null) {
+  function startRestUntil(endsAt: number | null, pauseAt = livePausedAt) {
     setRestEndsAt(endsAt)
     storeRestDeadline(workoutId, endsAt)
     inactivityReminder.noteActivity(endsAt)
-    if (endsAt !== null && endsAt > Date.now()) void scheduleNativeRestTimerNotification(workoutId, endsAt)
+    if (endsAt !== null && endsAt > Date.now() && (!coachV79 || pauseAt === null)) void scheduleNativeRestTimerNotification(workoutId, endsAt)
     else void cancelNativeRestTimerNotification(workoutId)
   }
   function stopRest() {
@@ -3411,12 +3421,12 @@ export function LiveWorkoutPage() {
     if (!preserveDeadline) startRestUntil(restDeadline(seconds))
     return seconds
   }
-  function setLivePhase(next: LivePhaseTimer | null) {
+  function setLivePhase(next: LivePhaseTimer | null, pauseAt = livePausedAt) {
     livePhaseRef.current = next
     setLivePhaseState(next)
     storeLivePhase(workoutId, next)
     inactivityReminder.noteActivity(next?.endsAt ?? null)
-    if (next === null) {
+    if (next === null || coachV79 && pauseAt !== null) {
       void cancelNativeRestTimerNotification(workoutId)
       return
     }
@@ -3905,17 +3915,32 @@ export function LiveWorkoutPage() {
   async function deleteLiveExercise(exercise: WorkoutExerciseModel) {
     if (await askConfirm({ message: `Удалить «${exercise.name}» из этой тренировки? Все его подходы, включая выполненные, будут удалены.`, confirmLabel: 'Удалить', danger: true })) removeExercise.mutate(exercise)
   }
+  function openLiveReplacement(exerciseId: string) {
+    if (clientReference) {
+      const exercise = query.data?.exercises.find(item => item.id === exerciseId)
+      const card = exercise ? document.querySelector<HTMLElement>(`.live-workout-page [data-workout-block="${exercise.blockId}"]`) : null
+      card?.querySelector<HTMLButtonElement>('.overflow-trigger')?.focus({ preventScroll: true })
+    }
+    setReplaceExerciseId(exerciseId)
+    setPickerOpen(true)
+  }
   function swipeLive(exercise: WorkoutExerciseModel, content: ReactNode, key = exercise.id) {
     return liveSwipeEnabled ? <WorkoutSwipe key={key} id={key} disabled={gestureDisabled} swipeFromCardButton={clientReference || coachV79}
       onDelete={() => { void deleteLiveExercise(exercise) }}
-      onReplace={coachReference ? () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } : undefined}>{content}</WorkoutSwipe> : content
+      onReplace={coachReference || clientReference ? () => openLiveReplacement(exercise.id) : undefined}>{content}</WorkoutSwipe> : content
   }
   // Комментарий тренера к упражнению в live — сохраняется по blur, если изменился.
-  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name, compactKey?: string) {
+  function liveCommentField(exercise: WorkoutExerciseModel, displayName = exercise.name, compactKey?: string, circuitSetId?: string) {
+    const coachCircuitNote = coachV79 && circuitSetId !== undefined
+    if (coachCircuitNote && coachCircuitNotes.get(exercise.id) !== circuitSetId) return null
     const serverNote = (clientMode ? exercise.clientNote : exercise.trainerComment) ?? ''
     const note = pendingNotes.get(exercise.id) ?? serverNote
     const preview = focusedNote === exercise.id ? serverNote : note
     return <details className={`live-exercise-note${compactKey ? ' client-circuit-note' : ''}`} id={compactKey ? `live-note-${compactKey}` : undefined} data-has-note={Boolean(note.trim()) || undefined}
+      {...(coachCircuitNote ? { open: true, onToggle: (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+        if (event.currentTarget.open) return
+        setCoachCircuitNotes(previous => { if (previous.get(exercise.id) !== circuitSetId) return previous; const next = new Map(previous); next.delete(exercise.id); return next })
+      } } : {})}
       {...(compactKey ? { open: openClientNotes.has(compactKey), onToggle: (event: React.SyntheticEvent<HTMLDetailsElement>) => {
         const open = event.currentTarget.open
         setOpenClientNotes(previous => { if (previous.has(compactKey) === open) return previous; const next = new Set(previous); if (open) next.add(compactKey); else next.delete(compactKey); return next })
@@ -3968,21 +3993,21 @@ export function LiveWorkoutPage() {
       <CoachLiveV79CardToggleIcon folded={!expanded} />
     </button>
   }
-  function v79IsFolded(exercise: WorkoutExerciseModel) {
-    return v79Folded.has(v79CardKey(exercise))
+  function v79IsFolded(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
+    return v79Folded.has(key)
   }
-  function toggleV79Card(exercise: WorkoutExerciseModel) {
-    setV79Folded(current => { const next = new Set(current), key = v79CardKey(exercise); if (next.has(key)) next.delete(key); else next.add(key); return next })
+  function toggleV79Card(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
+    setV79Folded(current => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next })
   }
-  function v79CardToggle(exercise: WorkoutExerciseModel) {
-    const folded = v79IsFolded(exercise)
-    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={event => { event.currentTarget.focus({ preventScroll: true }); toggleV79Card(exercise) }} disabled={rootMutationPending}>
+  function v79CardToggle(exercise: WorkoutExerciseModel, key = v79CardKey(exercise)) {
+    const folded = v79IsFolded(exercise, key)
+    return <button type="button" className="coach-v79-card-toggle" aria-label={`${folded ? 'Развернуть' : 'Свернуть'}: ${exercise.name}`} aria-expanded={!folded} onClick={event => { event.currentTarget.focus({ preventScroll: true }); toggleV79Card(exercise, key) }} disabled={rootMutationPending}>
       <CoachLiveV79CardToggleIcon folded={folded} />
     </button>
   }
-  function v79CardBody(exercise: WorkoutExerciseModel, body: ReactNode) {
+  function v79CardBody(exercise: WorkoutExerciseModel, body: ReactNode, key = v79CardKey(exercise)) {
     if (!coachV79) return body
-    const folded = v79Folded.has(v79CardKey(exercise))
+    const folded = v79Folded.has(key)
     // CSS clips the same forms; never unmount an unsent value to fold a card.
     return <WorkoutFoldBody className="coach-v79-card-body" folded={folded}>{body}</WorkoutFoldBody>
   }
@@ -4012,13 +4037,19 @@ export function LiveWorkoutPage() {
             onClick: () => mergeBlock.mutate({ blockId, preset: 'set' }) },
         ]
   }
-  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = [], footer = false) {
+  function exerciseMenu(exercise: WorkoutExerciseModel, canReorder = false, removableSet?: WorkoutSet, groupingItems: ReturnType<typeof groupActions> = [], footer = false, circuitSetId?: string) {
     if (!canManageLiveStructure) return null
     const showRpe = isRpeVisible(exercise.id)
     const showPlan = visiblePlans.has(exercise.id)
     const canCollapse = clientReference && exercise.sets.every((set) => set.confirmedAt) && clientCardExpanded(exercise)
     const collapseBlocked = clientCardCollapseBlocked(exercise)
+    const circuitTechnique = coachV79 && circuitSetId ? techniqueActionFor(exercise) : undefined
     return <OverflowMenu trigger={coachV79 && footer ? <span>Действия</span> : undefined} items={[
+      ...(circuitTechnique ? [{ label: 'Инструкция', onClick: circuitTechnique }] : []),
+      ...(coachV79 && circuitSetId ? [{ label: 'Заметка тренера', onClick: () => {
+        setV79Folded(previous => { const next = new Set(previous); next.delete(`round:${circuitSetId}`); return next })
+        setCoachCircuitNotes(previous => new Map(previous).set(exercise.id, circuitSetId))
+      } }] : []),
       ...(canCollapse ? [{ label: 'Свернуть', disabled: collapseBlocked, onClick: () => {
         // Never unmount an unsent fact. This is presentation only: confirmation,
         // rest and the active exercise keep their existing state.
@@ -4029,7 +4060,7 @@ export function LiveWorkoutPage() {
       { label: showPlan ? 'Скрыть план' : 'Показать план', onClick: () => togglePlan(exercise.id) },
       { label: showRpe ? 'Скрыть RPE' : 'Указать RPE', onClick: () => toggleRpe(exercise.id) },
       ...groupingItems,
-      { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => { setReplaceExerciseId(exercise.id); setPickerOpen(true) } },
+      { label: 'Заменить', disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: () => openLiveReplacement(exercise.id) },
       ...(removableSet ? [{ label: clientLime ? `Удалить подход ${exercise.sets.indexOf(removableSet) + 1}` : 'Удалить подход', danger: true, disabled: rootMutationPending || save.isPending || confirm.isPending, onClick: async () => {
         if (clientReference) return requestRemoveLiveSet(exercise, removableSet)
         const setId = removableSet.id
@@ -4257,30 +4288,43 @@ export function LiveWorkoutPage() {
     if (restEndsAt === null || restEndsAt <= Date.now()) startWorkTimer(currentLiveSet, activeLiveExercise)
   }, [timerLeads])
   const pauseWorkout = useMutation({
-    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean }) => workoutsRepository.setLivePause(workout, paused),
+    mutationFn: ({ workout, paused }: { workout: Workout; paused: boolean; timers?: { rest: number | null; phase: LivePhaseTimer | null } }) => workoutsRepository.setLivePause(workout, paused),
     onSuccess: (version) => queryClient.setQueryData<Workout>(['workout', workoutId], (workout) => workout ? { ...workout, version } : workout),
-    onError: () => { void query.refetch() },
+    onError: async (_error, { workout, paused, timers }): Promise<void> => {
+      if (!coachV79 || !timers) { void query.refetch(); return }
+      const result = await query.refetch()
+      // An uncertain reply can still have committed. Read back before rolling
+      // back the optimistic clock or allowing a second resume to shift it.
+      if (!result.error && result.data && Boolean(result.data.pausedAt) === paused) { pauseWorkout.reset(); return }
+      const restoredPause = workout.pausedAt ? Date.parse(workout.pausedAt) : null
+      if (timers.phase) { startRestUntil(timers.rest, restoredPause); setLivePhase(timers.phase, restoredPause) }
+      else { setLivePhase(null, restoredPause); startRestUntil(timers.rest, restoredPause) }
+      queryClient.setQueryData<Workout>(['workout', workoutId], current => current ? { ...current, pausedAt: workout.pausedAt, pausedSeconds: workout.pausedSeconds } : current)
+    },
+    onSettled: () => { coachPausePending.current = false },
   })
   // Пауза замораживает всё сразу на экране; сервер фиксирует её следом.
   // Снятие сдвигает отдых и идущий подход на длительность паузы.
   function setWorkoutPaused(paused: boolean) {
     const workout = query.data
-    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null)) return
+    if (!workout || !canPauseWorkout || paused === (livePausedAt !== null) || coachV79 && coachPausePending.current) return
+    if (coachV79) coachPausePending.current = true
+    const timers = coachV79 ? { rest: restEndsAt, phase: livePhaseRef.current } : undefined
     const now = Date.now()
     if (paused) {
       void cancelNativeRestTimerNotification(workoutId)
       queryClient.setQueryData<Workout>(['workout', workoutId], (current) => current ? { ...current, pausedAt: new Date(now).toISOString() } : current)
     } else {
       const shift = livePausedAt === null ? 0 : Math.max(0, now - livePausedAt)
-      if (restEndsAt !== null) startRestUntil(restEndsAt + shift)
+      if (restEndsAt !== null) startRestUntil(restEndsAt + shift, null)
       const phase = livePhaseRef.current
-      if (phase) setLivePhase({ ...phase, startedAt: phase.startedAt + shift, endsAt: phase.endsAt + shift })
+      if (phase) setLivePhase({ ...phase, startedAt: phase.startedAt + shift, endsAt: phase.endsAt + shift }, null)
       queryClient.setQueryData<Workout>(['workout', workoutId], (current) => current
         ? { ...current, pausedAt: undefined, pausedSeconds: (current.pausedSeconds ?? 0) + Math.round(shift / 1000) }
         : current)
     }
     trackGoal(paused ? 'live_workout_paused' : 'live_workout_resumed')
-    pauseWorkout.mutate({ workout, paused })
+    pauseWorkout.mutate({ workout, paused, timers })
   }
   /** Действие с подходом значит, что человек вернулся к тренировке, — пауза снимается сама. */
   function resumeWorkoutIfPaused() {
@@ -4446,14 +4490,15 @@ export function LiveWorkoutPage() {
               <LiveRestTimer workoutId={workoutId} pausedAt={livePausedAt} deadline={restEndsAt} defaultDurationSeconds={effectiveRestPickerSeconds} onChange={startRestUntil} onDurationChange={applyRestDuration}
                 coachV79={coachV79 || clientReference ? { density: clientReference ? clientLiveDensity : liveDensity, headerSlot: coachClockSlot } : undefined}
                 phase={livePhase} onPrimary={timerLeads || livePhase?.kind === 'prep' || (livePhase?.kind === 'work' && livePhase.manual) ? handleTimerPrimary : undefined} onPhaseChange={setLivePhase} onPhaseExpire={handlePhaseExpire} onRestExpire={handleRestExpire}
-                referenceActions={clientReference} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
-                referencePausedSeconds={clientReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={clientReference && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
+                referenceActions={clientReference} coachPauseActions={coachV79} pausePending={coachV79 && pauseWorkout.isPending} referenceStartedAt={visualReference ? query.data.startedAt ?? null : undefined} referenceWorkOvertime={clientReference} onReferenceRestActiveChange={visualReference ? setReferenceRestActive : undefined}
+                referencePausedSeconds={visualReference ? query.data.pausedSeconds ?? 0 : 0} onReferencePauseToggle={(clientReference || coachV79) && canPauseWorkout && query.data.startedAt ? () => setWorkoutPaused(livePausedAt === null) : undefined}
                 settings={!coachReference && query.data.exercises.length > 0 ? <div className="live-mode-switch" role="group" aria-label="Кто ведёт тренировку">
                   {(['timer', 'manual'] as const).map((mode) => <button key={mode} type="button" aria-pressed={liveExecutionMode === mode}
                     className={liveExecutionMode === mode ? 'active' : ''} onClick={() => changeLiveExecutionMode(mode)}>{EXECUTION_MODE_LABELS[mode]}</button>)}
                 </div> : undefined} />
             </Coachmark>
           </div>
+          {coachV79 && pauseWorkout.isError && <p className="error" role="alert">Не удалось {pauseWorkout.variables?.paused ? 'поставить тренировку на паузу' : 'продолжить тренировку'}. Попробуйте ещё раз.</p>}
           {phaseNotice && <div className="live-phase-notice" role="status">
             <span>{phaseNotice.kind === 'work-confirmed' ? `Подход засчитан · ${formatRest(phaseNotice.seconds)}` : 'Отдых остановлен'}</span>
             <button type="button" className="secondary" onClick={undoPhaseNotice}>{phaseNotice.kind === 'work-confirmed' ? 'Исправить' : 'Вернуть'}</button>
@@ -4600,7 +4645,15 @@ export function LiveWorkoutPage() {
         const activeCircuitSetId = blockStatus === 'current'
           ? rounds.flatMap((round) => round.items).find(({ set }) => !set.confirmedAt)?.set.id
           : undefined
-        const blockExpanded = !clientReference || blockStatus === 'current' || expandedClientBlocks.has(block.blockId)
+        const needsAttention = (set: WorkoutSet) => set.id === saveErrorSetId || validationErrorSetIds.has(set.id) || pendingSetConfirmations.current.has(set.id)
+        const coachHoldingInput = coachV79 && rounds.some(round => focusedCoachCircuitRound === `${block.blockId}:${round.round}` || round.items.some(({ set }) => needsAttention(set)))
+        const blockExpanded = coachV79 ? !blockDone || coachHoldingInput || expandedCoachCircuits.has(block.blockId)
+          : !clientReference || blockStatus === 'current' || expandedClientBlocks.has(block.blockId)
+        const coachCircuitHeading = coachV79 && <>
+          <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
+          <span className="circuit-counter">{blockDone ? `Завершено · ${rounds.length}/${rounds.length}` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
+          {blockDone && <span className="coach-v79-circuit-result-icon"><CoachLiveV79CardToggleIcon folded={!blockExpanded} /></span>}
+        </>
         const roundActions = canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && !reordering && <div className="live-round-actions">
           <button type="button" className="secondary live-add-set" disabled={rootMutationPending || (latestRound?.round ?? 0) >= 20} aria-busy={appendRound.isPending}
             onClick={() => appendRound.mutate(block.blockId)}>{appendRound.isPending ? 'Добавляем круг…' : <AddActionLabel>{clientReference ? 'Добавить круг' : 'Круг'}</AddActionLabel>}</button>
@@ -4612,10 +4665,9 @@ export function LiveWorkoutPage() {
           setExpandedClientBlocks(previous => previous.has(block.blockId) ? previous : new Set(previous).add(block.blockId))
         } : undefined}>
           <div className={`circuit-head${!clientReference && !coachV79 && blockStatus === 'current' ? ' circuit-head-actions-only' : ''}`}>
-            {coachV79 ? <div className="coach-v79-circuit-heading">
-              <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
-              <span className="circuit-counter">{blockDone ? `${rounds.length} из ${rounds.length} ${rounds.length === 1 ? 'круга' : 'кругов'} · завершено` : `Круг ${rounds[current]?.round ?? 1} из ${rounds.length}`}</span>
-            </div> : clientReference && blockStatus !== 'current' ? <button type="button" className="client-circuit-toggle" aria-expanded={blockExpanded}
+            {coachV79 ? blockDone ? <button type="button" className="coach-v79-circuit-heading" aria-label={`Результаты ${block.blockPreset === 'set' ? 'суперсета' : 'группы'}: ${block.exercises.map(exercise => exercise.name).join(', ')}`} aria-expanded={blockExpanded}
+              onClick={event => { event.currentTarget.focus({ preventScroll: true }); setExpandedCoachCircuits(previous => { const next = new Set(previous); if (next.has(block.blockId)) next.delete(block.blockId); else next.add(block.blockId); return next }) }}>{coachCircuitHeading}</button>
+              : <div className="coach-v79-circuit-heading">{coachCircuitHeading}</div> : clientReference && blockStatus !== 'current' ? <button type="button" className="client-circuit-toggle" aria-expanded={blockExpanded}
               onClick={() => setExpandedClientBlocks(previous => { const next = new Set(previous); if (next.has(block.blockId)) next.delete(block.blockId); else next.add(block.blockId); return next })}>
               <span className="block-badge">{blockLabel(block.blockType, block.blockPreset)}</span>
               <span className="circuit-counter">{blockDone ? 'Завершён' : `${rounds.length} ${rounds.length === 1 ? 'круг' : rounds.length < 5 ? 'круга' : 'кругов'}`} · {blockExpanded ? 'Свернуть' : 'Показать'}</span>
@@ -4639,39 +4691,48 @@ export function LiveWorkoutPage() {
             ]} />}
             {reorder}
           </div>
-          {coachV79 && <p className="coach-v79-circuit-summary">{block.exercises.map(exercise => exercise.name).join(' · ')}</p>}
-          <LiveCircuitLayout client={clientReference} expanded={blockExpanded}>
+          <LiveCircuitLayout client={clientReference} coach={coachV79} expanded={blockExpanded}>
           {!clientReference && !coachV79 && roundActions}
           {rounds.map((round, roundIndex) => { const roundDone = round.items.every(({ set }) => set.confirmedAt)
             const roundKey = `${block.blockId}:${round.round}`
             const isCurrent = roundIndex === current
-            const collapsed = !isCurrent && !expandedCircuitRounds.has(roundKey)
+            const holdingInput = coachV79 && (focusedCoachCircuitRound === roundKey || round.items.some(({ set }) => needsAttention(set)))
+            const collapsed = !isCurrent && !holdingInput && !expandedCircuitRounds.has(roundKey)
             const doneCount = round.items.filter(({ set }) => set.confirmedAt).length
-            return <div className={`circuit-round ${roundDone ? 'done' : isCurrent ? 'current' : ''}${collapsed ? ' collapsed' : ''}`} key={round.round}>
-            {isCurrent ? !clientReference && <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
+            return <div className={`circuit-round ${roundDone ? 'done' : isCurrent ? 'current' : ''}${collapsed ? ' collapsed' : ''}`} key={round.round}
+              onFocusCapture={coachV79 ? event => { if (event.target instanceof Element && event.target.matches('input, select, textarea, .workout-duration-trigger')) setFocusedCoachCircuitRound(roundKey) } : undefined}
+              onBlurCapture={coachV79 ? event => {
+                const target = event.relatedTarget
+                if (target instanceof Element && event.currentTarget.contains(target) && target.matches('input, select, textarea, .workout-duration-trigger')) return
+                setFocusedCoachCircuitRound(previous => previous === roundKey ? null : previous)
+              } : undefined}>
+            {isCurrent ? !clientReference && !coachV79 && <div className="circuit-round-label">Круг {round.round}</div> : <button type="button" className="circuit-round-toggle" aria-expanded={!collapsed}
               onClick={() => setExpandedCircuitRounds((previous) => { const next = new Set(previous); if (next.has(roundKey)) next.delete(roundKey); else next.add(roundKey); return next })}>
               <span>Круг {round.round}</span><span>{coachV79 && doneCount === 0 ? 'Впереди' : `${doneCount} из ${round.items.length} выполнено`}</span><span>{collapsed ? 'Показать' : 'Свернуть'}</span>
             </button>}
-            {!collapsed && round.items.map(({ exercise, set }) => { const duplicateNames = block.exercises.filter((item) => item.name === exercise.name)
+            <LiveCircuitRoundLayout coach={coachV79} collapsed={collapsed}>
+            {(coachV79 || !collapsed) && round.items.map(({ exercise, set }) => { const duplicateNames = block.exercises.filter((item) => item.name === exercise.name)
               const displayName = duplicateNames.length > 1 ? `${exercise.name} №${duplicateNames.findIndex((item) => item.id === exercise.id) + 1}` : exercise.name
-              const showNote = isCurrent || (blockDone && roundIndex === 0)
+              const showNote = coachV79 || isCurrent || (blockDone && roundIndex === 0)
+              const circuitCardKey = `round:${set.id}`
               return swipeLive(exercise, <section key={set.id}>
               <WorkoutExerciseHeader className="live-exercise-head" titleAs="h3" name={displayName}
                 leading={coachReference ? referenceNumber(exercise) : roundIndex === 0 || clientLime && set.id === activeCircuitSetId ? liveHeaderThumbnail(exercise, clientLime && set.id === activeCircuitSetId) : undefined}
                 summary={coachV79 ? `${set.confirmedAt ? 'Результат' : 'План'} на круг: ${set.confirmedAt ? factLine(set, false, exercise.ref) : planLine(exercise.inputKind, set, exercise.ref)}` : coachReference ? referenceLiveSummary({ ...exercise, sets: [set] }) : undefined}
-                onTitleClick={techniqueActionFor(exercise)} showTechniqueLabel={false} actions={roundIndex === 0 || clientReference ? <>
+                onTitleClick={coachV79 ? () => toggleV79Card(exercise, circuitCardKey) : techniqueActionFor(exercise)} titleActionLabel={coachV79 ? `${v79IsFolded(exercise, circuitCardKey) ? 'Развернуть' : 'Свернуть'}: ${displayName}` : undefined} titleExpanded={coachV79 ? !v79IsFolded(exercise, circuitCardKey) : undefined} showTechniqueLabel={false} actions={coachV79 ? exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [], false, set.id) : roundIndex === 0 || clientReference ? <>
                   {clientReference && showNote && <button type="button" className="client-circuit-note-toggle" data-has-note={Boolean((pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim()) || undefined} aria-description={(pendingNotes.get(exercise.id) ?? exercise.clientNote ?? '').trim() ? 'Есть заметка' : 'Добавить заметку'} aria-label={`Моя заметка: ${displayName}`} aria-expanded={openClientNotes.has(set.id)} aria-controls={`live-note-${set.id}`}
                     onClick={() => setOpenClientNotes(previous => { const next = new Set(previous); if (next.has(set.id)) next.delete(set.id); else next.add(set.id); return next })}><MessageIcon /></button>}
                   {(roundIndex === 0 || clientReference) && exerciseMenu(exercise, false, undefined, block.exercises.at(-1)?.id === exercise.id ? groupingItems : [])}
                 </> : undefined} />
-              {liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
+              {v79CardBody(exercise, <>{liveTechniqueFor(exercise, set.id === activeCircuitSetId)}
               {showNote && liveTrainerNote(exercise)}
               {renderLiveSet(exercise, set, coachV79 ? `Круг ${round.round}` : undefined, clientReference ? set.id === activeCircuitSetId : roundIndex === current && !set.confirmedAt,
                 liveSwipeEnabled && canManageLiveStructure && workoutsRepository.supportsAtomicLiveRounds && block.blockPreset === 'set' && canUndoAddedRound && round.round === latestRound?.round
                   ? { label: `Удалить круг ${round.round}: суперсет`, remove: () => void requestRemoveAddedRound() }
                   : undefined)}
-              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined)}
+              {showNote && liveCommentField(exercise, displayName, clientReference ? set.id : undefined, coachV79 ? set.id : undefined)}</>, circuitCardKey)}
             </section>, set.id)})}
+            </LiveCircuitRoundLayout>
           </div> })}
           {(clientReference || coachV79) && roundActions}
           </LiveCircuitLayout>
@@ -4683,8 +4744,8 @@ export function LiveWorkoutPage() {
         return liveDrag ? <>{clientLime && canManageLiveStructure && liveBlocks.length > 1 && <Coachmark id="client-live-card-drag-2026-10" userId={actor?.userId} title="Меняйте порядок упражнений" description="Удерживайте карточку за название или свободное место, затем перетащите. Поля и кнопки работают как обычно. В меню также есть «Изменить порядок»."><span className="sr-only">Перенос карточек</span></Coachmark>}<WorkoutGestureList nativeSwipe={liveSwipeEnabled} blocks={liveBlocks.map((block) => block.blockId)} disabled={gestureDisabled} holdCards={clientLime}
           onMove={(blockId, targetIndex) => moveLiveBlock.mutate({ blockId, targetIndex })}>{cards}</WorkoutGestureList></> : cards
       })()}
-      {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
-      {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={() => { setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
+      {canManageLiveStructure && query.data.exercises.length === 0 && liveExerciseEntry(<section className="live-empty-start"><h2>Добавьте первое упражнение</h2><button type="button" className="primary wide" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}>Выбрать упражнение</button>{cancelEmpty.error && <p className="live-empty-error" role="alert">Не удалось удалить тренировку. Попробуйте ещё раз.</p>}</section>)}
+      {canManageLiveStructure && query.data.exercises.length > 0 && liveExerciseEntry(<button type="button" className="secondary wide live-add-exercise" disabled={rootMutationPending} onClick={event => { if (clientReference) event.currentTarget.focus({ preventScroll: true }); setReplaceExerciseId(null); setPickerOpen(true) }}><AddActionLabel>{coachReference ? 'Упражнение' : 'Ещё упражнение'}</AddActionLabel></button>)}
       {coachReference && <FitLogo className="coach-live-footer-brand" />}
       {error && <p className="error">{error.message}</p>}
       {liveSwipeEnabled && removeSet.isError && removeSet.variables && <>
@@ -4731,7 +4792,7 @@ export function LiveWorkoutPage() {
           : !visualReference && <WorkoutCta variant={hasIncompleteLiveSets ? 'secondary' : 'primary'} className="wide" pending={finish.isPending} pendingLabel="Завершаем…" disabled={rootMutationPending || save.isPending || confirm.isPending} onClick={() => { if (hasIncompleteLiveSets || cardioSetMissingTime || timerConfirmedSets.length > 0) setConfirmFinish(true); else finish.mutate() }}>Завершить тренировку</WorkoutCta>)}
       </div>}
     </>}</AsyncView>
-    {canManageLiveStructure && pickerOpen && <ExercisePicker coachLiveV79={coachV79} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
+    {canManageLiveStructure && pickerOpen && <ExercisePicker coachLiveV79={coachV79} clientLiveV79={clientReference} clientLime={isClientLimeEnabled(actor)} reference={coachReference} referenceAppearance={visualReference} catalog={catalog} clientRecent={clientRecentExercises} techniqueActionLabel={replaceExerciseId ? 'Заменить упражнение' : 'Добавить упражнение'} onPick={pickLiveExercise} onPickMany={pickLiveExercises} multiple={clientLime && !replaceExerciseId} showEmptySelection={clientLime && !replaceExerciseId} keepSelectionWhileAdding={clientLime && !replaceExerciseId} selectionDraft={clientLime && !replaceExerciseId ? livePickerSelection : undefined} onSelectionDraftChange={clientLime && !replaceExerciseId ? setLivePickerSelection : undefined} onClose={closePicker} />}
     {techniqueExercise && <ExerciseTechniqueSheet exercise={techniqueExercise} onClose={() => setTechniqueExercise(null)} />}
     {confirmDialog}
   </Page>
